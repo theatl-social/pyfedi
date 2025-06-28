@@ -12,10 +12,10 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image
+    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
 
 from flask import abort, flash, request, current_app, g
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 import boto3
 from pillow_heif import register_heif_opener
@@ -24,10 +24,14 @@ from PIL import Image, ImageOps
 from sqlalchemy import text
 
 
-def vote_for_post(post_id: int, vote_direction, src, auth=None):
+def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
         post = Post.query.filter_by(id=post_id).one()
         user = authorise_api_user(auth, return_type='model')
+        if vote_direction == 'upvote' and not can_upvote(user, post.community):
+            return user.id
+        elif vote_direction == 'downvote' and not can_downvote(user, post.community):
+            return user.id
     else:
         post = Post.query.get_or_404(post_id)
         user = current_user
@@ -37,7 +41,7 @@ def vote_for_post(post_id: int, vote_direction, src, auth=None):
     # mark the post as read for the user
     user.mark_post_as_read(post)
 
-    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction)
+    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
 
     if src == SRC_API:
         return user.id
@@ -62,8 +66,6 @@ def bookmark_post(post_id: int, src, auth=None):
     if not existing_bookmark:
         db.session.add(PostBookmark(post_id=post_id, user_id=user_id))
         db.session.commit()
-        if src == SRC_WEB:
-            flash(_('Bookmark added.'))
     else:
         msg = 'This post has already been bookmarked.'
         if src == SRC_API:
@@ -83,8 +85,6 @@ def remove_bookmark_post(post_id: int, src, auth=None):
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
-        if src == SRC_WEB:
-            flash(_('Bookmark has been removed.'))
     else:
         msg = 'This post was not bookmarked.'
         if src == SRC_API:
@@ -189,8 +189,6 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     post.up_votes = 1
-    if user.reputation > 100:
-        post.up_votes += 1
     effect = user.instance.vote_weight
     post.score = post.up_votes * effect
     post.ranking = post.post_ranking(post.score, post.posted_at)
@@ -215,7 +213,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
             db.session.commit()
             raise e
 
-    notify_about_post(post)
+    if post.status == POST_STATUS_PUBLISHED:
+        notify_about_post(post)
 
     if src == SRC_API:
         return user.id, post
@@ -338,6 +337,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         uploaded_file.seek(0)
         uploaded_file.save(final_place)
 
+        final_ext = file_ext # track file extension for conversion
+
         if file_ext.lower() == '.heic':
             register_heif_opener()
         if file_ext.lower() == '.avif':
@@ -345,14 +346,30 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
-        # limit full sized version to 2000px
+        # Use environment variables to determine image max dimension, format, and quality
+        image_max_dimension = current_app.config['MEDIA_IMAGE_MAX_DIMENSION']
+        image_format = current_app.config['MEDIA_IMAGE_FORMAT']
+        image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
+
+        if image_format == 'AVIF':
+            import pillow_avif
+
         if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
+                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
-                img.thumbnail((2000, sys.maxsize))
-                img.save(final_place)
+                kwargs = {}
+                if image_format:
+                    kwargs['format'] = image_format.upper()
+                    final_ext = '.' + image_format.lower()
+                    final_place = os.path.splitext(final_place)[0] + final_ext
+                if image_quality:
+                    kwargs['quality'] = int(image_quality)
+
+                img.save(final_place, optimize=True, **kwargs)
             else:
                 raise Exception('filetype not allowed')
         
@@ -361,6 +378,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
             os.remove(final_place)
             final_place = final_place[:-4] + ".webp"
+            final_ext = '.webp'
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
@@ -380,10 +398,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext,
-                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                        new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                        ExtraArgs={'ContentType': guess_mime_type(final_place)})
             url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
-                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_ext
+                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
             s3.close()
             os.unlink(final_place)
 
@@ -396,7 +414,13 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.domain = domain
             domain.post_count += 1
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-            targets_data = {'post_id': post.id}
+            targets_data = {'gen':'0',
+                            'post_id': post.id,
+                            'orig_post_title':post.title,
+                            'orig_post_body':post.body,
+                            'orig_post_domain':post.domain,
+                            'author_user_name':user.ap_id if user.ap_id else user.user_name
+                            }
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
@@ -584,17 +608,28 @@ def report_post(post_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
-    targets_data = {'suspect_post_id':post.id,'suspect_user_id':post.user_id,'reporter_id':user_id}
+    suspect_user = User.query.get(post.user_id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen':'0',
+                    'suspect_post_id':post.id,
+                    'suspect_user_id':post.user_id,
+                    'suspect_user_user_name':suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                    'reporter_id':user_id,
+                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_post_title':post.title,
+                    'orig_post_body':post.body
+                    }
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
-            notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                        author_id=user_id, notif_type=NOTIF_REPORT,
-                                        subtype='post_reported',
-                                        targets=targets_data)
-            db.session.add(notification)
-            already_notified.add(mod.user_id)
+            with force_locale(get_recipient_language(moderator.id)):
+                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
+                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                            author_id=user_id, notif_type=NOTIF_REPORT,
+                                            subtype='post_reported',
+                                            targets=targets_data)
+                db.session.add(notification)
+                already_notified.add(mod.user_id)
     post.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():

@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
@@ -58,21 +58,21 @@
                     <div class="row">
                         {% if domain.blocked_by(current_user) %}
                             <div class="col-4">
-                                <a class="w-100 btn btn-primary" href="/d/{{ domain.id }}/unblock">{{ _('Unblock') }}</a>
+                              <a class="w-100 btn btn-primary" role="button" aria-label="{{ _('Unblock') }}" hx-post="/d/{{ domain.id }}/unblock" hx-trigger="click throttle:1s"tabindex="0">{{ _('Unblock') }}</a>
                             </div>
                         {% else %}
                             <div class="col-4">
-                                <a class="w-100 btn btn-primary" href="/d/{{ domain.id }}/block">{{ _('Block') }}</a>
+                              <a class="w-100 btn btn-primary" role="button" aria-label="{{ _('Block') }}" hx-post="/d/{{ domain.id }}/block" hx-trigger="click throttle:1s"tabindex="0">{{ _('Block') }}</a>
                             </div>
                         {% endif %}
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                             {% if domain.banned %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
                                 </div>
                             {% else %}
                                 <div class="col-8">
-                                    <a class="w-100 btn btn-primary confirm_first" href="/d/{{ domain.id }}/ban">{{ _('Ban instance-wide') }}</a>
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href="#" data-url="/d/{{ domain.id }}/ban">{{ _('Ban instance-wide') }}</a>
                                 </div>
                             {% endif %}
                         {% endif %}

@@ -1,0 +1,40 @@
+<tr>
+    <td>
+        <div class="overflow-ellipses-parent text-truncate">
+          <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+              <a href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
+              {{ _('replied to') }}
+              <a href="/post/{{ notification.targets.post_id }}">{{ notification.targets.post_title }}</a>
+              :
+          </div>
+        </div>
+        <div class="accordion" id="accordion-{{ notification.id }}">
+          <div class="accordion-item">
+            <div class="accordion-header">
+              <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                {{ _("Reply details") }}
+              </button>
+            </div>
+            <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
+              <p class="m-1">
+                <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.comment_body }}</a>
+              </p>
+            </div>
+          </div>
+        </div>
+    </td>
+    <td class="text-nowrap align-middle" width="120">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</td>
+    <td width="30" class="align-middle">
+      {% if not notification.read -%}
+        <a class="no-underline" role="button" aria-label="{{ _('Mark as read') }}" tabindex="0" title="{{ _('Mark as read') }}" 
+          hx-post="/notification/{{ notification.id }}/read" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-read"></span></a>
+      {% else -%}
+        <a class="no-underline" role="button" aria-label="{{ _('Mark as unread') }}" tabindex="0" title="{{ _('Mark as unread') }}" 
+          hx-post="/notification/{{ notification.id }}/unread" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-circle"></span></a>
+      {% endif -%}
+    </td>
+    <td width="30" class="align-middle">
+        <a class="no-underline" role="button" aria-label="{{ _('Delete') }}" tabindex="0" title="{{ _('Delete') }}" 
+          hx-post="/notification/{{ notification.id }}/delete" hx-trigger="click throttle:1s" hx-target="closest tr" hx-swap="outerHTML"><span class="fe fe-delete"></span></a>
+    </td>
+</tr>

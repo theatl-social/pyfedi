@@ -35,6 +35,7 @@ from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
+from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
 from wtforms.fields  import SelectField, SelectMultipleField, StringField
@@ -99,9 +100,9 @@ def getmtime(filename):
 def get_request(uri, params=None, headers=None) -> httpx.Response:
     timeout = 15 if 'washingtonpost.com' in uri else 10  # Washington Post is really slow on og:image for some reason
     if headers is None:
-        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
+        headers = {'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
+        headers.update({'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'})
     if params and '/webfinger' in uri:
         payload_str = urllib.parse.urlencode(params, safe=':@')
     else:
@@ -143,9 +144,9 @@ def get_request_instance(uri, instance: Instance, params=None, headers=None) -> 
 # do a HEAD request to a uri, return the result
 def head_request(uri, params=None, headers=None) -> httpx.Response:
     if headers is None:
-        headers = {'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'}
+        headers = {'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'}
     else:
-        headers.update({'User-Agent': f'PieFed/1.0; +https://{current_app.config["SERVER_NAME"]}'})
+        headers.update({'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'})
     try:
         response = httpx_client.head(uri, params=params, headers=headers, timeout=5, allow_redirects=True)
     except httpx.HTTPError as er:
@@ -267,7 +268,7 @@ def mime_type_using_head(url):
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
-                's', 'tg-spoiler']
+                's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -361,6 +362,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # replace the 'static' for images hotlinked to fandom sites with 'vignette'
     re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
     clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+
+    # replace ruby markdown like {漢字|かんじ}
+    re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
+    clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
     return clean_html
 
@@ -604,6 +609,8 @@ def digits(input: int) -> int:
 def user_access(permission: str, user_id: int) -> bool:
     if user_id == 0:
         return False
+    if user_id == 1:
+        return True
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
                                     'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
                                     'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
@@ -774,6 +781,39 @@ def permission_required(permission):
         return decorated_view
 
     return decorator
+
+
+
+def login_required(csrf=True):
+    def decorator(func):
+        @wraps(func)
+        def decorated_view(*args, **kwargs):
+            if request.method in {"OPTIONS"} or current_app.config.get("LOGIN_DISABLED"):
+                pass
+            elif not current_user.is_authenticated:
+                return current_app.login_manager.unauthorized()
+
+            # Validate CSRF token for POST requests
+            if request.method == 'POST' and csrf:
+                validate_csrf(request.form.get('csrf_token', request.headers.get('x-csrftoken')))
+
+            # flask 1.x compatibility
+            # current_app.ensure_sync is only available in Flask >= 2.0
+            if callable(getattr(current_app, "ensure_sync", None)):
+                return current_app.ensure_sync(func)(*args, **kwargs)
+            return func(*args, **kwargs)
+
+        return decorated_view
+    
+    # Handle both @login_required and @login_required()
+    if callable(csrf):
+        # Called as @login_required (csrf is actually the function)
+        func = csrf
+        csrf = True
+        return decorator(func)
+    else:
+        # Called as @login_required(csrf=False)
+        return decorator
 
 
 def debug_mode_only(func):
@@ -1334,6 +1374,7 @@ def url_to_thumbnail_file(filename) -> File:
         response = httpx_client.get(filename, timeout=timeout)
     except:
         return None
+    
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
@@ -1358,19 +1399,56 @@ def url_to_thumbnail_file(filename) -> File:
             else:
                 directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
             ensure_directory_exists(directory)
-            final_place = os.path.join(directory, new_filename + file_extension)
-            with open(final_place, 'wb') as f:
+            temp_file_path = os.path.join(directory, new_filename + file_extension)
+
+            with open(temp_file_path, 'wb') as f:
                 f.write(response.content)
             response.close()
+
+            # Use environment variables to determine URL thumbnail
+
+            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
+
+            final_ext = file_extension
+
+            if medium_image_format == 'AVIF':
+                import pillow_avif
+
             Image.MAX_IMAGE_PIXELS = 89478485
-            with Image.open(final_place) as img:
+            with Image.open(temp_file_path) as img:
                 img = ImageOps.exif_transpose(img)
-                img.thumbnail((170, 170))
-                img.save(final_place)
-                thumbnail_width = img.width
-                thumbnail_height = img.height
+                img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                
+                # Create 170px thumbnail
+                img_170 = img.copy()
+                img_170.thumbnail((170, 170), resample=Image.LANCZOS)
+
+                kwargs = {}
+                if medium_image_format:
+                    kwargs['format'] = medium_image_format.upper()
+                    final_ext = '.' + medium_image_format.lower()
+                    temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
+                if medium_image_quality:
+                    kwargs['quality'] = int(medium_image_quality)
+
+                img_170.save(temp_file_path, optimize=True, **kwargs)
+                thumbnail_width = img_170.width
+                thumbnail_height = img_170.height
+                
+                # Create 512px thumbnail
+                img_512 = img.copy()
+                img_512.thumbnail((512, 512), resample=Image.LANCZOS)
+                
+                # Create filename for 512px thumbnail
+                temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
+                img_512.save(temp_file_path_512, optimize=True, **kwargs)
+                thumbnail_512_width = img_512.width
+                thumbnail_512_height = img_512.height
+
+                
             if store_files_in_s3():
-                content_type = guess_mime_type(final_place)
+                content_type = guess_mime_type(temp_file_path)
                 boto3_session = boto3.session.Session()
                 s3 = boto3_session.client(
                     service_name='s3',
@@ -1379,14 +1457,26 @@ def url_to_thumbnail_file(filename) -> File:
                     aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
                     aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                 )
-                s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + file_extension,
+                # Upload 170px thumbnail
+                s3.upload_file(temp_file_path, current_app.config['S3_BUCKET'], 'posts/' +
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                ExtraArgs={'ContentType': content_type})
-                os.unlink(final_place)
-                final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                              '/' + new_filename + file_extension
-            return File(file_name=new_filename + file_extension, thumbnail_width=thumbnail_width,
-                        thumbnail_height=thumbnail_height, thumbnail_path=final_place,
+                # Upload 512px thumbnail
+                s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
+                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
+                               ExtraArgs={'ContentType': content_type})
+                os.unlink(temp_file_path)
+                os.unlink(temp_file_path_512)
+                thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                              '/' + new_filename + final_ext
+                thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                  '/' + new_filename + '_512' + final_ext
+            else:
+                # For local storage, use the temp file paths as final URLs
+                thumbnail_170_url = temp_file_path
+                thumbnail_512_url = temp_file_path_512
+            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width, height=thumbnail_512_height,
+                        thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
                         source_url=filename)
 
 
@@ -1447,14 +1537,14 @@ def current_theme():
         if current_user.theme is not None and current_user.theme != '':
             return current_user.theme
         else:
-            return site.default_theme if site.default_theme is not None else ''
+            return site.default_theme if site.default_theme is not None else 'piefed'
     else:
-        return site.default_theme if site.default_theme is not None else ''
+        return site.default_theme if site.default_theme is not None else 'piefed'
 
 
 def theme_list():
     """ All the themes available, by looking in the templates/themes directory """
-    result = [('', 'PieFed')]
+    result = [('piefed', 'PieFed')]
     for root, dirs, files in os.walk('app/templates/themes'):
         for dir in dirs:
             if os.path.exists(f'app/templates/themes/{dir}/{dir}.json'):
@@ -1638,6 +1728,7 @@ def languages_for_form(all=False):
             if id:
                 used_languages.append((id, ""))
 
+    other_languages = []
     for language in Language.query.order_by(Language.name).all():
         try:
             i = used_languages.index((language.id, ""))
@@ -1645,8 +1736,6 @@ def languages_for_form(all=False):
         except:
             if all and language.code != "und":
                 other_languages.append((language.id, language.name))
-    else:
-        other_languages = []
 
     return used_languages + other_languages
 
@@ -1748,7 +1837,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        issued_at = decoded['iat']      # use to check against blacklisted JWTs
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
@@ -1965,11 +2053,10 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
 
 
 def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+    from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
-    redis_client = None
     if result_id:
-        redis_client = get_redis_connection()
         if redis_client.exists(result_id):
             return json.loads(redis_client.get(result_id))
 
@@ -2062,8 +2149,6 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     post_ids = dedupe_post_ids(post_ids)
 
     if current_user.is_authenticated:
-        if redis_client is None:
-            redis_client = get_redis_connection()
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
     return post_ids
 
@@ -2098,7 +2183,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
-                    new_path = file.thumbnail_path.replace('app/static/media/', f"")
+                    new_path = file.thumbnail_path.replace('app/static/media/', "")
                     s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2108,7 +2193,7 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
-                    new_path = file.file_path.replace('app/static/media/', f"")
+                    new_path = file.file_path.replace('app/static/media/', "")
                     s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
@@ -2118,11 +2203,41 @@ def move_file_to_s3(file_id, s3):
                     'app/static/media'):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
-                    new_path = file.source_url.replace('app/static/media/', f"")
+                    new_path = file.source_url.replace('app/static/media/', "")
                     s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
+
+
+def days_to_add_for_next_month(today):
+    # Calculate the new month and year
+    new_month = today.month + 1
+    new_year = today.year
+
+    if new_month > 12:
+        new_month = 1
+        new_year += 1
+
+    # Get the last day of the new month
+    if new_month in {1, 3, 5, 7, 8, 10, 12}:
+        last_day = 31
+    elif new_month in {4, 6, 9, 11}:
+        last_day = 30
+    else:  # February
+        # Check for leap year
+        if (new_year % 4 == 0 and new_year % 100 != 0) or (new_year % 400 == 0):
+            last_day = 29
+        else:
+            last_day = 28
+
+    # Calculate the new day
+    new_day = min(today.day, last_day)
+
+    # Calculate the number of days to add
+    days_to_add = (datetime(new_year, new_month, new_day) - today).days + 1
+
+    return days_to_add
 
 
 def find_next_occurrence(post: Post) -> timedelta:
@@ -2132,7 +2247,9 @@ def find_next_occurrence(post: Post) -> timedelta:
         elif post.repeat == 'weekly':
             return timedelta(days=7)
         elif post.repeat == 'monthly':
-            return timedelta(days=28)
+            days_to_add = days_to_add_for_next_month(utcnow())
+            return timedelta(days=days_to_add)
+
     return timedelta(seconds=0)
 
 
@@ -2325,3 +2442,85 @@ def on_unread_notifications_set(target, value, oldvalue, initiator):
 def publish_sse_event(key, value):
     r = get_redis_connection()
     r.publish(key, value)
+
+
+def apply_feed_url_rules(self):
+    if '-' in self.url.data.strip():
+        self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
+        return False
+
+    if not self.public.data and not '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().lower() + '/' + current_user.user_name.lower()
+    elif self.public.data and '/' in self.url.data.strip():
+        self.url.data = self.url.data.strip().split('/', 1)[0]
+    else:
+        self.url.data = self.url.data.strip().lower()
+
+    # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
+    if self.public.data:
+        regex = r'^[a-zA-Z0-9_]+$'
+    else:
+        regex = r'^[a-zA-Z0-9_]+(?:/' + current_user.user_name.lower() + ')?$'
+    if not re.match(regex, self.url.data):
+        self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
+        return False
+
+    try:
+        self.feed_id
+    except AttributeError:
+        feed = Feed.query.filter(Feed.name == self.url.data).first()
+    else:
+        feed = Feed.query.filter(Feed.name == self.url.data).filter(Feed.id != self.feed_id).first()
+    if feed is not None:
+        self.url.errors.append(_l('A Feed with this url already exists.'))
+        return False
+    return True
+
+# notification destination user helper function to make sure the
+# notification text is stored in the database using the language of the
+# recipient, rather than the language of the originator
+def get_recipient_language(user_id):
+    lang_to_use = ''
+
+    # look up the user in the db based on the id
+    recipient = User.query.get(user_id)
+
+    # if the user has language_id set, use that
+    if recipient.language_id:
+        lang = Language.query.get(recipient.language_id)
+        lang_to_use = lang.code
+
+    # else if the user has interface_language use that
+    elif recipient.interface_language:
+        lang_to_use = recipient.interface_language
+
+    # else default to english
+    else:
+        lang_to_use = 'en'
+
+    return lang_to_use
+
+def render_from_tpl(tpl: str) -> str:
+    """
+    Replace tags in `template` like {% week %}, {%day%}, {% month %}, {%year%}
+    with the corresponding values.
+    """
+    date = utcnow()
+
+    # Words to replace
+    replacements = {
+        "week": f"{date.isocalendar()[1]:02d}",
+        "day": f"{date.day:02d}",
+        "month": f"{date.month:02d}",
+        "year": str(date.year)
+    }
+
+    # Regex to find {%   word   %}, spaces will be ignored
+    pattern = re.compile(r"\{\%\s*(week|day|month|year)\s*\%\}")
+
+    # Substitute each match with its replacement
+    def _sub(match):
+        key = match.group(1)
+        return replacements.get(key, match.group(0))
+
+    return pattern.sub(_sub, tpl)

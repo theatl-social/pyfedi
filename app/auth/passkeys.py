@@ -1,4 +1,4 @@
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g, abort, jsonify
+from flask import request, make_response, abort, jsonify
 import base64
 from webauthn import generate_authentication_options, options_to_json, verify_authentication_response
 from webauthn.helpers import parse_authentication_credential_json
@@ -64,7 +64,7 @@ def passkey_verification():
                     if isinstance(passkey.public_key, str):
                         try:
                             credential_public_key = base64.b64decode(passkey.public_key)
-                        except Exception as e:
+                        except Exception:
                             credential_public_key = passkey.public_key.encode('utf-8')
                     else:
                         credential_public_key = passkey.public_key
@@ -83,7 +83,7 @@ def passkey_verification():
                     passkey.used = utcnow()
                     success = True
                     break
-                except InvalidAuthenticationResponse as e:
+                except InvalidAuthenticationResponse:
                     pass # try another passkey instead by continuing to loop through all their passkeys
             if not success:
                 error_message = f'No valid passkeys found for {username}'

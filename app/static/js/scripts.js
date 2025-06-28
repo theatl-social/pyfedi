@@ -18,9 +18,12 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+    setupVotingLongPress();
+    setupVotingDialogHandlers();
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
+    setupSendPost();
     setupSubmitOnInputChange();
     setupTimeTracking();
     setupMobileNav();
@@ -48,6 +51,9 @@ document.addEventListener("DOMContentLoaded", function () {
     setupMegaMenuNavigation();
     setupPopupCommunitySidebar();
     setupVideoSpoilers();
+    setupDynamicContentObserver();
+    setupCommunityFilter();
+    setupPopupTooltips();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -460,8 +466,10 @@ function setupConfirmFirst() {
         element.addEventListener("click", function(event) {
             if (!confirm("Are you sure?")) {
               event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
+              event.stopImmediatePropagation(); // Stop other event listeners from running
+              event.action_cancelled = true; // Custom flag for setupSendPost handlers
             }
-        });
+        }, true); // Use capture phase to run before other handlers
     });
 
     const go_back = document.querySelectorAll('.go_back');
@@ -479,6 +487,43 @@ function setupConfirmFirst() {
             location.href = '/auth/login';
             event.preventDefault();
             return false;
+        });
+    });
+}
+
+// Handle custom POST requests for destructive actions
+function setupSendPost() {
+    const sendPostElements = document.querySelectorAll('a.send_post');
+    sendPostElements.forEach(element => {
+        element.addEventListener("click", function(event) {
+            // Check if the event was cancelled by confirm_first
+            if (event.action_cancelled) {
+                return;
+            }
+            
+            event.preventDefault();
+            
+            const url = element.getAttribute('data-url');
+            if (!url) return;
+            
+            // Get CSRF token from meta tag
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            // Create a form and submit it to preserve flash messages
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+            form.style.display = 'none';
+            
+            // Add CSRF token as hidden input
+            const tokenInput = document.createElement('input');
+            tokenInput.type = 'hidden';
+            tokenInput.name = 'csrf_token';
+            tokenInput.value = csrfToken;
+            form.appendChild(tokenInput);
+            
+            document.body.appendChild(form);
+            form.submit();
         });
     });
 }
@@ -758,12 +803,18 @@ function setupKeyboardShortcuts() {
             }
         }
 
-        // While typing a post or reply, Ctrl + Enter submits the form
+        // While typing a post or reply, Ctrl + Enter (or Cmd + Enter on Mac) submits the form
         if(document.activeElement.tagName === 'TEXTAREA') {
-            if (event.ctrlKey && event.key === 'Enter') {
-                var form = document.activeElement.closest('form');
-                if (form) {
-                    form.submit.click();
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                // Special handling for textareas with name "body"
+                if (document.activeElement.name === 'body') {
+                    event.preventDefault();
+                    handleCtrlEnterForBodyTextarea(document.activeElement);
+                } else {
+                    var form = document.activeElement.closest('form');
+                    if (form) {
+                        form.submit.click();
+                    }
                 }
             }
         }
@@ -1076,6 +1127,16 @@ function setupFancySelects() {
     if(community && community.type === 'select-one') {
         new TomSelect('#community', {maxOptions: null, maxItems: 1});
     }
+
+    var languageSelect = document.querySelector('#tom_select div #language_id');
+    if (languageSelect) {
+        new TomSelect('#tom_select #language_id', {maxOptions: null, maxItems: 1});
+    }
+
+    var languageSelect2 = document.querySelector('#tom_select div #languages');
+    if (languageSelect2) {
+        new TomSelect('#tom_select #languages', {maxOptions: null});
+    }
 }
 
 function setupImagePreview() {
@@ -1378,4 +1439,413 @@ function setupVideoSpoilers() {
             vid.classList.add("blur");
         });
     });
+}
+
+// Setup MutationObserver to detect dynamically loaded content (e.g., from htmx)
+function setupDynamicContentObserver() {
+    const observer = new MutationObserver(function(mutations) {
+        let shouldResetup = false;
+        
+        mutations.forEach(function(mutation) {
+            // Check if new nodes were added
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    // Only process element nodes (not text nodes)
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if the added content contains elements that need event handlers
+                        if (node.querySelector && (
+                            node.querySelector('.send_post') ||
+                            node.querySelector('.confirm_first') ||
+                            node.querySelector('.showElement') ||
+                            node.querySelector('.show-more') ||
+                            node.querySelector('.user_preview') ||
+                            node.classList.contains('send_post') ||
+                            node.classList.contains('confirm_first') ||
+                            node.classList.contains('showElement')
+                        )) {
+                            shouldResetup = true;
+                        }
+                    }
+                });
+            }
+        });
+        
+        // Re-run setup functions for the new content
+        if (shouldResetup) {
+            setupDynamicContent();
+        }
+    });
+    
+    // Start observing
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+}
+
+// handle Ctrl+Enter for comment textareas
+function handleCtrlEnterForBodyTextarea(textarea) {
+    // First try to find btn-primary within the same form
+    const form = textarea.closest('form');
+    if (form) {
+        const btnPrimary = form.querySelector('.btn-primary');
+        if (btnPrimary) {
+            btnPrimary.click();
+            return;
+        }
+    }
+
+    // If no form or no btn-primary in form, search in the parent container
+    let container = textarea.parentElement;
+    while (container && container !== document.body) {
+        const btnPrimary = container.querySelector('.btn-primary');
+        if (btnPrimary) {
+            btnPrimary.click();
+            return;
+        }
+        container = container.parentElement;
+    }
+}
+
+// Re-run specific setup functions for dynamically loaded content
+function setupDynamicContent() {
+    // These are the key functions needed for post options and other dynamic content
+    setupConfirmFirst();
+    setupSendPost();
+    setupShowElementLinks();
+    setupShowMoreLinks();
+    setupUserPopup();
+    setupVotingLongPress();
+    setupDynamicKeyboardShortcuts();
+}
+
+// Setup keyboard shortcuts for dynamically loaded content
+function setupDynamicKeyboardShortcuts() {
+    // Add event listeners to any new textarea elements with name "body"
+    document.querySelectorAll('textarea[name="body"]').forEach(textarea => {
+        // Remove existing listener to avoid duplicates
+        textarea.removeEventListener('keydown', handleDynamicCtrlEnter);
+        // Add new listener
+        textarea.addEventListener('keydown', handleDynamicCtrlEnter);
+    });
+}
+
+// Handler for dynamic textarea keydown events
+function handleDynamicCtrlEnter(event) {
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && event.target.name === 'body') {
+        event.preventDefault();
+        handleCtrlEnterForBodyTextarea(event.target);
+    }
+}
+
+// Community filter (search box)
+function setupCommunityFilter() {
+    // Try and hookup the filter first (in case HTMX already loaded)
+    hookupCommunityFilter();
+
+    // HTMX event listeners for dynamic content loading
+    document.addEventListener('htmx:afterSwap', function(event) {
+        // Check if the swapped content contains the communities menu
+        if (event.target.classList && event.target.classList.contains('communities_menu')) {
+            hookupCommunityFilter();
+        }
+        
+        // Also check if the swapped content is inside the communities menu
+        const communitiesMenu = event.target.closest('.communities_menu');
+        if (communitiesMenu) {
+            hookupCommunityFilter();
+        }
+    });
+
+    document.addEventListener('htmx:afterSettle', function(event) {
+        // Double-check after settle in case afterSwap missed it
+        if (event.target.classList && event.target.classList.contains('communities_menu')) {
+            hookupCommunityFilter();
+        }
+    });
+}
+
+function hookupCommunityFilter() {
+    // Set up community filter functionality for the communities dropdown
+    const filterInput = document.getElementById('community-filter');
+    const clearButton = document.getElementById('clear-community-filter');
+
+    if (!filterInput) {
+        return; // Only run if filter element exists in current theme
+    }
+    
+    const communityItems = document.querySelectorAll('.community-item');
+    const communitySections = document.querySelectorAll('.community-section');
+
+    function prevSection(communityItem) {
+        let current = communityItem.previousElementSibling;
+        
+        while (current) {
+            if (current.classList.contains('community-section')) {
+                return current;
+            }
+            current = current.previousElementSibling;
+        }
+        
+        return null; // No section found
+    }
+
+    function filterCommunities() {
+        const filterText = filterInput.value.toLowerCase().trim();
+        
+        let visibleInSection = {};
+        
+        // Show/hide clear button
+        if (clearButton) {
+            clearButton.style.display = filterText ? 'block' : 'none';
+        }
+        
+        communityItems.forEach((item, index) => {
+            const communityName = item.getAttribute('data-community-name') || '';
+            const isVisible = !filterText || communityName.includes(filterText);
+            
+            item.style.display = isVisible ? 'list-item' : 'none';
+            
+            // Track which sections have visible items
+            if (isVisible) {
+                const parentSection = prevSection(item);
+                if (parentSection) {
+                    const sectionType = parentSection.getAttribute('data-community-section');
+                    if (sectionType) {
+                        visibleInSection[sectionType] = true;
+                    }
+                }
+            }
+        });
+        
+        // Show/hide section headers based on whether they have visible items
+        communitySections.forEach((section, index) => {
+            let shouldShow = false;
+            
+            const sectionType = section.getAttribute('data-community-section');
+            if (sectionType) {
+                shouldShow = visibleInSection[sectionType];
+            }
+            
+            section.style.display = shouldShow ? 'list-item' : 'none';
+        });
+    }
+    
+    function clearFilter() {
+        filterInput.value = '';
+        filterCommunities();
+        filterInput.focus();
+    }
+    
+    // Event listeners
+    filterInput.addEventListener('input', filterCommunities);
+    filterInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            clearFilter();
+        }
+    });
+    
+    if (clearButton) {
+        clearButton.addEventListener('click', clearFilter);
+    }
+    
+    // Focus the input when the dropdown becomes visible
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList' && mutation.target.classList.contains('communities_menu')) {
+                // Check if the filter input is now in the DOM and visible
+                const currentFilter = document.getElementById('community-filter');
+                if (currentFilter && currentFilter.offsetParent !== null) {
+                    setTimeout(() => currentFilter.focus(), 100);
+                }
+            }
+        });
+    });
+    
+    // Observe the communities menu for changes (HTMX loading)
+    const communitiesMenu = document.querySelector('.communities_menu');
+    if (communitiesMenu) {
+        observer.observe(communitiesMenu, { childList: true, subtree: true });
+    }
+}
+
+function setupVotingLongPress() {
+    const votingElements = document.querySelectorAll('.voting_buttons_new');
+
+    votingElements.forEach(element => {
+        let longPressTimer;
+        let isLongPress = false;
+
+        // Mouse events
+        element.addEventListener('mousedown', function(event) {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                openVotingDialog(element);
+            }, 2000); // 2 seconds
+        });
+
+        element.addEventListener('mouseup', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        element.addEventListener('mouseleave', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        // Touch events for mobile
+        element.addEventListener('touchstart', function(event) {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                openVotingDialog(element);
+            }, 2000); // 2 seconds
+        });
+
+        element.addEventListener('touchend', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        element.addEventListener('touchcancel', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        // Prevent normal click if it was a long press
+        element.addEventListener('click', function(event) {
+            if (isLongPress) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+    });
+}
+
+function openVotingDialog(votingElement) {
+    const dialog = document.getElementById('voting_dialog');
+    if (!dialog) return;
+
+    // Get the base URL from the voting element
+    const baseUrl = votingElement.getAttribute('data-base-url');
+    if (!baseUrl) {
+        console.error('No data-base-url found on voting element');
+        return;
+    }
+
+    // Store the base URL and reference to original voting element on the dialog
+    dialog.dataset.currentBaseUrl = baseUrl;
+    dialog.originalVotingElement = votingElement;
+
+    // Get position of triggering element
+    const rect = votingElement.getBoundingClientRect();
+
+    // Show the dialog first to get its dimensions
+    dialog.showModal();
+
+    // Now get the dialog dimensions and position it
+    const dialogRect = dialog.getBoundingClientRect();
+
+    // Calculate position - center dialog over the voting element
+    const left = rect.left + (rect.width / 2) - (dialogRect.width / 2);
+    const top = rect.top + (rect.height / 2) - (dialogRect.height / 2);
+
+    // Keep dialog within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const finalLeft = Math.max(10, Math.min(left, viewportWidth - dialogRect.width - 10));
+    const finalTop = Math.max(10, Math.min(top, viewportHeight - dialogRect.height - 10));
+
+    // Apply positioning
+    dialog.style.position = 'fixed';
+    dialog.style.left = finalLeft + 'px';
+    dialog.style.top = finalTop + 'px';
+    dialog.style.margin = '0';
+}
+
+function setupVotingDialogHandlers() {
+    const dialog = document.getElementById('voting_dialog');
+    if (!dialog || dialog.dataset.handlersAttached) return;
+
+    // Mark that handlers are attached to prevent duplicates
+    dialog.dataset.handlersAttached = 'true';
+
+    // Close button functionality
+    const closeButton = dialog.querySelector('#voting_dialog_close');
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            dialog.close();
+        });
+    }
+
+    // Voting button event handlers using HTMX JS API
+    const votingButtons = [
+        { id: '#voting_dialog_upvote_public', path: '/upvote/public' },
+        { id: '#voting_dialog_upvote_private', path: '/upvote/private' },
+        { id: '#voting_dialog_downvote_private', path: '/downvote/private' },
+        { id: '#voting_dialog_downvote_public', path: '/downvote/public' }
+    ];
+
+    votingButtons.forEach(buttonConfig => {
+        const button = dialog.querySelector(buttonConfig.id);
+        if (button) {
+            button.addEventListener('click', function() {
+                const baseUrl = dialog.dataset.currentBaseUrl;
+                const originalVotingElement = dialog.originalVotingElement;
+
+                if (!baseUrl) {
+                    console.error('No base URL available for voting');
+                    return;
+                }
+
+                if (!originalVotingElement) {
+                    console.error('No original voting element available for swap');
+                    return;
+                }
+
+                const url = baseUrl + buttonConfig.path;
+                console.log('Making HTMX request to:', url);
+
+                // Use HTMX JavaScript API to make the request
+                htmx.ajax('POST', url, {
+                    source: button,
+                    target: originalVotingElement,
+                    swap: 'innerHTML',
+                    headers: {
+                        'HX-Request': 'true'
+                    }
+                }).then(() => {
+                    console.log('Vote request completed');
+                    dialog.close();
+                }).catch((error) => {
+                    console.error('Vote request failed:', error);
+                    dialog.close();
+                });
+            });
+        }
+    });
+
+    // Close on backdrop click
+    dialog.addEventListener('click', function(event) {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+}
+
+function setupPopupTooltips() {
+    // Find all elements with a title, add the necessary bootstrap attributes
+    document.querySelectorAll('[title]').forEach(el => {
+      if (!el.hasAttribute('data-bs-toggle')) {     // don't mess with dropdowns that use data-bs-toggle
+        el.setAttribute('data-bs-toggle', 'tooltip');
+        el.setAttribute('data-bs-placement', 'top');
+      }
+    });
+
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(el =>
+      new bootstrap.Tooltip(el, {
+          delay: { show: 750, hide: 200 }
+      })
+    );
 }

@@ -76,7 +76,7 @@
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
                     {% if current_user.is_authenticated -%}
                         <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                            hx-target="#reply_to_{{ post_reply.id }}"
                            hx-swap="innerHTML focus-scroll:true"
                            rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
@@ -88,14 +88,14 @@
                 {% endif -%}
             {% endif -%}
         </div>
-        <div class="voting_buttons_new">
+        <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
             {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
         </div>
         <div class="hide_button">
             {% if collapsed -%}
-                <a href='#' class=""><span class="fe fe-expand"></span></a>
+                <a href='#' class="" title="{{ _('Un-collapse') }}"><span class="fe fe-expand"></span></a>
             {% else -%}
-                <a href='#' class=""><span class="fe fe-collapse"></span></a>
+                <a href='#' class="" title="{{ _('Collapse') }}"><span class="fe fe-collapse"></span></a>
             {% endif -%}
         </div>
         <div class="notify_toggle pull-right">

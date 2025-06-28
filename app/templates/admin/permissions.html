@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% set active_child = 'admin_permissions' %}
 
@@ -20,6 +20,7 @@
                    <th> </th>
                    <th class="text-center">{{ _('Staff') }}</th>
                    <th class="text-center">{{ _('Admin') }}</th>
+                   <th class="text-center">{{ _('User ID #1') }}</th>
                 </tr>
                 {% for permission in permissions -%}
                 <tr>
@@ -30,9 +31,13 @@
                     <td class="text-center">
                         <input type="checkbox" name="role_4_{{ permission[0] }}" {{ 'checked' if role_access(permission[0], 4) else '' }}>
                     </td>
+                    <td class="text-center">
+                        <input type="checkbox" name="user_1" checked disabled>
+                    </td>
                 </tr>
                 {% endfor -%}
             </table>
+            {{ form.csrf_token() }}
             <input type="submit" class="btn btn-primary" value="{{ _('Save') }}">
         </form>
     </div>

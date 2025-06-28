@@ -1,5 +1,5 @@
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
-from flask_login import login_required, current_user
+from flask import request, flash, json, url_for, current_app, redirect, g, abort, make_response
+from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import desc, or_, and_, text
 
@@ -9,7 +9,7 @@ from app.chat.util import send_message
 from app.constants import NOTIF_REPORT, SRC_WEB
 from app.models import Site, User, Report, ChatMessage, Notification, Conversation, conversation_member, CommunityBan, ModLog
 from app.user.forms import ReportUserForm
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
+from app.utils import render_template, login_required, joined_communities, menu_topics, menu_instance_feeds, menu_my_feeds, \
     menu_subscribed_feeds
 from app.chat import bp
 from app.shared.site import block_remote_instance
@@ -22,7 +22,7 @@ def chat_home(conversation_id=None):
     form = AddReply()
     if form.validate_on_submit():
         send_message(form.message.data, conversation_id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor=f'message'))
+        return redirect(url_for('chat.chat_home', conversation_id=conversation_id, _anchor='message'))
     else:
         conversations = Conversation.query.join(conversation_member,
                                                 conversation_member.c.conversation_id == Conversation.id). \
@@ -79,7 +79,7 @@ def new_message(to):
         db.session.add(conversation)
         db.session.commit()
         send_message(form.message.data, conversation.id)
-        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor=f'message'))
+        return redirect(url_for('chat.chat_home', conversation_id=conversation.id, _anchor='message'))
     else:
         return render_template('chat/new_message.html', form=form, title=_('New message to "%(recipient_name)s"', recipient_name=recipient.link()),
                                recipient=recipient,
@@ -129,7 +129,7 @@ def chat_options(conversation_id):
                             )
 
 
-@bp.route('/chat/<int:conversation_id>/delete', methods=['GET', 'POST'])
+@bp.route('/chat/<int:conversation_id>/delete', methods=['POST'])
 @login_required
 def chat_delete(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
@@ -141,11 +141,23 @@ def chat_delete(conversation_id):
     return redirect(url_for('chat.chat_home'))
 
 
-@bp.route('/chat/<int:instance_id>/block_instance', methods=['GET', 'POST'])
+@bp.route('/chat/<int:instance_id>/block_instance', methods=['POST'])
 @login_required
 def block_instance(instance_id):
     block_remote_instance(instance_id, SRC_WEB)
     flash(_('Instance blocked.'))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/chat/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("main.index")
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('chat.chat_home'))
 
 
@@ -163,7 +175,7 @@ def chat_report(conversation_id):
 
             # Notify site admin
             already_notified = set()
-            targets_data = {'suspect_conversation_id':conversation.id,'reporter_id':current_user.id}
+            targets_data = {'gen':'0', 'suspect_conversation_id':conversation.id,'reporter_id':current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported conversation with user', url='/admin/reports', user_id=admin.id,

@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname %}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}

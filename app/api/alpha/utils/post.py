@@ -1,6 +1,6 @@
 from app import db
 from app.api.alpha.views import post_view, post_report_view
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.constants import *
 from app.models import Post, PostVote, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
@@ -15,10 +15,17 @@ from sqlalchemy import desc, text
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     type = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
-    page = int(data['page_cursor']) if data and 'page_cursor' in data else 1
+    if data and 'page_cursor' in data:
+        page = int(data['page_cursor'])
+    elif data and 'page' in data:
+        page = int(data['page'])
+    else:
+        page = 1
     limit = int(data['limit']) if data and 'limit' in data else 50
     liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
     liked_only = True if liked_only == 'true' else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
+    saved_only = True if saved_only == 'true' else False
 
     query = data['q'] if data and 'q' in data else ''
 
@@ -91,6 +98,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if user_id and liked_only:
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
+    elif user_id and saved_only:
+        bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        posts = posts.filter(Post.id.in_(bookmarked_post_ids))
     elif user_id and user.hide_read_posts:
         u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.not_in(u_rp_ids))
@@ -147,9 +157,11 @@ def get_post(auth, data):
 def post_post_like(auth, data):
     required(['post_id', 'score'], data)
     integer_expected(['post_id', 'score'], data)
+    boolean_expected(['private'], data)
 
     post_id = data['post_id']
     score = data['score']
+    private = data['private'] if 'private' in data else False
     if score == 1:
         direction = 'upvote'
     elif score == -1:
@@ -158,7 +170,7 @@ def post_post_like(auth, data):
         score = 0
         direction = 'reversal'
 
-    user_id = vote_for_post(post_id, direction, SRC_API, auth)
+    user_id = vote_for_post(post_id, direction, not private, SRC_API, auth)
     post_json = post_view(post=post_id, variant=4, user_id=user_id, my_vote=score)
     return post_json
 
@@ -326,3 +338,49 @@ def post_post_remove(auth, data):
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
+
+
+def post_post_mark_as_read(auth, data):
+    required(['read'], data)
+    integer_expected(['post_id'], data)
+    array_of_integers_expected(['post_ids'], data)
+    boolean_expected(['read'], data)
+
+    if not 'post_id' in data and not 'post_ids' in data:
+      raise Exception('post_id or post_ids required')
+
+    user_id = authorise_api_user(auth)
+
+    if 'post_id' in data:
+        post = Post.query.filter_by(id=data['post_id']).one()
+        if data['read'] == True:
+            # no compound primary key on user_id and read_post_id ??
+            existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                          {"user_id": user_id, "post_id": post.id}).scalar()
+            if not existing:
+                db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                                   {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
+                db.session.commit()
+        else:
+            db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                               {"user_id": user_id, "post_id": post.id})
+            db.session.commit()
+    elif 'post_ids' in data:
+        posts = Post.query.filter(Post.id.in_(data['post_ids']))
+        if posts.count() == 0:
+            raise Exception('No posts from post_ids array found')
+        if data['read'] == True:
+            for post in posts:
+                existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                              {"user_id": user_id, "post_id": post.id}).scalar()
+                if not existing:
+                    db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                                       {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
+            db.session.commit()
+        else:
+            for post in posts:
+                db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                                   {"user_id": user_id, "post_id": post.id})
+            db.session.commit()
+
+    return {"success": True}

@@ -167,7 +167,7 @@ def move_community_images_to_here(community_id):
                 if post.image.source_url.startswith('app/static/media'):
                     if os.path.isfile(post.image.source_url):
                         content_type = guess_mime_type(post.image.source_url)
-                        new_path = post.image.source_url.replace('app/static/media/', f"")
+                        new_path = post.image.source_url.replace('app/static/media/', "")
                         s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
                         os.unlink(post.image.source_url)
                         post.image.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"

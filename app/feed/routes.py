@@ -3,14 +3,14 @@ from datetime import timedelta
 from random import randint
 from typing import List
 from flask import g, current_app, request, redirect, url_for, flash, abort, Markup
-from flask_login import current_user, login_required
+from flask_login import current_user
 from flask_babel import _
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_PENDING, SUBSCRIPTION_NONMEMBER
 from app.feed import  bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
 from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_communities_for_edit, \
@@ -24,9 +24,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
-    communities_banned_from, reported_posts, user_notes
+    communities_banned_from, reported_posts, user_notes, login_required
 from collections import namedtuple
-from sqlalchemy import desc, or_, text
 from slugify import slugify
 
 
@@ -48,7 +47,9 @@ def feed_new():
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/f/'):
             form.url.data = form.url.data[3:]
-        form.url.data = slugify(form.url.data.strip(), separator='_').lower()
+        form.url.data = slugify(form.url.data.strip().split('/')[0], separator='_').lower()
+        if not form.public.data:
+            form.url.data = slugify(form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
         private_key, public_key = RsaKeys.generate_keypair()
         feed = Feed(user_id=current_user.id, title=form.title.data, name=form.url.data, machine_name=form.url.data,
                     description=piefed_markdown_to_lemmy_markdown(form.description.data),
@@ -151,6 +152,8 @@ def feed_add_remote():
 @bp.route('/feed/<int:feed_id>/edit', methods=['GET','POST'])
 @login_required
 def feed_edit(feed_id: int):
+    url_changed = False
+    old_url = None
     if current_user.banned:
         return show_ban_message()
     # load the feed
@@ -169,10 +172,15 @@ def feed_edit(feed_id: int):
         edit_feed_form.url.render_kw = {'disabled': True}
     
     if edit_feed_form.validate_on_submit():
-        edit_feed_form.url.data = slugify(edit_feed_form.url.data, separator='_').lower()
+        if edit_feed_form.url.data:
+            edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip().split('/')[0], separator='_').lower()
+            if not edit_feed_form.public.data:
+                edit_feed_form.url.data = slugify(edit_feed_form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
+            old_url = feed_to_edit.name
+            url_changed = feed_to_edit.name != edit_feed_form.url.data
+            feed_to_edit.name = edit_feed_form.url.data
+            feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.title = edit_feed_form.title.data
-        feed_to_edit.name = edit_feed_form.url.data
-        feed_to_edit.machine_name = edit_feed_form.url.data
         feed_to_edit.description = piefed_markdown_to_lemmy_markdown(edit_feed_form.description.data)
         feed_to_edit.description_html = markdown_to_html(edit_feed_form.description.data)
         feed_to_edit.show_posts_in_children = edit_feed_form.show_child_posts.data
@@ -196,6 +204,11 @@ def feed_edit(feed_id: int):
             feed_to_edit.nsfw = edit_feed_form.nsfw.data
         if g.site.enable_nsfl:
             feed_to_edit.nsfl = edit_feed_form.nsfl.data
+        # unsubscribe every feed member except owner when moving from public to private
+        if feed_to_edit.public and not edit_feed_form.public.data:
+            db.session.query(FeedMember).filter(FeedMember.is_owner == False).delete()
+            db.session.query(FeedJoinRequest).filter_by(user_id=current_user.id, feed_id=feed_to_edit.id).delete()
+            feed_to_edit.subscriptions_count = db.session.query(FeedMember).filter(FeedMember.is_owner == False).count()
         feed_to_edit.public = edit_feed_form.public.data
         if current_user.is_admin():
             feed_to_edit.is_instance_feed = edit_feed_form.is_instance_feed.data
@@ -216,7 +229,14 @@ def feed_edit(feed_id: int):
             _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
 
         flash(_('Settings saved.'))
-        return redirect(referrer())
+        if url_changed and old_url is not None:
+            if referrer().endswith(old_url):
+                return redirect('/f/' + feed_to_edit.name)
+            else:
+                return redirect(referrer())
+        else:
+            return redirect(referrer())
+
 
     # add the current data to the form
     edit_feed_form.title.data = feed_to_edit.title
@@ -239,7 +259,7 @@ def feed_edit(feed_id: int):
     return render_template('feed/feed_edit.html', form=edit_feed_form, )
 
 
-@bp.route('/feed/<int:feed_id>/delete', methods=['GET','POST'])
+@bp.route('/feed/<int:feed_id>/delete', methods=['POST'])
 @login_required
 def feed_delete(feed_id: int):
     # get the user_id
@@ -263,9 +283,7 @@ def feed_delete(feed_id: int):
             announce_feed_delete_to_subscribers.delay(user_id, feed.id)
 
     # strip out any feedmembers before deleting
-    feed_members = FeedMember.query.filter_by(feed_id=feed.id)
-    for fm in feed_members.all():
-        db.session.delete(fm)
+    db.session.query(FeedMember).filter(FeedMember.feed_id == feed.id).delete()
 
     # delete the feed
     if feed.num_communities > 0:
@@ -309,7 +327,10 @@ def feed_copy(feed_id: int):
     if copy_feed_form.validate_on_submit():
         if copy_feed_form.url.data.strip().lower().startswith('/f/'):
             copy_feed_form.url.data = copy_feed_form.url.data[3:]
-        copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower()
+        if copy_feed_form.public.data:
+            copy_feed_form.url.data = slugify(copy_feed_form.url.data, separator='_').lower()
+        else:
+            copy_feed_form.url.data = slugify(copy_feed_form.url.data.strip(), separator='_').lower() + '/' + current_user.user_name.lower()
         private_key, public_key = RsaKeys.generate_keypair()
         feed = Feed(user_id=current_user.id, title=copy_feed_form.title.data, name=copy_feed_form.url.data, machine_name=copy_feed_form.url.data, 
                     description=piefed_markdown_to_lemmy_markdown(copy_feed_form.description.data),
@@ -495,7 +516,7 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
         do_subscribe(actor, user_id, joined_via_feed=True)
 
 
-@bp.route('/feed/remove_community', methods=['GET'])
+@bp.route('/feed/remove_community', methods=['POST'])
 @login_required
 def feed_remove_community():
     # this takes a user_id, new_feed_id (0), current_feed_id,
@@ -556,7 +577,6 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
             proceed = True
             # Undo the Follow
             if not community.is_local():    # this is a remote community, so activitypub is needed
-                success = True
                 if not community.instance.gone_forever:
                     follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                     if community.instance.domain == 'a.gup.pe':
@@ -803,7 +823,7 @@ def do_feed_subscribe(actor, user_id):
         feed = Feed.query.filter_by(name=actor, ap_id=None).first()
     
     if feed is not None:
-        if feed_membership(user, feed) != SUBSCRIPTION_MEMBER and feed_membership(user, feed) != SUBSCRIPTION_PENDING:
+        if feed_membership(user, feed) == SUBSCRIPTION_NONMEMBER:
             success = True
 
             # for local feeds, joining is instant
@@ -813,15 +833,17 @@ def do_feed_subscribe(actor, user_id):
             db.session.commit()
 
             # also subscribe the user to the feeditem communities
-            from app.community.routes import do_subscribe
-            feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
-            for fi in feed_items:
-                community = Community.query.get(fi.community_id)
-                actor = community.ap_id if community.ap_id else community.name
-                if current_app.debug:
-                    do_subscribe(actor, user.id, joined_via_feed=True)
-                else:
-                    do_subscribe.delay(actor, user.id, joined_via_feed=True)
+            # if they have feed_auto_follow turned on
+            if user.feed_auto_follow:
+                from app.community.routes import do_subscribe
+                feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                for fi in feed_items:
+                    community = Community.query.get(fi.community_id)
+                    actor = community.ap_id if community.ap_id else community.name
+                    if current_app.debug:
+                        do_subscribe(actor, user.id, joined_via_feed=True)
+                    else:
+                        do_subscribe.delay(actor, user.id, joined_via_feed=True)
  
             # feed is remote
             if remote:
@@ -843,13 +865,15 @@ def do_feed_subscribe(actor, user_id):
                     res = get_request(feed.ap_following_url)
                     following_collection = res.json()
 
-                    # for each of those subscribe the user to the communities
+                    # for each of those add the communities
+                    # subscribe the user if they have feed_auto_follow turned on
                     for fci in following_collection['items']:
                         community_ap_id = fci 
                         community = find_actor_or_create(community_ap_id, community_only=True)
                         if community and isinstance(community, Community):
                             actor = community.ap_id if community.ap_id else community.name
-                            do_subscribe(actor, user.id, joined_via_feed=True)
+                            if user.feed_auto_follow:
+                                do_subscribe(actor, user.id, joined_via_feed=True)
                             # also make a feeditem in the local db
                             feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
                             db.session.add(feed_item)
@@ -868,7 +892,7 @@ def do_feed_subscribe(actor, user_id):
         abort(404)
 
 
-@bp.route('/<actor>/unsubscribe', methods=['GET'])
+@bp.route('/feed/<actor>/unsubscribe', methods=['GET'])
 @login_required
 def feed_unsubscribe(actor):
     feed = actor_to_feed(actor)
@@ -880,7 +904,6 @@ def feed_unsubscribe(actor):
                 proceed = True
                 # Undo the Follow
                 if '@' in actor:    # this is a remote feed, so activitypub is needed
-                    success = True
                     if not feed.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                         if feed.instance.domain == 'a.gup.pe':

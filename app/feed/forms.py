@@ -11,6 +11,8 @@ from wtforms.fields.choices import SelectMultipleField
 from app.models import Feed, utcnow, Community, User
 from flask_babel import _, lazy_gettext as _l
 
+from app.utils import apply_feed_url_rules
+
 
 class AddCopyFeedForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired()])
@@ -34,18 +36,7 @@ class AddCopyFeedForm(FlaskForm):
             self.url.errors.append(_l('Url is required.'))
             return False
         else:
-            if '-' in self.url.data.strip():
-                self.url.errors.append(_l('- cannot be in Url. Use _ instead?'))
-                return False
-
-            # Allow alphanumeric characters and underscores (a-z, A-Z, 0-9, _)
-            if not re.match(r'^[a-zA-Z0-9_]+$', self.url.data):
-                self.url.errors.append(_l('Feed urls can only contain letters, numbers, and underscores.'))
-                return False
-
-            feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
-            if feed is not None:
-                self.url.errors.append(_l('A Feed with this url already exists.'))
+            if not apply_feed_url_rules(self):
                 return False
             community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
             if community is not None:
@@ -86,10 +77,13 @@ class EditFeedForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate():
             return False
-        feed = Feed.query.filter(Feed.name == self.url.data.strip().lower()).first()
-        if feed is not None and feed.id != self.feed_id:
-            self.url.errors.append(_l('Url is already used by another feed.'))
-            return False
+        if self.url.data is not None:   # when editing a feed with subscribers this field is disabled
+            if self.url.data.strip() == '':
+                self.url.errors.append(_l('This field is required.'))
+                return False
+            else:
+                if not apply_feed_url_rules(self):
+                    return False
         
         input_communities = self.communities.data.strip().split('\n')
         for community_ap_id in input_communities:

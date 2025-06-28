@@ -1,3 +1,4 @@
+{% set cs = csrf_token() -%}
 <!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
   <head>
@@ -12,6 +13,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
+        <meta name="csrf-token" content="{{ cs }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
             <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
@@ -95,7 +97,7 @@
     {% block schema_org %}
     {% endblock %}
   </head>
-  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ session.get('compact_level', '') }}">
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ request.cookies.get('compact_level', '') }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
     {% if 'fontSize' in request.cookies -%}
         <style>
             body, .form-control, .btn, .dropdown-item {
@@ -170,7 +172,8 @@
                                   <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
                                   <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
-                                  {% if current_user.is_authenticated -%}
+                                  <li><a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}" href="/scheduled_posts">{{ _('Scheduled posts') }}</a></li>
+                                          {% if current_user.is_authenticated -%}
                                     {% if current_user.stripe_subscription_id -%}
                                         <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
                                     {% endif -%}
@@ -235,10 +238,34 @@
             <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
             <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
             <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
-            <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
-            <p class="text-center"><a href="/privacy">Privacy policy</a></p>
+            <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
+            <p class="text-center"><a href="/privacy">{{ _('Privacy policy') }}</a></p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
+        <dialog id="voting_dialog">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">{{ _('Voting Options') }}</h5>
+                    <button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="voting_dialog_close"></button>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" id="voting_dialog_upvote_public">
+                        <i class="fe fe-arrow-up"></i> {{ _('Upvote Publicly') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="voting_dialog_upvote_private">
+                        <i class="fe fe-arrow-up"></i> {{ _('Upvote Privately') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="voting_dialog_downvote_private">
+                        <i class="fe fe-arrow-down"></i> {{ _('Downvote Privately') }}
+                    </button>
+                    <button type="button" class="btn btn-danger" id="voting_dialog_downvote_public">
+                        <i class="fe fe-arrow-down"></i> {{ _('Downvote Publicly') }}
+                    </button>
+                </div>
+                <p align="center" class="mt-3 mb-0 small">{{ _('Private votes do not federate<br>to other instances.') }}</p>
+                <p align="center" class="mt-3 mb-0 small">{% if current_user.vote_privately %}{{ _('Default mode: private.') }}{% else %}{{ _('Default mode: public.') }}{% endif %}</p>
+            </div>
+        </dialog>
     {% endblock -%}
 
     {% block scripts -%}
@@ -264,5 +291,10 @@
     {% block end_scripts -%}
 
     {% endblock -%}
+    {% if g.site.additional_js -%}
+        <script nonce="{{ nonce }}">
+            {{ g.site.additional_js | safe }}
+        </script>
+    {% endif -%}
   </body>
 </html>

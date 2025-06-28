@@ -3,7 +3,7 @@ from random import randint
 
 from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
-from flask_login import login_user, logout_user, current_user, login_required
+from flask_login import current_user
 from flask_babel import _
 
 from app import db, constants, cache
@@ -13,7 +13,7 @@ from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
 from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
     user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url, \
-    blocked_communities, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds
+    blocked_communities, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, login_required
 from sqlalchemy import desc, or_
 
 
@@ -163,7 +163,7 @@ def tags_blocked_list():
                            next_url=next_url, prev_url=prev_url, search=search)
 
 
-@bp.route('/tag/<tag>/ban')
+@bp.route('/tag/<tag>/ban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def tag_ban(tag):
@@ -176,7 +176,7 @@ def tag_ban(tag):
         return redirect(url_for('tag.tags'))
 
 
-@bp.route('/tag/<tag>/unban')
+@bp.route('/tag/<tag>/unban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def tag_unban(tag):

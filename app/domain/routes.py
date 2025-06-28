@@ -189,7 +189,7 @@ def domains_blocked_list():
                            next_url=next_url, prev_url=prev_url, search=search)
 
 
-@bp.route('/d/<int:domain_id>/block')
+@bp.route('/d/<int:domain_id>/block', methods=['POST'])
 @login_required
 def domain_block(domain_id):
     domain = Domain.query.get_or_404(domain_id)
@@ -200,10 +200,17 @@ def domain_block(domain_id):
         db.session.commit()
     cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('%(name)s blocked.', name=domain.name))
+
+    if request.headers.get("HX-Request"):
+        resp = make_response()
+        resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
+        
+        return resp
+
     return redirect(url_for('domain.show_domain', domain_id=domain.id))
 
 
-@bp.route('/d/<int:domain_id>/unblock')
+@bp.route('/d/<int:domain_id>/unblock', methods=['POST'])
 @login_required
 def domain_unblock(domain_id):
     domain = Domain.query.get_or_404(domain_id)
@@ -213,10 +220,22 @@ def domain_unblock(domain_id):
         db.session.commit()
     cache.delete_memoized(blocked_domains, current_user.id)
     flash(_('%(name)s un-blocked.', name=domain.name))
+
+    if request.headers.get("HX-Request"):
+        resp = make_response()
+        curr_url = request.headers.get("HX-Current-Url")
+
+        if "/d/" in curr_url:
+            resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
+        else:
+            resp.headers["HX-Redirect"] = curr_url
+        
+        return resp
+
     return redirect(url_for('domain.show_domain', domain_id=domain.id))
 
 
-@bp.route('/d/<int:domain_id>/ban')
+@bp.route('/d/<int:domain_id>/ban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def domain_ban(domain_id):
@@ -229,7 +248,7 @@ def domain_ban(domain_id):
         return redirect(url_for('domain.domains'))
 
 
-@bp.route('/d/<int:domain_id>/unban')
+@bp.route('/d/<int:domain_id>/unban', methods=['POST'])
 @login_required
 @permission_required('manage users')
 def domain_unban(domain_id):

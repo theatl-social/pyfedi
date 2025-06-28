@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
-{% endif -%} -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
@@ -10,6 +10,7 @@
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         <form method="post">
+            {{ form.csrf_token() }}
             <input type="submit" class="btn btn-primary" value="{{ _('Delete %(count)s posts', count=len(posts)) }}" style="float: right;">
             <h1>{{ _('Posts containing blocked images') }}</h1>
             <table class="communities_table table table-striped table-hover w-100">

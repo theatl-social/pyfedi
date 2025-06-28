@@ -17,8 +17,8 @@ from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTIO
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, session, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
-from flask_login import current_user, login_required
+from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
+from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
@@ -32,9 +32,10 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes
+    moderating_communities_ids, user_notes, login_required
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
+from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -798,8 +799,8 @@ def test_email():
 @bp.route('/test_redis')
 @debug_mode_only
 def test_redis():
-    redis = get_redis_connection()
-    if redis and redis.memory_stats():
+    from app import redis_client
+    if redis_client and redis_client.memory_stats():
         return 'Redis connection is ok'
     else:
         return 'Redis error'
@@ -809,8 +810,8 @@ def test_redis():
 @debug_mode_only
 def test_s3():
     import boto3
-    session = boto3.session.Session()
-    s3 = session.client(
+    boto3_session = boto3.session.Session()
+    s3 = boto3_session.client(
         service_name='s3',
         region_name=current_app.config['S3_REGION'],
         endpoint_url=current_app.config['S3_ENDPOINT'],
@@ -830,6 +831,25 @@ def test_hashing():
         return 'Ok'
     else:
         return 'Error'
+
+
+@bp.route('/test_ldap')
+@debug_mode_only
+def test_ldap():
+    try:
+        # Test LDAP connection
+        connection_result = test_ldap_connection()
+        if not connection_result:
+            return 'LDAP test failed: Could not connect to LDAP server. Check configuration.'
+        
+        # Test user sync with dummy data using random password
+        from random import randint
+        random_password = f'testpass{randint(1000, 9999)}'
+        sync_result = sync_user_to_ldap('testuser', 'test@example.com', random_password)
+        
+        return f'LDAP test successful. Connection: {connection_result}, Sync: {sync_result}'
+    except Exception as e:
+        return f'LDAP test failed: {str(e)}'
 
 
 @bp.route('/find_voters')

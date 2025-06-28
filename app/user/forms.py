@@ -55,8 +55,9 @@ class SettingsForm(FlaskForm):
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
+    show_subscribed_communities = BooleanField(_l("Show communities I've joined on my profile"))
     manually_approves_followers = BooleanField(_l('Manually approve followers'))
-    vote_privately = BooleanField(_l('Vote privately'))
+    federate_votes = BooleanField(_l('Federate votes'))
     feed_auto_follow = BooleanField(_l('Enable Automatic Follow of Feed Communities.'), default=True)
     feed_auto_leave = BooleanField(_l('Enable Automatic Leave of Feed Communities.'), default=False)
     sorts = [('hot', _l('Hot')),
@@ -112,7 +113,7 @@ class DeleteAccountForm(FlaskForm):
 
 
 class BanUserForm(FlaskForm):
-    reason = TextAreaField(_l('Reason'))
+    reason = StringField(_l('Reason'), render_kw={'list': 'reasons'})
     ip_address = BooleanField(_l('Ban IP address'))
     purge = BooleanField(_l('Delete all content by this account'))
     submit = SubmitField(_l('Ban'), render_kw={'autofocus': True})

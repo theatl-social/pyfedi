@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% set active_child = 'read_posts' %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
@@ -51,7 +51,7 @@
                 <div class="card-body">
                     <div class="row">
                         <div class="col-6">
-                            <a href="{{ url_for('user.user_read_posts_delete') }}" class="btn btn-primary" style="float: right;">{{ _('Delete history') }}</a>
+                            <a href='#' data-url="{{ url_for('user.user_read_posts_delete') }}" class="btn btn-primary send_post" style="float: right;">{{ _('Delete history') }}</a>
                         </div>
                         <div class="col-6">
 

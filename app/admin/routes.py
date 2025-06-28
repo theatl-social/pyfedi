@@ -7,7 +7,7 @@ import json as python_json
 import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
-from flask_login import login_required, current_user
+from flask_login import current_user
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
@@ -22,6 +22,7 @@ from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
+from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
@@ -35,7 +36,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
-    download_defeds, instance_banned, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, referrer, \
+    download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
 from app.admin import bp
 
@@ -44,7 +45,10 @@ from app.admin import bp
 @login_required
 def admin_home():
     load1, load5, load15 = os.getloadavg()
-    num_cores = os.cpu_count()
+    if current_app.config["NUM_CPU"] and current_app.config["NUM_CPU"] != 0:
+        num_cores = current_app.config["NUM_CPU"]
+    else:
+        num_cores = os.cpu_count()
     path = os.getcwd()
     usage = shutil.disk_usage(path)
 
@@ -187,6 +191,7 @@ def admin_misc():
         site.updated = utcnow()
         site.default_theme = form.default_theme.data
         site.additional_css = form.additional_css.data
+        site.additional_js = form.additional_js.data
         site.default_filter = form.default_filter.data
         site.private_instance = form.private_instance.data
         site.language_id = form.language_id.data
@@ -224,6 +229,7 @@ def admin_misc():
         form.show_inoculation_block.data = site.show_inoculation_block
         form.default_theme.data = site.default_theme if site.default_theme is not None else ''
         form.additional_css.data = site.additional_css if site.additional_css is not None else ''
+        form.additional_js.data = site.additional_js if site.additional_js is not None else ''
         form.default_filter.data = site.default_filter if site.default_filter else 'popular'
         form.public_modlog.data = get_setting('public_modlog', False)
         form.email_verification.data = get_setting('email_verification', True)
@@ -232,7 +238,7 @@ def admin_misc():
         form.filter_selection.data = get_setting('filter_selection', True)
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
-        form.ban_check_servers.data = get_setting('ban_check_servers', 'piefed.social')
+        form.ban_check_servers.data = get_setting('ban_check_servers', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form)
 
 
@@ -1002,7 +1008,6 @@ def admin_community_edit(community_id):
         community.description = form.description.data
         community.description_html = markdown_to_html(form.description.data)
         community.rules = form.rules.data
-        community.rules_html = markdown_to_html(form.rules.data)
         community.nsfw = form.nsfw.data
         community.banned = form.banned.data
         community.local_only = form.local_only.data
@@ -1076,12 +1081,11 @@ def admin_community_edit(community_id):
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 
-@bp.route('/community/<int:community_id>/delete', methods=['GET'])
+@bp.route('/community/<int:community_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
-    
 
     community.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
     community.last_active = utcnow()
@@ -1179,7 +1183,7 @@ def admin_topic_edit(topic_id):
     return render_template('admin/edit_topic.html', title=_('Edit topic'), form=form, topic=topic)
 
 
-@bp.route('/topic/<int:topic_id>/delete', methods=['GET'])
+@bp.route('/topic/<int:topic_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_topic_delete(topic_id):
@@ -1319,7 +1323,7 @@ def admin_approve_registrations():
                           )
 
 
-@bp.route('/approve_registrations/<int:user_id>/approve', methods=['GET'])
+@bp.route('/approve_registrations/<int:user_id>/approve', methods=['POST'])
 @permission_required('approve registrations')
 @login_required
 def admin_approve_registrations_approve(user_id):
@@ -1451,10 +1455,13 @@ def admin_users_add():
     return render_template('admin/add_user.html', title=_('Add user'), form=form, user=user)
 
 
-@bp.route('/user/<int:user_id>/delete', methods=['GET'])
+@bp.route('/user/<int:user_id>/delete', methods=['POST'])
 @permission_required('administer all users')
 @login_required
 def admin_user_delete(user_id):
+    if user_id == 1:
+        flash(_('This user cannot be deleted.'))
+        return redirect(referrer())
     user = User.query.get_or_404(user_id)
 
     user.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.
@@ -1520,6 +1527,7 @@ def newsletter():
 @permission_required('change user roles')
 @login_required
 def admin_permissions():
+    form = FlaskForm()
     if request.method == 'POST':
         permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
         db.session.execute(text('DELETE FROM "role_permission"'))
@@ -1539,7 +1547,7 @@ def admin_permissions():
     permissions = db.session.execute(text('SELECT DISTINCT permission FROM "role_permission"')).fetchall()
 
     return render_template('admin/permissions.html', title=_('Role permissions'), roles=roles,
-                           permissions=permissions)
+                           form=form, permissions=permissions)
 
 
 @bp.route('/instances', methods=['GET', 'POST'])
@@ -1732,6 +1740,7 @@ def admin_blocked_image_add():
 @permission_required('administer all communities')
 @login_required
 def admin_blocked_image_purge_posts():
+    form = FlaskForm()
     if request.method == 'POST':
         post_ids = request.form.getlist('post_ids')
 
@@ -1743,10 +1752,10 @@ def admin_blocked_image_purge_posts():
 
     posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
     return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
-                           referrer=request.args.get('referrer'))
+                           form=form, referrer=request.args.get('referrer'))
 
 
-@bp.route('/blocked_image/<int:image_id>/delete', methods=['GET'])
+@bp.route('/blocked_image/<int:image_id>/delete', methods=['POST'])
 @permission_required('administer all communities')
 @login_required
 def admin_blocked_image_delete(image_id):
@@ -1806,12 +1815,11 @@ def admin_cms_page_edit(page_id):
     return render_template('admin/cms_page_edit.html', form=form, page=page, title=_('Edit page'))
 
 
-@bp.route('/pages/<int:page_id>/delete', methods=['GET'])
+@bp.route('/pages/<int:page_id>/delete', methods=['POST'])
 @permission_required('edit cms pages')
 @login_required
 def admin_cms_page_delete(page_id):
     page = CmsPage.query.get_or_404(page_id)
-
     db.session.delete(page)
     db.session.commit()
     flash(_('Page deleted.'))

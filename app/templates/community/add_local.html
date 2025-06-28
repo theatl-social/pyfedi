@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
 
 {% block app_content %}
@@ -21,6 +21,8 @@
                             {% endfor %}
                         </div>
                         {{ render_field(form.description) }}
+                        {{ render_field(form.posting_warning) }}
+                        <small class="field_hint">{{ _('This is shown above the field where people compose their content. Only use this if really necessary.') }}</small>
                         {{ render_field(form.icon_file) }}
                         <small class="field_hint">{{ _('Provide a square image that looks good when small. SVG is allowed.') }}</small>
                         {{ render_field(form.banner_file) }}

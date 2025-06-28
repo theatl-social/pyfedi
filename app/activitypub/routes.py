@@ -328,21 +328,18 @@ def user_profile(actor):
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor, User.alt_user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
 
     if user is not None:
-        main_user_name = True
-        if user.alt_user_name == actor:
-            main_user_name = False
         if request.method == 'HEAD':
             if is_activitypub_request():
                 resp = jsonify('')
@@ -354,18 +351,18 @@ def user_profile(actor):
             server = current_app.config['SERVER_NAME']
             actor_data = {  "@context": default_context(),
                             "type": "Person" if not user.bot else "Service",
-                            "id": user.public_url(main_user_name),
+                            "id": user.public_url(),
                             "preferredUsername": actor,
                             "name": user.title if user.title else user.user_name,
-                            "inbox": f"{user.public_url(main_user_name)}/inbox",
-                            "outbox": f"{user.public_url(main_user_name)}/outbox",
+                            "inbox": f"{user.public_url()}/inbox",
+                            "outbox": f"{user.public_url()}/outbox",
                             "discoverable": user.searchable,
                             "indexable": user.indexable,
                             "acceptPrivateMessages": user.accept_private_messages,
                             "manuallyApprovesFollowers": False if not user.ap_manually_approves_followers else user.ap_manually_approves_followers,
                             "publicKey": {
-                                "id": f"{user.public_url(main_user_name)}#main-key",
-                                "owner": user.public_url(main_user_name),
+                                "id": f"{user.public_url()}#main-key",
+                                "owner": user.public_url(),
                                 "publicKeyPem": user.public_key
                             },
                             "endpoints": {
@@ -374,11 +371,7 @@ def user_profile(actor):
                             "published": ap_datetime(user.created),
                         }
 
-            if not main_user_name:
-                actor_data['name'] = 'Anonymous'
-                actor_data['published'] = ap_datetime(user.created + timedelta(minutes=randint(-2592000, 0)))
-                actor_data['summary'] = '<p>This is an anonymous alternative account of another account. It has been generated automatically for a Piefed user who chose to keep their interactions private. They cannot reply to your messages using this account, but only upvote (like) or downvote (dislike). For more information about Piefed and this feature see <a href="https://piefed.social/post/205362">https://piefed.social/post/205362</a>.</p>'
-            if user.avatar_id is not None and main_user_name:
+            if user.avatar_id is not None:
                 avatar_image = user.avatar_image()
                 if avatar_image.startswith('http'):
                     actor_data["icon"] = {
@@ -390,7 +383,7 @@ def user_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{user.avatar_image()}"
                     }
-            if user.cover_id is not None and main_user_name:
+            if user.cover_id is not None:
                 cover_image = user.cover_image()
                 if cover_image.startswith('http'):
                     actor_data["image"] = {
@@ -402,10 +395,10 @@ def user_profile(actor):
                         "type": "Image",
                         "url": f"https://{current_app.config['SERVER_NAME']}{user.cover_image()}"
                     }
-            if user.about_html and main_user_name:
+            if user.about_html:
                 actor_data['summary'] = user.about_html
                 actor_data['source'] = {'content': user.about, 'mediaType': 'text/markdown'}
-            if user.matrix_user_id and main_user_name:
+            if user.matrix_user_id:
                 actor_data['matrixUserId'] = user.matrix_user_id
             if user.extra_fields.count() > 0:
                 actor_data['attachment'] = []
@@ -418,10 +411,7 @@ def user_profile(actor):
             resp.headers.set('Link', f'<https://{current_app.config["SERVER_NAME"]}/u/{actor}>; rel="alternate"; type="text/html"')
             return resp
         else:
-            if main_user_name:
-                return show_profile(user)
-            else:
-                return render_template('errors/alt_profile.html')
+            return show_profile(user)
     else:
         abort(404)
 
@@ -459,6 +449,7 @@ def community_profile(actor):
                 "type": "Group",
                 "id": f"https://{server}/c/{actor}",
                 "name": community.title,
+                "postingWarning": community.posting_warning,
                 "sensitive": True if community.nsfw or community.nsfl else False,
                 "preferredUsername": actor,
                 "inbox": f"https://{server}/c/{actor}/inbox",
@@ -532,6 +523,7 @@ def community_profile(actor):
 
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    from app import redis_client
     try:
         request_json = request.get_json(force=True)
     except werkzeug.exceptions.BadRequest as e:
@@ -562,7 +554,6 @@ def shared_inbox():
 
         id = object['id']
 
-    redis_client = get_redis_connection()
     if redis_client.exists(id):                 # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
         return '', 200
@@ -718,6 +709,7 @@ def replay_inbox_request(request_json):
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
+        from app import redis_client
         # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
         # For everything else, we have the user, and need to find the community/feed
         # Benefits of always using request_json['actor']:
@@ -740,10 +732,10 @@ def process_inbox_request(request_json, store_ap_json):
             if actor and isinstance(actor, User):
                 user = actor
                 # Update user's last_seen in a separate transaction to avoid deadlocks
-                with db.session.begin_nested():
+                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
                                      {"last_seen": utcnow(), "user_id": user.id})
-                db.session.commit()
+                    db.session.commit()
             elif actor and isinstance(actor, Community):                  # Process a few activities from NodeBB and a.gup.pe
                 if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
                     log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
@@ -781,12 +773,17 @@ def process_inbox_request(request_json, store_ap_json):
                 user_ap_id = request_json['object']['actor']
                 user = find_actor_or_create(user_ap_id)
                 if user and isinstance(user, User):
-                    user.last_seen = utcnow()
-                    user.instance.last_seen = utcnow()
-                    user.instance.dormant = False
-                    user.instance.gone_forever = False
-                    user.instance.failures = 0
-                    db.session.commit()
+                    if user.banned:
+                        log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                        return
+
+                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                        user.last_seen = utcnow()
+                        user.instance.last_seen = utcnow()
+                        user.instance.dormant = False
+                        user.instance.gone_forever = False
+                        user.instance.failures = 0
+                        db.session.commit()
                 else:
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
                     return
@@ -900,7 +897,7 @@ def process_inbox_request(request_json, store_ap_json):
                 join_request_parts = core_activity['object'].split('/')
                 try:
                     join_request = CommunityJoinRequest.query.filter_by(uuid=join_request_parts[-1]).first()
-                except Exception as e:  # old style join requests were just a number
+                except Exception:  # old style join requests were just a number
                     db.session.rollback()
                     join_request = CommunityJoinRequest.query.get(join_request_parts[-1])
                 if join_request:
@@ -908,6 +905,9 @@ def process_inbox_request(request_json, store_ap_json):
             elif core_activity['object']['type'] == 'Follow':
                 user_ap_id = core_activity['object']['actor']
                 user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                if user and user.banned:
+                    log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                    return
             if not user:
                 log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
                 return
@@ -1509,9 +1509,12 @@ def process_delete_request(request_json, store_ap_json):
 
 
 
-def announce_activity_to_followers(community, creator, activity):
+def announce_activity_to_followers(community: Community, creator: User, activity):
     # avoid announcing activity sent to local users unless it is also in a local community
     if not community.is_local():
+        return
+
+    if creator.banned:
         return
 
     # remove context from what will be inner object
@@ -1905,7 +1908,7 @@ def process_chat(user, store_ap_json, core_activity):
             db.session.commit()
 
             # Notify recipient
-            targets_data = {'conversation_id':existing_conversation.id,'message_id': new_message.id}
+            targets_data = {'gen':'0', 'conversation_id':existing_conversation.id,'message_id': new_message.id}
             notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
                                   url=f'/chat/{existing_conversation.id}#message_{new_message.id}', user_id=recipient.id,
                                   author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
@@ -1924,11 +1927,15 @@ def process_chat(user, store_ap_json, core_activity):
 
 # ---- Feeds ----
 
-@bp.route('/f/<actor>', methods=['GET'])
-def feed_profile(actor):
+@bp.route('/f/<actor>')
+@bp.route('/f/<actor>/<feed_owner>', methods=['GET'])
+def feed_profile(actor, feed_owner=None):
     """ Requests to this endpoint can be for a JSON representation of the feed, or an HTML rendering of it.
         The two types of requests are differentiated by the header """
     actor = actor.strip()
+    if feed_owner is not None:
+        feed_owner = feed_owner.strip()
+        actor = actor + '/' + feed_owner
     if '@' in actor:
         # don't provide activitypub info for remote communities
         if 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', ''):
@@ -2115,16 +2122,16 @@ def feed_followers(actor):
         abort(400)
     else:
         feed: Feed = Feed.query.filter_by(name=actor.lower(), ap_id=None).first()
-    if feed is not None:
-        result = {
-            "@context": default_context(),
-            "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
-            "type": "Collection",
-            "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
-            "items": []
-        }
-        resp = jsonify(result)
-        resp.content_type = 'application/activity+json'
-        return resp
-    else:
-        abort(404)
+        if feed is not None:
+            result = {
+                "@context": default_context(),
+                "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
+                "type": "Collection",
+                "totalItems": FeedMember.query.filter_by(feed_id=feed.id).count(),
+                "items": []
+            }
+            resp = jsonify(result)
+            resp.content_type = 'application/activity+json'
+            return resp
+        else:
+            abort(404)

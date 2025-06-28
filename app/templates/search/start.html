@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 
 {% block extra_css %}
@@ -18,7 +18,7 @@
                         <div class="card-title">{{ _('Search for...') }}</div>
                         <form action="" method="get" class="form" role="form">
                             <div class="sort_methods btn-group mt-0 mb-4" aria-label="{{ _('What to search for: ') }}">
-                                <input type="radio" name="search_for" class="btn-check" id="btncheck1" autocomplete="off" value="posts">
+                                <input type="radio" name="search_for" class="btn-check" id="btncheck1" autocomplete="off" value="posts" checked>
                                 <label class="btn btn-outline-primary" for="btncheck1">{{ _('Posts') }}</label>
 
                                 <input type="radio" name="search_for" class="btn-check" id="btncheck2" autocomplete="off" value="comments">

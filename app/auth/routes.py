@@ -14,6 +14,7 @@ from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm
 from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_user_application
 from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
+from app.ldap_utils import sync_user_to_ldap
 from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
@@ -75,6 +76,13 @@ def login():
         ip_address_info = ip2location(current_user.ip_address)
         current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
         db.session.commit()
+
+        try:
+            sync_user_to_ldap(user.user_name, user.email, form.password.data.strip())
+        except Exception as e:
+            # Log error but don't fail the profile update
+            current_app.logger.error(f"LDAP sync failed for user {user.user_name}: {e}")
+
         [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in  limiter.current_limits]
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
@@ -151,7 +159,7 @@ def register():
                     flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
                 font = ''
                 if 'Windows' in request.user_agent.string:
-                    font = 'inter'  # the default font on Windows doesn't look great so defaut to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
+                    font = 'inter'  # the default font on Windows doesn't look great so default to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
                             verification_token=verification_token, instance_id=1, ip_address=ip_address(),
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
@@ -171,7 +179,7 @@ def register():
                 if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
                     application = UserRegistration(user_id=user.id, answer=form.question.data)
                     db.session.add(application)
-                    targets_data = {'application_id':application.id,'user_id':user.id}
+                    targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
                     for admin in Site.admins():
                         notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
                                           author_id=user.id, notif_type=NOTIF_REGISTRATION,
@@ -181,7 +189,7 @@ def register():
                         db.session.add(notify)
                         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
                     db.session.commit()
-                    if get_setting('ban_check_servers', 'piefed.social'):
+                    if get_setting('ban_check_servers', ''):
                         task_selector('check_application', application_id=application.id)
                     return redirect(url_for('auth.please_wait'))
                 else:
@@ -190,12 +198,18 @@ def register():
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:
                             # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
-                            targets_data = {'suspect_user_id': user.id, 'reporter_id': 1}
+                            targets_data = {'gen': '0', 'suspect_user_id': user.id, 'reporter_id': 1}
                             notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
                                          url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
                                          subtype='user_reported', targets=targets_data)
                     if user.verified:
                         finalize_user_setup(user)
+                        try:
+                            sync_user_to_ldap(current_user.user_name, current_user.email,
+                                              form.password.data.strip())
+                        except Exception as e:
+                            # Log error but don't fail the profile update
+                            current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
                         login_user(user, remember=True)
                         return redirect(url_for('auth.trump_musk'))
                     else:
@@ -321,7 +335,7 @@ def google_login():
 def google_authorize():
     try:
         token = oauth.google.authorize_access_token()
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Google OAuth error")
         flash(_('Login failed due to a problem with Google.'), 'error')
         return redirect(url_for('auth.login'))
@@ -353,8 +367,9 @@ def google_authorize():
                         referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
             user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
             db.session.add(user)
+            targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
             db.session.commit()
-            if get_setting('ban_check_servers', 'piefed.social'):
+            if get_setting('ban_check_servers', ''):
                 task_selector('check_application', application_id=application.id)
 
             create_user_application(user, "Signed in with Google")

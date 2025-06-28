@@ -158,6 +158,7 @@
                                 {% endif -%}
                             {% endfor -%}
                             </ul>
+                            {{ form.csrf_token() }}
                             <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}">
                         </form>
                     {% endif -%}
@@ -186,7 +187,10 @@
     {% endif -%}
 
     <div class="post_utilities_bar">
-        <div class="voting_buttons_new" aria-live="assertive">
+        <div class="post_reply_count">
+          <a href="#post_replies"><span class="fe fe-reply"></span> {{ post.reply_count }}</a>
+        </div>
+        <div class="voting_buttons_new" aria-live="assertive" data-base-url="/post/{{ post.id}}">
             {% include "post/_post_voting_buttons.html" -%}
         </div>
         {% if post.cross_posts -%}

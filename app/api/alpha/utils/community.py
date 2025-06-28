@@ -18,23 +18,25 @@ from sqlalchemy import desc, or_
 
 
 def get_community_list(auth, data):
-    type = data['type_'] if data and 'type_' in data else "All"
+    type_ = data['type_'] if data and 'type_' in data else "All"
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
+    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else 'false'
+    show_nsfw = True if show_nsfw == 'true' else False
+    show_nsfl = show_nsfw
 
-    user_id = authorise_api_user(auth) if auth else None
+    user = authorise_api_user(auth, return_type='model') if auth else None
+    user_id = user.id if user else None
 
     query = data['q'] if data and 'q' in data else ''
     if user_id and '@' in query and '.' in query and query.startswith('!'):
         search_for_community(query)
         query = query[1:]
 
-    user_id = authorise_api_user(auth) if auth else None
-
-    if type == 'Subscribed':
+    if user_id and type_ == 'Subscribed':
         communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
-    elif type == 'Local':
+    elif type_ == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
     else:
         communities = Community.query.filter_by(banned=False)
@@ -49,12 +51,23 @@ def get_community_list(auth, data):
         blocked_community_ids = blocked_communities(user_id)
         if blocked_community_ids:
             communities = communities.filter(Community.id.not_in(blocked_community_ids))
+        if user.hide_nsfw and not show_nsfw:
+            communities = communities.filter(Community.nsfw == False)
+        if user.hide_nsfl and not show_nsfl:
+            communities = communities.filter(Community.nsfl == False)
+    else:
+        if not show_nsfw:
+            communities = communities.filter_by(nsfw=False)
+        if not show_nsfl:
+            communities = communities.filter_by(nsfl=False)
 
     if query:
         communities = communities.filter(or_(Community.title.ilike(f"%{query}%"), Community.ap_id.ilike(f"%{query}%")))
 
     if sort == 'New':
         communities = communities.order_by(desc(Community.created_at))
+    elif sort.startswith('Top'):
+        communities = communities.order_by(desc(Community.post_count))
     else:
         communities = communities.order_by(desc(Community.last_active))
 
@@ -312,7 +325,7 @@ def put_community_moderate_unban(auth, data):
     # notify the unbanned user if they are local to this instance
     if blocked.is_local():
         # Notify unbanned person
-        targets_data = {'community_id': community.id}
+        targets_data = {'gen':'0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
                               url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
                               author_id=user.id, notif_type=NOTIF_UNBAN,
@@ -377,7 +390,7 @@ def post_community_moderate_ban(auth,data):
         db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
 
         # Notify banned person
-        targets_data = {'community_id': community.id}
+        targets_data = {'gen':'0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been banned from ' + community.title),
                                 url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                                 author_id=blocker.id, notif_type=NOTIF_BAN, subtype='user_banned_from_community',
@@ -450,9 +463,9 @@ def post_community_mod(auth, data):
     added = data['added']
 
     if added:
-        user_id = add_mod_to_community(community_id, person_id, SRC_API, auth)
+        add_mod_to_community(community_id, person_id, SRC_API, auth)
     else:
-        user_id = remove_mod_from_community(community_id, person_id, SRC_API, auth)
+        remove_mod_from_community(community_id, person_id, SRC_API, auth)
     cache.delete_memoized(cached_modlist_for_community)
     community_json = {
         'moderators': cached_modlist_for_community(community_id)

@@ -8,24 +8,29 @@ from app.constants import *
 from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply
+                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply, \
+                      can_upvote, can_downvote, get_recipient_language
 
 from flask import abort, current_app, flash, redirect, request, url_for
-from flask_babel import _
+from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 
 
-def vote_for_reply(reply_id: int, vote_direction, src, auth=None):
+def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
+        if vote_direction == 'upvote' and not can_upvote(user, reply.community):
+            return user.id
+        elif vote_direction == 'downvote' and not can_downvote(user, reply.community):
+            return user.id
     else:
         reply = PostReply.query.get_or_404(reply_id)
         user = current_user
 
     undo = reply.vote(user, vote_direction)
 
-    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo, vote_direction=vote_direction)
+    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
 
     if src == SRC_API:
         return user.id
@@ -51,8 +56,6 @@ def bookmark_reply(reply_id: int, src, auth=None):
     if not existing_bookmark:
         db.session.add(PostReplyBookmark(post_reply_id=reply_id, user_id=user_id))
         db.session.commit()
-        if src == SRC_WEB:
-            flash(_('Bookmark added.'))
     else:
         msg = 'This comment has already been bookmarked.'
         if src == SRC_API:
@@ -72,8 +75,6 @@ def remove_bookmark_reply(reply_id: int, src, auth=None):
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
-        if src == SRC_WEB:
-            flash(_('Bookmark has been removed.'))
     else:
         msg = 'This comment was not bookmarked.'
         if src == SRC_API:
@@ -298,17 +299,27 @@ def report_reply(reply_id, input, src, auth=None):
 
     # Notify moderators
     already_notified = set()
-    targets_data = {'suspect_comment_id':reply.id,'suspect_user_id':reply.author.id,'reporter_id':user_id}
+    suspect_author = User.query.get(reply.author.id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen':'0',
+                    'suspect_comment_id':reply.id,
+                    'suspect_user_id':reply.author.id,
+                    'suspect_user_user_name':suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                    'reporter_id':user_id,
+                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_comment_body':reply.body
+                    }
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
-            notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                        author_id=user_id, notif_type=NOTIF_REPORT,
-                                        subtype='comment_reported',
-                                        targets=targets_data)
-            db.session.add(notification)
-            already_notified.add(mod.user_id)
+            with force_locale(get_recipient_language(moderator.id)):
+                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
+                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                            author_id=user_id, notif_type=NOTIF_REPORT,
+                                            subtype='comment_reported',
+                                            targets=targets_data)
+                db.session.add(notification)
+                already_notified.add(mod.user_id)
     reply.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():

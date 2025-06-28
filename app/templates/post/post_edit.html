@@ -1,8 +1,8 @@
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') %}
-    {% extends 'themes/' + theme() + '/base.html' %}
-{% else %}
-    {% extends "base.html" %}
-{% endif %}
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
 {% from 'bootstrap5/form.html' import render_form, render_field %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
@@ -152,7 +152,25 @@
                     {% if form.flair %}{{ render_field(form.flair) }}{% endif %}
                 </div>
                 {{ render_field(form.scheduled_for) }}
-                <!-- {{ render_field(form.repeat) }} -->
+                {{ render_field(form.repeat) }}
+
+                <div class="accordion accordion-flush" id="accordionFlushExample">
+  <div class="accordion-item">
+    <h2 class="accordion-header">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+        {{ _('Hey, did you know? Scheduled posts have a templating system for titles.') }}
+      </button>
+    </h2>
+    <div id="flush-collapseOne" class="accordion-collapse collapse" data-bs-parent="#accordionFlushExample">
+      <div class="accordion-body">
+            <p>{{ _('Tags available') }}:<code>{% raw %}{% week %}, {% day %}, {% month %}, {% year %}{% endraw %}</code></p>
+            <p>{{ _('Example') }}: <code>{% raw %}[Topic week {% week %}] Today's date {% year %}-{% month %}-{% day %}{% endraw %}</code></p>
+            <p>{{ _('...will generate') }}</p>
+            <p>[Topic week 27] Today's date 2025-06-25</p>
+        </div>
+    </div>
+  </div>
+</div>
             </fieldset>
 
             {{ render_field(form.submit) }}

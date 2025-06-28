@@ -200,21 +200,6 @@ That page can be accessed from the `Admin` navigation drop down, or nav bar as `
 
 Note that SSL is not a hard requirement for local testing or development. By including `HTTP_PROTOCOL='http'` in the `.env` file, some features will play a little nicer without SSL. This is not a teribly well-vetted workflow, so there might still be cases in which SSL is expected/required (such as S3 usage). This is primarily intended to ease development of basic features or UI changes.
 
-### Verify your configuration
-
-After setting up your .env file, you can verify your configuration is correct by running:
-
-```bash
-export FLASK_APP=pyfedi.py
-source venv/bin/activate
-flask init-db
-flask config_check
-```
-
-This command will check your environment variables for proper format, test database and Redis connections, verify directory
-permissions, and identify common configuration issues. Fix any errors reported before proceeding. For warnings you'll need to use
-your judgement.
-
 <div id="initialise-database-and-setup-admin-account"></div>
 
 ## Initialise database, and set up admin account
@@ -222,12 +207,27 @@ your judgement.
 ```bash
 export FLASK_APP=pyfedi.py
 flask db upgrade
+flask init-db
 ```
 
 (choose a new username, email address, and password for your PyFedi admin account)
 
 If you see an error message `ModuleNotFoundError: No module named 'flask_babel'` then use `venv/bin/flask` instead of `flask`
 for all flask commands.
+
+### Verify your configuration
+
+After setting up your .env file and your database, you can verify your configuration is correct by running:
+
+```bash
+export FLASK_APP=pyfedi.py
+source venv/bin/activate
+flask config_check
+```
+
+This command will check your environment variables for proper format, test database and Redis connections, verify directory
+permissions, and identify common configuration issues. Fix any errors reported before proceeding. For warnings you'll need to use
+your judgement.
 
 <div id="run-the-app"></div>
 

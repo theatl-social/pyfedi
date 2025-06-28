@@ -24,7 +24,7 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
             db.session.commit()
             if recipient.is_local():
                 # Notify local recipient
-                targets_data = {'conversation_id':conversation.id,'message_id': reply.id}
+                targets_data = {'gen':'0', 'conversation_id':conversation.id, 'message_id': reply.id}
                 notify = Notification(title=shorten_string('New message from ' + user.display_name()),
                                       url=f'/chat/{conversation_id}#message_{reply.id}',
                                       user_id=recipient.id,
@@ -36,7 +36,10 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
                 recipient.unread_notifications += 1
                 db.session.commit()
             else:
-                ap_type = "ChatMessage" if recipient.instance.software == "lemmy" else "Note"
+                if recipient.instance.software == "lemmy" or recipient.instance.software == "mbin":
+                    ap_type = "ChatMessage"
+                else:
+                    ap_type = "Note"
                 # Federate reply
                 reply_json = {
                     "actor": user.public_url(),

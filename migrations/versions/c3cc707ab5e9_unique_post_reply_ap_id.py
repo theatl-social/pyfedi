@@ -40,7 +40,6 @@ def upgrade():
         comments = conn.execute(comments_query, {"ap_id": ap_id}).fetchall()
 
         # Set the lowest ID as the new_id, and collect other IDs to update/delete
-        new_id = comments[0].id
         old_ids = [comment.id for comment in comments[1:]]
 
         print(ap_id)
