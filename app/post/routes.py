@@ -1179,6 +1179,50 @@ def post_sticky(post_id: int, mode):
 def post_set_flair(post_id):
     post = Post.query.get_or_404(post_id)
     if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        
+        if request.headers.get("HX-Request"):
+            curr_url = request.headers.get("HX-Current-Url")
+            # Request came from htmx, send back just a partial
+            flair_id = request.args.get('flair_id', None)
+            if not flair_id:
+                # Something went wrong
+                return ""
+            
+            flair_id = int(flair_id)
+            flair = CommunityFlair.query.get(flair_id) if flair_id else None
+            if not flair:
+                # Something went wrong
+                return ""
+            
+            community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
+            allowed_flair = [int(item.id) for item in community_flair]
+            if flair_id not in allowed_flair:
+                # Something went wrong, do nothing
+                return ""
+            
+            if flair in post.flair:
+                # Remove flair from post
+                post.flair.remove(flair)
+            else:
+                # Add flair to post
+                post.flair = [flair]
+            
+            db.session.commit()
+            if post.status == POST_STATUS_PUBLISHED and post.author.is_local():
+                task_selector('edit_post', post_id=post.id)
+
+            if "/c/" in curr_url:
+                show_post_community = False
+            else:
+                show_post_community = True
+            
+            if "/post/" in curr_url:
+                resp = make_response()
+                resp.headers["HX-Redirect"] = curr_url
+                return resp
+            
+            return render_template("post/_post_teaser.html", post=post, show_post_community=show_post_community)
+
         form = FlairPostForm()
         flair_choices = flair_for_form(post.community.id)
         if len(flair_choices):
@@ -1194,6 +1238,26 @@ def post_set_flair(post_id):
         form.referrer.data = referrer()
         form.flair.data = [flair.id for flair in post.flair]
         return render_template('generic_form.html', form=form, title=_('Set flair for %(post_title)s', post_title=post.title))
+    else:
+        abort(401)
+
+
+@bp.route('/post/<int:post_id>/get_flair', methods=['GET'])
+@login_required
+def post_flair_list(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
+        curr_url = request.headers.get("HX-Current-Url")
+        if "/post/" in curr_url:
+            post_preview = False
+        else:
+            post_preview = True
+        
+        flair_choices = flair_for_form(post.community.id)
+        if not flair_choices:
+            return ""
+        
+        return render_template('post/_flair_choices.html', flair_choices=flair_choices, post_id=post.id, post_preview=post_preview)
     else:
         abort(401)
 
