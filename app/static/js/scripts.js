@@ -53,6 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupVideoSpoilers();
     setupDynamicContentObserver();
     setupCommunityFilter();
+    setupPopupTooltips();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1829,4 +1830,21 @@ function setupVotingDialogHandlers() {
             dialog.close();
         }
     });
+}
+
+function setupPopupTooltips() {
+    document.querySelectorAll('[title]').forEach(el => {
+      el.setAttribute('data-bs-toggle', 'popover');
+      el.setAttribute('data-bs-trigger', 'hover');
+    });
+
+    const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
+    [...popoverTriggerList].map(el =>
+      new bootstrap.Popover(el, {
+        trigger: 'hover',
+        placement: 'top',
+        delay: { show: 200, hide: 100 },
+        fallbackPlacements: ['bottom', 'top', 'right']
+      })
+    );
 }
