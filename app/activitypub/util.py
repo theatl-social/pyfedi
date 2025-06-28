@@ -527,7 +527,7 @@ def refresh_community_profile_task(community_id, activity_json):
             if 'nsfl' in activity_json and activity_json['nsfl']:
                 community.nsfl = activity_json['nsfl']
             community.title = activity_json['name'].strip()
-            community.posting_warning = activity_json['postingWarning'].strip() if 'postingWarning' in activity_json else None
+            community.posting_warning = activity_json['postingWarning'] if 'postingWarning' in activity_json else None
             community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
