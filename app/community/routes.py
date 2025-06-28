@@ -83,7 +83,7 @@ def add_local():
         community = Community(title=form.community_name.data, name=form.url.data, description=piefed_markdown_to_lemmy_markdown(form.description.data),
                               nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
-                              local_only=form.local_only.data,
+                              local_only=form.local_only.data, posting_warning=form.posting_warning.data,
                               ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data.lower(),
                               ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
@@ -477,7 +477,7 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters,  sort=sort, flair=flair,
+                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
@@ -903,6 +903,7 @@ def community_edit(community_id: int):
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
+            community.posting_warning = form.posting_warning.data
             community.nsfw = form.nsfw.data
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
@@ -955,6 +956,7 @@ def community_edit(community_id: int):
         else:
             form.title.data = community.title
             form.description.data = community.description
+            form.posting_warning.data = community.posting_warning
             form.nsfw.data = community.nsfw
             form.local_only.data = community.local_only
             form.new_mods_wanted.data = community.new_mods_wanted

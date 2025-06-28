@@ -18,6 +18,8 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     }
+    setupVotingLongPress();
+    setupVotingDialogHandlers();
     setupCommunityNameInput();
     setupShowMoreLinks();
     setupConfirmFirst();
@@ -51,6 +53,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupVideoSpoilers();
     setupDynamicContentObserver();
     setupCommunityFilter();
+    setupPopupTooltips();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1491,7 +1494,7 @@ function handleCtrlEnterForBodyTextarea(textarea) {
             return;
         }
     }
-    
+
     // If no form or no btn-primary in form, search in the parent container
     let container = textarea.parentElement;
     while (container && container !== document.body) {
@@ -1512,6 +1515,7 @@ function setupDynamicContent() {
     setupShowElementLinks();
     setupShowMoreLinks();
     setupUserPopup();
+    setupVotingLongPress();
     setupDynamicKeyboardShortcuts();
 }
 
@@ -1722,4 +1726,184 @@ function addLanguageCheck(languageSelect, warningDiv, recipientLanguage) {
 
         return languageSelect;
     }
+}
+function setupVotingLongPress() {
+    const votingElements = document.querySelectorAll('.voting_buttons_new');
+
+    votingElements.forEach(element => {
+        let longPressTimer;
+        let isLongPress = false;
+
+        // Mouse events
+        element.addEventListener('mousedown', function(event) {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                openVotingDialog(element);
+            }, 2000); // 2 seconds
+        });
+
+        element.addEventListener('mouseup', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        element.addEventListener('mouseleave', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        // Touch events for mobile
+        element.addEventListener('touchstart', function(event) {
+            isLongPress = false;
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                openVotingDialog(element);
+            }, 2000); // 2 seconds
+        });
+
+        element.addEventListener('touchend', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        element.addEventListener('touchcancel', function(event) {
+            clearTimeout(longPressTimer);
+        });
+
+        // Prevent normal click if it was a long press
+        element.addEventListener('click', function(event) {
+            if (isLongPress) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+    });
+}
+
+function openVotingDialog(votingElement) {
+    const dialog = document.getElementById('voting_dialog');
+    if (!dialog) return;
+
+    // Get the base URL from the voting element
+    const baseUrl = votingElement.getAttribute('data-base-url');
+    if (!baseUrl) {
+        console.error('No data-base-url found on voting element');
+        return;
+    }
+
+    // Store the base URL and reference to original voting element on the dialog
+    dialog.dataset.currentBaseUrl = baseUrl;
+    dialog.originalVotingElement = votingElement;
+
+    // Get position of triggering element
+    const rect = votingElement.getBoundingClientRect();
+
+    // Show the dialog first to get its dimensions
+    dialog.showModal();
+
+    // Now get the dialog dimensions and position it
+    const dialogRect = dialog.getBoundingClientRect();
+
+    // Calculate position - center dialog over the voting element
+    const left = rect.left + (rect.width / 2) - (dialogRect.width / 2);
+    const top = rect.top + (rect.height / 2) - (dialogRect.height / 2);
+
+    // Keep dialog within viewport bounds
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    const finalLeft = Math.max(10, Math.min(left, viewportWidth - dialogRect.width - 10));
+    const finalTop = Math.max(10, Math.min(top, viewportHeight - dialogRect.height - 10));
+
+    // Apply positioning
+    dialog.style.position = 'fixed';
+    dialog.style.left = finalLeft + 'px';
+    dialog.style.top = finalTop + 'px';
+    dialog.style.margin = '0';
+}
+
+function setupVotingDialogHandlers() {
+    const dialog = document.getElementById('voting_dialog');
+    if (!dialog || dialog.dataset.handlersAttached) return;
+
+    // Mark that handlers are attached to prevent duplicates
+    dialog.dataset.handlersAttached = 'true';
+
+    // Close button functionality
+    const closeButton = dialog.querySelector('#voting_dialog_close');
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            dialog.close();
+        });
+    }
+
+    // Voting button event handlers using HTMX JS API
+    const votingButtons = [
+        { id: '#voting_dialog_upvote_public', path: '/upvote/public' },
+        { id: '#voting_dialog_upvote_private', path: '/upvote/private' },
+        { id: '#voting_dialog_downvote_private', path: '/downvote/private' },
+        { id: '#voting_dialog_downvote_public', path: '/downvote/public' }
+    ];
+
+    votingButtons.forEach(buttonConfig => {
+        const button = dialog.querySelector(buttonConfig.id);
+        if (button) {
+            button.addEventListener('click', function() {
+                const baseUrl = dialog.dataset.currentBaseUrl;
+                const originalVotingElement = dialog.originalVotingElement;
+
+                if (!baseUrl) {
+                    console.error('No base URL available for voting');
+                    return;
+                }
+
+                if (!originalVotingElement) {
+                    console.error('No original voting element available for swap');
+                    return;
+                }
+
+                const url = baseUrl + buttonConfig.path;
+                console.log('Making HTMX request to:', url);
+
+                // Use HTMX JavaScript API to make the request
+                htmx.ajax('POST', url, {
+                    source: button,
+                    target: originalVotingElement,
+                    swap: 'innerHTML',
+                    headers: {
+                        'HX-Request': 'true'
+                    }
+                }).then(() => {
+                    console.log('Vote request completed');
+                    dialog.close();
+                }).catch((error) => {
+                    console.error('Vote request failed:', error);
+                    dialog.close();
+                });
+            });
+        }
+    });
+
+    // Close on backdrop click
+    dialog.addEventListener('click', function(event) {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+}
+
+function setupPopupTooltips() {
+    // Find all elements with a title, add the necessary bootstrap attributes
+    document.querySelectorAll('[title]').forEach(el => {
+      if (!el.hasAttribute('data-bs-toggle')) {     // don't mess with dropdowns that use data-bs-toggle
+        el.setAttribute('data-bs-toggle', 'tooltip');
+        el.setAttribute('data-bs-placement', 'top');
+      }
+    });
+
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(el =>
+      new bootstrap.Tooltip(el, {
+          delay: { show: 750, hide: 200 }
+      })
+    );
 }

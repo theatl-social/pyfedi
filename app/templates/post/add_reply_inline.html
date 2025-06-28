@@ -5,7 +5,9 @@
                 <i class="fas fa-language"></i>
                 {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
             </div>
-                <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control" rows="5" autofocus="autofocus" required="required" aria-required="true"></textarea>
+                <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control" rows="5"
+                          autofocus="autofocus" required="required" aria-required="true"
+                          placeholder="{{ in_reply_to.community.posting_warning if in_reply_to.community.posting_warning else '' }}"></textarea>
         </div>
     </div>
     <div class="row mb-3">

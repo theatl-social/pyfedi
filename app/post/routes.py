@@ -376,18 +376,26 @@ def post_oembed(post_id):
     return jsonify(oembed)
 
 
-@bp.route('/post/<int:post_id>/<vote_direction>', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/<vote_direction>/<federate>', methods=['GET', 'POST'])
 @login_required
 @validation_required
-def post_vote(post_id: int, vote_direction):
-    return vote_for_post(post_id, vote_direction, SRC_WEB)
+def post_vote(post_id: int, vote_direction, federate):
+    if federate == 'default':
+        federate = not current_user.vote_privately
+    else:
+        federate = federate == 'public'
+    return vote_for_post(post_id, vote_direction, federate, SRC_WEB)
 
 
-@bp.route('/comment/<int:comment_id>/<vote_direction>', methods=['POST'])
+@bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>', methods=['POST'])
 @login_required
 @validation_required
-def comment_vote(comment_id, vote_direction):
-    return vote_for_reply(comment_id, vote_direction, SRC_WEB)
+def comment_vote(comment_id, vote_direction, federate):
+    if federate == 'default':
+        federate = not current_user.vote_privately
+    else:
+        federate = federate == 'public'
+    return vote_for_reply(comment_id, vote_direction, federate, SRC_WEB)
 
 
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])
@@ -563,7 +571,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
                                recipient_language_id=recipient_language_id,
                                recipient_language_code=recipient_language_code,
-                               recipient_language_name=recipient_language_name)
+                               recipient_language_name=recipient_language_name,
+                               in_reply_to=in_reply_to)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))

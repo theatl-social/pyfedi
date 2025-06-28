@@ -36,7 +36,10 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
                 recipient.unread_notifications += 1
                 db.session.commit()
             else:
-                ap_type = "ChatMessage" if recipient.instance.software == "lemmy" else "Note"
+                if recipient.instance.software == "lemmy" or recipient.instance.software == "mbin":
+                    ap_type = "ChatMessage"
+                else:
+                    ap_type = "Note"
                 # Federate reply
                 reply_json = {
                     "actor": user.public_url(),

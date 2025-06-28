@@ -25,6 +25,7 @@
                 {% endfor %}
             </div>
             {{ render_field(form.description) }}
+            {{ render_field(form.posting_warning) }}
             {% if community.icon_id %}
                 <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" />
             {% endif %}
@@ -54,7 +55,6 @@
                 {{ render_field(form.content_retention) }}
                 {{ render_field(form.topic) }}
                 {{ render_field(form.default_layout) }}
-                {{ render_field(form.posting_warning) }}
                 {{ render_field(form.ignore_remote_language) }}
             {% if not community.is_local() %}
             </fieldset>

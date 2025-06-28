@@ -17,7 +17,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
                                     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
                                     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
                                     put_user_mark_all_notifications_read, post_user_verify_credentials
-from app.api.alpha.utils.private_message import get_private_message_list
+from app.api.alpha.utils.private_message import get_private_message_list, post_private_message
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 
 
@@ -579,6 +579,23 @@ def get_alpha_private_message_list():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/private_message', methods=['POST'])
+def post_alpha_private_message():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        with limiter.limit('3/minute'):
+            auth = request.headers.get('Authorization')
+            data = request.get_json(force=True) or {}
+            return jsonify(post_private_message(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Recipient not found"}), 400
+    except RateLimitExceeded as ex:
+        return jsonify({"error": str(ex)}), 429
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -833,7 +850,6 @@ def alpha_reply():
 
 # Chat - not yet implemented
 @bp.route('/api/alpha/private_message', methods=['PUT'])                          # Not available in app
-@bp.route('/api/alpha/private_message', methods=['POST'])                         # Not available in app
 @bp.route('/api/alpha/private_message/delete', methods=['POST'])                  # Not available in app
 @bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])            # Not available in app
 @bp.route('/api/alpha/private_message/report', methods=['POST'])                  # Not available in app

@@ -260,6 +260,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                    'ap_domain': community.ap_domain})
         if community.description and not stub:
             v1['description'] = community.description
+        if not stub:
+            v1['posting_warning'] = community.posting_warning
         if community.icon_id:
             v1['icon'] = community.icon.medium_url()
         if community.image_id and not stub:
@@ -581,7 +583,7 @@ def instance_view(instance: Instance | int, variant) -> dict:
         return v1
 
 
-def private_message_view(cm: ChatMessage, user_id, ap_id) -> dict:
+def private_message_view(cm: ChatMessage, variant) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
     is_local = creator['instance_id'] == 1
@@ -590,19 +592,27 @@ def private_message_view(cm: ChatMessage, user_id, ap_id) -> dict:
       'private_message': {
         'id': cm.id,
         'creator_id': cm.sender_id,
-        'recipient_id': user_id,
+        'recipient_id': cm.recipient_id,
         'content': cm.body,
         'deleted': False,
         'read': cm.read,
         'published': cm.created_at.isoformat() + 'Z',
-        'ap_id': ap_id,
+        'ap_id': cm.ap_id,
         'local': is_local
       },
       'creator': creator,
       'recipient': recipient
     }
 
-    return v1
+    if variant == 1:
+        return v1
+
+    v2 = {
+      'private_message_view': v1
+    }
+
+    if variant == 2:
+        return v2
 
 
 def site_view(user) -> dict:
