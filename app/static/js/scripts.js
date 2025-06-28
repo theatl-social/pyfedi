@@ -1833,18 +1833,17 @@ function setupVotingDialogHandlers() {
 }
 
 function setupPopupTooltips() {
+    // Find all elements with a title
     document.querySelectorAll('[title]').forEach(el => {
-      el.setAttribute('data-bs-toggle', 'popover');
-      el.setAttribute('data-bs-trigger', 'hover');
+      el.setAttribute('data-bs-toggle', 'tooltip');
+      el.setAttribute('data-bs-placement', 'top'); // optional
     });
 
-    const popoverTriggerList = document.querySelectorAll('[data-bs-toggle="popover"]');
-    [...popoverTriggerList].map(el =>
-      new bootstrap.Popover(el, {
-        trigger: 'hover',
-        placement: 'top',
-        delay: { show: 200, hide: 100 },
-        fallbackPlacements: ['bottom', 'top', 'right']
+    // Initialize tooltips
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+    [...tooltipTriggerList].map(el =>
+      new bootstrap.Tooltip(el, {
+          delay: { show: 750, hide: 200 }
       })
     );
 }
