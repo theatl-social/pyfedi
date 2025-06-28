@@ -24,11 +24,11 @@ from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK
+    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll
 from app.post.routes import post_delete_post
 from app.shared.post import edit_post
 from app.shared.tasks import task_selector
@@ -552,6 +552,10 @@ def register(app):
                     post.posted_at = utcnow()
                     post.edited_at = None
                     post.title = render_from_tpl(post.title)
+                    if post.type == POST_TYPE_POLL:
+                        poll = Poll.query.get(post.id)
+                        time_difference = poll.end_poll - post.created_at
+                        poll.end_poll += time_difference
                     db.session.commit()
 
                     # Federate post
