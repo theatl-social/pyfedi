@@ -131,8 +131,6 @@ class Config(object):
 
     VERSION = app.constants.VERSION
 
-    # How long to keep post voting data
-    # defaults to 6 months
-    # see app/cli.py daily_maintenance for the math
+    # How long to keep post voting data ( months )
     KEEP_LOCAL_VOTE_DATA_TIME = int(os.environ.get('KEEP_LOCAL_VOTE_DATA_TIME') or 6)
     KEEP_REMOTE_VOTE_DATA_TIME = int(os.environ.get('KEEP_REMOTE_VOTE_DATA_TIME') or 6)

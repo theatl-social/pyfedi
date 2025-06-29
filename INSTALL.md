@@ -310,7 +310,7 @@ You will want to [tune PostgreSQL](https://pgtune.leopard.in.ua/). [More on this
 If you have more than 4 GB of RAM, consider [turning on 'huge pages'](https://www.percona.com/blog/why-linux-hugepages-are-super-important-for-database-servers-a-case-with-postgresql/)
 also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 
-[PgBouncer](https://www.pgbouncer.org) can be helpful in a high traffic situation.
+[PgBouncer](https://www.pgbouncer.org) can be helpful for instances with > 800 MAU.
 
 To assess whether to accept a registration application it can be helpful to know the country of the applicant. This can be
 automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
