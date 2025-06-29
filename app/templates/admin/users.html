@@ -98,7 +98,7 @@
                         <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ ('Delete') }}</a>,
                         <br />
                         {% if user.banned %}
-                            <a href="{{ url_for('user.unban_profile', actor=user.link()) }}" class="confirm_first">{{ ('Unban') }}</a>
+                            <a href="#" data-url="{{ url_for('user.unban_profile', actor=user.link(), redirect="/admin/users") }}" class="confirm_first send_post">{{ ('Unban') }}</a>
                         {% else %}
                             <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="">{{ ('Ban') }}</a>
                         {% endif %}
