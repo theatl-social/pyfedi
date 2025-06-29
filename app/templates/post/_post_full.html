@@ -222,6 +222,21 @@
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
         </div>
+        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+          <div class="dropdown" id="flair_dropdown_{{ post.id }}">
+            <a href="{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}"
+              data-bs-toggle="dropdown"
+              rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
+            <ul class="dropdown-menu" style="width: 320px">
+              <div
+                hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
+                hx-trigger="intersect once"
+                hx-target="this"
+                hx-swap="outerHTML"
+              ></div>
+            </ul>
+          </div>
+        {% endif -%}
         <div class="post_options_link">
             <div class="dropdown">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
