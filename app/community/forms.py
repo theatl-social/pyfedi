@@ -214,6 +214,8 @@ class CreateVideoForm(CreatePostForm):
                            render_kw={'placeholder': 'https://...'})
 
     def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+        
         domain = domain_from_url(self.video_url.data, create=False)
         if domain and domain.banned:
             self.video_url.errors.append(_l("Videos from %(domain)s are not allowed.", domain=domain.name))
@@ -226,6 +228,8 @@ class CreateImageForm(CreatePostForm):
     image_file = FileField(_l('Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
 
     def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+
         uploaded_file = request.files['image_file']
         if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
@@ -274,6 +278,8 @@ class EditImageForm(CreateImageForm):
     image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
     
     def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
@@ -306,8 +312,14 @@ class CreatePollForm(CreatePostForm):
     choice_10 = StringField('Choice')
 
     def validate(self, extra_validators=None) -> bool:
-        choices_made = 0
+        super().validate(extra_validators)
 
+        # Polls shouldn't be scheduled more than once
+        if self.repeat.data in ['daily', 'weekly', 'monthly']:
+            self.repeat.errors.append(_l("Polls can't be scheduled more than once"))
+            return False
+
+        choices_made = 0
         for i in range(1, 10):
             choice_data = getattr(self, f"choice_{i}").data.strip()
             if choice_data != '':

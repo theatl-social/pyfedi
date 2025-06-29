@@ -24,11 +24,11 @@ from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK
+    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll
 from app.post.routes import post_delete_post
 from app.shared.post import edit_post
 from app.shared.tasks import task_selector
@@ -291,10 +291,60 @@ def register(app):
                                                                 {'community_id': community.id}).scalar()
                 db.session.commit()
 
-            # Delete voting data after 6 months
+            # Delete voting data after configured time (default ~6 months)
             print(f'Delete old voting data {datetime.now()}')
-            db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
-            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
+            
+            # Trim voting data
+            local_months = current_app.config['KEEP_LOCAL_VOTE_DATA_TIME']
+            remote_months = current_app.config['KEEP_REMOTE_VOTE_DATA_TIME']
+
+            if local_months != -1:
+                cutoff_local = utcnow() - timedelta(days=28 * local_months)
+
+                # delete all the rows from post_vote where the user who did the vote is a local user
+                db.session.execute(text('''
+                    DELETE FROM "post_vote" pv
+                    USING "user" u, "instance" i
+                    WHERE pv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id = :instance_id
+                      AND pv.created_at < :cutoff
+                '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+
+
+                # delete all the rows from post_reply_vote where the user who did the vote is a local user
+                db.session.execute(text('''
+                    DELETE FROM "post_reply_vote" prv
+                    USING "user" u, "instance" i
+                    WHERE prv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id = :instance_id
+                      AND prv.created_at < :cutoff
+                '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+            if remote_months != -1:
+                cutoff_remote = utcnow() - timedelta(days=28 * remote_months)
+                # delete all the rows from post_vote where the user who did the vote is a remote user
+                db.session.execute(text('''
+                    DELETE FROM "post_vote" pv
+                    USING "user" u, "instance" i
+                    WHERE pv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id != :instance_id
+                      AND pv.created_at < :cutoff
+                '''), {'cutoff': cutoff_remote, 'instance_id': 1})
+
+                # delete all the rows from post_reply_vote where the user who did the vote is a remote user
+                db.session.execute(text('''
+                    DELETE FROM "post_reply_vote" prv
+                    USING "user" u, "instance" i
+                    WHERE prv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id != :instance_id
+                      AND prv.created_at < :cutoff
+                '''), {'cutoff': cutoff_remote, 'instance_id': 1})
+
             db.session.commit()
 
             # Un-ban after ban expires
@@ -552,6 +602,10 @@ def register(app):
                     post.posted_at = utcnow()
                     post.edited_at = None
                     post.title = render_from_tpl(post.title)
+                    if post.type == POST_TYPE_POLL:
+                        poll = Poll.query.get(post.id)
+                        time_difference = poll.end_poll - post.created_at
+                        poll.end_poll += time_difference
                     db.session.commit()
 
                     # Federate post

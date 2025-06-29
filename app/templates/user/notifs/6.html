@@ -14,9 +14,11 @@
                 </button>
               </div>
               <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                <p class="m-1">
-                  <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.comment_body }}</a>
-                </p>
+                <div class="mt-2 mx-2">
+                  <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                    {{ markdown_to_html(notification.targets.comment_body) | safe }}
+                  </a>
+                </div>
               </div>
             </div>
           </div>
@@ -29,9 +31,11 @@
                 </button>
               </div>
               <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                <p class="m-1">
-                  <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.post_body }}</a>
-                </p>
+                <div class="mt-2 mx-2">
+                  <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                    {{ markdown_to_html(notification.targets.post_body) | safe }}
+                  </a>
+                </div>
               </div>
             </div>
           </div>

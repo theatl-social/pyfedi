@@ -83,6 +83,9 @@
                     <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                     {% endif -%}
                 {% endif -%}
+                {% if community.content_retention != -1 -%}
+                    <p>{{ _('Posts older than %(number)s days will be removed.', number=community.content_retention) }}</p>
+                {% endif -%}
                 {% if rss_feed and not community.is_local() -%}
                     <ul>
                         <li><p><a href="{{ community.public_url() }}">{{ _('View community on original server') }}</a></p></li>

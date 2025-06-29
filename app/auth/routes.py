@@ -10,8 +10,8 @@ from wtforms import Label
 
 from app import db, cache, limiter, oauth
 from app.auth import bp
-from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm
-from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently
+from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterByMastodonForm
+from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_user_application
 from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.ldap_utils import sync_user_to_ldap
@@ -19,6 +19,7 @@ from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
     finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
+from app.community.util import save_icon_file
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -95,7 +96,9 @@ def login():
         else:
             response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
         return response
-    return render_template('auth/login.html', title=_('Login'), form=form, google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
+    return render_template('auth/login.html', title=_('Login'), form=form, 
+                            google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
+                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"])
 
 
 @bp.route('/logout')
@@ -221,8 +224,10 @@ def register():
             form.question.label = Label('question', g.site.application_question)
         if g.site.registration_mode != 'RequireApplication':
             del form.question
-        return render_template('auth/register.html', title=_('Register'), form=form, 
-                               google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'])
+        return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
+                               google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'], 
+                               mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"]
+                               )
 
 
 @bp.route('/please_wait', methods=['GET'])
@@ -353,13 +358,8 @@ def google_authorize():
             if g.site.registration_mode == 'Closed':
                 flash(_('Account registrations are currently closed.'), 'error')
                 return redirect(url_for('auth.login'))
-
-            # Country-based registration blocking
-            ip_address_info = ip2location(ip_address())
-            if ip_address_info and ip_address_info['country']:
-                for country_code in get_setting('auto_decline_countries', '').split('\n'):
-                    if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
-                        return redirect(url_for('auth.please_wait'))
+            if user_ip_banned():
+                return redirect(url_for('auth.please_wait'))
 
             user = User(user_name=find_new_username(email), title=name, email=email, verified=True,
                         verification_token='', instance_id=1, ip_address=ip_address(),
@@ -367,34 +367,20 @@ def google_authorize():
                         referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
             user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
             db.session.add(user)
-
-        db.session.commit()
-
-        if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-            application = UserRegistration(user_id=user.id, answer='Signed in with Google')
-            db.session.add(application)
             targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
-            for admin in Site.admins():
-                notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
-                                      user_id=admin.id,
-                                      author_id=user.id, notif_type=NOTIF_REGISTRATION,
-                                      subtype='new_registration_for_approval',
-                                      targets=targets_data)
-                admin.unread_notifications += 1
-                db.session.add(notify)
-                # todo: notify everyone with the "approve registrations" permission, instead of just all admins
             db.session.commit()
             if get_setting('ban_check_servers', ''):
                 task_selector('check_application', application_id=application.id)
+
+            create_user_application(user, "Signed in with Google")
             return redirect(url_for('auth.please_wait'))
-        else:
-            if user.verified:
-                finalize_user_setup(user)
-                login_user(user, remember=True)
-                return redirect(url_for('auth.trump_musk'))
-            else:
-                return redirect(url_for('auth.check_email'))
     else:
+        if user.verified:
+            finalize_user_setup(user)
+            login_user(user, remember=True)
+            return redirect(url_for('auth.trump_musk'))
+        else:
+            return redirect(url_for('auth.check_email'))
         # user already exists
         if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
             flash(_('You have been banned.'), 'error')
@@ -430,6 +416,75 @@ def google_authorize():
                 else:
                     next_page = url_for('main.index')
             return redirect(next_page)
+
+
+@bp.route("/mastodon_login")
+def mastodon_login():
+    redirect_uri = "urn:ietf:wg:oauth:2.0:oob"#url_for('auth.mastodon_authorize', _external=True)
+    return oauth.mastodon.authorize_redirect(redirect_uri=redirect_uri)
+
+
+@bp.route("/mastodon_authorize", methods=['GET', 'POST'])
+def mastodon_authorize():
+    if not session.get("mastodon_token"):
+        try:
+            token = oauth.mastodon.authorize_access_token()
+            session["mastodon_token"] = token 
+        except Exception as e:
+            current_app.logger.exception(e)
+            flash(_('Login failed due to a problem with Mastodon server.'), 'error')
+            return redirect(url_for('auth.login'))
+    else:
+        token = session.get("mastodon_token")
+
+    resp = oauth.mastodon.get('v1/accounts/verify_credentials', token=token)
+    user_info = resp.json()
+    mastodon_id = user_info['id']
+    username = user_info.get('username', '')
+    display_name = user_info.get("display_name", "")
+
+    user = User.query.filter_by(mastodon_oauth_id=mastodon_id).first()
+    if not user:
+        # Check if registrations are closed
+        if g.site.registration_mode == 'Closed':
+            flash(_('Account registrations are currently closed.'), 'error')
+            return redirect(url_for('auth.login'))
+        if user_ip_banned():
+            return redirect(url_for('auth.please_wait'))
+        # if IP is not banned and there is no user just display form to fill additional data
+        form = RegisterByMastodonForm()
+        if request.method == "GET" or not form.validate_on_submit():
+            return render_template(
+                'auth/mastodon_authorize.html', form=form, user_info=user_info
+            ) 
+        # Note - get from form additional data
+        email = form.email.data
+        # password = form.password.data
+        # get avatar also
+        user = User(user_name=username, title=display_name, email=email, verified=True,
+                    verification_token='', instance_id=1, ip_address=ip_address(),
+                    banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
+                    referrer='', alt_user_name=gibberish(randint(8, 20)), mastodon_oauth_id=mastodon_id)
+        ip_address_info = ip2location(user.ip_address)
+        user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+        # user.set_password(password)
+        db.session.add(user)
+
+        db.session.commit()
+        if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+            application = create_user_application(user, "Signed in with Mastodon")
+            if get_setting('ban_check_servers', 'piefed.social'):
+                task_selector('check_application', application_id=application.id)
+            return redirect(url_for('auth.please_wait'))
+    else:
+        if user.verified:
+            finalize_user_setup(user)
+            login_user(user, remember=True)
+            return redirect(url_for('auth.trump_musk'))
+        else:
+            return redirect(url_for('auth.check_email'))
+
+    return redirect(url_for('auth.check_email'))
 
 
 def find_new_username(email: str) -> str:

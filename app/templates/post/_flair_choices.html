@@ -1,0 +1,4 @@
+{% for flair_item in flair_choices %}
+<li><a class="dropdown-item no-underline" role="button" tyle="white-space: normal" aria-label="{{ _('Set %(flair)s flair', flair=flair_item[1]) }}"
+  hx-post="{{ url_for("post.post_set_flair", post_id=post_id, flair_id=flair_item[0]) }}" hx-trigger="click throttle:1s" {% if post_preview %}hx-target="#post_{{ post_id }}" {% endif %}hx-swap="outerHTML" tabindex="0"><span class="fe fe-chevron-right"></span> {{ flair_item[1] }}</a></li>
+{% endfor %}
