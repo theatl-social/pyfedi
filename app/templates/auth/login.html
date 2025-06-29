@@ -1,4 +1,5 @@
 {% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    return redirect(url_for('auth.check_email'))
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
@@ -13,6 +14,7 @@
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Log in') }}</div>
                     {{ render_form(form) }}
+                    {% if google_oauth -%}
                     <br>
                     <hr />
                     <p align="center">OR<br><br>
@@ -20,9 +22,18 @@
                             <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
                                 <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
                         {% endif -%}
-                        <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _('Log in with a passkey') }}</button>
+                        <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
+                            <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
                     </p>
+                    {% endif -%}
+                    {% if mastodon_oauth -%}
+                    <p align="center">OR<br><br>
+                        <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Log in with Mastodon') }}
+                            <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"></a>
 
+                    </p>
+                    {% endif -%}
+                    <p align="center">{{ _('or use a username and password:') }}</p>
                     <hr />
                     <p>{{ _('New User?') }} <a href="{{ url_for('auth.register') }}">{{ _('Register new account') }}</a></p>
                     <p class="mb-0">
@@ -35,3 +46,4 @@
     </div>
 
 {% endblock -%}
+
