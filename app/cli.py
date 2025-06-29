@@ -639,7 +639,7 @@ def register(app):
                     # Small hack to make image urls unique and avoid creating
                     # a crosspost when scheduling an image post
                     if post.type == POST_TYPE_IMAGE:
-                        post.image.source_url += f"?hash={uuid.uuid4().hex}"
+                        post.image.source_url += f"?uid={uuid.uuid4().hex}"
 
                     vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id, effect=1)
                     db.session.add(vote)
