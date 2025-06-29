@@ -291,10 +291,39 @@ def register(app):
                                                                 {'community_id': community.id}).scalar()
                 db.session.commit()
 
-            # Delete voting data after 6 months
+            # Delete voting data after configured time (default ~6 months)
             print(f'Delete old voting data {datetime.now()}')
-            db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
-            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
+            
+            # get config settings
+            local_months = int(current_app.config.get('KEEP_LOCAL_VOTE_DATA_TIME'))
+            remote_months = int(current_app.config.get('KEEP_REMOTE_VOTE_DATA_TIME'))
+
+            # delete all the rows from post_vote where the user who did the vote is a local user
+            db.session.execute(text('DELETE FROM "post_vote" as pv ' \
+                                    'INNER JOIN "user" as u ON pv.user_id = u.id ' \
+                                    'INNER JOIN "instance" as i ON u.instance_id = i.id ' \
+                                    'WHERE u.instance_id = :instance_id AND created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * local_months), 'instance_id': 1})
+
+            # delete all the rows from post_vote where the user who did the vote is a remote user
+            db.session.execute(text('DELETE FROM "post_vote" as pv ' \
+                                    'INNER JOIN "user" as u ON pv.user_id = u.id ' \
+                                    'INNER JOIN "instance" as i ON u.instance_id = i.id ' \
+                                    'WHERE u.instance_id != :instance_id AND created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * remote_months), 'instance_id': 1})
+
+            # delete all the rows from post_reply_vote where the user who did the vote is a local user
+            db.session.execute(text('DELETE FROM "post_reply_vote" as prv ' \
+                                    'INNER JOIN "user" as u ON prv.user_id = u.id ' \
+                                    'INNER JOIN "instance" as i ON u.instance_id = i.id ' \
+                                    'WHERE u.instance_id = :instance_id AND created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * local_months), 'instance_id': 1})
+
+            # delete all the rows from post_reply_vote where the user who did the vote is a remote user
+            db.session.execute(text('DELETE FROM "post_reply_vote" as prv ' \
+                                    'INNER JOIN "user" as u ON prv.user_id = u.id ' \
+                                    'INNER JOIN "instance" as i ON u.instance_id = i.id ' \
+                                    'WHERE u.instance_id != :instance_id AND created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * remote_months), 'instance_id': 1})
+
+            # db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
+            # db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
             db.session.commit()
 
             # Un-ban after ban expires

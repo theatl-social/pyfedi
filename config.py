@@ -130,3 +130,9 @@ class Config(object):
     LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
 
     VERSION = app.constants.VERSION
+
+    # How long to keep post voting data
+    # defaults to 6 months
+    # see app/cli.py daily_maintenance for the math
+    KEEP_LOCAL_VOTE_DATA_TIME = int(os.environ.get('KEEP_LOCAL_VOTE_DATA_TIME') or 6)
+    KEEP_REMOTE_VOTE_DATA_TIME = int(os.environ.get('KEEP_REMOTE_VOTE_DATA_TIME') or 6)
