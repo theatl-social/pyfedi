@@ -55,7 +55,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in new_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }}
+                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
                         </li>
                     {% endfor %}
                 </ul>
@@ -71,7 +71,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in active_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }}
+                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
                         </li>
                     {% endfor %}
                 </ul>
