@@ -31,7 +31,7 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription, BlockedImage, CmsPage
+    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
 from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
@@ -1342,6 +1342,32 @@ def admin_approve_registrations_approve(user_id):
 
     return redirect(url_for('admin.admin_approve_registrations'))
 
+@bp.route('/approve_registrations/<int:user_id>/deny', methods=['POST'])
+@permission_required('approve registrations')
+@login_required
+def admin_approve_registrations_denied(user_id):
+    user = User.query.get_or_404(user_id)
+    registration = UserRegistration.query.filter_by(status=0, user_id=user_id).first()
+    if registration:
+        # remove the registration attempt
+        db.session.delete(registration)
+
+        # remove notifications caused by the registration attempt
+        reg_notifs = Notification.query.filter_by(author_id=user.id)
+        for n in reg_notifs:
+            db.session.delete(n)
+
+        # remove the user from the db so the username is available again
+        user.deleted = True
+        user.delete_dependencies()
+        db.session.delete(user)
+
+        # save that to the db
+        db.session.commit()
+
+        flash(_('Registration denied. User removed from the database.'))
+
+    return redirect(url_for('admin.admin_approve_registrations'))
 
 @bp.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all users')
