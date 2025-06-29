@@ -15,12 +15,14 @@
                   </button>
                 </div>
                 <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                  <p class="m-1">
-                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.orig_post_body }}</a>
-                  </p>
-                  <p class="m-1">
+                  <div class="mt-2 mx-2">
+                    <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                      {{ markdown_to_html(notification.targets.orig_post_body) | safe }}
+                    </a>
+                  </div>
+                  <div class="mt-2 mx-2">
                     {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -66,12 +68,14 @@
                   </button>
                 </div>
                 <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                  <p class="m-1">
-                    {{ notification.targets.orig_comment_body }}
-                  </p>
-                  <p class="m-1">
+                  <div class="mt-2 mx-2">
+                    <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                      {{ markdown_to_html(notification.targets.orig_comment_body) | safe }}
+                    </a>
+                  </div>
+                  <div class="mt-2 mx-2">
                     {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -91,12 +95,14 @@
                   </button>
                 </div>
                 <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                  <p class="m-1">
-                    {{ notification.targets.orig_post_body }}
-                  </p>
-                  <p class="m-1">
+                  <div class="mt-2 mx-2">
+                    <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                      {{ markdown_to_html(notification.targets.orig_post_body) | safe }}
+                    </a>
+                  </div>
+                  <div class="mt-2 mx-2">
                     {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -115,12 +121,14 @@
                   </button>
                 </div>
                 <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                  <p class="m-1">
-                    {{ notification.targets.orig_post_body }}
-                  </p>
-                  <p class="m-1">
+                  <div class="mt-2 mx-2">
+                    <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                      {{ markdown_to_html(notification.targets.orig_post_body) | safe }}
+                    </a>
+                  </div>
+                  <div class="mt-2 mx-2">
                     {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
-                  </p>
+                  </div>
                 </div>
               </div>
             </div>
