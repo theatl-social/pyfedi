@@ -6,6 +6,7 @@
 
 import imaplib
 import re
+import uuid
 from datetime import datetime, timedelta
 from random import randint
 from time import sleep
@@ -24,7 +25,7 @@ from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL
+    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
@@ -595,6 +596,7 @@ def register(app):
                     next_occurrence = post.scheduled_for + find_next_occurrence(post)
                 else:
                     next_occurrence = None
+
                 # One shot scheduled post
                 if not next_occurrence:
                     post.status = POST_STATUS_PUBLISHED
@@ -633,6 +635,12 @@ def register(app):
                     scheduled_post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{scheduled_post.id}"
                     # Update the scheduled_for with the next occurrence date
                     post.scheduled_for = next_occurrence
+
+                    # Small hack to make image urls unique and avoid creating
+                    # a crosspost when scheduling an image post
+                    if post.type == POST_TYPE_IMAGE:
+                        post.image.source_url += f"?uid={uuid.uuid4().hex}"
+
                     vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id, effect=1)
                     db.session.add(vote)
                     db.session.commit()
