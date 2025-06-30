@@ -21,7 +21,7 @@ from flask import current_app
 
 
 @celery.task
-def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, federate: bool):
+def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, federate: bool=True):
     post = Post.query.filter_by(id=post_id).one()
     cache.delete_memoized(recently_upvoted_posts, user_id)
     cache.delete_memoized(recently_downvoted_posts, user_id)
@@ -30,7 +30,7 @@ def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, fe
 
 
 @celery.task
-def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, federate: bool):
+def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, federate: bool=True):
     reply = PostReply.query.filter_by(id=reply_id).one()
     cache.delete_memoized(recently_upvoted_post_replies, user_id)
     cache.delete_memoized(recently_downvoted_post_replies, user_id)
