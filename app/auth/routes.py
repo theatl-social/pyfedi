@@ -375,6 +375,11 @@ def google_authorize():
                 if get_setting('ban_check_servers', 'piefed.social'):
                     task_selector('check_application', application_id=application.id)
                 return redirect(url_for('auth.please_wait'))
+            else:
+                # New user, no application required
+                finalize_user_setup(user)
+                login_user(user, remember=True)
+                return redirect(url_for('auth.trump_musk'))
     else:
         if user.verified:
             finalize_user_setup(user)
@@ -382,41 +387,42 @@ def google_authorize():
             return redirect(url_for('auth.trump_musk'))
         else:
             return redirect(url_for('auth.check_email'))
-        # user already exists
-        if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
-            flash(_('You have been banned.'), 'error')
+    
+    # user already exists - check if banned
+    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+        flash(_('You have been banned.'), 'error')
 
-            response = make_response(redirect(url_for('auth.login')))
-            # Detect if a banned user tried to log in from a new IP address
-            if user.banned and not user_ip_banned():
-                # If so, ban their new IP address as well
-                new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
-                db.session.add(new_ip_ban)
-                db.session.commit()
-                cache.delete_memoized(banned_ip_addresses)
-
-            # Set a cookie so we have another way to track banned people
-            response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
-            return response
-        if user.waiting_for_approval():
-            return redirect(url_for('auth.please_wait'))
-        else:
-            login_user(user, remember=True)
-            session['ui_language'] = user.interface_language
-            current_user.last_seen = utcnow()
-            current_user.ip_address = ip_address()
-            ip_address_info = ip2location(current_user.ip_address)
-            current_user.ip_address_country = ip_address_info[
-                'country'] if ip_address_info else current_user.ip_address_country
+        response = make_response(redirect(url_for('auth.login')))
+        # Detect if a banned user tried to log in from a new IP address
+        if user.banned and not user_ip_banned():
+            # If so, ban their new IP address as well
+            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            db.session.add(new_ip_ban)
             db.session.commit()
-            [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
-            next_page = request.args.get('next')
-            if not next_page or url_parse(next_page).netloc != '':
-                if len(current_user.communities()) == 0:
-                    next_page = url_for('auth.trump_musk')
-                else:
-                    next_page = url_for('main.index')
-            return redirect(next_page)
+            cache.delete_memoized(banned_ip_addresses)
+
+        # Set a cookie so we have another way to track banned people
+        response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+        return response
+    if user.waiting_for_approval():
+        return redirect(url_for('auth.please_wait'))
+    else:
+        login_user(user, remember=True)
+        session['ui_language'] = user.interface_language
+        current_user.last_seen = utcnow()
+        current_user.ip_address = ip_address()
+        ip_address_info = ip2location(current_user.ip_address)
+        current_user.ip_address_country = ip_address_info[
+            'country'] if ip_address_info else current_user.ip_address_country
+        db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            if len(current_user.communities()) == 0:
+                next_page = url_for('auth.trump_musk')
+            else:
+                next_page = url_for('main.index')
+        return redirect(next_page)
 
 
 @bp.route("/mastodon_login")
