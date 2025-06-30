@@ -1306,6 +1306,11 @@ def finalize_user_setup(user):
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
     
+    # find all notifications from this registration and mark them as read
+    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION,author_id=user.id)
+    for rn in reg_notifs:
+        rn.read = True
+    
     db.session.commit()
 
 
