@@ -226,7 +226,7 @@ def show_post(post_id: int):
 
         community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
         # Get the language of the user being replied to
-        recipient_language_id = post.author.language_id
+        recipient_language_id = post.language_id or post.author.language_id
         recipient_language_code = None
         recipient_language_name = None
         if recipient_language_id:
@@ -558,7 +558,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
 
     if request.method == 'GET':
         # Get the language of the user being replied to
-        recipient_language_id = in_reply_to.author.language_id
+        recipient_language_id = in_reply_to.language_id or in_reply_to.author.language_id
         recipient_language_code = None
         recipient_language_name = None
         if recipient_language_id:

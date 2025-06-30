@@ -35,10 +35,12 @@
                                 {% if post.community.posting_warning -%}
                                     <p align="center">{{ post.community.posting_warning|safe }}</p>
                                 {% endif -%}
-                                <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
-                                    <i class="fas fa-language"></i>
-                                    {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
-                                </div>
+                                {% if recipient_language_name -%}
+                                    <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
+                                        <i class="fas fa-language"></i>
+                                        {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
+                                    </div>
+                                {% endif -%}
                                 <form method="post" role="form">
                                     {{ form.csrf_token() }}
                                     {{ render_field(form.body) }}
