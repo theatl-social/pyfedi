@@ -28,6 +28,12 @@
 
                             </p>
                             {% endif -%}
+                            {% if discord_oauth -%}
+                            <p align="center">OR<br><br>
+                                <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _('Log in with Discord') }}</a>
+
+                            </p>
+                            {% endif -%}
                             <p align="center">{{ _('or use a username and password:') }}</p>
                             {{ render_form(form) }}
                         {% else %}

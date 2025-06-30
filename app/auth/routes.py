@@ -98,7 +98,8 @@ def login():
         return response
     return render_template('auth/login.html', title=_('Login'), form=form, 
                             google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
-                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"])
+                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                            discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 @bp.route('/logout')
@@ -226,7 +227,8 @@ def register():
             del form.question
         return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
                                google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'], 
-                               mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"]
+                               mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                               discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"]
                                )
 
 
@@ -387,7 +389,7 @@ def google_authorize():
             return redirect(url_for('auth.trump_musk'))
         else:
             return redirect(url_for('auth.check_email'))
-    
+
     # user already exists - check if banned
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
         flash(_('You have been banned.'), 'error')
@@ -492,6 +494,106 @@ def mastodon_authorize():
             return redirect(url_for('auth.check_email'))
 
     return redirect(url_for('auth.check_email'))
+
+
+@bp.route('/discord_login')
+def discord_login():
+    return oauth.discord.authorize_redirect(redirect_uri=url_for('auth.discord_authorize', _external=True))
+
+
+@bp.route('/discord_authorize')
+def discord_authorize():
+    try:
+        token = oauth.discord.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("Discord OAuth error")
+        flash(_('Login failed due to a problem with Discord.'), 'error')
+        return redirect(url_for('auth.login'))
+
+    resp = oauth.discord.get('users/@me', token=token)
+    user_info = resp.json()
+    discord_id = user_info['id']
+    email = user_info['email']
+    username = user_info.get('username', '')
+
+    # Try to find user by discord_id first
+    user = User.query.filter_by(discord_oauth_id=discord_id).first()
+
+    # If not found, check by email and link
+    if not user:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.discord_oauth_id = discord_id
+        else:
+            # Check if registrations are closed
+            if g.site.registration_mode == 'Closed':
+                flash(_('Account registrations are currently closed.'), 'error')
+                return redirect(url_for('auth.login'))
+            if user_ip_banned():
+                return redirect(url_for('auth.please_wait'))
+
+            user = User(user_name=find_new_username(email), title=username, email=email, verified=True,
+                        verification_token='', instance_id=1, ip_address=ip_address(),
+                        banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
+                        referrer='', alt_user_name=gibberish(randint(8, 20)), discord_oauth_id=discord_id)
+            ip_address_info = ip2location(user.ip_address)
+            user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+            db.session.add(user)
+            db.session.commit()
+
+            if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+                application = create_user_application(user, "Signed in with Discord")
+                if get_setting('ban_check_servers', 'piefed.social'):
+                    task_selector('check_application', application_id=application.id)
+                return redirect(url_for('auth.please_wait'))
+            else:
+                # New user, no application required
+                finalize_user_setup(user)
+                login_user(user, remember=True)
+                return redirect(url_for('auth.trump_musk'))
+    else:
+        if user.verified:
+            finalize_user_setup(user)
+            login_user(user, remember=True)
+            return redirect(url_for('auth.trump_musk'))
+        else:
+            return redirect(url_for('auth.check_email'))
+
+    # user already exists - check if banned
+    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+        flash(_('You have been banned.'), 'error')
+
+        response = make_response(redirect(url_for('auth.login')))
+        # Detect if a banned user tried to log in from a new IP address
+        if user.banned and not user_ip_banned():
+            # If so, ban their new IP address as well
+            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            db.session.add(new_ip_ban)
+            db.session.commit()
+            cache.delete_memoized(banned_ip_addresses)
+
+        # Set a cookie so we have another way to track banned people
+        response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+        return response
+    if user.waiting_for_approval():
+        return redirect(url_for('auth.please_wait'))
+    else:
+        login_user(user, remember=True)
+        session['ui_language'] = user.interface_language
+        current_user.last_seen = utcnow()
+        current_user.ip_address = ip_address()
+        ip_address_info = ip2location(current_user.ip_address)
+        current_user.ip_address_country = ip_address_info[
+            'country'] if ip_address_info else current_user.ip_address_country
+        db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            if len(current_user.communities()) == 0:
+                next_page = url_for('auth.trump_musk')
+            else:
+                next_page = url_for('main.index')
+        return redirect(next_page)
 
 
 def find_new_username(email: str) -> str:
