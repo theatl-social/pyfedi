@@ -532,6 +532,8 @@ def refresh_community_profile_task(community_id, activity_json):
             community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
             community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
             community.ap_moderators_url = mods_url
+            if 'followers' in activity_json:
+                community.ap_followers_url = activity_json['followers']
             community.ap_fetched_at = utcnow()
             community.public_key=activity_json['publicKey']['publicKeyPem']
 
@@ -645,6 +647,16 @@ def refresh_community_profile_task(community_id, activity_json):
                                                                             user_id=member_user.id,
                                                                             is_moderator=True).delete()
                                 db.session.commit()
+
+            if community.ap_followers_url:
+                followers_request = get_request(community.ap_followers_url, headers={'Accept': 'application/activity+json'})
+                if followers_request.status_code == 200:
+                    followers_data = followers_request.json()
+                    followers_request.close()
+                    if followers_data and followers_data['type'] == 'Collection' and 'totalItems' in followers_data:
+                        community.total_subscriptions_count = followers_data['totalItems']
+                        session.commit()
+
     session.close()
 
 
