@@ -1205,7 +1205,7 @@ def post_set_flair(post_id):
                 post.flair.remove(flair)
             else:
                 # Add flair to post
-                post.flair = [flair]
+                post.flair.append(flair)
             
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED and post.author.is_local():
