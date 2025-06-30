@@ -365,15 +365,16 @@ def google_authorize():
                         verification_token='', instance_id=1, ip_address=ip_address(),
                         banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                         referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
+            ip_address_info = ip2location(user.ip_address)
             user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
             db.session.add(user)
-            targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
             db.session.commit()
-            if get_setting('ban_check_servers', ''):
-                task_selector('check_application', application_id=application.id)
 
-            create_user_application(user, "Signed in with Google")
-            return redirect(url_for('auth.please_wait'))
+            if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+                application = create_user_application(user, "Signed in with Google")
+                if get_setting('ban_check_servers', 'piefed.social'):
+                    task_selector('check_application', application_id=application.id)
+                return redirect(url_for('auth.please_wait'))
     else:
         if user.verified:
             finalize_user_setup(user)
