@@ -1669,6 +1669,64 @@ function hookupCommunityFilter() {
     }
 }
 
+function checkLanguage(languageSelect, warningDiv, recipientLanguage) {
+    if (typeof languageSelect === 'string') {
+        languageSelect = document.querySelector(languageSelect);
+    }
+
+    if (typeof warningDiv === 'string') {
+        warningDiv = document.querySelector(warningDiv);
+    }
+
+    if (warningDiv === undefined) {
+        warnignDiv = languageSelect.getAttribute('data-warning-div-id');
+    }
+
+    if (recipientLanguage === undefined && languageSelect) {
+        recipientLanguage = languageSelect.getAttribute('data-recipient-language');
+    }
+
+
+    if (recipientLanguage && languageSelect.value !== recipientLanguage) {
+        warningDiv.classList.remove('d-none');
+    } else {
+        warningDiv.classList.add('d-none');
+    }
+}
+
+function addLanguageCheck(languageSelect, warningDiv, recipientLanguage) {
+    if (typeof languageSelect === 'string') {
+        languageSelect = document.querySelector(languageSelect);
+    }
+
+    if (typeof warningDiv === 'string') {
+        warningDiv = document.querySelector(warningDiv);
+    }
+
+    if (warningDiv === undefined && languageSelect) {
+        warningDiv = document.getElementById(languageSelect.getAttribute('data-warning-div-id'));
+    }
+
+    if (recipientLanguage === undefined && languageSelect) {
+        recipientLanguage = languageSelect.getAttribute('data-recipient-language');
+    }
+
+    console.log(languageSelect, warningDiv, recipientLanguage);
+    
+
+    if (languageSelect && warningDiv) {
+        // Initial check
+        checkLanguage(languageSelect, warningDiv, recipientLanguage);
+
+        // Add event listener for changes
+        languageSelect.addEventListener('change', function () {
+            console.log('languageSelect change');
+            checkLanguage(languageSelect, warningDiv, recipientLanguage);
+        });
+
+        return languageSelect;
+    }
+}
 function setupVotingLongPress() {
     const votingElements = document.querySelectorAll('.voting_buttons_new');
 
