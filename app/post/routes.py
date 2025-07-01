@@ -14,7 +14,7 @@ from furl import furl
 from app import db, constants, cache, limiter, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
-from app.community.util import send_to_remote_instance, flair_from_form
+from app.community.util import send_to_remote_instance, flair_from_form, normalize_font_size
 from app.inoculation import inoculation
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
@@ -225,6 +225,16 @@ def show_post(post_id: int):
             user = None
 
         community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
+        tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+        FROM "tag" AS t
+        INNER JOIN post_tag pt ON t.id = pt.tag_id
+        INNER JOIN "post" ON pt.post_id = post.id
+        WHERE post.community_id = :community_id
+          AND t.banned IS FALSE
+        GROUP BY t.id
+        ORDER BY pc DESC
+        LIMIT 30;"""), {'community_id': post.community_id}).mappings().all()
+        tags = [dict(row) for row in tags]
         # Get the language of the user being replied to
         recipient_language_id = post.language_id or post.author.language_id
         recipient_language_code = None
@@ -244,7 +254,7 @@ def show_post(post_id: int):
                                 description=description, og_image=og_image, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                                 autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                                 noindex=not post.author.indexable, preconnect=post.url if post.url else None,
-                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, tags=normalize_font_size(tags),
                                 recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                                 reply_collapse_threshold=reply_collapse_threshold,
                                 etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,

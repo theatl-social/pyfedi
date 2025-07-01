@@ -483,7 +483,8 @@ def show_community(community: Community):
     WHERE post.community_id = :community_id
       AND t.banned IS FALSE
     GROUP BY t.id
-    ORDER BY pc DESC;"""), {'community_id': community.id}).mappings().all()
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_id': community.id}).mappings().all()
     tags = [dict(row) for row in tags]
 
     return render_template('community/community.html', community=community, title=community.title, breadcrumbs=breadcrumbs,
