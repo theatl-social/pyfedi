@@ -130,9 +130,9 @@
             {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
               <div class="dropdown" id="flair_dropdown_{{ post.id }}">
                 <a href="{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}"
-                  data-bs-toggle="dropdown"
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
                   rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
-                <ul class="dropdown-menu" style="width: 320px">
+                <ul class="dropdown-menu dropdown-menu-end overflow-auto" style="width: 320px;">
                   <div
                     hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
                     hx-trigger="intersect once"

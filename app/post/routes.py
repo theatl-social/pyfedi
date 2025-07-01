@@ -1207,30 +1207,27 @@ def post_set_flair(post_id):
         
         if request.headers.get("HX-Request"):
             curr_url = request.headers.get("HX-Current-Url")
-            # Request came from htmx, send back just a partial
-            flair_id = request.args.get('flair_id', None)
-            if not flair_id:
-                # Something went wrong
-                return ""
+            flair_sent = []
             
-            flair_id = int(flair_id)
-            flair = CommunityFlair.query.get(flair_id) if flair_id else None
-            if not flair:
-                # Something went wrong
-                return ""
+
+            form_fields = [key for key in request.form]
+            for field in form_fields:
+                if field.startswith("flair-"):
+                    flair_sent.append(int(field.partition("flair-")[2]))
             
-            community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
-            allowed_flair = [int(item.id) for item in community_flair]
-            if flair_id not in allowed_flair:
-                # Something went wrong, do nothing
-                return ""
-            
-            if flair in post.flair:
-                # Remove flair from post
-                post.flair.remove(flair)
-            else:
-                # Add flair to post
-                post.flair.append(flair)
+            flair_objs = [CommunityFlair.query.get(flair_id) for flair_id in flair_sent]
+            comm_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).order_by(CommunityFlair.flair).all()
+
+            # Reset flair for the post
+            post.flair = []
+
+            for flair in flair_objs:
+                if flair not in comm_flair:
+                    # Flair from wrong community, ignore
+                    continue
+                else:
+                    # Add flair to post
+                    post.flair.append(flair)
             
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED and post.author.is_local():
@@ -1282,7 +1279,11 @@ def post_flair_list(post_id):
         if not flair_choices:
             return ""
         
-        return render_template('post/_flair_choices.html', flair_choices=flair_choices, post_id=post.id, post_preview=post_preview)
+        flair_objs = [CommunityFlair.query.get(choice[0]) for choice in flair_choices]
+        post_flair = [flair.id for flair in post.flair]
+        
+        return render_template('post/_flair_choices.html', post_id=post.id, post_preview=post_preview,
+                               flair_objs=flair_objs, post_flair=post_flair)
     else:
         abort(401)
 
