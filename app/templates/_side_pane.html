@@ -43,6 +43,13 @@
                         {% endfor -%}
                     </div>
                 {% endif %}
+                {% if tags and len(tags) > 0 -%}
+                    <div class="post_tags_sidepane">
+                        {% for tag in tags -%}
+                            <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), tag=tag.name) }}">#{{ tag.display_as }}</a></span>
+                        {% endfor -%}
+                    </div>
+                {% endif -%}
             </div>
         </div>
         {% endif -%}

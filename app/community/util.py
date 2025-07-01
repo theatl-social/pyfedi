@@ -665,3 +665,18 @@ def find_potential_moderators(search: str) -> List[User]:
     else:
         return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
           order_by(desc(User.reputation)).all()
+
+
+def normalize_font_size(tags, min_size=12, max_size=24):
+    pcs = [tag['pc'] for tag in tags]
+    min_pc, max_pc = min(pcs), max(pcs)
+
+    def scale(pc):
+        if max_pc == min_pc:
+            return (min_size + max_size) // 2
+        return min_size + (pc - min_pc) * (max_size - min_size) / (max_pc - min_pc)
+
+    for tag in tags:
+        tag['font_size'] = round(scale(tag['pc']), 1)
+
+    return tags
