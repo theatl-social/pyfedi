@@ -1,3 +1,4 @@
+from app import db
 from app.api.alpha.views import private_message_view
 from app.api.alpha.utils.validators import required, string_expected, integer_expected
 from app.chat.util import send_message

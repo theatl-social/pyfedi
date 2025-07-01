@@ -92,65 +92,71 @@ def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str
 @celery.task
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str, content_type: str = "application/activity+json",
         method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
-    if '@context' not in body:  # add a default json-ld context if necessary
-        body['@context'] = default_context()
-    type = body['type'] if 'type' in body else ''
-    log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
-    log.activity_json = json.dumps(body)
-    db.session.add(log)
-    db.session.commit()
+    try:
+        if '@context' not in body:  # add a default json-ld context if necessary
+            body['@context'] = default_context()
+        type = body['type'] if 'type' in body else ''
+        log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
+        log.activity_json = json.dumps(body)
+        db.session.add(log)
+        db.session.commit()
 
-    http_status_code = None
+        http_status_code = None
 
-    if uri is None or uri == '':
-        log.result = 'failure'
-        log.exception_message = 'empty uri'
-    else:
-        try:
-            result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
-            http_status_code = result.status_code
-            if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
-                log.result = 'failure'
-                log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
-                if 'DOCTYPE html' in result.text:
-                    log.result = 'ignored'
-                    log.exception_message = f'{result.status_code}: HTML instead of JSON response'
-                    #log.activity_json += result.text[]
-                elif 'community_has_no_followers' in result.text:
-                    fix_local_community_membership(uri, private_key)
-                else:
-                    if current_app.debug:
-                        current_app.logger.error(f'Response code for post attempt to {uri} was ' +
-                                             str(result.status_code) + ' ' + result.text[:50])
-            log.exception_message += uri
-            if result.status_code == 202:
-                log.exception_message += ' 202'
-            if result.status_code == 204:
-                log.exception_message += ' 204'
-        except Exception as e:
+        if uri is None or uri == '':
             log.result = 'failure'
-            log.exception_message='could not send:' + str(e)
-            if current_app.debug:
-                current_app.logger.error(f'Exception while sending post to {uri}')
-            http_status_code = 404
-    if log.result == 'processing':
-        log.result = 'success'
-    db.session.commit()
+            log.exception_message = 'empty uri'
+        else:
+            try:
+                result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
+                http_status_code = result.status_code
+                if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
+                    log.result = 'failure'
+                    log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
+                    if 'DOCTYPE html' in result.text:
+                        log.result = 'ignored'
+                        log.exception_message = f'{result.status_code}: HTML instead of JSON response'
+                        #log.activity_json += result.text[]
+                    elif 'community_has_no_followers' in result.text:
+                        fix_local_community_membership(uri, private_key)
+                    else:
+                        if current_app.debug:
+                            current_app.logger.error(f'Response code for post attempt to {uri} was ' +
+                                                 str(result.status_code) + ' ' + result.text[:50])
+                log.exception_message += uri
+                if result.status_code == 202:
+                    log.exception_message += ' 202'
+                if result.status_code == 204:
+                    log.exception_message += ' 204'
+            except Exception as e:
+                log.result = 'failure'
+                log.exception_message='could not send:' + str(e)
+                if current_app.debug:
+                    current_app.logger.error(f'Exception while sending post to {uri}')
+                http_status_code = 404
+        if log.result == 'processing':
+            log.result = 'success'
+        db.session.commit()
 
-    if log.result != 'failure':
-        return
-    else:
-        if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
-            if content_type == "application/activity+json":
-                # Calculate retry delay with exponential backoff. 1 min, 2 mins, 4 mins, 8 mins, up to 4h
-                backoff = 60 * (2 ** retries)
-                backoff = min(backoff, 15360)
-                db.session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
-                                         private_key=private_key, payload=json.dumps(body), retries=retries,
-                                         retry_reason=log.exception_message, send_after=datetime.utcnow() + timedelta(seconds=backoff)))
-                db.session.commit()
+        if log.result != 'failure':
+            return
+        else:
+            if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
+                if content_type == "application/activity+json":
+                    # Calculate retry delay with exponential backoff. 1 min, 2 mins, 4 mins, 8 mins, up to 4h
+                    backoff = 60 * (2 ** retries)
+                    backoff = min(backoff, 15360)
+                    db.session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
+                                             private_key=private_key, payload=json.dumps(body), retries=retries,
+                                             retry_reason=log.exception_message, send_after=datetime.utcnow() + timedelta(seconds=backoff)))
+                    db.session.commit()
 
-        return
+            return
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",

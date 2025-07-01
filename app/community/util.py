@@ -279,68 +279,14 @@ def delete_post_from_community(post_id):
 
 @celery.task
 def delete_post_from_community_task(post_id):
-    post = Post.query.get(post_id)
-    community = post.community
-    post.deleted = True
-    post.deleted_by = current_user.id
-    db.session.commit()
-
-    if not community.local_only:
-        delete_json = {
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-            'type': 'Delete',
-            'actor': current_user.public_url(),
-            'audience': post.community.public_url(),
-            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-            'published': ap_datetime(utcnow()),
-            'cc': [
-                current_user.followers_url()
-            ],
-            'object': post.ap_id,
-        }
-
-        if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-            send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-        else:  # local community - send it to followers on remote instances
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.ap_profile_id,
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
-
-            for instance in post.community.following_instances():
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                        instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-
-
-def delete_post_reply_from_community(post_reply_id):
-    if current_app.debug:
-        delete_post_reply_from_community_task(post_reply_id)
-    else:
-        delete_post_reply_from_community_task.delay(post_reply_id)
-
-
-@celery.task
-def delete_post_reply_from_community_task(post_reply_id):
-    post_reply = PostReply.query.get(post_reply_id)
-    post = post_reply.post
-    community = post.community
-    if post_reply.user_id == current_user.id or community.is_moderator():
-        post_reply.deleted = True
-        post_reply.deleted_by = current_user.id
+    try:
+        post = Post.query.get(post_id)
+        community = post.community
+        post.deleted = True
+        post.deleted_by = current_user.id
         db.session.commit()
 
-        # federate delete
-        if not post.community.local_only:
+        if not community.local_only:
             delete_json = {
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                 'type': 'Delete',
@@ -351,12 +297,11 @@ def delete_post_reply_from_community_task(post_reply_id):
                 'cc': [
                     current_user.followers_url()
                 ],
-                'object': post_reply.ap_id,
+                'object': post.ap_id,
             }
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-
             else:  # local community - send it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -376,6 +321,73 @@ def delete_post_reply_from_community_task(post_reply_id):
                     if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                             instance.domain):
                         send_to_remote_instance(instance.id, post.community.id, announce)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
+
+
+def delete_post_reply_from_community(post_reply_id):
+    if current_app.debug:
+        delete_post_reply_from_community_task(post_reply_id)
+    else:
+        delete_post_reply_from_community_task.delay(post_reply_id)
+
+
+@celery.task
+def delete_post_reply_from_community_task(post_reply_id):
+    try:
+        post_reply = PostReply.query.get(post_reply_id)
+        post = post_reply.post
+        community = post.community
+        if post_reply.user_id == current_user.id or community.is_moderator():
+            post_reply.deleted = True
+            post_reply.deleted_by = current_user.id
+            db.session.commit()
+
+            # federate delete
+            if not post.community.local_only:
+                delete_json = {
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    'type': 'Delete',
+                    'actor': current_user.public_url(),
+                    'audience': post.community.public_url(),
+                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                    'published': ap_datetime(utcnow()),
+                    'cc': [
+                        current_user.followers_url()
+                    ],
+                    'object': post_reply.ap_id,
+                }
+
+                if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                    send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+
+                else:  # local community - send it to followers on remote instances
+                    announce = {
+                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                        "type": 'Announce',
+                        "to": [
+                            "https://www.w3.org/ns/activitystreams#Public"
+                        ],
+                        "actor": post.community.ap_profile_id,
+                        "cc": [
+                            post.community.ap_followers_url
+                        ],
+                        '@context': default_context(),
+                        'object': delete_json
+                    }
+
+                    for instance in post.community.following_instances():
+                        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                                instance.domain):
+                            send_to_remote_instance(instance.id, post.community.id, announce)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def remove_old_file(file_id):
@@ -638,12 +650,17 @@ def send_to_remote_instance(instance_id: int, community_id: int, payload):
 @celery.task
 def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     session = get_task_session()
-    community: Community = session.query(Community).get(community_id)
-    if community:
-        instance: Instance = session.query(Instance).get(instance_id)
-        if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
-    session.close()
+    try:
+        community: Community = session.query(Community).get(community_id)
+        if community:
+            instance: Instance = session.query(Instance).get(instance_id)
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def community_in_list(community_id, community_list):
