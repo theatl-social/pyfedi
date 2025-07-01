@@ -667,7 +667,9 @@ def find_potential_moderators(search: str) -> List[User]:
           order_by(desc(User.reputation)).all()
 
 
-def normalize_font_size(tags, min_size=12, max_size=24):
+def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
+    if len(tags) == 0:
+        return []
     pcs = [tag['pc'] for tag in tags]
     min_pc, max_pc = min(pcs), max(pcs)
 
