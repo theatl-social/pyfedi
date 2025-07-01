@@ -1217,7 +1217,7 @@ def register(app):
 
             # Check boolean environment variables
             print("\n   Checking boolean environment variables...")
-            boolean_vars = ['MAIL_USE_TLS', 'MAIL_ERRORS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
+            boolean_vars = ['MAIL_USE_TLS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
             for var in boolean_vars:
                 env_value = os.environ.get(var)
                 if env_value is not None:
@@ -1307,6 +1307,9 @@ def register(app):
                     print(f"   ✅ Mail from address: {mail_from}")
                 else:
                     warnings.append("   ⚠️  MAIL_FROM not configured")
+                errors_to = current_app.config.get('ERRORS_TO')
+                if errors_to:
+                    print(f"   ✅ Error messages sent to: {errors_to}")
             else:
                 warnings.append("   ⚠️  Mail server not configured - email functionality will be disabled")
 
