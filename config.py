@@ -89,6 +89,9 @@ class Config(object):
     MASTODON_OAUTH_SECRET = os.environ.get("MASTODON_OAUTH_SECRET") or ""
     MASTODON_OAUTH_DOMAIN = os.environ.get("MASTODON_OAUTH_DOMAIN") or ""
 
+    DISCORD_OAUTH_CLIENT_ID = os.environ.get('DISCORD_OAUTH_CLIENT_ID') or ""
+    DISCORD_OAUTH_SECRET = os.environ.get('DISCORD_OAUTH_SECRET') or ""
+
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
     SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']
@@ -98,7 +101,7 @@ class Config(object):
     FLAG_THROWAWAY_EMAILS = os.environ.get('FLAG_THROWAWAY_EMAILS') or False
 
     NOTIF_SERVER = os.environ.get('NOTIF_SERVER') or ''
-    
+
     # CORS configuration
     CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'
 
