@@ -1,60 +1,111 @@
-{% if feed %}
-    {% if current_user.is_authenticated %}
-        <div class="mobile_create_post d-md-none mt-1">
-            <div class="dropdown">
-                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Actions') }}
-                </button>
-                <ul class="dropdown-menu">
-                    <li><a class="dropdown-item" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}">{{ _('Create post') }}</a></li>
-                    <!-- <li><a class="dropdown-item" href="#search_community">{{ _('Search') }}</a></li> -->
-                    <!-- <li><a class="dropdown-item" href="#about_community">{{ _('About community') }}</a></li> -->
-                    <div class="dropdown-divider"></div>
-                    {% if current_user.is_authenticated and feed_membership(current_user, feed) in [SUBSCRIPTION_MEMBER] and current_user.id != feed.user_id -%}
-                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a></li>
-                        <div class="dropdown-divider"></div>
-                        <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
-                    {% elif current_user.is_authenticated and feed_membership(current_user, feed) == SUBSCRIPTION_PENDING and current_user.id != feed.user_id -%}
-                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a></li>
-                    {% elif current_user.is_authenticated and current_user.id == feed.user_id -%}
-                        <li><a class="dropdown-item" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}">{{ _('Settings') }}</a></li>
-                    {% else -%}
-                        <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/subscribe" rel="nofollow">{{ _('Subscribe') }}</a></li>
-                        <div class="dropdown-divider"></div>
-                        <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
-                    {% endif -%}
-                </ul>
-            </div>
-        </div>
-    {% endif %}
-{% endif %}
-<div class="btn-group mt-1 mb-2">
-    <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+<div class="d-flex flex-row justify-content-between mt-1">
+  <div class="d-block d-sm-none">
+    <div class="dropdown">
+      <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+        {{ _('Sort') }}
+      </button>
+      <ul class="dropdown-menu">
+        <li>
+          <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="dropdown-item {{ 'active' if sort == '' or sort == 'hot' }}" rel="nofollow noindex">
+            {{ _('Hot') }}
+          </a>
+        </li>
+        <li>
+          <a href="?sort=top&layout={{ post_layout }}" aria-label="{{ _('Sort by top') }}" class="dropdown-item {{ 'active' if sort == 'top' }}" rel="nofollow noindex">
+            {{ _('Top') }}
+          </a>
+        </li>
+        <li>
+          <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="dropdown-item {{ 'active' if sort == 'new' }}" rel="nofollow noindex">
+            {{ _('New') }}
+          </a>
+        </li>
+        <li>
+          <a href="?sort=old&layout={{ post_layout }}" aria-label="{{ _('Sort by old') }}" class="dropdown-item {{ 'active' if sort == 'old'  }}" rel="nofollow noindex">
+            {{ _('Old') }}
+          </a>
+        </li>
+        <li>
+          <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="dropdown-item {{ 'active' if sort == 'active' }}" rel="nofollow noindex">
+            {{ _('Active') }}
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+  <div class="d-none d-sm-block">
+    <div class="btn-group">
+      <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Hot') }}
-    </a>
-    <a href="?sort=top&layout={{ post_layout }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?sort=top&layout={{ post_layout }}" aria-label="{{ _('Sort by top') }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Top') }}
-    </a>
-    <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('New') }}
-    </a>
-    <a href="?sort=old&layout={{ post_layout }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?sort=old&layout={{ post_layout }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Old') }}
-    </a>
-    <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Active') }}
-    </a>
-</div>
-{% if post_layout != '' and post_layout is not none %}
-<div class="btn-group mt-1 mb-2 layout_switcher">
-    <a href="?layout=list&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+    </div>
+  </div>
+    <div class="mobile_create_post d-block d-lg-none">
+      <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+          {{ _('Options') }}
+        </button>
+        <ul class="dropdown-menu">
+          <li class="dropdown-header">{{ _('Layout') }}</li>
+          <li>
+            <a href="?layout=list&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == '' or post_layout == 'list' }}" rel="nofollow noindex">
+              {{ _('List') }}
+            </a>
+          </li>
+          <li>
+            <a href="?layout=masonry&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == 'masonry' }}" rel="nofollow noindex">
+              {{ _('Tile') }}
+            </a>
+          </li>
+          <li>
+            <a href="?layout=masonry_wide&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == 'masonry_wide' }}" rel="nofollow noindex">
+              {{ _('Wide tile') }}
+            </a>
+          </li>
+          {% if current_user.is_authenticated %}
+            <div class="dropdown-divider"></div>
+            <li><a class="dropdown-item" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}">{{ _('Create post') }}</a></li>
+            <div class="dropdown-divider"></div>
+            {% if current_user.is_authenticated and feed_membership(current_user, feed) in [SUBSCRIPTION_MEMBER] and current_user.id != feed.user_id -%}
+              <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a></li>
+              <div class="dropdown-divider"></div>
+              <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
+            {% elif current_user.is_authenticated and feed_membership(current_user, feed) == SUBSCRIPTION_PENDING and current_user.id != feed.user_id -%}
+              <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a></li>
+            {% elif current_user.is_authenticated and current_user.id == feed.user_id -%}
+              <li><a class="dropdown-item" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}">{{ _('Settings') }}</a></li>
+            {% else -%}
+              <li><a class="dropdown-item" href="/feed/{{ feed.link() }}/subscribe" rel="nofollow">{{ _('Subscribe') }}</a></li>
+              <div class="dropdown-divider"></div>
+              <li><a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _('Copy') }}</a></li>
+            {% endif -%}
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+  <div class="d-none d-lg-block">
+    <div class="btn-group layout_switcher">
+      <a href="?layout=list&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('List') }}
-    </a>
-    <a href="?layout=masonry&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?layout=masonry&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Tile') }}
-    </a>
-    <a href="?layout=masonry_wide&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+      </a>
+      <a href="?layout=masonry_wide&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
         {{ _('Wide tile') }}
-    </a>
+      </a>
+    </div>
+  </div>
 </div>
-{% endif %}
