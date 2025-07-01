@@ -668,17 +668,18 @@ def find_potential_moderators(search: str) -> List[User]:
 
 
 def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
+    # Add a font size to each dict, based on the number of times each tag is used (the post count aka 'pc')
     if len(tags) == 0:
         return []
-    pcs = [tag['pc'] for tag in tags]
+    pcs = [tag['pc'] for tag in tags]       # pcs = a list of all post counts. Sorry about the 'pc', the SQL that generates this dict had a naming collision
     min_pc, max_pc = min(pcs), max(pcs)
 
     def scale(pc):
         if max_pc == min_pc:
-            return (min_size + max_size) // 2
+            return (min_size + max_size) // 2   # if all tags have the same count
         return min_size + (pc - min_pc) * (max_size - min_size) / (max_pc - min_pc)
 
     for tag in tags:
-        tag['font_size'] = round(scale(tag['pc']), 1)
+        tag['font_size'] = round(scale(tag['pc']), 1)   # add a font size based on its post count
 
     return tags
