@@ -139,18 +139,18 @@
                 <div class="row">
                     <div class="col-6">
                         {% if current_user.id == feed.user_id %}
-                            <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/f/' + feed.name) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
+                            <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/f/' + feed.name) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
                         {% else %}
-                            <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}" rel="nofollow">{{ _('Copy Feed') }}</a>
+                            <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}" rel="nofollow">{{ _('Copy Feed') }}</a>
                             {% if current_user.is_authenticated and feed.subscribed(current_user.id) == 1 %}
-                                <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Unsubscribe') }}</a>
+                                <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Unsubscribe') }}</a>
                             {% else %}
-                                <a class="w-100 btn btn-primary" href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Subscribe') }}</a>
+                                <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Subscribe') }}</a>
                             {% endif %}
                         {% endif %}
                     </div>
                     <div class="col-6">
-                        <a class="w-100 btn btn-primary" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}" rel="nofollow">{{ _('Create post') }}</a>
+                        <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}" rel="nofollow">{{ _('Create post') }}</a>
                     </div>
                 </div>
             </div>

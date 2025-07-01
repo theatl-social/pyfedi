@@ -168,7 +168,7 @@ def create_app(config_class=Config):
     app.register_blueprint(app_api_bp)
 
     # send error reports via email
-    if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
+    if app.config['MAIL_SERVER'] and app.config['ERRORS_TO']:
         auth = None
         if app.config['MAIL_USERNAME'] or app.config['MAIL_PASSWORD']:
             auth = (app.config['MAIL_USERNAME'],

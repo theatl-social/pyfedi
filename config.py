@@ -19,7 +19,6 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or None
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or None
     MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
-    MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ERRORS_TO = os.environ.get('ERRORS_TO') or ''
     LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
