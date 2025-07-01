@@ -115,3 +115,13 @@ NOTE: Major version updates may require extra steps. Check [PieFed Meta](https:/
 sudo docker logs -f piefed_app1
 ```
 - `-f` Option displays logs with constant updates. Press `CTRL+C` to exit.
+
+
+### FOR DEVELOPERS
+
+An alternative Compose file improves the developer experience by automatically reloading the application whenever Python or template files change. It also mounts your local files into the container so you don’t have to rebuild or restart on every edit.
+
+Use:
+```bash
+sudo docker compose -f compose.dev.yaml up
+```
