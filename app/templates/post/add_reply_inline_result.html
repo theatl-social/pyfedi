@@ -28,10 +28,10 @@
             <span class="user_flair">{{ user_flair[user.id] }}</span>
         {% endif %}
         {% if user.id != current_user.id -%}
-            {% if user.reputation < -10 -%}
+            {% if user.reputation < -12 -%}
                 <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
                 <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-            {% elif user.reputation < 0 -%}
+            {% elif user.reputation < -3 -%}
                 <span class="fe fe-warning orangered" title="Low reputation."> </span>
             {% endif -%}
         {% endif -%}
