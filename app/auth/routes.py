@@ -11,15 +11,14 @@ from wtforms import Label
 from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterByMastodonForm
-from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_user_application
-from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
+from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_registration_application, notify_admins_of_registration
+from app.constants import NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.ldap_utils import sync_user_to_ldap
-from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
+from app.models import User, utcnow, IpBan, UserRegistration
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
     finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
-from app.community.util import save_icon_file
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -170,40 +169,33 @@ def register():
                 user.timezone = form.timezone.data
                 if get_setting('email_verification', True):
                     user.verified = False
+                    send_verification_email(user)
+                    if current_app.debug:
+                        current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
                 else:
                     user.verified = True
                 db.session.add(user)
                 db.session.commit()
-                send_verification_email(user)
-                if current_app.debug:
-                    current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
+
                 if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-                    application = UserRegistration(user_id=user.id, answer=form.question.data)
-                    db.session.add(application)
-                    targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
-                    for admin in Site.admins():
-                        notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
-                                          author_id=user.id, notif_type=NOTIF_REGISTRATION,
-                                          subtype='new_registration_for_approval',
-                                          targets=targets_data)
-                        admin.unread_notifications += 1
-                        db.session.add(notify)
-                        # todo: notify everyone with the "approve registrations" permission, instead of just all admins
+                    application = create_registration_application(user, form.question.data)
                     db.session.commit()
                     if get_setting('ban_check_servers', ''):
                         task_selector('check_application', application_id=application.id)
-                    return redirect(url_for('auth.please_wait'))
+                    if get_setting('email_verification', True):
+                        return redirect(url_for('auth.check_email'))
+                    else:
+                        return redirect(url_for('auth.please_wait'))
                 else:
                     if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
                         with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:
-                            # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
                             targets_data = {'gen': '0', 'suspect_user_id': user.id, 'reporter_id': 1}
                             notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
                                          url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
                                          subtype='user_reported', targets=targets_data)
-                    if user.verified:
+                    if user.verified and not user.waiting_for_approval():
                         finalize_user_setup(user)
                         try:
                             sync_user_to_ldap(current_user.user_name, current_user.email,
@@ -291,8 +283,17 @@ def verify_email(token):
                 return redirect(url_for('main.index'))
             if user.verified:   # guard against users double-clicking the link in the email
                 flash(_('Thank you for verifying your email address.'))
-                return redirect(url_for('main.index'))
+                return redirect(url_for('auth.login'))
             user.verified = True
+            
+            # Update any pending application status from -1 to 0 when email is verified
+            application = UserRegistration.query.filter_by(user_id=user.id, status=-1).first()
+            if application:
+                application.status = 0
+                
+                # Now notify admins since application is ready for review
+                notify_admins_of_registration(application)
+            
             db.session.commit()
             if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
@@ -304,7 +305,7 @@ def verify_email(token):
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
-            # Two things need to happen - email verification and (usually) admin approval. They can happen in any order.
+            # Two things need to happen - email verification and (usually) admin approval.
             if g.site.registration_mode == 'RequireApplication':
                 send_registration_approved_email(user)
             else:
@@ -373,7 +374,8 @@ def google_authorize():
             db.session.commit()
 
             if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-                application = create_user_application(user, "Signed in with Google")
+                application = create_registration_application(user, "Signed in with Google")
+                db.session.commit()
                 if get_setting('ban_check_servers', 'piefed.social'):
                     task_selector('check_application', application_id=application.id)
                 return redirect(url_for('auth.please_wait'))
@@ -383,10 +385,12 @@ def google_authorize():
                 login_user(user, remember=True)
                 return redirect(url_for('auth.trump_musk'))
     else:
-        if user.verified:
+        if user.verified and not user.waiting_for_approval():
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
+        elif user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
         else:
             return redirect(url_for('auth.check_email'))
 
@@ -481,15 +485,18 @@ def mastodon_authorize():
 
         db.session.commit()
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-            application = create_user_application(user, "Signed in with Mastodon")
+            application = create_registration_application(user, "Signed in with Mastodon")
+            db.session.commit()
             if get_setting('ban_check_servers', 'piefed.social'):
                 task_selector('check_application', application_id=application.id)
             return redirect(url_for('auth.please_wait'))
     else:
-        if user.verified:
+        if user.verified and not user.waiting_for_approval():
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
+        elif user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
         else:
             return redirect(url_for('auth.check_email'))
 
@@ -542,7 +549,8 @@ def discord_authorize():
             db.session.commit()
 
             if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-                application = create_user_application(user, "Signed in with Discord")
+                application = create_registration_application(user, "Signed in with Discord")
+                db.session.commit()
                 if get_setting('ban_check_servers', 'piefed.social'):
                     task_selector('check_application', application_id=application.id)
                 return redirect(url_for('auth.please_wait'))
@@ -552,10 +560,12 @@ def discord_authorize():
                 login_user(user, remember=True)
                 return redirect(url_for('auth.trump_musk'))
     else:
-        if user.verified:
+        if user.verified and not user.waiting_for_approval():
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
+        elif user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
         else:
             return redirect(url_for('auth.check_email'))
 

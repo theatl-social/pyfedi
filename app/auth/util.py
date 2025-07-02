@@ -6,7 +6,7 @@ from flask import current_app
 
 from app import cache, db
 from app.models import Site, utcnow, Notification, UserRegistration, User
-from app.utils import get_request
+from app.utils import get_request, get_setting
 from app.constants import NOTIF_REGISTRATION
 
 
@@ -74,3 +74,29 @@ def create_user_application(user: User, registration_answer: str):
         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
     db.session.commit()
 
+
+def notify_admins_of_registration(application):
+    """Notify admins when a registration application is ready for review"""
+    targets_data = {'gen': '0', 'application_id': application.id, 'user_id': application.user_id}
+    for admin in Site.admins():
+        notify = Notification(title='New registration',
+                              url=f'/admin/approve_registrations?account={application.user_id}', user_id=admin.id,
+                              author_id=application.user_id, notif_type=NOTIF_REGISTRATION,
+                              subtype='new_registration_for_approval',
+                              targets=targets_data)
+        admin.unread_notifications += 1
+        db.session.add(notify)
+
+
+def create_registration_application(user, answer):
+    """Create a UserRegistration application with proper status based on email verification"""
+    # Set status to -1 if email verification needed, 0 if not
+    status = -1 if get_setting('email_verification', True) and not user.verified else 0
+    application = UserRegistration(user_id=user.id, answer=answer, status=status)
+    db.session.add(application)
+
+    # Only notify admins if application is ready for review (status >= 0)
+    if status >= 0:
+        notify_admins_of_registration(application)
+
+    return application

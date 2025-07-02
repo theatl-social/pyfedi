@@ -12,7 +12,7 @@ from app import db, cache, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_IMAGE
 
-from app.models import User, Community, Instance, Site, ActivityPubLog, CommunityMember, Language, Post
+from app.models import User, Community, Instance, CommunityMember, Post
 from app.utils import gibberish, topic_tree, get_request, store_files_in_s3, ensure_directory_exists, guess_mime_type
 
 

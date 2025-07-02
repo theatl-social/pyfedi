@@ -1418,6 +1418,7 @@ def admin_approve_registrations_approve(user_id):
 
     return redirect(url_for('admin.admin_approve_registrations'))
 
+
 @bp.route('/approve_registrations/<int:user_id>/deny', methods=['POST'])
 @permission_required('approve registrations')
 @login_required
