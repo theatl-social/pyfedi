@@ -40,7 +40,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
-    possible_communities, user_notes, login_required, get_recipient_language
+    possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts
 from app.post.util import post_type_to_form_url_type
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
@@ -234,6 +234,8 @@ def show_post(post_id: int):
             if lang:
                 recipient_language_code = lang.code
                 recipient_language_name = lang.name
+
+        content_filters = user_filters_posts(current_user.id) if current_user.is_authenticated else {}
                 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator, is_owner=community.is_owner(),
                                 community=post.community, community_flair=community_flair,
@@ -244,7 +246,7 @@ def show_post(post_id: int):
                                 description=description, og_image=og_image, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                                 autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                                 noindex=not post.author.indexable, preconnect=post.url if post.url else None,
-                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, tags=hashtags_used_in_community(post.community_id),
+                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, tags=hashtags_used_in_community(post.community_id, content_filters),
                                 recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
                                 reply_collapse_threshold=reply_collapse_threshold,
                                 etag=f"{post.id}{sort}_{hash(post.last_active)}", markdown_editor=current_user.is_authenticated and current_user.markdown_editor,

@@ -684,7 +684,7 @@ def find_potential_moderators(search: str) -> List[User]:
           order_by(desc(User.reputation)).all()
 
 
-def hashtags_used_in_community(community_id):
+def hashtags_used_in_community(community_id: int, content_filters):
     tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
     FROM "tag" AS t
     INNER JOIN post_tag pt ON t.id = pt.tag_id
@@ -694,7 +694,15 @@ def hashtags_used_in_community(community_id):
     GROUP BY t.id
     ORDER BY pc DESC
     LIMIT 30;"""), {'community_id': community_id}).mappings().all()
-    return normalize_font_size([dict(row) for row in tags])
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
 def normalize_font_size(tags: List[dict], min_size=12, max_size=24):

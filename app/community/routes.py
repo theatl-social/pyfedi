@@ -476,17 +476,6 @@ def show_community(community: Community):
         recently_upvoted = []
         recently_downvoted = []
 
-    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
-    FROM "tag" AS t
-    INNER JOIN post_tag pt ON t.id = pt.tag_id
-    INNER JOIN "post" ON pt.post_id = post.id
-    WHERE post.community_id = :community_id
-      AND t.banned IS FALSE AND post.deleted IS FALSE
-    GROUP BY t.id
-    ORDER BY pc DESC
-    LIMIT 30;"""), {'community_id': community.id}).mappings().all()
-    tags = [dict(row) for row in tags]
-
     return render_template('community/community.html', community=community, title=community.title, breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts, comments=comments,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE, POST_TYPE_LINK=POST_TYPE_LINK,
@@ -497,7 +486,7 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False, tags=hashtags_used_in_community(community.id),
+                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False, tags=hashtags_used_in_community(community.id, content_filters),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
