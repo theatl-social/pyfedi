@@ -1403,6 +1403,24 @@ def register(app):
             
             print("\nFor more information, see the installation documentation.")
 
+    @app.cli.command("update_active_stats")
+    def update_active_stats():
+        # hard coded numbers for the moment
+        time_interval = utcnow() - timedelta(hours=24)
+        community_id = 229
+
+        count = db.session.execute(text('''
+                    SELECT count(*) FROM
+                    (
+                        SELECT p.user_id FROM "post" p
+                        INNER JOIN "user" u ON p.user_id = u.id
+                        WHERE p.posted_at < :time_interval 
+                            AND u.instance_id = '1' 
+                            AND u.bot = False
+                            AND p.community_id = :community_id                    
+                    )
+                '''),{'time_interval':time_interval,'community_id':community_id}).scalar()
+        print(f"count: {count}")
 
 def parse_communities(interests_source, segment):
     lines = interests_source.split("\n")
