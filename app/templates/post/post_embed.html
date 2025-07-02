@@ -20,10 +20,10 @@
         {% endif %}
         {% if user.id != current_user.id -%}
             {% if user.reputation < -12 -%}
-                <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
-                <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware.') }}"> </span>
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware!') }}"> </span>
             {% elif user.reputation < -3 -%}
-                <span class="fe fe-warning orangered" title="Low reputation."> </span>
+                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
             {% endif -%}
         {% endif -%}
     {% endif -%}
