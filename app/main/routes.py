@@ -1014,3 +1014,8 @@ def list_feeds():
         # render the page
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds, public_feeds_list=public_feeds,
                             subscribed_feeds=subscribed_feeds(current_user.get_id()))
+
+
+@bp.route('/health', methods=['HEAD', 'GET'])
+def health():
+    return 'Ok'
