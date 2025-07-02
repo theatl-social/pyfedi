@@ -166,7 +166,7 @@ def nodeinfo2():
                 "version": "2.0",
                 "software": {
                     "name": "piefed",
-                    "version": "0.1"
+                    "version": current_app.config["VERSION"]
                 },
                 "protocols": [
                     "activitypub"
@@ -194,7 +194,7 @@ def nodeinfo21():
                 "version": "2.1",
                 "software": {
                     "name": "piefed",
-                    "version": "0.1",
+                    "version": {current_app.config["VERSION"]},
                     "repository": "https://codeberg.org/rimu/pyfedi",
                     "homepage": "https://join.piefed.social"
                 },
