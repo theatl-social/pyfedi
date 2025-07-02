@@ -20,7 +20,7 @@ from app.models import Community, File, BannedInstances, PostReply, Post, utcnow
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 import os
 
 
@@ -682,6 +682,19 @@ def find_potential_moderators(search: str) -> List[User]:
     else:
         return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
           order_by(desc(User.reputation)).all()
+
+
+def hashtags_used_in_community(community_id):
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+    FROM "tag" AS t
+    INNER JOIN post_tag pt ON t.id = pt.tag_id
+    INNER JOIN "post" ON pt.post_id = post.id
+    WHERE post.community_id = :community_id
+      AND t.banned IS FALSE AND post.deleted IS FALSE
+    GROUP BY t.id
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_id': community_id}).mappings().all()
+    return normalize_font_size([dict(row) for row in tags])
 
 
 def normalize_font_size(tags: List[dict], min_size=12, max_size=24):

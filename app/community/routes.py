@@ -24,7 +24,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
-    find_potential_moderators, normalize_font_size
+    find_potential_moderators, hashtags_used_in_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -481,7 +481,7 @@ def show_community(community: Community):
     INNER JOIN post_tag pt ON t.id = pt.tag_id
     INNER JOIN "post" ON pt.post_id = post.id
     WHERE post.community_id = :community_id
-      AND t.banned IS FALSE
+      AND t.banned IS FALSE AND post.deleted IS FALSE
     GROUP BY t.id
     ORDER BY pc DESC
     LIMIT 30;"""), {'community_id': community.id}).mappings().all()
@@ -497,7 +497,7 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False, tags=normalize_font_size(tags),
+                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False, tags=hashtags_used_in_community(community.id),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
