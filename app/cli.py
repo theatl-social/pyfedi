@@ -648,7 +648,6 @@ def register(app):
                     task_selector('make_post', post_id=scheduled_post.id)
                     notify_about_post(scheduled_post)
 
-
     @app.cli.command('move-files-to-s3')
     def move_files_to_s3():
         with app.app_context():
@@ -1405,22 +1404,63 @@ def register(app):
 
     @app.cli.command("update_active_stats")
     def update_active_stats():
-        # hard coded numbers for the moment
-        time_interval = utcnow() - timedelta(hours=24)
-        community_id = 229
+        # timing settings
+        day = utcnow() - timedelta(hours=24)
+        week = utcnow() - timedelta(days=7)
+        month = utcnow() - timedelta(weeks=4)
+        half_year = utcnow() - timedelta(weeks=26) # 52 weeks/year divided by 2
 
-        count = db.session.execute(text('''
-                    SELECT count(*) FROM
-                    (
-                        SELECT p.user_id FROM "post" p
-                        INNER JOIN "user" u ON p.user_id = u.id
-                        WHERE p.posted_at < :time_interval 
-                            AND u.instance_id = '1' 
-                            AND u.bot = False
-                            AND p.community_id = :community_id                    
-                    )
-                '''),{'time_interval':time_interval,'community_id':community_id}).scalar()
-        print(f"count: {count}")
+        # get a list of the ids for local communities
+        local_comm_ids = []
+        local_comms = Community.query.filter(Community.banned == False).all()
+        for c in local_comms:
+            if c.is_local():
+                local_comm_ids.append(c.id)
+
+        print(f'local_comm_ids: {local_comm_ids}')
+        print(f"day: {day}")
+        print(f"week: {week}")
+        print(f"month: {month}")
+
+        for lci in local_comm_ids:
+            print(f'lci: {lci}')
+            for interval in day,week,month,half_year:
+                count = db.session.execute(text('''
+                            SELECT count(*) FROM
+                            (
+                                SELECT p.user_id FROM "post" p
+                                INNER JOIN "user" u ON p.user_id = u.id
+                                WHERE p.posted_at < :time_interval 
+                                    AND u.instance_id = '1' 
+                                    AND u.bot = False
+                                    AND p.community_id = :community_id
+                                UNION
+                                SELECT pr.user_id FROM "post_reply" pr
+                                INNER JOIN "user" u ON pr.user_id = u.id
+                                WHERE pr.posted_at < :time_interval
+                                    AND u.instance_id = '1'         
+                                    AND u.bot = False
+                                    AND pr.community_id = :community_id   
+                                UNION
+                                SELECT pv.user_id FROM "post_vote" pv
+                                INNER JOIN "user" u ON pv.user_id = u.id
+                                INNER JOIN "post" p ON pv.post_id = p.id
+                                WHERE pv.created_at < :time_interval
+                                    AND u.instance_id = '1'         
+                                    AND u.bot = False
+                                    AND p.community_id = :community_id                            
+                                UNION
+                                SELECT prv.user_id FROM "post_reply_vote" prv
+                                INNER JOIN "user" u ON prv.user_id = u.id
+                                INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+                                INNER JOIN "post" p ON pr.post_id = p.id
+                                WHERE prv.created_at < :time_interval
+                                    AND u.instance_id = '1'         
+                                    AND u.bot = False
+                                    AND p.community_id = :community_id
+                            )
+                        '''),{'time_interval':interval,'community_id':lci}).scalar()
+                print(f'interval: {interval}, count:{count}')
 
 def parse_communities(interests_source, segment):
     lines = interests_source.split("\n")
