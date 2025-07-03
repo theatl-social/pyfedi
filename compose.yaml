@@ -43,7 +43,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 20s
 
   web:
     build:
@@ -66,11 +66,11 @@ services:
     networks:
       - pf_network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "sh", "-c", "wget --header='Host: ${SERVER_NAME}' --quiet --tries=1 --spider http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 20s
 
   adminer:
     image: adminer
