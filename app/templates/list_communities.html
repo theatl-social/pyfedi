@@ -177,10 +177,14 @@
                                 {% elif community.id in joined_communities -%}
                                     {% include "community/_leave_button.html" %}
                                 {% else -%}
-                                    {% include "community/_join_button.html" %}
+                                    {% if not community.instance.gone_forever %}
+                                        {% include "community/_join_button.html" %}
+                                    {% endif %}
                                 {% endif -%}
                             {% else -%}
+                                {% if not community.instance.gone_forever %}
                                     {% include "community/_join_button.html" %}
+                                {% endif %}
                             {% endif -%}</td>
                         {% if not low_bandwidth -%}
                             <td width="46">
