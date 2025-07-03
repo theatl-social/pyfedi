@@ -814,6 +814,18 @@ div.navbar {
   }
 }
 
+form > .mb-3 {
+  margin-bottom: 1.1rem;
+}
+form > .mb-3.required > label:after {
+  content: "*";
+  color: red;
+  margin-left: 2px;
+  font-size: 80%;
+  position: relative;
+  top: -1px;
+}
+
 .form-group {
   margin-bottom: 1.1rem;
 }
@@ -824,6 +836,10 @@ div.navbar {
   font-size: 80%;
   position: relative;
   top: -1px;
+}
+
+.form-label {
+  font-weight: 500;
 }
 
 .post_reply_form {
@@ -2595,6 +2611,10 @@ form h5 {
 }
 #voting_dialog .btn i {
   margin-right: 0.5rem;
+}
+
+#registration_form #question {
+  margin-top: -0.5rem;
 }
 
 .blink {

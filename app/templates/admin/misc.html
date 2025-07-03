@@ -44,6 +44,7 @@
             <h3>{{ _('Registration') }}</h3>
             {{ render_field(form.registration_mode) }}
             {{ render_field(form.application_question) }}
+            <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
             {{ render_field(form.email_verification) }}
             {{ render_field(form.captcha_enabled) }}
             {{ render_field(form.choose_topics) }}

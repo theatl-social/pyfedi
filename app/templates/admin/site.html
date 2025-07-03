@@ -32,6 +32,8 @@
             {{ render_field(form.legal_information) }}
             <p class="small field_hint">{{ _('HTML is allowed in this field.') }}</p>
             {{ render_field(form.contact_email) }}
+            {{ render_field(form.tos_url) }}
+            <p class="small field_hint">{{ _('Create a page in the "Pages" area then put it\'s address in here.') }}</p>
             {{ render_field(form.submit) }}
         </form>
     </div>

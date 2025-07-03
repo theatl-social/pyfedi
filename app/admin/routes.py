@@ -78,6 +78,7 @@ def admin_site():
         site.about = form.about.data
         site.sidebar = form.sidebar.data
         site.legal_information = form.legal_information.data
+        site.tos_url = form.tos_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
         if site.id is None:
@@ -154,6 +155,7 @@ def admin_site():
         form.about.data = site.about
         form.sidebar.data = site.sidebar
         form.legal_information.data = site.legal_information
+        form.tos_url.data = site.tos_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,

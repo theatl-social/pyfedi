@@ -18,7 +18,7 @@ from app.ldap_utils import sync_user_to_ldap
 from app.models import User, utcnow, IpBan, UserRegistration
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
+    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin, markdown_to_html
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -123,6 +123,8 @@ def register():
     form = RegistrationForm()
     if g.site.registration_mode != 'RequireApplication':
         form.question.validators = ()
+    if g.site.tos_url is None or g.site.tos_url.strip() == '':
+        form.terms.validators = ()
     if form.validate_on_submit():
         if form.email.data == '': # ignore any registration where the email field is filled out. spam prevention
             if form.real_email.data.lower().startswith('postmaster@') or form.real_email.data.lower().startswith('abuse@') or \
@@ -214,9 +216,11 @@ def register():
         return resp
     else:
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question != '':
-            form.question.label = Label('question', g.site.application_question)
+            form.question.label = Label('question', markdown_to_html(g.site.application_question))
         if g.site.registration_mode != 'RequireApplication':
             del form.question
+        if g.site.tos_url is None or g.site.tos_url.strip() == '':
+            del form.terms
         return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
                                google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'], 
                                mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],

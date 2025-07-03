@@ -3,7 +3,7 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% from 'bootstrap5/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_field %}
 
 {% block app_content %}
 
@@ -35,7 +35,33 @@
                             </p>
                             {% endif -%}
                             <p align="center">{{ _('or use a username and password:') }}</p>
-                            {{ render_form(form) }}
+                            <form method="post">
+                                {{ form.csrf_token() }}
+                                {{ render_field(form.user_name) }}
+                                {{ render_field(form.email) }}
+                                {{ render_field(form.real_email) }}
+                                {{ render_field(form.password) }}
+                                {{ render_field(form.password2) }}
+                                {% if form.question -%}
+                                    <div class="mb-3 required">{{ form.question.label.text | safe }}
+                                        {{ form.question(class_="form-control", maxlength=255) }}
+                                        {% if len(form.question.errors) -%}
+                                            <br>
+                                            {% for error in form.question.errors %}
+                                                <span style="color: red;">[{{ error }}]</span>
+                                            {% endfor %}
+                                        {% endif -%}
+                                    </div>
+                                {% endif -%}
+                                {% if form.terms -%}
+                                    {{ render_field(form.terms) }}
+                                {% endif -%}
+                                {% if form.captcha %}
+                                    {{ render_field(form.captcha) }}
+                                {% endif -%}
+                                {{ render_field(form.timezone) }}
+                                {{ render_field(form.submit) }}
+                            </form>
                         {% else %}
                             <p>{{ _('Registration is closed. Only admins can create accounts.') }}</p>
                             <p>{{ _('If you would like to sign up for PieFed, choose one of the other instances in our network:') }}</p>
