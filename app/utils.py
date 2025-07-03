@@ -1411,7 +1411,7 @@ def url_to_thumbnail_file(filename) -> File:
             final_ext = file_extension
 
             if medium_image_format == 'AVIF':
-                pass
+                import pillow_avif  # I know this looks unused but it actually is used https://pypi.org/project/pillow-avif-plugin/
 
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(temp_file_path) as img:
