@@ -529,6 +529,11 @@ class Community(db.Model):
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
 
+    active_daily = db.Column(db.Integer, default=0)
+    active_weekly = db.Column(db.Integer, default=0)
+    active_monthly = db.Column(db.Integer, default=0)
+    active_6monthly = db.Column(db.Integer, default=0)
+
     # Which feeds posts from this community show up in
     show_popular = db.Column(db.Boolean, default=True)
     show_all = db.Column(db.Boolean, default=True)
@@ -2786,6 +2791,7 @@ class Site(db.Model):
     icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
     sidebar = db.Column(db.Text, default='')
     legal_information = db.Column(db.Text, default='')
+    tos_url = db.Column(db.String(256))
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
     enable_downvotes = db.Column(db.Boolean, default=True)
