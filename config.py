@@ -1,4 +1,5 @@
 import os
+
 from dotenv import load_dotenv
 
 import app.constants
@@ -136,3 +137,6 @@ class Config(object):
     # How long to keep post voting data ( months )
     KEEP_LOCAL_VOTE_DATA_TIME = int(os.environ.get('KEEP_LOCAL_VOTE_DATA_TIME') or 6)
     KEEP_REMOTE_VOTE_DATA_TIME = int(os.environ.get('KEEP_REMOTE_VOTE_DATA_TIME') or 6)
+
+    # Country Header sourcing
+    COUNTRY_SOURCE_HEADER = os.environ.get('COUNTRY_SOURCE_HEADER') or ''

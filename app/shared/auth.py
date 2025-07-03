@@ -1,23 +1,24 @@
+from datetime import datetime
+
+from flask import redirect, url_for, flash, request, make_response, session, Markup
+from flask_babel import _
 from flask_login import login_user
 from sqlalchemy.exc import NoResultFound
 from werkzeug.urls import url_parse
 
 from app import db, cache
-from app.auth.util import ip2location
+from app.api.alpha.utils.validators import required, string_expected
+from app.auth.util import get_country
 from app.constants import *
 from app.ldap_utils import sync_user_to_ldap
 from app.models import IpBan, User, utcnow
-from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, gibberish
-from app.api.alpha.utils.validators import required, string_expected
-
-from datetime import datetime
-
-from flask import redirect, url_for, flash, request, make_response, session, Markup
-from flask_babel import _
+from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses
 
 
 # function can be shared between WEB and API (only API calls it for now)
 def log_user_in(input, src):
+    ip = ip_address()
+    country = get_country(ip)
     if src == SRC_WEB:
         username = input.user_name.data
         password = input.password.data
@@ -81,9 +82,8 @@ def log_user_in(input, src):
         session['ui_language'] = user.interface_language
 
     user.last_seen = utcnow()
-    user.ip_address = ip_address()
-    ip_address_info = ip2location(user.ip_address)
-    user.ip_address_country = ip_address_info['country'] if ip_address_info else user.ip_address_country
+    user.ip_address = ip
+    user.ip_address_country = country
     db.session.commit()
 
     try:

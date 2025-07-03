@@ -1,17 +1,20 @@
 import os.path
-from datetime import date, datetime
+from datetime import datetime
 from random import randint
+
 from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
+from flask_babel import _
+from flask_login import login_user, logout_user, current_user
 from sqlalchemy import func
 from werkzeug.urls import url_parse
-from flask_login import login_user, logout_user, current_user
-from flask_babel import _
 from wtforms import Label
 
 from app import db, cache, limiter, oauth
 from app.auth import bp
-from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterByMastodonForm
-from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_registration_application, notify_admins_of_registration
+from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, \
+    RegisterByMastodonForm
+from app.auth.util import random_token, normalize_utf, no_admins_logged_in_recently, \
+    create_registration_application, notify_admins_of_registration, get_country
 from app.constants import NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.ldap_utils import sync_user_to_ldap
@@ -29,6 +32,10 @@ def login():
         if not next_page or url_parse(next_page).netloc != '':
             next_page = url_for('main.index')
         return redirect(next_page)
+
+    ip = ip_address()
+    country = get_country(ip)
+
     form = LoginForm()
     if form.validate_on_submit():
         form.user_name.data = form.user_name.data.strip()
@@ -70,10 +77,9 @@ def login():
         login_user(user, remember=True)
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
-        current_user.ip_address = ip_address()
+        current_user.ip_address = ip
         current_user.timezone = form.timezone.data
-        ip_address_info = ip2location(current_user.ip_address)
-        current_user.ip_address_country = ip_address_info['country'] if ip_address_info else current_user.ip_address_country
+        current_user.ip_address_country = country if country != '' else current_user.ip_address_country
         db.session.commit()
 
         try:
@@ -120,6 +126,9 @@ def register():
     if g.site.registration_mode == 'Open' and no_admins_logged_in_recently():
         g.site.registration_mode = 'Closed'
 
+    ip = ip_address()
+    country = get_country(ip)
+
     form = RegistrationForm()
     if g.site.registration_mode != 'RequireApplication':
         form.question.validators = ()
@@ -146,10 +155,9 @@ def register():
                         return resp
 
                 # Country-based registration blocking
-                ip_address_info = ip2location(ip_address())
-                if ip_address_info and ip_address_info['country']:
+                if country != '':
                     for country_code in get_setting('auto_decline_countries', '').split('\n'):
-                        if country_code and country_code.strip().upper() == ip_address_info['country'].upper():
+                        if country_code and country_code.strip().upper() == country.upper():
                             return render_template('generic_message.html', title=_('Application declined'),
                                                    message=_('Sorry, we are not accepting registrations from your country.'))
 
@@ -163,11 +171,11 @@ def register():
                 if 'Windows' in request.user_agent.string:
                     font = 'inter'  # the default font on Windows doesn't look great so default to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
                 user = User(user_name=form.user_name.data, title=form.user_name.data, email=form.real_email.data,
-                            verification_token=verification_token, instance_id=1, ip_address=ip_address(),
+                            verification_token=verification_token, instance_id=1, ip_address=ip,
                             banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                             referrer=session.get('Referer', ''), alt_user_name=gibberish(randint(8, 20)), font=font)
                 user.set_password(form.password.data)
-                user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                user.ip_address_country = country
                 user.timezone = form.timezone.data
                 if get_setting('email_verification', True):
                     user.verified = False
@@ -346,6 +354,15 @@ def google_authorize():
         current_app.logger.exception("Google OAuth error")
         flash(_('Login failed due to a problem with Google.'), 'error')
         return redirect(url_for('auth.login'))
+
+    ip = ip_address()
+    country = get_country(ip)
+    # Country-based registration blocking
+    if country != '':
+        for country_code in get_setting('auto_decline_countries', '').split('\n'):
+            if country_code and country_code.strip().upper() == country.upper():
+                return render_template('generic_message.html', title=_('Application declined'),
+                                       message=_('Sorry, we are not accepting registrations from your country.'))
     resp = oauth.google.get('oauth2/v2/userinfo', token=token)
     user_info = resp.json()
     google_id = user_info['id']
@@ -371,9 +388,8 @@ def google_authorize():
             user = User(user_name=find_new_username(email), title=name, email=email, verified=True,
                         verification_token='', instance_id=1, ip_address=ip_address(),
                         banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                        referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
-            ip_address_info = ip2location(user.ip_address)
-            user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                        referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id,
+                        ip_address_country=country)
             db.session.add(user)
             db.session.commit()
 
@@ -406,7 +422,7 @@ def google_authorize():
         # Detect if a banned user tried to log in from a new IP address
         if user.banned and not user_ip_banned():
             # If so, ban their new IP address as well
-            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            new_ip_ban = IpBan(ip_address=ip, notes=user.user_name + ' used new IP address')
             db.session.add(new_ip_ban)
             db.session.commit()
             cache.delete_memoized(banned_ip_addresses)
@@ -420,10 +436,8 @@ def google_authorize():
         login_user(user, remember=True)
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
-        current_user.ip_address = ip_address()
-        ip_address_info = ip2location(current_user.ip_address)
-        current_user.ip_address_country = ip_address_info[
-            'country'] if ip_address_info else current_user.ip_address_country
+        current_user.ip_address = ip
+        current_user.ip_address_country = country if country != '' else current_user.ip_address_country
         db.session.commit()
         [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
         next_page = request.args.get('next')
@@ -446,7 +460,7 @@ def mastodon_authorize():
     if not session.get("mastodon_token"):
         try:
             token = oauth.mastodon.authorize_access_token()
-            session["mastodon_token"] = token 
+            session["mastodon_token"] = token
         except Exception as e:
             current_app.logger.exception(e)
             flash(_('Login failed due to a problem with Mastodon server.'), 'error')
@@ -454,6 +468,15 @@ def mastodon_authorize():
     else:
         token = session.get("mastodon_token")
 
+    ip = ip_address()
+    country = get_country(ip)
+    # Country-based registration blocking
+    if country != '':
+        for country_code in get_setting('auto_decline_countries', '').split('\n'):
+            if country_code and country_code.strip().upper() == country.upper():
+                return render_template('generic_message.html', title=_('Application declined'),
+                                       message=_('Sorry, we are not accepting registrations from your country.'))
+  
     resp = oauth.mastodon.get('v1/accounts/verify_credentials', token=token)
     user_info = resp.json()
     mastodon_id = user_info['id']
@@ -473,17 +496,16 @@ def mastodon_authorize():
         if request.method == "GET" or not form.validate_on_submit():
             return render_template(
                 'auth/mastodon_authorize.html', form=form, user_info=user_info
-            ) 
+            )
         # Note - get from form additional data
         email = form.email.data
         # password = form.password.data
         # get avatar also
         user = User(user_name=username, title=display_name, email=email, verified=True,
-                    verification_token='', instance_id=1, ip_address=ip_address(),
+                    verification_token='', instance_id=1, ip_address=ip,
                     banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                    referrer='', alt_user_name=gibberish(randint(8, 20)), mastodon_oauth_id=mastodon_id)
-        ip_address_info = ip2location(user.ip_address)
-        user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                    referrer='', alt_user_name=gibberish(randint(8, 20)), mastodon_oauth_id=mastodon_id,
+                    ip_address_country=country)
         # user.set_password(password)
         db.session.add(user)
 
@@ -496,6 +518,8 @@ def mastodon_authorize():
             return redirect(url_for('auth.please_wait'))
     else:
         if user.verified and not user.waiting_for_approval():
+            user.ip_address = ip
+            user.ip_address_country = country if country != '' else user.ip_address_country
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
@@ -521,6 +545,15 @@ def discord_authorize():
         flash(_('Login failed due to a problem with Discord.'), 'error')
         return redirect(url_for('auth.login'))
 
+    ip = ip_address()
+    country = get_country(ip)
+    # Country-based registration blocking
+    if country != '':
+        for country_code in get_setting('auto_decline_countries', '').split('\n'):
+            if country_code and country_code.strip().upper() == country.upper():
+                return render_template('generic_message.html', title=_('Application declined'),
+                                       message=_('Sorry, we are not accepting registrations from your country.'))
+
     resp = oauth.discord.get('users/@me', token=token)
     user_info = resp.json()
     discord_id = user_info['id']
@@ -544,11 +577,10 @@ def discord_authorize():
                 return redirect(url_for('auth.please_wait'))
 
             user = User(user_name=find_new_username(email), title=username, email=email, verified=True,
-                        verification_token='', instance_id=1, ip_address=ip_address(),
+                        verification_token='', instance_id=1, ip_address=ip,
                         banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
-                        referrer='', alt_user_name=gibberish(randint(8, 20)), discord_oauth_id=discord_id)
-            ip_address_info = ip2location(user.ip_address)
-            user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+                        referrer='', alt_user_name=gibberish(randint(8, 20)), discord_oauth_id=discord_id,
+                        ip_address_country=country)
             db.session.add(user)
             db.session.commit()
 
@@ -565,6 +597,8 @@ def discord_authorize():
                 return redirect(url_for('auth.trump_musk'))
     else:
         if user.verified and not user.waiting_for_approval():
+            user.ip_address = ip
+            user.ip_address_country = country if country != '' else user.ip_address_country
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
@@ -581,7 +615,7 @@ def discord_authorize():
         # Detect if a banned user tried to log in from a new IP address
         if user.banned and not user_ip_banned():
             # If so, ban their new IP address as well
-            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            new_ip_ban = IpBan(ip_address=ip, notes=user.user_name + ' used new IP address')
             db.session.add(new_ip_ban)
             db.session.commit()
             cache.delete_memoized(banned_ip_addresses)
@@ -595,10 +629,8 @@ def discord_authorize():
         login_user(user, remember=True)
         session['ui_language'] = user.interface_language
         current_user.last_seen = utcnow()
-        current_user.ip_address = ip_address()
-        ip_address_info = ip2location(current_user.ip_address)
-        current_user.ip_address_country = ip_address_info[
-            'country'] if ip_address_info else current_user.ip_address_country
+        current_user.ip_address = ip
+        current_user.ip_address_country = country if country != '' else current_user.ip_address_country
         db.session.commit()
         [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
         next_page = request.args.get('next')

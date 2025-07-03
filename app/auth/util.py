@@ -1,13 +1,14 @@
 import random
 from datetime import timedelta
+from typing import Any
 from unicodedata import normalize
 
-from flask import current_app
+from flask import current_app, request
 
 from app import cache, db
+from app.constants import NOTIF_REGISTRATION
 from app.models import Site, utcnow, Notification, UserRegistration, User
 from app.utils import get_request, get_setting
-from app.constants import NOTIF_REGISTRATION
 
 
 # Return a random string of 6 letter/digits.
@@ -44,6 +45,17 @@ def ip2location(ip: str):
         postal = ''
     return {'city': data['city'], 'region': data['region'], 'country': data['country'], 'postal': postal,
             'timezone': data['timezone']}
+
+
+def get_country(ip: str, fallback: Any = '') -> str:
+    country_header = current_app.config['COUNTRY_SOURCE_HEADER']
+
+    if country_header and country_header in request.headers:
+        return request.headers[country_header]
+    if ip is None or ip.strip() == '':
+        return fallback
+
+    return ip2location(ip).get('country', fallback)
 
 
 def no_admins_logged_in_recently():

@@ -1,28 +1,26 @@
 from __future__ import annotations
 
+import base64
 import bisect
 import hashlib
 import mimetypes
 import random
 import urllib
+import warnings
 from collections import defaultdict
 from datetime import datetime, timedelta, date
+from functools import wraps
 from json import JSONDecodeError
 from time import sleep
 from typing import List
-
-
-import app
-import redis
-import httpx
-import markdown2
 from urllib.parse import urlparse, parse_qs, urlencode
-from functools import wraps
+
 import flask
-from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
-import warnings
+import httpx
 import jwt
-import base64
+import markdown2
+import redis
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
@@ -33,8 +31,8 @@ from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
-from wtforms.fields  import SelectField, SelectMultipleField, StringField
-from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
+from wtforms.fields  import SelectMultipleField, StringField
+from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
@@ -46,8 +44,8 @@ from PIL import Image, ImageOps
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
 
-from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
+from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
+    Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
 
 
@@ -1294,18 +1292,18 @@ def finalize_user_setup(user):
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
         user.public_key = public_key
-    
+
     # Only set AP profile IDs if they haven't been set already
     if user.ap_profile_id is None:
         user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
-    
+
     # find all notifications from this registration and mark them as read
     reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION,author_id=user.id)
     for rn in reg_notifs:
         rn.read = True
-    
+
     db.session.commit()
 
 
@@ -1413,7 +1411,7 @@ def url_to_thumbnail_file(filename) -> File:
             final_ext = file_extension
 
             if medium_image_format == 'AVIF':
-                import pillow_avif
+                pass
 
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(temp_file_path) as img:
