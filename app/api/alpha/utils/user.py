@@ -1,18 +1,17 @@
+from flask import current_app
+from sqlalchemy import text, desc, func
+from sqlalchemy.orm.exc import NoResultFound
+
 from app import db, cache
 from app.activitypub.util import make_image_sizes
-from app.api.alpha.views import user_view, reply_view, post_view, community_view
-from app.utils import authorise_api_user
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
+from app.api.alpha.views import user_view, reply_view, post_view, community_view
+from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.constants import *
-
-from flask import current_app
-
-from sqlalchemy import text, desc, func, literal_column
-from sqlalchemy.orm.exc import NoResultFound
+from app.utils import authorise_api_user
 
 
 def get_user(auth, data):
@@ -32,7 +31,8 @@ def get_user(auth, data):
                 ap_domain = None
             else:
                 ap_domain = ap_domain.lower()
-        person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain, User.deleted == False).one()
+        person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain,
+                                   User.deleted == False).one()
         data['person_id'] = person.id
     include_content = data['include_content'] if 'include_content' in data else 'false'
     include_content = True if include_content == 'true' else False
@@ -40,7 +40,7 @@ def get_user(auth, data):
     user_id = None
     if auth:
         user_id = authorise_api_user(auth)
-        auth = None                 # avoid authenticating user again in get_post_list and get_reply_list
+        auth = None  # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
     post_list = get_post_list(auth, data, user_id) if include_content else {'posts': []}
@@ -114,8 +114,12 @@ def get_user_unread_count(auth):
     unread_replies = unread_messages = 0
     unread_notifications = user.unread_notifications
     if unread_notifications > 0:
-        unread_replies = db.session.execute(text("SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false AND url LIKE '%comment%'"), {'user_id': user.id}).scalar()
-        unread_messages = db.session.execute(text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"), {'user_id': user.id}).scalar()
+        unread_replies = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false AND url LIKE '%comment%'"),
+                                            {'user_id': user.id}).scalar()
+        unread_messages = db.session.execute(
+            text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"),
+            {'user_id': user.id}).scalar()
 
     # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
     # replies and mentions are merged together in 'replies' as that's what get_user_replies() currently expects
@@ -136,15 +140,18 @@ def get_user_replies(auth, data):
 
     user_id = authorise_api_user(auth)
 
-    unread_urls = db.session.execute(text("select url from notification where user_id = :user_id and read = false and url ilike '%comment%'"), {'user_id': user_id}).scalars()
+    unread_urls = db.session.execute(
+        text("select url from notification where user_id = :user_id and read = false and url ilike '%comment%'"),
+        {'user_id': user_id}).scalars()
     unread_ids = []
     for url in unread_urls:
-        if '#comment_' in url:                                  # reply format
+        if '#comment_' in url:  # reply format
             unread_ids.append(url.rpartition('_')[-1])
-        elif '/comment/' in url:                                # mention format
+        elif '/comment/' in url:  # mention format
             unread_ids.append(url.rpartition('/')[-1])
 
-    replies = PostReply.query.filter(PostReply.id.in_(unread_ids)).order_by(desc(PostReply.posted_at)).paginate(page=page, per_page=limit, error_out=False)
+    replies = PostReply.query.filter(PostReply.id.in_(unread_ids)).order_by(desc(PostReply.posted_at)).paginate(
+        page=page, per_page=limit, error_out=False)
 
     reply_list = []
     for reply in replies:
@@ -166,7 +173,9 @@ def post_user_mark_all_as_read(auth):
 
     user.unread_notifications = 0
 
-    conversations = Conversation.query.filter_by(read=False).join(ChatMessage, ChatMessage.conversation_id == Conversation.id).filter_by(recipient_id=user.id)
+    conversations = Conversation.query.filter_by(read=False).join(ChatMessage,
+                                                                  ChatMessage.conversation_id == Conversation.id).filter_by(
+        recipient_id=user.id)
     for conversation in conversations:
         conversation.read = True
 
@@ -263,7 +272,8 @@ def get_user_notifications(auth, data):
     items = []
 
     # setup the db query/generator all notifications for the user
-    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).paginate(page=page, per_page=limit, error_out=False)
+    user_notifications = Notification.query.filter_by(user_id=user.id).order_by(desc(Notification.created_at)).\
+        paginate(page=page, per_page=limit, error_out=False)
 
     # currently supported notif types
     supported_notif_types = [
@@ -276,25 +286,24 @@ def get_user_notifications(auth, data):
         NOTIF_MENTION
     ]
 
-
     # new
     if status == 'New':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
-                if isinstance(item.subtype,str):
+                if isinstance(item.subtype, str):
                     notif = _process_notification_item(item)
                     items.append(notif)
     # all
     elif status == 'All':
         for item in user_notifications:
-                if isinstance(item.subtype,str) and item.notif_type in supported_notif_types:
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+            if isinstance(item.subtype, str) and item.notif_type in supported_notif_types:
+                notif = _process_notification_item(item)
+                items.append(notif)
     # read
     elif status == 'Read':
         for item in user_notifications:
             if item.read == True and item.notif_type in supported_notif_types:
-                if isinstance(item.subtype,str):
+                if isinstance(item.subtype, str):
                     notif = _process_notification_item(item)
                     items.append(notif)
 
@@ -303,7 +312,7 @@ def get_user_notifications(auth, data):
     counts['total_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
     counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
     counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
-    
+
     # make dicts of that and pass back
     res = {}
     res['user'] = user.user_name
@@ -375,8 +384,8 @@ def _process_notification_item(item):
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
-        return notification_json        
-    # for the NOTIF_REPLY
+        return notification_json
+        # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
@@ -406,8 +415,8 @@ def _process_notification_item(item):
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
-        return notification_json        
-    # for the NOTIF_MENTION
+        return notification_json
+        # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
         notification_json = {}
         if item.subtype == 'post_mention':
@@ -463,7 +472,8 @@ def get_user_notifications_count(auth):
     # get the user
     user = authorise_api_user(auth, return_type='model')
     # get the user's unread notifications count
-    unread_notifs_count = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    unread_notifs_count = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).\
+        where(Notification.read == False).scalar()
     # make the dict and add that info, then return it
     res = {}
     res['count'] = unread_notifs_count
@@ -478,9 +488,8 @@ def put_user_mark_all_notifications_read(auth):
     # save the changes to the db
     db.session.commit()
     # return a message, though it may not be used by the client
-    res = {"mark_all_notifications_as_read":"complete"}
+    res = {"mark_all_notifications_as_read": "complete"}
     return res
-
 
 
 def post_user_verify_credentials(data):
@@ -499,5 +508,3 @@ def post_user_verify_credentials(data):
         raise NoResultFound
 
     return {}
-
-

@@ -5,21 +5,19 @@ from typing import List
 
 from feedgen.feed import FeedGenerator
 from flask import request, flash, url_for, current_app, redirect, abort, make_response, g
-from flask_login import current_user
 from flask_babel import _
+from flask_login import current_user
 from sqlalchemy import text, desc, or_
 
-from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
-from app.inoculation import inoculation
-from app.models import Topic, Community, Post, \
-    NotificationSubscription, PostReply, utcnow
-from app.topic import bp
-from app.email import send_topic_suggestion
 from app import db, cache
+from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
+from app.email import send_topic_suggestion
+from app.inoculation import inoculation
+from app.models import Topic, Community, NotificationSubscription, PostReply, utcnow
+from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
-from app.utils import render_template, user_filters_posts, moderating_communities, joined_communities, \
-    validation_required, mimetype_from_url, login_required, \
+from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
     gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes
@@ -60,14 +58,16 @@ def show_topic(topic_path):
 
     if current_topic:
         # get posts from communities in that topic
-        if current_topic.show_posts_in_children:    # include posts from child topics
+        if current_topic.show_posts_in_children:  # include posts from child topics
             topic_ids = get_all_child_topic_ids(current_topic)
         else:
             topic_ids = [current_topic.id]
-        community_ids = db.session.execute(text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
-                                           {'topic_ids': tuple(topic_ids)}).scalars()
+        community_ids = db.session.execute(
+            text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+            {'topic_ids': tuple(topic_ids)}).scalars()
 
-        topic_communities = Community.query.filter(Community.topic_id == current_topic.id, Community.banned == False).order_by(Community.name)
+        topic_communities = Community.query.filter(Community.topic_id == current_topic.id,
+                                                   Community.banned == False).order_by(Community.name)
 
         posts = None
         comments = None
@@ -110,7 +110,8 @@ def show_topic(topic_path):
             if sort == '' or sort == 'hot':
                 comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
             elif sort == 'top':
-                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).\
+                    order_by(desc(PostReply.up_votes - PostReply.down_votes))
             elif sort == 'new' or sort == 'active':
                 comments = comments.order_by(desc(PostReply.posted_at))
             per_page = 100
@@ -134,16 +135,20 @@ def show_topic(topic_path):
             recently_downvoted = []
             communities_banned_from_list = []
 
-        return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic, sort=sort,
-                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url, comments=comments,
-                               topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
+        return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic,
+                               sort=sort,
+                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
+                               comments=comments,
+                               topic_communities=topic_communities, content_filters=user_filters_posts(
+                current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
                                reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                user_notes=user_notes(current_user.get_id()),
-                               show_post_community=True, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                               show_post_community=True, recently_upvoted=recently_upvoted,
+                               recently_downvoted=recently_downvoted,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
@@ -162,13 +167,14 @@ def show_topic_rss(topic_path):
     topic = Topic.query.filter(Topic.machine_name == last_topic_machine_name.strip().lower()).first()
 
     if topic:
-        if topic.show_posts_in_children:    # include posts from child topics
+        if topic.show_posts_in_children:  # include posts from child topics
             topic_ids = get_all_child_topic_ids(topic)
         else:
             topic_ids = [topic.id]
 
-        community_ids = db.session.execute(text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
-                                           {'topic_ids': tuple(topic_ids)}).scalars()
+        community_ids = db.session.execute(
+            text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+            {'topic_ids': tuple(topic_ids)}).scalars()
         post_ids = get_deduped_post_ids('', list(community_ids), 'new')
         post_ids = paginate_post_ids(post_ids, 0, page_length=100)
         posts = post_ids_to_models(post_ids, 'new')
@@ -213,13 +219,13 @@ def topic_create_post(topic_name):
         abort(404)
     communities = Community.query.filter_by(topic_id=topic.id, banned=False).order_by(Community.title).all()
     child_topics = [topic.id for topic in Topic.query.filter(Topic.parent_id == topic.id).all()]
-    sub_communities = Community.query.filter_by(banned=False).filter(Community.topic_id.in_(child_topics)).order_by(Community.title).all()
+    sub_communities = Community.query.filter_by(banned=False).filter(Community.topic_id.in_(child_topics)).order_by(
+        Community.title).all()
     if request.form.get('community_id', '') != '':
         community = Community.query.get_or_404(int(request.form.get('community_id')))
         return redirect(url_for('community.join_then_add', actor=community.link()))
     return render_template('topic/topic_create_post.html', communities=communities, sub_communities=sub_communities,
                            topic=topic,
-                           
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            )
 
@@ -260,8 +266,6 @@ def suggest_topics():
         return redirect(url_for('main.list_topics'))
     else:
         return render_template('topic/suggest_topics.html', form=form, title=_('Suggest a topic"'),
-                               
-                                
                                )
 
 
@@ -277,5 +281,3 @@ def get_all_child_topic_ids(topic: Topic) -> List[int]:
     for child_topic in Topic.query.filter(Topic.parent_id == topic.id):
         topic_ids.extend(get_all_child_topic_ids(child_topic))
     return topic_ids
-
-

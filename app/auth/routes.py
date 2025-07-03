@@ -19,7 +19,6 @@ from app.constants import NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.ldap_utils import sync_user_to_ldap
 from app.models import User, utcnow, IpBan, UserRegistration
-from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
     finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin, markdown_to_html
 
@@ -39,11 +38,14 @@ def login():
     form = LoginForm()
     if form.validate_on_submit():
         form.user_name.data = form.user_name.data.strip()
-        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).filter_by(ap_id=None).filter_by(deleted=False).first()
+        user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).\
+            filter_by(ap_id=None).filter_by(deleted=False).first()
         if user is None:
             user = User.query.filter_by(email=form.user_name.data, ap_id=None, deleted=False).first()
-        if user is None:    # ap_profile_id is always lower case so compare it with what_they_typed.lower()
-            user = User.query.filter(User.ap_profile_id.ilike(f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}"), User.deleted == False).first()
+        if user is None:  # ap_profile_id is always lower case so compare it with what_they_typed.lower()
+            user = User.query.filter(User.ap_profile_id.ilike(
+                f"https://{current_app.config['SERVER_NAME']}/u/{form.user_name.data.lower()}"),
+                                     User.deleted == False).first()
         if user is None:
             flash(_('No account exists with that user name.'), 'error')
             return redirect(url_for('auth.login'))
@@ -88,7 +90,7 @@ def login():
             # Log error but don't fail the profile update
             current_app.logger.error(f"LDAP sync failed for user {user.user_name}: {e}")
 
-        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in  limiter.current_limits]
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
         next_page = request.args.get('next')
         if not next_page or url_parse(next_page).netloc != '':
             if len(current_user.communities()) == 0:
@@ -101,10 +103,10 @@ def login():
         else:
             response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
         return response
-    return render_template('auth/login.html', title=_('Login'), form=form, 
-                            google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
-                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
-                            discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
+    return render_template('auth/login.html', title=_('Login'), form=form,
+                           google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
+                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 @bp.route('/logout')
@@ -118,6 +120,7 @@ def logout():
 @bp.route('/register', methods=['GET', 'POST'])
 @limiter.limit("100 per day;20 per 5 minutes", methods=['POST'])
 def register():
+    from app.shared.tasks import task_selector
     disallowed_usernames = ['admin']
     if current_user.is_authenticated:
         return redirect(url_for('main.index'))
@@ -135,8 +138,9 @@ def register():
     if g.site.tos_url is None or g.site.tos_url.strip() == '':
         form.terms.validators = ()
     if form.validate_on_submit():
-        if form.email.data == '': # ignore any registration where the email field is filled out. spam prevention
-            if form.real_email.data.lower().startswith('postmaster@') or form.real_email.data.lower().startswith('abuse@') or \
+        if form.email.data == '':  # ignore any registration where the email field is filled out. spam prevention
+            if form.real_email.data.lower().startswith('postmaster@') or form.real_email.data.lower().startswith(
+                    'abuse@') or \
                     form.real_email.data.lower().startswith('noc@'):
                 flash(_('Sorry, you cannot use that email address'), 'error')
             if form.user_name.data in disallowed_usernames:
@@ -166,7 +170,8 @@ def register():
                 before_normalize = form.user_name.data
                 form.user_name.data = normalize_utf(form.user_name.data)
                 if before_normalize != form.user_name.data:
-                    flash(_('Your username contained special letters so it was changed to %(name)s.', name=form.user_name.data), 'warning')
+                    flash(_('Your username contained special letters so it was changed to %(name)s.',
+                            name=form.user_name.data), 'warning')
                 font = ''
                 if 'Windows' in request.user_agent.string:
                     font = 'inter'  # the default font on Windows doesn't look great so default to Inter. A windows computer will tend to have a connection that won't notice the 300KB font file.
@@ -230,7 +235,7 @@ def register():
         if g.site.tos_url is None or g.site.tos_url.strip() == '':
             del form.terms
         return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
-                               google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'], 
+                               google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
                                mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
                                discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"]
                                )
@@ -258,7 +263,8 @@ def reset_password_request():
                 form.email.data.lower().startswith('noc@'):
             flash(_('Sorry, you cannot use that email address.'), 'error')
         else:
-            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
+            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None,
+                                                                                                      deleted=False).first()
             if user:
                 send_password_reset_email(user)
                 flash(_('Check your email for a link to reset your password.'))
@@ -293,21 +299,21 @@ def verify_email(token):
             if user.banned:
                 flash(_('You have been banned.'), 'error')
                 return redirect(url_for('main.index'))
-            if user.verified:   # guard against users double-clicking the link in the email
+            if user.verified:  # guard against users double-clicking the link in the email
                 flash(_('Thank you for verifying your email address.'))
                 return redirect(url_for('auth.login'))
             user.verified = True
-            
+
             # Update any pending application status from -1 to 0 when email is verified
             application = UserRegistration.query.filter_by(user_id=user.id, status=-1).first()
             if application:
                 application.status = 0
-                
+
                 # Now notify admins since application is ready for review
                 notify_admins_of_registration(application)
-            
+
             db.session.commit()
-            if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
+            if not user.waiting_for_approval() and user.private_key is None:  # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
             flash(_('Thank you for verifying your email address.'))
         else:
@@ -322,7 +328,7 @@ def verify_email(token):
                 send_registration_approved_email(user)
             else:
                 ...
-                #send_welcome_email(user) #not written yet
+                # send_welcome_email(user) #not written yet
 
             login_user(user, remember=True)
             if len(user.communities()) == 0:
@@ -348,6 +354,7 @@ def google_login():
 
 @bp.route('/google_authorize')
 def google_authorize():
+    from app.shared.tasks import task_selector
     try:
         token = oauth.google.authorize_access_token()
     except Exception:
@@ -451,12 +458,13 @@ def google_authorize():
 
 @bp.route("/mastodon_login")
 def mastodon_login():
-    redirect_uri = "urn:ietf:wg:oauth:2.0:oob"#url_for('auth.mastodon_authorize', _external=True)
+    redirect_uri = "urn:ietf:wg:oauth:2.0:oob"  # url_for('auth.mastodon_authorize', _external=True)
     return oauth.mastodon.authorize_redirect(redirect_uri=redirect_uri)
 
 
 @bp.route("/mastodon_authorize", methods=['GET', 'POST'])
 def mastodon_authorize():
+    from app.shared.tasks import task_selector
     if not session.get("mastodon_token"):
         try:
             token = oauth.mastodon.authorize_access_token()
@@ -476,7 +484,7 @@ def mastodon_authorize():
             if country_code and country_code.strip().upper() == country.upper():
                 return render_template('generic_message.html', title=_('Application declined'),
                                        message=_('Sorry, we are not accepting registrations from your country.'))
-  
+
     resp = oauth.mastodon.get('v1/accounts/verify_credentials', token=token)
     user_info = resp.json()
     mastodon_id = user_info['id']
@@ -538,6 +546,7 @@ def discord_login():
 
 @bp.route('/discord_authorize')
 def discord_authorize():
+    from app.shared.tasks import task_selector
     try:
         token = oauth.discord.authorize_access_token()
     except Exception:

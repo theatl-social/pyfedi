@@ -74,7 +74,7 @@ def no_admins_logged_in_recently():
 def create_user_application(user: User, registration_answer: str):
     application = UserRegistration(user_id=user.id, answer='Signed in with Google')
     db.session.add(application)
-    targets_data = {'application_id':application.id,'user_id':user.id}
+    targets_data = {'application_id': application.id, 'user_id': user.id}
     for admin in Site.admins():
         notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
                               user_id=admin.id,

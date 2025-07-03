@@ -2,19 +2,19 @@ from datetime import timezone
 from random import randint
 
 from feedgen.feed import FeedGenerator
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
-from flask_login import current_user
+from flask import redirect, url_for, flash, request, make_response, current_app, abort, g
 from flask_babel import _
+from flask_login import current_user
+from sqlalchemy import desc, or_
 
-from app import db, constants, cache
+from app import db, constants
 from app.constants import POST_STATUS_REVIEWING
 from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
-from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url, \
-    blocked_communities, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, login_required
-from sqlalchemy import desc, or_
+from app.utils import render_template, permission_required, user_filters_posts, blocked_instances, blocked_users, \
+    blocked_domains, mimetype_from_url, \
+    blocked_communities, login_required
 
 
 @bp.route('/tag/<tag>', methods=['GET'])
@@ -138,7 +138,8 @@ def tags():
     prev_url = url_for('tag.tags', page=tags.prev_num) if tags.has_prev and page != 1 else None
 
     return render_template('tag/tags.html', title='All known tags', tags=tags,
-                           next_url=next_url, prev_url=prev_url, search=search, ban_visibility_permission=ban_visibility_permission)
+                           next_url=next_url, prev_url=prev_url, search=search,
+                           ban_visibility_permission=ban_visibility_permission)
 
 
 @bp.route('/tags/banned', methods=['GET'])

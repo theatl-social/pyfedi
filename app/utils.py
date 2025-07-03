@@ -31,7 +31,7 @@ from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
-from wtforms.fields  import SelectMultipleField, StringField
+from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
@@ -106,16 +106,18 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
         # Convert to a more generic error we handle
         raise httpx.HTTPError(f"HTTPError: {str(ex)}") from None
     except httpx.ReadError as connection_error:
-        try:    # retry, this time with a longer timeout
+        try:  # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
-            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2,
+                                        follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {connection_error}")
             raise httpx_client.ReadError(f"HTTPReadError: {str(e)}") from connection_error
     except httpx.HTTPError as read_timeout:
-        try:    # retry, this time with a longer timeout
+        try:  # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
-            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2,
+                                        follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
             raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
@@ -198,7 +200,8 @@ def make_cache_key(sort=None, post_id=None, view_filter=None):
 
 
 def is_image_url(url):
-    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml', '.svg+xml; charset=utf-8']
+    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml',
+                               '.svg+xml; charset=utf-8']
     mime_type = mime_type_using_head(url)
     if mime_type:
         mime_type_parts = mime_type.split('/')
@@ -231,12 +234,14 @@ def is_video_url(url: str) -> bool:
 def is_video_hosting_site(url: str) -> bool:
     if url is None or url == '':
         return False
-    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://vimeo.com', 'https://streamable.com', 'https://www.redgifs.com/watch/']
+    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be',
+                           'https://www.vimeo.com', 'https://vimeo.com', 'https://streamable.com',
+                           'https://www.redgifs.com/watch/']
     for starts_with in video_hosting_sites:
         if url.startswith(starts_with):
             return True
 
-    if 'videos/watch' in url:   # PeerTube
+    if 'videos/watch' in url:  # PeerTube
         return True
 
     return False
@@ -259,9 +264,12 @@ def mime_type_using_head(url):
         return ''
 
 
-allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
+allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
+                'h6', 'pre',
+                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
+                'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
+
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -272,7 +280,7 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     soup = BeautifulSoup(html, 'html.parser')
 
     # Find all plain text links, convert to <a> tags
-    re_url = re.compile(r'(http[s]?://[!-~]+)')   # http(s):// followed by chars in ASCII range 33 to 126
+    re_url = re.compile(r'(http[s]?://[!-~]+)')  # http(s):// followed by chars in ASCII range 33 to 126
     for tag in soup.find_all(text=True):
         tags = []
         url = False
@@ -342,11 +350,15 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
     re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
-    clean_html = re_embedded_mp4.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>', clean_html)
+    clean_html = re_embedded_mp4.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
+        clean_html)
 
     # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
     re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
-    clean_html = re_embedded_webm.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>', clean_html)
+    clean_html = re_embedded_webm.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
+        clean_html)
 
     # replace <img src> for mp3 with <audio>
     re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
@@ -354,7 +366,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     # replace the 'static' for images hotlinked to fandom sites with 'vignette'
     re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
-    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
+                                       clean_html)
 
     # replace ruby markdown like {漢字|かんじ}
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
@@ -400,19 +413,24 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
     if markdown_text:
 
         # Escape <...> if it’s not a real HTML tag
-        markdown_text = escape_non_html_angle_brackets(markdown_text)   # To handle situations like https://ani.social/comment/9666667
+        markdown_text = escape_non_html_angle_brackets(
+            markdown_text)  # To handle situations like https://ani.social/comment/9666667
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                        extras={'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
-                                'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+                                          extras={'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                                  'tg-spoiler': True,
+                                                  'breaks': {'on_newline': True, 'on_backslash': True},
+                                                  'tag-friendly': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
                 raw_html = markdown2.markdown(markdown_text,
-                            extras={'middle-word-em': False, 'tables': True, 'strike': True, 'tg-spoiler': True,
-                                    'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+                                              extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                                                      'tg-spoiler': True,
+                                                      'breaks': {'on_newline': True, 'on_backslash': True},
+                                                      'tag-friendly': True})
             except TypeError:
                 raw_html = ''
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
@@ -605,8 +623,8 @@ def user_access(permission: str, user_id: int) -> bool:
     if user_id == 1:
         return True
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
-                                    'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
-                                    'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
+                                         'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
+                                         'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
                                     {'user_id': user_id, 'permission': permission}).first()
     return has_access is not None
 
@@ -696,6 +714,7 @@ def blocked_referrers() -> List[str]:
     else:
         return []
 
+
 def retrieve_block_list():
     try:
         response = httpx_client.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
@@ -728,7 +747,7 @@ def ensure_directory_exists(directory):
         if not os.path.isdir(rebuild_directory):
             os.mkdir(rebuild_directory)
         rebuild_directory += '/'
-    
+
     # Check if the final directory is writable
     if not os.access(directory, os.W_OK):
         current_app.logger.warning(f"Directory '{directory}' is not writable")
@@ -748,6 +767,7 @@ def validation_required(func):
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.validation_required'))
+
     return decorated_view
 
 
@@ -758,6 +778,7 @@ def login_required_if_private_instance(func):
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.login'))
+
     return decorated_view
 
 
@@ -774,7 +795,6 @@ def permission_required(permission):
         return decorated_view
 
     return decorator
-
 
 
 def login_required(csrf=True):
@@ -797,7 +817,7 @@ def login_required(csrf=True):
             return func(*args, **kwargs)
 
         return decorated_view
-    
+
     # Handle both @login_required and @login_required()
     if callable(csrf):
         # Called as @login_required (csrf is actually the function)
@@ -815,7 +835,8 @@ def debug_mode_only(func):
         if current_app.debug:
             return func(*args, **kwargs)
         else:
-            return abort(403, description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
+            return abort(403,
+                         description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
 
     return decorated_function
 
@@ -877,7 +898,7 @@ def user_ip_banned() -> bool:
 
 
 @cache.memoize(timeout=150)
-def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
+def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
     if domain is None or domain == '':
         return False
     domain = domain.lower().strip()
@@ -1002,7 +1023,6 @@ def can_upvote(user, community: Community, communities_banned_from_list=None) ->
 
 
 def can_create_post(user, content: Community) -> bool:
-
     if content is None:
         return False
 
@@ -1122,20 +1142,22 @@ def shorten_number(number):
 
 @cache.memoize(timeout=300)
 def user_filters_home(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_home=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_home=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
         if filter.hide_type == 0:
             result[filter.title].update(keywords)
-        else:   # type == 1 means hide completely. These posts are excluded from output by the jinja template
+        else:  # type == 1 means hide completely. These posts are excluded from output by the jinja template
             result['-1'].update(keywords)
     return result
 
 
 @cache.memoize(timeout=300)
 def user_filters_posts(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_posts=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_posts=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
@@ -1148,7 +1170,8 @@ def user_filters_posts(user_id):
 
 @cache.memoize(timeout=300)
 def user_filters_replies(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_replies=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_replies=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
@@ -1163,22 +1186,22 @@ def user_filters_replies(user_id):
 def moderating_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
-    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
-        filter(Community.banned == False).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
+        filter(Community.banned == False). \
         filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
-    
+
     # Track display names to identify duplicates
     display_name_counts = {}
     for community in communities:
         display_name = community.title
         display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
-    
+
     # Flag communities as duplicates if their display name appears more than once
     for community in communities:
         community.is_duplicate = display_name_counts[community.title] > 1
-    
+
     return communities
 
 
@@ -1189,7 +1212,7 @@ def moderating_communities_ids(user_id) -> List[int]:
     """
     if user_id is None or user_id == 0:
         return []
-    
+
     sql = text("""
         SELECT c.id
         FROM community c
@@ -1200,7 +1223,7 @@ def moderating_communities_ids(user_id) -> List[int]:
           AND cm.user_id = :user_id
         ORDER BY c.title
     """)
-    
+
     return db.session.execute(sql, {'user_id': user_id}).scalars().all()
 
 
@@ -1208,29 +1231,30 @@ def moderating_communities_ids(user_id) -> List[int]:
 def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
-    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
-    
+
     # track display names to identify duplicates
     display_name_counts = {}
     for community in communities:
         display_name = community.title
         display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
-    
+
     # flag communities as duplicates if their display name appears more than once
     for community in communities:
         community.is_duplicate = display_name_counts[community.title] > 1
-    
+
     return communities
 
 
 def joined_or_modding_communities(user_id):
     if user_id is None or user_id == 0:
         return []
-    return db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
+    return db.session.execute(text(
+        'SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
                               {'user_id': user_id}).scalars().all()
 
 
@@ -1250,7 +1274,8 @@ def menu_topics():
 
 @cache.memoize(timeout=3000)
 def menu_instance_feeds():
-    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(Feed.name).all()
+    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(
+        Feed.name).all()
 
 
 # @cache.memoize(timeout=3000)
@@ -1260,14 +1285,16 @@ def menu_my_feeds(user_id):
 
 @cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
-    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(is_owner=False).all()
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(
+        is_owner=False).all()
 
 
 # @cache.memoize(timeout=3000)
 def subscribed_feeds(user_id: int) -> List[int]:
     if user_id is None or user_id == 0:
         return []
-    return [feed.id for feed in Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
+    return [feed.id for feed in
+            Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
 
 
 @cache.memoize(timeout=300)
@@ -1300,7 +1327,7 @@ def finalize_user_setup(user):
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
 
     # find all notifications from this registration and mark them as read
-    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION,author_id=user.id)
+    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION, author_id=user.id)
     for rn in reg_notifs:
         rn.read = True
 
@@ -1308,8 +1335,9 @@ def finalize_user_setup(user):
 
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
-    return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :entity_id AND type = :type '),
-                                  {'entity_id': entity_id, 'type': entity_type}).scalars())
+    return list(db.session.execute(
+        text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :entity_id AND type = :type '),
+        {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
 # topics, in a tree
@@ -1368,11 +1396,11 @@ def opengraph_parse(url):
 
 def url_to_thumbnail_file(filename) -> File:
     try:
-        timeout = 15 if 'washingtonpost.com' in filename else 5 # Washington Post is really slow for some reason
+        timeout = 15 if 'washingtonpost.com' in filename else 5  # Washington Post is really slow for some reason
         response = httpx_client.get(filename, timeout=timeout)
     except:
         return None
-    
+
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
@@ -1411,13 +1439,13 @@ def url_to_thumbnail_file(filename) -> File:
             final_ext = file_extension
 
             if medium_image_format == 'AVIF':
-                import pillow_avif  # I know this looks unused but it actually is used https://pypi.org/project/pillow-avif-plugin/
+                import pillow_avif
 
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(temp_file_path) as img:
                 img = ImageOps.exif_transpose(img)
                 img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
-                
+
                 # Create 170px thumbnail
                 img_170 = img.copy()
                 img_170.thumbnail((170, 170), resample=Image.LANCZOS)
@@ -1433,18 +1461,17 @@ def url_to_thumbnail_file(filename) -> File:
                 img_170.save(temp_file_path, optimize=True, **kwargs)
                 thumbnail_width = img_170.width
                 thumbnail_height = img_170.height
-                
+
                 # Create 512px thumbnail
                 img_512 = img.copy()
                 img_512.thumbnail((512, 512), resample=Image.LANCZOS)
-                
+
                 # Create filename for 512px thumbnail
                 temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
                 img_512.save(temp_file_path_512, optimize=True, **kwargs)
                 thumbnail_512_width = img_512.width
                 thumbnail_512_height = img_512.height
 
-                
             if store_files_in_s3():
                 content_type = guess_mime_type(temp_file_path)
                 boto3_session = boto3.session.Session()
@@ -1466,14 +1493,15 @@ def url_to_thumbnail_file(filename) -> File:
                 os.unlink(temp_file_path)
                 os.unlink(temp_file_path_512)
                 thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                              '/' + new_filename + final_ext
+                                    '/' + new_filename + final_ext
                 thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                  '/' + new_filename + '_512' + final_ext
+                                    '/' + new_filename + '_512' + final_ext
             else:
                 # For local storage, use the temp file paths as final URLs
                 thumbnail_170_url = temp_file_path
                 thumbnail_512_url = temp_file_path_512
-            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width, height=thumbnail_512_height,
+            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width,
+                        height=thumbnail_512_height,
                         thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
                         source_url=filename)
 
@@ -1492,10 +1520,10 @@ KNOWN_OPENGRAPH_TAGS = [
     "og:image:width",
     "og:image:height",
     "og:image:alt",
-    ]
+]
 
 
-def parse_page(page_url, tags_to_search = KNOWN_OPENGRAPH_TAGS, fallback_tags = None):
+def parse_page(page_url, tags_to_search=KNOWN_OPENGRAPH_TAGS, fallback_tags=None):
     '''
     Parses a page, returns a JSON style dictionary of all OG tags found on that page.
 
@@ -1516,7 +1544,7 @@ def parse_page(page_url, tags_to_search = KNOWN_OPENGRAPH_TAGS, fallback_tags = 
     found_tags = {}
 
     for og_tag in tags_to_search:
-        new_found_tag = soup.find("meta",  property=og_tag)
+        new_found_tag = soup.find("meta", property=og_tag)
         if new_found_tag is not None:
             found_tags[new_found_tag["property"]] = new_found_tag["content"]
         elif fallback_tags is not None and og_tag in fallback_tags:
@@ -1663,29 +1691,33 @@ def in_sorted_list(arr, target):
 
 @cache.memoize(timeout=600)
 def recently_upvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
-    return sorted(post_ids)     # sorted so that in_sorted_list can be used
+    post_ids = db.session.execute(
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
+        {'user_id': user_id}).scalars()
+    return sorted(post_ids)  # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
+    post_ids = db.session.execute(
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
+        {'user_id': user_id}).scalars()
     return sorted(post_ids)
 
 
 @cache.memoize(timeout=600)
 def recently_upvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
-    return sorted(reply_ids)     # sorted so that in_sorted_list can be used
+    reply_ids = db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
+                                   {'user_id': user_id}).scalars()
+    return sorted(reply_ids)  # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
+    reply_ids = db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
+                                   {'user_id': user_id}).scalars()
     return sorted(reply_ids)
 
 
@@ -1709,7 +1741,7 @@ def languages_for_form(all=False):
                                                                     GROUP BY language_id
                                                                     ORDER BY MAX(posted_at) DESC
                                                                     LIMIT 10"""),
-                                                              {'user_id': current_user.id}).scalars().all()
+                                                            {'user_id': current_user.id}).scalars().all()
 
             # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
             # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
@@ -1746,7 +1778,8 @@ def flair_for_form(community_id):
 
 
 def find_flair_id(flair: str, community_id: int) -> int | None:
-    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id, CommunityFlair.flair == flair.strip()).first()
+    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id,
+                                        CommunityFlair.flair == flair.strip()).first()
     if flair:
         return flair.id
     else:
@@ -1815,7 +1848,7 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
         action_type = 'admin'
     else:
         action_type = 'mod'
-    reason=shorten_string(reason, 512)
+    reason = shorten_string(reason, 512)
     db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
                           reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
@@ -1824,7 +1857,7 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
 def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if not auth:
         raise Exception('incorrect_login')
-    token = auth[7:]     # remove 'Bearer '
+    token = auth[7:]  # remove 'Bearer '
 
     if current_app.debug and request.host == 'piefed.ngrok.app':
         if return_type and return_type == 'model':
@@ -1926,7 +1959,7 @@ def retrieve_defederation_list(domain: str) -> List[str]:
             instance_data = response.json()
             for row in instance_data['federated_instances']['blocked']:
                 result.append(row['domain'])
-    else:   # Assume mastodon-compatible API
+    else:  # Assume mastodon-compatible API
         try:
             response = get_request(f'https://{domain}/api/v1/instance/domain_blocks')
         except:
@@ -1946,7 +1979,7 @@ def instance_software(domain: str):
 
 # ----------------------------------------------------------------------
 # Return contents of referrer with a fallback
-def referrer(default: str=None) -> str:
+def referrer(default: str = None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
     if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
@@ -1962,17 +1995,17 @@ def create_captcha(length=4):
         code += str(random.choice(['2', '3', '4', '5', '6', '8', '9']))
 
     imagedata = ImageCaptcha().generate(code)
-    image = "data:image/jpeg;base64,"+base64.encodebytes(imagedata.read()).decode()
+    image = "data:image/jpeg;base64," + base64.encodebytes(imagedata.read()).decode()
 
     audiodata = AudioCaptcha().generate(code)
-    audio = "data:audio/wav;base64,"+base64.encodebytes(audiodata).decode()
+    audio = "data:audio/wav;base64," + base64.encodebytes(audiodata).decode()
 
     uuid = os.urandom(12).hex()
 
     redis_client = get_redis_connection()
-    redis_client.set("captcha_" + uuid, code, ex=30*60)
+    redis_client.set("captcha_" + uuid, code, ex=30 * 60)
 
-    return {"uuid":uuid, "audio":audio, "image":image}
+    return {"uuid": uuid, "audio": audio, "image": image}
 
 
 def decode_captcha(uuid: str, code: str):
@@ -1995,16 +2028,17 @@ def decode_captcha(uuid: str, code: str):
 class CaptchaField(StringField):
     widget = TextInput()
 
-    def  __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         self.data = ''
         captcha = create_captcha()
-        input_field_html = super(CaptchaField, self).__call__(*args,**kwargs)
+        input_field_html = super(CaptchaField, self).__call__(*args, **kwargs)
         return Markup("""<input type="hidden" name="captcha_uuid" value="{uuid}" id="captcha-uuid">
                          <img src="{image}" class="border mb-2" id="captcha-image">
                          <audio src="{audio}" type="audio/wav" controls></audio>
                          <!--<button type="button" id="captcha-refresh-button">Refresh</button>-->
                          <br />
-                      """).format(uuid=captcha["uuid"], image=captcha["image"], audio=captcha["audio"]) + input_field_html
+                      """).format(uuid=captcha["uuid"], image=captcha["image"],
+                                  audio=captcha["audio"]) + input_field_html
 
     def post_validate(self, form, validation_stopped):
         if decode_captcha(request.form.get('captcha_uuid', None), self.data):
@@ -2014,6 +2048,8 @@ class CaptchaField(StringField):
 
 
 user2_cache = {}
+
+
 def jaccard_similarity(user1_upvoted: set, user2_id: int):
     if user2_id not in user2_cache:
         user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
@@ -2147,7 +2183,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     post_ids = dedupe_post_ids(post_ids)
 
     if current_user.is_authenticated:
-        redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
+        redis_client.set(result_id, json.dumps(post_ids), ex=86400)  # 86400 is 1 day
     return post_ids
 
 
@@ -2170,7 +2206,8 @@ def post_ids_to_models(post_ids: List[int], sort: str):
 
 
 def store_files_in_s3():
-    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and \
+        current_app.config['S3_ENDPOINT'] != ''
 
 
 def move_file_to_s3(file_id, s3):
@@ -2182,7 +2219,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
                     new_path = file.thumbnail_path.replace('app/static/media/', "")
-                    s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2192,7 +2230,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
                     new_path = file.file_path.replace('app/static/media/', "")
-                    s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2202,7 +2241,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
                     new_path = file.source_url.replace('app/static/media/', "")
-                    s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2384,7 +2424,7 @@ def reported_post_replies(user_id, admin_ids) -> List[int]:
     else:
         community_ids = [community.id for community in moderating_communities(user_id)]
         post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0 AND community_id IN :community_ids'),
-                                           {'community_ids': community_ids}).scalars())
+                                                 {'community_ids': community_ids}).scalars())
     return post_reply_ids
 
 
@@ -2474,6 +2514,7 @@ def apply_feed_url_rules(self):
         return False
     return True
 
+
 # notification destination user helper function to make sure the
 # notification text is stored in the database using the language of the
 # recipient, rather than the language of the originator
@@ -2497,6 +2538,7 @@ def get_recipient_language(user_id):
         lang_to_use = 'en'
 
     return lang_to_use
+
 
 def render_from_tpl(tpl: str) -> str:
     """

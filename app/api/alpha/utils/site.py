@@ -1,9 +1,9 @@
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import site_view, federated_instances_view
-from app.utils import authorise_api_user
-from app.models import InstanceBlock
 from app.constants import SRC_API
+from app.models import InstanceBlock
 from app.shared.site import block_remote_instance, unblock_remote_instance
+from app.utils import authorise_api_user
 
 
 def get_site(auth):
@@ -32,6 +32,6 @@ def post_site_block(auth, data):
     blocked = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
     block = True if blocked else False
     data = {
-      "blocked": block
+        "blocked": block
     }
     return data

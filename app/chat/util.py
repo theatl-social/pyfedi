@@ -1,9 +1,8 @@
-import json
 from flask import flash, current_app
-from flask_login import current_user
 from flask_babel import _
+from flask_login import current_user
 
-from app import db, celery
+from app import db
 from app.activitypub.signature import send_post_request
 from app.constants import NOTIF_MESSAGE
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
@@ -24,7 +23,7 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
             db.session.commit()
             if recipient.is_local():
                 # Notify local recipient
-                targets_data = {'gen':'0', 'conversation_id':conversation.id, 'message_id': reply.id}
+                targets_data = {'gen': '0', 'conversation_id': conversation.id, 'message_id': reply.id}
                 notify = Notification(title=shorten_string('New message from ' + user.display_name()),
                                       url=f'/chat/{conversation_id}#message_{reply.id}',
                                       user_id=recipient.id,
@@ -63,15 +62,14 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
                 }
                 if recipient.instance.software != "lemmy" and recipient.instance.software != "piefed":
                     reply_json['object']['tag'] = [
-                      {
-                        "href": recipient.public_url(),
-                        "name": recipient.mention_tag(),
-                        "type": "Mention"
-                      }
+                        {
+                            "href": recipient.public_url(),
+                            "name": recipient.mention_tag(),
+                            "type": "Mention"
+                        }
                     ]
                 send_post_request(recipient.ap_inbox_url, reply_json, user.private_key,
                                   user.public_url() + '#main-key')
 
     flash(_('Message sent.'))
     return reply
-

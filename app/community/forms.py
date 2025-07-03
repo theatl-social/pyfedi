@@ -1,24 +1,23 @@
 import re
+from io import BytesIO
 
+import pytesseract
+from PIL import Image, UnidentifiedImageError
 from flask import request, g
+from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
     DateField
-from wtforms.fields.choices import SelectMultipleField
 from wtforms.fields import DateTimeLocalField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
-from flask_babel import _, lazy_gettext as _l
+from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional
 
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
 from app.models import Community, Site, utcnow, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField
-from PIL import Image, ImageOps, UnidentifiedImageError
-from io import BytesIO
-import pytesseract
 
 
 class AddCommunityForm(FlaskForm):
@@ -30,7 +29,8 @@ class AddCommunityForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
-    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-multicheck-columns'})
+    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
+                                   render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))
 
     def validate(self, extra_validators=None):
@@ -49,11 +49,13 @@ class AddCommunityForm(FlaskForm):
                 self.url.errors.append(_l('Community urls can only contain letters, numbers, and underscores.'))
                 return False
 
-            community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
+            community = Community.query.filter(Community.name == self.url.data.strip().lower(),
+                                               Community.ap_id == None).first()
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
                 return False
-            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(ap_id=None).first()
+            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(
+                ap_id=None).first()
             if user is not None:
                 if user.deleted:
                     self.url.errors.append(_l('This name was used in the past and cannot be reused.'))
@@ -82,14 +84,17 @@ class EditCommunityForm(FlaskForm):
                              (DOWNVOTE_ACCEPT_INSTANCE, _l('This instance')),
                              (DOWNVOTE_ACCEPT_TRUSTED, _l('Trusted instances')),
 
-    ]
-    downvote_accept_mode = SelectField(_l('Accept downvotes from'), coerce=int, choices=downvote_accept_modes, validators=[Optional()], render_kw={'class': 'form-select'})
+                             ]
+    downvote_accept_mode = SelectField(_l('Accept downvotes from'), coerce=int, choices=downvote_accept_modes,
+                                       validators=[Optional()], render_kw={'class': 'form-select'})
     topic = SelectField(_l('Topic'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
-    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-multicheck-columns'})
+    languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
+                                   render_kw={'class': 'form-multicheck-columns'})
     layouts = [('', _l('List')),
                ('masonry', _l('Masonry')),
                ('masonry_wide', _l('Wide masonry'))]
-    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()], render_kw={'class': 'form-select'})
+    default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()],
+                                 render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -101,8 +106,9 @@ class EditCommunityWikiPageForm(FlaskForm):
                     (1, _l('Trusted accounts')),
                     (2, _l('Community members')),
                     (3, _l('Any account'))
-    ]
-    who_can_edit = SelectField(_l('Who can edit'), coerce=int, choices=edit_options, validators=[Optional()], render_kw={'class': 'form-select'})
+                    ]
+    who_can_edit = SelectField(_l('Who can edit'), coerce=int, choices=edit_options, validators=[Optional()],
+                               render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -123,7 +129,9 @@ class ResolveReportForm(FlaskForm):
 
 
 class SearchRemoteCommunity(FlaskForm):
-    address = StringField(_l('Community address'), render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True, 'autocomplete': 'off'}, validators=[DataRequired()])
+    address = StringField(_l('Community address'),
+                          render_kw={'placeholder': 'e.g. !name@server', 'autofocus': True, 'autocomplete': 'off'},
+                          validators=[DataRequired()])
     submit = SubmitField(_l('Search'))
 
 
@@ -139,24 +147,29 @@ class FindAndBanUserCommunityForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()])
     submit = SubmitField(_l('Find'))
 
+
 class CreatePostForm(FlaskForm):
-    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select',
-                                                                                                   'hx-get': '/community/community_changed',
-                                                                                                   'hx-params': '*',
-                                                                                                   'hx-target': '#communityFlair'})
+    communities = SelectField(_l('Community'), validators=[DataRequired()], coerce=int,
+                              render_kw={'class': 'form-select',
+                                         'hx-get': '/community/community_changed',
+                                         'hx-params': '*',
+                                         'hx-target': '#communityFlair'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
     body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=2, max=5000)])
     flair = MultiCheckboxField(_l('Flair'), coerce=int, validators=[Optional()],
-                                        render_kw={'class':'form-multicheck-columns'})
+                               render_kw={'class': 'form-multicheck-columns'})
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     notify_author = BooleanField(_l('Notify about replies'))
-    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int,
+                              render_kw={'class': 'form-select'})
     scheduled_for = DateTimeLocalField(_l('Publish at'), validators=[Optional()], format="%Y-%m-%dT%H:%M")
-    repeat = SelectField(_l('Repeat'), validators=[Optional()], choices=[('none', _l('None')), ('once', _l('Only once')), ('daily', _l('Daily')), ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
-        render_kw={'class': 'form-select'})
+    repeat = SelectField(_l('Repeat'), validators=[Optional()],
+                         choices=[('none', _l('None')), ('once', _l('Only once')), ('daily', _l('Daily')),
+                                  ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
+                         render_kw={'class': 'form-select'})
     timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Publish'))
 
@@ -211,11 +224,11 @@ class CreateLinkForm(CreatePostForm):
 
 class CreateVideoForm(CreatePostForm):
     video_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
-                           render_kw={'placeholder': 'https://...'})
+                            render_kw={'placeholder': 'https://...'})
 
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
-        
+
         domain = domain_from_url(self.video_url.data, create=False)
         if domain and domain.banned:
             self.video_url.errors.append(_l("Videos from %(domain)s are not allowed.", domain=domain.name))
@@ -231,13 +244,14 @@ class CreateImageForm(CreatePostForm):
         super().validate(extra_validators)
 
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith(
+                '.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
 
             site = Site.query.get(1)
             if site is None:
                 site = Site()
-            
+
             if site.enable_chan_image_filter:
                 # Do not allow fascist meme content
                 try:
@@ -273,10 +287,11 @@ class CreateImageForm(CreatePostForm):
 
         return True
 
+
 class EditImageForm(CreateImageForm):
     image_file = FileField(_l('Replace Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
     image_file = FileField(_l('Image'), validators=[Optional()], render_kw={'accept': 'image/*'})
-    
+
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
 
@@ -287,9 +302,12 @@ class EditImageForm(CreateImageForm):
 
         return True
 
+
 class CreatePollForm(CreatePostForm):
-    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')), ('multiple', _l('Voters choose many options'))], render_kw={'class': 'form-select'})
-    finish_choices=[
+    mode = SelectField(_('Mode'), validators=[DataRequired()], choices=[('single', _l('Voters choose one option')),
+                                                                        ('multiple', _l('Voters choose many options'))],
+                       render_kw={'class': 'form-select'})
+    finish_choices = [
         ('30m', _l('30 minutes')),
         ('1h', _l('1 hour')),
         ('6h', _l('6 hours')),
@@ -298,9 +316,11 @@ class CreatePollForm(CreatePostForm):
         ('3d', _l('3 days')),
         ('7d', _l('7 days')),
     ]
-    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices, render_kw={'class': 'form-select'})
+    finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices,
+                            render_kw={'class': 'form-select'})
     local_only = BooleanField(_l('Accept votes from this instance only'))
-    choice_1 = StringField('Choice')    # intentionally left out of internationalization (no _l()) as this label is not used
+    choice_1 = StringField(
+        'Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
     choice_2 = StringField('Choice')
     choice_3 = StringField('Choice')
     choice_4 = StringField('Choice')
@@ -366,12 +386,16 @@ class DeleteCommunityForm(FlaskForm):
 
 
 class RetrieveRemotePost(FlaskForm):
-    address = StringField(_l('Full URL'), render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True}, validators=[DataRequired()])
+    address = StringField(_l('Full URL'),
+                          render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True},
+                          validators=[DataRequired()])
     submit = SubmitField(_l('Retrieve'))
 
 
 class InviteCommunityForm(FlaskForm):
-    to = TextAreaField(_l('To'), validators=[DataRequired()], render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'), 'autofocus': True})
+    to = TextAreaField(_l('To'), validators=[DataRequired()],
+                       render_kw={'placeholder': _l('Email addresses or fediverse handles, one per line'),
+                                  'autofocus': True})
     submit = SubmitField(_l('Invite'))
 
     def validate_to(self, field):

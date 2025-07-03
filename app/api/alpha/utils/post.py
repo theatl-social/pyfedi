@@ -1,16 +1,18 @@
+from datetime import timedelta
+
+from flask import current_app
+from sqlalchemy import desc, text
+
 from app import db
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
+    array_of_integers_expected
 from app.api.alpha.views import post_view, post_report_view
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
 from app.constants import *
-from app.models import Post, PostVote, Community, CommunityMember, utcnow, User
+from app.models import Post, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
-                            delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
+    delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id
-
-from datetime import timedelta
-from sqlalchemy import desc, text
-from flask import current_app
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -59,35 +61,73 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     # Community.instance_id.not_in(blocked_instance_ids)    # exclude posts in communities on blocked instances
 
     if type == "Local":
-        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids)).\
+        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                  Post.user_id.not_in(blocked_person_ids),
+                                  Post.community_id.not_in(blocked_community_ids)). \
             join(Community, Community.id == Post.community_id).filter_by(ap_id=None)
     elif type == "Popular":
-        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-            join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100, Community.instance_id.not_in(blocked_instance_ids))
+        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                  Post.user_id.not_in(blocked_person_ids),
+                                  Post.community_id.not_in(blocked_community_ids),
+                                  Post.instance_id.not_in(blocked_instance_ids)). \
+            join(Community, Community.id == Post.community_id).filter(Community.show_popular == True, Post.score > 100,
+                                                                      Community.instance_id.not_in(
+                                                                          blocked_instance_ids))
     elif type == "Subscribed" and user_id is not None:
-        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-            join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False, user_id=user_id).\
-            join(Community, Community.id == CommunityMember.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
+        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                  Post.user_id.not_in(blocked_person_ids),
+                                  Post.community_id.not_in(blocked_community_ids),
+                                  Post.instance_id.not_in(blocked_instance_ids)). \
+            join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(is_banned=False,
+                                                                                               user_id=user_id). \
+            join(Community, Community.id == CommunityMember.community_id).filter(
+            Community.instance_id.not_in(blocked_instance_ids))
     elif type == "ModeratorView" and user_id is not None:
-         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-            join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(user_id=user_id, is_moderator=True).\
-            join(Community, Community.id == CommunityMember.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
-    else: # type == "All"
+        posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                  Post.user_id.not_in(blocked_person_ids),
+                                  Post.community_id.not_in(blocked_community_ids),
+                                  Post.instance_id.not_in(blocked_instance_ids)). \
+            join(CommunityMember, Post.community_id == CommunityMember.community_id).filter_by(user_id=user_id,
+                                                                                               is_moderator=True). \
+            join(Community, Community.id == CommunityMember.community_id).filter(
+            Community.instance_id.not_in(blocked_instance_ids))
+    else:  # type == "All"
         if community_name:
             if not '@' in community_name:
                 community_name = f"{community_name}@{current_app.config['SERVER_NAME']}"
             name, ap_domain = community_name.split('@')
-            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-                join(Community, Community.id == Post.community_id).filter(Community.show_all == True, Community.name == name, Community.ap_domain == ap_domain, Community.instance_id.not_in(blocked_instance_ids))
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.user_id.not_in(blocked_person_ids),
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids)). \
+                join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
+                                                                          Community.name == name,
+                                                                          Community.ap_domain == ap_domain,
+                                                                          Community.instance_id.not_in(
+                                                                              blocked_instance_ids))
         elif community_id:
-            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-                join(Community, Community.id == Post.community_id).filter(Community.show_all == True, Community.id == community_id, Community.instance_id.not_in(blocked_instance_ids))
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.user_id.not_in(blocked_person_ids),
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids)). \
+                join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
+                                                                          Community.id == community_id,
+                                                                          Community.instance_id.not_in(
+                                                                              blocked_instance_ids))
         elif person_id:
-            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids), Post.user_id == person_id).\
-                join(Community, Community.id == Post.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids), Post.user_id == person_id). \
+                join(Community, Community.id == Post.community_id).filter(
+                Community.instance_id.not_in(blocked_instance_ids))
         else:
-            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
-                join(Community, Community.id == Post.community_id).filter(Community.show_all == True, Community.instance_id.not_in(blocked_instance_ids))
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.user_id.not_in(blocked_person_ids),
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids)). \
+                join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
+                                                                          Community.instance_id.not_in(
+                                                                              blocked_instance_ids))
 
     # change when polls are supported
     posts = posts.filter(Post.type != POST_TYPE_POLL)
@@ -102,30 +142,39 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         upvoted_post_ids = recently_upvoted_posts(user_id)
         posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
     elif user_id and saved_only:
-        bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                 {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.in_(bookmarked_post_ids))
     elif user_id and user.hide_read_posts:
-        u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                                      {"user_id": user_id}).scalars()
         posts = posts.filter(Post.id.not_in(u_rp_ids))
 
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Top" or sort == "TopDay":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=1)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "TopHour":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=1)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=1)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "TopSixHour":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=6)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=6)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "TopTwelveHour":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=12)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=12)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "TopWeek":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "TopMonth":
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
-        posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+        posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(
+            desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Active":
         posts = posts.order_by(desc(Post.last_active))
 
@@ -278,7 +327,6 @@ def post_post_delete(auth, data):
     return post_json
 
 
-
 def post_post_report(auth, data):
     required(['post_id', 'reason'], data)
     integer_expected(['post_id'], data)
@@ -350,7 +398,7 @@ def post_post_mark_as_read(auth, data):
     boolean_expected(['read'], data)
 
     if not 'post_id' in data and not 'post_ids' in data:
-      raise Exception('post_id or post_ids required')
+        raise Exception('post_id or post_ids required')
 
     user_id = authorise_api_user(auth)
 
@@ -358,10 +406,12 @@ def post_post_mark_as_read(auth, data):
         post = Post.query.filter_by(id=data['post_id']).one()
         if data['read'] == True:
             # no compound primary key on user_id and read_post_id ??
-            existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
-                                          {"user_id": user_id, "post_id": post.id}).scalar()
+            existing = db.session.execute(
+                text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                {"user_id": user_id, "post_id": post.id}).scalar()
             if not existing:
-                db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                db.session.execute(text(
+                    'INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
                                    {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
                 db.session.commit()
         else:
@@ -374,16 +424,19 @@ def post_post_mark_as_read(auth, data):
             raise Exception('No posts from post_ids array found')
         if data['read'] == True:
             for post in posts:
-                existing = db.session.execute(text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
-                                              {"user_id": user_id, "post_id": post.id}).scalar()
+                existing = db.session.execute(
+                    text('SELECT user_id FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                    {"user_id": user_id, "post_id": post.id}).scalar()
                 if not existing:
-                    db.session.execute(text('INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
+                    db.session.execute(text(
+                        'INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp)'),
                                        {"user_id": user_id, "post_id": post.id, "stamp": utcnow()})
             db.session.commit()
         else:
             for post in posts:
-                db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
-                                   {"user_id": user_id, "post_id": post.id})
+                db.session.execute(
+                    text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                    {"user_id": user_id, "post_id": post.id})
             db.session.commit()
 
     return {"success": True}

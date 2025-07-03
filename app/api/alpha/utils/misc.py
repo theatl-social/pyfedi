@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from app.activitypub.util import find_actor_or_create, remote_object_to_json, actor_json_to_model, \
     find_community, create_resolved_object
 from app.api.alpha.utils.community import get_community_list
@@ -5,11 +7,10 @@ from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
 from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
 from app.community.util import search_for_community
-from app.user.utils import search_for_user
 from app.models import Post, PostReply, User, Community, BannedInstances
+from app.user.utils import search_for_user
 from app.utils import authorise_api_user, gibberish
 
-from urllib.parse import urlparse
 
 def get_search(auth, data):
     if not data or ('q' not in data and 'type_' not in data):
@@ -63,7 +64,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     # if not found and user is logged in, fetch the object if it's not hosted on a banned instance
     # note: accommodating ! and @ queries for communities and people is different from lemmy's v3 api
 
-    if not user_id:   # not logged in
+    if not user_id:  # not logged in
         raise Exception('No object found.')
 
     server = None
@@ -75,7 +76,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         if '@' in address:
             name, server = address.lower().split('@')
 
-    if not server:    # can't find server
+    if not server:  # can't find server
         raise Exception('No object found.')
 
     banned = BannedInstances.query.filter_by(domain=server).first()
@@ -121,14 +122,14 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         raise Exception('No object found.')
 
     if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' and
-        'preferredUsername' in ap_json):
-            name = ap_json['preferredUsername'].lower()
-            object = actor_json_to_model(ap_json, name, server)
-            if object:
-                if isinstance(object, User):
-                    return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
-                elif isinstance(object, Community):
-                    return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
+            'preferredUsername' in ap_json):
+        name = ap_json['preferredUsername'].lower()
+        object = actor_json_to_model(ap_json, name, server)
+        if object:
+            if isinstance(object, User):
+                return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
+            elif isinstance(object, Community):
+                return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
 
     # a post or a reply
     community = find_community(ap_json)

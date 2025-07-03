@@ -1,11 +1,11 @@
-from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
+import os
 
-from pillow_heif import register_heif_opener
+import boto3
 from PIL import Image, ImageOps
 from flask import current_app
-import boto3
+from pillow_heif import register_heif_opener
 
-import os
+from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
 
 
 def process_upload(image_file, destination='posts'):
@@ -31,7 +31,7 @@ def process_upload(image_file, destination='posts'):
     image_file.seek(0)
     image_file.save(final_place)
 
-    final_ext = file_ext # track file extension for conversion
+    final_ext = file_ext  # track file extension for conversion
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
@@ -93,5 +93,3 @@ def process_upload(image_file, destination='posts'):
         raise Exception('unable to process upload')
 
     return url
-
-

@@ -1,16 +1,15 @@
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, g
-from flask_login import login_user, logout_user, current_user, login_required
+from flask import redirect, url_for, flash, current_app
 from flask_babel import _
+from flask_login import current_user, login_required
 
 from app import db, cache
-from app.activitypub.signature import post_request, send_post_request
+from app.activitypub.signature import send_post_request
 from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
 from app.models import User, Topic, Community, \
     CommunityJoinRequest, CommunityMember, Filter
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics, \
-    community_membership, get_setting
+from app.utils import render_template, joined_communities, community_membership, get_setting
 
 
 @bp.route('/trump_musk', methods=['GET', 'POST'])
@@ -73,12 +72,14 @@ def join_topic(topic_id):
                 db.session.commit()
                 send_community_follow(community.id, join_request.id, current_user.id)
 
-            existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id, CommunityMember.user_id == current_user.id).first()
+            existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id,
+                                                           CommunityMember.user_id == current_user.id).first()
             if not existing_member:
                 member = CommunityMember(user_id=current_user.id, community_id=community.id)
                 db.session.add(member)
                 db.session.commit()
             cache.delete_memoized(community_membership, current_user, community)
+
 
 def topics_for_form():
     topics = Topic.query.filter_by(parent_id=None).order_by(Topic.name).all()
@@ -97,10 +98,10 @@ def send_community_follow(community_id: int, join_request_id: int, user_id: int)
         community = Community.query.get(community_id)
         if not community.instance.gone_forever:
             follow = {
-              "actor": user.public_url(),
-              "to": [community.public_url()],
-              "object": community.public_url(),
-              "type": "Follow",
-              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
+                "actor": user.public_url(),
+                "to": [community.public_url()],
+                "object": community.public_url(),
+                "type": "Follow",
+                "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
             }
             send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key')

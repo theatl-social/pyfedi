@@ -1,9 +1,9 @@
 import pytest
-from flask import Flask
-from app import create_app, db
-from config import Config
+from sqlalchemy import desc
+
+from app import create_app
 from app.models import User, Community
-from sqlalchemy import text, desc
+from config import Config
 
 
 class TestConfig(Config):
@@ -39,7 +39,8 @@ def test_api_instance_blocks(app):
             post_site_block(auth, data)
         assert str(ex.value) == 'You cannot block the local instance.'
 
-        high_post_community = Community.query.filter(Community.instance_id != 1).order_by(desc(Community.post_count)).first()
+        high_post_community = Community.query.filter(Community.instance_id != 1).order_by(
+            desc(Community.post_count)).first()
         assert high_post_community is not None and hasattr(high_post_community, 'id')
 
         # post list should be more than 0 before blocking the instance
@@ -62,5 +63,3 @@ def test_api_instance_blocks(app):
         data = {"community_id": high_post_community.id}
         response = get_post_list(auth, data)
         assert 'posts' in response and len(response['posts']) > 0
-
-

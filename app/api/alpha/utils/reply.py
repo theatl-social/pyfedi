@@ -1,13 +1,15 @@
+from sqlalchemy import desc, or_, text
+
 from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view
-from app.models import Notification, PostReply, Post
 from app.constants import *
-from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, edit_reply, \
-                             delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
-from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, recently_upvoted_post_replies
-
-from sqlalchemy import desc, or_, text
+from app.models import Notification, PostReply, Post
+from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
+    edit_reply, \
+    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
+from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
+    recently_upvoted_post_replies
 
 
 def get_reply_list(auth, data, user_id=None):
@@ -35,7 +37,8 @@ def get_reply_list(auth, data, user_id=None):
     if parent_id and post_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id, PostReply.post_id == post_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
+            reply_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:id]'),
+                                           {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids), PostReply.post_id == post_id)
         post_is_same = community_is_same = True
     elif post_id:
@@ -44,7 +47,8 @@ def get_reply_list(auth, data, user_id=None):
     elif parent_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
+            reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE path @> ARRAY[:id]'),
+                                           {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
         post_is_same = community_is_same = True
     elif person_id:
@@ -70,7 +74,9 @@ def get_reply_list(auth, data, user_id=None):
         upvoted_reply_ids = recently_upvoted_post_replies(user_id)
         replies = replies.filter(PostReply.id.in_(upvoted_reply_ids), PostReply.user_id != user_id)
     elif user_id and saved_only:
-        bookmarked_reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        bookmarked_reply_ids = db.session.execute(
+            text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+            {"user_id": user_id}).scalars()
         replies = replies.filter(PostReply.id.in_(bookmarked_reply_ids))
 
     if sort == "Hot":
@@ -183,7 +189,7 @@ def put_reply_subscribe(auth, data):
 
 def post_reply(auth, data):
     required(['body', 'post_id'], data)
-    string_expected(['body',], data)
+    string_expected(['body', ], data)
     integer_expected(['post_id', 'parent_id', 'language_id'], data)
 
     body = data['body']
@@ -204,7 +210,7 @@ def post_reply(auth, data):
 
 def put_reply(auth, data):
     required(['comment_id'], data)
-    string_expected(['body',], data)
+    string_expected(['body', ], data)
     integer_expected(['comment_id', 'language_id'], data)
     boolean_expected(['distinguished'], data)
 
@@ -294,15 +300,12 @@ def post_reply_mark_as_read(auth, data):
 
     reply_url = '#comment_' + str(reply.id)
     mention_url = '/comment/' + str(reply.id)
-    notification = Notification.query.filter(Notification.user_id == user_id, or_(Notification.url.ilike(f"%{reply_url}%"), Notification.url.ilike(f"%{mention_url}%"))).first()
+    notification = Notification.query.filter(Notification.user_id == user_id,
+                                             or_(Notification.url.ilike(f"%{reply_url}%"),
+                                                 Notification.url.ilike(f"%{mention_url}%"))).first()
     if notification:
         notification.read = read
         db.session.commit()
 
     reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user_id, read=True)}
     return reply_json
-
-
-
-
-

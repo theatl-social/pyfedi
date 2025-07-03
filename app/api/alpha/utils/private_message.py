@@ -1,12 +1,12 @@
+from sqlalchemy import desc
+
 from app import db
-from app.api.alpha.views import private_message_view
 from app.api.alpha.utils.validators import required, string_expected, integer_expected
+from app.api.alpha.views import private_message_view
 from app.chat.util import send_message
 from app.models import ChatMessage, Conversation, User
 from app.utils import authorise_api_user
 
-from flask import current_app
-from sqlalchemy import desc
 
 def get_private_message_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1

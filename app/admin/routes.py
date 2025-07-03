@@ -60,7 +60,8 @@ def admin_home():
         disk_usage = f"<span class='blink red'>Storage used: {percent_used:.2f}%</span>"
     else:
         disk_usage = f"Storage used: {percent_used:.2f}%"
-    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15, num_cores=num_cores,
+    return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
+                           num_cores=num_cores,
                            disk_usage=disk_usage)
 
 
@@ -74,7 +75,7 @@ def admin_site():
         site = Site()
     if form.validate_on_submit():
         site.name = form.name.data
-        site.description = form.description.data #tagline
+        site.description = form.description.data  # tagline
         site.about = form.about.data
         site.sidebar = form.sidebar.data
         site.legal_information = form.legal_information.data
@@ -158,9 +159,7 @@ def admin_site():
         form.tos_url.data = site.tos_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
-    return render_template('admin/site.html', title=_('Site profile'), form=form,
-                           
-                            )
+    return render_template('admin/site.html', title=_('Site profile'), form=form)
 
 
 @bp.route('/misc', methods=['GET', 'POST'])
@@ -273,7 +272,7 @@ def admin_federation():
             'cunt', 'cocksucker', 'motherfucker', 'tits',
             'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
-            ]
+        ]
 
         total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
         candidate_communities = []
@@ -319,7 +318,8 @@ def admin_federation():
         flash(_('%d out of %d communities were excluded using current filters' % (filtered_count, total_count)))
 
         # sort the list based on the users_active_week key
-        parsed_communities_sorted = sorted(candidate_communities, key=lambda c: c['counts']['users_active_week'], reverse=True)
+        parsed_communities_sorted = sorted(candidate_communities, key=lambda c: c['counts']['users_active_week'],
+                                           reverse=True)
 
         # get the community urls to join
         community_urls_to_join = []
@@ -387,7 +387,6 @@ def admin_federation():
         is_lemmy = False
         is_mbin = False
         is_piefed = False
-
 
         # get the remote_url data
         remote_url = remote_scan_form.remote_url.data
@@ -457,7 +456,7 @@ def admin_federation():
             page = 1
             get_more_communities = True
             while get_more_communities:
-                params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
+                params = {"sort": "Active", "type_": "Local", "limit": "50", "page": f"{page}", "show_nsfw": "false"}
                 resp = get_request(f"{remote_url}/api/v3/community/list", params=params)
                 page_dict = json.loads(resp.text)
                 # get the individual communities out of the communities[] list in the response and 
@@ -528,7 +527,7 @@ def admin_federation():
             page = 1
             get_more_communities = True
             while get_more_communities:
-                params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
+                params = {"sort": "Active", "type_": "Local", "limit": "50", "page": f"{page}", "show_nsfw": "false"}
                 resp = get_request(f"{remote_url}/api/alpha/community/list", params=params)
                 page_dict = json.loads(resp.text)
                 # get the individual communities out of the communities[] list in the response and 
@@ -536,7 +535,7 @@ def admin_federation():
                 for c in page_dict["communities"]:
                     comms_list.append(c)
                 # check the amount of items in the page_dict['communities'] list
-                # if it's lesss than 50 then we know its the last page of communities
+                # if it's less than 50 then we know its the last page of communities
                 # so we break the loop
                 if len(page_dict['communities']) < 50:
                     get_more_communities = False
@@ -594,7 +593,7 @@ def admin_federation():
                             Communities to join based on current filters: {len(community_urls_to_join)}."
                 flash(_(message))
                 return redirect(url_for('admin.admin_federation'))
-            
+
         if is_mbin:
             # loop through and send the right number of requests to the remote endpoint for mbin
             # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
@@ -602,7 +601,8 @@ def admin_federation():
             page = 1
             get_more_magazines = True
             while get_more_magazines:
-                params = {"p":f"{page}","perPage":"50","sort":"active","federation":"local","hide_adult":"hide"}
+                params = {"p": f"{page}", "perPage": "50", "sort": "active", "federation": "local",
+                          "hide_adult": "hide"}
                 resp = get_request(f"{remote_url}/api/magazines", params=params)
                 page_dict = json.loads(resp.text)
                 # get the individual magazines out of the items[] list in the response and 
@@ -616,7 +616,7 @@ def admin_federation():
                     get_more_magazines = False
                 else:
                     page += 1
-            
+
             # filter out the magazines
             already_known_count = low_content_count = low_subscribed_users_count = bad_words_count = 0
             candidate_communities = []
@@ -654,7 +654,7 @@ def admin_federation():
             # make the list of urls
             for i in range(magazines_to_add):
                 community_urls_to_join.append(candidate_communities[i]['apProfileId'].lower())
-            
+
             # if its a dry run, just return the stats
             if dry_run:
                 message = f"Dry-Run for {remote_url}: \
@@ -819,7 +819,7 @@ def admin_federation():
         db.session.commit()
 
         flash(_('Admin settings saved'))
-    
+
     # this is just the regular page load
     elif request.method == 'GET':
         use_allowlist = get_setting('use_allowlist', False)
@@ -833,7 +833,7 @@ def admin_federation():
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
         form.blocked_bio.data = get_setting('actor_bio_blocked_words', '')
 
-    return render_template('admin/federation.html', title=_('Federation settings'), 
+    return render_template('admin/federation.html', title=_('Federation settings'),
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
                            remote_scan_form=remote_scan_form, current_app_debug=current_app.debug)
 
@@ -854,7 +854,7 @@ def import_bans_task(filename):
             if len(already_allowed) > 0:
                 for already_allowed in already_allowed:
                     already_allowed_instances.append(already_allowed.domain)
-            
+
             # loop through the instances_allowed
             for allowed_instance in instances_allowed:
                 # check if we have already allowed this instance
@@ -877,7 +877,7 @@ def import_bans_task(filename):
             if len(already_banned) > 0:
                 for ab in already_banned:
                     already_banned_instances.append(ab.domain)
-            
+
             # loop through the instance_bans
             for instance_ban in instance_bans:
                 # check if we have already banned this instance
@@ -899,7 +899,7 @@ def import_bans_task(filename):
         if len(already_banned) > 0:
             for ab in already_banned:
                 already_banned_domains.append(ab.name)
-        
+
         # loop through the domain_bans
         for domain_ban in domain_bans:
             # check if we have already banned this domain
@@ -910,7 +910,7 @@ def import_bans_task(filename):
                 db.session.add(Domain(name=domain_ban, banned=True))
         # commit to the db
         db.session.commit()
-    
+
     # import banned_tags
     # check for banned_tags existing and being more than 0 entries
     tag_bans = contents_json['banned_tags']
@@ -932,7 +932,7 @@ def import_bans_task(filename):
                 db.session.add(Tag(name=tag_ban['name'], display_as=tag_ban['display_as'], banned=True))
         # commit to the db
         db.session.commit()
-    
+
     # import banned_users
     # check for banned_users existing and being more than 0 entries
     user_bans = contents_json['banned_users']
@@ -979,8 +979,10 @@ def admin_activities():
 
     activities = activities.paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_activities', page=activities.next_num, result=result_filter, direction=direction_filter) if activities.has_next else None
-    prev_url = url_for('admin.admin_activities', page=activities.prev_num, result=result_filter, direction=direction_filter) if activities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_activities', page=activities.next_num, result=result_filter,
+                       direction=direction_filter) if activities.has_next else None
+    prev_url = url_for('admin.admin_activities', page=activities.prev_num, result=result_filter,
+                       direction=direction_filter) if activities.has_prev and page != 1 else None
 
     return render_template('admin/activities.html', title=_('ActivityPub Log'), next_url=next_url, prev_url=prev_url,
                            activities=activities)
@@ -1011,7 +1013,6 @@ def activity_replay(activity_id):
 @permission_required('administer all communities')
 @login_required
 def admin_communities():
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     sort_by = request.args.get('sort_by', 'title ASC')
@@ -1022,8 +1023,10 @@ def admin_communities():
     communities = communities.order_by(text('"community".' + sort_by))
     communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_communities', page=communities.next_num, search=search, sort_by=sort_by) if communities.has_next else None
-    prev_url = url_for('admin.admin_communities', page=communities.prev_num, search=search, sort_by=sort_by) if communities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_communities', page=communities.next_num, search=search,
+                       sort_by=sort_by) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities', page=communities.prev_num, search=search,
+                       sort_by=sort_by) if communities.has_prev and page != 1 else None
 
     return render_template('admin/communities.html', title=_('Communities'), next_url=next_url, prev_url=prev_url,
                            communities=communities,
@@ -1035,7 +1038,6 @@ def admin_communities():
 @permission_required('administer all communities')
 @login_required
 def admin_communities_no_topic():
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
 
@@ -1047,7 +1049,8 @@ def admin_communities_no_topic():
     next_url = url_for('admin.admin_communities_no_topic', page=communities.next_num) if communities.has_next else None
     prev_url = url_for('admin.admin_communities_no_topic', page=communities.prev_num) if communities.has_prev and page != 1 else None
 
-    return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url, prev_url=prev_url,
+    return render_template('admin/communities.html', title=_('Communities with no topic'), next_url=next_url,
+                           prev_url=prev_url,
                            communities=communities)
 
 
@@ -1055,7 +1058,6 @@ def admin_communities_no_topic():
 @permission_required('administer all communities')
 @login_required
 def admin_communities_low_quality():
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
 
@@ -1064,10 +1066,13 @@ def admin_communities_low_quality():
         communities = communities.filter(Community.title.ilike(f"%{search}%"))
     communities = communities.order_by(-Community.post_count).paginate(page=page, per_page=1000, error_out=False)
 
-    next_url = url_for('admin.admin_communities_low_quality', page=communities.next_num) if communities.has_next else None
-    prev_url = url_for('admin.admin_communities_low_quality', page=communities.prev_num) if communities.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_communities_low_quality',
+                       page=communities.next_num) if communities.has_next else None
+    prev_url = url_for('admin.admin_communities_low_quality',
+                       page=communities.prev_num) if communities.has_prev and page != 1 else None
 
-    return render_template('admin/communities.html', title=_('Communities with low_quality == True'), next_url=next_url, prev_url=prev_url,
+    return render_template('admin/communities.html', title=_('Communities with low_quality == True'), next_url=next_url,
+                           prev_url=prev_url,
                            communities=communities)
 
 
@@ -1199,7 +1204,7 @@ def unsubscribe_everyone_then_delete_task(community_id):
 
     sleep(5)
     community.delete_dependencies()
-    db.session.delete(community)    # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
+    db.session.delete(community)  # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
     db.session.commit()
 
 
@@ -1232,6 +1237,7 @@ def admin_topic_add():
         return redirect(url_for('admin.admin_topics'))
 
     return render_template('admin/edit_topic.html', title=_('Add topic'), form=form)
+
 
 @bp.route('/topic/<int:topic_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all communities')
@@ -1283,7 +1289,6 @@ def admin_topic_delete(topic_id):
 @permission_required('administer all users')
 @login_required
 def admin_users():
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     local_remote = request.args.get('local_remote', '')
@@ -1306,8 +1311,10 @@ def admin_users():
     users = users.order_by(text('"user".' + sort_by))
     users = users.paginate(page=page, per_page=500, error_out=False)
 
-    next_url = url_for('admin.admin_users', page=users.next_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_next else None
-    prev_url = url_for('admin.admin_users', page=users.prev_num, search=search, local_remote=local_remote, sort_by=sort_by, last_seen=last_seen) if users.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_users', page=users.next_num, search=search, local_remote=local_remote,
+                       sort_by=sort_by, last_seen=last_seen) if users.has_next else None
+    prev_url = url_for('admin.admin_users', page=users.prev_num, search=search, local_remote=local_remote,
+                       sort_by=sort_by, last_seen=last_seen) if users.has_prev and page != 1 else None
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
@@ -1325,7 +1332,8 @@ def admin_content():
     show = request.args.get('show', 'trash')
     days = request.args.get('days', 3, type=int)
 
-    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+    posts = Post.query.join(User, User.id == Post.user_id).filter(Post.deleted == False,
+                                                                  Post.status > POST_STATUS_REVIEWING)
     post_replies = PostReply.query.join(User, User.id == PostReply.user_id).filter(PostReply.deleted == False)
     if show == 'trash':
         title = _('Bad / Most downvoted')
@@ -1368,10 +1376,15 @@ def admin_content():
     posts = posts.paginate(page=page, per_page=100, error_out=False)
     post_replies = post_replies.paginate(page=replies_page, per_page=100, error_out=False)
 
-    next_url = url_for('admin.admin_content', page=posts.next_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_next else None
-    prev_url = url_for('admin.admin_content', page=posts.prev_num, replies_page=replies_page, posts_replies=posts_replies, show=show, days=days) if posts.has_prev and page != 1 else None
-    next_url_replies = url_for('admin.admin_content', replies_page=post_replies.next_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_next else None
-    prev_url_replies = url_for('admin.admin_content', replies_page=post_replies.prev_num, page=page, posts_replies=posts_replies, show=show, days=days) if post_replies.has_prev and replies_page != 1 else None
+    next_url = url_for('admin.admin_content', page=posts.next_num, replies_page=replies_page,
+                       posts_replies=posts_replies, show=show, days=days) if posts.has_next else None
+    prev_url = url_for('admin.admin_content', page=posts.prev_num, replies_page=replies_page,
+                       posts_replies=posts_replies, show=show, days=days) if posts.has_prev and page != 1 else None
+    next_url_replies = url_for('admin.admin_content', replies_page=post_replies.next_num, page=page,
+                               posts_replies=posts_replies, show=show, days=days) if post_replies.has_next else None
+    prev_url_replies = url_for('admin.admin_content', replies_page=post_replies.prev_num, page=page,
+                               posts_replies=posts_replies, show=show,
+                               days=days) if post_replies.has_prev and replies_page != 1 else None
 
     return render_template('admin/content.html', title=title,
                            next_url=next_url, prev_url=prev_url,
@@ -1394,11 +1407,12 @@ def admin_approve_registrations():
         disposable_domains = []
 
     registrations = UserRegistration.query.filter_by(status=0).order_by(UserRegistration.created_at).all()
-    recently_approved = UserRegistration.query.filter_by(status=1).order_by(desc(UserRegistration.approved_at)).limit(30)
+    recently_approved = UserRegistration.query.filter_by(status=1).order_by(desc(UserRegistration.approved_at)).limit(
+        30)
     return render_template('admin/approve_registrations.html',
                            registrations=registrations, disposable_domains=disposable_domains,
                            recently_approved=recently_approved,
-                          )
+                           )
 
 
 @bp.route('/approve_registrations/<int:user_id>/approve', methods=['POST'])
@@ -1447,6 +1461,7 @@ def admin_approve_registrations_denied(user_id):
         flash(_('Registration denied. User removed from the database.'))
 
     return redirect(url_for('admin.admin_approve_registrations'))
+
 
 @bp.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all users')
@@ -1575,9 +1590,9 @@ def admin_user_delete(user_id):
     db.session.commit()
 
     if user.is_local():
-        if user.private_key is not None:    # They have a private key once the registration is fully completed
+        if user.private_key is not None:  # They have a private key once the registration is fully completed
             unsubscribe_from_everything_then_delete(user.id)
-        else:                               # Non-finalized users can just be deleted as they will not have been federated anywhere.
+        else:  # Non-finalized users can just be deleted as they will not have been federated anywhere.
             user.deleted = True
             user.delete_dependencies()
             db.session.commit()
@@ -1596,7 +1611,6 @@ def admin_user_delete(user_id):
 @permission_required('administer all users')
 @login_required
 def admin_reports():
-
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
     local_remote = request.args.get('local_remote', '')
@@ -1611,8 +1625,8 @@ def admin_reports():
     next_url = url_for('admin.admin_reports', page=reports.next_num) if reports.has_next else None
     prev_url = url_for('admin.admin_reports', page=reports.prev_num) if reports.has_prev and page != 1 else None
 
-    return render_template('admin/reports.html', title=_('Reports'), next_url=next_url, prev_url=prev_url, reports=reports,
-                           local_remote=local_remote, search=search)
+    return render_template('admin/reports.html', title=_('Reports'), next_url=next_url, prev_url=prev_url,
+                           reports=reports, local_remote=local_remote, search=search)
 
 
 @bp.route('/newsletter', methods=['GET', 'POST'])
@@ -1688,8 +1702,10 @@ def admin_instances():
 
     instances = instances.order_by(text('"instance".' + sort_by))
     instances = instances.paginate(page=page, per_page=50, error_out=False)
-    next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter, sort_by=sort_by) if instances.has_next else None
-    prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter, sort_by=sort_by) if instances.has_prev and page != 1 else None
+    next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter,
+                       sort_by=sort_by) if instances.has_next else None
+    prev_url = url_for('admin.admin_instances', page=instances.prev_num, search=search, filter=filter,
+                       sort_by=sort_by) if instances.has_prev and page != 1 else None
 
     return render_template('admin/instances.html', instances=instances,
                            title=_(title), search=search, filter=filter, sort_by=sort_by,
@@ -1773,7 +1789,8 @@ def admin_community_move(community_id, new_owner):
             move_community_images_to_here.delay(community.id)
 
         new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
-        flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.', community_name=old_name, new_url=new_url))
+        flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.',
+                community_name=old_name, new_url=new_url))
 
         flash(_('Ensure this community has the right moderators.'))
         return redirect(url_for('community.community_mod_list', community_id=community.id))
@@ -1813,7 +1830,8 @@ def admin_blocked_image_edit(image_id):
         form.file_name.data = image.file_name
         form.note.data = image.note
 
-    return render_template('admin/edit_blocked_image.html', title=_('Edit blocked image'), form=form, blocked_image=image)
+    return render_template('admin/edit_blocked_image.html', title=_('Edit blocked image'), form=form,
+                           blocked_image=image)
 
 
 @bp.route('/blocked_image/add', methods=['GET', 'POST'])
@@ -1849,14 +1867,16 @@ def admin_blocked_image_purge_posts():
     if request.method == 'POST':
         post_ids = request.form.getlist('post_ids')
 
-        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id, send_async=not current_app.debug)
+        task_selector('delete_posts_with_blocked_images', post_ids=post_ids, user_id=current_user.id,
+                      send_async=not current_app.debug)
 
         flash(_('%(count)s posts deleted.', count=len(post_ids)))
 
         return redirect(url_for('admin.admin_blocked_images'))
 
     posts = Post.query.filter(Post.id.in_(posts_with_blocked_images()), Post.deleted == False).order_by(desc(Post.posted_at)).all()
-    return render_template('post/post_block_image_purge_posts.html', posts=posts, title=_('Posts containing blocked images'),
+    return render_template('post/post_block_image_purge_posts.html', posts=posts,
+                           title=_('Posts containing blocked images'),
                            form=form, referrer=request.args.get('referrer'))
 
 
@@ -1895,7 +1915,7 @@ def admin_cms_page_add():
         db.session.commit()
         flash(_('Page saved.'))
         return redirect(url_for('admin.admin_cms_pages'))
-    
+
     return render_template('admin/cms_page_edit.html', form=form, title=_('Add CMS Page'))
 
 
@@ -1905,7 +1925,7 @@ def admin_cms_page_add():
 def admin_cms_page_edit(page_id):
     page = CmsPage.query.get_or_404(page_id)
     form = CmsPageForm(original_page=page, obj=page)
-    
+
     if form.validate_on_submit():
         page.url = form.url.data
         page.title = form.title.data
@@ -1916,7 +1936,7 @@ def admin_cms_page_edit(page_id):
         db.session.commit()
         flash(_('Page saved.'))
         return redirect(url_for('admin.admin_cms_pages'))
-    
+
     return render_template('admin/cms_page_edit.html', form=form, page=page, title=_('Edit page'))
 
 

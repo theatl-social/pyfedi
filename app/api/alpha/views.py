@@ -1,14 +1,14 @@
 from __future__ import annotations
 
+from flask import current_app, g
+from sqlalchemy import text, func
+
 from app import cache, db
 from app.constants import *
-from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, PostVote, User, \
-                       AllowedInstances, BannedInstances, utcnow, Site
+from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
+    AllowedInstances, BannedInstances, utcnow, Site
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
 
-from flask import current_app, g
-
-from sqlalchemy import text, func
 
 # 'stub' param: set to True to exclude optional fields
 
@@ -22,11 +22,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
         include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
         v1.update({'published': post.posted_at.isoformat() + 'Z',
-                        'ap_id': post.profile_id(),
-                        'local': post.is_local(),
-                        'language_id': post.language_id if post.language_id else 0,
-                        'removed': False,
-                        'locked': not post.comments_enabled})
+                   'ap_id': post.profile_id(),
+                   'local': post.is_local(),
+                   'language_id': post.language_id if post.language_id else 0,
+                   'removed': False,
+                   'locked': not post.comments_enabled})
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
@@ -56,12 +56,20 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
     # Variant 2 - views/post_view.dart - /post/list api endpoint
     if variant == 2:
         # counts - models/post/post_aggregates.dart
-        counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes, 'downvotes': post.down_votes,
-                  'published': post.posted_at.isoformat() + 'Z', 'newest_comment_time': post.last_active.isoformat() + 'Z'}
+        counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes,
+                  'downvotes': post.down_votes,
+                  'published': post.posted_at.isoformat() + 'Z',
+                  'newest_comment_time': post.last_active.isoformat() + 'Z'}
         if user_id:
-            bookmarked = db.session.execute(text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
-            post_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
-            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": post.community_id, "user_id": user_id}).scalar()
+            bookmarked = db.session.execute(
+                text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'),
+                {'post_id': post.id, 'user_id': user_id}).scalar()
+            post_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                          {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+            followed = db.session.execute(text(
+                'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
+                                          {"community_id": post.community_id, "user_id": user_id}).scalar()
         else:
             bookmarked = post_sub = followed = False
         if not stub:
@@ -73,7 +81,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
             moderator = False
             admin = False
         if my_vote == 0 and user_id is not None:
-            post_vote =  db.session.execute(text('SELECT effect FROM "post_vote" WHERE post_id = :post_id and user_id = :user_id'), {'post_id': post.id, 'user_id': user_id}).scalar()
+            post_vote = db.session.execute(
+                text('SELECT effect FROM "post_vote" WHERE post_id = :post_id and user_id = :user_id'),
+                {'post_id': post.id, 'user_id': user_id}).scalar()
             effect = post_vote if post_vote else 0
         else:
             effect = my_vote
@@ -85,9 +95,12 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
-        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False, 'subscribed': subscribe_type,
-              'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote, 'activity_alert': activity_alert,
-              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
+        v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False,
+              'subscribed': subscribe_type,
+              'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote,
+              'activity_alert': activity_alert,
+              'creator_banned_from_community': creator_banned_from_community,
+              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
         creator = user_view(user=post.user_id, variant=1, stub=True)
         community = community_view(community=post.community_id, variant=1, stub=True)
@@ -95,7 +108,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
             user = User.query.get(user_id)
             post_community = Community.query.get(post.community_id)
             can_auth_user_moderate = post_community.is_moderator(user) or post_community.is_owner(user)
-            v2.update({'canAuthUserModerate':can_auth_user_moderate})
+            v2.update({'canAuthUserModerate': can_auth_user_moderate})
 
         v2.update({'creator': creator, 'community': community})
 
@@ -159,9 +172,12 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
         v2 = {'person': user_view(user=user, variant=1), 'counts': counts, 'is_admin': user.is_admin()}
         user_sub = False
         if user_id and user_id != user.id:
-            user_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_USER, 'entity_id': user.id, 'user_id': user_id}).scalar()
+            user_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                          {'type': NOTIF_USER, 'entity_id': user.id, 'user_id': user_id}).scalar()
         activity_alert = True if user_sub else False
-        v2 = {'person': user_view(user=user, variant=1), 'activity_alert': activity_alert, 'counts': counts, 'is_admin': user.is_admin()}
+        v2 = {'person': user_view(user=user, variant=1), 'activity_alert': activity_alert, 'counts': counts,
+              'is_admin': user.is_admin()}
         return v2
 
     # Variant 3 - models/user/get_person_details.dart - /user?person_id api endpoint
@@ -176,7 +192,9 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
 
     # Variant 4 - models/user/block_person_response.dart - /user/block api endpoint
     if variant == 4:
-        block = db.session.execute(text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :blocker_id and blocked_id = :blocked_id'), {'blocker_id': user_id, 'blocked_id': user.id}).scalar()
+        block = db.session.execute(
+            text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :blocker_id and blocked_id = :blocked_id'),
+            {'blocker_id': user_id, 'blocked_id': user.id}).scalar()
         blocked = True if block else False
         v4 = {'person_view': user_view(user=user, variant=2, user_id=user_id),
               'blocked': blocked}
@@ -190,41 +208,41 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
     # Variant 6 - User Settings - api/user.dart saveUserSettings
     if variant == 6:
         v6 = {
-          "local_user_view": {
-            "local_user": {
-              "show_nsfw": not user.hide_nsfw == 1,
-              "default_sort_type": user.default_sort.capitalize(),
-              "default_listing_type": user.default_filter.capitalize(),
-              "show_scores": True,
-              "show_bot_accounts": not user.ignore_bots == 1,
-              "show_read_posts": not user.hide_read_posts == True
+            "local_user_view": {
+                "local_user": {
+                    "show_nsfw": not user.hide_nsfw == 1,
+                    "default_sort_type": user.default_sort.capitalize(),
+                    "default_listing_type": user.default_filter.capitalize(),
+                    "show_scores": True,
+                    "show_bot_accounts": not user.ignore_bots == 1,
+                    "show_read_posts": not user.hide_read_posts == True
+                },
+                "person": {
+                    "id": user.id,
+                    "user_name": user.user_name,
+                    "banned": user.banned,
+                    "published": user.created.isoformat() + 'Z',
+                    "actor_id": user.public_url(),
+                    "local": True,
+                    "deleted": user.deleted,
+                    "bot": user.bot,
+                    "instance_id": 1,
+                    "title": user.display_name(),
+                    "avatar": user.avatar.medium_url() if user.avatar_id else None,
+                    "banner": user.cover.medium_url() if user.cover_id else None,
+                },
+                "counts": {
+                    "person_id": user.id,
+                    "post_count": user.post_count,
+                    "comment_count": user.post_reply_count
+                }
             },
-            "person": {
-              "id": user.id,
-              "user_name": user.user_name,
-              "banned": user.banned,
-              "published": user.created.isoformat() + 'Z',
-              "actor_id": user.public_url(),
-              "local": True,
-              "deleted": user.deleted,
-              "bot": user.bot,
-              "instance_id": 1,
-              "title": user.display_name(),
-              "avatar": user.avatar.medium_url() if user.avatar_id else None,
-              "banner": user.cover.medium_url() if user.cover_id else None,
-            },
-            "counts": {
-              "person_id": user.id,
-              "post_count": user.post_count,
-             "comment_count": user.post_reply_count
-            }
-          },
-          "moderates": moderating_communities_view(user),
-          "follows": joined_communities_view(user),
-          "community_blocks": blocked_communities_view(user),
-          "instance_blocks": blocked_instances_view(user),
-          "person_blocks": blocked_people_view(user),
-          "discussion_languages": []        # TODO
+            "moderates": moderating_communities_view(user),
+            "follows": joined_communities_view(user),
+            "community_blocks": blocked_communities_view(user),
+            "instance_blocks": blocked_instances_view(user),
+            "person_blocks": blocked_people_view(user),
+            "discussion_languages": []  # TODO
         }
         return v6
 
@@ -244,11 +262,11 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
             community = Community.query.filter(func.lower(Community.name) == name.lower(),
                                                func.lower(Community.ap_domain) == ap_domain.lower()).one()
 
-
     # Variant 1 - models/community/community.dart
     if variant == 1:
         include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods']
-        v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
+        v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if
+              column.name in include}
         v1.update({'published': community.created_at.isoformat() + 'Z',
                    'updated': community.created_at.isoformat() + 'Z',
                    'deleted': community.banned,
@@ -273,39 +291,48 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if variant == 2:
         # counts - models/community/community_aggregates
         include = ['id', 'subscriptions_count', 'total_subscriptions_count', 'post_count', 'post_reply_count']
-        counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
+        counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if
+                  column.name in include}
         if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:
             counts['total_subscriptions_count'] = counts['subscriptions_count']
         counts.update({'published': community.created_at.isoformat() + 'Z'})
         if user_id:
-            followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()
+            followed = db.session.execute(text(
+                'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
+                                          {"community_id": community.id, "user_id": user_id}).scalar()
             blocked = True if community.id in blocked_communities(user_id) else False
-            community_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_COMMUNITY, 'entity_id': community.id, 'user_id': user_id}).scalar()
+            community_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                               {'type': NOTIF_COMMUNITY, 'entity_id': community.id,
+                                                'user_id': user_id}).scalar()
         else:
             followed = blocked = community_sub = False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
         activity_alert = True if community_sub else False
-        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type, 'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
+        v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
+              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
     if variant == 3:
         modlist = cached_modlist_for_community(community.id)
 
-        v3  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
-               'moderators': modlist,
-               'discussion_languages': []}
+        v3 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+              'moderators': modlist,
+              'discussion_languages': []}
         return v3
 
     # Variant 4 - models/community/community_response.dart - /community/follow api endpoint
     if variant == 4:
-        v4  = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
-               'discussion_languages': []}
+        v4 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
+              'discussion_languages': []}
         return v4
 
     # Variant 5 - models/community/block_community_response.dart - /community/block api endpoint
     if variant == 5:
-        block = db.session.execute(text('SELECT user_id FROM "community_block" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': user_id, 'community_id': community.id}).scalar()
+        block = db.session.execute(
+            text('SELECT user_id FROM "community_block" WHERE user_id = :user_id and community_id = :community_id'),
+            {'user_id': user_id, 'community_id': community.id}).scalar()
         blocked = True if block else False
         v5 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
               'blocked': blocked}
@@ -313,7 +340,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
     # Variant 6 - from resolve_object
     if variant == 6:
-        v6  = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
+        v6 = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
         return v6
 
 
@@ -329,7 +356,8 @@ def calculate_path(reply):
         depth = reply.depth - 1
         path_ids = [reply.id, reply.parent_id]
         while depth > 0:
-            pid = db.session.execute(text('SELECT parent_id FROM "post_reply" WHERE id = :parent_id'), {'parent_id': parent_id}).scalar()
+            pid = db.session.execute(text('SELECT parent_id FROM "post_reply" WHERE id = :parent_id'),
+                                     {'parent_id': parent_id}).scalar()
             path_ids.append(pid)
             parent_id = pid
             depth -= 1
@@ -341,7 +369,9 @@ def calculate_path(reply):
 
 # emergency function - shouldn't be called in normal circumstances
 def calculate_child_count(reply):
-    child_count = db.session.execute(text('select count(id) as c from post_reply where :id = ANY(path) and id != :id and deleted = false'), {"id": reply.id}).scalar()
+    child_count = db.session.execute(
+        text('select count(id) as c from post_reply where :id = ANY(path) and id != :id and deleted = false'),
+        {"id": reply.id}).scalar()
     reply.child_count = child_count
     db.session.commit()
 
@@ -386,13 +416,24 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
     # Variant 5 - views/comment_reply_view.dart - /user/replies api endpoint
     if variant == 5:
-        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
-        banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': reply.user_id}).scalar()
+        bookmarked = db.session.execute(text(
+            'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                        {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        reply_sub = db.session.execute(text(
+            'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                       {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        banned = db.session.execute(
+            text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'),
+            {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        moderator = db.session.execute(text(
+            'SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'),
+                                       {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'),
+                                   {'user_id': reply.user_id}).scalar()
         if my_vote == 0 and user_id is not None:
-            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            reply_vote = db.session.execute(text(
+                'SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
             effect = reply_vote if reply_vote else 0
         else:
             effect = my_vote
@@ -404,13 +445,16 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
 
-        v5 = {'comment_reply': {'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id, 'read': read, 'published': reply.posted_at.isoformat() + 'Z'},
+        v5 = {'comment_reply': {'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id, 'read': read,
+                                'published': reply.posted_at.isoformat() + 'Z'},
               'comment': reply_view(reply=reply, variant=1),
               'creator': user_view(user=reply.author, variant=1),
               'post': post_view(post=reply.post, variant=1),
               'community': community_view(community=reply.community, variant=1),
               'recipient': user_view(user=user_id, variant=1),
-              'counts': {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat() + 'Z', 'child_count': 0},
+              'counts': {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
+                         'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat() + 'Z',
+                         'child_count': 0},
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator,
@@ -419,7 +463,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
               'saved': saved,
               'creator_blocked': False,
               'my_vote': my_vote
-             }
+              }
 
         return v5
 
@@ -436,16 +480,24 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
     # when they're the same for all replies
     if variant == 7 or variant == 8 or variant == 9:
         # counts - models/comment/comment_aggregates.dart
-        counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes, 'downvotes': reply.down_votes,
-                  'published': reply.posted_at.isoformat() + 'Z', 'child_count': reply.child_count if reply.child_count is not None else 0}
+        counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
+                  'downvotes': reply.down_votes,
+                  'published': reply.posted_at.isoformat() + 'Z',
+                  'child_count': reply.child_count if reply.child_count is not None else 0}
 
-        bookmarked = db.session.execute(text('SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-        reply_sub = db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'), {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        bookmarked = db.session.execute(text(
+            'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                        {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        reply_sub = db.session.execute(text(
+            'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                       {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
         banned = reply.community_id in communities_banned_from(user_id)
         moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
         admin = reply.author.is_admin()
         if my_vote == 0 and user_id is not None:
-            reply_vote = db.session.execute(text('SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'), {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            reply_vote = db.session.execute(text(
+                'SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
             effect = reply_vote if reply_vote else 0
         else:
             effect = my_vote
@@ -457,9 +509,11 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
 
-        v7 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False, 'subscribed': 'NotSubscribed',
+        v7 = {'comment': reply_view(reply=reply, variant=1), 'counts': counts, 'banned_from_community': False,
+              'subscribed': 'NotSubscribed',
               'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
-              'creator_banned_from_community': creator_banned_from_community, 'creator_is_moderator': creator_is_moderator,
+              'creator_banned_from_community': creator_banned_from_community,
+              'creator_is_moderator': creator_is_moderator,
               'creator_is_admin': creator_is_admin, 'creator': user_view(user=reply.author, variant=1, stub=True)}
         if variant == 7:
             return v7
@@ -473,7 +527,8 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
             v9['community'] = community_view(community=reply.community, variant=1, stub=True)
             v9['canAuthUserModerate'] = False
             if user_id:
-                v9['canAuthUserModerate'] = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+                v9['canAuthUserModerate'] = any(
+                    moderator.user_id == user_id for moderator in reply.community.moderators())
             return v9
 
 
@@ -483,38 +538,43 @@ def reply_report_view(report, reply_id, user_id) -> dict:
     post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
     community_json = community_view(community=post_json['community_id'], variant=1, stub=True)
 
-    banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': report.reporter_id}).scalar()
+    banned = db.session.execute(
+        text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'),
+        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    moderator = db.session.execute(
+        text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'),
+        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'),
+                               {'user_id': report.reporter_id}).scalar()
 
     creator_banned_from_community = True if banned else False
     creator_is_moderator = True if moderator else False
     creator_is_admin = True if admin else False
 
     v1 = {
-      'comment_report_view': {
-        'comment_report': {
-          'id': report.id,
-          'creator_id': report.reporter_id,
-          'comment_id': report.suspect_post_reply_id,
-          'original_comment_text': reply_json['comment']['body'],
-          'reason': report.reasons,
-          'resolved': report.status == 3,
-          'published': report.created_at.isoformat() + 'Z'
-        },
-        'comment': reply_json['comment'],
-        'post': post_json,
-        'community': community_json,
-        'creator': user_view(user=user_id, variant=1, stub=True),
-        'comment_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
-        'counts': reply_json['counts'],
-        'creator_banned_from_community': creator_banned_from_community,
-        'creator_is_moderator': creator_is_moderator,
-        'creator_is_admin': creator_is_admin,
-        'creator_blocked': False,
-        'subscribed': reply_json['subscribed'],
-        'saved': reply_json['saved']
-      }
+        'comment_report_view': {
+            'comment_report': {
+                'id': report.id,
+                'creator_id': report.reporter_id,
+                'comment_id': report.suspect_post_reply_id,
+                'original_comment_text': reply_json['comment']['body'],
+                'reason': report.reasons,
+                'resolved': report.status == 3,
+                'published': report.created_at.isoformat() + 'Z'
+            },
+            'comment': reply_json['comment'],
+            'post': post_json,
+            'community': community_json,
+            'creator': user_view(user=user_id, variant=1, stub=True),
+            'comment_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+            'counts': reply_json['counts'],
+            'creator_banned_from_community': creator_banned_from_community,
+            'creator_is_moderator': creator_is_moderator,
+            'creator_is_admin': creator_is_admin,
+            'creator_blocked': False,
+            'subscribed': reply_json['subscribed'],
+            'saved': reply_json['saved']
+        }
     }
     return v1
 
@@ -524,49 +584,54 @@ def post_report_view(report, post_id, user_id) -> dict:
     post_json = post_view(post=post_id, variant=2, user_id=user_id)
     community_json = community_view(community=post_json['post']['community_id'], variant=1, stub=True)
 
-    banned = db.session.execute(text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    moderator = db.session.execute(text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'), {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'), {'user_id': report.reporter_id}).scalar()
+    banned = db.session.execute(
+        text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'),
+        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    moderator = db.session.execute(
+        text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'),
+        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
+    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'),
+                               {'user_id': report.reporter_id}).scalar()
 
     creator_banned_from_community = True if banned else False
     creator_is_moderator = True if moderator else False
     creator_is_admin = True if admin else False
 
     v1 = {
-      'post_report_view': {
-        'post_report': {
-          'id': report.id,
-          'creator_id': report.reporter_id,
-          'post_id': report.suspect_post_id,
-          'original_post_name': post_json['post']['title'],
-          'original_post_body': '',
-          'reason': report.reasons,
-          'resolved': report.status == 3,
-          'published': report.created_at.isoformat() + 'Z'
-        },
-        'post': post_json['post'],
-        'community': community_json,
-        'creator': user_view(user=user_id, variant=1, stub=True),
-        'post_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
-        'counts': post_json['counts'],
-        'creator_banned_from_community': creator_banned_from_community,
-        'creator_is_moderator': creator_is_moderator,
-        'creator_is_admin': creator_is_admin,
-        'creator_blocked': False,
-        'subscribed': post_json['subscribed'],
-        'saved': post_json['saved']
-      }
+        'post_report_view': {
+            'post_report': {
+                'id': report.id,
+                'creator_id': report.reporter_id,
+                'post_id': report.suspect_post_id,
+                'original_post_name': post_json['post']['title'],
+                'original_post_body': '',
+                'reason': report.reasons,
+                'resolved': report.status == 3,
+                'published': report.created_at.isoformat() + 'Z'
+            },
+            'post': post_json['post'],
+            'community': community_json,
+            'creator': user_view(user=user_id, variant=1, stub=True),
+            'post_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+            'counts': post_json['counts'],
+            'creator_banned_from_community': creator_banned_from_community,
+            'creator_is_moderator': creator_is_moderator,
+            'creator_is_admin': creator_is_admin,
+            'creator_blocked': False,
+            'subscribed': post_json['subscribed'],
+            'saved': post_json['saved']
+        }
     }
     return v1
 
 
 def search_view(type) -> dict:
     v1 = {
-      'type_': type,
-      'comments': [],
-      'posts': [],
-      'communities': [],
-      'users': []
+        'type_': type,
+        'comments': [],
+        'posts': [],
+        'communities': [],
+        'users': []
     }
     return v1
 
@@ -577,10 +642,12 @@ def instance_view(instance: Instance | int, variant) -> dict:
 
     if variant == 1:
         include = ['id', 'domain', 'software', 'version']
-        v1 = {column.name: getattr(instance, column.name) for column in instance.__table__.columns if column.name in include}
+        v1 = {column.name: getattr(instance, column.name) for column in instance.__table__.columns if
+              column.name in include}
         if not v1['version']:
             v1.update({'version': '0.0.1'})
-        v1.update({'published': instance.created_at.isoformat() + 'Z', 'updated': instance.updated_at.isoformat() + 'Z'})
+        v1.update(
+            {'published': instance.created_at.isoformat() + 'Z', 'updated': instance.updated_at.isoformat() + 'Z'})
 
         return v1
 
@@ -591,26 +658,26 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
     is_local = creator['instance_id'] == 1
 
     v1 = {
-      'private_message': {
-        'id': cm.id,
-        'creator_id': cm.sender_id,
-        'recipient_id': cm.recipient_id,
-        'content': cm.body,
-        'deleted': False,
-        'read': cm.read,
-        'published': cm.created_at.isoformat() + 'Z',
-        'ap_id': cm.ap_id,
-        'local': is_local
-      },
-      'creator': creator,
-      'recipient': recipient
+        'private_message': {
+            'id': cm.id,
+            'creator_id': cm.sender_id,
+            'recipient_id': cm.recipient_id,
+            'content': cm.body,
+            'deleted': False,
+            'read': cm.read,
+            'published': cm.created_at.isoformat() + 'Z',
+            'ap_id': cm.ap_id,
+            'local': is_local
+        },
+        'creator': creator,
+        'recipient': recipient
     }
 
     if variant == 1:
         return v1
 
     v2 = {
-      'private_message_view': v1
+        'private_message_view': v1
     }
 
     if variant == 2:
@@ -620,13 +687,13 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
 def site_view(user) -> dict:
     logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
     site = {
-      "enable_downvotes": g.site.enable_downvotes,
-      "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
-      "registration_mode": g.site.registration_mode,
-      "name": g.site.name,
-      "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
-      "user_count": users_total(),
-      "all_languages": []
+        "enable_downvotes": g.site.enable_downvotes,
+        "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+        "registration_mode": g.site.registration_mode,
+        "name": g.site.name,
+        "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+        "user_count": users_total(),
+        "all_languages": []
     }
     if g.site.sidebar:
         site['sidebar'] = g.site.sidebar
@@ -640,9 +707,9 @@ def site_view(user) -> dict:
         })
 
     v1 = {
-      "version": current_app.config['VERSION'],
-      "admins": [],
-      "site": site
+        "version": current_app.config['VERSION'],
+        "admins": [],
+        "site": site
     }
     for admin in Site.admins():
         v1['admins'].append(user_view(user=admin, variant=2))
@@ -663,7 +730,8 @@ def federated_instances_view():
     for instance in BannedInstances.query.all():
         blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(), "updated": instance.updated_at.isoformat()}
+        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(),
+                         "updated": instance.updated_at.isoformat()}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
@@ -671,23 +739,25 @@ def federated_instances_view():
         if not any(blocked_instance.get('domain') == instance.domain for blocked_instance in blocked):
             linked.append(instance_data)
     v1 = {
-      "federated_instances": {
-        "linked": linked,
-        "allowed": allowed,
-        "blocked": blocked
-      }
+        "federated_instances": {
+            "linked": linked,
+            "allowed": allowed,
+            "blocked": blocked
+        }
     }
     return v1
 
 
 @cache.memoize(timeout=60)
 def cached_modlist_for_community(community_id):
-    moderator_ids = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'), {'community_id': community_id}).scalars()
+    moderator_ids = db.session.execute(
+        text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'),
+        {'community_id': community_id}).scalars()
     modlist = []
     for m_id in moderator_ids:
         entry = {
-          'community': community_view(community=community_id, variant=1, stub=True),
-          'moderator': user_view(user=m_id, variant=1, stub=True)
+            'community': community_view(community=community_id, variant=1, stub=True),
+            'moderator': user_view(user=m_id, variant=1, stub=True)
         }
         modlist.append(entry)
     return modlist
@@ -695,12 +765,14 @@ def cached_modlist_for_community(community_id):
 
 @cache.memoize(timeout=60)
 def cached_modlist_for_user(user):
-    community_ids = db.session.execute(text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and is_moderator = True'), {'user_id': user.id}).scalars()
+    community_ids = db.session.execute(
+        text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and is_moderator = True'),
+        {'user_id': user.id}).scalars()
     modlist = []
     for c_id in community_ids:
         entry = {
-          'community': community_view(community=c_id, variant=1, stub=True),
-          'moderator': user_view(user=user, variant=1, stub=True)
+            'community': community_view(community=c_id, variant=1, stub=True),
+            'moderator': user_view(user=user, variant=1, stub=True)
         }
         modlist.append(entry)
     return modlist
@@ -746,7 +818,8 @@ def blocked_communities_view(user) -> list[dict]:
     blocked_ids = blocked_communities(user.id)
     blocked = []
     for blocked_id in blocked_ids:
-        blocked.append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_id, variant=1, stub=True)})
+        blocked.append({'person': user_view(user, variant=1, stub=True),
+                        'community': community_view(blocked_id, variant=1, stub=True)})
     return blocked
 
 
@@ -757,4 +830,3 @@ def blocked_instances_view(user) -> list[dict]:
     for blocked_id in blocked_ids:
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
     return blocked
-

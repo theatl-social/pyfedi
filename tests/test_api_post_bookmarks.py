@@ -1,10 +1,10 @@
 import pytest
-from flask import Flask
+from sqlalchemy import text
+
 from app import create_app, db
 from app.constants import POST_STATUS_REVIEWING
-from config import Config
 from app.models import User, Post
-from sqlalchemy import text
+from config import Config
 
 
 class TestConfig(Config):
@@ -34,8 +34,10 @@ def test_api_post_bookmarks(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove bookmark
-        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
-        post = Post.query.filter(Post.id.not_in(existing_bookmarks), Post.deleted == False, Post.status > POST_STATUS_REVIEWING).first()
+        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                {"user_id": user_id}).scalars()
+        post = Post.query.filter(Post.id.not_in(existing_bookmarks), Post.deleted == False,
+                                 Post.status > POST_STATUS_REVIEWING).first()
         assert post is not None and hasattr(post, 'id')
 
         data = {"post_id": post.id, "save": True}
@@ -52,8 +54,10 @@ def test_api_post_bookmarks(app):
         assert str(ex.value) == 'This post was not bookmarked.'
 
         # add to existing
-        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
-        post = Post.query.filter(Post.id.in_(existing_bookmarks), Post.deleted == False, Post.status > POST_STATUS_REVIEWING).first()
+        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                {"user_id": user_id}).scalars()
+        post = Post.query.filter(Post.id.in_(existing_bookmarks), Post.deleted == False,
+                                 Post.status > POST_STATUS_REVIEWING).first()
         if post:
             data = {"post_id": post.id, "save": True}
             with pytest.raises(Exception) as ex:
@@ -68,7 +72,8 @@ def test_api_post_bookmarks(app):
                 result = put_post_save(auth, data)
 
         # remove from deleted
-        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        existing_bookmarks = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                {"user_id": user_id}).scalars()
         post = Post.query.filter(Post.id.in_(existing_bookmarks), Post.deleted == True).first()
         if post:
             data = {"post_id": post.id, "save": False}

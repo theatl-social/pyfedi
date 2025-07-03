@@ -1,9 +1,9 @@
 import pytest
-from flask import Flask
-from app import create_app, db
-from config import Config
-from app.models import User, Community
 from sqlalchemy import text
+
+from app import create_app, db
+from app.models import User, Community
+from config import Config
 
 
 class TestConfig(Config):
@@ -33,7 +33,9 @@ def test_api_community_subscriptions(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove subscription
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'),
+            {"user_id": user_id}).scalars()
         community = Community.query.filter(Community.id.not_in(existing_subs), Community.banned == False).first()
         assert community is not None and hasattr(community, 'id')
 
@@ -51,7 +53,9 @@ def test_api_community_subscriptions(app):
         assert str(ex.value) == 'A subscription for this community did not exist.'
 
         # add to existing
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'),
+            {"user_id": user_id}).scalars()
         community = Community.query.filter(Community.id.in_(existing_subs), Community.banned == False).first()
         assert community is not None and hasattr(community, 'id')
         if community:
@@ -68,7 +72,9 @@ def test_api_community_subscriptions(app):
                 result = put_community_subscribe(auth, data)
 
         # remove from a banned community
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'),
+            {"user_id": user_id}).scalars()
         community = Community.query.filter(Community.id.in_(existing_subs), Community.banned == True).first()
         if community:
             data = {"community_id": community.id, "subscribe": False}
@@ -76,9 +82,13 @@ def test_api_community_subscriptions(app):
                 result = put_community_subscribe(auth, data)
 
         # add to a community this user is banned from
-        existing_bans = db.session.execute(text('SELECT community_id FROM "community_ban" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'), {"user_id": user_id}).scalars()
-        community = Community.query.filter(Community.id.in_(existing_bans), Community.id.not_in(existing_subs), Community.banned == False).first()
+        existing_bans = db.session.execute(text('SELECT community_id FROM "community_ban" WHERE user_id = :user_id'),
+                                           {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 1'),
+            {"user_id": user_id}).scalars()
+        community = Community.query.filter(Community.id.in_(existing_bans), Community.id.not_in(existing_subs),
+                                           Community.banned == False).first()
         if community:
             data = {"community_id": community.id, "subscribe": True}
             with pytest.raises(Exception) as ex:

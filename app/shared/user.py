@@ -1,14 +1,13 @@
-from app import db, cache
-from app.constants import ROLE_STAFF, ROLE_ADMIN
-from app.models import UserBlock, NotificationSubscription, User
-from app.constants import *
-from app.utils import authorise_api_user, blocked_users, render_template
-
 from flask import flash
 from flask_babel import _
 from flask_login import current_user
-
 from sqlalchemy import text
+
+from app import db, cache
+from app.constants import *
+from app.models import UserBlock, NotificationSubscription, User
+from app.utils import authorise_api_user, blocked_users, render_template
+
 
 # only called from API for now, but can be called from web using [un]block_another_user(user.id, SRC_WEB)
 
@@ -28,7 +27,8 @@ def block_another_user(person_id, src, auth=None):
             flash(_('You cannot block yourself.'), 'error')
             return
 
-    role = db.session.execute(text('SELECT role_id FROM "user_role" WHERE user_id = :person_id'), {'person_id': person_id}).scalar()
+    role = db.session.execute(text('SELECT role_id FROM "user_role" WHERE user_id = :person_id'),
+                              {'person_id': person_id}).scalar()
     if role == ROLE_ADMIN or role == ROLE_STAFF:
         if src == SRC_API:
             raise Exception('cannot_block_admin_or_staff')
@@ -40,8 +40,9 @@ def block_another_user(person_id, src, auth=None):
     if not existing_block:
         block = UserBlock(blocker_id=user_id, blocked_id=person_id)
         db.session.add(block)
-        db.session.execute(text('DELETE FROM "notification_subscription" WHERE entity_id = :current_user AND user_id = :user_id'),
-                                        {'current_user': user_id, 'user_id': person_id})
+        db.session.execute(
+            text('DELETE FROM "notification_subscription" WHERE entity_id = :current_user AND user_id = :user_id'),
+            {'current_user': user_id, 'user_id': person_id})
         db.session.commit()
 
         cache.delete_memoized(blocked_users, user_id)
@@ -51,7 +52,7 @@ def block_another_user(person_id, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect
 
 
 def unblock_another_user(person_id, src, auth=None):
@@ -79,7 +80,7 @@ def unblock_another_user(person_id, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect
 
 
 def subscribe_user(person_id: int, subscribe, src, auth=None):
@@ -131,5 +132,3 @@ def subscribe_user(person_id: int, subscribe, src, auth=None):
         return user_id
     else:
         return render_template('user/_notification_toggle.html', user=person)
-
-

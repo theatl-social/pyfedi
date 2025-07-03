@@ -1,17 +1,16 @@
 import os
 from typing import List, Tuple
 
+import boto3
 import httpx
-from flask import request, abort, g, current_app, json, flash, render_template
+from flask import g, current_app, flash, render_template
+from flask_babel import _
 from flask_login import current_user
 from sqlalchemy import text, desc
-from flask_babel import _
-import boto3
 
-from app import db, cache, celery
+from app import db, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_IMAGE
-
 from app.models import User, Community, Instance, CommunityMember, Post
 from app.utils import gibberish, topic_tree, get_request, store_files_in_s3, ensure_directory_exists, guess_mime_type
 
@@ -79,7 +78,8 @@ def unsubscribe_from_community(community, user):
 
 
 def send_newsletter(form):
-    recipients = User.query.filter(User.newsletter == True, User.banned == False, User.ap_id == None).order_by(desc(User.id)).limit(40000)
+    recipients = User.query.filter(User.newsletter == True, User.banned == False, User.ap_id == None).\
+        order_by(desc(User.id)).limit(40000)
 
     from app.email import send_email
 
@@ -99,7 +99,8 @@ def send_newsletter(form):
         else:
             to = recipient.email
 
-        send_email(subject=form.subject.data, sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', recipients=[to],
+        send_email(subject=form.subject.data, sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+                   recipients=[to],
                    text_body=body_text, html_body=body_html)
 
         if form.test.data:
@@ -129,9 +130,11 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
 
 @celery.task
 def move_community_images_to_here(community_id):
-    db.session.execute(text('UPDATE "post" SET instance_id = 1, ap_create_id = null, ap_announce_id = null WHERE community_id = :community_id'),
+    db.session.execute(text(
+        'UPDATE "post" SET instance_id = 1, ap_create_id = null, ap_announce_id = null WHERE community_id = :community_id'),
                        {'community_id': community_id})
-    db.session.execute(text('UPDATE "post_reply" SET instance_id = 1, ap_create_id = null, ap_announce_id = null WHERE community_id = :community_id'),
+    db.session.execute(text(
+        'UPDATE "post_reply" SET instance_id = 1, ap_create_id = null, ap_announce_id = null WHERE community_id = :community_id'),
                        {'community_id': community_id})
     db.session.commit()
     server_name = current_app.config['SERVER_NAME']
@@ -149,7 +152,8 @@ def move_community_images_to_here(community_id):
     db.session.commit()
 
     import shutil
-    post_ids = list(db.session.execute(text('SELECT id FROM "post" WHERE type = :post_type AND community_id = :community_id AND deleted is false AND image_id is not null'),
+    post_ids = list(db.session.execute(text(
+        'SELECT id FROM "post" WHERE type = :post_type AND community_id = :community_id AND deleted is false AND image_id is not null'),
                                        {'post_type': POST_TYPE_IMAGE, 'community_id': community_id}).scalars())
 
     if store_files_in_s3():
@@ -163,12 +167,14 @@ def move_community_images_to_here(community_id):
         )
         for post_id in post_ids:
             post = Post.query.get(post_id)
-            if post.image.source_url and not post.image.source_url.startswith(f"https://{current_app.config['S3_PUBLIC_URL']}"):
+            if post.image.source_url and not post.image.source_url.startswith(
+                    f"https://{current_app.config['S3_PUBLIC_URL']}"):
                 if post.image.source_url.startswith('app/static/media'):
                     if os.path.isfile(post.image.source_url):
                         content_type = guess_mime_type(post.image.source_url)
                         new_path = post.image.source_url.replace('app/static/media/', "")
-                        s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                        s3.upload_file(post.image.source_url, current_app.config['S3_BUCKET'], new_path,
+                                       ExtraArgs={'ContentType': content_type})
                         os.unlink(post.image.source_url)
                         post.image.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                         db.session.commit()
@@ -194,7 +200,7 @@ def move_community_images_to_here(community_id):
                                     file_extension = file_extension.replace('%3f', '?')
                                     if '?' in file_extension:
                                         file_extension = file_extension.split('?')[0]
-                                
+
                                 # Save to a temporary file first
                                 new_filename = gibberish(15)
                                 tmp_directory = 'app/static/tmp'
@@ -203,15 +209,16 @@ def move_community_images_to_here(community_id):
                                 with open(tmp_file, 'wb') as f:
                                     f.write(response.content)
                                 response.close()
-                                
+
                                 # Upload to S3
                                 content_type = guess_mime_type(tmp_file)
                                 new_path = f"posts/{new_filename[0:2]}/{new_filename[2:4]}/{new_filename}{file_extension}"
-                                s3.upload_file(tmp_file, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
-                                
+                                s3.upload_file(tmp_file, current_app.config['S3_BUCKET'], new_path,
+                                               ExtraArgs={'ContentType': content_type})
+
                                 # Delete temporary file
                                 os.unlink(tmp_file)
-                                
+
                                 # Update post.image.source_url with the S3 url
                                 post.image.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                                 db.session.commit()
@@ -250,7 +257,7 @@ def move_community_images_to_here(community_id):
                                     file_extension = file_extension.replace('%3f', '?')
                                     if '?' in file_extension:
                                         file_extension = file_extension.split('?')[0]
-                                
+
                                 # Save to a temporary file first
                                 new_filename = gibberish(15)
                                 tmp_directory = 'app/static/tmp'
@@ -259,15 +266,15 @@ def move_community_images_to_here(community_id):
                                 with open(tmp_file, 'wb') as f:
                                     f.write(response.content)
                                 response.close()
-                                
+
                                 # Now move to the proper directory
                                 directory = 'app/static/media/posts/' + new_filename[0:2] + '/' + new_filename[2:4]
                                 ensure_directory_exists(directory)
                                 final_place = os.path.join(directory, new_filename + file_extension)
-                                
+
                                 # Move file from tmp to final location
                                 shutil.move(tmp_file, final_place)
-                                
+
                                 # Update the post image source_url
                                 new_path = f"static/media/posts/{new_filename[0:2]}/{new_filename[2:4]}/{new_filename}{file_extension}"
                                 post.image.source_url = f"https://{current_app.config['SERVER_NAME']}/{new_path}"

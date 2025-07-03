@@ -53,7 +53,7 @@ def log_user_in(input, src):
             flash(_('Invalid password'))
             return redirect(url_for('auth.login'))
         elif src == SRC_API:
-             raise Exception('incorrect_login')
+            raise Exception('incorrect_login')
 
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
         # Detect if a banned user tried to log in from a new IP address
@@ -73,7 +73,7 @@ def log_user_in(input, src):
                 response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
                 return response
             elif src == SRC_API:
-                 raise Exception('incorrect_login')
+                raise Exception('incorrect_login')
 
     if src == SRC_WEB:
         if user.waiting_for_approval():
