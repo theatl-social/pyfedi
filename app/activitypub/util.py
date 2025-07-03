@@ -1719,7 +1719,7 @@ def ban_user(blocker, blocked, community, core_activity):
             reason = core_activity['summary']
         else:
             reason = ''
-        new_ban.reason = reason
+        new_ban.reason = shorten_string(reason, 255)
 
         ban_until = None
         if 'expires' in core_activity:

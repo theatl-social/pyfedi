@@ -9,9 +9,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta, date
 from json import JSONDecodeError
 from time import sleep
-from typing import List, Literal, Union
+from typing import List
 
-from jinja2 import BytecodeCache
 
 import app
 import redis
@@ -25,12 +24,8 @@ import warnings
 import jwt
 import base64
 
-from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_INSTANCE, \
-    DOWNVOTE_ACCEPT_MEMBERS
-
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
-import pickle
 from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
