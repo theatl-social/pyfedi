@@ -17,6 +17,8 @@ services:
     restart: unless-stopped
     env_file:
      - ./.env.docker
+    volumes:
+     - redis_data:/data
     networks:
       - pf_network
 
@@ -87,3 +89,6 @@ networks:
   pf_network:
     name: pf_network
     external: false
+
+volumes:
+  redis_data:
