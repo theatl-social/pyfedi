@@ -1,9 +1,7 @@
 #!/usr/bin/env sh
 set -e
 
-echo "Running configuration check..."
 export FLASK_APP=pyfedi.py
-flask config_check
 
 echo "Running database migrations..."
 flask db upgrade
