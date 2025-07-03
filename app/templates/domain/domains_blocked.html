@@ -9,9 +9,9 @@
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% if search == '' %}
-            <h1>{{ _('Blocked domains') }}</h1>
+            <h1>{{ _('Banned domains') }}</h1>
         {% else %}
-            <h1>{{ _('Blocked domains containing "%(search)s"', search=search) }}</h1>
+            <h1>{{ _('Banned domains containing "%(search)s"', search=search) }}</h1>
         {% endif %}
         {% if not current_user.is_anonymous and current_user.trustworthy() %}
         <div class="row">
@@ -43,9 +43,7 @@
                         <td>
                             {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
                                 {% if domain.banned %}
-                                        <a class="btn btn-primary confirm_first" title="{{ _('Unbanning this domain allows future posts linking to that domain.') }}" href="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
-                                {% else %}
-                                        <a class="btn btn-primary confirm_first" title="{{ _('Banning this domain will delete all posts linking to this domain and prevent future posts linking to that domain.') }}" href="/d/{{ domain.id }}/ban">{{ _('Ban') }}</a>
+                                        <a class="btn btn-primary confirm_first send_post" title="{{ _('Unbanning this domain allows future posts linking to that domain.') }}" href="#" data-url="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
                                 {% endif %}
                             {% endif %}
                         </td>
