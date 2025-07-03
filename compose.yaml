@@ -38,6 +38,12 @@ services:
      - ./tmp/:/app/app/static/tmp/
     networks:
       - pf_network
+    healthcheck:
+      test: ["CMD", "celery", "-A", "celery_worker_docker.celery", "inspect", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   web:
     build:
@@ -59,6 +65,12 @@ services:
       - '8030:5000'
     networks:
       - pf_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   adminer:
     image: adminer

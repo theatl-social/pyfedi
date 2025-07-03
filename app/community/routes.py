@@ -449,7 +449,6 @@ def show_community(community: Community):
                 breadcrumb.url = f"/f/{feed.link()}"
                 breadcrumbs.append(breadcrumb)
 
-
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
