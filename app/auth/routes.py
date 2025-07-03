@@ -11,15 +11,14 @@ from wtforms import Label
 from app import db, cache, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegistrationForm, ResetPasswordRequestForm, ResetPasswordForm, RegisterByMastodonForm
-from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_user_application
-from app.constants import NOTIF_REGISTRATION, NOTIF_REPORT
+from app.auth.util import random_token, normalize_utf, ip2location, no_admins_logged_in_recently,  create_registration_application, notify_admins_of_registration
+from app.constants import NOTIF_REPORT
 from app.email import send_verification_email, send_password_reset_email, send_registration_approved_email
 from app.ldap_utils import sync_user_to_ldap
-from app.models import User, utcnow, IpBan, UserRegistration, Notification, Site
+from app.models import User, utcnow, IpBan, UserRegistration
 from app.shared.tasks import task_selector
 from app.utils import render_template, ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses, \
-    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin
-from app.community.util import save_icon_file
+    finalize_user_setup, blocked_referrers, gibberish, get_setting, notify_admin, markdown_to_html
 
 
 @bp.route('/login', methods=['GET', 'POST'])
@@ -98,7 +97,8 @@ def login():
         return response
     return render_template('auth/login.html', title=_('Login'), form=form, 
                             google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'],
-                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"])
+                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                            discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 @bp.route('/logout')
@@ -123,6 +123,8 @@ def register():
     form = RegistrationForm()
     if g.site.registration_mode != 'RequireApplication':
         form.question.validators = ()
+    if g.site.tos_url is None or g.site.tos_url.strip() == '':
+        form.terms.validators = ()
     if form.validate_on_submit():
         if form.email.data == '': # ignore any registration where the email field is filled out. spam prevention
             if form.real_email.data.lower().startswith('postmaster@') or form.real_email.data.lower().startswith('abuse@') or \
@@ -169,40 +171,33 @@ def register():
                 user.timezone = form.timezone.data
                 if get_setting('email_verification', True):
                     user.verified = False
+                    send_verification_email(user)
+                    if current_app.debug:
+                        current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
                 else:
                     user.verified = True
                 db.session.add(user)
                 db.session.commit()
-                send_verification_email(user)
-                if current_app.debug:
-                    current_app.logger.info('Verify account:' + url_for('auth.verify_email', token=user.verification_token, _external=True))
+
                 if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-                    application = UserRegistration(user_id=user.id, answer=form.question.data)
-                    db.session.add(application)
-                    targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
-                    for admin in Site.admins():
-                        notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}', user_id=admin.id,
-                                          author_id=user.id, notif_type=NOTIF_REGISTRATION,
-                                          subtype='new_registration_for_approval',
-                                          targets=targets_data)
-                        admin.unread_notifications += 1
-                        db.session.add(notify)
-                        # todo: notify everyone with the "approve registrations" permission, instead of just all admins
+                    application = create_registration_application(user, form.question.data)
                     db.session.commit()
                     if get_setting('ban_check_servers', ''):
                         task_selector('check_application', application_id=application.id)
-                    return redirect(url_for('auth.please_wait'))
+                    if get_setting('email_verification', True):
+                        return redirect(url_for('auth.check_email'))
+                    else:
+                        return redirect(url_for('auth.please_wait'))
                 else:
                     if current_app.config['FLAG_THROWAWAY_EMAILS'] and os.path.isfile('app/static/tmp/disposable_domains.txt'):
                         with open('app/static/tmp/disposable_domains.txt', 'r', encoding='utf-8') as f:
                             disposable_domains = [line.rstrip('\n') for line in f]
                         if user.email_domain() in disposable_domains:
-                            # todo: notify everyone with the "approve registrations" permission, instead of just all admins?
                             targets_data = {'gen': '0', 'suspect_user_id': user.id, 'reporter_id': 1}
                             notify_admin(_('Throwaway email used for account %(username)s', username=user.user_name),
                                          url=f'/u/{user.link()}', author_id=1, notif_type=NOTIF_REPORT,
                                          subtype='user_reported', targets=targets_data)
-                    if user.verified:
+                    if user.verified and not user.waiting_for_approval():
                         finalize_user_setup(user)
                         try:
                             sync_user_to_ldap(current_user.user_name, current_user.email,
@@ -221,12 +216,15 @@ def register():
         return resp
     else:
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question != '':
-            form.question.label = Label('question', g.site.application_question)
+            form.question.label = Label('question', markdown_to_html(g.site.application_question))
         if g.site.registration_mode != 'RequireApplication':
             del form.question
+        if g.site.tos_url is None or g.site.tos_url.strip() == '':
+            del form.terms
         return render_template('auth/register.html', title=_('Register'), form=form, site=g.site,
                                google_oauth=current_app.config['GOOGLE_OAUTH_CLIENT_ID'], 
-                               mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"]
+                               mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                               discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"]
                                )
 
 
@@ -289,8 +287,17 @@ def verify_email(token):
                 return redirect(url_for('main.index'))
             if user.verified:   # guard against users double-clicking the link in the email
                 flash(_('Thank you for verifying your email address.'))
-                return redirect(url_for('main.index'))
+                return redirect(url_for('auth.login'))
             user.verified = True
+            
+            # Update any pending application status from -1 to 0 when email is verified
+            application = UserRegistration.query.filter_by(user_id=user.id, status=-1).first()
+            if application:
+                application.status = 0
+                
+                # Now notify admins since application is ready for review
+                notify_admins_of_registration(application)
+            
             db.session.commit()
             if not user.waiting_for_approval() and user.private_key is None:    # only finalize user set up if this is a brand new user. People can also end up doing this process when they change their email address in which case we DO NOT want to reset their keys, etc!
                 finalize_user_setup(user)
@@ -302,7 +309,7 @@ def verify_email(token):
         if user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
-            # Two things need to happen - email verification and (usually) admin approval. They can happen in any order.
+            # Two things need to happen - email verification and (usually) admin approval.
             if g.site.registration_mode == 'RequireApplication':
                 send_registration_approved_email(user)
             else:
@@ -365,57 +372,67 @@ def google_authorize():
                         verification_token='', instance_id=1, ip_address=ip_address(),
                         banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
                         referrer='', alt_user_name=gibberish(randint(8, 20)), google_oauth_id=google_id)
+            ip_address_info = ip2location(user.ip_address)
             user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
             db.session.add(user)
-            targets_data = {'gen':'0', 'application_id':application.id,'user_id':user.id}
             db.session.commit()
-            if get_setting('ban_check_servers', ''):
-                task_selector('check_application', application_id=application.id)
 
-            create_user_application(user, "Signed in with Google")
-            return redirect(url_for('auth.please_wait'))
+            if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+                application = create_registration_application(user, "Signed in with Google")
+                db.session.commit()
+                if get_setting('ban_check_servers', 'piefed.social'):
+                    task_selector('check_application', application_id=application.id)
+                return redirect(url_for('auth.please_wait'))
+            else:
+                # New user, no application required
+                finalize_user_setup(user)
+                login_user(user, remember=True)
+                return redirect(url_for('auth.trump_musk'))
     else:
-        if user.verified:
+        if user.verified and not user.waiting_for_approval():
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
-        else:
-            return redirect(url_for('auth.check_email'))
-        # user already exists
-        if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
-            flash(_('You have been banned.'), 'error')
-
-            response = make_response(redirect(url_for('auth.login')))
-            # Detect if a banned user tried to log in from a new IP address
-            if user.banned and not user_ip_banned():
-                # If so, ban their new IP address as well
-                new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
-                db.session.add(new_ip_ban)
-                db.session.commit()
-                cache.delete_memoized(banned_ip_addresses)
-
-            # Set a cookie so we have another way to track banned people
-            response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
-            return response
-        if user.waiting_for_approval():
+        elif user.waiting_for_approval():
             return redirect(url_for('auth.please_wait'))
         else:
-            login_user(user, remember=True)
-            session['ui_language'] = user.interface_language
-            current_user.last_seen = utcnow()
-            current_user.ip_address = ip_address()
-            ip_address_info = ip2location(current_user.ip_address)
-            current_user.ip_address_country = ip_address_info[
-                'country'] if ip_address_info else current_user.ip_address_country
+            return redirect(url_for('auth.check_email'))
+
+    # user already exists - check if banned
+    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+        flash(_('You have been banned.'), 'error')
+
+        response = make_response(redirect(url_for('auth.login')))
+        # Detect if a banned user tried to log in from a new IP address
+        if user.banned and not user_ip_banned():
+            # If so, ban their new IP address as well
+            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            db.session.add(new_ip_ban)
             db.session.commit()
-            [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
-            next_page = request.args.get('next')
-            if not next_page or url_parse(next_page).netloc != '':
-                if len(current_user.communities()) == 0:
-                    next_page = url_for('auth.trump_musk')
-                else:
-                    next_page = url_for('main.index')
-            return redirect(next_page)
+            cache.delete_memoized(banned_ip_addresses)
+
+        # Set a cookie so we have another way to track banned people
+        response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+        return response
+    if user.waiting_for_approval():
+        return redirect(url_for('auth.please_wait'))
+    else:
+        login_user(user, remember=True)
+        session['ui_language'] = user.interface_language
+        current_user.last_seen = utcnow()
+        current_user.ip_address = ip_address()
+        ip_address_info = ip2location(current_user.ip_address)
+        current_user.ip_address_country = ip_address_info[
+            'country'] if ip_address_info else current_user.ip_address_country
+        db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            if len(current_user.communities()) == 0:
+                next_page = url_for('auth.trump_musk')
+            else:
+                next_page = url_for('main.index')
+        return redirect(next_page)
 
 
 @bp.route("/mastodon_login")
@@ -472,19 +489,125 @@ def mastodon_authorize():
 
         db.session.commit()
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
-            application = create_user_application(user, "Signed in with Mastodon")
+            application = create_registration_application(user, "Signed in with Mastodon")
+            db.session.commit()
             if get_setting('ban_check_servers', 'piefed.social'):
                 task_selector('check_application', application_id=application.id)
             return redirect(url_for('auth.please_wait'))
     else:
-        if user.verified:
+        if user.verified and not user.waiting_for_approval():
             finalize_user_setup(user)
             login_user(user, remember=True)
             return redirect(url_for('auth.trump_musk'))
+        elif user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
         else:
             return redirect(url_for('auth.check_email'))
 
     return redirect(url_for('auth.check_email'))
+
+
+@bp.route('/discord_login')
+def discord_login():
+    return oauth.discord.authorize_redirect(redirect_uri=url_for('auth.discord_authorize', _external=True))
+
+
+@bp.route('/discord_authorize')
+def discord_authorize():
+    try:
+        token = oauth.discord.authorize_access_token()
+    except Exception:
+        current_app.logger.exception("Discord OAuth error")
+        flash(_('Login failed due to a problem with Discord.'), 'error')
+        return redirect(url_for('auth.login'))
+
+    resp = oauth.discord.get('users/@me', token=token)
+    user_info = resp.json()
+    discord_id = user_info['id']
+    email = user_info['email']
+    username = user_info.get('username', '')
+
+    # Try to find user by discord_id first
+    user = User.query.filter_by(discord_oauth_id=discord_id).first()
+
+    # If not found, check by email and link
+    if not user:
+        user = User.query.filter_by(email=email).first()
+        if user:
+            user.discord_oauth_id = discord_id
+        else:
+            # Check if registrations are closed
+            if g.site.registration_mode == 'Closed':
+                flash(_('Account registrations are currently closed.'), 'error')
+                return redirect(url_for('auth.login'))
+            if user_ip_banned():
+                return redirect(url_for('auth.please_wait'))
+
+            user = User(user_name=find_new_username(email), title=username, email=email, verified=True,
+                        verification_token='', instance_id=1, ip_address=ip_address(),
+                        banned=user_ip_banned() or user_cookie_banned(), email_unread_sent=False,
+                        referrer='', alt_user_name=gibberish(randint(8, 20)), discord_oauth_id=discord_id)
+            ip_address_info = ip2location(user.ip_address)
+            user.ip_address_country = ip_address_info['country'] if ip_address_info else ''
+            db.session.add(user)
+            db.session.commit()
+
+            if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
+                application = create_registration_application(user, "Signed in with Discord")
+                db.session.commit()
+                if get_setting('ban_check_servers', 'piefed.social'):
+                    task_selector('check_application', application_id=application.id)
+                return redirect(url_for('auth.please_wait'))
+            else:
+                # New user, no application required
+                finalize_user_setup(user)
+                login_user(user, remember=True)
+                return redirect(url_for('auth.trump_musk'))
+    else:
+        if user.verified and not user.waiting_for_approval():
+            finalize_user_setup(user)
+            login_user(user, remember=True)
+            return redirect(url_for('auth.trump_musk'))
+        elif user.waiting_for_approval():
+            return redirect(url_for('auth.please_wait'))
+        else:
+            return redirect(url_for('auth.check_email'))
+
+    # user already exists - check if banned
+    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+        flash(_('You have been banned.'), 'error')
+
+        response = make_response(redirect(url_for('auth.login')))
+        # Detect if a banned user tried to log in from a new IP address
+        if user.banned and not user_ip_banned():
+            # If so, ban their new IP address as well
+            new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
+            db.session.add(new_ip_ban)
+            db.session.commit()
+            cache.delete_memoized(banned_ip_addresses)
+
+        # Set a cookie so we have another way to track banned people
+        response.set_cookie('sesion', '17489047567495', expires=datetime(year=2099, month=12, day=30))
+        return response
+    if user.waiting_for_approval():
+        return redirect(url_for('auth.please_wait'))
+    else:
+        login_user(user, remember=True)
+        session['ui_language'] = user.interface_language
+        current_user.last_seen = utcnow()
+        current_user.ip_address = ip_address()
+        ip_address_info = ip2location(current_user.ip_address)
+        current_user.ip_address_country = ip_address_info[
+            'country'] if ip_address_info else current_user.ip_address_country
+        db.session.commit()
+        [limiter.limiter.clear(limit.limit, *limit.request_args) for limit in limiter.current_limits]
+        next_page = request.args.get('next')
+        if not next_page or url_parse(next_page).netloc != '':
+            if len(current_user.communities()) == 0:
+                next_page = url_for('auth.trump_musk')
+            else:
+                next_page = url_for('main.index')
+        return redirect(next_page)
 
 
 def find_new_username(email: str) -> str:

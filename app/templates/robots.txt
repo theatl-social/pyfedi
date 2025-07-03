@@ -49,6 +49,9 @@ Disallow: /
 User-agent: YandexBot
 Disallow: /
 
+User-agent: BLEXBot
+Disallow: /
+
 User-Agent: ImagesiftBot
 Crawl-delay: 5
 

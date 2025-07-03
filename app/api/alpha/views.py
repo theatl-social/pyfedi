@@ -272,8 +272,10 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     # Variant 2 - views/community_view.dart - /community/list api endpoint
     if variant == 2:
         # counts - models/community/community_aggregates
-        include = ['id', 'subscriptions_count', 'post_count', 'post_reply_count']
+        include = ['id', 'subscriptions_count', 'total_subscriptions_count', 'post_count', 'post_reply_count']
         counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if column.name in include}
+        if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:
+            counts['total_subscriptions_count'] = counts['subscriptions_count']
         counts.update({'published': community.created_at.isoformat() + 'Z'})
         if user_id:
             followed = db.session.execute(text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'), {"community_id": community.id, "user_id": user_id}).scalar()

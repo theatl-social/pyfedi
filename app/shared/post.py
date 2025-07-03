@@ -36,6 +36,10 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
         post = Post.query.get_or_404(post_id)
         user = current_user
 
+        if (vote_direction == 'upvote' and not can_upvote(user, post.community)) or (vote_direction == 'downvote' and not can_downvote(user, post.community)):
+            template = 'post/_post_voting_buttons.html' if request.args.get('style', '') == '' else 'post/_post_voting_buttons_masonry.html'
+            return render_template(template, post=post, community=post.community, recently_upvoted=[], recently_downvoted=[])
+
     undo = post.vote(user, vote_direction)
 
     # mark the post as read for the user

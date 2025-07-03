@@ -49,7 +49,7 @@
                         <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>
                     {% endif -%}
                 </div>
-            {% elif post.type == POST_TYPE_LINK -%}
+            {% elif post.type == POST_TYPE_LINK and post.url -%}
                 <p class="mt-2"><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
                 <span class="fe fe-external"></span></a>
                     {% if post.domain.post_warning -%}
@@ -75,7 +75,7 @@
                     <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
-            {% elif post.type == POST_TYPE_VIDEO -%}
+            {% elif post.type == POST_TYPE_VIDEO and post.url -%}
                 <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
                 <span class="fe fe-external"></span></a></p>
                 {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
@@ -222,6 +222,21 @@
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
         </div>
+        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+          <div class="dropdown" id="flair_dropdown_{{ post.id }}">
+            <a href="{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}"
+              data-bs-toggle="dropdown"
+              rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
+            <ul class="dropdown-menu" style="width: 320px">
+              <div
+                hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
+                hx-trigger="intersect once"
+                hx-target="this"
+                hx-swap="outerHTML"
+              ></div>
+            </ul>
+          </div>
+        {% endif -%}
         <div class="post_options_link">
             <div class="dropdown">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"

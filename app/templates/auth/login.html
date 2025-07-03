@@ -18,18 +18,22 @@
                     <br>
                     <hr />
                     <p align="center">OR<br><br>
-                        {% if google_oauth -%}
-                            <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
-                                <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
-                        {% endif -%}
                         <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
                             <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
                     </p>
                     {% endif -%}
                     {% if mastodon_oauth -%}
-                    <p align="center">
+                    <p align="center">OR<br><br>
                         <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Log in with Mastodon') }}
                             <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"></a>
+
+                    </p>
+                    {% endif -%}
+                    {% if discord_oauth -%}
+                    <p align="center">OR<br><br>
+                        <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _('Log in with Discord') }}
+                            <img src="/static/images/discord_ico.png" width="16" alt="Logo"></a>
+                        </a>
 
                     </p>
                     {% endif -%}
@@ -46,4 +50,3 @@
     </div>
 
 {% endblock -%}
-

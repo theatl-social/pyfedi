@@ -232,6 +232,10 @@
   content: "\e92e";
 }
 
+.fe-chevron-right::before {
+  content: "\e930";
+}
+
 .fe-feather::before {
   content: "\e960";
 }
@@ -810,6 +814,18 @@ div.navbar {
   }
 }
 
+form > .mb-3 {
+  margin-bottom: 1.1rem;
+}
+form > .mb-3.required > label:after {
+  content: "*";
+  color: red;
+  margin-left: 2px;
+  font-size: 80%;
+  position: relative;
+  top: -1px;
+}
+
 .form-group {
   margin-bottom: 1.1rem;
 }
@@ -820,6 +836,10 @@ div.navbar {
   font-size: 80%;
   position: relative;
   top: -1px;
+}
+
+.form-label {
+  font-weight: 500;
 }
 
 .post_reply_form {
@@ -1746,6 +1766,39 @@ time {
 .comment .replies.depth_10 {
   border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
 }
+.comment .replies.depth_11 {
+  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+}
+.comment .replies.depth_12 {
+  border-left: 2px solid rgba(172, 157, 83, 0.6) !important;
+}
+.comment .replies.depth_13 {
+  border-left: 2px solid rgba(113, 172, 83, 0.6) !important;
+}
+.comment .replies.depth_14 {
+  border-left: 2px solid rgba(83, 172, 128, 0.6) !important;
+}
+.comment .replies.depth_15 {
+  border-left: 2px solid rgba(83, 142, 172, 0.6) !important;
+}
+.comment .replies.depth_16 {
+  border-left: 2px solid rgba(98, 83, 172, 0.5) !important;
+}
+.comment .replies.depth_17 {
+  border-left: 2px solid rgba(172, 83, 172, 0.5) !important;
+}
+.comment .replies.depth_18 {
+  border-left: 2px solid rgba(172, 83, 83, 0.5) !important;
+}
+.comment .replies.depth_19 {
+  border-left: 2px solid rgba(172, 83, 83, 0.65) !important;
+}
+.comment .replies.depth_20 {
+  border-left: 2px solid rgba(172, 83, 83, 0.78) !important;
+}
+.comment .replies.depth_21 {
+  border-left: 2px solid rgba(172, 83, 83, 0.85) !important;
+}
 
 #more_replies .community_actions_link {
   float: right;
@@ -2558,6 +2611,10 @@ form h5 {
 }
 #voting_dialog .btn i {
   margin-right: 0.5rem;
+}
+
+#registration_form #question {
+  margin-top: -0.5rem;
 }
 
 .blink {

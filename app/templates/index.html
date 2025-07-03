@@ -15,10 +15,10 @@
             <div id="home_announcement">{{ announcement|safe }}</div>
         {% endif -%}
         <div class="row">
-            <div class="col-6 pr-md-0">
+            <div class="col-6 pe-1">
                 {% include "_home_nav.html" %}
             </div>
-            <div class="col-6 pl-md-0">
+            <div class="col-6 ps-1">
                 {% include "_view_filter_nav.html" %}
             </div>
         </div>
@@ -55,7 +55,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in new_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }}
+                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
                         </li>
                     {% endfor %}
                 </ul>
@@ -71,7 +71,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in active_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }}
+                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
                         </li>
                     {% endfor %}
                 </ul>

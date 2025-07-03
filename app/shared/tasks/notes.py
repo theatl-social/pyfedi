@@ -53,12 +53,24 @@ import re
 
 @celery.task
 def make_reply(send_async, reply_id, parent_id):
-    send_reply(reply_id, parent_id)
+    try:
+        send_reply(reply_id, parent_id)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 @celery.task
 def edit_reply(send_async, reply_id, parent_id):
-    send_reply(reply_id, parent_id, edit=True)
+    try:
+        send_reply(reply_id, parent_id, edit=True)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def send_reply(reply_id, parent_id, edit=False):

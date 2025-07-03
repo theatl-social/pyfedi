@@ -19,7 +19,6 @@ class Config(object):
     MAIL_USERNAME = os.environ.get('MAIL_USERNAME') or None
     MAIL_PASSWORD = os.environ.get('MAIL_PASSWORD') or None
     MAIL_FROM = os.environ.get('MAIL_FROM') or 'noreply@' + os.environ.get('SERVER_NAME')
-    MAIL_ERRORS = os.environ.get('MAIL_ERRORS') is not None
     ERRORS_TO = os.environ.get('ERRORS_TO') or ''
     LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
@@ -89,6 +88,9 @@ class Config(object):
     MASTODON_OAUTH_SECRET = os.environ.get("MASTODON_OAUTH_SECRET") or ""
     MASTODON_OAUTH_DOMAIN = os.environ.get("MASTODON_OAUTH_DOMAIN") or ""
 
+    DISCORD_OAUTH_CLIENT_ID = os.environ.get('DISCORD_OAUTH_CLIENT_ID') or ""
+    DISCORD_OAUTH_SECRET = os.environ.get('DISCORD_OAUTH_SECRET') or ""
+
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
     SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']
@@ -98,7 +100,7 @@ class Config(object):
     FLAG_THROWAWAY_EMAILS = os.environ.get('FLAG_THROWAWAY_EMAILS') or False
 
     NOTIF_SERVER = os.environ.get('NOTIF_SERVER') or ''
-    
+
     # CORS configuration
     CORS_ALLOW_ORIGIN = os.environ.get('CORS_ALLOW_ORIGIN') or '*'
 
@@ -130,3 +132,7 @@ class Config(object):
     LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
 
     VERSION = app.constants.VERSION
+
+    # How long to keep post voting data ( months )
+    KEEP_LOCAL_VOTE_DATA_TIME = int(os.environ.get('KEEP_LOCAL_VOTE_DATA_TIME') or 6)
+    KEEP_REMOTE_VOTE_DATA_TIME = int(os.environ.get('KEEP_REMOTE_VOTE_DATA_TIME') or 6)

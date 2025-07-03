@@ -75,7 +75,7 @@ def create_app(config_class=Config):
     cache.init_app(app)
     limiter.init_app(app)
     celery.conf.update(app.config)
-    
+
     # Initialize redis_client
     global redis_client
     from app.utils import get_redis_connection
@@ -102,6 +102,18 @@ def create_app(config_class=Config):
             authorize_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/oauth/authorize",
             api_base_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/api/",
             client_kwargs={"response_type": "code"}
+        )
+
+    if app.config["DISCORD_OAUTH_CLIENT_ID"]:
+        oauth.init_app(app)
+        oauth.register(
+            name="discord",
+            client_id=app.config["DISCORD_OAUTH_CLIENT_ID"],
+            client_secret=app.config["DISCORD_OAUTH_SECRET"],
+            access_token_url="https://discord.com/api/oauth2/token",
+            authorize_url="https://discord.com/api/oauth2/authorize",
+            api_base_url="https://discord.com/api/",
+            client_kwargs={"scope": "identify email"}
         )
 
     from app.main import bp as main_bp
@@ -156,7 +168,7 @@ def create_app(config_class=Config):
     app.register_blueprint(app_api_bp)
 
     # send error reports via email
-    if app.config['MAIL_SERVER'] and app.config['MAIL_ERRORS']:
+    if app.config['MAIL_SERVER'] and app.config['ERRORS_TO']:
         auth = None
         if app.config['MAIL_USERNAME'] or app.config['MAIL_PASSWORD']:
             auth = (app.config['MAIL_USERNAME'],

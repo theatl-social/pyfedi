@@ -12,7 +12,7 @@
     {% if not post_reply.deleted -%}
         {# Normal delete permissions (unchanged) #}
         {% if post_reply.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
-            <li><a href='#' data-url="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
+            <li><a href="{{ url_for('post.post_reply_delete', post_id=post.id, comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-delete"></span>
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% else -%}

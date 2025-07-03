@@ -9,9 +9,8 @@ from collections import defaultdict
 from datetime import datetime, timedelta, date
 from json import JSONDecodeError
 from time import sleep
-from typing import List, Literal, Union
+from typing import List
 
-from jinja2 import BytecodeCache
 
 import app
 import redis
@@ -25,12 +24,8 @@ import warnings
 import jwt
 import base64
 
-from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_INSTANCE, \
-    DOWNVOTE_ACCEPT_MEMBERS
-
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
-import pickle
 from furl import furl
 from flask import current_app, json, redirect, url_for, request, make_response, Response, g, flash, abort
 from flask_babel import _, lazy_gettext as _l
@@ -411,7 +406,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                        extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
+                        extras={'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
                                 'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
@@ -1305,6 +1300,11 @@ def finalize_user_setup(user):
         user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
+    
+    # find all notifications from this registration and mark them as read
+    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION,author_id=user.id)
+    for rn in reg_notifs:
+        rn.read = True
     
     db.session.commit()
 

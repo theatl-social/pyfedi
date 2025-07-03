@@ -813,83 +813,89 @@ def subscribe(actor):
 
 @celery.task
 def do_feed_subscribe(actor, user_id):
-    remote = False
-    actor = actor.strip()
-    user = User.query.get(user_id)
-    if '@' in actor:
-        feed = Feed.query.filter_by(ap_id=actor).first()
-        remote = True
-    else:
-        feed = Feed.query.filter_by(name=actor, ap_id=None).first()
-    
-    if feed is not None:
-        if feed_membership(user, feed) == SUBSCRIPTION_NONMEMBER:
-            success = True
-
-            # for local feeds, joining is instant
-            member = FeedMember(user_id=user.id, feed_id=feed.id)
-            db.session.add(member)
-            feed.subscriptions_count += 1
-            db.session.commit()
-
-            # also subscribe the user to the feeditem communities
-            # if they have feed_auto_follow turned on
-            if user.feed_auto_follow:
-                from app.community.routes import do_subscribe
-                feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
-                for fi in feed_items:
-                    community = Community.query.get(fi.community_id)
-                    actor = community.ap_id if community.ap_id else community.name
-                    if current_app.debug:
-                        do_subscribe(actor, user.id, joined_via_feed=True)
-                    else:
-                        do_subscribe.delay(actor, user.id, joined_via_feed=True)
- 
-            # feed is remote
-            if remote:
-                # send ActivityPub message to remote feed, asking to follow. Accept message will be sent to our shared inbox
-                join_request = FeedJoinRequest(user_id=user.id, feed_id=feed.id)
-                db.session.add(join_request)
-                db.session.commit()
-                if feed.instance.online():
-                    follow = {
-                      "actor": user.public_url(),
-                      "to": [feed.public_url()],
-                      "object": feed.public_url(),
-                      "type": "Follow",
-                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
-                    }
-                    send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
-                    
-                    # reach out and get the feeditems from the remote /following collection
-                    res = get_request(feed.ap_following_url)
-                    following_collection = res.json()
-
-                    # for each of those add the communities
-                    # subscribe the user if they have feed_auto_follow turned on
-                    for fci in following_collection['items']:
-                        community_ap_id = fci 
-                        community = find_actor_or_create(community_ap_id, community_only=True)
-                        if community and isinstance(community, Community):
-                            actor = community.ap_id if community.ap_id else community.name
-                            if user.feed_auto_follow:
-                                do_subscribe(actor, user.id, joined_via_feed=True)
-                            # also make a feeditem in the local db
-                            feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
-                            db.session.add(feed_item)
-                            db.session.commit()
-
-            if success is True:
-                flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
+    try:
+        remote = False
+        actor = actor.strip()
+        user = User.query.get(user_id)
+        if '@' in actor:
+            feed = Feed.query.filter_by(ap_id=actor).first()
+            remote = True
         else:
-            msg_to_user = "Already subscribed, or subscription pending"
-            flash(_(msg_to_user))
+            feed = Feed.query.filter_by(name=actor, ap_id=None).first()
+        
+        if feed is not None:
+            if feed_membership(user, feed) == SUBSCRIPTION_NONMEMBER:
+                success = True
 
-        cache.delete_memoized(feed_membership, user, feed)
-        cache.delete_memoized(menu_subscribed_feeds, user.id)
-        cache.delete_memoized(joined_communities, user.id)
-    else:
-        abort(404)
+                # for local feeds, joining is instant
+                member = FeedMember(user_id=user.id, feed_id=feed.id)
+                db.session.add(member)
+                feed.subscriptions_count += 1
+                db.session.commit()
+
+                # also subscribe the user to the feeditem communities
+                # if they have feed_auto_follow turned on
+                if user.feed_auto_follow:
+                    from app.community.routes import do_subscribe
+                    feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
+                    for fi in feed_items:
+                        community = Community.query.get(fi.community_id)
+                        actor = community.ap_id if community.ap_id else community.name
+                        if current_app.debug:
+                            do_subscribe(actor, user.id, joined_via_feed=True)
+                        else:
+                            do_subscribe.delay(actor, user.id, joined_via_feed=True)
+ 
+                # feed is remote
+                if remote:
+                    # send ActivityPub message to remote feed, asking to follow. Accept message will be sent to our shared inbox
+                    join_request = FeedJoinRequest(user_id=user.id, feed_id=feed.id)
+                    db.session.add(join_request)
+                    db.session.commit()
+                    if feed.instance.online():
+                        follow = {
+                          "actor": user.public_url(),
+                          "to": [feed.public_url()],
+                          "object": feed.public_url(),
+                          "type": "Follow",
+                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                        }
+                        send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
+                        
+                        # reach out and get the feeditems from the remote /following collection
+                        res = get_request(feed.ap_following_url)
+                        following_collection = res.json()
+
+                        # for each of those add the communities
+                        # subscribe the user if they have feed_auto_follow turned on
+                        for fci in following_collection['items']:
+                            community_ap_id = fci 
+                            community = find_actor_or_create(community_ap_id, community_only=True)
+                            if community and isinstance(community, Community):
+                                actor = community.ap_id if community.ap_id else community.name
+                                if user.feed_auto_follow:
+                                    do_subscribe(actor, user.id, joined_via_feed=True)
+                                # also make a feeditem in the local db
+                                feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
+                                db.session.add(feed_item)
+                                db.session.commit()
+
+                if success is True:
+                    flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
+            else:
+                msg_to_user = "Already subscribed, or subscription pending"
+                flash(_(msg_to_user))
+
+            cache.delete_memoized(feed_membership, user, feed)
+            cache.delete_memoized(menu_subscribed_feeds, user.id)
+            cache.delete_memoized(joined_communities, user.id)
+        else:
+            abort(404)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 @bp.route('/feed/<actor>/unsubscribe', methods=['GET'])
@@ -1004,22 +1010,27 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
     #  - if its a remote user
     # setup a db session for this task
     session = get_task_session()
-    for fm in feed_members:
-        fm_user = User.query.get(fm.user_id)
-        if fm_user.id == feed.user_id:
-            continue
-        if fm_user.is_local():
-            # user is local so lets auto-subscribe them to the community
-            from app.community.routes import do_subscribe
-            actor = community.ap_id if community.ap_id else community.name
-            do_subscribe(actor, fm_user.id, joined_via_feed=True)
-            continue
+    try:
+        for fm in feed_members:
+            fm_user = User.query.get(fm.user_id)
+            if fm_user.id == feed.user_id:
+                continue
+            if fm_user.is_local():
+                # user is local so lets auto-subscribe them to the community
+                from app.community.routes import do_subscribe
+                actor = community.ap_id if community.ap_id else community.name
+                do_subscribe(actor, fm_user.id, joined_via_feed=True)
+                continue
 
-        # if we get here the feedmember is a remote user
-        instance: Instance = session.query(Instance).get(fm_user.instance.id)
-        if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            send_post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
-    session.close()
+            # if we get here the feedmember is a remote user
+            instance: Instance = session.query(Instance).get(fm_user.instance.id)
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, activity_json, feed.private_key, feed.ap_profile_id + '#main-key', timeout=10)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @celery.task
@@ -1048,17 +1059,22 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
     #  - if its a local server user, skip
     #  - if its a remote user
     session = get_task_session()
-    for fm in feed_members:
-        fm_user = session.query(User).get(fm.user_id)
-        if fm_user.id == feed.user_id:
-            continue
-        if fm_user.is_local():
-            continue
-        # if we get here the feedmember is a remote user
-        instance: Instance = session.query(Instance).get(fm_user.instance.id)
-        if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            send_post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
-    session.close()
+    try:
+        for fm in feed_members:
+            fm_user = session.query(User).get(fm.user_id)
+            if fm_user.id == feed.user_id:
+                continue
+            if fm_user.is_local():
+                continue
+            # if we get here the feedmember is a remote user
+            instance: Instance = session.query(Instance).get(fm_user.instance.id)
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, delete_json, user.private_key, user.ap_profile_id + '#main-key', timeout=10)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @bp.route('/feed/lookup/<feedname>/<domain>')

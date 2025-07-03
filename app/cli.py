@@ -6,6 +6,7 @@
 
 import imaplib
 import re
+import uuid
 from datetime import datetime, timedelta
 from random import randint
 from time import sleep
@@ -24,11 +25,11 @@ from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK
+    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote
+    Tag, InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll
 from app.post.routes import post_delete_post
 from app.shared.post import edit_post
 from app.shared.tasks import task_selector
@@ -291,10 +292,60 @@ def register(app):
                                                                 {'community_id': community.id}).scalar()
                 db.session.commit()
 
-            # Delete voting data after 6 months
+            # Delete voting data after configured time (default ~6 months)
             print(f'Delete old voting data {datetime.now()}')
-            db.session.execute(text('DELETE FROM "post_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
-            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE created_at < :cutoff'), {'cutoff': utcnow() - timedelta(days=28 * 6)})
+            
+            # Trim voting data
+            local_months = current_app.config['KEEP_LOCAL_VOTE_DATA_TIME']
+            remote_months = current_app.config['KEEP_REMOTE_VOTE_DATA_TIME']
+
+            if local_months != -1:
+                cutoff_local = utcnow() - timedelta(days=28 * local_months)
+
+                # delete all the rows from post_vote where the user who did the vote is a local user
+                db.session.execute(text('''
+                    DELETE FROM "post_vote" pv
+                    USING "user" u, "instance" i
+                    WHERE pv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id = :instance_id
+                      AND pv.created_at < :cutoff
+                '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+
+
+                # delete all the rows from post_reply_vote where the user who did the vote is a local user
+                db.session.execute(text('''
+                    DELETE FROM "post_reply_vote" prv
+                    USING "user" u, "instance" i
+                    WHERE prv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id = :instance_id
+                      AND prv.created_at < :cutoff
+                '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+            if remote_months != -1:
+                cutoff_remote = utcnow() - timedelta(days=28 * remote_months)
+                # delete all the rows from post_vote where the user who did the vote is a remote user
+                db.session.execute(text('''
+                    DELETE FROM "post_vote" pv
+                    USING "user" u, "instance" i
+                    WHERE pv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id != :instance_id
+                      AND pv.created_at < :cutoff
+                '''), {'cutoff': cutoff_remote, 'instance_id': 1})
+
+                # delete all the rows from post_reply_vote where the user who did the vote is a remote user
+                db.session.execute(text('''
+                    DELETE FROM "post_reply_vote" prv
+                    USING "user" u, "instance" i
+                    WHERE prv.user_id = u.id
+                      AND u.instance_id = i.id
+                      AND u.instance_id != :instance_id
+                      AND prv.created_at < :cutoff
+                '''), {'cutoff': cutoff_remote, 'instance_id': 1})
+
             db.session.commit()
 
             # Un-ban after ban expires
@@ -545,6 +596,7 @@ def register(app):
                     next_occurrence = post.scheduled_for + find_next_occurrence(post)
                 else:
                     next_occurrence = None
+
                 # One shot scheduled post
                 if not next_occurrence:
                     post.status = POST_STATUS_PUBLISHED
@@ -552,6 +604,10 @@ def register(app):
                     post.posted_at = utcnow()
                     post.edited_at = None
                     post.title = render_from_tpl(post.title)
+                    if post.type == POST_TYPE_POLL:
+                        poll = Poll.query.get(post.id)
+                        time_difference = poll.end_poll - post.created_at
+                        poll.end_poll += time_difference
                     db.session.commit()
 
                     # Federate post
@@ -579,6 +635,12 @@ def register(app):
                     scheduled_post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{scheduled_post.id}"
                     # Update the scheduled_for with the next occurrence date
                     post.scheduled_for = next_occurrence
+
+                    # Small hack to make image urls unique and avoid creating
+                    # a crosspost when scheduling an image post
+                    if post.type == POST_TYPE_IMAGE:
+                        post.image.source_url += f"?uid={uuid.uuid4().hex}"
+
                     vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id, effect=1)
                     db.session.add(vote)
                     db.session.commit()
@@ -1155,7 +1217,7 @@ def register(app):
 
             # Check boolean environment variables
             print("\n   Checking boolean environment variables...")
-            boolean_vars = ['MAIL_USE_TLS', 'MAIL_ERRORS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
+            boolean_vars = ['MAIL_USE_TLS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
             for var in boolean_vars:
                 env_value = os.environ.get(var)
                 if env_value is not None:
@@ -1245,6 +1307,9 @@ def register(app):
                     print(f"   ✅ Mail from address: {mail_from}")
                 else:
                     warnings.append("   ⚠️  MAIL_FROM not configured")
+                errors_to = current_app.config.get('ERRORS_TO')
+                if errors_to:
+                    print(f"   ✅ Error messages sent to: {errors_to}")
             else:
                 warnings.append("   ⚠️  Mail server not configured - email functionality will be disabled")
 

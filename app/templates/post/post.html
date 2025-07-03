@@ -35,6 +35,12 @@
                                 {% if post.community.posting_warning -%}
                                     <p align="center">{{ post.community.posting_warning|safe }}</p>
                                 {% endif -%}
+                                {% if recipient_language_name -%}
+                                    <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
+                                        <i class="fas fa-language"></i>
+                                        {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
+                                    </div>
+                                {% endif -%}
                                 <form method="post" role="form">
                                     {{ form.csrf_token() }}
                                     {{ render_field(form.body) }}
@@ -47,6 +53,23 @@
                                     {{ render_field(form.submit) }}
                                 </form>
                                 {% if not low_bandwidth -%}
+                                    <script nonce="{{ nonce }}">
+                                        window.addEventListener("DOMContentLoaded", function () {
+                                            var postCommentLanguageSelect = document.querySelector('#language_id');
+                                            if (postCommentLanguageSelect) {
+                                                postCommentLanguageSelect.setAttribute('data-recipient-language', '{{ recipient_language_id }}');
+                                                postCommentLanguageSelect.setAttribute('data-warning-div-id', 'post_language_warning_{{ post.id }}');
+                                            }
+
+                                            addLanguageCheck(
+                                                postCommentLanguageSelect,
+                                                undefined,
+                                                undefined,
+                                            );
+                                        })
+
+                                    </script>
+
                                     {% if markdown_editor -%}
                                         <script nonce="{{ nonce }}">
                                             window.addEventListener("load", function () {

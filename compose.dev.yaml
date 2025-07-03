@@ -17,8 +17,6 @@ services:
     restart: unless-stopped
     env_file:
      - ./.env.docker
-    volumes:
-     - redis_data:/data
     networks:
       - pf_network
 
@@ -40,12 +38,6 @@ services:
      - ./tmp/:/app/app/static/tmp/
     networks:
       - pf_network
-    healthcheck:
-      test: ["CMD", "celery", "-A", "celery_worker_docker.celery", "inspect", "ping"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   web:
     build:
@@ -58,21 +50,19 @@ services:
       - redis
     env_file:
      - ./.env.docker
+    environment:
+      - FLASK_DEBUG=1
+      - FLASK_ENV=development
     volumes:
      - ./gunicorn.conf.py:/app/gunicorn.conf.py
      - ./media/:/app/app/static/media/
      - ./logs/:/app/logs/
      - ./tmp/:/app/app/static/tmp/
+     - ./:/app:z
     ports:
       - '8030:5000'
     networks:
       - pf_network
-    healthcheck:
-      test: ["CMD", "pgrep", "-f", "gunicorn"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   adminer:
     image: adminer
@@ -89,6 +79,3 @@ networks:
   pf_network:
     name: pf_network
     external: false
-
-volumes:
-  redis_data:

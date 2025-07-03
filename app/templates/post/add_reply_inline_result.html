@@ -28,11 +28,11 @@
             <span class="user_flair">{{ user_flair[user.id] }}</span>
         {% endif %}
         {% if user.id != current_user.id -%}
-            {% if user.reputation < -10 -%}
-                <span class="fe fe-warning red" title="Very low reputation. Beware."> </span>
-                <span class="fe fe-warning red" title="Very low reputation. Beware!"> </span>
-            {% elif user.reputation < 0 -%}
-                <span class="fe fe-warning orangered" title="Low reputation."> </span>
+            {% if user.reputation < -12 -%}
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware.') }}"> </span>
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware!') }}"> </span>
+            {% elif user.reputation < -3 -%}
+                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
             {% endif -%}
         {% endif -%}
         {% if current_user.is_authenticated -%}

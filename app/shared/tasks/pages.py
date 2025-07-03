@@ -58,12 +58,24 @@ import re
 
 @celery.task
 def make_post(send_async, post_id):
-    send_post(post_id)
+    try:
+        send_post(post_id)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 @celery.task
 def edit_post(send_async, post_id):
-    send_post(post_id, edit=True)
+    try:
+        send_post(post_id, edit=True)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def send_post(post_id, edit=False):

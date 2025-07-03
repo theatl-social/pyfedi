@@ -31,7 +31,7 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription, BlockedImage, CmsPage
+    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
 from app.shared.tasks import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
@@ -78,6 +78,7 @@ def admin_site():
         site.about = form.about.data
         site.sidebar = form.sidebar.data
         site.legal_information = form.legal_information.data
+        site.tos_url = form.tos_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
         if site.id is None:
@@ -154,6 +155,7 @@ def admin_site():
         form.about.data = site.about
         form.sidebar.data = site.sidebar
         form.legal_information.data = site.legal_information
+        form.tos_url.data = site.tos_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form,
@@ -384,6 +386,7 @@ def admin_federation():
         ]
         is_lemmy = False
         is_mbin = False
+        is_piefed = False
 
 
         # get the remote_url data
@@ -440,8 +443,10 @@ def admin_federation():
             is_lemmy = True
         elif instance_software_name == "mbin":
             is_mbin = True
+        elif instance_software_name == "piefed":
+            is_piefed = True
         else:
-            flash(_(f"{remote_url} does not appear to be a lemmy or mbin instance."))
+            flash(_(f"{remote_url} does not appear to be a lemmy, mbin, or piefed instance."))
             return redirect(url_for('admin.admin_federation'))
 
         if is_lemmy:
@@ -517,6 +522,79 @@ def admin_federation():
                 flash(_(message))
                 return redirect(url_for('admin.admin_federation'))
 
+        if is_piefed:
+            # loop through and send off requests to the remote endpoint for 50 communities at a time
+            comms_list = []
+            page = 1
+            get_more_communities = True
+            while get_more_communities:
+                params = {"sort":"Active","type_":"Local","limit":"50","page":f"{page}","show_nsfw":"false"}
+                resp = get_request(f"{remote_url}/api/alpha/community/list", params=params)
+                page_dict = json.loads(resp.text)
+                # get the individual communities out of the communities[] list in the response and 
+                # add them to a holding list[] of our own
+                for c in page_dict["communities"]:
+                    comms_list.append(c)
+                # check the amount of items in the page_dict['communities'] list
+                # if it's lesss than 50 then we know its the last page of communities
+                # so we break the loop
+                if len(page_dict['communities']) < 50:
+                    get_more_communities = False
+                else:
+                    page += 1
+
+            # filter out the communities
+            already_known_count = nsfw_count = low_content_count = low_active_users_count = bad_words_count = 0
+            candidate_communities = []
+            for community in comms_list:
+                # sort out already known communities
+                if community['community']['actor_id'] in already_known:
+                    already_known_count += 1
+                    continue
+                # sort out any that have less than minimum posts
+                elif community['counts']['post_count'] < min_posts:
+                    low_content_count += 1
+                    continue
+
+                # TODO - add users_active_week to response for /api/alpha/community/list
+                # sort out any that do not have greater than the requested active users over the past week
+                # elif community['counts']['users_active_week'] < min_users:
+                #     low_active_users_count += 1
+                #     continue
+
+                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
+                # "low effort" communities
+                if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                    bad_words_count += 1
+                    continue
+                else:
+                    candidate_communities.append(community)
+
+            # get the community urls to join
+            community_urls_to_join = []
+
+            # if the admin user wants more added than we have, then just add all of them
+            if communities_requested > len(candidate_communities):
+                communities_to_add = len(candidate_communities)
+            else:
+                communities_to_add = communities_requested
+
+            # make the list of urls
+            for i in range(communities_to_add):
+                community_urls_to_join.append(candidate_communities[i]['community']['actor_id'].lower())
+
+            # if its a dry run, just return the stats
+            if dry_run:
+                message = f"Dry-Run for {remote_url}: \
+                            Local Communities on the server: {len(comms_list)}, \
+                            Communities we already have: {already_known_count}, \
+                            Communities below minimum posts: {low_content_count}, \
+                            Candidate Communities based on filters: {len(candidate_communities)}, \
+                            Communities to join request: {communities_requested}, \
+                            Communities to join based on current filters: {len(community_urls_to_join)}."
+                flash(_(message))
+                return redirect(url_for('admin.admin_federation'))
+            
         if is_mbin:
             # loop through and send the right number of requests to the remote endpoint for mbin
             # mbin does not have the hard-coded limit, but lets stick with 50 to match lemmy 
@@ -1342,6 +1420,33 @@ def admin_approve_registrations_approve(user_id):
 
     return redirect(url_for('admin.admin_approve_registrations'))
 
+
+@bp.route('/approve_registrations/<int:user_id>/deny', methods=['POST'])
+@permission_required('approve registrations')
+@login_required
+def admin_approve_registrations_denied(user_id):
+    user = User.query.get_or_404(user_id)
+    registration = UserRegistration.query.filter_by(status=0, user_id=user_id).first()
+    if registration:
+        # remove the registration attempt
+        db.session.delete(registration)
+
+        # remove notifications caused by the registration attempt
+        reg_notifs = Notification.query.filter_by(author_id=user.id)
+        for n in reg_notifs:
+            db.session.delete(n)
+
+        # remove the user from the db so the username is available again
+        user.deleted = True
+        user.delete_dependencies()
+        db.session.delete(user)
+
+        # save that to the db
+        db.session.commit()
+
+        flash(_('Registration denied. User removed from the database.'))
+
+    return redirect(url_for('admin.admin_approve_registrations'))
 
 @bp.route('/user/<int:user_id>/edit', methods=['GET', 'POST'])
 @permission_required('administer all users')

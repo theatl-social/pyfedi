@@ -20,7 +20,7 @@ from app.models import Community, File, BannedInstances, PostReply, Post, utcnow
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type
-from sqlalchemy import func, desc
+from sqlalchemy import func, desc, text
 import os
 
 
@@ -279,68 +279,14 @@ def delete_post_from_community(post_id):
 
 @celery.task
 def delete_post_from_community_task(post_id):
-    post = Post.query.get(post_id)
-    community = post.community
-    post.deleted = True
-    post.deleted_by = current_user.id
-    db.session.commit()
-
-    if not community.local_only:
-        delete_json = {
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-            'type': 'Delete',
-            'actor': current_user.public_url(),
-            'audience': post.community.public_url(),
-            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-            'published': ap_datetime(utcnow()),
-            'cc': [
-                current_user.followers_url()
-            ],
-            'object': post.ap_id,
-        }
-
-        if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-            send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-        else:  # local community - send it to followers on remote instances
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.ap_profile_id,
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
-
-            for instance in post.community.following_instances():
-                if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                        instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
-
-
-def delete_post_reply_from_community(post_reply_id):
-    if current_app.debug:
-        delete_post_reply_from_community_task(post_reply_id)
-    else:
-        delete_post_reply_from_community_task.delay(post_reply_id)
-
-
-@celery.task
-def delete_post_reply_from_community_task(post_reply_id):
-    post_reply = PostReply.query.get(post_reply_id)
-    post = post_reply.post
-    community = post.community
-    if post_reply.user_id == current_user.id or community.is_moderator():
-        post_reply.deleted = True
-        post_reply.deleted_by = current_user.id
+    try:
+        post = Post.query.get(post_id)
+        community = post.community
+        post.deleted = True
+        post.deleted_by = current_user.id
         db.session.commit()
 
-        # federate delete
-        if not post.community.local_only:
+        if not community.local_only:
             delete_json = {
                 'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                 'type': 'Delete',
@@ -351,12 +297,11 @@ def delete_post_reply_from_community_task(post_reply_id):
                 'cc': [
                     current_user.followers_url()
                 ],
-                'object': post_reply.ap_id,
+                'object': post.ap_id,
             }
 
             if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
                 send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-
             else:  # local community - send it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -376,6 +321,73 @@ def delete_post_reply_from_community_task(post_reply_id):
                     if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
                             instance.domain):
                         send_to_remote_instance(instance.id, post.community.id, announce)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
+
+
+def delete_post_reply_from_community(post_reply_id):
+    if current_app.debug:
+        delete_post_reply_from_community_task(post_reply_id)
+    else:
+        delete_post_reply_from_community_task.delay(post_reply_id)
+
+
+@celery.task
+def delete_post_reply_from_community_task(post_reply_id):
+    try:
+        post_reply = PostReply.query.get(post_reply_id)
+        post = post_reply.post
+        community = post.community
+        if post_reply.user_id == current_user.id or community.is_moderator():
+            post_reply.deleted = True
+            post_reply.deleted_by = current_user.id
+            db.session.commit()
+
+            # federate delete
+            if not post.community.local_only:
+                delete_json = {
+                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    'type': 'Delete',
+                    'actor': current_user.public_url(),
+                    'audience': post.community.public_url(),
+                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                    'published': ap_datetime(utcnow()),
+                    'cc': [
+                        current_user.followers_url()
+                    ],
+                    'object': post_reply.ap_id,
+                }
+
+                if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                    send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+
+                else:  # local community - send it to followers on remote instances
+                    announce = {
+                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                        "type": 'Announce',
+                        "to": [
+                            "https://www.w3.org/ns/activitystreams#Public"
+                        ],
+                        "actor": post.community.ap_profile_id,
+                        "cc": [
+                            post.community.ap_followers_url
+                        ],
+                        '@context': default_context(),
+                        'object': delete_json
+                    }
+
+                    for instance in post.community.following_instances():
+                        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                                instance.domain):
+                            send_to_remote_instance(instance.id, post.community.id, announce)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def remove_old_file(file_id):
@@ -638,12 +650,17 @@ def send_to_remote_instance(instance_id: int, community_id: int, payload):
 @celery.task
 def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     session = get_task_session()
-    community: Community = session.query(Community).get(community_id)
-    if community:
-        instance: Instance = session.query(Instance).get(instance_id)
-        if instance.inbox and instance.online() and not instance_banned(instance.domain):
-            send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
-    session.close()
+    try:
+        community: Community = session.query(Community).get(community_id)
+        if community:
+            instance: Instance = session.query(Instance).get(instance_id)
+            if instance.inbox and instance.online() and not instance_banned(instance.domain):
+                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def community_in_list(community_id, community_list):
@@ -665,3 +682,42 @@ def find_potential_moderators(search: str) -> List[User]:
     else:
         return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
           order_by(desc(User.reputation)).all()
+
+
+def hashtags_used_in_community(community_id: int, content_filters):
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+    FROM "tag" AS t
+    INNER JOIN post_tag pt ON t.id = pt.tag_id
+    INNER JOIN "post" ON pt.post_id = post.id
+    WHERE post.community_id = :community_id
+      AND t.banned IS FALSE AND post.deleted IS FALSE
+    GROUP BY t.id
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_id': community_id}).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
+def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
+    # Add a font size to each dict, based on the number of times each tag is used (the post count aka 'pc')
+    if len(tags) == 0:
+        return []
+    pcs = [tag['pc'] for tag in tags]       # pcs = a list of all post counts. Sorry about the 'pc', the SQL that generates this dict had a naming collision
+    min_pc, max_pc = min(pcs), max(pcs)
+
+    def scale(pc):
+        if max_pc == min_pc:
+            return (min_size + max_size) // 2   # if all tags have the same count
+        return min_size + (pc - min_pc) * (max_size - min_size) / (max_pc - min_pc)
+
+    for tag in tags:
+        tag['font_size'] = round(scale(tag['pc']), 1)   # add a font size based on its post count
+
+    return tags

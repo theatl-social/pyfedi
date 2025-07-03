@@ -23,7 +23,8 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, find_potential_moderators
+    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
+    find_potential_moderators, hashtags_used_in_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -33,7 +34,8 @@ from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
     File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
-    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair
+    CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
+    post_tag, Tag
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
@@ -222,6 +224,7 @@ def show_community(community: Community):
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     content_type = request.args.get('content_type', 'posts')
     flair = request.args.get('flair', '')
+    tag = request.args.get('tag', '')
     if sort is None:
         sort = ''
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
@@ -324,6 +327,12 @@ def show_community(community: Community):
             flair_id = find_flair_id(flair, community.id)
             if flair_id:
                 posts = posts.join(post_flair).filter(post_flair.c.flair_id == flair_id)
+
+        # Filter by post tag
+        if tag:
+            tag_record = Tag.query.filter(Tag.name == tag.strip()).first()
+            if tag_record:
+                posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag_record.id)
 
         if sort == '' or sort == 'hot':
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
@@ -440,7 +449,6 @@ def show_community(community: Community):
                 breadcrumb.url = f"/f/{feed.link()}"
                 breadcrumbs.append(breadcrumb)
 
-
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
@@ -477,7 +485,7 @@ def show_community(community: Community):
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community), can_downvote_here=can_downvote(user, community),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed", rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False,
+                           content_filters=content_filters,  sort=sort, flair=flair, show_post_community=False, tags=hashtags_used_in_community(community.id, content_filters),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,

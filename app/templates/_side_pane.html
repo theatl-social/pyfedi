@@ -43,6 +43,13 @@
                         {% endfor -%}
                     </div>
                 {% endif %}
+                {% if tags and len(tags) > 0 -%}
+                    <div class="post_tags_sidepane">
+                        {% for tag in tags -%}
+                            <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), tag=tag.name) }}">#{{ tag.display_as }}</a></span>
+                        {% endfor -%}
+                    </div>
+                {% endif -%}
             </div>
         </div>
         {% endif -%}
@@ -57,9 +64,11 @@
                     <p class="border bg-body-secondary border-secondary rounded-pill text-center px-3 py-1">
                       {{ _('This community does not federate with other instances.') }}
                     </p>
-                {% endif %}
+                {% endif -%}
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
-                <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
+                <p>
+                    {% if not community.is_local() and community.total_subscriptions_count -%}{{ _('Total members') }}: {{ community.total_subscriptions_count }}<br />{% endif -%}
+                    {{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
                     <a href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite people to join') }}</a>
                     <br>
                     {{ _('Posts') }}: {{ community.post_count }}<br>
@@ -82,6 +91,9 @@
                     {% if un_moderated -%}
                     <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                     {% endif -%}
+                {% endif -%}
+                {% if community.content_retention != -1 -%}
+                    <p>{{ _('Posts older than %(number)s days will be removed.', number=community.content_retention) }}</p>
                 {% endif -%}
                 {% if rss_feed and not community.is_local() -%}
                     <ul>

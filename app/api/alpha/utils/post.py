@@ -10,6 +10,7 @@ from app.utils import authorise_api_user, blocked_users, blocked_communities, bl
 
 from datetime import timedelta
 from sqlalchemy import desc, text
+from flask import current_app
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -73,6 +74,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             join(Community, Community.id == CommunityMember.community_id).filter(Community.instance_id.not_in(blocked_instance_ids))
     else: # type == "All"
         if community_name:
+            if not '@' in community_name:
+                community_name = f"{community_name}@{current_app.config['SERVER_NAME']}"
             name, ap_domain = community_name.split('@')
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id.not_in(blocked_person_ids), Post.community_id.not_in(blocked_community_ids), Post.instance_id.not_in(blocked_instance_ids)).\
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True, Community.name == name, Community.ap_domain == ap_domain, Community.instance_id.not_in(blocked_instance_ids))

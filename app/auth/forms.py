@@ -27,6 +27,7 @@ class RegistrationForm(FlaskForm):
         _l('Repeat password'), validators=[DataRequired(),
                                            EqualTo('password')])
     question = TextAreaField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
+    terms = BooleanField(_l('I agree to the terms of service & privacy policy (see links in footer)'), validators=[DataRequired()])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
     timezone = HiddenField(render_kw={'id': 'timezone'})
 

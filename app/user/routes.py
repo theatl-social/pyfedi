@@ -1115,7 +1115,7 @@ def notifications():
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications,
                            user=current_user, notification_links=notification_links, current_filter=current_filter,
-                           site=g.site
+                           site=g.site, markdown_to_html=markdown_to_html,
                            )
 
 
@@ -1156,7 +1156,8 @@ def notification_read(notification_id):
             current_user.unread_notifications -= 1
         notification.read = True
         db.session.commit()
-        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification)
+        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification,
+                               markdown_to_html=markdown_to_html)
     else:
         abort(403)
 
@@ -1170,7 +1171,8 @@ def notification_unread(notification_id):
             current_user.unread_notifications += 1
         notification.read = False
         db.session.commit()
-        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification)
+        return render_template(f"user/notifs/{notification.notif_type}.html", notification=notification,
+                               markdown_to_html=markdown_to_html)
     else:
         abort(403)
 

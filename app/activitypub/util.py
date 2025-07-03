@@ -386,108 +386,110 @@ def refresh_user_profile(user_id):
 @celery.task
 def refresh_user_profile_task(user_id):
     session = get_task_session()
-    user: User = session.query(User).get(user_id)
-    if user and user.instance_id and user.instance.online():
-        try:
-            actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            time.sleep(randint(3, 10))
+    try:
+        user: User = session.query(User).get(user_id)
+        if user and user.instance_id and user.instance.online():
             try:
                 actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
             except httpx.HTTPError:
-                session.close()
-                return
-        except:
-            try:
-                site = session.query(Site).get(1)
-                actor_data = signed_get_request(user.ap_public_url, site.private_key,
-                                f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                time.sleep(randint(3, 10))
+                try:
+                    actor_data = get_request(user.ap_public_url, headers={'Accept': 'application/activity+json'})
+                except httpx.HTTPError:
+                    return
             except:
-                session.close()
-                return
-        if actor_data.status_code == 200:
-            try:
-                activity_json = actor_data.json()
-                actor_data.close()
-            except JSONDecodeError:
-                user.instance.failures += 1
-                session.commit()
-                session.close()
-                return
+                try:
+                    site = session.query(Site).get(1)
+                    actor_data = signed_get_request(user.ap_public_url, site.private_key,
+                                    f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                except:
+                    return
+            if actor_data.status_code == 200:
+                try:
+                    activity_json = actor_data.json()
+                    actor_data.close()
+                except JSONDecodeError:
+                    user.instance.failures += 1
+                    session.commit()
+                    return
 
-            # update indexible state on their posts, if necessary
-            new_indexable = activity_json['indexable'] if 'indexable' in activity_json else True
-            if new_indexable != user.indexable:
-                session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
-                                {'user_id': user.id,
-                                'indexable': new_indexable})
+                # update indexible state on their posts, if necessary
+                new_indexable = activity_json['indexable'] if 'indexable' in activity_json else True
+                if new_indexable != user.indexable:
+                    session.execute(text('UPDATE "post" set indexable = :indexable WHERE user_id = :user_id'),
+                                    {'user_id': user.id,
+                                    'indexable': new_indexable})
 
-            # fix ap_id for WordPress actors
-            if user.ap_id.startswith('@'):
-                server, address = extract_domain_and_actor(user.ap_profile_id)
-                user.ap_id = f"{address.lower()}@{server.lower()}"
+                # fix ap_id for WordPress actors
+                if user.ap_id.startswith('@'):
+                    server, address = extract_domain_and_actor(user.ap_profile_id)
+                    user.ap_id = f"{address.lower()}@{server.lower()}"
 
-            user.user_name = activity_json['preferredUsername'].strip()
-            if 'name' in activity_json:
-                user.title = activity_json['name'].strip() if activity_json['name'] else ''
-            if 'summary' in activity_json:
-                about_html = activity_json['summary']
-                if about_html is not None and not about_html.startswith('<'):                    # PeerTube
-                    about_html = '<p>' + about_html + '</p>'
-                user.about_html = allowlist_html(about_html)
-            else:
-                user.about_html = ''
-            if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
-                user.about = activity_json['source']['content']
-                user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
-            else:
-                user.about = html_to_text(user.about_html)
-            if 'attachment' in activity_json and isinstance(activity_json['attachment'], list):
-                user.extra_fields = []
-                for field_data in activity_json['attachment']:
-                    if field_data['type'] == 'PropertyValue':
-                        if '<a ' in field_data['value']:
-                            field_data['value'] = mastodon_extra_field_link(field_data['value'])
-                        user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
-            if 'type' in activity_json:
-                user.bot = True if activity_json['type'] == 'Service' else False
-            user.ap_fetched_at = utcnow()
-            user.public_key = activity_json['publicKey']['publicKeyPem']
-            user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
-            user.indexable = new_indexable
-
-            avatar_changed = cover_changed = False
-            if 'icon' in activity_json and activity_json['icon'] is not None:
-                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
-                    icon_entry = activity_json['icon']['url']
-                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
-                    icon_entry = activity_json['icon'][-1]['url']
+                user.user_name = activity_json['preferredUsername'].strip()
+                if 'name' in activity_json:
+                    user.title = activity_json['name'].strip() if activity_json['name'] else ''
+                if 'summary' in activity_json:
+                    about_html = activity_json['summary']
+                    if about_html is not None and not about_html.startswith('<'):                    # PeerTube
+                        about_html = '<p>' + about_html + '</p>'
+                    user.about_html = allowlist_html(about_html)
                 else:
-                    icon_entry = None
-                if icon_entry:
-                    if user.avatar_id and icon_entry != user.avatar.source_url:
-                        user.avatar.delete_from_disk()
-                    if not user.avatar_id or (user.avatar_id and icon_entry != user.avatar.source_url):
-                        avatar = File(source_url=icon_entry)
-                        user.avatar = avatar
-                        session.add(avatar)
-                        avatar_changed = True
-            if 'image' in activity_json and activity_json['image'] is not None:
-                if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
-                    user.cover.delete_from_disk()
-                if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
-                    cover = File(source_url=activity_json['image']['url'])
-                    user.cover = cover
-                    session.add(cover)
-                    cover_changed = True
-            user.recalculate_post_stats()
-            session.commit()
-            if user.avatar_id and avatar_changed:
-                make_image_sizes(user.avatar_id, 40, 250, 'users')
-            if user.cover_id and cover_changed:
-                make_image_sizes(user.cover_id, 700, 1600, 'users')
-                cache.delete_memoized(User.cover_image, user)
-            session.close()
+                    user.about_html = ''
+                if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                    user.about = activity_json['source']['content']
+                    user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
+                else:
+                    user.about = html_to_text(user.about_html)
+                if 'attachment' in activity_json and isinstance(activity_json['attachment'], list):
+                    user.extra_fields = []
+                    for field_data in activity_json['attachment']:
+                        if field_data['type'] == 'PropertyValue':
+                            if '<a ' in field_data['value']:
+                                field_data['value'] = mastodon_extra_field_link(field_data['value'])
+                            user.extra_fields.append(UserExtraField(label=field_data['name'].strip(), text=field_data['value'].strip()))
+                if 'type' in activity_json:
+                    user.bot = True if activity_json['type'] == 'Service' else False
+                user.ap_fetched_at = utcnow()
+                user.public_key = activity_json['publicKey']['publicKeyPem']
+                user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
+                user.indexable = new_indexable
+
+                avatar_changed = cover_changed = False
+                if 'icon' in activity_json and activity_json['icon'] is not None:
+                    if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                        icon_entry = activity_json['icon']['url']
+                    elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                        icon_entry = activity_json['icon'][-1]['url']
+                    else:
+                        icon_entry = None
+                    if icon_entry:
+                        if user.avatar_id and icon_entry != user.avatar.source_url:
+                            user.avatar.delete_from_disk()
+                        if not user.avatar_id or (user.avatar_id and icon_entry != user.avatar.source_url):
+                            avatar = File(source_url=icon_entry)
+                            user.avatar = avatar
+                            session.add(avatar)
+                            avatar_changed = True
+                if 'image' in activity_json and activity_json['image'] is not None:
+                    if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
+                        user.cover.delete_from_disk()
+                    if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
+                        cover = File(source_url=activity_json['image']['url'])
+                        user.cover = cover
+                        session.add(cover)
+                        cover_changed = True
+                user.recalculate_post_stats()
+                session.commit()
+                if user.avatar_id and avatar_changed:
+                    make_image_sizes(user.avatar_id, 40, 250, 'users')
+                if user.cover_id and cover_changed:
+                    make_image_sizes(user.cover_id, 700, 1600, 'users')
+                    cache.delete_memoized(User.cover_image, user)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def refresh_community_profile(community_id, activity_json=None):
@@ -500,152 +502,169 @@ def refresh_community_profile(community_id, activity_json=None):
 @celery.task
 def refresh_community_profile_task(community_id, activity_json):
     session = get_task_session()
-    community: Community = session.query(Community).get(community_id)
-    if community and community.instance.online() and not community.is_local():
-        if not activity_json:
-            try:
-                actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-            except httpx.HTTPError:
-                time.sleep(randint(3, 10))
+    try:
+        community: Community = session.query(Community).get(community_id)
+        if community and community.instance.online() and not community.is_local():
+            if not activity_json:
                 try:
                     actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
-                except Exception:
-                    return
-            if actor_data.status_code == 200:
-                activity_json = actor_data.json()
-                actor_data.close()
+                except httpx.HTTPError:
+                    time.sleep(randint(3, 10))
+                    try:
+                        actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
+                    except Exception:
+                        return
+                if actor_data.status_code == 200:
+                    activity_json = actor_data.json()
+                    actor_data.close()
 
-        if activity_json:
-            if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
-                mods_url = activity_json['attributedTo']
-            elif 'moderators' in activity_json:  # kbin
-                mods_url = activity_json['moderators']
-            else:
-                mods_url = None
-
-            community.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
-            if 'nsfl' in activity_json and activity_json['nsfl']:
-                community.nsfl = activity_json['nsfl']
-            community.title = activity_json['name'].strip()
-            community.posting_warning = activity_json['postingWarning'] if 'postingWarning' in activity_json else None
-            community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
-            community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
-            community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
-            community.ap_moderators_url = mods_url
-            community.ap_fetched_at = utcnow()
-            community.public_key=activity_json['publicKey']['publicKeyPem']
-
-            if 'summary' in activity_json:
-                description_html = activity_json['summary']
-            elif 'content' in activity_json:
-                description_html = activity_json['content']
-            else:
-                description_html = ''
-
-            if description_html is not None and description_html != '':
-                if not description_html.startswith('<'):                    # PeerTube
-                    description_html = '<p>' + description_html + '</p>'
-                community.description_html = allowlist_html(description_html)
-                if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
-                    community.description = activity_json['source']['content']
-                    community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+            if activity_json:
+                if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
+                    mods_url = activity_json['attributedTo']
+                elif 'moderators' in activity_json:  # kbin
+                    mods_url = activity_json['moderators']
                 else:
-                    community.description = html_to_text(community.description_html)
+                    mods_url = None
 
-            icon_changed = cover_changed = False
-            if 'icon' in activity_json:
-                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
-                    icon_entry = activity_json['icon']['url']
-                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
-                    icon_entry = activity_json['icon'][-1]['url']
+                community.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
+                if 'nsfl' in activity_json and activity_json['nsfl']:
+                    community.nsfl = activity_json['nsfl']
+                community.title = activity_json['name'].strip()
+                community.posting_warning = activity_json['postingWarning'] if 'postingWarning' in activity_json else None
+                community.restricted_to_mods = activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False
+                community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
+                community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
+                community.ap_moderators_url = mods_url
+                if 'followers' in activity_json:
+                    community.ap_followers_url = activity_json['followers']
+                community.ap_fetched_at = utcnow()
+                community.public_key=activity_json['publicKey']['publicKeyPem']
+
+                if 'summary' in activity_json:
+                    description_html = activity_json['summary']
+                elif 'content' in activity_json:
+                    description_html = activity_json['content']
                 else:
-                    icon_entry = None
-                if icon_entry:
-                    if community.icon_id and icon_entry != community.icon.source_url:
-                        community.icon.delete_from_disk()
-                    if not community.icon_id or (community.icon_id and icon_entry != community.icon.source_url):
-                        icon = File(source_url=icon_entry)
-                        community.icon = icon
-                        session.add(icon)
-                        icon_changed = True
-            if 'image' in activity_json:
-                if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
-                    image_entry = activity_json['image']['url']
-                elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
-                    image_entry = activity_json['image'][0]['url']
-                else:
-                    image_entry = None
-                if image_entry:
-                    if community.image_id and image_entry != community.image.source_url:
-                        community.image.delete_from_disk()
-                    if not community.image_id or (community.image_id and image_entry != community.image.source_url):
-                        image = File(source_url=image_entry)
-                        community.image = image
-                        session.add(image)
-                        cover_changed = True
-            if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
-                for ap_language in activity_json['language']:
-                    new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
-                    if new_language not in community.languages:
-                        community.languages.append(new_language)
-            instance = session.query(Instance).get(community.instance_id)
-            if instance and instance.software == 'peertube':
-                community.restricted_to_mods = True
-            session.commit()
+                    description_html = ''
 
-            if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
-                if len(community.flair) == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
-                    for flair in activity_json['lemmy:tagsForPosts']:
-                        flair_dict = {'display_name': flair['display_name']}
-                        if 'text_color' in flair:
-                            flair_dict['text_color'] = flair['text_color']
-                        if 'background_color' in flair:
-                            flair_dict['background_color'] = flair['background_color']
-                        if 'blur_images' in flair:
-                            flair_dict['blur_images'] = flair['blur_images']
-                        community.flair.append(find_flair_or_create(flair_dict, community.id))
-                    session.commit()
+                if description_html is not None and description_html != '':
+                    if not description_html.startswith('<'):                    # PeerTube
+                        description_html = '<p>' + description_html + '</p>'
+                    community.description_html = allowlist_html(description_html)
+                    if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                        community.description = activity_json['source']['content']
+                        community.description_html = markdown_to_html(community.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+                    else:
+                        community.description = html_to_text(community.description_html)
 
-            if community.icon_id and icon_changed:
-                make_image_sizes(community.icon_id, 60, 250, 'communities')
-            if community.image_id and cover_changed:
-                make_image_sizes(community.image_id, 700, 1600, 'communities')
+                icon_changed = cover_changed = False
+                if 'icon' in activity_json:
+                    if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                        icon_entry = activity_json['icon']['url']
+                    elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                        icon_entry = activity_json['icon'][-1]['url']
+                    else:
+                        icon_entry = None
+                    if icon_entry:
+                        if community.icon_id and icon_entry != community.icon.source_url:
+                            community.icon.delete_from_disk()
+                        if not community.icon_id or (community.icon_id and icon_entry != community.icon.source_url):
+                            icon = File(source_url=icon_entry)
+                            community.icon = icon
+                            session.add(icon)
+                            icon_changed = True
+                if 'image' in activity_json:
+                    if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                        image_entry = activity_json['image']['url']
+                    elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                        image_entry = activity_json['image'][0]['url']
+                    else:
+                        image_entry = None
+                    if image_entry:
+                        if community.image_id and image_entry != community.image.source_url:
+                            community.image.delete_from_disk()
+                        if not community.image_id or (community.image_id and image_entry != community.image.source_url):
+                            image = File(source_url=image_entry)
+                            community.image = image
+                            session.add(image)
+                            cover_changed = True
+                if 'language' in activity_json and isinstance(activity_json['language'], list) and not community.ignore_remote_language:
+                    for ap_language in activity_json['language']:
+                        new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
+                        if new_language not in community.languages:
+                            community.languages.append(new_language)
+                instance = session.query(Instance).get(community.instance_id)
+                if instance and instance.software == 'peertube':
+                    community.restricted_to_mods = True
+                session.commit()
 
-            if community.ap_moderators_url:
-                mods_request = get_request(community.ap_moderators_url, headers={'Accept': 'application/activity+json'})
-                if mods_request.status_code == 200:
-                    mods_data = mods_request.json()
-                    mods_request.close()
-                    if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
-                        for actor in mods_data['orderedItems']:
-                            time.sleep(0.5)
-                            user = find_actor_or_create(actor)
-                            if user:
-                                existing_membership = CommunityMember.query.filter_by(community_id=community.id,
-                                                                                      user_id=user.id).first()
-                                if existing_membership:
-                                    existing_membership.is_moderator = True
-                                    db.session.commit()
-                                else:
-                                    new_membership = CommunityMember(community_id=community.id, user_id=user.id,
-                                                                     is_moderator=True)
-                                    db.session.add(new_membership)
-                                    db.session.commit()
+                if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+                    if len(community.flair) == 0:    # for now, all we do is populate community flair if there is not yet any. simpler.
+                        for flair in activity_json['lemmy:tagsForPosts']:
+                            flair_dict = {'display_name': flair['display_name']}
+                            if 'text_color' in flair:
+                                flair_dict['text_color'] = flair['text_color']
+                            if 'background_color' in flair:
+                                flair_dict['background_color'] = flair['background_color']
+                            if 'blur_images' in flair:
+                                flair_dict['blur_images'] = flair['blur_images']
+                            community.flair.append(find_flair_or_create(flair_dict, community.id))
+                        session.commit()
 
-                        # Remove people who are no longer mods
-                        for member in CommunityMember.query.filter_by(community_id=community.id, is_moderator=True).all():
-                            member_user = User.query.get(member.user_id)
-                            is_mod = False
+                if community.icon_id and icon_changed:
+                    make_image_sizes(community.icon_id, 60, 250, 'communities')
+                if community.image_id and cover_changed:
+                    make_image_sizes(community.image_id, 700, 1600, 'communities')
+
+                if community.ap_moderators_url:
+                    mods_request = get_request(community.ap_moderators_url, headers={'Accept': 'application/activity+json'})
+                    if mods_request.status_code == 200:
+                        mods_data = mods_request.json()
+                        mods_request.close()
+                        if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
                             for actor in mods_data['orderedItems']:
-                                if actor.lower() == member_user.profile_id().lower():
-                                    is_mod = True
-                                    break
-                            if not is_mod:
-                                db.session.query(CommunityMember).filter_by(community_id=community.id,
-                                                                            user_id=member_user.id,
-                                                                            is_moderator=True).delete()
-                                db.session.commit()
-    session.close()
+                                time.sleep(0.5)
+                                user = find_actor_or_create(actor)
+                                if user:
+                                    existing_membership = CommunityMember.query.filter_by(community_id=community.id,
+                                                                                          user_id=user.id).first()
+                                    if existing_membership:
+                                        existing_membership.is_moderator = True
+                                        db.session.commit()
+                                    else:
+                                        new_membership = CommunityMember(community_id=community.id, user_id=user.id,
+                                                                         is_moderator=True)
+                                        db.session.add(new_membership)
+                                        db.session.commit()
+
+                            # Remove people who are no longer mods
+                            for member in CommunityMember.query.filter_by(community_id=community.id, is_moderator=True).all():
+                                member_user = User.query.get(member.user_id)
+                                is_mod = False
+                                for actor in mods_data['orderedItems']:
+                                    if actor.lower() == member_user.profile_id().lower():
+                                        is_mod = True
+                                        break
+                                if not is_mod:
+                                    db.session.query(CommunityMember).filter_by(community_id=community.id,
+                                                                                user_id=member_user.id,
+                                                                                is_moderator=True).delete()
+                                    db.session.commit()
+
+                if community.ap_followers_url:
+                    followers_request = get_request(community.ap_followers_url, headers={'Accept': 'application/activity+json'})
+                    if followers_request.status_code == 200:
+                        followers_data = followers_request.json()
+                        followers_request.close()
+                        if followers_data and followers_data['type'] == 'Collection' and 'totalItems' in followers_data:
+                            community.total_subscriptions_count = followers_data['totalItems']
+                            session.commit()
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def refresh_feed_profile(feed_id):
@@ -658,143 +677,148 @@ def refresh_feed_profile(feed_id):
 @celery.task
 def refresh_feed_profile_task(feed_id):
     session = get_task_session()
-    feed: Feed = session.query(Feed).get(feed_id)
-    if feed and feed.instance.online() and not feed.is_local():
-        try:
-            actor_data = get_request(feed.ap_public_url, headers={'Accept': 'application/activity+json'})
-        except httpx.HTTPError:
-            time.sleep(randint(3, 10))
+    try:
+        feed: Feed = session.query(Feed).get(feed_id)
+        if feed and feed.instance.online() and not feed.is_local():
             try:
                 actor_data = get_request(feed.ap_public_url, headers={'Accept': 'application/activity+json'})
-            except Exception:
-                return
-        if actor_data.status_code == 200:
-            activity_json = actor_data.json()
-            actor_data.close()
+            except httpx.HTTPError:
+                time.sleep(randint(3, 10))
+                try:
+                    actor_data = get_request(feed.ap_public_url, headers={'Accept': 'application/activity+json'})
+                except Exception:
+                    return
+            if actor_data.status_code == 200:
+                activity_json = actor_data.json()
+                actor_data.close()
 
-            if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
-                owners_url = activity_json['attributedTo']
-            elif 'moderators' in activity_json:  # kbin, and our feeds
-                owners_url = activity_json['moderators']
-            else:
-                owners_url = None
+                if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
+                    owners_url = activity_json['attributedTo']
+                elif 'moderators' in activity_json:  # kbin, and our feeds
+                    owners_url = activity_json['moderators']
+                else:
+                    owners_url = None
 
-            feed.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
-            if 'nsfl' in activity_json and activity_json['nsfl']:
-                feed.nsfl = activity_json['nsfl']
-            feed.title = activity_json['name'].strip()
-            feed.ap_moderators_url = owners_url
-            feed.ap_fetched_at = utcnow()
-            feed.public_key=activity_json['publicKey']['publicKeyPem']
+                feed.nsfw = activity_json['sensitive'] if 'sensitive' in activity_json else False
+                if 'nsfl' in activity_json and activity_json['nsfl']:
+                    feed.nsfl = activity_json['nsfl']
+                feed.title = activity_json['name'].strip()
+                feed.ap_moderators_url = owners_url
+                feed.ap_fetched_at = utcnow()
+                feed.public_key=activity_json['publicKey']['publicKeyPem']
 
-            description_html = ''
-            if 'summary' in activity_json:
-                description_html = activity_json['summary']
-            elif 'content' in activity_json:
-                description_html = activity_json['content']
-            else:
                 description_html = ''
-
-            if description_html is not None and description_html != '':
-                if not description_html.startswith('<'):                    # PeerTube
-                    description_html = '<p>' + description_html + '</p>'
-                feed.description_html = allowlist_html(description_html)
-                if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
-                    feed.description = activity_json['source']['content']
-                    feed.description_html = markdown_to_html(feed.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+                if 'summary' in activity_json:
+                    description_html = activity_json['summary']
+                elif 'content' in activity_json:
+                    description_html = activity_json['content']
                 else:
-                    feed.description = html_to_text(feed.description_html)
+                    description_html = ''
 
-            icon_changed = cover_changed = False
-            if 'icon' in activity_json:
-                if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
-                    icon_entry = activity_json['icon']['url']
-                elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
-                    icon_entry = activity_json['icon'][-1]['url']
-                else:
-                    icon_entry = None
-                if icon_entry:
-                    if feed.icon_id and icon_entry != feed.icon.source_url:
-                        feed.icon.delete_from_disk()
-                    if not feed.icon_id or (feed.icon_id and icon_entry != feed.icon.source_url):
-                        icon = File(source_url=icon_entry)
-                        feed.icon = icon
-                        session.add(icon)
-                        icon_changed = True
-            if 'image' in activity_json:
-                if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
-                    image_entry = activity_json['image']['url']
-                elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
-                    image_entry = activity_json['image'][0]['url']
-                else:
-                    image_entry = None
-                if image_entry:
-                    if feed.image_id and image_entry != feed.image.source_url:
-                        feed.image.delete_from_disk()
-                    if not feed.image_id or (feed.image_id and image_entry != feed.image.source_url):
-                        image = File(source_url=image_entry)
-                        feed.image = image
-                        session.add(image)
-                        cover_changed = True
-            session.commit()
+                if description_html is not None and description_html != '':
+                    if not description_html.startswith('<'):                    # PeerTube
+                        description_html = '<p>' + description_html + '</p>'
+                    feed.description_html = allowlist_html(description_html)
+                    if 'source' in activity_json and activity_json['source'].get('mediaType') == 'text/markdown':
+                        feed.description = activity_json['source']['content']
+                        feed.description_html = markdown_to_html(feed.description)          # prefer Markdown if provided, overwrite version obtained from HTML
+                    else:
+                        feed.description = html_to_text(feed.description_html)
 
-            if feed.icon_id and icon_changed:
-                make_image_sizes(feed.icon_id, 60, 250, 'feeds')
-            if feed.image_id and cover_changed:
-                make_image_sizes(feed.image_id, 700, 1600, 'feeds')
+                icon_changed = cover_changed = False
+                if 'icon' in activity_json:
+                    if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
+                        icon_entry = activity_json['icon']['url']
+                    elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
+                        icon_entry = activity_json['icon'][-1]['url']
+                    else:
+                        icon_entry = None
+                    if icon_entry:
+                        if feed.icon_id and icon_entry != feed.icon.source_url:
+                            feed.icon.delete_from_disk()
+                        if not feed.icon_id or (feed.icon_id and icon_entry != feed.icon.source_url):
+                            icon = File(source_url=icon_entry)
+                            feed.icon = icon
+                            session.add(icon)
+                            icon_changed = True
+                if 'image' in activity_json:
+                    if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
+                        image_entry = activity_json['image']['url']
+                    elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
+                        image_entry = activity_json['image'][0]['url']
+                    else:
+                        image_entry = None
+                    if image_entry:
+                        if feed.image_id and image_entry != feed.image.source_url:
+                            feed.image.delete_from_disk()
+                        if not feed.image_id or (feed.image_id and image_entry != feed.image.source_url):
+                            image = File(source_url=image_entry)
+                            feed.image = image
+                            session.add(image)
+                            cover_changed = True
+                session.commit()
 
-            if feed.ap_moderators_url:
-                owners_request = get_request(feed.ap_moderators_url, headers={'Accept': 'application/activity+json'})
-                if owners_request.status_code == 200:
-                    owners_data = owners_request.json()
-                    owners_request.close()
-                    if owners_data and owners_data['type'] == 'OrderedCollection' and 'orderedItems' in owners_data:
-                        for actor in owners_data['orderedItems']:
-                            time.sleep(0.5)
-                            user = find_actor_or_create(actor)
-                            if user:
-                                existing_membership = FeedMember.query.filter_by(feed_id=feed.id,
-                                                                                      user_id=user.id).first()
-                                if existing_membership:
-                                    existing_membership.is_owner = True
-                                    db.session.commit()
-                                else:
-                                    new_membership = FeedMember(feed_id=feed.id, user_id=user.id,
-                                                                     is_owner=True)
-                                    db.session.add(new_membership)
-                                    db.session.commit()
+                if feed.icon_id and icon_changed:
+                    make_image_sizes(feed.icon_id, 60, 250, 'feeds')
+                if feed.image_id and cover_changed:
+                    make_image_sizes(feed.image_id, 700, 1600, 'feeds')
 
-                        # Remove people who are no longer mods
-                        # this should not get triggered as feeds just have the one owner
-                        # right now, but that may change later so this is here for 
-                        # future proofing
-                        for member in FeedMember.query.filter_by(feed_id=feed.id, is_owner=True).all():
-                            member_user = User.query.get(member.user_id)
-                            is_owner = False
+                if feed.ap_moderators_url:
+                    owners_request = get_request(feed.ap_moderators_url, headers={'Accept': 'application/activity+json'})
+                    if owners_request.status_code == 200:
+                        owners_data = owners_request.json()
+                        owners_request.close()
+                        if owners_data and owners_data['type'] == 'OrderedCollection' and 'orderedItems' in owners_data:
                             for actor in owners_data['orderedItems']:
-                                if actor.lower() == member_user.profile_id().lower():
-                                    is_owner = True
-                                    break
-                            if not is_owner:
-                                db.session.query(FeedMember).filter_by(feed_id=feed.id,
-                                                                            user_id=member_user.id,
-                                                                            is_owner=True).delete()
-                                db.session.commit()
-            
-            # also make sure we have all the feeditems from the /following collection
-            res = get_request(feed.ap_following_url)
-            following_collection = res.json()
+                                time.sleep(0.5)
+                                user = find_actor_or_create(actor)
+                                if user:
+                                    existing_membership = FeedMember.query.filter_by(feed_id=feed.id,
+                                                                                          user_id=user.id).first()
+                                    if existing_membership:
+                                        existing_membership.is_owner = True
+                                        db.session.commit()
+                                    else:
+                                        new_membership = FeedMember(feed_id=feed.id, user_id=user.id,
+                                                                         is_owner=True)
+                                        db.session.add(new_membership)
+                                        db.session.commit()
 
-            # for each of those get the communities and make feeditems
-            for fci in following_collection['items']:
-                community_ap_id = fci 
-                community = find_actor_or_create(community_ap_id, community_only=True)
-                if community and isinstance(community, Community):
-                    feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
-                    db.session.add(feed_item)
-                    db.session.commit()
-    
-    session.close()
+                            # Remove people who are no longer mods
+                            # this should not get triggered as feeds just have the one owner
+                            # right now, but that may change later so this is here for 
+                            # future proofing
+                            for member in FeedMember.query.filter_by(feed_id=feed.id, is_owner=True).all():
+                                member_user = User.query.get(member.user_id)
+                                is_owner = False
+                                for actor in owners_data['orderedItems']:
+                                    if actor.lower() == member_user.profile_id().lower():
+                                        is_owner = True
+                                        break
+                                if not is_owner:
+                                    db.session.query(FeedMember).filter_by(feed_id=feed.id,
+                                                                                user_id=member_user.id,
+                                                                                is_owner=True).delete()
+                                    db.session.commit()
+                
+                # also make sure we have all the feeditems from the /following collection
+                res = get_request(feed.ap_following_url)
+                following_collection = res.json()
+
+                # for each of those get the communities and make feeditems
+                for fci in following_collection['items']:
+                    community_ap_id = fci 
+                    community = find_actor_or_create(community_ap_id, community_only=True)
+                    if community and isinstance(community, Community):
+                        feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
+                        db.session.add(feed_item)
+                        db.session.commit()
+        
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def actor_json_to_model(activity_json, address, server):
@@ -1136,148 +1160,111 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
     with current_app.app_context():
         original_directory = directory
         session = get_task_session()
-        file: File = session.query(File).get(file_id)
-        if file and file.source_url:
-            try:
-                source_image_response = get_request(file.source_url)
-            except:
-                pass
-            else:
-                if source_image_response.status_code == 404 and '/api/v3/image_proxy' in file.source_url:
-                    source_image_response.close()
-                    # Lemmy failed to retrieve the image but we might have better luck. Example source_url: https://slrpnk.net/api/v3/image_proxy?url=https%3A%2F%2Fi.guim.co.uk%2Fimg%2Fmedia%2F24e87cb4d730141848c339b3b862691ca536fb26%2F0_164_3385_2031%2Fmaster%2F3385.jpg%3Fwidth%3D1200%26height%3D630%26quality%3D85%26auto%3Dformat%26fit%3Dcrop%26overlay-align%3Dbottom%252Cleft%26overlay-width%3D100p%26overlay-base64%3DL2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc%26enable%3Dupscale%26s%3D0ec9d25a8cb5db9420471054e26cfa63
-                    # The un-proxied image url is the query parameter called 'url'
-                    parsed_url = urlparse(file.source_url)
-                    query_params = parse_qs(parsed_url.query)
-                    if 'url' in query_params:
-                        url_value = query_params['url'][0]
-                        source_image_response = get_request(url_value)
-                    else:
-                        source_image_response = None
-                if source_image_response and source_image_response.status_code == 200:
-                    content_type = source_image_response.headers.get('content-type')
-                    if content_type:
-                        if content_type.startswith('image') or (content_type == 'application/octet-stream' and file.source_url.endswith('.avif')):
-                            source_image = source_image_response.content
-                            source_image_response.close()
+        try:
+            file: File = session.query(File).get(file_id)
+            if file and file.source_url:
+                try:
+                    source_image_response = get_request(file.source_url)
+                except:
+                    pass
+                else:
+                    if source_image_response.status_code == 404 and '/api/v3/image_proxy' in file.source_url:
+                        source_image_response.close()
+                        # Lemmy failed to retrieve the image but we might have better luck. Example source_url: https://slrpnk.net/api/v3/image_proxy?url=https%3A%2F%2Fi.guim.co.uk%2Fimg%2Fmedia%2F24e87cb4d730141848c339b3b862691ca536fb26%2F0_164_3385_2031%2Fmaster%2F3385.jpg%3Fwidth%3D1200%26height%3D630%26quality%3D85%26auto%3Dformat%26fit%3Dcrop%26overlay-align%3Dbottom%252Cleft%26overlay-width%3D100p%26overlay-base64%3DL2ltZy9zdGF0aWMvb3ZlcmxheXMvdGctZGVmYXVsdC5wbmc%26enable%3Dupscale%26s%3D0ec9d25a8cb5db9420471054e26cfa63
+                        # The un-proxied image url is the query parameter called 'url'
+                        parsed_url = urlparse(file.source_url)
+                        query_params = parse_qs(parsed_url.query)
+                        if 'url' in query_params:
+                            url_value = query_params['url'][0]
+                            source_image_response = get_request(url_value)
+                        else:
+                            source_image_response = None
+                    if source_image_response and source_image_response.status_code == 200:
+                        content_type = source_image_response.headers.get('content-type')
+                        if content_type:
+                            if content_type.startswith('image') or (content_type == 'application/octet-stream' and file.source_url.endswith('.avif')):
+                                source_image = source_image_response.content
+                                source_image_response.close()
 
-                            content_type_parts = content_type.split('/')
-                            if content_type_parts:
-                                # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
+                                content_type_parts = content_type.split('/')
+                                if content_type_parts:
+                                    # content type headers often are just 'image/jpeg' but sometimes 'image/jpeg;charset=utf8'
 
-                                # Remove ;charset=whatever
-                                main_part = content_type.split(';')[0]
+                                    # Remove ;charset=whatever
+                                    main_part = content_type.split(';')[0]
 
-                                # Split the main part on the '/' character and take the second part
-                                file_ext = '.' + main_part.split('/')[1]
-                                file_ext = file_ext.strip() # just to be sure
+                                    # Split the main part on the '/' character and take the second part
+                                    file_ext = '.' + main_part.split('/')[1]
+                                    file_ext = file_ext.strip() # just to be sure
 
-                                if file_ext == '.jpeg':
-                                    file_ext = '.jpg'
-                                elif file_ext == '.svg+xml':
-                                    return  # no need to resize SVG images
-                                elif file_ext == '.octet-stream':
-                                    file_ext = '.avif'
-                            else:
-                                file_ext = os.path.splitext(file.source_url)[1]
-                                file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
-                                if '?' in file_ext:
-                                    file_ext = file_ext.split('?')[0]
+                                    if file_ext == '.jpeg':
+                                        file_ext = '.jpg'
+                                    elif file_ext == '.svg+xml':
+                                        return  # no need to resize SVG images
+                                    elif file_ext == '.octet-stream':
+                                        file_ext = '.avif'
+                                else:
+                                    file_ext = os.path.splitext(file.source_url)[1]
+                                    file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
+                                    if '?' in file_ext:
+                                        file_ext = file_ext.split('?')[0]
 
-                            new_filename = gibberish(15)
+                                new_filename = gibberish(15)
 
-                            # set up the storage directory
-                            if store_files_in_s3():
-                                directory = 'app/static/tmp'
-                            else:
-                                directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
-                            ensure_directory_exists(directory)
-
-                            # file path and names to store the resized images on disk
-                            final_place = os.path.join(directory, new_filename + file_ext)
-                            final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
-
-                            if file_ext == '.avif': # this is quite a big package so we'll only load it if necessary
-                                import pillow_avif
-
-                            # Load image data into Pillow
-                            Image.MAX_IMAGE_PIXELS = 89478485
-                            image = Image.open(BytesIO(source_image))
-                            image = ImageOps.exif_transpose(image)
-                            img_width = image.width
-
-                            boto3_session = None
-                            s3 = None
-
-                            # Use environment variables to determine medium and thumbnail format and quality
-
-                            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
-                            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
-                            thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
-                            thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
-
-                            final_ext = file_ext # track file extension for conversion
-                            thumbnail_ext = file_ext
-
-                            if medium_image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-                                import pillow_avif
-
-                            # Resize the image to medium
-                            if medium_width:
-                                if img_width > medium_width or medium_image_format:
-                                    image = image.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
-                                    image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
-
-                                kwargs = {}
-                                if medium_image_format:
-                                    kwargs['format'] = medium_image_format.upper()
-                                    final_ext = '.' + medium_image_format.lower()
-                                    final_place = os.path.splitext(final_place)[0] + final_ext
-                                if medium_image_quality:
-                                    kwargs['quality'] = int(medium_image_quality)
-
-                                image.save(final_place, optimize=True, **kwargs)
-
+                                # set up the storage directory
                                 if store_files_in_s3():
-                                    content_type = guess_mime_type(final_place)
-                                    boto3_session = boto3.session.Session()
-                                    s3 = boto3_session.client(
-                                        service_name='s3',
-                                        region_name=current_app.config['S3_REGION'],
-                                        endpoint_url=current_app.config['S3_ENDPOINT'],
-                                        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                                        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                                    )
-                                    s3.upload_file(final_place, current_app.config['S3_BUCKET'], original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
-                                                   ExtraArgs={'ContentType': content_type})
-                                    os.unlink(final_place)
-                                    final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                                  '/' + new_filename + final_ext
+                                    directory = 'app/static/tmp'
+                                else:
+                                    directory = f'app/static/media/{directory}/' + new_filename[0:2] + '/' + new_filename[2:4]
+                                ensure_directory_exists(directory)
 
-                                file.file_path = final_place
-                                file.width = image.width
-                                file.height = image.height
+                                # file path and names to store the resized images on disk
+                                final_place = os.path.join(directory, new_filename + file_ext)
+                                final_place_thumbnail = os.path.join(directory, new_filename + '_thumbnail.webp')
 
-                            # Resize the image to a thumbnail (webp)
-                            if thumbnail_width:
-                                if img_width > thumbnail_width:
-                                    image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
-                                    image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
+                                if file_ext == '.avif': # this is quite a big package so we'll only load it if necessary
+                                    import pillow_avif
 
-                                kwargs = {}
-                                if thumbnail_image_format:
-                                    kwargs['format'] = thumbnail_image_format.upper()
-                                    thumbnail_ext = '.' + thumbnail_image_format.lower()
-                                    final_place_thumbnail = os.path.splitext(final_place_thumbnail)[0] + thumbnail_ext
-                                if thumbnail_image_quality:
-                                    kwargs['quality'] = int(thumbnail_image_quality)
+                                # Load image data into Pillow
+                                Image.MAX_IMAGE_PIXELS = 89478485
+                                image = Image.open(BytesIO(source_image))
+                                image = ImageOps.exif_transpose(image)
+                                img_width = image.width
 
-                                image.save(final_place_thumbnail, optimize=True, **kwargs)
+                                boto3_session = None
+                                s3 = None
 
-                                if store_files_in_s3():
-                                    content_type = guess_mime_type(final_place_thumbnail)
-                                    if boto3_session is None and s3 is None:
+                                # Use environment variables to determine medium and thumbnail format and quality
+
+                                medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                                medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
+                                thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
+                                thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
+
+                                final_ext = file_ext # track file extension for conversion
+                                thumbnail_ext = file_ext
+
+                                if medium_image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
+                                    import pillow_avif
+
+                                # Resize the image to medium
+                                if medium_width:
+                                    if img_width > medium_width or medium_image_format:
+                                        image = image.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                                        image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
+
+                                    kwargs = {}
+                                    if medium_image_format:
+                                        kwargs['format'] = medium_image_format.upper()
+                                        final_ext = '.' + medium_image_format.lower()
+                                        final_place = os.path.splitext(final_place)[0] + final_ext
+                                    if medium_image_quality:
+                                        kwargs['quality'] = int(medium_image_quality)
+
+                                    image.save(final_place, optimize=True, **kwargs)
+
+                                    if store_files_in_s3():
+                                        content_type = guess_mime_type(final_place)
                                         boto3_session = boto3.session.Session()
                                         s3 = boto3_session.client(
                                             service_name='s3',
@@ -1286,48 +1273,91 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                             aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
                                             aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
                                         )
-                                    s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'],
-                                                   original_directory + '/' +
-                                                   new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail' + thumbnail_ext,
-                                                   ExtraArgs={'ContentType': content_type})
-                                    os.unlink(final_place_thumbnail)
-                                    final_place_thumbnail = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                                            '/' + new_filename + '_thumbnail' + thumbnail_ext
-                                file.thumbnail_path = final_place_thumbnail
-                                file.thumbnail_width = image.width
-                                file.thumbnail_height = image.height
+                                        s3.upload_file(final_place, current_app.config['S3_BUCKET'], original_directory + '/' +
+                                                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                                                       ExtraArgs={'ContentType': content_type})
+                                        os.unlink(final_place)
+                                        final_place = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                                      '/' + new_filename + final_ext
 
-                            if s3:
-                                s3.close()
-                            session.commit()
+                                    file.file_path = final_place
+                                    file.width = image.width
+                                    file.height = image.height
 
-                            site = Site.query.get(1)
-                            if site is None:
-                                site = Site()
+                                # Resize the image to a thumbnail (webp)
+                                if thumbnail_width:
+                                    if img_width > thumbnail_width:
+                                        image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
+                                        image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
-                            # Alert regarding fascist meme content
-                            if site.enable_chan_image_filter and toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
-                                if os.environ.get('ALLOW_4CHAN', None) is None:
-                                    try:
-                                        image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
-                                    except Exception:
-                                        image_text = ''
-                                    if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                        post = Post.query.filter_by(image_id=file.id).first()
-                                        targets_data = {'gen':'0',
-                                                        'post_id': post.id,
-                                                        'orig_post_title': post.title,
-                                                        'orig_post_body': post.body
-                                                        }
-                                        notification = Notification(title='Review this',
-                                                                    user_id=1,
-                                                                    author_id=post.user_id,
-                                                                    url=url_for('activitypub.post_ap', post_id=post.id),
-                                                                    notif_type=NOTIF_REPORT,
-                                                                    subtype='post_with_suspicious_image',
-                                                                    targets=targets_data)
-                                        session.add(notification)
-                                        session.commit()
+                                    kwargs = {}
+                                    if thumbnail_image_format:
+                                        kwargs['format'] = thumbnail_image_format.upper()
+                                        thumbnail_ext = '.' + thumbnail_image_format.lower()
+                                        final_place_thumbnail = os.path.splitext(final_place_thumbnail)[0] + thumbnail_ext
+                                    if thumbnail_image_quality:
+                                        kwargs['quality'] = int(thumbnail_image_quality)
+
+                                    image.save(final_place_thumbnail, optimize=True, **kwargs)
+
+                                    if store_files_in_s3():
+                                        content_type = guess_mime_type(final_place_thumbnail)
+                                        if boto3_session is None and s3 is None:
+                                            boto3_session = boto3.session.Session()
+                                            s3 = boto3_session.client(
+                                                service_name='s3',
+                                                region_name=current_app.config['S3_REGION'],
+                                                endpoint_url=current_app.config['S3_ENDPOINT'],
+                                                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                                                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                                            )
+                                        s3.upload_file(final_place_thumbnail, current_app.config['S3_BUCKET'],
+                                                       original_directory + '/' +
+                                                       new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_thumbnail' + thumbnail_ext,
+                                                       ExtraArgs={'ContentType': content_type})
+                                        os.unlink(final_place_thumbnail)
+                                        final_place_thumbnail = f"https://{current_app.config['S3_PUBLIC_URL']}/{original_directory}/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                                                '/' + new_filename + '_thumbnail' + thumbnail_ext
+                                    file.thumbnail_path = final_place_thumbnail
+                                    file.thumbnail_width = image.width
+                                    file.thumbnail_height = image.height
+
+                                if s3:
+                                    s3.close()
+                                session.commit()
+
+                                site = Site.query.get(1)
+                                if site is None:
+                                    site = Site()
+
+                                # Alert regarding fascist meme content
+                                if site.enable_chan_image_filter and toxic_community and img_width < 2000:    # images > 2000px tend to be real photos instead of 4chan screenshots.
+                                    if os.environ.get('ALLOW_4CHAN', None) is None:
+                                        try:
+                                            image_text = pytesseract.image_to_string(Image.open(BytesIO(source_image)).convert('L'), timeout=30)
+                                        except Exception:
+                                            image_text = ''
+                                        if 'Anonymous' in image_text and ('No.' in image_text or ' N0' in image_text):   # chan posts usually contain the text 'Anonymous' and ' No.12345'
+                                            post = Post.query.filter_by(image_id=file.id).first()
+                                            targets_data = {'gen':'0',
+                                                            'post_id': post.id,
+                                                            'orig_post_title': post.title,
+                                                            'orig_post_body': post.body
+                                                            }
+                                            notification = Notification(title='Review this',
+                                                                        user_id=1,
+                                                                        author_id=post.user_id,
+                                                                        url=url_for('activitypub.post_ap', post_id=post.id),
+                                                                        notif_type=NOTIF_REPORT,
+                                                                        subtype='post_with_suspicious_image',
+                                                                        targets=targets_data)
+                                            session.add(notification)
+                                            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 
@@ -1424,88 +1454,93 @@ def new_instance_profile(instance_id: int):
 @celery.task
 def new_instance_profile_task(instance_id: int):
     session = get_task_session()
-    instance: Instance = session.query(Instance).get(instance_id)
     try:
-        instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
-    except:
-        return
-    if instance_data.status_code == 200:
+        instance: Instance = session.query(Instance).get(instance_id)
         try:
-            instance_json = instance_data.json()
-            instance_data.close()
-        except Exception:
-            instance_json = {}
-        if 'type' in instance_json and instance_json['type'] == 'Application':
-            instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
-            instance.outbox = instance_json['outbox']
-        else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
-            instance.inbox = f"https://{instance.domain}/inbox"
-        instance.updated_at = utcnow()
-        session.commit()
-
-        # retrieve list of Admins from /api/v3/site, update InstanceRole
-        try:
-            response = get_request(f'https://{instance.domain}/api/v3/site')
+            instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
         except:
-            response = None
-
-        if response and response.status_code == 200:
+            return
+        if instance_data.status_code == 200:
             try:
-                instance_data = response.json()
+                instance_json = instance_data.json()
+                instance_data.close()
+            except Exception:
+                instance_json = {}
+            if 'type' in instance_json and instance_json['type'] == 'Application':
+                instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
+                instance.outbox = instance_json['outbox']
+            else:   # it's pretty much always /inbox so just assume that it is for whatever this instance is running
+                instance.inbox = f"https://{instance.domain}/inbox"
+            instance.updated_at = utcnow()
+            session.commit()
+
+            # retrieve list of Admins from /api/v3/site, update InstanceRole
+            try:
+                response = get_request(f'https://{instance.domain}/api/v3/site')
             except:
-                instance_data = None
-            finally:
-                response.close()
+                response = None
 
-            if instance_data:
-                if 'admins' in instance_data:
-                    admin_profile_ids = []
-                    for admin in instance_data['admins']:
-                        admin_profile_ids.append(admin['person']['actor_id'].lower())
-                        user = find_actor_or_create(admin['person']['actor_id'])
-                        if user and not instance.user_is_admin(user.id):
-                            new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id, role='admin')
-                            session.add(new_instance_role)
-                            session.commit()
-                    # remove any InstanceRoles that are no longer part of instance-data['admins']
-                    for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
-                        if instance_admin.user.profile_id() not in admin_profile_ids:
-                            session.query(InstanceRole).filter(
-                                    InstanceRole.user_id == instance_admin.user.id,
-                                    InstanceRole.instance_id == instance.id,
-                                    InstanceRole.role == 'admin').delete()
-                            session.commit()
-    elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
-        instance.inbox = f"https://{instance.domain}/inbox"
-        instance.updated_at = utcnow()
-        session.commit()
+            if response and response.status_code == 200:
+                try:
+                    instance_data = response.json()
+                except:
+                    instance_data = None
+                finally:
+                    response.close()
 
-    headers = {'Accept': 'application/activity+json'}
-    try:
-        nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
-        if nodeinfo.status_code == 200:
-            nodeinfo_json = nodeinfo.json()
-            for links in nodeinfo_json['links']:
-                if isinstance(links, dict) and 'rel' in links and (
-                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or    # most platforms except KBIN and Lemmy v0.19.4
-                    links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or   # KBIN
-                    links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):     # Lemmy v0.19.4+ (no 2.0 back-compat provided here)
-                    try:
-                        time.sleep(0.1)
-                        node = get_request(links['href'], headers=headers)
-                        if node.status_code == 200:
-                            node_json = node.json()
-                            if 'software' in node_json:
-                                instance.software = node_json['software']['name'].lower()
-                                instance.version = node_json['software']['version']
-                                instance.nodeinfo_href = links['href']
+                if instance_data:
+                    if 'admins' in instance_data:
+                        admin_profile_ids = []
+                        for admin in instance_data['admins']:
+                            admin_profile_ids.append(admin['person']['actor_id'].lower())
+                            user = find_actor_or_create(admin['person']['actor_id'])
+                            if user and not instance.user_is_admin(user.id):
+                                new_instance_role = InstanceRole(instance_id=instance.id, user_id=user.id, role='admin')
+                                session.add(new_instance_role)
                                 session.commit()
-                                break  # most platforms (except Lemmy v0.19.4) that provide 2.1 also provide 2.0 - there's no need to check both
-                    except:
-                        return
-    except:
-        return
-    session.close()
+                        # remove any InstanceRoles that are no longer part of instance-data['admins']
+                        for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
+                            if instance_admin.user.profile_id() not in admin_profile_ids:
+                                session.query(InstanceRole).filter(
+                                        InstanceRole.user_id == instance_admin.user.id,
+                                        InstanceRole.instance_id == instance.id,
+                                        InstanceRole.role == 'admin').delete()
+                                session.commit()
+        elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
+            instance.inbox = f"https://{instance.domain}/inbox"
+            instance.updated_at = utcnow()
+            session.commit()
+
+        headers = {'Accept': 'application/activity+json'}
+        try:
+            nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
+            if nodeinfo.status_code == 200:
+                nodeinfo_json = nodeinfo.json()
+                for links in nodeinfo_json['links']:
+                    if isinstance(links, dict) and 'rel' in links and (
+                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.0' or    # most platforms except KBIN and Lemmy v0.19.4
+                        links['rel'] == 'https://nodeinfo.diaspora.software/ns/schema/2.0' or   # KBIN
+                        links['rel'] == 'http://nodeinfo.diaspora.software/ns/schema/2.1'):     # Lemmy v0.19.4+ (no 2.0 back-compat provided here)
+                        try:
+                            time.sleep(0.1)
+                            node = get_request(links['href'], headers=headers)
+                            if node.status_code == 200:
+                                node_json = node.json()
+                                if 'software' in node_json:
+                                    instance.software = node_json['software']['name'].lower()
+                                    instance.version = node_json['software']['version']
+                                    instance.nodeinfo_href = links['href']
+                                    session.commit()
+                                    break  # most platforms (except Lemmy v0.19.4) that provide 2.1 also provide 2.0 - there's no need to check both
+                        except:
+                            return
+        except:
+            return
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
@@ -1684,7 +1719,7 @@ def ban_user(blocker, blocked, community, core_activity):
             reason = core_activity['summary']
         else:
             reason = ''
-        new_ban.reason = reason
+        new_ban.reason = shorten_string(reason, 255)
 
         ban_until = None
         if 'expires' in core_activity:
@@ -1914,109 +1949,115 @@ def notify_about_post(post: Post):
 
 @celery.task
 def notify_about_post_task(post_id):
-    # get the post by id
-    post = Post.query.get(post_id)
+    try:
+        # get the post by id
+        post = Post.query.get(post_id)
 
-    # get the author
-    author = User.query.get(post.user_id)
+        # get the author
+        author = User.query.get(post.user_id)
 
-    # get the community
-    community = Community.query.get(post.community_id)
+        # get the community
+        community = Community.query.get(post.community_id)
 
-    # Send notifications based on subscriptions
-    notifications_sent_to = set()
+        # Send notifications based on subscriptions
+        notifications_sent_to = set()
 
-    # NOTIF_USER 
-    user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
-    for notify_id in user_send_notifs_to:
-        if notify_id != post.user_id and notify_id not in notifications_sent_to:
-            targets_data = {'gen':'0',
-                            'post_id': post.id,
-                            'post_title': post.title,
-                            'community_name': community.ap_id if community.ap_id else community.name,
-                            'author_id':post.user_id,
-                            'author_user_name': author.ap_id if author.ap_id else author.user_name}
-            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_USER, 
-                                            subtype='new_post_from_followed_user',
-                                            targets=targets_data)
-            db.session.add(new_notification)
-            user = User.query.get(notify_id)
-            user.unread_notifications += 1
-            db.session.commit()
-            notifications_sent_to.add(notify_id)
-
-    # NOTIF_COMMUNITY
-    community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
-    for notify_id in community_send_notifs_to:
-        if notify_id != post.user_id and notify_id not in notifications_sent_to:
-            targets_data = {'gen':'0',
-                            'post_id': post.id,
-                            'post_title': post.title,
-                            'community_name': community.ap_id if community.ap_id else community.name,
-                            'community_id':post.community_id}
-            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_COMMUNITY,
-                                            subtype='new_post_in_followed_community',
-                                            targets=targets_data)
-            db.session.add(new_notification)
-            user = User.query.get(notify_id)
-            user.unread_notifications += 1
-            db.session.commit()
-            notifications_sent_to.add(notify_id)
-
-    # NOTIF_TOPIC    
-    topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
-    if post.community.topic_id:
-        topic = Topic.query.get(post.community.topic_id)
-    for notify_id in topic_send_notifs_to:
-        if notify_id != post.user_id and notify_id not in notifications_sent_to:
-            targets_data = {'gen':'0',
-                            'post_id': post.id,
-                            'post_title': post.title,
-                            'community_name': community.ap_id if community.ap_id else community.name,
-                            'topic_name': topic.machine_name,
-                            'topic_machine_name': topic.name,
-                            'author_id': post.user_id}
-            new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
-                                            user_id=notify_id, author_id=post.user_id,
-                                            notif_type=NOTIF_TOPIC,
-                                            subtype='new_post_in_followed_topic',
-                                            targets=targets_data)
-            db.session.add(new_notification)
-            user = User.query.get(notify_id)
-            user.unread_notifications += 1
-            db.session.commit()
-            notifications_sent_to.add(notify_id)
-
-
-    # NOTIF_FEED
-    # Get all the feeds that the post's community is in
-    community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == post.community_id).all()
-
-    for feed in community_feeds:
-        feed_send_notifs_to = notification_subscribers(feed.id, NOTIF_FEED)
-        for notify_id in feed_send_notifs_to:
+        # NOTIF_USER 
+        user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
+        for notify_id in user_send_notifs_to:
             if notify_id != post.user_id and notify_id not in notifications_sent_to:
                 targets_data = {'gen':'0',
-                                'post_id':post.id,
+                                'post_id': post.id,
                                 'post_title': post.title,
                                 'community_name': community.ap_id if community.ap_id else community.name,
-                                'feed_id':feed.id,
-                                'feed_name':feed.title
-                                }
+                                'author_id':post.user_id,
+                                'author_user_name': author.ap_id if author.ap_id else author.user_name}
                 new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
                                                 user_id=notify_id, author_id=post.user_id,
-                                                notif_type=NOTIF_FEED,
-                                                subtype='new_post_in_followed_feed',
+                                                notif_type=NOTIF_USER, 
+                                                subtype='new_post_from_followed_user',
                                                 targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
                 db.session.commit()
                 notifications_sent_to.add(notify_id)
+
+        # NOTIF_COMMUNITY
+        community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
+        for notify_id in community_send_notifs_to:
+            if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                targets_data = {'gen':'0',
+                                'post_id': post.id,
+                                'post_title': post.title,
+                                'community_name': community.ap_id if community.ap_id else community.name,
+                                'community_id':post.community_id}
+                new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
+                                                user_id=notify_id, author_id=post.user_id,
+                                                notif_type=NOTIF_COMMUNITY,
+                                                subtype='new_post_in_followed_community',
+                                                targets=targets_data)
+                db.session.add(new_notification)
+                user = User.query.get(notify_id)
+                user.unread_notifications += 1
+                db.session.commit()
+                notifications_sent_to.add(notify_id)
+
+        # NOTIF_TOPIC    
+        topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
+        if post.community.topic_id:
+            topic = Topic.query.get(post.community.topic_id)
+        for notify_id in topic_send_notifs_to:
+            if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                targets_data = {'gen':'0',
+                                'post_id': post.id,
+                                'post_title': post.title,
+                                'community_name': community.ap_id if community.ap_id else community.name,
+                                'topic_name': topic.machine_name,
+                                'topic_machine_name': topic.name,
+                                'author_id': post.user_id}
+                new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
+                                                user_id=notify_id, author_id=post.user_id,
+                                                notif_type=NOTIF_TOPIC,
+                                                subtype='new_post_in_followed_topic',
+                                                targets=targets_data)
+                db.session.add(new_notification)
+                user = User.query.get(notify_id)
+                user.unread_notifications += 1
+                db.session.commit()
+                notifications_sent_to.add(notify_id)
+
+
+        # NOTIF_FEED
+        # Get all the feeds that the post's community is in
+        community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(FeedItem.community_id == post.community_id).all()
+
+        for feed in community_feeds:
+            feed_send_notifs_to = notification_subscribers(feed.id, NOTIF_FEED)
+            for notify_id in feed_send_notifs_to:
+                if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                    targets_data = {'gen':'0',
+                                    'post_id':post.id,
+                                    'post_title': post.title,
+                                    'community_name': community.ap_id if community.ap_id else community.name,
+                                    'feed_id':feed.id,
+                                    'feed_name':feed.title
+                                    }
+                    new_notification = Notification(title=shorten_string(post.title, 150), url=f"/post/{post.id}",
+                                                    user_id=notify_id, author_id=post.user_id,
+                                                    notif_type=NOTIF_FEED,
+                                                    subtype='new_post_in_followed_feed',
+                                                    targets=targets_data)
+                    db.session.add(new_notification)
+                    user = User.query.get(notify_id)
+                    user.unread_notifications += 1
+                    db.session.commit()
+                notifications_sent_to.add(notify_id)
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
@@ -2968,16 +3009,22 @@ def create_resolved_object(uri, post_data, uri_domain, community, announce_id, s
 
 @celery.task
 def get_nodebb_replies_in_background(replies_uri_list, community_id):
-    max = 10 if not current_app.debug else 2           # magic number alert
-    community = Community.query.get(community_id)
-    if not community:
-        return
-    reply_count = 0
-    for uri in replies_uri_list:
-        reply_count += 1
-        resolve_remote_post(uri, community, None, False, nodebb=True)
-        if reply_count >= max:
-            break
+    try:
+        max = 10 if not current_app.debug else 2           # magic number alert
+        community = Community.query.get(community_id)
+        if not community:
+            return
+        reply_count = 0
+        for uri in replies_uri_list:
+            reply_count += 1
+            resolve_remote_post(uri, community, None, False, nodebb=True)
+            if reply_count >= max:
+                break
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 def populate_child_feed(feed_id, child_feed):
@@ -2989,11 +3036,17 @@ def populate_child_feed(feed_id, child_feed):
 
 @celery.task
 def populate_child_feed_worker(feed_id, child_feed):
-    from app.feed.util import search_for_feed
-    server, feed = extract_domain_and_actor(child_feed)
-    new_feed = search_for_feed('~' + feed + '@' + server)
-    new_feed.parent_feed_id = feed_id
-    db.session.commit()
+    try:
+        from app.feed.util import search_for_feed
+        server, feed = extract_domain_and_actor(child_feed)
+        new_feed = search_for_feed('~' + feed + '@' + server)
+        new_feed.parent_feed_id = feed_id
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        raise
+    finally:
+        db.session.remove()
 
 
 

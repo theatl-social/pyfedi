@@ -189,7 +189,7 @@ class Conversation(db.Model):
             if member.id == user.id:
                 return True
         return False
-    
+
     def instances(self):
         retval = []
         for member in self.members:
@@ -529,6 +529,11 @@ class Community(db.Model):
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
 
+    active_daily = db.Column(db.Integer, default=0)
+    active_weekly = db.Column(db.Integer, default=0)
+    active_monthly = db.Column(db.Integer, default=0)
+    active_6monthly = db.Column(db.Integer, default=0)
+
     # Which feeds posts from this community show up in
     show_popular = db.Column(db.Boolean, default=True)
     show_all = db.Column(db.Boolean, default=True)
@@ -776,7 +781,7 @@ class Passkey(db.Model):
     used = db.Column(db.DateTime, default=utcnow)
     device = db.Column(db.String(50))
     counter = db.Column(db.Integer, default=0)
-    
+
     def __repr__(self):
         return f"<Passkey {self.id} {self.device}>"
 
@@ -850,6 +855,7 @@ class User(UserMixin, db.Model):
     show_subscribed_communities = db.Column(db.Boolean, default=False)
     additional_css = db.Column(db.Text)
     mastodon_oauth_id = db.Column(db.String(64), unique=True, index=True)
+    discord_oauth_id = db.Column(db.String(64), unique=True, index=True)
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
@@ -1088,10 +1094,10 @@ class User(UserMixin, db.Model):
                 LIMIT 50
             ) AS recent_votes
         """), {"user_id": self.id}).fetchone()
-        
+
         upvotes = post_votes_result[0] or 0
         downvotes = post_votes_result[1] or 0
-        
+
         # Count comment upvotes and downvotes
         comment_votes_result = db.session.execute(text("""
             SELECT 
@@ -1105,7 +1111,7 @@ class User(UserMixin, db.Model):
                 LIMIT 50
             ) AS recent_votes
         """), {"user_id": self.id}).fetchone()
-        
+
         comment_upvotes = comment_votes_result[0] or 0
         comment_downvotes = comment_votes_result[1] or 0
 
@@ -1117,7 +1123,7 @@ class User(UserMixin, db.Model):
             new_attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
             new_attitude = None
-        
+
         # Update attitude
         db.session.execute(text("""
             UPDATE "user" 
@@ -1845,12 +1851,12 @@ class Post(db.Model):
                                  'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
                                  'name': f'#{tag.name}'})
         return return_value
-    
+
     def spoiler_flair(self):
         for flair in self.flair:
             if flair.blur_images:
                 return True
-        
+
         return False
 
 
@@ -1962,11 +1968,11 @@ class Post(db.Model):
             db.session.add(vote)
 
         db.session.commit()
-        
+
         # Calculate new ranking values
         new_ranking = self.post_ranking(self.score, self.created_at)
         new_ranking_scaled = int(new_ranking + self.community.scale_by())
-        
+
         # Update post ranking
         with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("""UPDATE "post" 
@@ -2089,7 +2095,7 @@ class PostReply(db.Model):
         site = Site.query.get(1)
         if site is None:
             site = Site()
-        
+
         if reply_is_just_link_to_gif_reaction(reply.body) and site.enable_gif_reply_rep_decrease:
             user.reputation -= 1
             raise PostReplyValidationError(_('Gif comment ignored'))
@@ -2329,10 +2335,10 @@ class PostReply(db.Model):
                 db.session.commit()
             db.session.add(vote)
         db.session.commit()
-        
+
         # Calculate the new ranking value
         new_ranking = PostReply.confidence(self.up_votes, self.down_votes)
-        
+
         with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
             db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
                               {"ranking": new_ranking, "post_reply_id": self.id})
@@ -2785,6 +2791,7 @@ class Site(db.Model):
     icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
     sidebar = db.Column(db.Text, default='')
     legal_information = db.Column(db.Text, default='')
+    tos_url = db.Column(db.String(256))
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
     enable_downvotes = db.Column(db.Boolean, default=True)
@@ -3016,7 +3023,7 @@ class Feed(db.Model):
                 return SUBSCRIPTION_PENDING
             else:
                 return SUBSCRIPTION_NONMEMBER
-            
+
     def profile_id(self):
         retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return retval.lower()
