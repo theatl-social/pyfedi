@@ -206,7 +206,7 @@ def register(app):
         with app.app_context():
             # calculate active users for day/week/month/half year
             # for local communities
-            print("Calculating local community stats...")
+            print("Calculating community stats...")
 
             # timing settings
             day = utcnow() - timedelta(hours=24)
@@ -631,7 +631,7 @@ def register(app):
 
             # calculate active users for day/week/month/half year
             # for local communities
-            print("Calculating local community stats...")
+            print("Calculating community stats...")
 
             # timing settings
             day = utcnow() - timedelta(hours=24)
