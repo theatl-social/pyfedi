@@ -214,59 +214,55 @@ def register(app):
             month = utcnow() - timedelta(weeks=4)
             half_year = utcnow() - timedelta(weeks=26)  # 52 weeks/year divided by 2
 
-            # get a list of the ids for local communities
-            local_comm_ids = []
-            local_comms = Community.query.filter(Community.banned == False).all()
-            for c in local_comms:
-                if c.is_local():
-                    local_comm_ids.append(c.id)
+            # get a list of the ids for communities
+            comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
+            comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
-            for lci in local_comm_ids:
-                print(lci)
+            for community_id in comm_ids:
                 for interval in day, week, month, half_year:
                     count = db.session.execute(text('''
-                                                    SELECT count(*) FROM
-                                                    (
-                                                        SELECT p.user_id FROM "post" p
-                                                        WHERE p.posted_at > :time_interval 
-                                                            AND p.from_bot = False
-                                                            AND p.community_id = :community_id
-                                                        UNION
-                                                        SELECT pr.user_id FROM "post_reply" pr
-                                                        WHERE pr.posted_at > :time_interval
-                                                            AND pr.from_bot = False
-                                                            AND pr.community_id = :community_id   
-                                                        UNION
-                                                        SELECT pv.user_id FROM "post_vote" pv
-                                                        INNER JOIN "user" u ON pv.user_id = u.id
-                                                        INNER JOIN "post" p ON pv.post_id = p.id
-                                                        WHERE pv.created_at > :time_interval
-                                                            AND u.bot = False
-                                                            AND p.community_id = :community_id                            
-                                                        UNION
-                                                        SELECT prv.user_id FROM "post_reply_vote" prv
-                                                        INNER JOIN "user" u ON prv.user_id = u.id
-                                                        INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
-                                                        INNER JOIN "post" p ON pr.post_id = p.id
-                                                        WHERE prv.created_at > :time_interval
-                                                            AND u.bot = False
-                                                            AND p.community_id = :community_id
-                                                    ) AS activity
-                                                '''), {'time_interval': interval, 'community_id': lci}).scalar()
+                                 SELECT count(*) FROM
+                                 (
+                                     SELECT p.user_id FROM "post" p
+                                     WHERE p.posted_at > :time_interval 
+                                         AND p.from_bot = False
+                                         AND p.community_id = :community_id
+                                     UNION
+                                     SELECT pr.user_id FROM "post_reply" pr
+                                     WHERE pr.posted_at > :time_interval
+                                         AND pr.from_bot = False
+                                         AND pr.community_id = :community_id   
+                                     UNION
+                                     SELECT pv.user_id FROM "post_vote" pv
+                                     INNER JOIN "user" u ON pv.user_id = u.id
+                                     INNER JOIN "post" p ON pv.post_id = p.id
+                                     WHERE pv.created_at > :time_interval
+                                         AND u.bot = False
+                                         AND p.community_id = :community_id                            
+                                     UNION
+                                     SELECT prv.user_id FROM "post_reply_vote" prv
+                                     INNER JOIN "user" u ON prv.user_id = u.id
+                                     INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+                                     INNER JOIN "post" p ON pr.post_id = p.id
+                                     WHERE prv.created_at > :time_interval
+                                         AND u.bot = False
+                                         AND p.community_id = :community_id
+                                 ) AS activity
+                             '''), {'time_interval': interval, 'community_id': community_id}).scalar()
 
                     # update the community stats in the db
                     try:
                         if interval == day:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_daily = count
                         elif interval == week:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_weekly = count
                         elif interval == month:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_monthly = count
                         elif interval == half_year:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_6monthly = count
                         # commit to the db
                         db.session.commit()
@@ -643,14 +639,11 @@ def register(app):
             month = utcnow() - timedelta(weeks=4)
             half_year = utcnow() - timedelta(weeks=26) # 52 weeks/year divided by 2
 
-            # get a list of the ids for local communities
-            local_comm_ids = []
-            local_comms = Community.query.filter(Community.banned == False).all()
-            for c in local_comms:
-                if c.is_local():
-                    local_comm_ids.append(c.id)
+            # get a list of the ids for communities
+            comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
+            comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
-            for lci in local_comm_ids:
+            for community_id in comm_ids:
                 for interval in day,week,month,half_year:
                     count = db.session.execute(text('''
                                 SELECT count(*) FROM
@@ -680,21 +673,21 @@ def register(app):
                                         AND u.bot = False
                                         AND p.community_id = :community_id
                                 ) AS activity
-                            '''), {'time_interval': interval,'community_id': lci}).scalar()
+                            '''), {'time_interval': interval,'community_id': community_id}).scalar()
                     
                     # update the community stats in the db
                     try:
                         if interval == day:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_daily = count
                         elif interval == week:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_weekly = count
                         elif interval == month:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_monthly = count
                         elif interval == half_year:
-                            c = Community.query.get(lci)
+                            c = Community.query.get(community_id)
                             c.active_6monthly = count
                         # commit to the db
                         db.session.commit()
