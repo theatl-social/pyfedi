@@ -2,7 +2,6 @@ from datetime import datetime
 from random import randint
 
 from flask import (
-    Markup,
     current_app,
     flash,
     g,
@@ -29,19 +28,18 @@ from app.auth.forms import (
 from app.auth.util import (
     create_registration_application,
     get_country,
-    notify_admins_of_registration,
     handle_abandoned_open_instance,
-    process_registration_form,
-    render_login_form,
+    notify_admins_of_registration,
     process_login,
+    process_registration_form,
     redirect_next_page,
+    render_login_form,
     render_registration_form,
 )
 from app.email import (
     send_password_reset_email,
     send_registration_approved_email,
 )
-from app.ldap_utils import sync_user_to_ldap
 from app.models import IpBan, User, UserRegistration, utcnow
 from app.utils import (
     banned_ip_addresses,
@@ -74,6 +72,7 @@ def logout():
     response = make_response(redirect(url_for('main.index')))
     response.set_cookie('low_bandwidth', '0', expires=datetime(year=2099, month=12, day=30))
     return response
+
 
 @bp.route("/register", methods=["GET", "POST"])
 @limiter.limit("100 per day;20 per 5 minutes", methods=["POST"])
