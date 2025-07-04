@@ -16,7 +16,7 @@
         <meta name="csrf-token" content="{{ cs }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
-            <script src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
+            <script rel="preload" src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
         {% endif -%}
         {% if current_user.font == 'atkinson' -%}
             <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
