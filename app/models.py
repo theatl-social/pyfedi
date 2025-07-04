@@ -512,6 +512,7 @@ class Community(db.Model):
     default_layout = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
+    rss_url = db.Column(db.String(2048))
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -530,6 +531,7 @@ class Community(db.Model):
     banned = db.Column(db.Boolean, default=False)
     restricted_to_mods = db.Column(db.Boolean, default=False)
     local_only = db.Column(db.Boolean, default=False)  # only users on this instance can post
+    private = db.Column(db.Boolean, default=False)     # only owner can view - for unapproved rss
     new_mods_wanted = db.Column(db.Boolean, default=False)
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
@@ -1412,6 +1414,16 @@ class Post(db.Model):
             'search_vector',
             postgresql_using='gin'
         ),
+        db.Index(
+            'ix_post_community_posted_bot',
+            'community_id', 'posted_at',
+            postgresql_where=db.text('from_bot = false')
+        ),
+        db.Index(
+            'ix_post_community_created_bot',
+            'community_id', 'created_at',
+            postgresql_where=db.text('from_bot = false')
+        ),
     )
 
     def is_local(self):
@@ -2092,6 +2104,11 @@ class PostReply(db.Model):
             'path',
             postgresql_using='gin'
         ),
+        db.Index(
+            'ix_post_reply_community_posted_bot',
+            'community_id', 'posted_at',
+            postgresql_where=db.text('from_bot = false')
+        )
     )
 
     @classmethod
@@ -2601,6 +2618,11 @@ class PostVote(db.Model):
 
     __table_args__ = (
         Index('ix_post_vote_user_id_id_desc', 'user_id', desc('id')),
+        db.Index(
+            'ix_post_vote_post_created',
+            'post_id', 'created_at'
+        ),
+        db.Index('ix_post_vote_created', 'created_at')
     )
 
 
@@ -2614,6 +2636,11 @@ class PostReplyVote(db.Model):
 
     __table_args__ = (
         Index('ix_post_reply_vote_user_id_id_desc', 'user_id', desc('id')),
+        db.Index(
+            'ix_post_reply_vote_reply_created',
+            'post_reply_id', 'created_at'
+        ),
+        db.Index('ix_post_reply_vote_created', 'created_at')
     )
 
 
