@@ -555,6 +555,87 @@ def register(app):
             for user in User.query.filter(User.last_seen > utcnow() - timedelta(days=1)):
                 user.recalculate_attitude()
 
+            # calculate active users for day/week/month/half year
+            # for local communities
+            print("Calculating local community stats...")
+
+            # timing settings
+            day = utcnow() - timedelta(hours=24)
+            week = utcnow() - timedelta(days=7)
+            month = utcnow() - timedelta(weeks=4)
+            half_year = utcnow() - timedelta(weeks=26) # 52 weeks/year divided by 2
+
+            # get a list of the ids for local communities
+            local_comm_ids = []
+            local_comms = Community.query.filter(Community.banned == False).all()
+            for c in local_comms:
+                if c.is_local():
+                    local_comm_ids.append(c.id)
+
+            for lci in local_comm_ids:
+                for interval in day,week,month,half_year:
+                    count = db.session.execute(text('''
+                                SELECT count(*) FROM
+                                (
+                                    SELECT p.user_id FROM "post" p
+                                    WHERE p.posted_at > :time_interval 
+                                        AND p.instance_id = '1' 
+                                        AND p.from_bot = False
+                                        AND p.community_id = :community_id
+                                    UNION
+                                    SELECT pr.user_id FROM "post_reply" pr
+                                    WHERE pr.posted_at > :time_interval
+                                        AND pr.instance_id = '1'         
+                                        AND pr.from_bot = False
+                                        AND pr.community_id = :community_id   
+                                    UNION
+                                    SELECT pv.user_id FROM "post_vote" pv
+                                    INNER JOIN "user" u ON pv.user_id = u.id
+                                    INNER JOIN "post" p ON pv.post_id = p.id
+                                    WHERE pv.created_at > :time_interval
+                                        AND u.instance_id = '1'         
+                                        AND u.bot = False
+                                        AND p.community_id = :community_id                            
+                                    UNION
+                                    SELECT prv.user_id FROM "post_reply_vote" prv
+                                    INNER JOIN "user" u ON prv.user_id = u.id
+                                    INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+                                    INNER JOIN "post" p ON pr.post_id = p.id
+                                    WHERE prv.created_at > :time_interval
+                                        AND u.instance_id = '1'         
+                                        AND u.bot = False
+                                        AND p.community_id = :community_id
+                                )
+                            '''),{'time_interval':interval,'community_id':lci}).scalar()
+                    
+                    # update the community stats in the db
+                    try:
+                        if interval == day:
+                            c = Community.query.get(lci)
+                            c.active_daily = count
+                            db.session.add(c)
+                        elif interval == week:
+                            c = Community.query.get(lci)
+                            c.active_weekly = count
+                            db.session.add(c)
+                        elif interval == month:
+                            c = Community.query.get(lci)
+                            c.active_monthly = count
+                            db.session.add(c)
+                        elif interval == half_year:
+                            c = Community.query.get(lci)
+                            c.active_6monthly = count
+                            db.session.add(c)
+                        # commit to the db
+                        db.session.commit()
+                    except Exception as e:
+                        print(f"Exception: {e}, db rollback initiated.")
+                        db.session.rollback()
+                        raise 
+                    finally:
+                        db.session.remove()
+            print("Stats update complete.")
+
             print(f'Done {datetime.now()}')
 
     @app.cli.command('send-queue')
