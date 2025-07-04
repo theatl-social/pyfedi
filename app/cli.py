@@ -661,13 +661,13 @@ def register(app):
                                 (
                                     SELECT p.user_id FROM "post" p
                                     WHERE p.posted_at > :time_interval 
-                                        AND p.instance_id = '1' 
+                                        AND p.instance_id = 1
                                         AND p.from_bot = False
                                         AND p.community_id = :community_id
                                     UNION
                                     SELECT pr.user_id FROM "post_reply" pr
                                     WHERE pr.posted_at > :time_interval
-                                        AND pr.instance_id = '1'         
+                                        AND pr.instance_id = 1
                                         AND pr.from_bot = False
                                         AND pr.community_id = :community_id   
                                     UNION
@@ -675,7 +675,7 @@ def register(app):
                                     INNER JOIN "user" u ON pv.user_id = u.id
                                     INNER JOIN "post" p ON pv.post_id = p.id
                                     WHERE pv.created_at > :time_interval
-                                        AND u.instance_id = '1'         
+                                        AND u.instance_id = 1
                                         AND u.bot = False
                                         AND p.community_id = :community_id                            
                                     UNION
@@ -684,7 +684,7 @@ def register(app):
                                     INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
                                     INNER JOIN "post" p ON pr.post_id = p.id
                                     WHERE prv.created_at > :time_interval
-                                        AND u.instance_id = '1'         
+                                        AND u.instance_id = 1
                                         AND u.bot = False
                                         AND p.community_id = :community_id
                                 ) AS activity
