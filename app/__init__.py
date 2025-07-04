@@ -76,6 +76,13 @@ def create_app(config_class=Config):
     limiter.init_app(app)
     celery.conf.update(app.config)
 
+    celery.conf.update(CELERY_ROUTES={
+        'app.shared.tasks.users.check_user_application': {'queue': 'background'},
+        'app.user.utils.purge_user_then_delete_task': {'queue': 'background'},
+        'app.community.util.retrieve_mods_and_backfill': {'queue': 'background'},
+        'app.activitypub.signature.post_request': {'queue': 'send'},
+    })
+
     # Initialize redis_client
     global redis_client
     from app.utils import get_redis_connection
