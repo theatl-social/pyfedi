@@ -18,7 +18,6 @@ from urllib.parse import urlparse, parse_qs, urlencode
 import flask
 import httpx
 import jwt
-from minify_html_onepass import minify
 import markdown2
 import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
@@ -57,10 +56,6 @@ def render_template(template_name: str, **context) -> Response:
         content = flask.render_template(f'themes/{theme}/{template_name}', **context)
     else:
         content = flask.render_template(template_name, **context)
-
-    # Minify HTML in production for better performance
-    if not current_app.debug:
-        content = minify(content)
 
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
