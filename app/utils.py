@@ -418,7 +418,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                                          extras={'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
                                                   'tg-spoiler': True,
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True})
