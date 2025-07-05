@@ -111,47 +111,73 @@ def post_user_block(auth, data):
 
 def get_user_unread_count(auth):
     user = authorise_api_user(auth, return_type='model')
-    unread_replies = unread_messages = 0
+    unread_replies = unread_messages = unread_mentions = 0
     unread_notifications = user.unread_notifications
     if unread_notifications > 0:
-        unread_replies = db.session.execute(text(
-            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false AND url LIKE '%comment%'"),
-                                            {'user_id': user.id}).scalar()
+        unread_comment_replies = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'new_reply_on_followed_comment'"),
+            {'user_id': user.id, 'notif_type': NOTIF_REPLY}).scalar()
+        unread_post_replies = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'top_level_comment_on_followed_post'"),
+            {'user_id': user.id, 'notif_type': NOTIF_POST}).scalar()
+        unread_replies = unread_comment_replies + unread_post_replies
+        unread_comment_mentions = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'comment_mention'"),
+            {'user_id': user.id, 'notif_type': NOTIF_MENTION}).scalar()
+        unread_mentions = unread_comment_mentions
         unread_messages = db.session.execute(
             text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"),
             {'user_id': user.id}).scalar()
 
     # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
-    # replies and mentions are merged together in 'replies' as that's what get_user_replies() currently expects
+    # "mentions" are just comment mentions as /user/mentions endpoint will only deliver a CommentView
 
     unread_count = {
         "replies": unread_replies,
-        "mentions": 0,
+        "mentions": unread_mentions,
         "private_messages": unread_messages,
-        "other": unread_notifications - unread_replies - unread_messages
+        "other": unread_notifications - unread_replies - unread_messages - unread_mentions
     }
 
     return unread_count
 
 
-def get_user_replies(auth, data):
+def get_user_replies(auth, data, mentions=False):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
+    sort = data['sort'] if data and 'sort' in data else "New"
+    unread_only = data['unread_only'] if data and 'unread_only' in data else 'true'
+    unread_only = True if unread_only == 'true' else False
 
     user_id = authorise_api_user(auth)
 
-    unread_urls = db.session.execute(
-        text("select url from notification where user_id = :user_id and read = false and url ilike '%comment%'"),
-        {'user_id': user_id}).scalars()
-    unread_ids = []
-    for url in unread_urls:
-        if '#comment_' in url:  # reply format
-            unread_ids.append(url.rpartition('_')[-1])
-        elif '/comment/' in url:  # mention format
-            unread_ids.append(url.rpartition('/')[-1])
+    if not mentions:
+        query = "SELECT targets FROM notification WHERE user_id = :user_id and \
+                (subtype = 'new_reply_on_followed_comment' or subtype = 'top_level_comment_on_followed_post')"
+    else:
+        query = "SELECT targets FROM notification WHERE user_id = :user_id and subtype = 'comment_mention'"
+    if unread_only:
+        query += " AND read = false"
+    targets = db.session.execute(text(query), {'user_id': user_id}).scalars()
 
-    replies = PostReply.query.filter(PostReply.id.in_(unread_ids)).order_by(desc(PostReply.posted_at)).paginate(
-        page=page, per_page=limit, error_out=False)
+    comment_ids = []
+    for target in targets:
+        if 'comment_id' in target:
+            comment_ids.append(target['comment_id'])
+
+    replies = PostReply.query.filter(PostReply.id.in_(comment_ids))
+    if sort == "Hot":
+        replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+    elif sort == "Top":
+        replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
+    elif sort == 'Old':
+        replies = replies.order_by(PostReply.posted_at)
+    else:
+        replies = replies.order_by(desc(PostReply.posted_at))
+    replies = replies.paginate(page=page, per_page=limit, error_out=False)
 
     reply_list = []
     for reply in replies:
