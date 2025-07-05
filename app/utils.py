@@ -1871,6 +1871,11 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if decoded:
         user_id = decoded['sub']
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        if user.password_updated_at:
+            issued_at_time = decoded['iat']
+            password_updated_time = int(user.password_updated_at.timestamp())
+            if issued_at_time < password_updated_time:
+                raise Exception('incorrect_login')
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
         if return_type and return_type == 'model':

@@ -256,6 +256,7 @@ def edit_profile(actor):
         password_updated = False
         if form.password_field.data.strip() != '':
             current_user.set_password(form.password_field.data)
+            current_user.password_updated_at = utcnow()
             password_updated = True
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
         current_user.about_html = markdown_to_html(form.about.data)
