@@ -50,6 +50,7 @@ from sqlalchemy import text
 from app import db, celery, httpx_client
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
+from app.utils import get_task_session
 
 
 def http_date(epoch_seconds=None):
@@ -94,14 +95,15 @@ def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                  content_type: str = "application/activity+json",
                  method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
+    session = get_task_session()
     try:
         if '@context' not in body:  # add a default json-ld context if necessary
             body['@context'] = default_context()
         type = body['type'] if 'type' in body else ''
         log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
         log.activity_json = json.dumps(body)
-        db.session.add(log)
-        db.session.commit()
+        session.add(log)
+        session.commit()
 
         http_status_code = None
 
@@ -138,7 +140,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                 http_status_code = 404
         if log.result == 'processing':
             log.result = 'success'
-        db.session.commit()
+        session.commit()
 
         if log.result != 'failure':
             return
@@ -148,18 +150,18 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                     # Calculate retry delay with exponential backoff. 1 min, 2 mins, 4 mins, 8 mins, up to 4h
                     backoff = 60 * (2 ** retries)
                     backoff = min(backoff, 15360)
-                    db.session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
+                    session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
                                              private_key=private_key, payload=json.dumps(body), retries=retries,
                                              retry_reason=log.exception_message,
                                              send_after=datetime.utcnow() + timedelta(seconds=backoff)))
-                    db.session.commit()
+                    session.commit()
 
             return
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",
