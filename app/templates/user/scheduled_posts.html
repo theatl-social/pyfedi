@@ -24,6 +24,7 @@
                     <tr>
                        <th>{{ _('Title') }}</th>
                        <th>{{ _('Scheduled for') }}</th>
+		       <th>{{ _('Timezone') }}</th>
                        <th>{{ _('Frequency') }}</th>
                        <th>{{ _('Actions') }}</th>
                     </tr>
@@ -31,6 +32,7 @@
                         <tr>
                             <td><span title="{{ post.title }}">{{ post.title }}</span></td>
                             <td><span title="{{ _('Scheduled for') }}">{{ post.scheduled_for }}</span></td>
+			    <td><span title="{{ _('Timezone') }}">{{ post.timezone }}</span></td>
                             <td><span title="{{ _('Frequency') }}">
                             {% if post.repeat == 'daily' %}
                                 {{ _('Daily') }}

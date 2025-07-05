@@ -5,7 +5,7 @@ from wtforms import StringField, SubmitField, PasswordField, BooleanField, Email
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
-from app.utils import MultiCheckboxField
+from app.utils import MultiCheckboxField, get_timezones
 
 
 class ProfileForm(FlaskForm):
@@ -27,8 +27,12 @@ class ProfileForm(FlaskForm):
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
-    timezone = HiddenField(render_kw={'id': 'timezone'})
+    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', 'class': 'form-control tom-select'})
     submit = SubmitField(_l('Save profile'))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.timezone.choices = get_timezones()
 
     def validate_email(self, field):
         if current_user.another_account_using_email(field.data):
