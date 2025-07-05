@@ -20,7 +20,7 @@
                                 <p> {% if subscribed %}
                                         <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/unsubscribe">{{ _('Leave') }}</a>
                                     {% else %}
-                                        {% if not community.instance.gone_forever %}
+                                        {% if not new_community.instance.gone_forever %}
                                            <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/subscribe">{{ _('Join') }}</a> 
                                         {% endif %}
                                     {% endif %}
