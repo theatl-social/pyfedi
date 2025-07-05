@@ -2566,6 +2566,7 @@ def render_from_tpl(tpl: str) -> str:
 
     return pattern.sub(_sub, tpl)
 
+
 @lru_cache(maxsize=None)
 def get_timezones():
     """

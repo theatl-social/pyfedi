@@ -740,7 +740,7 @@ def post_edit(post_id: int):
             form.tags.data = tags_to_string(post)
             form.repeat.data = post.repeat
             form.scheduled_for.data = post.scheduled_for
-            form.timezone.data = post.timezone
+            form.timezone.data = post.timezone if post.timezone else current_user.timezone
             if form.flair:
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
