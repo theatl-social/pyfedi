@@ -852,6 +852,8 @@ def add_post(actor, type):
         if community.posting_warning:
             flash(community.posting_warning)
 
+        form.timezone.data = current_user.timezone
+
         # The source query parameter is used when cross-posting - load the source post's content into the form
         if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('source'):
             source_post = Post.query.get(request.args.get('source'))

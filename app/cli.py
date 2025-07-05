@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta
 from random import randint
 from time import sleep
+from zoneinfo import ZoneInfo
 
 import click
 import flask
@@ -797,14 +798,15 @@ def register(app):
         publish_scheduled_posts()
 
     def publish_scheduled_posts():
-        with app.app_context():
-            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
+            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED,
                                           Post.deleted == False, Post.repeat != 'none'):
+                date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+                if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
+                    continue
                 if post.repeat and post.repeat != 'once':
                     next_occurrence = post.scheduled_for + find_next_occurrence(post)
                 else:
                     next_occurrence = None
-
                 # One shot scheduled post
                 if not next_occurrence:
                     post.status = POST_STATUS_PUBLISHED

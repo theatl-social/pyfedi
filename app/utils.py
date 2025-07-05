@@ -7,13 +7,14 @@ import mimetypes
 import random
 import urllib
 import warnings
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import datetime, timedelta, date
-from functools import wraps
+from functools import wraps, lru_cache
 from json import JSONDecodeError
 from time import sleep
 from typing import List
 from urllib.parse import urlparse, parse_qs, urlencode
+from zoneinfo import available_timezones
 
 import flask
 import httpx
@@ -2564,3 +2565,22 @@ def render_from_tpl(tpl: str) -> str:
         return replacements.get(key, match.group(0))
 
     return pattern.sub(_sub, tpl)
+
+@lru_cache(maxsize=None)
+def get_timezones():
+    """
+    returns an OrderedDict of timezones:
+    {
+       'Africa': [('Africa/Abidjan','Africa/Abidjan'), ...],
+       'America': [('America/New_York','America/New_York'), ...],
+       ...
+    }
+    """
+    by_region = OrderedDict()
+    for tz in sorted(available_timezones()):
+        if '/' in tz:
+            region, _ = tz.split('/', 1)
+            if region in ['Arctic', 'Atlantic', 'Etc', 'Other']:
+                continue
+            by_region.setdefault(region, []).append((tz, tz))
+    return by_region

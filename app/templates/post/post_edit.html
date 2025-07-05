@@ -12,7 +12,6 @@
 
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
 <script nonce="{{ nonce }}">
     function checkAndCopyTitle() {
       const retrieved = document.getElementById('retrieved_title');
@@ -33,7 +32,6 @@
         {% block title %}<h1>{{ _('Edit post') }}</h1>{% endblock %}
         <form method="post" enctype="multipart/form-data" role="form">
             {{ form.csrf_token() }}
-            {{ render_field(form.timezone) }}
             {% block post_type %}{% endblock %}
             {% if post_type == POST_TYPE_LINK %}
                 {{ render_field(form.link_url) }}
@@ -152,6 +150,7 @@
                     {% if form.flair %}{{ render_field(form.flair) }}{% endif %}
                 </div>
                 {{ render_field(form.scheduled_for) }}
+                {{ render_field(form.timezone) }}
                 {{ render_field(form.repeat) }}
 
                 <div class="accordion accordion-flush" id="accordionFlushExample">
@@ -186,6 +185,16 @@
         })();"
            title="Drag this to your bookmarks bar"
            style="cursor: grab; text-decoration: underline;">{{ _('Share on PieFed') }}</a></p>
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <script nonce="{{ nonce }}">
+      document.addEventListener("DOMContentLoaded", () => {
+        new TomSelect(".tom-select", {
+          plugins: ['dropdown_input'],
+          create: false,
+          maxOptions: 2000,
+       })
+    });
+    </script>
     </main>
 
     {% include "_side_pane.html" %}

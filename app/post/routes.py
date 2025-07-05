@@ -101,8 +101,7 @@ def show_post(post_id: int):
         form.language_id.choices = languages_for_form() if current_user.is_authenticated else []
 
         if post.status == POST_STATUS_SCHEDULED:
-            flash(_('This post is scheduled to be published at %(when)s UTC',
-                    when=str(post.scheduled_for)))  # todo: convert into current_user.timezone
+            flash(_('This post is scheduled to be published at %(when)s in %(_tz)s', when=str(post.scheduled_for), _tz=str(post.timezone)))
 
         if current_user.is_authenticated:
             if not post.community.is_moderator() and not post.community.is_owner() and not current_user.is_staff() and not current_user.is_admin():
@@ -741,6 +740,7 @@ def post_edit(post_id: int):
             form.tags.data = tags_to_string(post)
             form.repeat.data = post.repeat
             form.scheduled_for.data = post.scheduled_for
+            form.timezone.data = post.timezone
             if form.flair:
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:

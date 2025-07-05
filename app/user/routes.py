@@ -320,6 +320,7 @@ def edit_profile(actor):
         form.title.data = current_user.title
         form.email.data = current_user.email
         form.about.data = current_user.about
+        form.timezone.data = current_user.timezone
         i = 1
         for extra_field in current_user.extra_fields:
             getattr(form, f"extra_label_{i}").data = extra_field.label
@@ -1569,8 +1570,7 @@ def user_alerts(type='posts', filter='all'):
 @login_required
 def user_scheduled_posts(type='posts', filter='all'):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED,
-                                 Post.user_id == current_user.id)
+    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id).all()
     title = _('Scheduled posts')
 
     return render_template('user/scheduled_posts.html', title=title, entities=entities,
