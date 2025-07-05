@@ -9,3 +9,5 @@ if not app.debug:
     os.environ['SERVER_NAME'] = 'piefed.ngrok.app'
 
 app.app_context().push()
+
+from app.shared.tasks import maintenance
