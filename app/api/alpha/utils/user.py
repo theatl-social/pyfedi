@@ -36,6 +36,8 @@ def get_user(auth, data):
         data['person_id'] = person.id
     include_content = data['include_content'] if 'include_content' in data else 'false'
     include_content = True if include_content == 'true' else False
+    saved_only = data['saved_only'] if 'saved_only' in data else 'false'
+    saved_only = True if saved_only == 'true' else False
 
     user_id = None
     if auth:
@@ -43,8 +45,14 @@ def get_user(auth, data):
         auth = None  # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
-    post_list = get_post_list(auth, data, user_id) if include_content else {'posts': []}
-    reply_list = get_reply_list(auth, data, user_id) if include_content else {'comments': []}
+    if include_content or saved_only:
+        if 'saved_only':
+            del data['person_id']
+        post_list = get_post_list(auth, data, user_id)
+        reply_list = get_reply_list(auth, data, user_id)
+    else:
+        post_list = {'posts': []}
+        reply_list = {'comments': []}
 
     user_json = user_view(user=person, variant=3, user_id=user_id)
     user_json['posts'] = post_list['posts']
