@@ -651,6 +651,18 @@ def get_alpha_user_replies():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/user/mentions', methods=['GET'])
+def get_alpha_user_mentions():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return jsonify(get_user_replies(auth, data, mentions=True))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 @bp.route('/api/alpha/user/block', methods=['POST'])
 def post_alpha_user_block():
     if not enable_api():
@@ -870,7 +882,6 @@ def alpha_chat():
 # User - not yet implemented
 @bp.route('/api/alpha/user/register', methods=['POST'])  # Not available in app
 @bp.route('/api/alpha/user/get_captcha', methods=['GET'])  # Not available in app
-@bp.route('/api/alpha/user/mention', methods=['GET'])  # No DB support
 @bp.route('/api/alpha/user/mention/mark_as_read',
           methods=['POST'])  # No DB support / Not available in app (using mark_all instead)
 @bp.route('/api/alpha/user/ban', methods=['POST'])  # Admin function. No plans to implement
@@ -891,6 +902,10 @@ def alpha_chat():
 @bp.route('/api/alpha/user/logout', methods=['POST'])  # Stage 2
 def alpha_user():
     return jsonify({"error": "not_yet_implemented"}), 400
+
+@bp.route('/api/alpha/user/mention', methods=['GET'])
+def alpha_user_mention():
+    return jsonify({"error": "renamed to user/mentions"}), 400
 
 
 # Admin - not yet implemented
