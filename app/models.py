@@ -847,6 +847,7 @@ class User(UserMixin, db.Model):
     searchable = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=False)
     bot = db.Column(db.Boolean, default=False)
+    bot_override = db.Column(db.Boolean, default=False)
     vote_privately = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
@@ -1468,7 +1469,7 @@ class Post(db.Model):
                     ap_create_id=request_json['id'],
                     ap_announce_id=announce_id,
                     up_votes=1,
-                    from_bot=user.bot,
+                    from_bot=user.bot or user.bot_override,
                     score=instance_weight(user.ap_domain),
                     instance_id=user.instance_id,
                     indexable=user.indexable,
@@ -2140,7 +2141,7 @@ class PostReply(db.Model):
                           depth=depth,
                           community_id=post.community.id, body=body,
                           body_html=body_html, body_html_safe=True,
-                          from_bot=user.bot, nsfw=post.nsfw,
+                          from_bot=user.bot or user.bot_override, nsfw=post.nsfw,
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
                           distinguished=distinguished,
