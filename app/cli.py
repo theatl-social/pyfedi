@@ -1038,10 +1038,10 @@ def register(app):
                                sender=f'{site.name} <{current_app.config["MAIL_FROM"]}>',
                                recipients=[user.email],
                                text_body=flask.render_template('email/unread_notifications.txt', user=user,
-                                                               notifications=notifications),
+                                                               notifications=notifications, site=site),
                                html_body=flask.render_template('email/unread_notifications.html', user=user,
                                                                notifications=notifications,
-                                                               posts=posts,
+                                                               posts=posts, site=site,
                                                                domain=current_app.config['SERVER_NAME']))
                     user.email_unread_sent = True
                     db.session.commit()
