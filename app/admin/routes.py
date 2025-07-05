@@ -555,11 +555,10 @@ def admin_federation():
                     low_content_count += 1
                     continue
 
-                # TODO - add users_active_week to response for /api/alpha/community/list
                 # sort out any that do not have greater than the requested active users over the past week
-                # elif community['counts']['users_active_week'] < min_users:
-                #     low_active_users_count += 1
-                #     continue
+                elif community['counts']['active_weekly'] < min_users:
+                    low_active_users_count += 1
+                    continue
 
                 # sort out the 'seven things you can't say on tv' names (cursewords), plus some
                 # "low effort" communities
@@ -588,6 +587,7 @@ def admin_federation():
                             Local Communities on the server: {len(comms_list)}, \
                             Communities we already have: {already_known_count}, \
                             Communities below minimum posts: {low_content_count}, \
+                            Communities below minimum users: {low_active_users_count}, \
                             Candidate Communities based on filters: {len(candidate_communities)}, \
                             Communities to join request: {communities_requested}, \
                             Communities to join based on current filters: {len(community_urls_to_join)}."

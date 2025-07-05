@@ -11,6 +11,7 @@ import uuid
 from datetime import datetime, timedelta
 from random import randint
 from time import sleep
+from zoneinfo import ZoneInfo
 
 import click
 import flask
@@ -274,6 +275,55 @@ def register(app):
                         db.session.remove()
             print("Stats update complete.")
 
+    @app.cli.command('daily-maintenance-celery')
+    def daily_maintenance_celery():
+        """Schedule daily maintenance tasks via Celery background queue"""
+        with app.app_context():
+            from app.shared.tasks.maintenance import (
+                cleanup_old_notifications, cleanup_send_queue, process_expired_bans,
+                remove_old_community_content, update_hashtag_counts, delete_old_soft_deleted_content,
+                update_community_stats, cleanup_old_voting_data, unban_expired_users,
+                sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
+                recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs
+            )
+
+            print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
+
+            # Schedule all maintenance tasks (sync in debug mode, async in production)
+            if current_app.debug:
+                cleanup_old_notifications()
+                cleanup_send_queue()
+                process_expired_bans()
+                remove_old_community_content()
+                update_hashtag_counts()
+                delete_old_soft_deleted_content()
+                update_community_stats()
+                cleanup_old_voting_data()
+                unban_expired_users()
+                sync_defederation_subscriptions()
+                check_instance_health()
+                monitor_healthy_instances()
+                recalculate_user_attitudes()
+                calculate_community_activity_stats()
+                cleanup_old_activitypub_logs()
+                print('All maintenance tasks completed synchronously (debug mode)')
+            else:
+                cleanup_old_notifications.delay()
+                cleanup_send_queue.delay()
+                process_expired_bans.delay()
+                remove_old_community_content.delay()
+                update_hashtag_counts.delay()
+                delete_old_soft_deleted_content.delay()
+                update_community_stats.delay()
+                cleanup_old_voting_data.delay()
+                unban_expired_users.delay()
+                sync_defederation_subscriptions.delay()
+                check_instance_health.delay()
+                monitor_healthy_instances.delay()
+                recalculate_user_attitudes.delay()
+                calculate_community_activity_stats.delay()
+                cleanup_old_activitypub_logs.delay()
+                print('All maintenance tasks scheduled successfully (production mode)')
 
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
@@ -748,14 +798,15 @@ def register(app):
         publish_scheduled_posts()
 
     def publish_scheduled_posts():
-        with app.app_context():
-            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.scheduled_for < utcnow(),
+            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED,
                                           Post.deleted == False, Post.repeat != 'none'):
+                date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+                if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
+                    continue
                 if post.repeat and post.repeat != 'once':
                     next_occurrence = post.scheduled_for + find_next_occurrence(post)
                 else:
                     next_occurrence = None
-
                 # One shot scheduled post
                 if not next_occurrence:
                     post.status = POST_STATUS_PUBLISHED

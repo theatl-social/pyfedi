@@ -70,8 +70,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
             followed = db.session.execute(text(
                 'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
                                           {"community_id": post.community_id, "user_id": user_id}).scalar()
+            read_post = db.session.execute(
+                text('SELECT user_id FROM "read_posts" WHERE read_post_id = :post_id and user_id = :user_id'),
+                {'post_id': post.id, 'user_id': user_id}).scalar()
         else:
-            bookmarked = post_sub = followed = False
+            bookmarked = post_sub = followed = read_post = False
         if not stub:
             banned = post.community_id in communities_banned_from(post.user_id)
             moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
@@ -90,6 +93,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
 
         my_vote = int(effect)
         saved = True if bookmarked else False
+        read = True if read_post else False
         activity_alert = True if post_sub else False
         creator_banned_from_community = True if banned else False
         creator_is_moderator = True if moderator else False
@@ -97,7 +101,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
         v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False,
               'subscribed': subscribe_type,
-              'saved': saved, 'read': False, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote,
+              'saved': saved, 'read': read, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote,
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}

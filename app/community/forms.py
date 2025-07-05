@@ -1,5 +1,6 @@
 import re
 from io import BytesIO
+from zoneinfo import ZoneInfo
 
 import pytesseract
 from PIL import Image, UnidentifiedImageError
@@ -17,7 +18,7 @@ from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
 from app.models import Community, Site, utcnow, User, Feed
-from app.utils import domain_from_url, MultiCheckboxField
+from app.utils import domain_from_url, MultiCheckboxField, get_timezones
 
 
 class AddCommunityForm(FlaskForm):
@@ -170,8 +171,12 @@ class CreatePostForm(FlaskForm):
                          choices=[('none', _l('None')), ('once', _l('Only once')), ('daily', _l('Daily')),
                                   ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
                          render_kw={'class': 'form-select'})
-    timezone = HiddenField(render_kw={'id': 'timezone'})
+    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control tom-select"})
     submit = SubmitField(_l('Publish'))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.timezone.choices = get_timezones()
 
     def validate_nsfw(self, field):
         if g.site.enable_nsfw is False:
@@ -188,9 +193,11 @@ class CreatePostForm(FlaskForm):
         return True
 
     def validate_scheduled_for(self, field):
-        if field.data and field.data < utcnow():
-            self.scheduled_for.errors.append(_l('Choose a time in the future.'))
-            return False
+        if field.data:
+            date_with_tz = field.data.replace(tzinfo=ZoneInfo(self.timezone.data))
+            if date_with_tz.astimezone(ZoneInfo('UTC')) < utcnow(naive=False):
+                self.scheduled_for.errors.append(_l('Choose a time in the future.'))
+                return False
         return True
 
     def validate_repeat(self, field):
@@ -256,7 +263,7 @@ class CreateImageForm(CreatePostForm):
                 # Do not allow fascist meme content
                 try:
                     if '.avif' in uploaded_file.filename:
-                        import pillow_avif
+                        import pillow_avif  # NOQA
                     image_text = pytesseract.image_to_string(Image.open(BytesIO(uploaded_file.read())).convert('L'))
                 except FileNotFoundError:
                     image_text = ''

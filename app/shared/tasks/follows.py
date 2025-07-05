@@ -2,7 +2,7 @@ from app import cache, celery, db
 from app.constants import *
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityBan, CommunityJoinRequest, User
-from app.utils import community_membership, gibberish, joined_communities, instance_banned
+from app.utils import community_membership, gibberish, joined_communities, instance_banned, get_task_session
 
 from flask import current_app, flash, Markup
 from flask_babel import _
@@ -35,12 +35,13 @@ sync:
 
 @celery.task
 def join_community(send_async, user_id, community_id, src):
+    session = get_task_session()
     try:
-        user = User.query.filter_by(id=user_id).one()
-        community = Community.query.filter_by(id=community_id).one()
+        user = session.query(User).filter_by(id=user_id).one()
+        community = session.query(Community).filter_by(id=community_id).one()
 
         pre_load_message = {}
-        banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community_id).first()
+        banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community_id).first()
         if banned:
             if not send_async:
                 if src == SRC_WEB:
@@ -69,8 +70,8 @@ def join_community(send_async, user_id, community_id, src):
 
         if not community.is_local() and community.instance.online():
             join_request = CommunityJoinRequest(user_id=user_id, community_id=community_id)
-            db.session.add(join_request)
-            db.session.commit()
+            session.add(join_request)
+            session.commit()
 
             follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
             follow = {
@@ -98,17 +99,18 @@ def join_community(send_async, user_id, community_id, src):
 
         return True
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
 @celery.task
 def leave_community(send_async, user_id, community_id):
+    session = get_task_session()
     try:
-        user = User.query.filter_by(id=user_id).one()
-        community = Community.query.filter_by(id=community_id).one()
+        user = session.query(User).filter_by(id=user_id).one()
+        community = session.query(Community).filter_by(id=community_id).one()
 
         cache.delete_memoized(community_membership, user, community)
         cache.delete_memoized(joined_communities, user.id)
@@ -116,9 +118,9 @@ def leave_community(send_async, user_id, community_id):
         if community.is_local():
             return
 
-        join_request = CommunityJoinRequest.query.filter_by(user_id=user_id, community_id=community_id).one()
-        db.session.delete(join_request)
-        db.session.commit()
+        join_request = session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).one()
+        session.delete(join_request)
+        session.commit()
 
         if (not community.instance.online() or
            user.has_blocked_instance(community.instance.id) or
@@ -145,9 +147,9 @@ def leave_community(send_async, user_id, community_id):
 
         send_post_request(community.ap_inbox_url, undo, user.private_key, user.public_url() + '#main-key', timeout=10)
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 

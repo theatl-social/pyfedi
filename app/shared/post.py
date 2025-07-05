@@ -266,10 +266,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         else:
             flair = []
         scheduled_for = input.scheduled_for.data
-        if scheduled_for and hasattr(input, 'timezone') and input.timezone.data:
-            scheduled_for = scheduled_for.replace(tzinfo=ZoneInfo(input.timezone.data))
-            scheduled_for = scheduled_for.astimezone(ZoneInfo('UTC'))
         repeat = input.repeat.data
+        timezone = input.timezone.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -283,10 +281,12 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.type = type
     post.scheduled_for = scheduled_for
     post.repeat = repeat
+    post.timezone = timezone
 
-    if post.scheduled_for and post.scheduled_for.replace(tzinfo=None) > utcnow():
+    date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+    if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
         post.status = POST_STATUS_SCHEDULED
-
+    
     url_changed = False
     hash = None
 
@@ -349,7 +349,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if file_ext.lower() == '.heic':
             register_heif_opener()
         if file_ext.lower() == '.avif':
-            import pillow_avif  # do not remove
+            import pillow_avif  # NOQA  # do not remove
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
@@ -359,7 +359,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
 
         if image_format == 'AVIF':
-            import pillow_avif  # do not remove
+            import pillow_avif  # NOQA  # do not remove
 
         if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)

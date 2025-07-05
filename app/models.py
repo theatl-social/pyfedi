@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from time import time
 from typing import List, Union
 from urllib.parse import urlparse, parse_qs, urlencode
+from zoneinfo import ZoneInfo
 
 import arrow
 import boto3
@@ -32,9 +33,10 @@ from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPT
     POST_STATUS_PUBLISHED
 
 
-# datetime.utcnow() is depreciated in Python 3.12 so it will need to be swapped out eventually
-def utcnow():
-    return datetime.utcnow()
+def utcnow(naive=True):
+    if naive:
+        return datetime.now(ZoneInfo('UTC')).replace(tzinfo=None)
+    return datetime.now(ZoneInfo('UTC'))
 
 
 class PostReplyValidationError(Exception):
@@ -1375,6 +1377,7 @@ class Post(db.Model):
     repeat = db.Column(db.String(20), default='')  # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
+    timezone = db.Column(db.String(30))
     flair = db.relationship('CommunityFlair', lazy='joined', secondary=post_flair,
                             backref=db.backref('posts', lazy='dynamic'))
 

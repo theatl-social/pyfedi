@@ -7,13 +7,14 @@ import string
 
 from app import celery, httpx_client, db
 from app.models import UserRegistration
-from app.utils import get_setting
+from app.utils import get_setting, get_task_session
 
 
 @celery.task
 def check_user_application(application_id, send_async=True):
+    session = get_task_session()
     try:
-        application = UserRegistration.query.get(application_id)
+        application = session.query(UserRegistration).get(application_id)
         if not application or not application.user:
             return
 
@@ -78,11 +79,11 @@ def check_user_application(application_id, send_async=True):
                 continue
 
         if num_banned > 0:
-            db.session.execute(text('UPDATE "user_registration" SET warning = :warning WHERE id = :id',
+            session.execute(text('UPDATE "user_registration" SET warning = :warning WHERE id = :id',
                                     {'warning': f"{num_banned} instances have banned this account.", 'id': application_id}))
-            db.session.commit()
+            session.commit()
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()

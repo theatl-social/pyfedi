@@ -1,7 +1,7 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
 from app.models import Community, Instance, Post, PostReply, User, UserFollower, File
-from app.utils import gibberish, instance_banned
+from app.utils import gibberish, instance_banned, get_task_session
 
 from flask import current_app
 
@@ -164,9 +164,10 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None)
 
 @celery.task
 def delete_posts_with_blocked_images(post_ids, user_id, send_async):
+    session = get_task_session()
     try:
         for post_id in post_ids:
-            post = Post.query.get(post_id)
+            post = session.query(Post).get(post_id)
             if post:
                 if post.url:
                     post.calculate_cross_posts(delete_only=True)
@@ -175,13 +176,13 @@ def delete_posts_with_blocked_images(post_ids, user_id, send_async):
                 post.author.post_count -= 1
                 post.community.post_count -= 1
                 if post.image_id:
-                    file = File.query.get(post.image_id)
+                    file = session.query(File).get(post.image_id)
                     file.delete_from_disk()
-                db.session.commit()
+                session.commit()
 
             delete_object(user_id, post, is_post=True, reason='Contains blocked image')
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()

@@ -7,13 +7,14 @@ import mimetypes
 import random
 import urllib
 import warnings
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from datetime import datetime, timedelta, date
-from functools import wraps
+from functools import wraps, lru_cache
 from json import JSONDecodeError
 from time import sleep
 from typing import List
 from urllib.parse import urlparse, parse_qs, urlencode
+from zoneinfo import available_timezones
 
 import flask
 import httpx
@@ -418,7 +419,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                                          extras={'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
                                                   'tg-spoiler': True,
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True})
@@ -1439,7 +1440,7 @@ def url_to_thumbnail_file(filename) -> File:
             final_ext = file_extension
 
             if medium_image_format == 'AVIF':
-                import pillow_avif
+                import pillow_avif  # NOQA
 
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(temp_file_path) as img:
@@ -2564,3 +2565,22 @@ def render_from_tpl(tpl: str) -> str:
         return replacements.get(key, match.group(0))
 
     return pattern.sub(_sub, tpl)
+
+@lru_cache(maxsize=None)
+def get_timezones():
+    """
+    returns an OrderedDict of timezones:
+    {
+       'Africa': [('Africa/Abidjan','Africa/Abidjan'), ...],
+       'America': [('America/New_York','America/New_York'), ...],
+       ...
+    }
+    """
+    by_region = OrderedDict()
+    for tz in sorted(available_timezones()):
+        if '/' in tz:
+            region, _ = tz.split('/', 1)
+            if region in ['Arctic', 'Atlantic', 'Etc', 'Other']:
+                continue
+            by_region.setdefault(region, []).append((tz, tz))
+    return by_region
