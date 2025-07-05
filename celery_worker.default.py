@@ -11,3 +11,4 @@ if not app.debug:
 app.app_context().push()
 
 from app.shared.tasks import maintenance
+from app.shared.tasks import follows, likes, notes, deletes, flags, pages, locks, adds, removes, groups, users, blocks
