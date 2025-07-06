@@ -1,10 +1,10 @@
 from datetime import datetime
+from urllib.parse import urlsplit
 
 from flask import redirect, url_for, flash, request, make_response, session, Markup
 from flask_babel import _
 from flask_login import login_user
 from sqlalchemy.exc import NoResultFound
-from werkzeug.urls import url_parse
 
 from app import db, cache
 from app.api.alpha.utils.validators import required, string_expected
@@ -93,7 +93,7 @@ def log_user_in(input, src):
 
     if src == SRC_WEB:
         next_page = request.args.get('next')
-        if not next_page or url_parse(next_page).netloc != '':
+        if not next_page or urlsplit(next_page).netloc != '':
             if len(user.communities()) == 0:
                 next_page = url_for('auth.trump_musk')
             else:
