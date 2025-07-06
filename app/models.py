@@ -772,6 +772,7 @@ class Community(db.Model):
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
+        db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
 
 
 user_role = db.Table('user_role',
@@ -3192,6 +3193,16 @@ class SendQueue(db.Model):
     retry_reason = db.Column(db.String(255))
     created = db.Column(db.DateTime, default=utcnow)
     send_after = db.Column(db.DateTime, default=utcnow, index=True)
+
+
+class ActivityBatch(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)    # where the activity will be sent to
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)  # which community the activity came from
+    source_type = db.Column(db.Integer, index=True)       # the type of vote that caused this. PostVote, PostReplyVote
+    source_id = db.Column(db.Integer, index=True)         # the ID of the vote that caused this. When undo-ing a vote, look it up by source_id and delete it from this table (before the batch is sent). If not found, federate the undo.
+    payload = db.Column(db.JSON)
+    created = db.Column(db.DateTime, default=utcnow)
 
 
 class BlockedImage(db.Model):
