@@ -8,6 +8,7 @@ import random
 import urllib
 import warnings
 from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
 from datetime import datetime, timedelta, date
 from functools import wraps, lru_cache
 from json import JSONDecodeError
@@ -761,6 +762,10 @@ def mimetype_from_url(url):
     return mime_type
 
 
+def is_activitypub_request():
+    return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
+
+
 def validation_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -775,7 +780,7 @@ def validation_required(func):
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if (g.site.private_instance and current_user.is_authenticated) or g.site.private_instance is False:
+        if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.login'))
@@ -1870,6 +1875,11 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if decoded:
         user_id = decoded['sub']
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        if user.password_updated_at:
+            issued_at_time = decoded['iat']
+            password_updated_time = int(user.password_updated_at.timestamp())
+            if issued_at_time < password_updated_time:
+                raise Exception('incorrect_login')
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
         if return_type and return_type == 'model':
@@ -1882,6 +1892,42 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
 def get_task_session() -> Session:
     # Use the same engine as the main app, but create an independent session
     return Session(bind=db.engine)
+
+
+@contextmanager
+def patch_db_session(task_session):
+    """Temporarily replace db.session with task_session for functions that use it internally"""
+    from app import db
+    from flask import has_request_context
+    
+    # Only patch if we're not in a Flask request context (i.e., in a Celery worker)
+    if has_request_context():
+        # In Flask request context, don't patch - just use the existing session
+        yield
+        return
+    
+    original_session = db.session
+    
+    # Create a wrapper that makes the task session work with Flask-SQLAlchemy's Model.query
+    class SessionWrapper:
+        def __init__(self, session):
+            self._session = session
+            
+        def __call__(self):
+            return self._session
+            
+        def __getattr__(self, name):
+            # Handle scoped session methods that don't exist on regular Session
+            if name == 'remove':
+                # For task sessions, we don't want to remove since we manage the lifecycle
+                return lambda: None
+            return getattr(self._session, name)
+    
+    db.session = SessionWrapper(task_session)
+    try:
+        yield
+    finally:
+        db.session = original_session
 
 
 def get_redis_connection(connection_string=None) -> redis.Redis:
@@ -2565,6 +2611,7 @@ def render_from_tpl(tpl: str) -> str:
         return replacements.get(key, match.group(0))
 
     return pattern.sub(_sub, tpl)
+
 
 @lru_cache(maxsize=None)
 def get_timezones():

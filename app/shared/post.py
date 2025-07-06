@@ -283,9 +283,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.repeat = repeat
     post.timezone = timezone
 
-    date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
-    if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
-        post.status = POST_STATUS_SCHEDULED
+    if scheduled_for:
+        date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+        if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
+            post.status = POST_STATUS_SCHEDULED
     
     url_changed = False
     hash = None
