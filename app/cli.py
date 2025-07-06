@@ -870,12 +870,12 @@ def register(app):
     def send_batched_activities():
         instances_and_communities = db.session.execute(text("""SELECT DISTINCT instance_id, community_id 
                                                                 FROM "activity_batch" 
-                                                                ORDER BY instance_id, community_id""")).scalars()
+                                                                ORDER BY instance_id, community_id""")).fetchall()
         current_instance = None
         for instances_and_community in instances_and_communities:
-            if current_instance is None or current_instance.id != instances_and_community['instance_id']:
-                current_instance = Instance.query.get(instances_and_community['instance_id'])
-            community = Community.query.get(instances_and_community['community_id'])
+            if current_instance is None or current_instance.id != instances_and_community[0]:
+                current_instance = Instance.query.get(instances_and_community[0])
+            community = Community.query.get(instances_and_community[1])
 
             announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
             actor = community.public_url()
@@ -893,7 +893,7 @@ def register(app):
             payloads = ActivityBatch.query.filter(ActivityBatch.instance_id == current_instance.id, ActivityBatch.community_id == community.id).order_by(ActivityBatch.created)
             delete_payloads = []
             for payload in payloads.all():
-                announce['object'].append(payload)
+                announce['object'].append(payload.payload)
                 delete_payloads.append(payload.id)
             send_post_request(current_instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
             ActivityBatch.query.filter(ActivityBatch.id.in_(delete_payloads)).delete()
