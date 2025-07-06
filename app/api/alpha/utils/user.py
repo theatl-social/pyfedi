@@ -162,21 +162,37 @@ def get_user_replies(auth, data, mentions=False):
 
     user_id = authorise_api_user(auth)
 
-    if not mentions:
-        query = "SELECT targets FROM notification WHERE user_id = :user_id and \
-                (subtype = 'new_reply_on_followed_comment' or subtype = 'top_level_comment_on_followed_post')"
-    else:
-        query = "SELECT targets FROM notification WHERE user_id = :user_id and subtype = 'comment_mention'"
+    all_comment_ids = []
+    read_comment_ids = []
     if unread_only:
+        if not mentions:
+            query = "SELECT targets FROM notification WHERE user_id = :user_id and \
+                    (subtype = 'new_reply_on_followed_comment' or subtype = 'top_level_comment_on_followed_post')"
+        else:
+            query = "SELECT targets FROM notification WHERE user_id = :user_id and subtype = 'comment_mention'"
         query += " AND read = false"
-    targets = db.session.execute(text(query), {'user_id': user_id}).scalars()
+        targets = db.session.execute(text(query), {'user_id': user_id}).scalars()
 
-    comment_ids = []
-    for target in targets:
-        if 'comment_id' in target:
-            comment_ids.append(target['comment_id'])
+        for target in targets:
+            if 'comment_id' in target:
+                all_comment_ids.append(target['comment_id'])
+    else:
+        if not mentions:
+            query = "SELECT targets, read FROM notification WHERE user_id = :user_id and \
+                    (subtype = 'new_reply_on_followed_comment' or subtype = 'top_level_comment_on_followed_post')"
+        else:
+            query = "SELECT targets, read FROM notification WHERE user_id = :user_id and subtype = 'comment_mention'"
+        results = db.session.execute(text(query), {'user_id': user_id}).all()
 
-    replies = PostReply.query.filter(PostReply.id.in_(comment_ids))
+        for result in results:
+            # result[0] = Notification.targets
+            # result[1] = Notification.read
+            if 'comment_id' in result[0]:
+                all_comment_ids.append(result[0]['comment_id'])
+            if result[1] == True:
+                read_comment_ids.append(result[0]['comment_id'])
+
+    replies = PostReply.query.filter(PostReply.id.in_(all_comment_ids))
     if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
     elif sort == "Top":
@@ -189,7 +205,8 @@ def get_user_replies(auth, data, mentions=False):
 
     reply_list = []
     for reply in replies:
-        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id))
+        read = True if reply.id in read_comment_ids else False
+        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id, read=read))
     list_json = {
         "replies": reply_list,
         'next_page': str(replies.next_num) if replies.next_num else None
