@@ -803,7 +803,7 @@ def register(app):
 
     def publish_scheduled_posts():
             for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED,
-                                          Post.deleted == False, Post.repeat != 'none'):
+                                          Post.deleted == False, Post.repeat != 'none', Post.scheduled_for != None):
                 date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
                 if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
                     continue
