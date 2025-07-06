@@ -32,11 +32,10 @@ def login():
             next_page = url_for('main.index')
         return redirect(next_page)
 
-    ip = ip_address()
-    country = get_country(ip)
-
     form = LoginForm()
     if form.validate_on_submit():
+        ip = ip_address()
+        country = get_country(ip)
         form.user_name.data = form.user_name.data.strip()
         user = User.query.filter(func.lower(User.user_name) == func.lower(form.user_name.data)).\
             filter_by(ap_id=None).filter_by(deleted=False).first()
