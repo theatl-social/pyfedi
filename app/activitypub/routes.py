@@ -781,6 +781,13 @@ def process_inbox_request(request_json, store_ap_json):
                         else:
                             log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'Could not resolve post')
                         return
+                    elif isinstance(request_json['object'], list):  # PieFed can Announce an unlimited amount of objects at once, as long as they are all from the same community.
+                        for obj in request_json['object']:
+                            if obj['audience'] == request_json['actor']:    # Check if same community. This ensures the HTTP Sig on the original announce is valid for all objects.
+                                fake_activity = request_json.copy()
+                                fake_activity['object'] = obj
+                                process_inbox_request(fake_activity, store_ap_json)
+                        return
 
                     if not feed:
                         user_ap_id = request_json['object']['actor']

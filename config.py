@@ -140,3 +140,5 @@ class Config(object):
 
     # Country Header sourcing
     COUNTRY_SOURCE_HEADER = os.environ.get('COUNTRY_SOURCE_HEADER') or ''
+
+    FEP_AWESOME = os.environ.get('FEP_AWESOME') or False

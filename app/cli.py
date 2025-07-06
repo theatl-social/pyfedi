@@ -21,7 +21,7 @@ from flask_babel import _
 from sqlalchemy import or_, desc, text
 
 from app import db, cache
-from app.activitypub.signature import RsaKeys, send_post_request
+from app.activitypub.signature import RsaKeys, send_post_request, default_context
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
@@ -29,7 +29,8 @@ from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll
+    InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
+    ActivityBatch
 from app.post.routes import post_delete_post
 from app.shared.tasks import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
@@ -784,6 +785,9 @@ def register(app):
 
                     publish_scheduled_posts()
 
+                    if current_app.config['FEP_AWESOME']:
+                        send_batched_activities()
+
             except redis.exceptions.LockError:
                 print('Send queue is still running - stopping this process to avoid duplication.')
                 return
@@ -858,6 +862,42 @@ def register(app):
 
                     task_selector('make_post', post_id=scheduled_post.id)
                     notify_about_post(scheduled_post)
+
+    @app.cli.command('send-batched-activities')
+    def send_batched_activities_command():
+        send_batched_activities()
+
+    def send_batched_activities():
+        instances_and_communities = db.session.execute(text("""SELECT DISTINCT instance_id, community_id 
+                                                                FROM "activity_batch" 
+                                                                ORDER BY instance_id, community_id""")).scalars()
+        current_instance = None
+        for instances_and_community in instances_and_communities:
+            if current_instance is None or current_instance.id != instances_and_community['instance_id']:
+                current_instance = Instance.query.get(instances_and_community['instance_id'])
+            community = Community.query.get(instances_and_community['community_id'])
+
+            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            actor = community.public_url()
+            to = ["https://www.w3.org/ns/activitystreams#Public"]
+            cc = [community.ap_followers_url]
+            announce = {
+                'id': announce_id,
+                'type': 'Announce',
+                'actor': actor,
+                'object': [],
+                '@context': default_context(),
+                'to': to,
+                'cc': cc
+            }
+            payloads = ActivityBatch.query.filter(ActivityBatch.instance_id == current_instance.id, ActivityBatch.community_id == community.id).order_by(ActivityBatch.created)
+            delete_payloads = []
+            for payload in payloads.all():
+                announce['object'].append(payload)
+                delete_payloads.append(payload.id)
+            send_post_request(current_instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+            ActivityBatch.query.filter(ActivityBatch.id.in_(delete_payloads)).delete()
+
 
     @app.cli.command('move-files-to-s3')
     def move_files_to_s3():
