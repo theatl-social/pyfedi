@@ -2,22 +2,13 @@ import random
 from datetime import datetime, timedelta
 from typing import Any
 from unicodedata import normalize
+from urllib.parse import urlsplit
 
-from flask import (
-    current_app,
-    flash,
-    g,
-    make_response,
-    redirect,
-    request,
-    session,
-    url_for,
-)
+from flask import current_app, flash, g, make_response, redirect, request, session, url_for
 from flask_babel import _
 from flask_login import current_user, login_user
 from markupsafe import Markup
 from sqlalchemy import func
-from werkzeug.urls import url_parse
 from wtforms import Label
 
 from app import cache, db
@@ -25,19 +16,8 @@ from app.constants import NOTIF_REGISTRATION
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap
 from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow
-from app.utils import (
-    banned_ip_addresses,
-    blocked_referrers,
-    finalize_user_setup,
-    get_request,
-    get_setting,
-    gibberish,
-    ip_address,
-    markdown_to_html,
-    render_template,
-    user_cookie_banned,
-    user_ip_banned,
-)
+from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
+    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
 
 
 # Return a random string of 6 letter/digits.
@@ -349,7 +329,7 @@ def render_registration_form(form):
 
 def redirect_next_page():
     next_page = request.args.get("next")
-    if not next_page or url_parse(next_page).netloc != "":
+    if not next_page or urlsplit(next_page).netloc != "":
         next_page = url_for("main.index")
     return redirect(next_page)
 
@@ -470,7 +450,7 @@ def sync_user_with_ldap(user, password):
 
 def determine_next_page():
     next_page = request.args.get("next")
-    if not next_page or url_parse(next_page).netloc != "":
+    if not next_page or urlsplit(next_page).netloc != "":
         next_page = url_for(
             "auth.trump_musk" if not current_user.communities() else "main.index"
         )

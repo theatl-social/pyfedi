@@ -1,45 +1,19 @@
 from datetime import datetime
 
-from flask import (
-    flash,
-    g,
-    make_response,
-    redirect,
-    request,
-    url_for,
-)
+from flask import flash, g, make_response, redirect, request, url_for
 from flask_babel import _
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import func
 
 from app import db, limiter, oauth
 from app.auth import bp
-from app.auth.forms import (
-    LoginForm,
-    RegisterByMastodonForm,
-    RegistrationForm,
-    ResetPasswordForm,
-    ResetPasswordRequestForm,
-)
+from app.auth.forms import LoginForm, RegisterByMastodonForm, RegistrationForm, ResetPasswordForm, ResetPasswordRequestForm
 from app.auth.oauth_util import handle_oauth_authorize
-from app.auth.util import (
-    handle_abandoned_open_instance,
-    notify_admins_of_registration,
-    process_login,
-    process_registration_form,
-    redirect_next_page,
-    render_login_form,
-    render_registration_form,
-)
-from app.email import (
-    send_password_reset_email,
-    send_registration_approved_email,
-)
+from app.auth.util import handle_abandoned_open_instance, notify_admins_of_registration, process_login, \
+    process_registration_form, redirect_next_page, render_login_form, render_registration_form
+from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
-from app.utils import (
-    finalize_user_setup,
-    render_template,
-)
+from app.utils import finalize_user_setup, render_template
 
 
 @bp.route("/login", methods=["GET", "POST"])
