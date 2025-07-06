@@ -36,7 +36,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes, login_required
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -245,7 +245,7 @@ def edit_profile(actor):
         current_user.title = form.title.data.strip()
         current_user.email = form.email.data.strip()
         # Email address has changed - request verification of new address
-        if form.email.data.strip() != old_email:
+        if form.email.data.strip() != old_email and get_setting('email_verification', True):
             current_user.verified = False
             verification_token = random_token(16)
             current_user.verification_token = verification_token
