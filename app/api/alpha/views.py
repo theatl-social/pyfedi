@@ -284,7 +284,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                    'hidden': not community.show_all,
                    'instance_id': community.instance_id if community.instance_id else 1,
                    'ap_domain': community.ap_domain})
-        if community.description and not stub:
+        if community.description:
             v1['description'] = community.description
         if not stub:
             v1['posting_warning'] = community.posting_warning
