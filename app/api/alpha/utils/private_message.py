@@ -61,20 +61,25 @@ def post_private_message_mark_as_read(auth, data):
     integer_expected(['private_message_id'], data)
     boolean_expected(['read'], data)
 
-    user_id = authorise_api_user(auth)
+    user = authorise_api_user(auth, return_type='model')
     message_id = data['private_message_id']
     read = data['read']
 
-    private_message = ChatMessage.query.filter_by(id=message_id, recipient_id=user_id).one()
+    private_message = ChatMessage.query.filter_by(id=message_id, recipient_id=user.id).one()
     private_message.read = read
 
-    notifications = Notification.query.filter_by(user_id=user_id, notif_type=NOTIF_MESSAGE, subtype='chat_message', read=False)
+    notif_read = not read
+    notifications = Notification.query.filter_by(user_id=user.id, notif_type=NOTIF_MESSAGE, subtype='chat_message', read=notif_read)
     for notification in notifications:
         if 'message_id' in notification.targets and notification.targets['message_id'] == message_id:
             notification.read = read
+            if read == True and user.unread_notifications > 0:
+                user.unread_notifications -= 1
+            else:
+                user.unread_notifications += 1
             break
-
     db.session.commit()
+
 
     return private_message_view(private_message, variant=2)
 
