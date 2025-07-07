@@ -13,7 +13,7 @@ from app.auth.util import handle_abandoned_open_instance, notify_admins_of_regis
     process_registration_form, redirect_next_page, render_login_form, render_registration_form
 from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
-from app.utils import finalize_user_setup, render_template
+from app.utils import finalize_user_setup, render_template, login_required
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -160,7 +160,16 @@ def permission_denied():
 
 @bp.route("/google_login")
 def google_login():
+    # If user is already logged in, redirect to connect route
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.google_connect'))
     return oauth.google.authorize_redirect(redirect_uri=url_for('auth.google_authorize', _external=True))
+
+
+@bp.route("/google_connect")
+@login_required
+def google_connect():
+    return oauth.google.authorize_redirect(redirect_uri=url_for('auth.google_connect_callback', _external=True))
 
 
 @bp.route("/google_authorize")
@@ -172,9 +181,76 @@ def google_authorize():
     )
 
 
+@bp.route("/google_connect_callback")
+@login_required
+def google_connect_callback():
+    try:
+        token = oauth.google.authorize_access_token()
+        resp = oauth.google.get('oauth2/v2/userinfo', token=token)
+        user_info = resp.json()
+
+        # Check if this OAuth ID is already connected to another account
+        existing_user = User.query.filter_by(google_oauth_id=user_info['id']).first()
+        if existing_user and existing_user.id != current_user.id:
+            flash(_('This Google account is already connected to another user.'), 'error')
+            return redirect(url_for('user.connect_oauth'))
+
+        # Connect the OAuth ID to the current user
+        current_user.google_oauth_id = user_info['id']
+        db.session.commit()
+
+        flash(_('Your Google account has been connected successfully.'), 'success')
+        return redirect(url_for('user.connect_oauth'))
+    except Exception as e:
+        flash(_('Failed to connect Google account: %(error)s', error=str(e)), 'error')
+        return redirect(url_for('user.connect_oauth'))
+
+
 @bp.route("/mastodon_login")
 def mastodon_login():
+    # If user is already logged in, redirect to connect route
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.mastodon_connect'))
     return oauth.mastodon.authorize_redirect(redirect_uri="urn:ietf:wg:oauth:2.0:oob")  # static redirect_uri
+
+
+@bp.route("/mastodon_connect", methods=["GET", "POST"])
+@login_required
+def mastodon_connect():
+    from app.auth.forms import ConnectMastodonForm
+
+    form = ConnectMastodonForm()
+
+    if form.validate_on_submit():
+        try:
+            # Exchange the authorization code for a token
+            token = oauth.mastodon.authorize_access_token(code=form.authorization_code.data)
+            resp = oauth.mastodon.get('v1/accounts/verify_credentials', token=token)
+            user_info = resp.json()
+
+            # Check if this OAuth ID is already connected to another account
+            existing_user = User.query.filter_by(mastodon_oauth_id=user_info['id']).first()
+            if existing_user and existing_user.id != current_user.id:
+                flash(_('This Mastodon account is already connected to another user.'), 'error')
+                return redirect(url_for('user.connect_oauth'))
+
+            # Connect the OAuth ID to the current user
+            current_user.mastodon_oauth_id = user_info['id']
+            db.session.commit()
+
+            flash(_('Your Mastodon account has been connected successfully.'), 'success')
+            return redirect(url_for('user.connect_oauth'))
+        except Exception as e:
+            flash(_('Failed to connect Mastodon account: %(error)s', error=str(e)), 'error')
+            return redirect(url_for('user.connect_oauth'))
+
+    # For Mastodon, we use the same static redirect URI
+    auth_url = oauth.mastodon.authorize_redirect(redirect_uri="urn:ietf:wg:oauth:2.0:oob")
+
+    # Extract the authorization URL from the response
+    auth_url = auth_url.headers.get('Location')
+
+    return render_template('auth/mastodon_connect.html', form=form, auth_url=auth_url)
 
 
 @bp.route("/mastodon_authorize", methods=["GET", "POST"])
@@ -189,7 +265,16 @@ def mastodon_authorize():
 
 @bp.route("/discord_login")
 def discord_login():
+    # If user is already logged in, redirect to connect route
+    if current_user.is_authenticated:
+        return redirect(url_for('auth.discord_connect'))
     return oauth.discord.authorize_redirect(redirect_uri=url_for('auth.discord_authorize', _external=True))
+
+
+@bp.route("/discord_connect")
+@login_required
+def discord_connect():
+    return oauth.discord.authorize_redirect(redirect_uri=url_for('auth.discord_connect_callback', _external=True))
 
 
 @bp.route("/discord_authorize")
@@ -199,3 +284,28 @@ def discord_authorize():
         user_info_endpoint="users/@me",
         oauth_id_key="discord_oauth_id",
     )
+
+
+@bp.route("/discord_connect_callback")
+@login_required
+def discord_connect_callback():
+    try:
+        token = oauth.discord.authorize_access_token()
+        resp = oauth.discord.get("users/@me", token=token)
+        user_info = resp.json()
+
+        # Check if this OAuth ID is already connected to another account
+        existing_user = User.query.filter_by(discord_oauth_id=user_info['id']).first()
+        if existing_user and existing_user.id != current_user.id:
+            flash(_('This Discord account is already connected to another user.'), 'error')
+            return redirect(url_for('user.connect_oauth'))
+
+        # Connect the OAuth ID to the current user
+        current_user.discord_oauth_id = user_info['id']
+        db.session.commit()
+
+        flash(_('Your Discord account has been connected successfully.'), 'success')
+        return redirect(url_for('user.connect_oauth'))
+    except Exception as e:
+        flash(_('Failed to connect Discord account: %(error)s', error=str(e)), 'error')
+        return redirect(url_for('user.connect_oauth'))

@@ -1,0 +1,36 @@
+{% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap/form.html' import render_form -%}
+
+{% block app_content -%}
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6">
+                    <div class="card-title text-center">{{ _('Connect Mastodon Account') }}</div>
+                    <div class="alert alert-info">
+                        <p>{{ _('To connect your Mastodon account, follow these steps:') }}</p>
+                        <ol>
+                            <li>{{ _('Click the "Authorize on Mastodon" button below') }}</li>
+                            <li>{{ _('Log in to your Mastodon account if needed') }}</li>
+                            <li>{{ _('Authorize the application') }}</li>
+                            <li>{{ _('Copy the authorization code provided by Mastodon') }}</li>
+                            <li>{{ _('Paste the code in the field below and submit the form') }}</li>
+                        </ol>
+                    </div>
+                    <div class="text-center mb-4">
+                        <a href="{{ auth_url }}" class="btn btn-primary" target="_blank">
+                            {{ _('Authorize on Mastodon') }}
+                        </a>
+                    </div>
+                    <form method="post">
+                        {{ render_form(form) }}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock -%}
