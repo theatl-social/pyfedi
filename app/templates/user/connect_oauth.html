@@ -40,7 +40,7 @@
                                             <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                         </p>
                                         <form method="post" class="mt-auto">
-                                            {{ form.csrf_token() }}
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="disconnect_provider" value="google">
                                             <button type="submit" class="btn btn-outline-danger">
                                                 {{ _('Disconnect') }}
@@ -72,7 +72,7 @@
                                             <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                         </p>
                                         <form method="post" class="mt-auto">
-                                            {{ form.csrf_token() }}
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="disconnect_provider" value="discord">
                                             <button type="submit" class="btn btn-outline-danger">
                                                 {{ _('Disconnect') }}
@@ -104,7 +104,7 @@
                                             <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                         </p>
                                         <form method="post" class="mt-auto">
-                                            {{ form.csrf_token() }}
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                             <input type="hidden" name="disconnect_provider" value="mastodon">
                                             <button type="submit" class="btn btn-outline-danger">
                                                 {{ _('Disconnect') }}
