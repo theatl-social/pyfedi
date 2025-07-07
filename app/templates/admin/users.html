@@ -58,9 +58,9 @@
                    </button>
                </th>
                <th>
-                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC NULLS LAST' else ' DESC' }} NULLS LAST" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
+                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC' else ' DESC' }}" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
                        {{ _('Attitude') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC NULLS LAST' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC NULLS LAST' }}"></span>
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC' }}"></span>
                    </button>
                </th>
                <th>
