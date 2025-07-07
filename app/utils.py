@@ -2119,9 +2119,14 @@ def dedupe_post_ids(post_ids) -> List[int]:
     if post_ids is None or len(post_ids) == 0:
         return result
     seen_before = set()
+    priority = set()
     for post_id in post_ids:
-        if post_id[1]:
+        if post_id[1] and post_id[2] in low_value_reposters():
+            seen_before.add(post_id[0])
+            priority.update(post_id[1])
+        elif post_id[1] and post_id[0] not in priority:
             seen_before.update(post_id[1])
+            priority.difference_update(post_id[1])
         if post_id[0] not in seen_before:
             result.append(post_id[0])
     return result
@@ -2142,13 +2147,13 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             return json.loads(redis_client.get(result_id))
 
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
-        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.banned is false AND c.show_all is true']
         if current_user.is_authenticated and current_user.hide_low_quality:
             post_id_where.append('c.low_quality is false')
         params = {}
     else:
-        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
     # filter out nsfw and nsfl if desired
@@ -2668,3 +2673,11 @@ def get_timezones():
                 continue
             by_region.setdefault(region, []).append((tz, tz))
     return by_region
+
+
+@cache.memoize(timeout=86400)
+def low_value_reposters() -> List[int]:
+    # update when PR #1031 is merged
+    result = db.session.execute(text('SELECT id FROM "user" WHERE user_name = :username or bot = true'),
+                                {"username": "cm0002"}).scalars()
+    return list(result)
