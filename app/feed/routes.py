@@ -1049,7 +1049,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -1093,7 +1093,7 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @bp.route('/feed/lookup/<feedname>/<domain>')

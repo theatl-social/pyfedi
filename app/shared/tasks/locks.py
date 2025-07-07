@@ -34,7 +34,7 @@ def lock_post(send_async, user_id, post_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -49,7 +49,7 @@ def unlock_post(send_async, user_id, post_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def lock_object(user_id, object, is_undo=False):

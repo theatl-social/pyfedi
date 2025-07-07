@@ -30,7 +30,7 @@ def cleanup_old_notifications():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -45,7 +45,7 @@ def cleanup_send_queue():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -95,7 +95,7 @@ def process_expired_bans():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -122,7 +122,7 @@ def remove_old_community_content():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -143,7 +143,7 @@ def update_hashtag_counts():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -188,7 +188,7 @@ def delete_old_soft_deleted_content():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -220,7 +220,7 @@ def update_community_stats():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -280,7 +280,7 @@ def cleanup_old_voting_data():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -296,7 +296,7 @@ def unban_expired_users():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -314,7 +314,7 @@ def sync_defederation_subscriptions():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -395,7 +395,7 @@ def check_instance_health():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -536,7 +536,7 @@ def monitor_healthy_instances():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -556,7 +556,7 @@ def recalculate_user_attitudes():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -623,7 +623,7 @@ def calculate_community_activity_stats():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -638,4 +638,4 @@ def cleanup_old_activitypub_logs():
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()

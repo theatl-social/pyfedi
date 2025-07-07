@@ -61,7 +61,7 @@ def unsubscribe_from_everything_then_delete_task(user_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def unsubscribe_from_community(community, user):
@@ -299,4 +299,4 @@ def move_community_images_to_here(community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()

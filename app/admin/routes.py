@@ -963,7 +963,7 @@ def import_bans_task(filename):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @bp.route('/activities', methods=['GET'])
@@ -1226,7 +1226,7 @@ def unsubscribe_everyone_then_delete_task(community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @bp.route('/topics', methods=['GET'])

@@ -33,7 +33,7 @@ def report_reply(send_async, user_id, reply_id, summary):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -48,7 +48,7 @@ def report_post(send_async, user_id, post_id, summary):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def report_object(user_id, object, summary):

@@ -86,4 +86,4 @@ def check_user_application(application_id, send_async=True):
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()

@@ -211,7 +211,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def actor_to_community(actor) -> Community:
@@ -336,7 +336,7 @@ def delete_post_from_community_task(post_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def delete_post_reply_from_community(post_reply_id):
@@ -401,7 +401,7 @@ def delete_post_reply_from_community_task(post_reply_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def remove_old_file(file_id):
@@ -674,7 +674,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 def community_in_list(community_id, community_list):

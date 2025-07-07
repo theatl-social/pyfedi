@@ -678,7 +678,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @bp.route('/<actor>/unsubscribe', methods=['GET', 'POST'])

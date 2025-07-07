@@ -161,7 +161,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",

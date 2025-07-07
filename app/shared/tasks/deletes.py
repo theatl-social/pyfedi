@@ -35,7 +35,7 @@ def delete_reply(send_async, user_id, reply_id, reason=None):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -50,7 +50,7 @@ def restore_reply(send_async, user_id, reply_id, reason=None):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -65,7 +65,7 @@ def delete_post(send_async, user_id, post_id, reason=None):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -80,7 +80,7 @@ def restore_post(send_async, user_id, post_id, reason=None):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -95,7 +95,7 @@ def delete_community(send_async, user_id, community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -110,7 +110,7 @@ def restore_community(send_async, user_id, community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def delete_object(user_id, object, is_post=False, is_restore=False, reason=None, session=None):
@@ -241,4 +241,4 @@ def delete_posts_with_blocked_images(post_ids, user_id, send_async):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()

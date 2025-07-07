@@ -48,7 +48,7 @@ def ban_from_site(send_async, user_id, mod_id, expiry, reason):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -62,7 +62,7 @@ def unban_from_site(send_async, user_id, mod_id, expiry, reason):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -76,7 +76,7 @@ def ban_from_community(send_async, user_id, mod_id, community_id, expiry, reason
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -90,7 +90,7 @@ def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reas
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=False):

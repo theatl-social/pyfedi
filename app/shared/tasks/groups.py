@@ -140,4 +140,4 @@ def edit_community(send_async, user_id, community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()

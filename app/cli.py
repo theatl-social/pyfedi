@@ -801,7 +801,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.remove()
+                session.close()
 
     @app.cli.command('publish-scheduled-posts')
     def publish_scheduled_posts_command():
@@ -1105,7 +1105,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.remove()
+                session.close()
 
     @app.cli.command("process_email_bounces")
     def process_email_bounces():
@@ -1178,7 +1178,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.remove()
+                session.close()
 
     @app.cli.command("clean_up_old_activities")
     def clean_up_old_activities():
@@ -1192,7 +1192,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.remove()
+                session.close()
 
     @app.cli.command("detect_vote_manipulation")
     def detect_vote_manipulation():
@@ -1702,7 +1702,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.remove()
+                session.close()
 
 
 def parse_communities(interests_source, segment):

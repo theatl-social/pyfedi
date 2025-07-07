@@ -35,7 +35,7 @@ def sticky_post(send_async, user_id, post_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -50,7 +50,7 @@ def add_mod(send_async, user_id, mod_id, community_id):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def add_object(user_id, object, community_id=None):

@@ -1578,7 +1578,7 @@ def process_inbox_request(request_json, store_ap_json):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 @celery.task
@@ -1605,7 +1605,7 @@ def process_delete_request(request_json, store_ap_json):
             session.rollback()
             raise
         finally:
-            session.remove()
+            session.close()
 
 
 def announce_activity_to_followers(community: Community, creator: User, activity, can_batch=False):

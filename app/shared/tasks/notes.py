@@ -60,7 +60,7 @@ def make_reply(send_async, reply_id, parent_id):
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 @celery.task
@@ -72,7 +72,7 @@ def edit_reply(send_async, reply_id, parent_id):
         session.rollback()
         raise
     finally:
-        session.remove()
+        session.close()
 
 
 def send_reply(reply_id, parent_id, edit=False, session=None):
