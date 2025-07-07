@@ -1,4 +1,4 @@
-urllib3==1.26.11
+urllib3~=1.26.20
 Flask==2.3.2
 python-dotenv==1.0.0
 flask-wtf==1.1.1
@@ -18,7 +18,7 @@ cryptography==44.0.2
 Bootstrap-Flask==2.3.0
 arrow==1.2.3
 pyld==2.0.4
-boto3==1.28.35
+boto3~=1.39.0
 markdown2==2.5.3
 beautifulsoup4==4.12.2
 flask-caching==2.0.2

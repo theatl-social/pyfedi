@@ -2143,7 +2143,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
 
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
         post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ['c.banned is false ']
+        post_id_where = ['c.banned is false AND c.show_all is true']
         if current_user.is_authenticated and current_user.hide_low_quality:
             post_id_where.append('c.low_quality is false')
         params = {}
@@ -2585,6 +2585,43 @@ def get_recipient_language(user_id):
         lang_to_use = 'en'
 
     return lang_to_use
+
+
+def safe_order_by(sort_param: str, model, allowed_fields: set):
+    """
+    Returns a SQLAlchemy order_by clause for a given model and sort parameter. Guards against SQL injection.
+
+    Parameters:
+        sort_param (str): The user-supplied sort string (e.g., 'name desc').
+        model (db.Model): The SQLAlchemy model class to sort on.
+        allowed_fields (set): A set of allowed field names (str) from the model.
+
+    Returns:
+        A SQLAlchemy order_by clause (asc/desc column expression).
+
+    Example usage:
+        sort_param = request.args.get('sort_by', 'post_reply_count desc')
+        allowed_fields = {'name', 'created_at', 'post_reply_count'}
+
+        communities = communities.order_by(
+            safe_order_by(sort_param, Community, allowed_fields)
+        )
+    """
+    parts = sort_param.strip().split()
+    field_name = parts[0]
+    direction = parts[1].lower() if len(parts) > 1 else 'asc'
+
+    if field_name in allowed_fields and hasattr(model, field_name):
+        column = getattr(model, field_name)
+        if direction == 'desc':
+            return desc(column)
+        else:
+            return asc(column)
+    else:
+        # Return a default safe order if invalid input
+        default_field = next(iter(allowed_fields))
+        return desc(getattr(model, default_field))
+
 
 
 def render_from_tpl(tpl: str) -> str:

@@ -1,4 +1,4 @@
-<p><a href="https://piefed.social/"><img src="https://piefed.social/static/images/piefed_logo_icon_t_75.png" style="max-width: 100%; margin-bottom: 20px;" width="50" height="50" alt="PieFed logo" /></a></p>
+<p style="margin-bottom: 0;"><a href="https://{{ home_domain }}/"><img src="https://{{ home_domain }}{{ site.logo if site.logo else '/static/images/piefed_logo_icon_t_75.png' }}" style="max-width: 100%;" width="50" height="50"></a></p>
 <p>{{ current_user.display_name() }} has requested to move {{ community.link() }} from it's current instance to {{ home_domain }}.</p>
 <p>Checklist: </p>
     <ol>

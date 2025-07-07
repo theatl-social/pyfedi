@@ -79,9 +79,9 @@
                        </button>
                    </th>
                    <th>
-                       <button form="searchCommunities" name="sort_by" value="{{'nsfl ASC, nsfw ASC' if sort_by == 'nsfl DESC, nsfw DESC' else 'nsfl DESC, nsfw DESC' }}" class="btn" title="{{ _('Content warning, NSFW or NSFL set for community.') }}">
+                       <button form="searchCommunities" name="sort_by" value="{{'nsfw ASC' if sort_by == 'nsfw DESC' else 'nsfw DESC' }}" class="btn" title="{{ _('Content warning, NSFW set for community.') }}">
                            {{ _('Warning') }}
-                           <span class="{{ 'fe fe-chevron-up' if sort_by == 'nsfl ASC, nsfw ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'nsfl DESC, nsfw DESC' }}"></span>
+                           <span class="{{ 'fe fe-chevron-up' if sort_by == 'nsfw ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'nsfw DESC' }}"></span>
                        </button>
                    </th>
                    <th>

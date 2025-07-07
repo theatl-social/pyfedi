@@ -20,9 +20,9 @@ def send_password_reset_email(user):
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
                text_body=render_template('email/reset_password.txt',
-                                         user=user, token=token),
+                                         user=user, token=token, domain=current_app.config['SERVER_NAME']),
                html_body=render_template('email/reset_password.html',
-                                         user=user, token=token))
+                                         user=user, token=token, domain=current_app.config['SERVER_NAME']))
 
 
 def send_verification_email(user):
@@ -37,10 +37,10 @@ def send_registration_approved_email(user):
     subject = _('Your application has been approved - welcome to PieFed')
     body = get_setting('registration_approved_email', '')
     if body:
-        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body))
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body), domain=current_app.config['SERVER_NAME'])
     else:
-        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(
-            f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'))
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'),
+                               domain=current_app.config['SERVER_NAME'])
     mail_from = current_app.config["MAIL_FROM"] if current_app.config["MAIL_FROM"] else g.site.contact_email
     send_email(subject,
                sender=f'{g.site.name} <{mail_from}>',

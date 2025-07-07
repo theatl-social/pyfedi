@@ -32,7 +32,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes, login_required
+    moderating_communities_ids, user_notes, login_required, safe_order_by
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
@@ -249,7 +249,7 @@ def list_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(text('community.' + sort_by))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -336,7 +336,7 @@ def list_local_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(text('community.' + sort_by))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -430,7 +430,7 @@ def list_subscribed_communities():
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
 
-    communities = communities.order_by(text('community.' + sort_by))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -525,7 +525,7 @@ def list_not_subscribed_communities():
     if current_user.hide_nsfl == 1:
         communities = communities.filter(Community.nsfl == False)
 
-    communities = communities.order_by(text('community.' + sort_by))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
 
     # Pagination
     communities = communities.paginate(page=page,

@@ -37,7 +37,8 @@ from app.utils import render_template, permission_required, set_setting, get_set
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
-    community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes
+    community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
+    safe_order_by
 from app.admin import bp
 
 
@@ -1020,7 +1021,9 @@ def admin_communities():
     communities = Community.query
     if search:
         communities = communities.filter(or_(Community.title.ilike(f"%{search}%"), Community.ap_id.ilike(f"%{search}%")))
-    communities = communities.order_by(text('"community".' + sort_by))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'topic_id', 'subscriptions_count',
+                                                                          'show_popular', 'show_all', 'post_count',
+                                                                          'content_retention', 'nsfw', 'post_reply_count', 'last_active'}))
     communities = communities.paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('admin.admin_communities', page=communities.next_num, search=search,
@@ -1308,7 +1311,9 @@ def admin_users():
         users = users.filter(or_(User.email.ilike(f"%{search}%"), User.user_name.ilike(f"%{search}%")))
     if last_seen > 0:
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
-    users = users.order_by(text('"user".' + sort_by))
+    if 'attitude' in sort_by:
+        users = users.filter(User.attitude != None)
+    users = users.order_by(safe_order_by(sort_by, User, {'user_name', 'banned', 'reports', 'attitude', 'reputation', 'created', 'last_seen'}))
     users = users.paginate(page=page, per_page=500, error_out=False)
 
     next_url = url_for('admin.admin_users', page=users.next_num, search=search, local_remote=local_remote,
@@ -1700,7 +1705,9 @@ def admin_instances():
         elif filter == 'blocked':
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
-    instances = instances.order_by(text('"instance".' + sort_by))
+    instances = instances.order_by(safe_order_by(sort_by, Instance, {'domain', 'software', 'version', 'vote_weight',
+                                                                     'trusted', 'last_seen', 'last_successful_send',
+                                                                     'failures', 'gone_forever', 'dormant'}))
     instances = instances.paginate(page=page, per_page=50, error_out=False)
     next_url = url_for('admin.admin_instances', page=instances.next_num, search=search, filter=filter,
                        sort_by=sort_by) if instances.has_next else None
