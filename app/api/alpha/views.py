@@ -106,7 +106,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
-        creator = user_view(user=post.user_id, variant=1, stub=True)
+        creator = user_view(user=post.user_id, variant=1, stub=True, flair_community_id=post.community_id)
         community = community_view(community=post.community_id, variant=1, stub=True)
         if user_id:
             user = User.query.get(user_id)
@@ -149,7 +149,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
 
 
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
-def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
+def user_view(user: User | int, variant, stub=False, user_id=None, flair_community_id=None) -> dict:
     if isinstance(user, int):
         user = User.query.filter_by(id=user).one()
 
@@ -167,6 +167,10 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
             v1['avatar'] = user.avatar.medium_url()
         if user.cover_id and not stub:
             v1['banner'] = user.cover.medium_url()
+        if flair_community_id:
+            flair = user.community_flair(flair_community_id)
+            if flair:
+                v1['flair'] = flair
 
         return v1
 
@@ -180,7 +184,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
                 'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
                                           {'type': NOTIF_USER, 'entity_id': user.id, 'user_id': user_id}).scalar()
         activity_alert = True if user_sub else False
-        v2 = {'person': user_view(user=user, variant=1), 'activity_alert': activity_alert, 'counts': counts,
+        v2 = {'person': user_view(user=user, variant=1, flair_community_id=flair_community_id), 'activity_alert': activity_alert, 'counts': counts,
               'is_admin': user.is_admin()}
         return v2
 
@@ -206,7 +210,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None) -> dict:
 
     # Variant 5 - PersonResponse (for user activity_alert subscriptions, to be consistent with the response to community activity_alert subscriptions)
     if variant == 5:
-        v5 = {'person_view': user_view(user=user, variant=2, user_id=user_id)}
+        v5 = {'person_view': user_view(user=user, variant=2, user_id=user_id, flair_community_id=flair_community_id)}
         return v5
 
     # Variant 6 - User Settings - api/user.dart saveUserSettings
@@ -453,7 +457,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         v5 = {'comment_reply': {'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id, 'read': read,
                                 'published': reply.posted_at.isoformat() + 'Z'},
               'comment': reply_view(reply=reply, variant=1),
-              'creator': user_view(user=reply.author, variant=1),
+              'creator': user_view(user=reply.author, variant=1, flair_community_id=reply.community_id),
               'post': post_view(post=reply.post, variant=1),
               'community': community_view(community=reply.community, variant=1),
               'recipient': user_view(user=user_id, variant=1),
@@ -519,7 +523,8 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
               'saved': saved, 'creator_blocked': False, 'my_vote': my_vote, 'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator,
-              'creator_is_admin': creator_is_admin, 'creator': user_view(user=reply.author, variant=1, stub=True)}
+              'creator_is_admin': creator_is_admin,
+              'creator': user_view(user=reply.author, variant=1, stub=True, flair_community_id=reply.community_id)}
         if variant == 7:
             return v7
         if variant == 8:

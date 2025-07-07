@@ -20,7 +20,7 @@ from app.api.alpha.utils.upload import post_upload_image, post_upload_community_
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-    put_user_mark_all_notifications_read, post_user_verify_credentials
+    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
 from app.constants import *
 
 
@@ -775,6 +775,18 @@ def post_alpha_user_verify_credentials():
         return jsonify({"error": str(ex)}), 429
     except NoResultFound:
         return jsonify({"error": "Bad credentials"}), 400
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/user/set_flair', methods=['POST'])
+def post_alpha_user_set_flair():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_user_set_flair(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

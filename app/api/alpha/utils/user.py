@@ -9,7 +9,7 @@ from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
-from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File
+from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.utils import authorise_api_user
 
@@ -559,3 +559,26 @@ def post_user_verify_credentials(data):
         raise NoResultFound
 
     return {}
+
+
+def post_user_set_flair(auth, data):
+    required(['community_id', 'flair_text'], data)
+    integer_expected(['community_id'], data)
+    string_expected(['flair_text'], data)
+    if len(data['flair_text']) > 50:
+        raise Exception('Flair text is too long (50 chars max)')
+
+    user = authorise_api_user(auth, return_type='model')
+    community_id = data['community_id']
+    flair_text = data['flair_text']
+
+    try:
+        user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+        user_flair.flair = flair_text
+        db.session.commit()
+    except NoResultFound:
+        user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
+        db.session.add(user_flair)
+        db.session.commit()
+
+    return user_view(user=user, variant=5, flair_community_id=community_id)
