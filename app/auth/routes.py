@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import flash, g, make_response, redirect, request, url_for
+from flask import flash, g, make_response, redirect, request, url_for, current_app
 from flask_babel import _
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import func
@@ -99,7 +99,7 @@ def reset_password(token):
         db.session.commit()
         flash(_('Your password has been reset. Please use it to log in with user name of %(name)s.', name=user.user_name))
         return redirect(url_for('auth.login'))
-    return render_template('auth/reset_password.html', form=form)
+    return render_template('auth/reset_password.html', form=form, domain=current_app.config['SERVER_NAME'])
 
 
 @bp.route('/verify_email/<token>')
