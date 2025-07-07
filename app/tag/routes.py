@@ -187,3 +187,22 @@ def tag_unban(tag):
         db.session.commit()
         flash(_('%(name)s un-banned for all users.', name=tag.name))
         return redirect(url_for('tag.show_tag', tag=tag.name))
+
+
+@bp.route('/tags/community/<community_id>', methods=['GET'])
+def tags_community(community_id: int):
+    try:
+        community = Community.query.filter_by(id=community_id).one()
+    except Exception:
+        abort(404)
+
+    search = request.args.get('search', '')
+
+    tags = Tag.query.filter_by(banned=False).join(post_tag, post_tag.c.tag_id == Tag.id).join(
+              Post, Post.id == post_tag.c.post_id).filter_by(community_id=community_id, deleted=False)
+    if search != '':
+        tags = tags.filter(Tag.name.ilike(f'%{search}%'))
+    tags = tags.order_by(Tag.name)
+
+    return render_template('tag/tags_community.html', title='Community tags',
+                           community=community, tags=tags, search=search)
