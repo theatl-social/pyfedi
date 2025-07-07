@@ -169,6 +169,7 @@ def make_reply(input, post, parent_id, src, auth=None):
                           language_id=language_id, distinguished=distinguished)
 
     user.language_id = language_id
+    user.post_reply_count += 1
     reply.ap_id = reply.profile_id()
     db.session.commit()
     if src == SRC_WEB:
