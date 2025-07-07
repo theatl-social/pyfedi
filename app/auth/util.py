@@ -310,9 +310,7 @@ def finalize_user_registration(user, form):
 
 def render_registration_form(form):
     if g.site.registration_mode == "RequireApplication" and g.site.application_question:
-        form.question.label = Label(
-            "question", markdown_to_html(g.site.application_question)
-        )
+        form.question.label = Label("question", markdown_to_html(g.site.application_question))
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
