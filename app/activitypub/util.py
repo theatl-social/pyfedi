@@ -489,7 +489,7 @@ def refresh_user_profile_task(user_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 def refresh_community_profile(community_id, activity_json=None):
@@ -666,7 +666,7 @@ def refresh_community_profile_task(community_id, activity_json):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 def refresh_feed_profile(feed_id):
@@ -822,7 +822,7 @@ def refresh_feed_profile_task(feed_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 def actor_json_to_model(activity_json, address, server):
@@ -1370,7 +1370,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
             session.rollback()
             raise
         finally:
-            session.close()
+            session.remove()
 
 
 def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
@@ -1553,7 +1553,7 @@ def new_instance_profile_task(instance_id: int):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 # alter the effect of upvotes based on their instance. Default to 1.0
@@ -2082,7 +2082,7 @@ def notify_about_post_task(post_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):

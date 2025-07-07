@@ -102,7 +102,7 @@ def join_community(send_async, user_id, community_id, src):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 @celery.task
@@ -150,6 +150,6 @@ def leave_community(send_async, user_id, community_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 

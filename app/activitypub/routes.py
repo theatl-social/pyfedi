@@ -24,7 +24,7 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan
+    IpBan, ActivityBatch
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
@@ -716,9 +716,9 @@ def replay_inbox_request(request_json):
 
 @celery.task
 def process_inbox_request(request_json, store_ap_json):
-    session = get_task_session()
-    try:
-        with current_app.app_context():
+    with current_app.app_context():
+        session = get_task_session()
+        try:
             # patch_db_session makes all db.session.whatever() use the session created with get_task_session, to guarantee proper connection clean-up at the end of the task.
             # although process_inbox_request uses session instead of db.session, many of the functions it calls, like find_actor_or_create, do not which makes this necessary.
             with patch_db_session(session):
@@ -1574,32 +1574,6 @@ def process_inbox_request(request_json, store_ap_json):
                         return
 
                     log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
-
-
-@celery.task
-def process_delete_request(request_json, store_ap_json):
-    with current_app.app_context():
-        session = get_task_session()
-        try:
-            # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
-            saved_json = request_json if store_ap_json else None
-            id = request_json['id']
-            user_ap_id = request_json['actor']
-            user = session.query(User).filter_by(ap_profile_id=user_ap_id.lower()).first()
-            if user:
-                if 'removeData' in request_json and request_json['removeData'] is True:
-                    user.purge_content()
-                user.deleted = True
-                user.deleted_by = user.id
-                user.delete_dependencies()
-                session.commit()
-                with patch_db_session(session):
-                    log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
         except Exception:
             session.rollback()
             raise
@@ -1607,7 +1581,34 @@ def process_delete_request(request_json, store_ap_json):
             session.remove()
 
 
-def announce_activity_to_followers(community: Community, creator: User, activity):
+@celery.task
+def process_delete_request(request_json, store_ap_json):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
+                saved_json = request_json if store_ap_json else None
+                id = request_json['id']
+                user_ap_id = request_json['actor']
+                user = session.query(User).filter_by(ap_profile_id=user_ap_id.lower()).first()
+                if user:
+                    if 'removeData' in request_json and request_json['removeData'] is True:
+                        user.purge_content()
+                    user.deleted = True
+                    user.deleted_by = user.id
+                    user.delete_dependencies()
+                    session.commit()
+                    with patch_db_session(session):
+                        log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
+
+
+def announce_activity_to_followers(community: Community, creator: User, activity, can_batch=False):
     # avoid announcing activity sent to local users unless it is also in a local community
     if not community.is_local():
         return
@@ -1639,7 +1640,12 @@ def announce_activity_to_followers(community: Community, creator: User, activity
         # All good? Send!
         if instance and instance.online() and not instance_banned(instance.inbox):
             if creator.instance_id != instance.id:  # don't send it to the instance that hosts the creator as presumably they already have the content
-                send_to_remote_instance(instance.id, community.id, announce_activity)
+                if can_batch and current_app.config['FEP_AWESOME'] and instance.software == 'piefed':
+                    db.session.add(ActivityBatch(instance_id=instance.id, community_id=community.id,
+                                                 payload=activity))
+                    db.session.commit()
+                else:
+                    send_to_remote_instance(instance.id, community.id, announce_activity)
 
 
 @bp.route('/c/<actor>/outbox', methods=['GET'])
@@ -1934,7 +1940,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
             liked.vote(user, 'upvote')
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
-                announce_activity_to_followers(liked.community, user, request_json)
+                announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
     else:
         log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, saved_json, 'Cannot upvote this')
 
@@ -1954,7 +1960,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
             liked.vote(user, 'downvote')
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:
-                announce_activity_to_followers(liked.community, user, request_json)
+                announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
 

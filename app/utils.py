@@ -1991,7 +1991,7 @@ def download_defeds_worker(defederation_subscription_id: int, domain: str):
     for defederation_url in retrieve_defederation_list(domain):
         session.add(BannedInstances(domain=defederation_url, reason='auto', subscription_id=defederation_subscription_id))
     session.commit()
-    session.close()
+    session.remove()
 
 
 def retrieve_defederation_list(domain: str) -> List[str]:

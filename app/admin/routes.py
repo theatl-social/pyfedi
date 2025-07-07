@@ -38,7 +38,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by
+    safe_order_by, get_task_session, patch_db_session
 from app.admin import bp
 
 
@@ -841,120 +841,129 @@ def admin_federation():
 
 @celery.task
 def import_bans_task(filename):
-    contents = file_get_contents(filename)
-    contents_json = json.loads(contents)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                contents = file_get_contents(filename)
+                contents_json = json.loads(contents)
 
-    # import allowed_instances
-    if get_setting('use_allowlist'):
-        # check for allowed_instances existing and being more than 0 entries
-        instances_allowed = contents_json['allowed_instances']
-        if isinstance(instance_allowed, list) and len(instance_allowed) > 0:
-            # get the existing allows and their domains
-            already_allowed_instances = []
-            already_allowed = AllowedInstances.query.all()
-            if len(already_allowed) > 0:
-                for already_allowed in already_allowed:
-                    already_allowed_instances.append(already_allowed.domain)
+                # import allowed_instances
+                if get_setting('use_allowlist'):
+                    # check for allowed_instances existing and being more than 0 entries
+                    instances_allowed = contents_json['allowed_instances']
+                    if isinstance(instance_allowed, list) and len(instance_allowed) > 0:
+                        # get the existing allows and their domains
+                        already_allowed_instances = []
+                        already_allowed = AllowedInstances.query.all()
+                        if len(already_allowed) > 0:
+                            for already_allowed in already_allowed:
+                                already_allowed_instances.append(already_allowed.domain)
 
-            # loop through the instances_allowed
-            for allowed_instance in instances_allowed:
-                # check if we have already allowed this instance
-                if allowed_instance in already_allowed_instances:
-                    continue
+                        # loop through the instances_allowed
+                        for allowed_instance in instances_allowed:
+                            # check if we have already allowed this instance
+                            if allowed_instance in already_allowed_instances:
+                                continue
+                            else:
+                                # allow the instance
+                                db.session.add(AllowedInstances(domain=allowed_instance))
+                    # commit to the db
+                    db.session.commit()
+
+                # import banned_instances
                 else:
-                    # allow the instance
-                    db.session.add(AllowedInstances(domain=allowed_instance))
-        # commit to the db
-        db.session.commit()
+                    # check for banned_instances existing and being more than 0 entries
+                    instance_bans = contents_json['banned_instances']
+                    if isinstance(instance_bans, list) and len(instance_bans) > 0:
+                        # get the existing bans and their domains
+                        already_banned_instances = []
+                        already_banned = BannedInstances.query.all()
+                        if len(already_banned) > 0:
+                            for ab in already_banned:
+                                already_banned_instances.append(ab.domain)
 
-    # import banned_instances
-    else:
-        # check for banned_instances existing and being more than 0 entries
-        instance_bans = contents_json['banned_instances']
-        if isinstance(instance_bans, list) and len(instance_bans) > 0:
-            # get the existing bans and their domains
-            already_banned_instances = []
-            already_banned = BannedInstances.query.all()
-            if len(already_banned) > 0:
-                for ab in already_banned:
-                    already_banned_instances.append(ab.domain)
+                        # loop through the instance_bans
+                        for instance_ban in instance_bans:
+                            # check if we have already banned this instance
+                            if instance_ban in already_banned_instances:
+                                continue
+                            else:
+                                # ban the domain
+                                db.session.add(BannedInstances(domain=instance_ban))
+                    # commit to the db
+                    db.session.commit()
 
-            # loop through the instance_bans
-            for instance_ban in instance_bans:
-                # check if we have already banned this instance
-                if instance_ban in already_banned_instances:
-                    continue
-                else:
-                    # ban the domain
-                    db.session.add(BannedInstances(domain=instance_ban))
-        # commit to the db
-        db.session.commit()
+                # import banned_domains
+                # check for banned_domains existing and being more than 0 entries
+                domain_bans = contents_json['banned_domains']
+                if isinstance(domain_bans, list) and len(domain_bans) > 0:
+                    # get the existing bans and their domains
+                    already_banned_domains = []
+                    already_banned = Domain.query.filter_by(banned=True).all()
+                    if len(already_banned) > 0:
+                        for ab in already_banned:
+                            already_banned_domains.append(ab.name)
 
-    # import banned_domains
-    # check for banned_domains existing and being more than 0 entries
-    domain_bans = contents_json['banned_domains']
-    if isinstance(domain_bans, list) and len(domain_bans) > 0:
-        # get the existing bans and their domains
-        already_banned_domains = []
-        already_banned = Domain.query.filter_by(banned=True).all()
-        if len(already_banned) > 0:
-            for ab in already_banned:
-                already_banned_domains.append(ab.name)
+                    # loop through the domain_bans
+                    for domain_ban in domain_bans:
+                        # check if we have already banned this domain
+                        if domain_ban in already_banned_domains:
+                            continue
+                        else:
+                            # ban the domain
+                            db.session.add(Domain(name=domain_ban, banned=True))
+                    # commit to the db
+                    db.session.commit()
 
-        # loop through the domain_bans
-        for domain_ban in domain_bans:
-            # check if we have already banned this domain
-            if domain_ban in already_banned_domains:
-                continue
-            else:
-                # ban the domain
-                db.session.add(Domain(name=domain_ban, banned=True))
-        # commit to the db
-        db.session.commit()
+                # import banned_tags
+                # check for banned_tags existing and being more than 0 entries
+                tag_bans = contents_json['banned_tags']
+                if isinstance(tag_bans, list) and len(tag_bans) > 0:
+                    # get the existing bans and their domains
+                    already_banned_tags = []
+                    already_banned = Tag.query.filter_by(banned=True).all()
+                    if len(already_banned) > 0:
+                        for ab in already_banned:
+                            already_banned_tags.append(ab.name)
 
-    # import banned_tags
-    # check for banned_tags existing and being more than 0 entries
-    tag_bans = contents_json['banned_tags']
-    if isinstance(tag_bans, list) and len(tag_bans) > 0:
-        # get the existing bans and their domains
-        already_banned_tags = []
-        already_banned = Tag.query.filter_by(banned=True).all()
-        if len(already_banned) > 0:
-            for ab in already_banned:
-                already_banned_tags.append(ab.name)
+                    # loop through the tag_bans
+                    for tag_ban in tag_bans:
+                        # check if we have already banned this tag
+                        if tag_ban['name'] in already_banned_tags:
+                            continue
+                        else:
+                            # ban the domain
+                            db.session.add(Tag(name=tag_ban['name'], display_as=tag_ban['display_as'], banned=True))
+                    # commit to the db
+                    db.session.commit()
 
-        # loop through the tag_bans
-        for tag_ban in tag_bans:
-            # check if we have already banned this tag
-            if tag_ban['name'] in already_banned_tags:
-                continue
-            else:
-                # ban the domain
-                db.session.add(Tag(name=tag_ban['name'], display_as=tag_ban['display_as'], banned=True))
-        # commit to the db
-        db.session.commit()
+                # import banned_users
+                # check for banned_users existing and being more than 0 entries
+                user_bans = contents_json['banned_users']
+                if isinstance(user_bans, list) and len(user_bans) > 0:
+                    # get the existing bans and their domains
+                    already_banned_users = []
+                    already_banned = User.query.filter_by(banned=True).all()
+                    if len(already_banned) > 0:
+                        for ab in already_banned:
+                            already_banned_users.append(ab.ap_id)
 
-    # import banned_users
-    # check for banned_users existing and being more than 0 entries
-    user_bans = contents_json['banned_users']
-    if isinstance(user_bans, list) and len(user_bans) > 0:
-        # get the existing bans and their domains
-        already_banned_users = []
-        already_banned = User.query.filter_by(banned=True).all()
-        if len(already_banned) > 0:
-            for ab in already_banned:
-                already_banned_users.append(ab.ap_id)
-
-        # loop through the user_bans
-        for user_ban in user_bans:
-            # check if we have already banned this user
-            if user_ban in already_banned_users:
-                continue
-            else:
-                # ban the user
-                db.session.add(User(user_name=user_ban.split('@')[0], ap_id=user_ban, banned=True))
-        # commit to the db
-        db.session.commit()
+                    # loop through the user_bans
+                    for user_ban in user_bans:
+                        # check if we have already banned this user
+                        if user_ban in already_banned_users:
+                            continue
+                        else:
+                            # ban the user
+                            db.session.add(User(user_name=user_ban.split('@')[0], ap_id=user_ban, banned=True))
+                    # commit to the db
+                    db.session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 @bp.route('/activities', methods=['GET'])
@@ -1195,20 +1204,29 @@ def unsubscribe_everyone_then_delete(community_id):
 
 @celery.task
 def unsubscribe_everyone_then_delete_task(community_id):
-    community = Community.query.get_or_404(community_id)
-    if not community.is_local():
-        members = CommunityMember.query.filter_by(community_id=community_id).all()
-        for member in members:
-            user = User.query.get(member.user_id)
-            unsubscribe_from_community(community, user)
-    else:
-        # todo: federate delete of local community out to all following instances
-        ...
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = Community.query.get_or_404(community_id)
+                if not community.is_local():
+                    members = CommunityMember.query.filter_by(community_id=community_id).all()
+                    for member in members:
+                        user = User.query.get(member.user_id)
+                        unsubscribe_from_community(community, user)
+                else:
+                    # todo: federate delete of local community out to all following instances
+                    ...
 
-    sleep(5)
-    community.delete_dependencies()
-    db.session.delete(community)  # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
-    db.session.commit()
+                sleep(5)
+                community.delete_dependencies()
+                session.delete(community)  # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 @bp.route('/topics', methods=['GET'])

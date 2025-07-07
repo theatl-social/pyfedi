@@ -1,7 +1,7 @@
 from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import CommunityBan, Post, PostReply, User
-from app.utils import gibberish, instance_banned
+from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
 
@@ -23,14 +23,32 @@ Flag:
 
 @celery.task
 def report_reply(send_async, user_id, reply_id, summary):
-    reply = PostReply.query.filter_by(id=reply_id).one()
-    report_object(user_id, reply, summary)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                reply = PostReply.query.filter_by(id=reply_id).one()
+                report_object(user_id, reply, summary)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 @celery.task
 def report_post(send_async, user_id, post_id, summary):
-    post = Post.query.filter_by(id=post_id).one()
-    report_object(user_id, post, summary)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.filter_by(id=post_id).one()
+                report_object(user_id, post, summary)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 def report_object(user_id, object, summary):

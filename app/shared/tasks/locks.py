@@ -1,7 +1,7 @@
 from app import celery
-from app.activitypub.signature import default_context, post_request, send_post_request
+from app.activitypub.signature import default_context, send_post_request
 from app.models import Post, User
-from app.utils import gibberish, instance_banned
+from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
 
@@ -24,14 +24,32 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 @celery.task
 def lock_post(send_async, user_id, post_id):
-    post = Post.query.filter_by(id=post_id).one()
-    lock_object(user_id, post)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.filter_by(id=post_id).one()
+                lock_object(user_id, post)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 @celery.task
 def unlock_post(send_async, user_id, post_id):
-    post = Post.query.filter_by(id=post_id).one()
-    lock_object(user_id, post, is_undo=True)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.filter_by(id=post_id).one()
+                lock_object(user_id, post, is_undo=True)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.remove()
 
 
 def lock_object(user_id, object, is_undo=False):

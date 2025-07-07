@@ -65,7 +65,7 @@ def make_post(send_async, post_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 @celery.task
@@ -77,7 +77,7 @@ def edit_post(send_async, post_id):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
 
 
 def send_post(post_id, edit=False, session=None):

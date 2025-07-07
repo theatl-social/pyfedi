@@ -771,7 +771,7 @@ def register(app):
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
-                            for to_send in SendQueue.query.filter(SendQueue.send_after < utcnow()):
+                            for to_send in session.query(SendQueue).filter(SendQueue.send_after < utcnow()):
                                 if instance_online(to_send.destination_domain):
                                     if to_send.retries <= to_send.max_retries:
                                         send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key,
@@ -782,9 +782,9 @@ def register(app):
                                     to_be_deleted.append(to_send.id)
                             # Remove them once sent - send_post_request will have re-queued them if they failed
                             if len(to_be_deleted):
-                                db.session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'),
+                                session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'),
                                                    {'to_be_deleted': tuple(to_be_deleted)})
-                                db.session.commit()
+                                session.commit()
 
                             publish_scheduled_posts()
 
@@ -801,7 +801,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.close()
+                session.remove()
 
     @app.cli.command('publish-scheduled-posts')
     def publish_scheduled_posts_command():
@@ -1105,7 +1105,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.close()
+                session.remove()
 
     @app.cli.command("process_email_bounces")
     def process_email_bounces():
@@ -1178,7 +1178,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.close()
+                session.remove()
 
     @app.cli.command("clean_up_old_activities")
     def clean_up_old_activities():
@@ -1192,7 +1192,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.close()
+                session.remove()
 
     @app.cli.command("detect_vote_manipulation")
     def detect_vote_manipulation():
@@ -1702,7 +1702,7 @@ def register(app):
                 session.rollback()
                 raise
             finally:
-                session.close()
+                session.remove()
 
 
 def parse_communities(interests_source, segment):

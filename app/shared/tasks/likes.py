@@ -139,4 +139,4 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
         session.rollback()
         raise
     finally:
-        session.close()
+        session.remove()
