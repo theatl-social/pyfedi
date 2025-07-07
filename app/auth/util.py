@@ -436,7 +436,8 @@ def log_user_in(user, form, ip, country):
 def update_user_session(user, form, ip, country):
     user.last_seen = utcnow()
     user.ip_address = ip
-    user.timezone = form.timezone.data
+    if user.timezone is None:
+        user.timezone = form.timezone.data
     user.ip_address_country = country or user.ip_address_country
     db.session.commit()
 
