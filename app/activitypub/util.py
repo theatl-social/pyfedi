@@ -478,7 +478,6 @@ def refresh_user_profile_task(user_id):
                             user.cover = cover
                             session.add(cover)
                             cover_changed = True
-                    user.recalculate_post_stats()
                     session.commit()
                     if user.avatar_id and avatar_changed:
                         make_image_sizes(user.avatar_id, 40, 250, 'users')
