@@ -46,7 +46,7 @@ def get_user(auth, data):
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
     if include_content or saved_only:
-        if 'saved_only':
+        if saved_only:
             del data['person_id']
         post_list = get_post_list(auth, data, user_id)
         reply_list = get_reply_list(auth, data, user_id)
