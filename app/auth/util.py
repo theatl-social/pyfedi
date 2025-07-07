@@ -388,6 +388,10 @@ def validate_user_login(user, password, ip):
         handle_banned_user(user, ip)
         return False
 
+    if user.deleted:
+        flash(_("This account has been deleted."), "error")
+        return False
+
     if user.waiting_for_approval():
         return redirect(url_for("auth.please_wait"))
 

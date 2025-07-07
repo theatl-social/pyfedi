@@ -5,7 +5,11 @@ from flask_babel import _
 from flask_login import login_user
 
 from app import db, oauth
-from app.auth.util import create_registration_application, get_country
+from app.auth.util import (
+    create_registration_application,
+    get_country,
+    handle_banned_user,
+)
 from app.models import User, utcnow
 from app.shared.tasks import task_selector
 from app.utils import (
@@ -123,6 +127,13 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
                                message=_('Sorry, we are not accepting registrations from your country.'))
 
     user = User.query.filter_by(**{oauth_id_key: user_info['id']}).first()
+    if user:
+        if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+            return handle_banned_user(user, ip)
+        elif user.deleted:
+            flash(_('This account has been deleted.'), 'error')
+            return redirect(url_for('auth.login'))
+
     if not user:
         form = form_class() if form_class else None
         # For providers requiring a registration form
