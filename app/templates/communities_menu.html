@@ -22,6 +22,7 @@
                {% endfor -%}
                <li><hr class="dropdown-divider"></li>
           {% endif -%}
+          <li><a class="dropdown-item" href="/feed/add_remote">{{ _('Add Remote Feed') }}</a></li>
           {% if menu_my_feeds or menu_subscribed_feeds -%}
                <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
                {% for feed_menu_item in menu_my_feeds -%}
@@ -53,6 +54,7 @@
         <ul class="text-end text-lg-start">
             <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
             <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
+            <li><a class="dropdown-item" href="/community/add_remote">{{ _('Add remote community') }}</a></li>
           {% if moderating_communities %}
             <li class="community-section" data-community-section="moderating"><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
             {% for community_menu_item in moderating_communities -%}
