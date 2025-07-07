@@ -45,11 +45,7 @@
                     <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
                 {% endif -%}
             </h1>
-            <p class="text-muted">
-                <a class="link-secondary" href="{{ community.ap_profile_id }}" rel="nofollow noindex">
-                    {{ community.lemmy_link() }}
-                </a>
-            </p>
+            <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% elif community.icon_id and not low_bandwidth -%}
             <div class="row mb-3">
                 <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
@@ -86,11 +82,7 @@
                             <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
                         {% endif -%}
                     </h1>
-                    <p class="text-muted">
-                        <a class="link-secondary" href="{{ community.ap_profile_id }}" rel="nofollow noindex">
-                            {{ community.lemmy_link() }}
-                        </a>
-                    </p>
+                    <p class="text-muted">{{ community.lemmy_link() }}</p>
                 </div>
             </div>
         {% else -%}
@@ -124,11 +116,7 @@
                     <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
                 {% endif -%}
             </h1>
-            <p class="text-muted">
-                <a class="link-secondary" href="{{ community.ap_profile_id }}" rel="nofollow noindex">
-                    {{ community.lemmy_link() }}
-                </a>
-            </p>
+            <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
         {% if content_type == 'posts' and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
