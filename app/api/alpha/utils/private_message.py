@@ -1,10 +1,11 @@
 from sqlalchemy import desc
 
 from app import db
-from app.api.alpha.utils.validators import required, string_expected, integer_expected
+from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
 from app.api.alpha.views import private_message_view
+from app.constants import NOTIF_MESSAGE
 from app.chat.util import send_message
-from app.models import ChatMessage, Conversation, User
+from app.models import ChatMessage, Conversation, User, Notification
 from app.utils import authorise_api_user
 
 
@@ -53,3 +54,28 @@ def post_private_message(auth, data):
 
     pm_json = private_message_view(private_message, variant=2)
     return pm_json
+
+
+def post_private_message_mark_as_read(auth, data):
+    required(['private_message_id', 'read'], data)
+    integer_expected(['private_message_id'], data)
+    boolean_expected(['read'], data)
+
+    user_id = authorise_api_user(auth)
+    message_id = data['private_message_id']
+    read = data['read']
+
+    private_message = ChatMessage.query.filter_by(id=message_id, recipient_id=user_id).one()
+    private_message.read = read
+
+    notifications = Notification.query.filter_by(user_id=user_id, notif_type=NOTIF_MESSAGE, subtype='chat_message', read=False)
+    for notification in notifications:
+        if 'message_id' in notification.targets and notification.targets['message_id'] == message_id:
+            notification.read = read
+            break
+
+    db.session.commit()
+
+    return private_message_view(private_message, variant=2)
+
+
