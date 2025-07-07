@@ -2203,26 +2203,6 @@ h1 .warning_badge {
   color: #eee;
 }
 
-[data-bs-theme="dark"] .full .ts-control {
-  background-color: #424549 !important;
-  color: #eee !important;
-}
-
-[data-bs-theme="dark"] .ts-dropdown {
-  background-color: #424549 !important;
-  color: #eee !important;
-}
-
-[data-bs-theme="dark"] .ts-dropdown .active {
-  background-color: #424549 !important;
-  color: #eee !important;
-}
-
-[data-bs-theme="dark"] .ts-dropdown .optgroup-header {
-  background-color: #424549 !important;
-  color: #eee !important;
-}
-
 .community_icon {
   width: 20vw;
   height: 20vw;

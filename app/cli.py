@@ -804,64 +804,65 @@ def register(app):
     def publish_scheduled_posts():
             for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED,
                                           Post.deleted == False, Post.repeat != 'none', Post.scheduled_for != None):
-                date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
-                if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
-                    continue
-                if post.repeat and post.repeat != 'once':
-                    next_occurrence = post.scheduled_for + find_next_occurrence(post)
-                else:
-                    next_occurrence = None
-                # One shot scheduled post
-                if not next_occurrence:
-                    post.status = POST_STATUS_PUBLISHED
-                    post.scheduled_for = None
-                    post.posted_at = utcnow()
-                    post.edited_at = None
-                    post.title = render_from_tpl(post.title)
-                    if post.type == POST_TYPE_POLL:
-                        poll = Poll.query.get(post.id)
-                        time_difference = poll.end_poll - post.created_at
-                        poll.end_poll += time_difference
-                    db.session.commit()
+                if post.scheduled_for:
+                    date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+                    if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
+                        continue
+                    if post.repeat and post.repeat != 'once':
+                        next_occurrence = post.scheduled_for + find_next_occurrence(post)
+                    else:
+                        next_occurrence = None
+                    # One shot scheduled post
+                    if not next_occurrence:
+                        post.status = POST_STATUS_PUBLISHED
+                        post.scheduled_for = None
+                        post.posted_at = utcnow()
+                        post.edited_at = None
+                        post.title = render_from_tpl(post.title)
+                        if post.type == POST_TYPE_POLL:
+                            poll = Poll.query.get(post.id)
+                            time_difference = poll.end_poll - post.created_at
+                            poll.end_poll += time_difference
+                        db.session.commit()
 
-                    # Federate post
-                    task_selector('make_post', post_id=post.id)
+                        # Federate post
+                        task_selector('make_post', post_id=post.id)
 
-                    # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
-                    notify_about_post(post)
+                        # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
+                        notify_about_post(post)
 
-                # Scheduled post with multiple occurences
-                else:
-                    # Create a new instance and copy all fields
-                    scheduled_post = Post()
-                    for column in post.__table__.columns:
-                        setattr(scheduled_post, column.name, getattr(post, column.name))
-                    scheduled_post.id = None
-                    scheduled_post.ap_id = None
-                    scheduled_post.scheduled_for = None
-                    scheduled_post.posted_at = utcnow()
-                    scheduled_post.edited_at = None
-                    scheduled_post.status = POST_STATUS_PUBLISHED
-                    scheduled_post.title = render_from_tpl(scheduled_post.title)
-                    db.session.add(scheduled_post)
-                    db.session.commit()
+                    # Scheduled post with multiple occurences
+                    else:
+                        # Create a new instance and copy all fields
+                        scheduled_post = Post()
+                        for column in post.__table__.columns:
+                            setattr(scheduled_post, column.name, getattr(post, column.name))
+                        scheduled_post.id = None
+                        scheduled_post.ap_id = None
+                        scheduled_post.scheduled_for = None
+                        scheduled_post.posted_at = utcnow()
+                        scheduled_post.edited_at = None
+                        scheduled_post.status = POST_STATUS_PUBLISHED
+                        scheduled_post.title = render_from_tpl(scheduled_post.title)
+                        db.session.add(scheduled_post)
+                        db.session.commit()
 
-                    scheduled_post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{scheduled_post.id}"
-                    # Update the scheduled_for with the next occurrence date
-                    post.scheduled_for = next_occurrence
+                        scheduled_post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{scheduled_post.id}"
+                        # Update the scheduled_for with the next occurrence date
+                        post.scheduled_for = next_occurrence
 
-                    # Small hack to make image urls unique and avoid creating
-                    # a crosspost when scheduling an image post
-                    if post.type == POST_TYPE_IMAGE:
-                        post.image.source_url += f"?uid={uuid.uuid4().hex}"
+                        # Small hack to make image urls unique and avoid creating
+                        # a crosspost when scheduling an image post
+                        if post.type == POST_TYPE_IMAGE:
+                            post.image.source_url += f"?uid={uuid.uuid4().hex}"
 
-                    vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id,
-                                    effect=1)
-                    db.session.add(vote)
-                    db.session.commit()
+                        vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id,
+                                        effect=1)
+                        db.session.add(vote)
+                        db.session.commit()
 
-                    task_selector('make_post', post_id=scheduled_post.id)
-                    notify_about_post(scheduled_post)
+                        task_selector('make_post', post_id=scheduled_post.id)
+                        notify_about_post(scheduled_post)
 
     @app.cli.command('send-batched-activities')
     def send_batched_activities_command():
