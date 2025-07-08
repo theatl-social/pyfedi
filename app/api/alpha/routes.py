@@ -12,7 +12,8 @@ from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
     post_post_mark_as_read
-from app.api.alpha.utils.private_message import get_private_message_list, post_private_message
+from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
+    post_private_message_mark_as_read
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances
@@ -598,6 +599,20 @@ def post_alpha_private_message():
         return jsonify({"error": str(ex)}), 400
 
 
+@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])
+def post_alpha_private_message_mark_as_read():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(post_private_message_mark_as_read(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Message not found"}), 400
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 # User
 @bp.route('/api/alpha/user', methods=['GET'])
 def get_alpha_user():
@@ -883,7 +898,6 @@ def alpha_reply():
 # Chat - not yet implemented
 @bp.route('/api/alpha/private_message', methods=['PUT'])  # Not available in app
 @bp.route('/api/alpha/private_message/delete', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])  # Not available in app
 @bp.route('/api/alpha/private_message/report', methods=['POST'])  # Not available in app
 @bp.route('/api/alpha/private_message/report/resolve', methods=['PUT'])  # Stage 2
 @bp.route('/api/alpha/private_message/report/list', methods=['GET'])  # Stage 2
