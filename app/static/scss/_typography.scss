@@ -202,8 +202,18 @@
   font-weight: normal;
 }
 
+.fe-arrow-up-circle::before {
+  content: "\e915";
+  font-weight: normal;
+}
+
 .fe-arrow-down::before {
   content: "\e90c";
+  font-weight: normal;
+}
+
+.fe-arrow-down-circle::before {
+  content: "\e90d";
   font-weight: normal;
 }
 
