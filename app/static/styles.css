@@ -261,8 +261,18 @@
   font-weight: normal;
 }
 
+.fe-arrow-up-circle::before {
+  content: "\e915";
+  font-weight: normal;
+}
+
 .fe-arrow-down::before {
   content: "\e90c";
+  font-weight: normal;
+}
+
+.fe-arrow-down-circle::before {
+  content: "\e90d";
   font-weight: normal;
 }
 
@@ -1513,7 +1523,8 @@ time {
   font-weight: bold;
 }
 .voting_buttons_new .upvote_button.voted_down, .voting_buttons_new .downvote_button.voted_down {
-  color: darkred;
+  /* light red with a little transparnecy */
+  color: rgba(251, 74, 74, 0.846); 
 }
 .voting_buttons_new .upvote_button.voted_down .fe, .voting_buttons_new .downvote_button.voted_down .fe {
   font-weight: bold;
