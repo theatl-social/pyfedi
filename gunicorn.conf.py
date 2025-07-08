@@ -1,7 +1,7 @@
 import multiprocessing
 
-workers = 2
-threads = multiprocessing.cpu_count() * 3 + 1
+workers = multiprocessing.cpu_count()
+threads = 4
 
 worker_tmp_dir = '/dev/shm'
 
