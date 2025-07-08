@@ -2678,6 +2678,6 @@ def get_timezones():
 @cache.memoize(timeout=86400)
 def low_value_reposters() -> List[int]:
     # update when PR #1031 is merged
-    result = db.session.execute(text('SELECT id FROM "user" WHERE user_name = :username or bot = true'),
+    result = db.session.execute(text('SELECT id FROM "user" WHERE user_name = :username or bot = true or bot_override = true'),
                                 {"username": "cm0002"}).scalars()
     return list(result)
