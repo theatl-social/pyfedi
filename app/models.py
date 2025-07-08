@@ -846,8 +846,8 @@ class User(UserMixin, db.Model):
     stripe_subscription_id = db.Column(db.String(50))
     searchable = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=False)
-    bot = db.Column(db.Boolean, default=False)
-    bot_override = db.Column(db.Boolean, default=False)
+    bot = db.Column(db.Boolean, default=False, index=True)
+    bot_override = db.Column(db.Boolean, default=False, index=True)
     vote_privately = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)
@@ -859,6 +859,7 @@ class User(UserMixin, db.Model):
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
     font = db.Column(db.String(25), default='')
+    community_keyword_filter = db.Column(db.String(150))
     referrer = db.Column(db.String(256))
     markdown_editor = db.Column(db.Boolean, default=True)
     interface_language = db.Column(db.String(10))  # a locale that the translation system understands e.g. 'en' or 'en-us'. If empty, use browser default

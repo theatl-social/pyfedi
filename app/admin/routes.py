@@ -38,7 +38,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters
 from app.admin import bp
 
 
@@ -1522,6 +1522,7 @@ def admin_user_edit(user_id):
             flash(_("Permissions are cached for 50 seconds so new admin roles won't take effect immediately."))
 
         db.session.commit()
+        cache.delete_memoized(low_value_reposters)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))
