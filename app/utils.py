@@ -2208,7 +2208,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
         post_id_where.append('p.ranking_scaled is not null ')
     elif sort.startswith('top'):
-        post_id_where.append('p.posted_at > :top_cutoff ')
+        if sort != 'top_all':
+            post_id_where.append('p.posted_at > :top_cutoff ')
         post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
         if sort == 'top_1h':
             params['top_cutoff'] = utcnow() - timedelta(hours=1)
@@ -2222,7 +2223,9 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             params['top_cutoff'] = utcnow() - timedelta(days=7)
         elif sort == 'top_1m':
             params['top_cutoff'] = utcnow() - timedelta(days=28)
-        else:
+        elif sort == 'top_1y':
+            params['top_cutoff'] = utcnow() - timedelta(days=365)
+        elif sort != 'top_all':
             params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
