@@ -337,13 +337,6 @@ def process_login(form):
     country = get_country(ip)
     user = find_user(form)
 
-    if is_country_blocked(country):
-        return render_template(
-            "generic_message.html",
-            title=_("Application declined"),
-            message=_("Sorry, we are not accepting registrations from your country."),
-        )
-
     if not user:
         flash(_("No account exists with that user name."), "error")
         return redirect(url_for("auth.login"))
