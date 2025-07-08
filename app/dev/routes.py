@@ -43,7 +43,7 @@ def tools():
                                   rules=rules, nsfw=False, private_key=private_key,
                                   public_key=public_key, description_html=markdown_to_html(description), local_only=True,
                                   ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
-                                  ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower(),
+                                  ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
                                   ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower() + '/followers',
                                   ap_domain=current_app.config['SERVER_NAME'],
                                   subscriptions_count=1, instance_id=1, low_quality='memes' in name)            
