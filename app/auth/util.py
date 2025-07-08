@@ -209,10 +209,12 @@ def register_new_user(form, ip, country):
 
     if requires_email_verification(user):
         send_email_verification(user)
-        return redirect(url_for("auth.check_email"))
 
     if requires_approval(user):
         return handle_user_application(user, form)
+
+    if requires_email_verification(user):
+        return redirect(url_for("auth.check_email"))
 
     finalize_user_registration(user, form)
     return redirect(url_for("auth.trump_musk"))
