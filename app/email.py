@@ -1,4 +1,5 @@
 import smtplib
+import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import List
@@ -197,6 +198,7 @@ class SMTPEmailService:
         self.msg["To"] = None
         self.msg["CC"] = None
         self.msg["BCC"] = None
+        self.msg["Message-ID"] = f"<{uuid.uuid4()}@{self.server_name}>"
 
     def clear_message(self):
         """
