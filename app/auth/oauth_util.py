@@ -86,11 +86,8 @@ def get_token_and_user_info(provider, user_info_endpoint):
         token = oauth_provider.authorize_access_token()
 
         resp = oauth_provider.get(user_info_endpoint, token=token)
-        print(resp.text)  # Debugging output
         return token, resp.json()
-    except Exception as e:
-        # Log the error for debugging purposes
-        print(f"Error during OAuth authorization: {e}")
+    except Exception:
         return None, None
 
 

@@ -606,8 +606,6 @@ def connect_oauth():
         'discord': current_app.config["DISCORD_OAUTH_CLIENT_ID"] != ''
     }
 
-    print(oauth_providers)
-
     # Handle disconnect requests
     if request.method == 'POST':
         provider = request.form.get('disconnect_provider')
