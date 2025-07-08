@@ -2,7 +2,7 @@ from random import randint
 
 from flask import flash, g, redirect, render_template, request, url_for
 from flask_babel import _
-from flask_login import login_user
+from flask_login import login_user, current_user
 
 from app import db, oauth
 from app.auth.util import create_registration_application, get_country, handle_banned_user
@@ -29,12 +29,6 @@ def handle_user_verification(user, oauth_id_key, token, ip, country, user_info):
     if not user:
         email = user_info.get('email')
         username = user_info.get('username', '')
-
-        if g.site.registration_mode == 'Closed':
-            flash(_('Account registrations are currently closed.'), 'error')
-            return redirect(url_for('auth.login'))
-        if user_ip_banned():
-            return redirect(url_for('auth.please_wait'))
 
         # Register a new user
         user = initialize_new_user(email, username, oauth_id_key, user_info, ip, country)
@@ -88,15 +82,51 @@ def get_token_and_user_info(provider, user_info_endpoint):
         oauth_provider = getattr(oauth, provider, None)
         if not oauth_provider:
             raise ValueError(f"OAuth provider '{provider}' is not configured.")
-        
+
         token = oauth_provider.authorize_access_token()
+
         resp = oauth_provider.get(user_info_endpoint, token=token)
+        print(resp.text)  # Debugging output
         return token, resp.json()
     except Exception as e:
         # Log the error for debugging purposes
         print(f"Error during OAuth authorization: {e}")
-        flash(_('Login failed due to a problem with the server.'), 'error')
         return None, None
+
+
+def current_user_is_banned():
+    """
+    Check if the current user is banned.
+    """
+    if not current_user.is_authenticated:
+        return False
+    return current_user.banned or user_ip_banned() or user_cookie_banned()
+
+
+def current_user_is_deleted():
+    """
+    Check if the current user account is deleted.
+    """
+    if not current_user.is_authenticated:
+        return False
+    return current_user.deleted
+
+
+def can_user_register():
+    """
+    Check if the user can register or login based on the site's registration mode.
+    """
+    if g.site.registration_mode == 'Closed':
+        flash(_('Account registrations are currently closed.'), 'error')
+        return redirect(url_for('auth.login'))
+    if g.site.registration_mode == 'RequireApplication' and not g.site.application_question:
+        flash(_('Account registrations are currently closed.'), 'error')
+        return redirect(url_for('auth.login'))
+    if is_country_blocked(get_country(ip_address())):
+        flash(_('Application declined'), 'error')
+        return render_template('generic_message.html', title=_('Application declined'),
+                               message=_('Sorry, we are not accepting registrations from your country.'))
+    return True
 
 
 def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_class=None):
@@ -105,15 +135,17 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
     """
     token, user_info = get_token_and_user_info(provider, user_info_endpoint)
     if not token or not user_info:
+        flash(_('Login failed due to a problem with the OAuth server.'), 'error')
         return redirect(url_for('auth.login'))
+
+    can_user_authenticate = can_user_register()
+    if can_user_authenticate is not True:
+        if can_user_authenticate is False:
+            return redirect(url_for('auth.login'))
+        return can_user_authenticate
 
     ip = ip_address()
     country = get_country(ip)
-
-    # Block registration for certain countries
-    if is_country_blocked(country):
-        return render_template('generic_message.html', title=_('Application declined'),
-                               message=_('Sorry, we are not accepting registrations from your country.'))
 
     user = User.query.filter_by(**{oauth_id_key: user_info['id']}).first()
     if user:

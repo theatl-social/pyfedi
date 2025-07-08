@@ -81,7 +81,6 @@ def create_app(config_class=Config):
         'app.user.utils.purge_user_then_delete_task': {'queue': 'background'},
         'app.community.util.retrieve_mods_and_backfill': {'queue': 'background'},
         'app.activitypub.signature.post_request': {'queue': 'send'},
-        
         # Maintenance tasks - all go to background queue
         'app.shared.tasks.maintenance.*': {'queue': 'background'},
     })
@@ -91,8 +90,8 @@ def create_app(config_class=Config):
     from app.utils import get_redis_connection
     redis_client = get_redis_connection(app.config['CACHE_REDIS_URL'])
 
+    oauth.init_app(app)
     if app.config['GOOGLE_OAUTH_CLIENT_ID']:
-        oauth.init_app(app)
         oauth.register(
             name='google',
             client_id=app.config['GOOGLE_OAUTH_CLIENT_ID'],
@@ -103,19 +102,17 @@ def create_app(config_class=Config):
             client_kwargs={'scope': 'email profile'}
         )
     if app.config["MASTODON_OAUTH_CLIENT_ID"]:
-        oauth.init_app(app)
         oauth.register(
             name="mastodon",
             client_id=app.config["MASTODON_OAUTH_CLIENT_ID"],
             client_secret=app.config["MASTODON_OAUTH_SECRET"],
             access_token_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/oauth/token",
             authorize_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/oauth/authorize",
-            api_base_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/api/",
+            api_base_url=f"https://{app.config['MASTODON_OAUTH_DOMAIN']}/api/v1/",
             client_kwargs={"response_type": "code"}
         )
 
     if app.config["DISCORD_OAUTH_CLIENT_ID"]:
-        oauth.init_app(app)
         oauth.register(
             name="discord",
             client_id=app.config["DISCORD_OAUTH_CLIENT_ID"],

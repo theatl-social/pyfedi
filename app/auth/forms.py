@@ -133,8 +133,3 @@ class ChooseTopicsForm(FlaskForm):
 class RegisterByMastodonForm(FlaskForm):
     email = EmailField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
     submit = SubmitField(_l("Set email"))
-
-
-class ConnectMastodonForm(FlaskForm):
-    authorization_code = StringField(_l('Authorization Code'), validators=[DataRequired()], render_kw={'autofocus': True})
-    submit = SubmitField(_l("Connect Mastodon"))
