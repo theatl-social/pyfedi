@@ -274,13 +274,13 @@
     {% block scripts -%}
     {% endblock -%}
     {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
-    <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth -%}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
             <!-- -->
         {% endif -%}
+        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
         <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
         {% if notif_server and current_user.is_authenticated -%}
             <script type="text/javascript" nonce="{{ nonce }}">

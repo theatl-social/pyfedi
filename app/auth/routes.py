@@ -46,6 +46,8 @@ def register():
     handle_abandoned_open_instance()
 
     form = RegistrationForm()
+    if g.site.tos_url is None or not g.site.tos_url.strip():
+        del form.terms
     if request.method == "POST" and form.validate_on_submit():
         return process_registration_form(form)
 

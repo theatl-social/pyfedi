@@ -258,6 +258,8 @@ class AddUserForm(FlaskForm):
 
 class EditUserForm(FlaskForm):
     bot = BooleanField(_l('This profile is a bot'))
+    bot_override = BooleanField(_l('Flag their posts as from a bot'))
+    suppress_crossposts = BooleanField(_l('Hide cross-posts by this user'))
     verified = BooleanField(_l('Email address is verified'))
     banned = BooleanField(_l('Banned'))
     ban_posts = BooleanField(_l('Ban posts'))

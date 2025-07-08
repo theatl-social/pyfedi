@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, date
 from functools import wraps, lru_cache
 from json import JSONDecodeError
 from time import sleep
-from typing import List
+from typing import List, Tuple, Optional
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import available_timezones
 
@@ -2114,19 +2114,45 @@ def jaccard_similarity(user1_upvoted: set, user2_id: int):
         return 0
 
 
-def dedupe_post_ids(post_ids) -> List[int]:
+def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], is_all_view: bool) -> List[int]:
+    # Remove duplicate posts based on cross-posting rules
+    # post_ids is a list of tuples: (post_id, cross_post_ids, user_id, reply_count)
     result = []
     if post_ids is None or len(post_ids) == 0:
         return result
-    seen_before = set()
-    priority = set()
+
+    seen_before = set()  # Track which post IDs we've already processed to avoid duplicates
+    priority = set()     # Track post IDs that should be prioritized (kept over their cross-posts)
+    lvp = low_value_reposters()
+
     for post_id in post_ids:
-        if post_id[1] and post_id[2] in low_value_reposters():
+        # If this post has cross-posts AND the author is a low-value reposter
+        # Only applies to 'All' feed to avoid suppressing posts when alternatives aren't viewable to user
+        if post_id[1] and is_all_view and post_id[2] in lvp:
+            # Mark this post as seen (will be filtered out)
             seen_before.add(post_id[0])
-            priority.update(post_id[1])
-        elif post_id[1] and post_id[0] not in priority:
+            # Find the cross-post with the most replies and prioritize only that one
+            cross_posts = list(post_id[1])
+            if cross_posts:
+                # Find reply counts for each cross-post from remaining tuples
+                cross_post_replies = {}
+                for other_post in post_ids:
+                    if other_post[0] in cross_posts:
+                        cross_post_replies[other_post[0]] = other_post[3]
+
+                # Prioritize the cross-post with most replies
+                best_cross_post = max(cross_posts, key=lambda x: cross_post_replies.get(x, 0))
+                priority.add(best_cross_post)
+                # Mark all other cross-posts as seen to avoid duplicates
+                seen_before.update(cp for cp in cross_posts if cp != best_cross_post)
+        # If this post has cross-posts AND it's not already prioritized or seen
+        elif post_id[1] and post_id[0] not in priority and post_id[0] not in seen_before:
+            # Mark all its cross-posts as seen (they'll be filtered out)
             seen_before.update(post_id[1])
+            # Remove cross-posts from priority set (this post takes precedence)
             priority.difference_update(post_id[1])
+
+        # Only add the post to results if we haven't seen it before
         if post_id[0] not in seen_before:
             result.append(post_id[0])
     return result
@@ -2147,13 +2173,13 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             return json.loads(redis_client.get(result_id))
 
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
-        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.banned is false AND c.show_all is true']
         if current_user.is_authenticated and current_user.hide_low_quality:
             post_id_where.append('c.low_quality is false')
         params = {}
     else:
-        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
     # filter out nsfw and nsfl if desired
@@ -2232,7 +2258,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()
-    post_ids = dedupe_post_ids(post_ids)
+    post_ids = dedupe_post_ids(post_ids, community_ids[0] == -1)
 
     if current_user.is_authenticated:
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)  # 86400 is 1 day
@@ -2675,9 +2701,7 @@ def get_timezones():
     return by_region
 
 
-@cache.memoize(timeout=86400)
+@cache.memoize(timeout=6000)
 def low_value_reposters() -> List[int]:
-    # update when PR #1031 is merged
-    result = db.session.execute(text('SELECT id FROM "user" WHERE user_name = :username or bot = true'),
-                                {"username": "cm0002"}).scalars()
+    result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true or suppress_crossposts = true')).scalars()
     return list(result)

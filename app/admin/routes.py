@@ -38,7 +38,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters
 from app.admin import bp
 
 
@@ -1494,6 +1494,8 @@ def admin_user_edit(user_id):
     user = User.query.get_or_404(user_id)
     if form.validate_on_submit():
         user.bot = form.bot.data
+        user.bot_override = form.bot_override.data
+        user.suppress_crossposts = form.suppress_crossposts.data
         user.banned = form.banned.data
         user.ban_posts = form.ban_posts.data
         user.ban_comments = form.ban_comments.data
@@ -1521,6 +1523,7 @@ def admin_user_edit(user_id):
             flash(_("Permissions are cached for 50 seconds so new admin roles won't take effect immediately."))
 
         db.session.commit()
+        cache.delete_memoized(low_value_reposters)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))
@@ -1528,6 +1531,8 @@ def admin_user_edit(user_id):
         if not user.is_local():
             flash(_('This is a remote user - most settings here will be regularly overwritten with data from the original server.'), 'warning')
         form.bot.data = user.bot
+        form.bot_override.data = user.bot_override
+        form.suppress_crossposts.data = user.suppress_crossposts
         form.verified.data = user.verified
         form.banned.data = user.banned
         form.ban_posts.data = user.ban_posts

@@ -10,6 +10,7 @@ if(!setTheme) {
 
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
+    let low_bandwidth = document.body.classList.contains('low_bandwidth');
     if(navigator.getBattery) {
         navigator.getBattery().then(function(battery) {
             // Only load youtube videos in teasers if there is plenty of power available
@@ -34,8 +35,10 @@ document.addEventListener("DOMContentLoaded", function () {
     setupMarkdownEditorEnabler();
     setupAddPollChoice();
     setupShowElementLinks();
-    setupLightboxTeaser();
-    setupLightboxPostBody();
+    if (!low_bandwidth) {
+      setupLightboxTeaser();
+      setupLightboxPostBody();
+    }
     setupPostTeaserHandler();
     setupPostTypeSwitcher();
     setupSelectNavigation();

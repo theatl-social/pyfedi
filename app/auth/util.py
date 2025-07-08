@@ -310,9 +310,7 @@ def finalize_user_registration(user, form):
 
 def render_registration_form(form):
     if g.site.registration_mode == "RequireApplication" and g.site.application_question:
-        form.question.label = Label(
-            "question", markdown_to_html(g.site.application_question)
-        )
+        form.question.label = Label("question", markdown_to_html(g.site.application_question))
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
@@ -338,13 +336,6 @@ def process_login(form):
     ip = ip_address()
     country = get_country(ip)
     user = find_user(form)
-
-    if is_country_blocked(country):
-        return render_template(
-            "generic_message.html",
-            title=_("Application declined"),
-            message=_("Sorry, we are not accepting registrations from your country."),
-        )
 
     if not user:
         flash(_("No account exists with that user name."), "error")
@@ -386,6 +377,10 @@ def validate_user_login(user, password, ip):
 
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
         handle_banned_user(user, ip)
+        return False
+
+    if user.deleted:
+        flash(_("This account has been deleted."), "error")
         return False
 
     if user.waiting_for_approval():

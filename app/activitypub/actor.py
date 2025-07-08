@@ -13,7 +13,7 @@ from app.activitypub.util import get_request, signed_get_request, actor_json_to_
     refresh_community_profile, refresh_feed_profile, extract_domain_and_actor, instance_allowed, normalise_actor_string
 from app.models import User, Community, Feed, Site
 from app.utils import utcnow, get_setting, actor_contains_blocked_words, actor_profile_contains_blocked_words, \
-    instance_banned
+    instance_banned, low_value_reposters
 
 
 def find_local_community(actor_url: str) -> Community:
@@ -193,6 +193,9 @@ def create_actor_from_remote(actor_address: str, community_only=False,
             return None
         if feed_only and not isinstance(actor_model, Feed):
             return None
+
+        if isinstance(actor_model, User) and actor_model.bot:
+            cache.delete_memoized(low_value_reposters)
 
         return actor_model
 
