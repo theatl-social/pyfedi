@@ -19,7 +19,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
+    is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
     hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
 
 
@@ -681,8 +681,9 @@ def lock_post(post_id, locked, src, auth=None):
     if post.community.is_moderator(user) or post.community.is_instance_admin(user):
         post.comments_enabled = comments_enabled
         db.session.commit()
-        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
-                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
+        add_to_modlog(modlog_type, actor=user, target_user=post.author, reason='',
+                      community=post.community, post=post,
+                      link_text=shorten_string(post.title), link=f'post/{post.id}')
 
         if locked:
             if src == SRC_WEB:
@@ -715,8 +716,9 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
         if not community.ap_featured_url:
             community.ap_featured_url = community.ap_profile_id + '/featured'
         db.session.commit()
-        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
-                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
+        add_to_modlog(modlog_type, actor=user, target_user=post.author, reason='',
+                      community=post.community, post=post,
+                      link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     if featured:
         task_selector('sticky_post', user_id=user.id, post_id=post_id)
@@ -748,8 +750,9 @@ def mod_remove_post(post_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Post deleted.'))
 
-    add_to_modlog_activitypub('delete_post', user, community_id=post.community_id,
-                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+    add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason,
+                  community=post.community, post=post,
+                  link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
 
@@ -780,8 +783,9 @@ def mod_restore_post(post_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Post restored.'))
 
-    add_to_modlog_activitypub('restore_post', user, community_id=post.community_id,
-                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+    add_to_modlog('restore_post', actor=user, target_user=post.author, reason=reason,
+                  community=post.community, post=post,
+                  link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     task_selector('restore_post', user_id=user.id, post_id=post.id, reason=reason)
 

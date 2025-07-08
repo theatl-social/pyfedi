@@ -872,8 +872,8 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
                 send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
     if post.user_id != user.id and reason is not None:
-        add_to_modlog('delete_post', reason=reason, community_id=community.id, link_text=shorten_string(post.title),
-                      link=f'post/{post.id}')
+        add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
+                      link_text=shorten_string(post.title), link=f'post/{post.id}')
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
@@ -942,8 +942,8 @@ def post_restore(post_id: int):
                         send_to_remote_instance(instance.id, post.community.id, announce)
 
         if post.user_id != current_user.id:
-            add_to_modlog('restore_post', community_id=post.community.id, link_text=shorten_string(post.title),
-                          link=f'post/{post.id}')
+            add_to_modlog('restore_post', actor=current_user, target_user=post.author, community=post.community, post=post,
+                          link_text=shorten_string(post.title), link=f'post/{post.id}')
 
         flash(_('Post has been restored.'))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -1642,7 +1642,8 @@ def post_reply_restore(post_id: int, comment_id: int):
                         send_to_remote_instance(instance.id, post.community.id, announce)
 
         if post_reply.user_id != current_user.id:
-            add_to_modlog('restore_post_reply', community_id=post.community.id,
+            add_to_modlog('restore_post_reply', actor=current_user, target_user=post_reply.author,
+                          community=post.community, post=post_reply.post, reply=post_reply,
                           link_text=f'comment on {shorten_string(post.title)}',
                           link=f'post/{post.id}#comment_{post_reply.id}')
 

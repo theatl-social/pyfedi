@@ -19,7 +19,7 @@ from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
     communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
-    add_to_modlog_activitypub, get_recipient_language
+    get_recipient_language
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -484,12 +484,9 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
         server = current_app.config['SERVER_NAME']
         send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
                      existing_conversation.id, user=user)
-    if src == SRC_WEB:
-        add_to_modlog('add_mod', community_id=community_id, link_text=new_moderator.display_name(),
-                      link=new_moderator.link())
-    else:
-        add_to_modlog_activitypub('add_mod', community_id=community_id, actor=user,
-                                  link_text=new_moderator.display_name(), link=new_moderator.link())
+
+    add_to_modlog('add_mod', actor=user, target_user=new_moderator, community=community, link_text=new_moderator.display_name(),
+                    link=new_moderator.link())
 
     # Flush cache
     cache.delete_memoized(moderating_communities, new_moderator.id)
@@ -520,11 +517,9 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
         db.session.commit()
     if src == SRC_WEB:
         flash(_('Moderator removed'))
-        add_to_modlog('remove_mod', community_id=community_id, link_text=old_moderator.display_name(),
-                      link=old_moderator.link())
-    else:
-        add_to_modlog_activitypub('remove_mod', community_id=community_id, actor=user,
-                                  link_text=old_moderator.display_name(), link=old_moderator.link())
+
+    add_to_modlog('remove_mod', actor=user, target_user=old_moderator, community=community, link_text=old_moderator.display_name(),
+                    link=old_moderator.link())
 
     # Flush cache
     cache.delete_memoized(moderating_communities, old_moderator.id)

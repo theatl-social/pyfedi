@@ -1067,7 +1067,7 @@ def community_delete(community_id: int):
 
             # record for modlog
             reason = f"Community {community.name} deleted by {current_user.user_name}"
-            add_to_modlog('delete_community', reason=reason)
+            add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
 
             # actually delete the community
             community.delete_dependencies()
@@ -1229,7 +1229,7 @@ def community_ban_user(community_id: int, user_id: int):
                                                           NotificationSubscription.user_id == user.id,
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
 
-        add_to_modlog('ban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
+        add_to_modlog('ban_user', actor=current_user, target_user=user, community=community, link_text=user.display_name(), link=user.link())
 
         return redirect(community.local_url())
     else:
@@ -1280,7 +1280,7 @@ def community_unban_user(community_id: int, user_id: int):
 
     cache.delete_memoized(communities_banned_from, user.id)
 
-    add_to_modlog('unban_user', community_id=community.id, link_text=user.display_name(), link=user.link())
+    add_to_modlog('unban_user', actor=current_user, target_user=user, community=community, link_text=user.display_name(), link=user.link())
 
     return redirect(url_for('community.community_moderate_subscribers', actor=community.link()))
 

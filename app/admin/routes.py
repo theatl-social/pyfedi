@@ -1189,7 +1189,7 @@ def admin_community_delete(community_id):
     unsubscribe_everyone_then_delete(community.id)
 
     reason = f"Community {community.name} deleted by {current_user.user_name}"
-    add_to_modlog('delete_community', reason=reason)
+    add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
 
     flash(_('Community deleted'))
     return redirect(url_for('admin.admin_communities'))
@@ -1629,7 +1629,7 @@ def admin_user_delete(user_id):
         user.delete_dependencies()
         db.session.commit()
 
-        add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+        add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
     flash(_('User deleted'))
     return redirect(referrer())
