@@ -848,6 +848,7 @@ class User(UserMixin, db.Model):
     indexable = db.Column(db.Boolean, default=False)
     bot = db.Column(db.Boolean, default=False, index=True)
     bot_override = db.Column(db.Boolean, default=False, index=True)
+    suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
     vote_privately = db.Column(db.Boolean, default=False)
     ignore_bots = db.Column(db.Integer, default=0)
     unread_notifications = db.Column(db.Integer, default=0)

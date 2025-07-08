@@ -2702,5 +2702,5 @@ def get_timezones():
 
 @cache.memoize(timeout=6000)
 def low_value_reposters() -> List[int]:
-    result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true')).scalars()
+    result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true or suppress_crossposts = true')).scalars()
     return list(result)

@@ -1495,6 +1495,7 @@ def admin_user_edit(user_id):
     if form.validate_on_submit():
         user.bot = form.bot.data
         user.bot_override = form.bot_override.data
+        user.suppress_crossposts = form.suppress_crossposts.data
         user.banned = form.banned.data
         user.ban_posts = form.ban_posts.data
         user.ban_comments = form.ban_comments.data
@@ -1531,6 +1532,7 @@ def admin_user_edit(user_id):
             flash(_('This is a remote user - most settings here will be regularly overwritten with data from the original server.'), 'warning')
         form.bot.data = user.bot
         form.bot_override.data = user.bot_override
+        form.suppress_crossposts.data = user.suppress_crossposts
         form.verified.data = user.verified
         form.banned.data = user.banned
         form.ban_posts.data = user.ban_posts
