@@ -14,7 +14,7 @@ from app.utils import MultiCheckboxField, CaptchaField, get_setting
 class LoginForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()],
                             render_kw={'autofocus': True, 'autocomplete': 'username', 'placeholder': _l('or email')})
-    password = PasswordField(_l('Password'), validators=[DataRequired()])
+    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)])
     low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Log In'))
@@ -28,11 +28,10 @@ class RegistrationForm(FlaskForm):
                             render_kw={'autocomplete': 'email'})
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)],
                              render_kw={'autocomplete': 'new-password'})
-    password2 = PasswordField(
-        _l('Repeat password'), validators=[DataRequired(),
-                                           EqualTo('password')])
-    question = TextAreaField(_l('Why would you like to join this site?'),
-                             validators=[DataRequired(), Length(min=1, max=512)])
+    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password'),
+                                                                 Length(min=8, max=129)])
+    question = TextAreaField(_l('Why would you like to join this site?'),  validators=[DataRequired(),
+                                                                                       Length(min=1, max=512)])
     terms = BooleanField(_l('I agree to the terms of service & privacy policy (see links in footer)'),
                          validators=[DataRequired()])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
