@@ -2182,6 +2182,14 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
+
+    # filter out posts in communities where the community name is objectionable to them
+    if current_user.is_authenticated:
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
+            params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
+
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
         post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
@@ -2410,6 +2418,19 @@ def notif_id_to_string(notif_id) -> str:
     # --model/db default--
     if notif_id == NOTIF_DEFAULT:
         return _('All')
+
+
+@cache.memoize(timeout=6000)
+def filtered_out_communities(user: User) -> List[int]:
+    if user.community_keyword_filter:
+        communities = Community.query
+        for community_filter in user.community_keyword_filter.split(','):
+            if community_filter.strip():
+                communities = communities.filter(or_(Community.name.ilike(f"%{community_filter}%"),
+                                                     Community.title.ilike(f"%{community_filter}%"))
+                                                 )
+
+        return [community.id for community in communities.all()]
 
 
 @cache.memoize(timeout=300)

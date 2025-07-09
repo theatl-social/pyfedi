@@ -36,7 +36,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -1346,10 +1346,14 @@ def user_settings_filters():
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
+        current_user.community_keyword_filter = form.community_keyword_filter.data
         db.session.commit()
+
+        cache.delete_memoized(filtered_out_communities, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_filters'))
+
     elif request.method == 'GET':
         form.ignore_bots.data = current_user.ignore_bots
         form.hide_nsfw.data = current_user.hide_nsfw
@@ -1357,6 +1361,7 @@ def user_settings_filters():
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
         form.hide_low_quality.data = current_user.hide_low_quality
+        form.community_keyword_filter.data = current_user.community_keyword_filter
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
     blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id). \
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
@@ -1366,6 +1371,7 @@ def user_settings_filters():
         filter(DomainBlock.user_id == current_user.id).order_by(Domain.name).all()
     blocked_instances = Instance.query.join(InstanceBlock, InstanceBlock.instance_id == Instance.id). \
         filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
+
     return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances)

@@ -154,6 +154,7 @@ class ReportUserForm(FlaskForm):
 
 
 class FilterForm(FlaskForm):
+    community_keyword_filter = StringField(_l('Hide posts in communities with these words in their name'))
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),
                          (2, _l('Blur thumbnail')),
