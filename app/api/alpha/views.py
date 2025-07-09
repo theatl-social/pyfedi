@@ -665,7 +665,7 @@ def instance_view(instance: Instance | int, variant) -> dict:
 def private_message_view(cm: ChatMessage, variant) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
-    is_local = creator['instance_id'] == 1
+    is_local = (creator['instance_id'] == 1 and recipient['instance_id'] == 1)
 
     v1 = {
         'private_message': {

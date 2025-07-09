@@ -1,4 +1,4 @@
-from sqlalchemy import desc
+from sqlalchemy import desc, or_, text
 
 from app import db
 from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
@@ -20,7 +20,8 @@ def get_private_message_list(auth, data):
     if unread_only:
         private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False).order_by(desc(ChatMessage.created_at))
     else:
-        private_messages = ChatMessage.query.filter_by(recipient_id=user_id).order_by(desc(ChatMessage.created_at))
+        private_messages = ChatMessage.query.filter(or_(ChatMessage.recipient_id == user_id,
+                    ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
     private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
@@ -75,7 +76,7 @@ def post_private_message_mark_as_read(auth, data):
             notification.read = read
             if read == True and user.unread_notifications > 0:
                 user.unread_notifications -= 1
-            else:
+            elif read == False:
                 user.unread_notifications += 1
             break
     db.session.commit()
