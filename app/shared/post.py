@@ -240,6 +240,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         nsfw = input['nsfw']
         notify_author = input['notify_author']
         language_id = input['language_id']
+        timezone = input['timezone'] if 'timezone' in input else user.timezone
         tags = []
         flair = []
         scheduled_for = None
