@@ -35,6 +35,37 @@ def get_private_message_list(auth, data):
     return pm_json
 
 
+def get_private_message_conversation(auth, data):
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+    if not data or 'person_id' not in data:
+        raise Exception('Missing person_id parameter')
+    person_id = int(data['person_id'])
+    person = User.query.filter_by(id=person_id).one()
+
+    user_id = authorise_api_user(auth)
+
+    conversation_ids = db.session.execute(text("SELECT conversation_id FROM conversation_member WHERE user_id = :person_id"),
+                                         {"person_id": person_id}).scalars()
+    pm_list = []
+    next_page = None
+    if conversation_ids:
+        private_messages = ChatMessage.query.filter(ChatMessage.conversation_id.in_(conversation_ids),
+                              or_(ChatMessage.recipient_id == user_id,
+                                  ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
+        private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
+        for private_message in private_messages:
+            pm_list.append(private_message_view(private_message, variant=1))
+
+        next_page = str(private_messages.next_num) if private_messages.next_num else None
+
+    pm_json = {
+        "private_messages": pm_list,
+        'next_page': next_page
+    }
+    return pm_json
+
+
 def post_private_message(auth, data):
     required(['content', 'recipient_id'], data)
     string_expected(['content'], data)
