@@ -849,7 +849,7 @@ def test_redis():
 @bp.route('/test_ip')
 @debug_mode_only
 def test_ip():
-    return ip_address()
+    return ip_address() + ' ' + request.headers.get('CF-Connecting-IP', 'CF-Connecting-IP is empty')
 
 
 @bp.route('/test_s3')
