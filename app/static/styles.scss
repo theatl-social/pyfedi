@@ -1596,7 +1596,7 @@ a.unread, div.unread {
   float: right;
 }
 
-.post_body, .comment_body {
+.post_body, .comment_body, #preview, .reply_preview {
   word-wrap: break-word;
 
   img {
