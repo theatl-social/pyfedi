@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from flask import flash, g, make_response, redirect, request, url_for, current_app
+from flask import flash, g, make_response, redirect, request, url_for, current_app, session
 from flask_babel import _
 from flask_login import current_user, login_user, logout_user
 from sqlalchemy import func
@@ -8,12 +8,33 @@ from sqlalchemy import func
 from app import db, limiter, oauth
 from app.auth import bp
 from app.auth.forms import LoginForm, RegisterByMastodonForm, RegistrationForm, ResetPasswordForm, ResetPasswordRequestForm
-from app.auth.oauth_util import handle_oauth_authorize
-from app.auth.util import handle_abandoned_open_instance, notify_admins_of_registration, process_login, \
-    process_registration_form, redirect_next_page, render_login_form, render_registration_form
+from app.auth.oauth_util import (
+    handle_oauth_authorize,
+    finalize_user_login,
+    initialize_new_user,
+)
+from app.auth.util import (
+    handle_abandoned_open_instance,
+    notify_admins_of_registration,
+    process_login,
+    process_registration_form,
+    redirect_next_page,
+    render_login_form,
+    render_registration_form,
+    handle_banned_user,
+    get_country,
+)
 from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
-from app.utils import finalize_user_setup, render_template, login_required
+from app.shared.tasks import task_selector
+from app.utils import (
+    finalize_user_setup,
+    render_template,
+    login_required,
+    ip_address,
+    user_ip_banned,
+    user_cookie_banned,
+)
 
 
 @bp.route("/login", methods=["GET", "POST"])
@@ -220,10 +241,48 @@ def mastodon_login():
 
 @bp.route("/mastodon_authorize", methods=["GET", "POST"])
 def mastodon_authorize():
+    oauth_id_key = 'mastodon_oauth_id'
+    form = RegisterByMastodonForm()
+    if session.get("user_info") is not None:
+        if request.method == "POST" and form.validate_on_submit():
+            # User is submitting the registration form after OAuth authorization
+            user_info = session["user_info"]
+            session.pop("user_info", None)
+            user = User.query.filter_by(**{oauth_id_key: user_info['id']}).first()
+            ip = ip_address()
+            country = get_country(ip)
+            print(f"User info from session: {user_info}, IP: {ip}, Country: {country}")
+            if user:
+                if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+                    return handle_banned_user(user, ip)
+                elif user.deleted:
+                    flash(_('This account has been deleted.'), 'error')
+                    return redirect(url_for('auth.login'))
+                else:
+                    # User already exists, finalize login
+                    return finalize_user_login(user, None, ip, country)
+            else:
+                email = form.email.data.strip()
+                username = user_info['username']
+                # New user registration
+                user = initialize_new_user(
+                    email, username, oauth_id_key, user_info, ip, country
+                )
+                if (
+                    g.site.registration_mode == "RequireApplication"
+                    and g.site.application_question
+                ):
+                    task_selector(
+                        "check_application",
+                        application_id=user.registration_application.id,
+                    )
+                    return redirect(url_for("auth.please_wait"))
+                return redirect_next_page() if len(user.communities()) >= 0 else redirect(url_for('auth.trump_musk'))
+
     return handle_oauth_authorize(
         provider='mastodon',
         user_info_endpoint='accounts/verify_credentials',
-        oauth_id_key='mastodon_oauth_id',
+        oauth_id_key=oauth_id_key,
         form_class=RegisterByMastodonForm
     )
 
@@ -231,7 +290,7 @@ def mastodon_authorize():
 @bp.route("/mastodon_connect")
 def mastodon_connect():
     return oauth.mastodon.authorize_redirect(redirect_uri=url_for(
-    'auth.mastodon_connect_callback', _external=True
+        'auth.mastodon_connect_callback', _external=True
     ))
 
 
