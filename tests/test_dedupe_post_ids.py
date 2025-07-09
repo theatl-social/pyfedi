@@ -11,17 +11,17 @@ class TestDudupePostIds(unittest.TestCase):
         """Test basic dedupe with no cross-posts"""
         mock_low_value.return_value = set()
         params = [(1, None, 1, 10), (2, None, 1, 10)]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [1, 2])
 
     @patch('app.utils.low_value_reposters')
     def test_empty_input(self, mock_low_value):
         """Test with empty input"""
         mock_low_value.return_value = set()
-        result = dedupe_post_ids([])
+        result = dedupe_post_ids([], True)
         self.assertEqual(result, [])
         
-        result = dedupe_post_ids(None)
+        result = dedupe_post_ids(None, True)
         self.assertEqual(result, [])
 
     @patch('app.utils.low_value_reposters')
@@ -34,7 +34,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1, 3], 101, 10), # Cross-post 1
             (3, [1, 2], 102, 15)  # Cross-post 2
         ]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [1])  # Only first post should remain
 
     @patch('app.utils.low_value_reposters')
@@ -47,7 +47,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1, 3], 101, 10), # Cross-post 1 (10 replies)
             (3, [1, 2], 102, 15)  # Cross-post 2 (15 replies) - should win
         ]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [3])  # Post with most replies should remain
 
     @patch('app.utils.low_value_reposters')
@@ -64,7 +64,7 @@ class TestDudupePostIds(unittest.TestCase):
             (6, [5, 7], 201, 20),  # Cross-post 1 (20 replies) - should win
             (7, [5, 6], 202, 15)   # Cross-post 2 (15 replies)
         ]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [1, 2, 6])  # Regular post, first cross-post group, best from low-value group
 
     @patch('app.utils.low_value_reposters')
@@ -76,7 +76,7 @@ class TestDudupePostIds(unittest.TestCase):
             (1, [99], 100, 5),  # Cross-post ID 99 doesn't exist in params
             (2, None, 101, 10)
         ]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [2])  # Only post 2 should remain
 
     @patch('app.utils.low_value_reposters')
@@ -89,7 +89,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1], 101, 10),   # Should be kept (prioritized)
             (3, [2], 102, 15)    # Should not filter out post 2 since it's prioritized
         ]
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         self.assertEqual(result, [2, 3])  # Both 2 and 3 should remain
 
     @patch('app.utils.low_value_reposters')
@@ -124,7 +124,7 @@ class TestDudupePostIds(unittest.TestCase):
         
         # Time the execution
         start_time = time.time()
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         end_time = time.time()
         
         execution_time = end_time - start_time
@@ -167,7 +167,7 @@ class TestDudupePostIds(unittest.TestCase):
         
         # Time the execution
         start_time = time.time()
-        result = dedupe_post_ids(params)
+        result = dedupe_post_ids(params, True)
         end_time = time.time()
         
         execution_time = end_time - start_time
