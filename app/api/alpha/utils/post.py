@@ -170,6 +170,20 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     elif sort == "TopMonth":
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(
             desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopThreeMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=90)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopSixMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=180)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopNineMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=270)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopYear":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=365)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopAll":
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
