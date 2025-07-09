@@ -2431,6 +2431,8 @@ def filtered_out_communities(user: User) -> List[int]:
                                                  )
 
         return [community.id for community in communities.all()]
+    else:
+        return []
 
 
 @cache.memoize(timeout=300)
