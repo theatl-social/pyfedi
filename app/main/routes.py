@@ -839,6 +839,12 @@ def test_redis():
         return 'Redis error'
 
 
+@bp.route('/test_ip')
+@debug_mode_only
+def test_ip():
+    return ip_address()
+
+
 @bp.route('/test_s3')
 @debug_mode_only
 def test_s3():
