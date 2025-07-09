@@ -81,14 +81,11 @@ def get_token_and_user_info(provider, user_info_endpoint):
         if not oauth_provider:
             raise ValueError(f"OAuth provider '{provider}' is not configured.")
 
-        print(f"Session state: {session.values()}")
-
         token = oauth_provider.authorize_access_token()
 
         resp = oauth_provider.get(user_info_endpoint, token=token)
         return token, resp.json()
-    except Exception as e:
-        print(f"Error during OAuth authorization: {e}")
+    except Exception:
         return None, None
 
 
@@ -131,9 +128,6 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
     """
     Generalized handler for OAuth authorize routes.
     """
-    print(f"Session state: {session.get('oauth_state')}")
-    print(f"Request state: {request.args.get('state')}")
-
     token, user_info = get_token_and_user_info(provider, user_info_endpoint)
     if not token or not user_info:
         flash(_('Login failed due to a problem with the OAuth server.'), 'error')
