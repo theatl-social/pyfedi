@@ -16,11 +16,11 @@
                 {{ _('Delete') }}</a></li>
         {% endif -%}
     {% else -%}
-        {# Special restore permissions for deleted posts #}
-        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+        {# Special restore permissions for deleted replies #}
+        {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids or current_user.is_staff() -%}
             <li><a href='#' data-url="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
-        {% elif post_reply.user_id == current_user.id and (current_user.is_staff() or current_user.get_id() in admin_ids) -%}
+        {% elif post_reply.user_id == current_user.id and post_reply.deleted_by == post_reply.user_id -%}
             <li><a href='#' data-url="{{ url_for('post.post_reply_restore', post_id=post.id, comment_id=post_reply.id) }}" class="confirm_first send_post dropdown-item no-underline" rel="nofollow"><span class="fe fe-arrow-up"></span>
                 {{ _('Restore') }}</a></li>
         {% endif -%}
