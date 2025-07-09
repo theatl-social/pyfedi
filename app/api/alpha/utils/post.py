@@ -12,7 +12,7 @@ from app.models import Post, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
-    site_language_id
+    site_language_id, filtered_out_communities
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -138,17 +138,22 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         else:
             posts = posts.filter(Post.title.ilike(f"%{query}%"))
 
-    if user_id and liked_only:
-        upvoted_post_ids = recently_upvoted_posts(user_id)
-        posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
-    elif user_id and saved_only:
-        bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
-                                                 {"user_id": user_id}).scalars()
-        posts = posts.filter(Post.id.in_(bookmarked_post_ids))
-    elif user_id and user.hide_read_posts:
-        u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
-                                      {"user_id": user_id}).scalars()
-        posts = posts.filter(Post.id.not_in(u_rp_ids))
+    if user_id:
+        if liked_only:
+            upvoted_post_ids = recently_upvoted_posts(user_id)
+            posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
+        elif saved_only:
+            bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                     {"user_id": user_id}).scalars()
+            posts = posts.filter(Post.id.in_(bookmarked_post_ids))
+        elif user.hide_read_posts:
+            u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                                          {"user_id": user_id}).scalars()
+            posts = posts.filter(Post.id.not_in(u_rp_ids))
+
+        filtered_out_community_ids = filtered_out_communities(user)
+        if len(filtered_out_community_ids):
+            posts = posts.filter(Post.community_id.not_in(filtered_out_community_ids))
 
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
@@ -170,6 +175,20 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     elif sort == "TopMonth":
         posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).order_by(
             desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopThreeMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=90)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopSixMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=180)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopNineMonths":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=270)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopYear":
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=365)).order_by(
+            desc(Post.up_votes - Post.down_votes))
+    elif sort == "TopAll":
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
     elif sort == "New":
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":

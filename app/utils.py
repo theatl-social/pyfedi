@@ -891,7 +891,7 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 def ip_address() -> str:
-    ip = request.headers.get('X-Forwarded-For') or request.remote_addr
+    ip = request.headers.get('CF-Connecting-IP') or request.headers.get('X-Forwarded-For') or request.remote_addr
     if ',' in ip:  # Remove all but first ip addresses
         ip = ip[:ip.index(',')].strip()
     return ip
@@ -2182,6 +2182,14 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
+
+    # filter out posts in communities where the community name is objectionable to them
+    if current_user.is_authenticated:
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
+            params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
+
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
         post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
@@ -2234,7 +2242,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
         post_id_where.append('p.ranking_scaled is not null ')
     elif sort.startswith('top'):
-        post_id_where.append('p.posted_at > :top_cutoff ')
+        if sort != 'top_all':
+            post_id_where.append('p.posted_at > :top_cutoff ')
         post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
         if sort == 'top_1h':
             params['top_cutoff'] = utcnow() - timedelta(hours=1)
@@ -2248,7 +2257,9 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             params['top_cutoff'] = utcnow() - timedelta(days=7)
         elif sort == 'top_1m':
             params['top_cutoff'] = utcnow() - timedelta(days=28)
-        else:
+        elif sort == 'top_1y':
+            params['top_cutoff'] = utcnow() - timedelta(days=365)
+        elif sort != 'top_all':
             params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
@@ -2407,6 +2418,21 @@ def notif_id_to_string(notif_id) -> str:
     # --model/db default--
     if notif_id == NOTIF_DEFAULT:
         return _('All')
+
+
+@cache.memoize(timeout=6000)
+def filtered_out_communities(user: User) -> List[int]:
+    if user.community_keyword_filter:
+        communities = Community.query
+        for community_filter in user.community_keyword_filter.split(','):
+            if community_filter.strip():
+                communities = communities.filter(or_(Community.name.ilike(f"%{community_filter}%"),
+                                                     Community.title.ilike(f"%{community_filter}%"))
+                                                 )
+
+        return [community.id for community in communities.all()]
+    else:
+        return []
 
 
 @cache.memoize(timeout=300)

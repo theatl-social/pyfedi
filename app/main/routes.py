@@ -32,7 +32,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes, login_required, safe_order_by
+    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
@@ -246,6 +246,10 @@ def list_communities():
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
             communities = communities.filter(or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
+
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
@@ -333,6 +337,9 @@ def list_local_communities():
             communities = communities.filter(Community.nsfw == False)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
@@ -842,7 +849,7 @@ def test_redis():
 @bp.route('/test_ip')
 @debug_mode_only
 def test_ip():
-    return ip_address()
+    return ip_address() + ' ' + request.headers.get('CF-Connecting-IP', 'CF-Connecting-IP is empty')
 
 
 @bp.route('/test_s3')
