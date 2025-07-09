@@ -13,7 +13,6 @@ from flask_mail import Mail
 from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
 from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
@@ -36,6 +35,13 @@ def get_locale():
         return 'en'
 
 
+def get_ip_address() -> str:
+    ip = request.headers.get('X-Forwarded-For') or request.remote_addr
+    if ',' in ip:  # Remove all but first ip addresses
+        ip = ip[:ip.index(',')].strip()
+    return ip
+
+
 db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
 migrate = Migrate()
 login = LoginManager()
@@ -45,7 +51,7 @@ mail = Mail()
 bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
-limiter = Limiter(get_remote_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
+limiter = Limiter(get_ip_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
 httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
