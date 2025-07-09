@@ -408,6 +408,18 @@ def escape_non_html_angle_brackets(text: str) -> str:
 
     return text
 
+def handle_double_bolds(text: str) -> str:
+    """
+    Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
+    same sentence.
+    """
+
+    # Regex is slightly modified from markdown2 source code
+    re_bold = re.compile(r"(\*\*)(?=\S)(.+?[*]?)(?<=\S)\1")
+    strong_html = re_bold.sub(r"<strong>\2</strong>", text)
+
+    return strong_html
+
 
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
@@ -417,6 +429,8 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
         # Escape <...> if it’s not a real HTML tag
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
+        
+        markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
         try:
             raw_html = markdown2.markdown(markdown_text,
