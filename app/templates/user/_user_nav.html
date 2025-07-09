@@ -7,6 +7,7 @@
         <option value="/user/settings/filters" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if request.path == '/user/settings/filters' }}>{{ _('Blocks & Filters') }}</option>
         <option value="/user/settings/import_export" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/settings/import_export' }}>{{ _('Import & Export') }}</option>
         <option value="{{ url_for('user.user_passkey_list') }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/passkeys' }}>{{ _('Passkeys') }}</option>
+        <option value="{{ url_for('user.connect_oauth') }}" aria-label="{{ _('Connect OAuth') }}" {{ 'selected'  if request.path == '/user/connect_oauth' }}>{{ _('Connect OAuth') }}</option>
     </select>
     <hr>
 </div>
@@ -26,6 +27,9 @@
         </a>
         <a href="{{ url_for('user.user_passkey_list') }}" class="btn {{ 'btn-primary' if request.path == '/user/passkeys' else 'btn-outline-secondary' }}">
             {{ _('Passkeys') }}
+        </a>
+        <a href="{{ url_for('user.connect_oauth') }}" class="btn {{ 'btn-primary' if request.path == '/user/connect_oauth' else 'btn-outline-secondary' }}">
+            {{ _('Connect OAuth') }}
         </a>
     </div>
 </div>

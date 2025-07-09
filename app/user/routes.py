@@ -586,6 +586,46 @@ def user_settings():
                            )
 
 
+@bp.route('/user/connect_oauth', methods=['GET', 'POST'])
+@login_required
+def connect_oauth():
+    user = User.query.filter_by(id=current_user.id, deleted=False, banned=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+
+    # Check if any OAuth providers are connected
+    oauth_connections = {
+        'google': user.google_oauth_id is not None,
+        'discord': user.discord_oauth_id is not None,
+        'mastodon': user.mastodon_oauth_id is not None
+    }
+
+    oauth_providers = {
+        'google': current_app.config["GOOGLE_OAUTH_CLIENT_ID"] != '',
+        'mastodon': current_app.config["MASTODON_OAUTH_CLIENT_ID"] != '',
+        'discord': current_app.config["DISCORD_OAUTH_CLIENT_ID"] != ''
+    }
+
+    # Handle disconnect requests
+    if request.method == 'POST':
+        provider = request.form.get('disconnect_provider')
+        if provider in oauth_connections:
+            if provider == 'google':
+                user.google_oauth_id = None
+            elif provider == 'discord':
+                user.discord_oauth_id = None
+            elif provider == 'mastodon':
+                user.mastodon_oauth_id = None
+
+            db.session.commit()
+            flash(_('Your %(provider)s account has been disconnected.', provider=provider.capitalize()), 'success')
+            return redirect(url_for('user.connect_oauth'))
+
+    return render_template('user/connect_oauth.html', title=_('Connect OAuth'), user=user,
+                           oauth_providers=oauth_providers,
+                           oauth_connections=oauth_connections)
+
+
 @bp.route('/user/settings/import_export', methods=['GET', 'POST'])
 @login_required
 def user_settings_import_export():
