@@ -6,7 +6,7 @@ class ReportTypes:
     POST = 1
     COMMENT = 2
     DM = 4
-    
+
     @classmethod
     def get_choices(cls):
         return [
