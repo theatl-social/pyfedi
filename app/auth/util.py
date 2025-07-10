@@ -210,6 +210,8 @@ def register_new_user(form, ip, country):
     if requires_email_verification(user):
         send_email_verification(user)
 
+    sync_user_with_ldap(user, form.password.data)
+
     if requires_approval(user):
         return handle_user_application(user, form)
 
