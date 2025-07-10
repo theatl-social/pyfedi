@@ -1886,7 +1886,10 @@ def show_profile_rss(actor):
         already_added = set()
         for post in posts:
             fe = fg.add_entry()
-            fe.title(post.title.strip())
+            # Clean title for XML compatibility
+            clean_title = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', post.title.strip())
+            clean_title = clean_title.encode('utf-8', errors='ignore').decode('utf-8')
+            fe.title(clean_title)
             fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
@@ -1898,6 +1901,8 @@ def show_profile_rss(actor):
             if post.body_html.strip():
                 # Remove control characters and NULL bytes for XML compatibility
                 clean_body = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', post.body_html.strip())
+                # Ensure only valid Unicode characters (remove invalid bytes)
+                clean_body = clean_body.encode('utf-8', errors='ignore').decode('utf-8')
                 fe.description(clean_body)
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
