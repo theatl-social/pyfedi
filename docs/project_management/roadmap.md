@@ -16,7 +16,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 [Technical debt & documentation](https://piefed.social/post/411592) & [code repository](https://piefed.social/post/411573)
 
-[Scheduled posts](https://piefed.social/post/411583)
+✅ [Scheduled posts](https://piefed.social/post/411583)
 
 [Built-in instance chooser during onboarding](https://piefed.social/post/411579)
 
