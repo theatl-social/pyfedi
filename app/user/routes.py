@@ -1889,6 +1889,8 @@ def show_profile_rss(actor):
             # Validate title and body - skip this post if invalid
             if not is_valid_xml_utf8(post.title.strip()):
                 continue
+            if post.body_html is None:
+                continue
             if post.body_html.strip() and not is_valid_xml_utf8(post.body_html.strip()):
                 continue
             
