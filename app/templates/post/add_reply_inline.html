@@ -8,25 +8,33 @@
                 </div>
             {% endif -%}
             <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control" rows="5"
-                      autofocus="autofocus" required="required" aria-required="true"
-                      placeholder="{{ in_reply_to.community.posting_warning if in_reply_to.community.posting_warning else '' }}"></textarea>
+                    autofocus="autofocus" required="required" aria-required="true"
+                    placeholder="{{ in_reply_to.community.posting_warning if in_reply_to.community.posting_warning else '' }}">
+            </textarea>
         </div>
     </div>
     <div class="row mb-3">
         <div class="col-8">
             <a href="#"
-                   class="btn btn-primary mt-2"
-                   hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id, nonce=nonce) }}"
-                   hx-target="#reply_to_{{ comment_id }}"
-                   hx-swap="outerHTML"
-                >{{ _('Comment') }}</a>
-            <a href="#" class="btn btn-outline mt-2" hx-post="{{ url_for('post.preview') }}" hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">{{ _('Preview') }}</a>
+                    class="btn btn-primary mt-2"
+                    hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id, nonce=nonce) }}"
+                    hx-target="#reply_to_{{ comment_id }}"
+                    hx-swap="outerHTML">
+                {{ _('Comment') }}
+            </a>
+            <a href="#" 
+                class="btn btn-outline mt-2" 
+                hx-post="{{ url_for('post.preview') }}" 
+                hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
+                {{ _('Preview') }}
+            </a>
         </div>
         <div class="col-4 text-right">
-            <select name="language_id" class="form-select mt-2" id="language_select_{{ comment_id }}"
-                    data-recipient-language="{{ recipient_language_id }}"
-                    data-warning-div-id="comment_language_warning_{{ comment_id }}"
-            >
+            <select name="language_id" 
+                    class="form-select mt-2" 
+                    id="language_select_{{ comment_id }}" 
+                    data-recipient-language="{{ recipient_language_id }}" 
+                    data-warning-div-id="comment_language_warning_{{ comment_id }}">
                 {% for language in languages %}
                     <option value="{{ language[0] }}">{{ language[1] }}</option>
                 {% endfor %}
@@ -56,7 +64,7 @@
     {% endif %}
     <div class="row">
         <div class="col">
-            <div id="textarea_in_reply_to_preview_{{ comment_id }}"></div>
+            <div id="textarea_in_reply_to_preview_{{ comment_id }}" class="reply_preview"></div>
         </div>
     </div>
 {% endif -%}

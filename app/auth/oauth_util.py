@@ -1,6 +1,6 @@
 from random import randint
 
-from flask import flash, g, redirect, render_template, request, url_for
+from flask import flash, g, redirect, render_template, request, url_for, session
 from flask_babel import _
 from flask_login import login_user, current_user
 
@@ -31,15 +31,13 @@ def handle_user_verification(user, oauth_id_key, token, ip, country, user_info):
         username = user_info.get('username', '')
 
         # Register a new user
-        user = initialize_new_user(email, username, oauth_id_key, user_info, ip, country)
-
+        user, redirect_request = initialize_new_user(email, username, oauth_id_key, user_info, ip, country)
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
             task_selector('check_application', application_id=user.registration_application.id)
             return redirect(url_for('auth.please_wait'))
     else:
         # Handle existing user
         return finalize_user_login(user, token, ip, country)
-    return user
 
 
 def initialize_new_user(email, username, oauth_id_key, user_info, ip, country):
@@ -71,7 +69,7 @@ def initialize_new_user(email, username, oauth_id_key, user_info, ip, country):
         # Finalize registration and log user in
         finalize_user_setup(user)
         login_user(user, remember=True)
-        return redirect(url_for('auth.trump_musk'))
+        return user
 
 
 def get_token_and_user_info(provider, user_info_endpoint):
@@ -156,6 +154,8 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
         form = form_class() if form_class else None
         # For providers requiring a registration form
         if form_class and (request.method == "GET" or not form.validate_on_submit()):
+            # session['code'] = request.args.get('code')
+            session["user_info"] = user_info
             return render_template(f'auth/{provider}_authorize.html', form=form, user_info=user_info)
 
     return handle_user_verification(user, oauth_id_key, token, ip, country, user_info)

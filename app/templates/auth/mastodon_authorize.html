@@ -1,11 +1,10 @@
 
 {% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
-    return redirect(url_for('auth.check_email'))
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%} -%}
-{% from 'bootstrap/form.html' import render_form -%}
+{% from 'bootstrap5/form.html' import render_form -%}
 
 {% block app_content -%}
     <div class="row">
