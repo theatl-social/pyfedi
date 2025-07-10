@@ -1361,14 +1361,14 @@ def process_inbox_request(request_json, store_ap_json):
                         core_activity['cc'] = []  # cut very long list of instances
 
                     blocker = user
+                    already_banned = False
                     blocked_ap_id = core_activity['object'].lower()
                     blocked = session.query(User).filter_by(ap_profile_id=blocked_ap_id).first()
                     if not blocked:
                         log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Does not exist here')
                         return
                     if blocked.banned:  # We may have already banned them - we don't want remote temp bans to over-ride our permanent bans
-                        log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json, 'Already banned')
-                        return
+                        already_banned = True
 
                     remove_data = core_activity['removeData'] if 'removeData' in core_activity else False
                     if 'target' in core_activity:
@@ -1388,12 +1388,13 @@ def process_inbox_request(request_json, store_ap_json):
                                 current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
                                 return
 
-                            blocked.banned = True
-                            if 'expires' in core_activity:
-                                blocked.ban_until = core_activity['expires']
-                            elif 'endTime' in core_activity:
-                                blocked.ban_until = core_activity['endTime']
-                            session.commit()
+                            if not already_banned:
+                                blocked.banned = True
+                                if 'expires' in core_activity:
+                                    blocked.ban_until = core_activity['expires']
+                                elif 'endTime' in core_activity:
+                                    blocked.ban_until = core_activity['endTime']
+                                session.commit()
 
                             if remove_data:
                                 site_ban_remove_data(blocker.id, blocked)
@@ -1411,7 +1412,8 @@ def process_inbox_request(request_json, store_ap_json):
 
                             if remove_data:
                                 community_ban_remove_data(blocker.id, community.id, blocked)
-                            ban_user(blocker, blocked, community, core_activity)
+                            if not already_banned:
+                                ban_user(blocker, blocked, community, core_activity)
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
                     else:  # Mastodon does not have a target when blocking, only object
                         if 'object' in core_activity and isinstance(core_activity['object'], str):
