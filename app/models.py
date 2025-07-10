@@ -2734,6 +2734,7 @@ class Report(db.Model):
     source_instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'))  # the instance of the reporter. mostly used to distinguish between local (instance 1) and remote reports
     created_at = db.Column(db.DateTime, default=utcnow)
     updated = db.Column(db.DateTime, default=utcnow)
+    targets = db.Column(db.JSON)
 
     # textual representation of self.type
     def type_text(self):
