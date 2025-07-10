@@ -292,7 +292,7 @@ def post_reply_mark_as_read(auth, data):
     reply_id = data['comment_reply_id']
     read = data['read']
 
-    user_id = authorise_api_user(auth)
+    user = authorise_api_user(auth, return_type='model')
 
     # no real support for this. Just marking the Notification for the reply really
     # notification has its own id, which would be handy, but reply_view is currently just returning the reply.id for that
@@ -300,12 +300,16 @@ def post_reply_mark_as_read(auth, data):
 
     reply_url = '#comment_' + str(reply.id)
     mention_url = '/comment/' + str(reply.id)
-    notification = Notification.query.filter(Notification.user_id == user_id,
+    notification = Notification.query.filter(Notification.user_id == user.id,
                                              or_(Notification.url.ilike(f"%{reply_url}%"),
                                                  Notification.url.ilike(f"%{mention_url}%"))).first()
     if notification:
         notification.read = read
+        if read == True and user.unread_notifications > 0:
+            user.unread_notifications -= 1
+        elif read == False:
+            user.unread_notifications += 1
         db.session.commit()
 
-    reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user_id, read=True)}
+    reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user.id, read=True)}
     return reply_json
