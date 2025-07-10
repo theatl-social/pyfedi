@@ -30,7 +30,7 @@ from app.shared.tasks import task_selector
 from app.user.routes import show_profile
 from app.utils import gibberish, get_setting, community_membership, ap_datetime, ip_address, can_downvote, \
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, html_to_text, add_to_modlog_activitypub, instance_banned, get_redis_connection, \
+    community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases
 
@@ -1169,9 +1169,9 @@ def process_inbox_request(request_json, store_ap_json):
                         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
                             post.comments_enabled = False
                             session.commit()
-                            add_to_modlog_activitypub('lock_post', mod, community_id=post.community.id,
-                                                      link_text=shorten_string(post.title), link=f'post/{post.id}',
-                                                      reason=reason)
+                            add_to_modlog('lock_post', actor=mod, target_user=post.author, reason=reason,
+                                          community=post.community, post=post,
+                                          link_text=shorten_string(post.title), link=f'post/{post.id}')
                             log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                         else:
                             log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: Does not have permission')
@@ -1233,7 +1233,8 @@ def process_inbox_request(request_json, store_ap_json):
                                     new_membership = CommunityMember(community_id=community.id, user_id=new_mod.id,
                                                                      is_moderator=True)
                                     session.add(new_membership)
-                                add_to_modlog_activitypub('add_mod', mod, community_id=community.id)
+                                add_to_modlog('add_mod', actor=mod, target_user=new_mod, community=community,
+                                              link_text=new_mod.display_name(), link=new_mod.link())
                                 session.commit()
                                 log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, saved_json)
                             else:
@@ -1330,7 +1331,8 @@ def process_inbox_request(request_json, store_ap_json):
                                     existing_membership.is_moderator = False
                                     session.commit()
                                     log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json)
-                                add_to_modlog_activitypub('remove_mod', mod, community_id=community.id)
+                                add_to_modlog('remove_mod', actor=mod, target_user=old_mod, community=community,
+                                              link_text=old_mod.display_name(), link=old_mod.link())
                             else:
                                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json,
                                                 'Cannot find: ' + core_activity['object'])
@@ -1513,9 +1515,9 @@ def process_inbox_request(request_json, store_ap_json):
                             if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
                                 post.comments_enabled = True
                                 session.commit()
-                                add_to_modlog_activitypub('unlock_post', mod, community_id=post.community.id,
-                                                          link_text=shorten_string(post.title), link=f'post/{post.id}',
-                                                          reason=reason)
+                                add_to_modlog('unlock_post', actor=mod, target_user=post.author, reason=reason,
+                                              community=post.community, post=post,
+                                              link_text=shorten_string(post.title), link=f'post/{post.id}')
                                 log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                             else:
                                 log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: Does not have permission')

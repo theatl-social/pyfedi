@@ -560,6 +560,7 @@ class Community(db.Model):
     languages = db.relationship('Language', lazy='dynamic', secondary=community_language,
                                 backref=db.backref('communities', lazy='dynamic'))
     flair = db.relationship('CommunityFlair', backref=db.backref('community'), cascade="all, delete-orphan")
+    modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.community_id", back_populates='community')
 
     __table_args__ = (
         db.Index(
@@ -771,7 +772,7 @@ class Community(db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.community_id == self.id).delete()
         db.session.query(Report).filter(Report.suspect_community_id == self.id).delete()
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
-        db.session.query(ModLog).filter(ModLog.community_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.community_id == self.id).update({ModLog.community_id: None})
         db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
 
 
@@ -904,6 +905,8 @@ class User(UserMixin, db.Model):
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
     roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
+    modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user')
+    modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author')
 
     hide_read_posts = db.Column(db.Boolean, default=False)
     # db relationship tracked by the "read_posts" table
@@ -1261,7 +1264,8 @@ class User(UserMixin, db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
-        db.session.query(ModLog).filter(ModLog.user_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.user_id == self.id).update({ModLog.user_id: None})
+        db.session.query(ModLog).filter(ModLog.target_user_id == self.id).update({ModLog.target_user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
 
     def purge_content(self, soft=True):
@@ -1400,6 +1404,7 @@ class Post(db.Model):
     replies = db.relationship('PostReply', lazy='dynamic', backref='post')
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
+    modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1792,6 +1797,7 @@ class Post(db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
 
@@ -2095,6 +2101,7 @@ class PostReply(db.Model):
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
+    modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.reply_id", back_populates='reply')
 
     __table_args__ = (
         db.Index(
@@ -2289,6 +2296,7 @@ class PostReply(db.Model):
         """
 
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.post_reply_id == self.id).delete()
+        db.session.query(ModLog).filter(ModLog.reply_id == self.id).update({ModLog.reply_id: None})
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
@@ -2826,8 +2834,11 @@ class PostReplyBookmark(db.Model):
 
 class ModLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), nullable=True, index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=True, index=True)
+    reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), nullable=True, index=True)
+    target_user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
     type = db.Column(db.String(10))  # 'mod' or 'admin'
     action = db.Column(db.String(30))  # 'removing post', 'banning from community', etc
     reason = db.Column(db.String(512))
@@ -2836,8 +2847,11 @@ class ModLog(db.Model):
     public = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
 
-    community = db.relationship('Community', lazy='joined', foreign_keys=[community_id])
-    author = db.relationship('User', lazy='joined', foreign_keys=[user_id])
+    author = db.relationship('User', lazy='joined', foreign_keys=[user_id], back_populates='modlog_actor')
+    community = db.relationship('Community', lazy='joined', foreign_keys=[community_id], back_populates='modlog')
+    target_user = db.relationship('User', lazy='joined', foreign_keys=[target_user_id], back_populates='modlog_target')
+    post = db.relationship('Post', lazy='joined', foreign_keys=[post_id], back_populates='modlog')
+    reply = db.relationship('PostReply', lazy='joined', foreign_keys=[reply_id], back_populates='modlog')
 
     action_map = {
         'add_mod': _l('Added moderator'),

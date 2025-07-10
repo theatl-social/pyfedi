@@ -31,7 +31,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
     shorten_string, fixup_url, \
     microblog_content_to_title, is_video_url, \
-    notification_subscribers, communities_banned_from, html_to_text, add_to_modlog_activitypub, joined_communities, \
+    notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
     patch_db_session
@@ -1586,9 +1586,9 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                 to_delete.calculate_cross_posts(delete_only=True)
             db.session.commit()
             if to_delete.author.id != deletor.id:
-                add_to_modlog_activitypub('delete_post', deletor, community_id=community.id,
-                                          link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}',
-                                          reason=reason)
+                add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
+                              community=community, post=to_delete,
+                              link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
         elif isinstance(to_delete, PostReply):
             to_delete.deleted = True
             to_delete.deleted_by = deletor.id
@@ -1601,10 +1601,10 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                                    {'parents': tuple(to_delete.path[:-1])})
             db.session.commit()
             if to_delete.author.id != deletor.id:
-                add_to_modlog_activitypub('delete_post_reply', deletor, community_id=community.id,
-                                          link_text=f'comment on {shorten_string(to_delete.post.title)}',
-                                          link=f'post/{to_delete.post.id}#comment_{to_delete.id}',
-                                          reason=reason)
+                add_to_modlog('delete_post_reply', actor=deletor, target_user=to_delete.author, reason=reason,
+                              community=community, post=to_delete.post, reply=to_delete,
+                              link_text=f'comment on {shorten_string(to_delete.post.title)}',
+                              link=f'post/{to_delete.post.id}#comment_{to_delete.id}')
         log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
     else:
         log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Deletor did not have permisson')
@@ -1627,9 +1627,9 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
                 to_restore.calculate_cross_posts()
             db.session.commit()
             if to_restore.author.id != restorer.id:
-                add_to_modlog_activitypub('restore_post', restorer, community_id=community.id,
-                                          link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}',
-                                          reason=reason)
+                add_to_modlog('restore_post', actor=restorer, target_user=to_restore.author, reason=reason,
+                              community=community, post=to_restore,
+                              link_text=shorten_string(to_restore.title), link=f'post/{to_restore.id}')
 
         elif isinstance(to_restore, PostReply):
             to_restore.deleted = False
@@ -1642,10 +1642,10 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
                                    {'parents': tuple(to_restore.path[:-1])})
             db.session.commit()
             if to_restore.author.id != restorer.id:
-                add_to_modlog_activitypub('restore_post_reply', restorer, community_id=community.id,
-                                          link_text=f'comment on {shorten_string(to_restore.post.title)}',
-                                          link=f'post/{to_restore.post_id}#comment_{to_restore.id}',
-                                          reason=reason)
+                add_to_modlog('restore_post_reply', actor=restorer, target_user=to_restore.author, reason=reason,
+                              community=community, post=to_restore.post, reply=to_restore,
+                              link_text=f'comment on {shorten_string(to_restore.post.title)}',
+                              link=f'post/{to_restore.post_id}#comment_{to_restore.id}')
         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, saved_json)
     else:
         log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, saved_json, 'Restorer did not have permisson')
@@ -1780,8 +1780,8 @@ def ban_user(blocker, blocked, community, core_activity):
             cache.delete_memoized(joined_communities, blocked.id)
             cache.delete_memoized(moderating_communities, blocked.id)
 
-        add_to_modlog_activitypub('ban_user', blocker, community_id=community.id, link_text=blocked.display_name(),
-                                  link=f'u/{blocked.link()}', reason=reason)
+        add_to_modlog('ban_user', actor=blocker, target_user=blocked, reason=reason,
+                      community=community, link_text=blocked.display_name(), link=f'u/{blocked.link()}')
 
 
 def unban_user(blocker, blocked, community, core_activity):
@@ -1814,8 +1814,8 @@ def unban_user(blocker, blocked, community, core_activity):
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
-    add_to_modlog_activitypub('unban_user', blocker, community_id=community.id, link_text=blocked.display_name(),
-                              link=f'u/{blocked.link()}', reason=reason)
+    add_to_modlog('unban_user', actor=blocker, target_user=blocked, reason=reason,
+                  community=community, link_text=blocked.display_name(), link=f'u/{blocked.link()}')
 
 
 def create_post_reply(store_ap_json, community: Community, in_reply_to, request_json: dict, user: User,

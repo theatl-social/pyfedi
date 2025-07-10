@@ -9,7 +9,7 @@ from app.models import Notification, NotificationSubscription, Post, PostReply, 
     utcnow
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, \
-    piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog_activitypub, can_create_post_reply, \
+    piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
     can_upvote, can_downvote, get_recipient_language
 
 
@@ -372,9 +372,10 @@ def mod_remove_reply(reply_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
 
-    add_to_modlog_activitypub('delete_post_reply', user, community_id=reply.community_id,
-                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+    add_to_modlog('delete_post_reply', actor=user, target_user=reply.author, reason=reason,
+                  community=reply.community, post=reply.post, reply=reply,
+                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                  link=f'post/{reply.post_id}#comment_{reply.id}')
 
     task_selector('delete_reply', user_id=user.id, reply_id=reply.id, reason=reason)
 
@@ -406,9 +407,10 @@ def mod_restore_reply(reply_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Comment restored.'))
 
-    add_to_modlog_activitypub('restore_post_reply', user, community_id=reply.community_id,
-                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+    add_to_modlog('restore_post_reply', actor=user, target_user=reply.author, reason=reason,
+                  community=reply.community, post=reply.post, reply=reply,
+                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                  link=f'post/{reply.post_id}#comment_{reply.id}')
 
     task_selector('restore_reply', user_id=user.id, reply_id=reply.id, reason=reason)
 

@@ -728,9 +728,9 @@ def ban_profile(actor):
                             db.session.commit()
                         flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
-                    add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                    add_to_modlog('delete_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
                 else:
-                    add_to_modlog('ban_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                    add_to_modlog('ban_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
 
                     if user.is_instance_admin():
                         flash(_('Banned user was a remote instance admin.'), 'warning')
@@ -780,7 +780,7 @@ def unban_profile(actor):
             user.banned = False
             db.session.commit()
 
-            add_to_modlog('unban_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
             flash(_('%(actor)s has been unbanned.', actor=actor))
     else:
@@ -984,7 +984,7 @@ def delete_profile(actor):
             user.delete_dependencies()
             db.session.commit()
 
-            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
                 flash(_('Deleted user was a remote instance admin.'), 'warning')
@@ -1131,7 +1131,7 @@ def ban_purge_profile(actor):
                 db.session.commit()
                 flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
-            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
     else:
         abort(401)

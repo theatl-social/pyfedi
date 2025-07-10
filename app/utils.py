@@ -1832,30 +1832,23 @@ def actor_profile_contains_blocked_words(user: User) -> bool:
     return False
 
 
-def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = ''):
+def add_to_modlog(action: str, actor: User, target_user: User = None, reason: str = '',
+                  community: Community = None, post: Post = None, reply: PostReply = None,
+                  link: str = '', link_text: str = ''):
     """ Adds a new entry to the Moderation Log """
     if action not in ModLog.action_map.keys():
         raise Exception('Invalid action: ' + action)
-    if current_user.is_admin() or current_user.is_staff():
+    if actor.is_instance_admin() or actor.is_admin() or actor.is_staff():
         action_type = 'admin'
     else:
         action_type = 'mod'
-    db.session.add(ModLog(user_id=current_user.id, community_id=community_id, type=action_type, action=action,
-                          reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
-    db.session.commit()
-
-
-def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None, reason: str = '', link: str = '',
-                              link_text: str = ''):
-    """ Adds a new entry to the Moderation Log - identical to above except has an 'actor' parameter """
-    if action not in ModLog.action_map.keys():
-        raise Exception('Invalid action: ' + action)
-    if actor.is_instance_admin():
-        action_type = 'admin'
-    else:
-        action_type = 'mod'
+    community_id = community.id if community else None
+    target_user_id = target_user.id if target_user else None
+    post_id = post.id if post else None
+    reply_id = reply.id if reply else None
     reason = shorten_string(reason, 512)
-    db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
+    db.session.add(ModLog(user_id=actor.id, type=action_type, action=action, target_user_id=target_user_id,
+                          community_id=community_id, post_id=post_id, reply_id=reply_id,
                           reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
 
