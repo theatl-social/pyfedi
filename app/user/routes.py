@@ -1,5 +1,6 @@
 import json as python_json
 import os
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from io import BytesIO
@@ -1895,7 +1896,9 @@ def show_profile_rss(actor):
                     fe.enclosure(post.url, type=type)
                 already_added.add(post.url)
             if post.body_html.strip():
-                fe.description(post.body_html.strip())
+                # Remove control characters and NULL bytes for XML compatibility
+                clean_body = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', post.body_html.strip())
+                fe.description(clean_body)
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
             fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
