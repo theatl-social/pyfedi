@@ -285,6 +285,7 @@ def show_community(community: Community):
     for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
         user_flair[u_flair.user_id] = u_flair.flair
 
+    sticky_posts = None
     posts = None
     comments = None
     if content_type == 'posts':
@@ -339,16 +340,43 @@ def show_community(community: Community):
             if tag_record:
                 posts = posts.join(post_tag).filter(post_tag.c.tag_id == tag_record.id)
 
+        sticky_posts = posts.filter(Post.sticky == True)
+        posts = posts.filter(Post.sticky == False)
+
         if sort == '' or sort == 'hot':
-            posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
-        elif sort == 'top':
-            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).\
+            sticky_posts = sticky_posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+            posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+        elif sort == "top_12h":
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=12)).\
                 order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'top':
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(hours=24)).\
+                order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'top_1w':
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).\
+                order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'top_1m':
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=28)).\
+                order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'top_1y':
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=365)).\
+                order_by(desc(Post.up_votes - Post.down_votes))
+        elif sort == 'top_all':
+            sticky_posts = sticky_posts.order_by(desc(Post.up_votes - Post.down_votes))
+            posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
         elif sort == 'new':
+            sticky_posts = sticky_posts.order_by(desc(Post.posted_at))
             posts = posts.order_by(desc(Post.posted_at))
         elif sort == 'old':
+            sticky_posts = sticky_posts.order_by(asc(Post.posted_at))
             posts = posts.order_by(asc(Post.posted_at))
         elif sort == 'active':
+            sticky_posts = sticky_posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
         per_page = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
         if post_layout == 'masonry':
@@ -356,6 +384,7 @@ def show_community(community: Community):
         elif post_layout == 'masonry_wide':
             per_page = 300
         posts = posts.paginate(page=page, per_page=per_page, error_out=False)
+        sticky_posts = sticky_posts.all()
     else:
         content_filters = {}
         comments = community.replies
@@ -385,11 +414,27 @@ def show_community(community: Community):
 
         if sort == '' or sort == 'hot':
             comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+        elif sort == 'top_12h':
+            comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=12)).order_by(
+                desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == 'top':
+            comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=24)).order_by(
+                desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == 'top_1w':
             comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).order_by(
                 desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == 'top_1m':
+            comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=28)).order_by(
+                desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == 'top_1y':
+            comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=365)).order_by(
+                desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == 'top_all':
+            comments = comments.order_by(desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == 'new' or sort == 'active':
             comments = comments.order_by(desc(PostReply.posted_at))
+        elif sort == 'old':
+            comments = comments.order_by(asc(PostReply.posted_at))
         per_page = 100
         comments = comments.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -514,7 +559,7 @@ def show_community(community: Community):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_title=current_feed_title, user_flair=user_flair)
+                           current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts)
 
 
 # RSS feed of the community

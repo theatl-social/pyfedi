@@ -7,7 +7,7 @@ from feedgen.feed import FeedGenerator
 from flask import request, flash, url_for, current_app, redirect, abort, make_response, g
 from flask_babel import _
 from flask_login import current_user
-from sqlalchemy import text, desc, or_
+from sqlalchemy import text, desc, asc, or_
 
 from app import db, cache
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
@@ -109,11 +109,27 @@ def show_topic(topic_path):
 
             if sort == '' or sort == 'hot':
                 comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+            elif sort == 'top_12h':
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=12)).order_by(
+                    desc(PostReply.up_votes - PostReply.down_votes))
             elif sort == 'top':
-                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).\
-                    order_by(desc(PostReply.up_votes - PostReply.down_votes))
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=24)).order_by(
+                    desc(PostReply.up_votes - PostReply.down_votes))
+            elif sort == 'top_1w':
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=7)).order_by(
+                    desc(PostReply.up_votes - PostReply.down_votes))
+            elif sort == 'top_1m':
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=28)).order_by(
+                    desc(PostReply.up_votes - PostReply.down_votes))
+            elif sort == 'top_1y':
+                comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(days=365)).order_by(
+                    desc(PostReply.up_votes - PostReply.down_votes))
+            elif sort == 'top_all':
+                comments = comments.order_by(desc(PostReply.up_votes - PostReply.down_votes))
             elif sort == 'new' or sort == 'active':
                 comments = comments.order_by(desc(PostReply.posted_at))
+            elif sort == 'old':
+                comments = comments.order_by(asc(PostReply.posted_at))
             per_page = 100
             comments = comments.paginate(page=page, per_page=per_page, error_out=False)
             next_url = url_for('topic.show_topic', topic_path=topic_path,

@@ -127,6 +127,11 @@
                 document.addEventListener("DOMContentLoaded", function() {
                     const masonry = document.getElementById('masonry');
                     const htmlSnippets = [
+                        {% if sticky_posts -%}
+                          {% for post in sticky_posts -%}
+                              {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
+                          {% endfor -%}
+                        {% endif -%}
                         {% for post in posts.items -%}
                             {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
                         {% endfor -%}
@@ -135,22 +140,33 @@
                 });
             </script>
         {% else -%}
-            {% if posts %}
-                <div class="post_list">
-                    {% for post in posts.items -%}
-                        {% include 'post/_post_teaser.html' -%}
-                    {% else -%}
-                        <p>{{ _('No posts in this community yet.') }}</p>
-                    {% endfor -%}
-                </div>
-            {% elif comments %}
-                <div class="post_list comments">
-                    {% for post_reply in comments.items %}
-                        {% with teaser=True %}
-                            {% include 'post/_post_reply_teaser.html' %}
-                        {% endwith %}
-                    {% endfor %}
-                </div>
+            {% if content_type == "posts" -%}
+                {% if posts or sticky_posts %}
+                    <div class="post_list">
+                        {% if sticky_posts -%}
+                            {% for post in sticky_posts -%}
+                                {% include 'post/_post_teaser.html' -%}
+                            {% endfor -%}
+                        {% endif -%}
+                        {% for post in posts.items -%}
+                            {% include 'post/_post_teaser.html' -%}
+                        {% endfor -%}
+                    </div>
+                {% else -%}
+                    <p>{{ _('No posts in this community yet.') }}</p>
+                {% endif -%}
+            {% elif content_type == "comments" %}
+                {% if comments -%}
+                    <div class="post_list comments">
+                        {% for post_reply in comments.items %}
+                            {% with teaser=True %}
+                                {% include 'post/_post_reply_teaser.html' %}
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
+                {% else -%}
+                    <p>{{ _("No comments in this community yet.") }}</p>
+                {% endif -%}
             {% endif -%}
         {% endif -%}
 
