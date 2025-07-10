@@ -2786,3 +2786,35 @@ def get_timezones():
 def low_value_reposters() -> List[int]:
     result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true or suppress_crossposts = true')).scalars()
     return list(result)
+
+
+def is_valid_xml_utf8(pystring):
+    """Check if a string is like valid UTF-8 XML content."""
+    if isinstance(pystring, str):
+        pystring = pystring.encode('utf-8', errors='ignore')
+
+    s = pystring
+    c_end = len(s)
+    i = 0
+
+    while i < c_end - 2:
+        if s[i] & 0x80:
+            # Check for forbidden characters
+            if i + 2 < c_end:
+                next3 = (s[i] << 16) | (s[i + 1] << 8) | s[i + 2]
+                # 0xefbfbe and 0xefbfbf are utf-8 encodings of forbidden characters \ufffe and \uffff
+                if next3 == 0xefbfbe or next3 == 0xefbfbf:
+                    return False
+                # 0xeda080 and 0xedbfbf are utf-8 encodings of \ud800 and \udfff (surrogate blocks)
+                if 0xeda080 <= next3 <= 0xedbfbf:
+                    return False
+        elif s[i] < 9 or s[i] == 11 or s[i] == 12 or (14 <= s[i] <= 31) or s[i] == 127:
+            return False  # invalid ascii char
+        i += 1
+
+    while i < c_end:
+        if not (s[i] & 0x80) and (s[i] < 9 or s[i] == 11 or s[i] == 12 or (14 <= s[i] <= 31) or s[i] == 127):
+            return False  # invalid ascii char
+        i += 1
+
+    return True

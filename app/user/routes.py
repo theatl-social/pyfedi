@@ -37,7 +37,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
+    is_valid_xml_utf8
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -1885,11 +1886,14 @@ def show_profile_rss(actor):
 
         already_added = set()
         for post in posts:
+            # Validate title and body - skip this post if invalid
+            if not is_valid_xml_utf8(post.title.strip()):
+                continue
+            if post.body_html.strip() and not is_valid_xml_utf8(post.body_html.strip()):
+                continue
+            
             fe = fg.add_entry()
-            # Clean title for XML compatibility
-            clean_title = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', post.title.strip())
-            clean_title = clean_title.encode('utf-8', errors='ignore').decode('utf-8')
-            fe.title(clean_title)
+            fe.title(post.title.strip())
             fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
@@ -1899,11 +1903,7 @@ def show_profile_rss(actor):
                     fe.enclosure(post.url, type=type)
                 already_added.add(post.url)
             if post.body_html.strip():
-                # Remove control characters and NULL bytes for XML compatibility
-                clean_body = re.sub(r'[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]', '', post.body_html.strip())
-                # Ensure only valid Unicode characters (remove invalid bytes)
-                clean_body = clean_body.encode('utf-8', errors='ignore').decode('utf-8')
-                fe.description(clean_body)
+                fe.description(post.body_html.strip())
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
             fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
