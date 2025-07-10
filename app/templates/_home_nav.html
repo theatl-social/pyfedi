@@ -19,10 +19,10 @@
             <option value="/home/top_1h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last hour') }}" {{ 'selected'  if sort == 'top_1h' }}>
                 {{ _('1 hour') }}
             </option>
-            <option value="/home/top_6h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 6h') }}" {{ 'selected'  if sort == 'top_6h' }}>
+            <option value="/home/top_6h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 6 hours') }}" {{ 'selected'  if sort == 'top_6h' }}>
                 {{ _('6 hours') }}
             </option>
-            <option value="/home/top_12h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 12h') }}" {{ 'selected'  if sort == 'top_12h' }}>
+            <option value="/home/top_12h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 12 hours') }}" {{ 'selected'  if sort == 'top_12h' }}>
                 {{ _('12 hours') }}
             </option>
             <option value="/home/top/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last day') }}" {{ 'selected'  if sort == 'top' }}>
@@ -52,42 +52,42 @@
         </button>
         <ul class="dropdown-menu" aria-labelledby="btnGroupDrop1">
             <li>
-                <a class="dropdown-item" href="/home/top_1h/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_1h' else '' }}" href="/home/top_1h/{{ view_filter }}">
                     {{ _('1 hour') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_6h/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_6h' else '' }}" href="/home/top_6h/{{ view_filter }}">
                     {{ _('6 hours') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_12h/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="/home/top_12h/{{ view_filter }}">
                     {{ _('12 hours') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="/home/top/{{ view_filter }}">
                     {{ _('Day') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_1w/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="/home/top_1w/{{ view_filter }}">
                     {{ _('Week') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_1m/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="/home/top_1m/{{ view_filter }}">
                     {{ _('Month') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_1y/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="/home/top_1y/{{ view_filter }}">
                     {{ _('Year') }}
                 </a>
             </li>
             <li>
-                <a class="dropdown-item" href="/home/top_all/{{ view_filter }}">
+                <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="/home/top_all/{{ view_filter }}">
                     {{ _('All Time') }}
                 </a>
             </li>
