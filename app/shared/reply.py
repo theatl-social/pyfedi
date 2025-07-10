@@ -294,14 +294,6 @@ def report_reply(reply_id, input, src, auth=None):
             flash(_('Comment has already been reported, thank you!'))
             return
 
-    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id,
-                    suspect_community_id=reply.community.id,
-                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id,
-                    source_instance_id=1)
-    db.session.add(report)
-
-    # Notify moderators
-    already_notified = set()
     suspect_author = User.query.get(reply.author.id)
     reporter_user = User.query.get(user_id)
     targets_data = {'gen': '0',
@@ -312,6 +304,14 @@ def report_reply(reply_id, input, src, auth=None):
                     'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
                     'orig_comment_body': reply.body
                     }
+    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id,
+                    suspect_community_id=reply.community.id,
+                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id,
+                    source_instance_id=1, targets=targets_data)
+    db.session.add(report)
+
+    # Notify moderators
+    already_notified = set()
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():

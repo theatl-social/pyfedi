@@ -2662,26 +2662,26 @@ def process_report(user, reported, request_json):
         if reported.reports == -1:
             return
         type = 0
+        source_instance = Instance.query.get(user.instance_id)
+        targets_data = {'gen': '0',
+                        'suspect_user_id': reported.id,
+                        'suspect_user_user_name': reported.ap_id if reported.ap_id else reported.user_name,
+                        'reporter_id': user.id,
+                        'reporter_user_name': user.ap_id if user.ap_id else user.user_name,
+                        'source_instance_id': user.instance_id,
+                        'source_instance_domain': source_instance.domain,
+                        'reasons': reasons,
+                        'description': description
+                        }
         report = Report(reasons=reasons, description=description,
                         type=type, reporter_id=user.id, suspect_user_id=reported.id,
-                        source_instance_id=user.instance_id)
+                        source_instance_id=user.instance_idi, targets=targets_data)
         db.session.add(report)
 
         # Notify site admin
         already_notified = set()
-        source_instance = Instance.query.get(user.instance_id)
         for admin in Site.admins():
             if admin.id not in already_notified:
-                targets_data = {'gen': '0',
-                                'suspect_user_id': reported.id,
-                                'suspect_user_user_name': reported.ap_id if reported.ap_id else reported.user_name,
-                                'reporter_id': user.id,
-                                'reporter_user_name': user.ap_id if user.ap_id else user.user_name,
-                                'source_instance_id': user.instance_id,
-                                'source_instance_domain': source_instance.domain,
-                                'reasons': reasons,
-                                'description': description
-                                }
                 notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
                                       author_id=user.id, notif_type=NOTIF_REPORT,
                                       subtype='user_reported',
@@ -2694,27 +2694,27 @@ def process_report(user, reported, request_json):
         if reported.reports == -1:
             return
         type = 1
+        suspect_author = User.query.get(reported.author.id)
+        source_instance = Instance.query.get(user.instance_id)
+        targets_data = {'gen': '0',
+                        'suspect_post_id': reported.id,
+                        'suspect_user_id': reported.author.id,
+                        'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                        'reporter_id': user.id,
+                        'reporter_user_name': user.ap_id if user.ap_id else user.user_name,
+                        'source_instance_id': user.instance_id,
+                        'source_instance_domain': source_instance.domain,
+                        'orig_post_title': reported.title,
+                        'orig_post_body': reported.body
+                        }
         report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id,
                         suspect_user_id=reported.author.id, suspect_post_id=reported.id,
                         suspect_community_id=reported.community.id, in_community_id=reported.community.id,
-                        source_instance_id=user.instance_id)
+                        source_instance_id=user.instance_id, targets=targets_data)
         db.session.add(report)
 
         already_notified = set()
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
         for mod in reported.community.moderators():
-            targets_data = {'gen': '0',
-                            'suspect_post_id': reported.id,
-                            'suspect_user_id': reported.author.id,
-                            'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                            'reporter_id': user.id,
-                            'reporter_user_name': user.ap_id if user.ap_id else user.user_name,
-                            'source_instance_id': user.instance_id,
-                            'source_instance_domain': source_instance.domain,
-                            'orig_post_title': reported.title,
-                            'orig_post_body': reported.body
-                            }
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
@@ -2729,6 +2729,18 @@ def process_report(user, reported, request_json):
             return
         type = 2
         post = Post.query.get(reported.post_id)
+        suspect_author = User.query.get(reported.author.id)
+        source_instance = Instance.query.get(user.instance_id)
+        targets_data = {'gen': '0',
+                        'suspect_comment_id': reported.id,
+                        'suspect_user_id': reported.author.id,
+                        'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                        'reporter_id': user.id,
+                        'reporter_user_name': user.ap_id if user.ap_id else user.name,
+                        'source_instance_id': user.instance_id,
+                        'source_instance_domain': source_instance.domain,
+                        'orig_comment_body': reported.body
+                        }
         report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id,
                         suspect_post_id=post.id,
                         suspect_community_id=post.community.id,
@@ -2738,19 +2750,7 @@ def process_report(user, reported, request_json):
         db.session.add(report)
         # Notify moderators
         already_notified = set()
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
         for mod in post.community.moderators():
-            targets_data = {'gen': '0',
-                            'suspect_comment_id': reported.id,
-                            'suspect_user_id': reported.author.id,
-                            'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                            'reporter_id': user.id,
-                            'reporter_user_name': user.ap_id if user.ap_id else user.name,
-                            'source_instance_id': user.instance_id,
-                            'source_instance_domain': source_instance.domain,
-                            'orig_comment_body': reported.body
-                            }
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
                                         url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
