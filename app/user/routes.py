@@ -1894,7 +1894,8 @@ def show_profile_rss(actor):
                 if type and not type.startswith('text/'):
                     fe.enclosure(post.url, type=type)
                 already_added.add(post.url)
-            fe.description(post.body_html)
+            if post.body_html:
+                fe.description(post.body_html)
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
             fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
