@@ -275,8 +275,34 @@ allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite'
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
+    # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
     if html is None or html == '':
         return ''
+
+    # Pre-escape angle brackets that aren't valid HTML tags before BeautifulSoup parsing
+    # We need to distinguish between:
+    # 1. Valid HTML tags (allowed or disallowed) - let BeautifulSoup handle them
+    # 2. Invalid/non-HTML content in angle brackets - escape them
+    def escape_non_html_brackets(match):
+        tag_content = match.group(1).strip().lower()
+        # Handle closing tags by removing the leading slash before extracting tag name
+        if tag_content.startswith('/'):
+            tag_name = tag_content[1:].split()[0]
+        else:
+            tag_name = tag_content.split()[0]
+        
+        # Check if this looks like a valid HTML tag (allowed or not)
+        # Valid HTML tags have specific patterns
+        html_tags = ['a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'big', 'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col', 'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt', 'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i', 'iframe', 'img', 'input', 'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'meta', 'meter', 'nav', 'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture', 'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small', 'source', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track', 'tt', 'u', 'ul', 'var', 'video', 'wbr']
+        
+        if tag_name in html_tags:
+            # This is a valid HTML tag - let BeautifulSoup handle it (it will remove if not allowed)
+            return match.group(0)
+        else:
+            # This doesn't look like a valid HTML tag - escape it
+            return f"&lt;{match.group(1)}&gt;"
+    
+    html = re.sub(r'<([^<>]+?)>', escape_non_html_brackets, html)
 
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
@@ -335,6 +361,7 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
 
     # replace lemmy's spoiler markdown left in HTML
+    clean_html = clean_html.replace('<h2>:::</h2>', '<p>:::</p>')   # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
     re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
     clean_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', clean_html)
 
@@ -394,7 +421,11 @@ def escape_non_html_angle_brackets(text: str) -> str:
     # Step 2: Escape <...> unless they look like valid HTML tags
     def escape_tag(match):
         tag_content = match.group(1).strip().lower()
-        tag_name = re.split(r'\s|/', tag_content)[0]
+        # Handle closing tags by removing the leading slash before extracting tag name
+        if tag_content.startswith('/'):
+            tag_name = tag_content[1:].split()[0]
+        else:
+            tag_name = tag_content.split()[0]
         if tag_name in allowed_tags:
             return match.group(0)
         else:
