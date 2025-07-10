@@ -38,7 +38,7 @@ from app.utils import (
 
 
 @bp.route("/login", methods=["GET", "POST"])
-@limiter.limit("100 per day;20 per 5 minutes", methods=["POST"])
+@limiter.limit("100 per day;20 per 5 minutes", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
         return redirect_next_page()
