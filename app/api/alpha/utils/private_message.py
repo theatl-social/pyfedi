@@ -43,6 +43,9 @@ def get_private_message_conversation(auth, data):
     person_id = int(data['person_id'])
     person = User.query.filter_by(id=person_id).one()
 
+    if person is None:
+        raise Exception('person not found')
+
     user_id = authorise_api_user(auth)
 
     conversation_ids = db.session.execute(text("SELECT conversation_id FROM conversation_member WHERE user_id = :person_id"),
