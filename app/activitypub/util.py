@@ -537,6 +537,8 @@ def refresh_community_profile_task(community_id, activity_json):
                     community.ap_moderators_url = mods_url
                     if 'followers' in activity_json:
                         community.ap_followers_url = activity_json['followers']
+                    if 'featured' in activity_json:
+                        community.ap_featured_url = activity_json['featured']
                     community.ap_fetched_at = utcnow()
                     community.public_key = activity_json['publicKey']['publicKeyPem']
 
@@ -660,6 +662,21 @@ def refresh_community_profile_task(community_id, activity_json):
                             if followers_data and followers_data['type'] == 'Collection' and 'totalItems' in followers_data:
                                 community.total_subscriptions_count = followers_data['totalItems']
                                 session.commit()
+
+                    if community.ap_featured_url:
+                        featured_request = get_request(community.ap_featured_url, headers={'Accept': 'application/activity+json'})
+                        if featured_request.status_code == 200:
+                            featured_data = featured_request.json()
+                            featured_request.close()
+                            if featured_data and 'type' in featured_data and featured_data['type'] == 'OrderedCollection' and 'orderedItems' in featured_data:
+                                session.execute(text('UPDATE post SET sticky = false WHERE community_id = :community_id AND sticky = true'),
+                                                {'community_id': community.id})
+                                session.commit()
+                                for item in featured_data['orderedItems']:
+                                    post = Post.get_by_ap_id(item['id'])
+                                    if post:
+                                        post.sticky = True
+                                        session.commit()
 
     except Exception:
         session.rollback()
