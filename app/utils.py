@@ -967,19 +967,26 @@ def user_ip_banned() -> bool:
 
 @cache.memoize(timeout=150)
 def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
-    if domain is None or domain == '':
-        return False
-    domain = domain.lower().strip()
-    if 'https://' in domain or 'http://' in domain:
-        domain = urlparse(domain).hostname
-    banned = BannedInstances.query.filter_by(domain=domain).first()
-    if banned is not None:
-        return True
+    session = get_task_session()
+    try:
+        if domain is None or domain == '':
+            return False
+        domain = domain.lower().strip()
+        if 'https://' in domain or 'http://' in domain:
+            domain = urlparse(domain).hostname
+        banned = session.query(BannedInstances).filter_by(domain=domain).first()
+        if banned is not None:
+            return True
 
-    # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
-    regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
-                      BannedInstances.query.filter(BannedInstances.domain.like('%*%')).all()]
-    return any(pattern.match(domain) for pattern in regex_patterns)
+        # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
+        regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
+                          session.query(BannedInstances).filter(BannedInstances.domain.like('%*%')).all()]
+        return any(pattern.match(domain) for pattern in regex_patterns)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @cache.memoize(timeout=150)
@@ -989,11 +996,18 @@ def instance_online(domain: str) -> bool:
     domain = domain.lower().strip()
     if 'https://' in domain or 'http://' in domain:
         domain = urlparse(domain).hostname
-    instance = Instance.query.filter_by(domain=domain).first()
-    if instance is not None:
-        return instance.online()
-    else:
-        return False
+    session = get_task_session()
+    try:
+        instance = session.query(Instance).filter_by(domain=domain).first()
+        if instance is not None:
+            return instance.online()
+        else:
+            return False
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @cache.memoize(timeout=150)
@@ -1003,11 +1017,18 @@ def instance_gone_forever(domain: str) -> bool:
     domain = domain.lower().strip()
     if 'https://' in domain or 'http://' in domain:
         domain = urlparse(domain).hostname
-    instance = Instance.query.filter_by(domain=domain).first()
-    if instance is not None:
-        return instance.gone_forever
-    else:
-        return True
+    session = get_task_session()
+    try:
+        instance = Instance.query.filter_by(domain=domain).first()
+        if instance is not None:
+            return instance.gone_forever
+        else:
+            return True
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def user_cookie_banned() -> bool:
@@ -1017,8 +1038,15 @@ def user_cookie_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def banned_ip_addresses() -> List[str]:
-    ips = IpBan.query.all()
-    return [ip.ip_address for ip in ips]
+    session = get_task_session()
+    try:
+        ips = session.query(IpBan).all()
+        return [ip.ip_address for ip in ips]
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def guess_mime_type(file_path: str) -> str:
