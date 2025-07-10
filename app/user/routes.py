@@ -91,8 +91,6 @@ def _get_user_post_replies(user, replies_page):
 
 def _get_user_posts_and_replies(user, page):
     """Get list of posts and replies in reverse chronological order based on current user's permissions"""
-    engine = db.session.get_bind()
-    connection = engine.connect()
     returned_list = []
     user_id = user.id
     per_page = 20
@@ -113,7 +111,7 @@ def _get_user_posts_and_replies(user, page):
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
 
     full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
-    query_result = connection.execute(text(full_query))
+    query_result = db.session.execute(text(full_query))
 
     for row in query_result:
         if row.type == "post":
