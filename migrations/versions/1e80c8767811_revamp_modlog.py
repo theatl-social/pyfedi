@@ -33,72 +33,78 @@ def upgrade():
 
     # ### end Alembic commands ###
 
-    conn = op.get_bind()
-    result = conn.execute(text("SELECT id, link, action FROM mod_log WHERE link IS NOT NULL")).mappings()
-    updates = []
-    for row in result:
-        modlog_id = row['id']
-        link = row['link']
-        action = row['action']
-        post_id = None
-        reply_id = None
-        target_user_id = None
+    # Wrap risky migration code in try-except block
+    try:
+        conn = op.get_bind()
+        result = conn.execute(text("SELECT id, link, action FROM mod_log WHERE link IS NOT NULL")).mappings()
+        updates = []
+        for row in result:
+            modlog_id = row['id']
+            link = row['link']
+            action = row['action']
+            post_id = None
+            reply_id = None
+            target_user_id = None
 
-        # Match post link like "post/123"
-        post_match = re.match(r'^post/(\d+)$', link)
-        # Match reply link like "post/456#comment_789"
-        reply_match = re.match(r'^post/(\d+)#comment_(\d+)$', link)
-        # Match user: u/username@domain
-        user_match = re.match(r'^u/(.+)$', link)
+            # Match post link like "post/123"
+            post_match = re.match(r'^post/(\d+)$', link)
+            # Match reply link like "post/456#comment_789"
+            reply_match = re.match(r'^post/(\d+)#comment_(\d+)$', link)
+            # Match user: u/username@domain
+            user_match = re.match(r'^u/(.+)$', link)
 
-        if post_match:
-            post_id_candidate = int(post_match.group(1))
-            post_result = conn.execute(
-                text("""SELECT id, user_id FROM "post" WHERE id = :id LIMIT 1"""),
-                {"id": post_id_candidate}
-            ).fetchone()
-            if post_result:
-                post_id = post_result[0] # id
-                if action not in ['lock_post', 'unlock_post']:
-                    target_user_id = post_result[1] # user_id
-        elif reply_match:
-            post_id_candidate = int(reply_match.group(1))
-            reply_id_candidate = int(reply_match.group(2))
-            reply_result = conn.execute(
-                text("""SELECT id, post_id, user_id FROM "post_reply" WHERE id = :id LIMIT 1"""),
-                {"id": reply_id_candidate}
-            ).fetchone()
-            if reply_result:
-                reply_id = reply_result[0] # id
-                post_id = reply_result[1] # post_id
-                target_user_id = reply_result[2] # user_id
-        elif user_match:
-            user_ap_id = user_match.group(1)
-            user_result = conn.execute(
-                text("""SELECT id FROM "user" WHERE ap_id = :ap_id LIMIT 1"""),
-                {"ap_id": user_ap_id}
-            ).fetchone()
-            if user_result:
-                target_user_id = user_result[0]
+            if post_match:
+                post_id_candidate = int(post_match.group(1))
+                post_result = conn.execute(
+                    text("""SELECT id, user_id FROM "post" WHERE id = :id LIMIT 1"""),
+                    {"id": post_id_candidate}
+                ).fetchone()
+                if post_result:
+                    post_id = post_result[0] # id
+                    if action not in ['lock_post', 'unlock_post']:
+                        target_user_id = post_result[1] # user_id
+            elif reply_match:
+                post_id_candidate = int(reply_match.group(1))
+                reply_id_candidate = int(reply_match.group(2))
+                reply_result = conn.execute(
+                    text("""SELECT id, post_id, user_id FROM "post_reply" WHERE id = :id LIMIT 1"""),
+                    {"id": reply_id_candidate}
+                ).fetchone()
+                if reply_result:
+                    reply_id = reply_result[0] # id
+                    post_id = reply_result[1] # post_id
+                    target_user_id = reply_result[2] # user_id
+            elif user_match:
+                user_ap_id = user_match.group(1)
+                user_result = conn.execute(
+                    text("""SELECT id FROM "user" WHERE ap_id = :ap_id LIMIT 1"""),
+                    {"ap_id": user_ap_id}
+                ).fetchone()
+                if user_result:
+                    target_user_id = user_result[0]
 
-        if post_id or reply_id or target_user_id:
-            updates.append({
-                'id': modlog_id,
-                'post_id': post_id,
-                'reply_id': reply_id,
-                'target_user_id': target_user_id,
-            })
+            if post_id or reply_id or target_user_id:
+                updates.append({
+                    'id': modlog_id,
+                    'post_id': post_id,
+                    'reply_id': reply_id,
+                    'target_user_id': target_user_id,
+                })
 
-    # Perform updates in batch
-    for entry in updates:
-        conn.execute(
-            text("""
-                UPDATE mod_log
-                SET post_id = :post_id, reply_id = :reply_id, target_user_id = :target_user_id
-                WHERE id = :id
-            """),
-            entry
-        )
+        # Perform updates in batch
+        for entry in updates:
+            conn.execute(
+                text("""
+                    UPDATE mod_log
+                    SET post_id = :post_id, reply_id = :reply_id, target_user_id = :target_user_id
+                    WHERE id = :id
+                """),
+                entry
+            )
+    except Exception as e:
+        # Log the error but allow migration to continue
+        print(f"Warning: Error during mod_log data migration: {e}")
+        print("Migration will continue, but some mod_log entries may not have been updated")
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
