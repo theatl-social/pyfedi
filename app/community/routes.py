@@ -578,7 +578,7 @@ def show_community_rss(actor):
             return return_304(current_etag, 'application/rss+xml')
 
         posts = community.posts.filter(Post.from_bot == False, Post.deleted == False,
-                                       Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(100).all()
+                                       Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()

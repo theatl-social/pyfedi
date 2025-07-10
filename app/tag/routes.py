@@ -79,7 +79,7 @@ def show_tag_rss(tag):
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
-        posts = posts.order_by(desc(Post.posted_at)).limit(100).all()
+        posts = posts.order_by(desc(Post.posted_at)).limit(20).all()
 
         description = None
         og_image = None

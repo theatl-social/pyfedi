@@ -113,7 +113,7 @@ def show_domain_rss(domain_id):
             posts = Post.query.join(Community, Community.id == Post.community_id). \
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
                        Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
-                order_by(desc(Post.posted_at)).limit(100)
+                order_by(desc(Post.posted_at)).limit(20)
 
             fg = FeedGenerator()
             fg.id(f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}")
