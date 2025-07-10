@@ -2307,8 +2307,11 @@ class PostReply(db.Model):
     def child_replies(self):
         return PostReply.query.filter_by(parent_id=self.id).all()
 
-    def has_replies(self):
-        reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
+    def has_replies(self, include_deleted=False):
+        if include_deleted:
+            reply = PostReply.query.filter_by(parent_id=self.id).first()
+        else:
+            reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
     def has_been_reported(self):
