@@ -1885,7 +1885,7 @@ def show_profile_rss(actor):
         already_added = set()
         for post in posts:
             fe = fg.add_entry()
-            fe.title(post.title)
+            fe.title(post.title.strip())
             fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
@@ -1894,8 +1894,8 @@ def show_profile_rss(actor):
                 if type and not type.startswith('text/'):
                     fe.enclosure(post.url, type=type)
                 already_added.add(post.url)
-            if post.body_html:
-                fe.description(post.body_html)
+            if post.body_html.strip():
+                fe.description(post.body_html.strip())
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
             fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))
