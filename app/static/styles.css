@@ -1236,6 +1236,10 @@ time {
   border-left: 0;
 }
 
+.community_instance {
+  display: none;
+}
+
 .max_width_512 {
   max-width: 512px;
   display: inline-block;
