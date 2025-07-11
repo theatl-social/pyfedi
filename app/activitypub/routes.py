@@ -1824,7 +1824,7 @@ def post_replies_ap(post_id):
 
         if request.method == 'GET':
             replies = post_replies_for_ap(post.id)
-            replies_collection = {"type": "OrderedCollection", "totalItems": len(replies), "items": [replies]}
+            replies_collection = {"type": "OrderedCollection", "totalItems": len(replies), "orderedItems": [replies]}
         else:
             replies_collection = {}
         replies_collection['@context'] = default_context()
