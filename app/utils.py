@@ -469,9 +469,18 @@ def handle_double_bolds(text: str) -> str:
     return text
 
 
+def escape_img(raw_html: str) -> str:
+    """Prevents embedding images for places where an image would break formatting."""
+    
+    re_img = re.compile(r"<img.+?>")
+    raw_html = re_img.sub(r"<code><image placeholder></code>", raw_html)
+
+    return raw_html
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
-def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
+def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str:
     if markdown_text:
 
         # Escape <...> if it’s not a real HTML tag
@@ -497,6 +506,10 @@ def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
                                                       'tag-friendly': True})
             except TypeError:
                 raw_html = ''
+        
+        if not allow_img:
+            raw_html = escape_img(raw_html)
+
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
