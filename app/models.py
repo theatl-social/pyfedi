@@ -2128,10 +2128,13 @@ class PostReply(db.Model):
 
     @classmethod
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished,
-            request_json: dict = None, announce_id=None):
+            request_json: dict = None, announce_id=None, session=None):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
             reply_is_just_link_to_gif_reaction, reply_is_stupid
         from app.activitypub.util import notify_about_post_reply
+
+        if session is None:
+            session = db.session
 
         if not post.comments_enabled:
             raise PostReplyValidationError(_('Comments are disabled on this post'))
@@ -2184,16 +2187,16 @@ class PostReply(db.Model):
             raise PostReplyValidationError(_('Low quality reply'))
 
         try:
-            db.session.add(reply)
-            db.session.commit()
+            session.add(reply)
+            session.commit()
         except IntegrityError:
-            db.session.rollback()
+            session.rollback()
             return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
         if in_reply_to and in_reply_to.path:
             reply.path = in_reply_to.path[:]
             reply.path.append(reply.id)
-            db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
+            session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
                                {'parents': tuple(in_reply_to.path)})
         else:
             reply.path = [0, reply.id]
@@ -2208,14 +2211,14 @@ class PostReply(db.Model):
                                                                               post_title=post.title), 50),
                                                         user_id=user.id, entity_id=reply.id,
                                                         type=NOTIF_REPLY)
-            db.session.add(new_notification)
+            session.add(new_notification)
 
         # upvote own reply
         reply.score = 1
         reply.up_votes = 1
         reply.ranking = PostReply.confidence(1, 0)
         vote = PostReplyVote(user_id=user.id, post_reply_id=reply.id, author_id=user.id, effect=1)
-        db.session.add(vote)
+        session.add(vote)
         if user.is_local():
             cache.delete_memoized(recently_upvoted_post_replies, user.id)
 
@@ -2224,10 +2227,10 @@ class PostReply(db.Model):
             post.reply_count += 1
             post.community.post_reply_count += 1
             post.community.last_active = post.last_active = utcnow()
-        db.session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
+        session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
                            {'user_id': user.id})
-        db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
-        db.session.commit()
+        session.execute(text('UPDATE "site" SET last_active = NOW()'))
+        session.commit()
 
         return reply
 

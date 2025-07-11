@@ -2955,7 +2955,8 @@ def remote_object_to_json(uri):
         except:
             object_request.close()
             return None
-        object_request.close()
+        finally:
+            object_request.close()
     elif object_request.status_code == 401:
         site = Site.query.get(1)
         try:
@@ -2970,9 +2971,9 @@ def remote_object_to_json(uri):
             object = object_request.json()
             return object
         except:
-            object_request.close()
             return None
-        object_request.close()
+        finally:
+            object_request.close()
     else:
         return None
 
