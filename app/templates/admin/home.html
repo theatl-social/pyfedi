@@ -60,7 +60,7 @@
                             <td>
                                 {% if plugin_data.info.get('source_url') %}
                                     <a href="{{ plugin_data.info.get('source_url') }}" target="_blank" rel="noopener noreferrer">
-                                        <i class="fas fa-external-link-alt"></i> {{ _('Source Code') }}
+                                        {{ _('Source Code') }} <i class="fe fe-external"></i>
                                     </a>
                                 {% else %}
                                     <span class="text-muted">{{ _('No source URL') }}</span>
