@@ -152,22 +152,12 @@ def process_registration_form(form):
 
 
 def is_invalid_email_or_username(form, disallowed_usernames):
-    email = form.real_email.data.strip().lower()
-    if email:
+    if form.email.data.strip():
         return False
 
-    if email.startswith(("postmaster@", "abuse@", "noc@")):
+    if form.real_email.data.lower().startswith(("postmaster@", "abuse@", "noc@")):
         flash(_("Sorry, you cannot use that email address"), "error")
         return True
-
-    exists = User.query.filter(
-        func.lower(User.email) == func.lower(email)
-    ).first()
-
-    if exists:
-        flash(_("An account with that email address already exists."), "error")
-        return True
-
 
     if form.user_name.data in disallowed_usernames:
         flash(_("Sorry, you cannot use that user name"), "error")
