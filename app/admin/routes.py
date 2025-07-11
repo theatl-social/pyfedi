@@ -62,9 +62,17 @@ def admin_home():
         disk_usage = f"<span class='blink red'>Storage used: {percent_used:.2f}%</span>"
     else:
         disk_usage = f"Storage used: {percent_used:.2f}%"
+    
+    # Get plugin information
+    from app.plugins import get_loaded_plugins, get_plugin_hooks
+    plugins = get_loaded_plugins()
+    plugin_hooks = get_plugin_hooks()
+    
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
                            num_cores=num_cores,
-                           disk_usage=disk_usage)
+                           disk_usage=disk_usage,
+                           plugins=plugins,
+                           plugin_hooks=plugin_hooks)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
