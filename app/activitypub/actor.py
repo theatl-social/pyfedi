@@ -62,7 +62,31 @@ def validate_remote_actor(actor_url, actor=None):
 
 def find_remote_actor(actor_url):
     """Find a remote actor in the database."""
-    # Look for a remote user
+    # Check URL patterns to optimize database queries
+    if '/u/' in actor_url:
+        # URL contains /u/ - likely a user
+        actor = User.query.filter(User.ap_profile_id == actor_url).first()
+        if actor:
+            return actor
+    elif '/c/' in actor_url:
+        # URL contains /c/ - likely a community
+        actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
+        if actor and actor.banned:
+            # Try to find a non-banned copy of the community
+            unbanned_actor = Community.query.filter(Community.ap_profile_id == actor_url,
+                                                    Community.banned == False).first()
+            if unbanned_actor is None:
+                return None
+            actor = unbanned_actor
+        if actor:
+            return actor
+    elif '/f/' in actor_url:
+        # URL contains /f/ - likely a feed
+        actor = Feed.query.filter(Feed.ap_profile_id == actor_url).first()
+        if actor:
+            return actor
+    
+    # Fallback to trying everything
     actor = User.query.filter(User.ap_profile_id == actor_url).first()
 
     # Look for a remote community if not found as user
