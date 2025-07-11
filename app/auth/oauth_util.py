@@ -3,6 +3,7 @@ from random import randint
 from flask import flash, g, redirect, render_template, request, url_for, session
 from flask_babel import _
 from flask_login import login_user, current_user
+from sqlalchemy import func
 
 from app import db, oauth
 from app.auth.util import create_registration_application, get_country, handle_banned_user
@@ -141,8 +142,10 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
 
     ip = ip_address()
     country = get_country(ip)
-
-    user = User.query.filter_by(**{oauth_id_key: user_info['id']}).first()
+    user = User.query.filter(
+        (getattr(User, oauth_id_key) == user_info['id']) |
+        (func.lower(User.email) == user_info.get('email', '').lower())
+    ).first()
     if user:
         if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
             return handle_banned_user(user, ip)
