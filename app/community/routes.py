@@ -958,14 +958,15 @@ def community_report(community_id: int):
     community = Community.query.get_or_404(community_id)
     form = ReportCommunityForm()
     if form.validate_on_submit():
+        targets_data = {'gen': '0', 'suspect_community_id': community.id, 'reporter_id': current_user.id}
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=1, reporter_id=current_user.id, suspect_community_id=community.id, source_instance_id=1)
+                        type=1, reporter_id=current_user.id, suspect_community_id=community.id, source_instance_id=1,
+                        targets=targets_data)
         db.session.add(report)
 
         # Notify admin
         # todo: find all instance admin(s). for now just load User.id == 1
         admins = [User.query.get_or_404(1)]
-        targets_data = {'gen': '0', 'suspect_community_id': community.id, 'reporter_id': current_user.id}
         for admin in admins:
             with force_locale(get_recipient_language(admin.id)):
                 notification = Notification(user_id=admin.id, title=gettext('A community has been reported'),

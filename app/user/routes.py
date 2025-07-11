@@ -926,18 +926,19 @@ def report_profile(actor):
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
-            report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, source_instance_id=1)
-            db.session.add(report)
-
-            # Notify site admin
-            already_notified = set()
             targets_data = {'gen': '0',
                             'suspect_user_id': user.id,
                             'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
                             'reporter_id': current_user.id,
                             'reporter_user_name': current_user.user_name
                             }
+            report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
+                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, 
+                            source_instance_id=1, targets=targets_data)
+            db.session.add(report)
+
+            # Notify site admin
+            already_notified = set()
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
