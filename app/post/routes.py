@@ -1024,14 +1024,7 @@ def post_report(post_id: int):
         if post.reports == -1:
             flash(_('Post has already been reported, thank you!'))
             return redirect(post.community.local_url())
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id, in_community_id=post.community.id, source_instance_id=1)
-        db.session.add(report)
-
-        # Notify moderators
-        already_notified = set()
-
+        
         suspect_user = User.query.get(post.author.id)
         targets_data = {'gen': '0',
                         'suspect_post_id': post.id,
@@ -1042,6 +1035,15 @@ def post_report(post_id: int):
                         'orig_post_title': post.title,
                         'orig_post_body': post.body
                         }
+        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
+                        type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
+                        suspect_community_id=post.community.id, in_community_id=post.community.id, 
+                        source_instance_id=1, targets=targets_data)
+        db.session.add(report)
+
+        # Notify moderators
+        already_notified = set()
+
         for mod in post.community.moderators():
             with force_locale(get_recipient_language(mod.user_id)):
                 notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
@@ -1346,16 +1348,6 @@ def post_reply_report(post_id: int, comment_id: int):
             flash(_('Comment has already been reported, thank you!'))
             return redirect(post.community.local_url())
 
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=2, reporter_id=current_user.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id,
-                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id,
-                        in_community_id=post.community.id,
-                        source_instance_id=1)
-        db.session.add(report)
-
-        # Notify moderators
-        already_notified = set()
         suspect_author = User.query.get(post_reply.author.id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': post_reply.id,
@@ -1365,6 +1357,16 @@ def post_reply_report(post_id: int, comment_id: int):
                         'reporter_user_name': current_user.user_name,
                         'orig_comment_body': post_reply.body
                         }
+        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
+                        type=2, reporter_id=current_user.id, suspect_post_id=post.id,
+                        suspect_community_id=post.community.id,
+                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id,
+                        in_community_id=post.community.id,
+                        source_instance_id=1, targets=targets_data)
+        db.session.add(report)
+
+        # Notify moderators
+        already_notified = set()
         for mod in post.community.moderators():
             with force_locale(get_recipient_language(mod.user_id)):
                 notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),

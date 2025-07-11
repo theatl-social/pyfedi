@@ -610,13 +610,6 @@ def report_post(post_id, input, src, auth=None):
             flash(_('Post has already been reported, thank you!'))
             return
 
-    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id,
-                    suspect_community_id=post.community_id,
-                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1)
-    db.session.add(report)
-
-    # Notify moderators
-    already_notified = set()
     suspect_user = User.query.get(post.user_id)
     reporter_user = User.query.get(user_id)
     targets_data = {'gen': '0',
@@ -628,6 +621,14 @@ def report_post(post_id, input, src, auth=None):
                     'orig_post_title': post.title,
                     'orig_post_body': post.body
                     }
+    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id,
+                    suspect_community_id=post.community_id,
+                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1,
+                    targets=targets_data)
+    db.session.add(report)
+
+    # Notify moderators
+    already_notified = set()
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():

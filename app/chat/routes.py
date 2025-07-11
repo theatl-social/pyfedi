@@ -171,14 +171,14 @@ def chat_report(conversation_id):
         form = ReportConversationForm()
 
         if form.validate_on_submit():
+            targets_data = {'gen': '0', 'suspect_conversation_id': conversation.id, 'reporter_id': current_user.id}
             report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
                             type=4, reporter_id=current_user.id, suspect_conversation_id=conversation_id,
-                            source_instance_id=1)
+                            source_instance_id=1,targets=targets_data)
             db.session.add(report)
 
             # Notify site admin
             already_notified = set()
-            targets_data = {'gen': '0', 'suspect_conversation_id': conversation.id, 'reporter_id': current_user.id}
             for admin in Site.admins():
                 if admin.id not in already_notified:
                     notify = Notification(title='Reported conversation with user', url='/admin/reports',
