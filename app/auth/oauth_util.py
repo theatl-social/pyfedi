@@ -3,6 +3,7 @@ from random import randint
 from flask import flash, g, redirect, render_template, request, url_for, session
 from flask_babel import _
 from flask_login import login_user, current_user
+from sqlalchemy import func
 
 from app import db, oauth
 from app.auth.util import create_registration_application, get_country, handle_banned_user
@@ -30,11 +31,19 @@ def handle_user_verification(user, oauth_id_key, token, ip, country, user_info):
         email = user_info.get('email')
         username = user_info.get('username', '')
 
+        # Check if an account with this email already exists
+        # Otherwise
+        existing_user = User.query.filter(func.lower(User.email) == email.lower()).first()
+        if existing_user:
+            flash(_('An account with this email already exists, please login and connect this account over "Connect OAuth" setting.'), 'error')
+            return redirect(url_for('auth.login'))
+
         # Register a new user
-        user, redirect_request = initialize_new_user(email, username, oauth_id_key, user_info, ip, country)
+        user = initialize_new_user(email, username, oauth_id_key, user_info, ip, country)
         if g.site.registration_mode == 'RequireApplication' and g.site.application_question:
             task_selector('check_application', application_id=user.registration_application.id)
             return redirect(url_for('auth.please_wait'))
+        return None
     else:
         # Handle existing user
         return finalize_user_login(user, token, ip, country)
@@ -141,8 +150,7 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
 
     ip = ip_address()
     country = get_country(ip)
-
-    user = User.query.filter_by(**{oauth_id_key: user_info['id']}).first()
+    user = User.query.filter(getattr(User, oauth_id_key) == user_info['id']).first()
     if user:
         if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
             return handle_banned_user(user, ip)
