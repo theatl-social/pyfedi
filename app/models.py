@@ -2628,6 +2628,10 @@ class UserRegistration(db.Model):
     warning = db.Column(db.String(100))
     user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
 
+    def search_similar_names(self):
+        return User.query.filter(or_(User.user_name == self.user.user_name, User.title == self.user.title),
+                                 User.id != self.user.id).order_by(desc(User.banned)).order_by(User.reputation).limit(15)
+
 
 class PostVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
