@@ -1572,6 +1572,13 @@ a.unread, div.unread {
   }
 }
 
+.clamp_line {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
 .profile_action_buttons, .rh_action_buttons {
   float: right;
 }

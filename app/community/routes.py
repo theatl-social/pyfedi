@@ -1374,7 +1374,10 @@ def community_move(actor):
             send_email(f'Request to move {community.link()}', f'{current_app.config["MAIL_FROM"]}',
                        g.site.contact_email, text_body, html_body, current_user.email)
 
-            targets_data = {'gen': '0', 'community_id': community.id, 'requestor_id': current_user.id}
+            targets_data = {'gen': '0',
+                            'community_id': community.id,
+                            'requestor_id': current_user.id,
+                            'author_user_name': community.name}
             notify = Notification(title='Community move requested, check your email.',
                                   url=f'/admin/community/{community.id}/move/{current_user.id}', user_id=1,
                                   author_id=current_user.id, notif_type=NOTIF_MENTION,
