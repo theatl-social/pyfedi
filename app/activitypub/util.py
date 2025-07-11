@@ -2675,7 +2675,7 @@ def process_report(user, reported, request_json):
                         }
         report = Report(reasons=reasons, description=description,
                         type=type, reporter_id=user.id, suspect_user_id=reported.id,
-                        source_instance_id=user.instance_idi, targets=targets_data)
+                        source_instance_id=user.instance_id, targets=targets_data)
         db.session.add(report)
 
         # Notify site admin
