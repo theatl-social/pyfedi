@@ -81,7 +81,15 @@ def before_request():
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
         g.admin_ids = list(db.session.execute(
-            text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
+            text(
+                '''
+                SELECT u.id FROM "user" u WHERE u.id = 1
+                UNION
+                SELECT u.id
+                FROM "user" u
+                JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                ORDER BY id
+                '''),
             {'role_admin': ROLE_ADMIN}
         ).scalars())
     if current_user.is_authenticated:
