@@ -2400,6 +2400,20 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     return posts
 
 
+def total_comments_on_post_and_cross_posts(post_id):
+    sql = """SELECT
+            p.reply_count + (
+                SELECT COALESCE(SUM(cp.reply_count), 0)
+                FROM post cp
+                WHERE cp.id = ANY(p.cross_posts)
+            ) AS total_reply_count
+        FROM post p
+        WHERE p.id = :post_id;
+    """
+    result = db.session.execute(text(sql), {'post_id': post_id}).scalar_one_or_none()
+    return result if result is not None else 0
+
+
 def store_files_in_s3():
     return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and \
         current_app.config['S3_ENDPOINT'] != ''

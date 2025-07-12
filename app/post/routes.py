@@ -46,7 +46,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
-    possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts
+    possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
+    total_comments_on_post_and_cross_posts
 
 
 @login_required_if_private_instance
@@ -116,19 +117,26 @@ def show_post(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
         else:
-            replies = post_replies(community, post.id, sort, current_user)
-            more_replies = defaultdict(list)
-            if post.cross_posts:
-                cbf = communities_banned_from(current_user.get_id())
-                bc = blocked_communities(current_user.get_id())
-                bi = blocked_instances(current_user.get_id())
-                for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
-                    if cross_posted_post.community_id not in cbf \
-                            and cross_posted_post.community_id not in bc \
-                            and cross_posted_post.community.instance_id not in bi:
-                        cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort, current_user)
-                        if len(cross_posted_replies):
-                            more_replies[cross_posted_post.community].extend(cross_posted_replies)
+            if total_comments_on_post_and_cross_posts(post.id) < 100:   # if there are not many comments then we might as well load them with the post
+                lazy_load_replies = False
+                replies = post_replies(community, post.id, sort, current_user)
+                more_replies = defaultdict(list)
+                if post.cross_posts:
+                    cbf = communities_banned_from(current_user.get_id())
+                    bc = blocked_communities(current_user.get_id())
+                    bi = blocked_instances(current_user.get_id())
+                    for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
+                        if cross_posted_post.community_id not in cbf \
+                                and cross_posted_post.community_id not in bc \
+                                and cross_posted_post.community.instance_id not in bi:
+                            cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort, current_user)
+                            if len(cross_posted_replies):
+                                more_replies[cross_posted_post.community].extend(cross_posted_replies)
+            else:
+                replies = []
+                more_replies = {}
+                lazy_load_replies = True
+
             form.notify_author.data = True
 
             # user flair
@@ -246,9 +254,9 @@ def show_post(post_id: int):
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
-                                   user_flair=user_flair,
+                                   user_flair=user_flair, lazy_load_replies=lazy_load_replies,
                                    THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
-                                   description=description, og_image=og_image,
+                                   description=description, og_image=og_image, sort=sort,
                                    show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                                    autoplay=request.args.get('autoplay', False), archive_link=archive_link,
                                    noindex=not post.author.indexable, preconnect=post.url if post.url else None,
@@ -275,6 +283,69 @@ def show_post(post_id: int):
         oembed_url = url_for('post.post_oembed', post_id=post.id, _external=True)
         response.headers.set('Link', f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"')
         return response
+
+
+@bp.route('/post/<int:post_id>/lazy_replies/<nonce>', methods=['GET', 'OPTIONS'])
+def post_lazy_replies(post_id, nonce):
+    if request.method == 'OPTIONS':
+        return ''
+    post = Post.query.get_or_404(post_id)
+    sort = request.args.get('sort', 'hot')
+    community = post.community
+    user = current_user if current_user.is_authenticated else None
+
+    # user flair
+    user_flair = {}
+    for u_flair in UserFlair.query.filter(UserFlair.community_id == community.id):
+        user_flair[u_flair.user_id] = u_flair.flair
+
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+        recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+        reply_collapse_threshold = current_user.reply_collapse_threshold if current_user.reply_collapse_threshold else -1000
+    else:
+        recently_upvoted_replies = []
+        recently_downvoted_replies = []
+        reply_collapse_threshold = -10
+    
+    # Get necessary data for comment rendering
+    communities_banned_from_list = communities_banned_from(current_user.get_id()) if current_user.is_authenticated else []
+    
+    replies = post_replies(post.community, post.id, sort, current_user)
+    more_replies = defaultdict(list)
+    if post.cross_posts:
+        cbf = communities_banned_from_list
+        bc = blocked_communities(current_user.get_id())
+        bi = blocked_instances(current_user.get_id())
+        for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
+            if cross_posted_post.community_id not in cbf \
+                    and cross_posted_post.community_id not in bc \
+                    and cross_posted_post.community.instance_id not in bi:
+                cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort,
+                                                    current_user)
+                if len(cross_posted_replies):
+                    more_replies[cross_posted_post.community].extend(cross_posted_replies)
+    
+    return render_template('post/post_reply_lazy.html', 
+                           replies=replies, 
+                           more_replies=more_replies,
+                           post=post, 
+                           community=post.community, 
+                           nonce=nonce,
+                           THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
+                           reply_collapse_threshold=reply_collapse_threshold,
+                           recently_upvoted_replies=recently_upvoted_replies,
+                           recently_downvoted_replies=recently_downvoted_replies,
+                           can_upvote_here=can_upvote(user, community),
+                           can_downvote_here=can_downvote(user, community),
+                           communities_banned_from_list=communities_banned_from_list,
+                           user_notes=user_notes(current_user.get_id()) if current_user.is_authenticated else {},
+                           show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
+                           low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                           user_flair=user_flair if current_user.is_authenticated else {},
+                           upvoted_class='',
+                           downvoted_class='')
 
 
 @bp.route('/post/<int:post_id>/embed', methods=['GET', 'HEAD'])
