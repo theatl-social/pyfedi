@@ -83,9 +83,13 @@ def before_request():
         g.admin_ids = get_setting('admin_ids')    # get_setting is cached in redis
         if g.admin_ids is None:
             g.admin_ids = list(db.session.execute(
-                text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
-                {'role_admin': ROLE_ADMIN}
-            ).scalars())
+                text("""SELECT u.id FROM "user" u WHERE u.id = 1
+                        UNION
+                        SELECT u.id
+                        FROM "user" u
+                        JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                        ORDER BY id"""),
+                {'role_admin': ROLE_ADMIN}).scalars())
             set_setting('admin_ids', g.admin_ids)
 
     if current_user.is_authenticated:
