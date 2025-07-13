@@ -105,6 +105,13 @@
                     {{ _('More') }}
                   </button>
                   <ul class="dropdown-menu">
+                    {% if current_user.is_admin() -%}
+                        <li>
+                            <a class="dropdown-item" href="{{ url_for("admin.admin_user_edit", user_id=user.id) }}">
+                                {{ _("Edit user in admin panel") }}
+                            </a>
+                        </li>
+                    {% endif -%}
                     <li><a class="dropdown-item" href="{{ user.ap_profile_id }}" title="{{ _('View user profile on original server') }}" rel="nofollow"><span class="fe fe-external"></span>{{ _('View original profile') }}</a></li>
                     {% if current_user.has_blocked_user(user.id) -%}
                         <li><a class="dropdown-item" role="button" aria-label="{{ _('Unblock @%(user_name)s', user_name=user.display_name) }}"
