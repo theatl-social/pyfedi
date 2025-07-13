@@ -1926,6 +1926,9 @@ a.unread:before, div.unread:before {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
+.accordion-preview .accordion-item:first-of-type .accordion-button:not(.collapsed) {
+  background-color: var(--bs-accordion-active-bg) !important;
+}
 
 .profile_action_buttons, .rh_action_buttons {
   float: right;
