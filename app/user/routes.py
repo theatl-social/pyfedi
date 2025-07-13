@@ -38,7 +38,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
-    is_valid_xml_utf8
+    moderating_communities_ids, is_valid_xml_utf8
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -222,6 +222,7 @@ def show_profile(user):
                            noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,

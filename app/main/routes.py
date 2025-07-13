@@ -166,6 +166,7 @@ def home_page(sort, view_filter):
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()),
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
+                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            enable_mod_filter=enable_mod_filter,
                            )

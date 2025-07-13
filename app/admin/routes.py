@@ -39,7 +39,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session, low_value_reposters
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids
 from app.admin import bp
 
 
@@ -1425,6 +1425,7 @@ def admin_content():
                            user_notes=user_notes(current_user.get_id()),
                            posts_replies=posts_replies, show=show, days=days,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            )
 
 
