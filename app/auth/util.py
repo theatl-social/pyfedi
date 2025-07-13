@@ -241,6 +241,7 @@ def create_new_user(form, ip, country, verification_token):
         title=form.user_name.data,
         email=form.real_email.data,
         verification_token=verification_token,
+        verified=not get_setting("email_verification", True),
         instance_id=1,
         ip_address=ip,
         banned=user_ip_banned() or user_cookie_banned(),
@@ -269,7 +270,6 @@ def requires_email_verification(user):
 
 
 def send_email_verification(user):
-    user.verified = False
     send_verification_email(user)
     if current_app.debug:
         current_app.logger.info(
