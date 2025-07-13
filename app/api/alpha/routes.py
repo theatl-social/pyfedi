@@ -23,7 +23,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
 from app.constants import *
-
+from app.utils import orjson_response
 
 
 def enable_api():
@@ -271,7 +271,7 @@ def get_alpha_post_list():
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
-        return jsonify(get_post_list(auth, data))
+        return orjson_response(get_post_list(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -437,7 +437,7 @@ def get_alpha_comment_list():
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
-        return jsonify(get_reply_list(auth, data))
+        return orjson_response(get_reply_list(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -635,7 +635,7 @@ def get_alpha_user():
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
-        return jsonify(get_user(auth, data))
+        return orjson_response(get_user(auth, data))
     except NoResultFound:
         return jsonify({"error": "User not found"}), 400
     except Exception as ex:

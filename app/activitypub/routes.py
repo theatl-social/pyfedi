@@ -33,7 +33,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
-    blocked_phrases
+    blocked_phrases, orjson_response
 
 
 @bp.route('/testredis')
@@ -287,7 +287,7 @@ def api_is_email_banned():
 @bp.route('/api/v3/site')
 @cache.cached(timeout=600)
 def lemmy_site():
-    return jsonify(lemmy_site_data())
+    return orjson_response(lemmy_site_data())
 
 
 @bp.route('/api/v3/federated_instances')
@@ -310,7 +310,7 @@ def lemmy_federated_instances():
             instance_data['version'] = instance.version
         if not any(blocked_instance.get('domain') == instance.domain for blocked_instance in blocked):
             linked.append(instance_data)
-    return jsonify({
+    return orjson_response({
         "federated_instances": {
             "linked": linked,
             "allowed": allowed,

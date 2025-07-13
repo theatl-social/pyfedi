@@ -23,6 +23,7 @@ import jwt
 import markdown2
 import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
+import orjson
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
@@ -2851,6 +2852,15 @@ def get_timezones():
 def low_value_reposters() -> List[int]:
     result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true or suppress_crossposts = true')).scalars()
     return list(result)
+
+
+def orjson_response(obj, status=200, headers=None):
+    return Response(
+        response=orjson.dumps(obj),
+        status=status,
+        headers=headers,
+        mimetype="application/json"
+    )
 
 
 def is_valid_xml_utf8(pystring):
