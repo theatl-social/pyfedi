@@ -105,7 +105,7 @@
                     {{ _('More') }}
                   </button>
                   <ul class="dropdown-menu">
-                    {% if current_user.is_admin() -%}
+                    {% if current_user.is_admin_or_staff() -%}
                         <li>
                             <a class="dropdown-item" href="{{ url_for("admin.admin_user_edit", user_id=user.id) }}">
                                 {{ _("Edit user in admin panel") }}
