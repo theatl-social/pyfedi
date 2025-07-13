@@ -9,7 +9,7 @@ from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_rep
     edit_reply, \
     delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
-    recently_upvoted_post_replies
+    recently_upvoted_post_replies, communities_banned_from
 
 
 def get_reply_list(auth, data, user_id=None):
@@ -98,25 +98,43 @@ def get_reply_list(auth, data, user_id=None):
     inner_post_view = None
     inner_community_view = None
     can_auth_user_moderate = False
+    mods = None
+    banned_from = communities_banned_from(user_id)
+    bookmarked_replies = db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+        {'user_id': user_id}).scalar()
+    if bookmarked_replies is None:
+        bookmarked_replies = []
+    reply_subscriptions = db.session.execute(text(
+        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+        {'type': NOTIF_REPLY, 'user_id': user_id}).scalar()
+    if reply_subscriptions is None:
+        reply_subscriptions = []
+
     for reply in replies:
         if post_is_same and community_is_same:
-            view = reply_view(reply=reply, variant=7, user_id=user_id)
+            if mods is None:
+                mods = [moderator.user_id for moderator in reply.community.moderators()]
+            view = reply_view(reply=reply, variant=7, user_id=user_id, mods=mods, banned_from=banned_from,
+                              bookmarked_replies=bookmarked_replies, reply_subscriptions=reply_subscriptions)
             if not inner_post_view:
                 inner_post_view = post_view(reply.post, variant=1)
             view['post'] = inner_post_view
             if not inner_community_view:
                 inner_community_view = community_view(reply.community, variant=1, stub=True)
                 if user_id:
-                    can_auth_user_moderate = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+                    can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
             view['canAuthUserModerate'] = can_auth_user_moderate
             replylist.append(view)
         elif community_is_same:
-            view = reply_view(reply=reply, variant=8, user_id=user_id)
+            if mods is None:
+                mods = [moderator.user_id for moderator in reply.community.moderators()]
+            view = reply_view(reply=reply, variant=8, user_id=user_id, mods=mods, banned_from=banned_from)
             if not inner_community_view:
                 inner_community_view = community_view(reply.community, variant=1, stub=True)
                 if user_id:
-                    can_auth_user_moderate = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+                    can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
             view['canAuthUserModerate'] = can_auth_user_moderate
             replylist.append(view)

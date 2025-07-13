@@ -385,7 +385,8 @@ def calculate_child_count(reply):
     db.session.commit()
 
 
-def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False) -> dict:
+def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False, mods=None, banned_from=None,
+               bookmarked_replies=None, reply_subscriptions=None) -> dict:
     if isinstance(reply, int):
         reply = PostReply.query.filter_by(id=reply).one()
 
@@ -425,20 +426,29 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
     # Variant 5 - views/comment_reply_view.dart - /user/replies api endpoint
     if variant == 5:
-        bookmarked = db.session.execute(text(
-            'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
-                                        {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-        reply_sub = db.session.execute(text(
-            'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
-                                       {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
-        banned = db.session.execute(
-            text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'),
-            {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
+        if bookmarked_replies is None:
+            bookmarked = db.session.execute(text(
+                'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        else:
+            bookmarked = reply.id in bookmarked_replies
+
+        if reply_subscriptions is None:
+            reply_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        else:
+            reply_sub = reply.id in reply_subscriptions
+
+        if banned_from is None:
+            banned = reply.community_id in communities_banned_from(user_id)
+        else:
+            banned = reply.community_id in banned_from
+
         moderator = db.session.execute(text(
             'SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'),
                                        {'user_id': reply.user_id, 'community_id': reply.community_id}).scalar()
-        admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'),
-                                   {'user_id': reply.user_id}).scalar()
+        admin = reply.user_id in g.admin_ids
         if my_vote == 0 and user_id is not None:
             reply_vote = db.session.execute(text(
                 'SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
@@ -494,15 +504,32 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                   'published': reply.posted_at.isoformat() + 'Z',
                   'child_count': reply.child_count if reply.child_count is not None else 0}
 
-        bookmarked = db.session.execute(text(
-            'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
-                                        {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
-        reply_sub = db.session.execute(text(
-            'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
-                                       {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
-        banned = reply.community_id in communities_banned_from(user_id)
-        moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
-        admin = reply.author.is_admin()
+        if bookmarked_replies is None:
+            bookmarked = db.session.execute(text(
+                'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+        else:
+            bookmarked = reply.id in bookmarked_replies
+
+        if reply_subscriptions is None:
+            reply_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                           {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+        else:
+            reply_sub = reply.id in reply_subscriptions
+
+        if banned_from is None:
+            banned = reply.community_id in communities_banned_from(user_id)
+        else:
+            banned = reply.community_id in banned_from
+
+        if mods is None:
+            moderator = reply.community.is_moderator(reply.author) or reply.community.is_owner(reply.author)
+        else:
+            moderator = reply.user_id in mods
+
+        admin = reply.user_id in g.admin_ids
+
         if my_vote == 0 and user_id is not None:
             reply_vote = db.session.execute(text(
                 'SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
