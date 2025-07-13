@@ -121,7 +121,7 @@ def after_request(response):
         profiler.disable()
         s = io.StringIO()
         ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
-        ps.print_stats(50)  # Top 50 lines by cumulative time
+        ps.print_stats(200)  # Top 50 lines by cumulative time
 
         # Output to stderr, or save to file, or add to response
         print(f"--- PROFILE ({request.path}) ---\n{s.getvalue()}")

@@ -6,7 +6,7 @@ from typing import List
 
 import boto3
 from botocore.exceptions import ClientError
-from flask import current_app, render_template, g
+from flask import current_app, render_template, g, url_for, flash
 from flask_babel import _  # todo: set the locale based on account_id so that _() works
 
 from app import celery
@@ -17,6 +17,9 @@ CHARSET = "UTF-8"
 
 def send_password_reset_email(user):
     token = user.get_reset_password_token()
+    if current_app.debug:
+        flash(_('Check the console for a link.'), 'warning')
+        print(url_for('auth.reset_password', token=token, _external=True))
     send_email(_('[PieFed] Reset Your Password'),
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],

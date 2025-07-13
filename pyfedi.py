@@ -17,7 +17,7 @@ from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string, feed_link_to_href
+    notif_id_to_string, feed_link_to_href, get_setting, set_setting
 
 app = create_app()
 cli.register(app)
@@ -80,10 +80,14 @@ def before_request():
     g.low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     if request.path != '/inbox' and not request.path.startswith('/static/'):        # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
-        g.admin_ids = list(db.session.execute(
-            text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
-            {'role_admin': ROLE_ADMIN}
-        ).scalars())
+        g.admin_ids = get_setting('admin_ids')    # get_setting is cached in redis
+        if g.admin_ids is None:
+            g.admin_ids = list(db.session.execute(
+                text('SELECT DISTINCT u.id FROM "user" u LEFT JOIN user_role ur ON u.id = ur.user_id WHERE (ur.role_id = :role_admin AND u.deleted = false AND u.banned = false) OR u.id = 1 ORDER BY u.id'),
+                {'role_admin': ROLE_ADMIN}
+            ).scalars())
+            set_setting('admin_ids', g.admin_ids)
+
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False
