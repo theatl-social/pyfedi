@@ -4,6 +4,7 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_username %}
 {% set active_child = 'admin_approve_registrations' %}
 
 {% block app_content %}
@@ -19,14 +20,15 @@
         </form>
         <table class="table table-striped">
             <tr>
-               <th>{{ _('Name') }}</th>
+                <th>{{ _('Name') }}</th>
                 <th>{{ _('Email') }}</th>
                 <th>{{ _('Email verifed') }}</th>
                 <th>{{ _('Answer') }}</th>
                 <th>{{ _('Applied') }}</th>
                 <th>{{ _('IP and country code') }}</th>
                 <th>{{ _('Source') }}</th>
-               <th>{{ _('Actions') }}</th>
+                <th>{{ _('Similar usernames') }}</th>
+                <th>{{ _('Actions') }}</th>
             </tr>
             {% for registration in registrations %}
                 <tr>
@@ -44,6 +46,17 @@
                     <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
+                    <td>
+                        {% for similar_user in registration.search_similar_names() -%}
+                            {{ render_username(similar_user) }}
+                            {% if similar_user.reputation < -3 -%}
+                                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
+                            {% endif -%}
+                            {% if similar_user.banned %}
+                                <span class="fe fe-warning red" title="{{ _('Banned') }}"> </span>
+                            {% endif %}<br />
+                        {% endfor -%}
+                    </td>
                     <td>
                         <a href="#" data-url="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary send_post">{{ _('Approve') }}</a>
                         <a href="#" data-url="{{ url_for('admin.admin_approve_registrations_denied', user_id=registration.user.id) }}" class="btn btn-sm btn-danger confirm_first send_post">{{ _('Deny') }}</a>
