@@ -22,8 +22,7 @@ from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setu
 
 # Return a random string of 6 letter/digits.
 def random_token(length=6) -> str:
-    return "".join(
-        [random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for x in range(length)])
+    return "".join([random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for x in range(length)])
 
 
 def normalize_utf(username):
@@ -142,11 +141,8 @@ def process_registration_form(form):
         return redirect_with_session_cookie("auth.please_wait")
 
     if is_country_blocked(country):
-        return render_template(
-            "generic_message.html",
-            title=_("Application declined"),
-            message=_("Sorry, we are not accepting registrations from your country."),
-        )
+        return render_template("generic_message.html", title=_("Application declined"),
+                               message=_("Sorry, we are not accepting registrations from your country."))
 
     return register_new_user(form, ip, country)
 
@@ -175,9 +171,7 @@ def contains_banned_username_patterns(username):
 
 def redirect_with_session_cookie(route):
     response = make_response(redirect(url_for(route)))
-    response.set_cookie(
-        "sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30)
-    )
+    response.set_cookie("sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30))
     return response
 
 
@@ -272,18 +266,12 @@ def requires_email_verification(user):
 def send_email_verification(user):
     send_verification_email(user)
     if current_app.debug:
-        current_app.logger.info(
-            "Verify account:"
-            + url_for(
-                "auth.verify_email", token=user.verification_token, _external=True
-            )
-        )
+        current_app.logger.info("Verify account:" +
+                                url_for("auth.verify_email", token=user.verification_token, _external=True))
 
 
 def requires_approval(user):
-    return (
-        g.site.registration_mode == "RequireApplication" and g.site.application_question
-    )
+    return g.site.registration_mode == "RequireApplication" and g.site.application_question
 
 
 def handle_user_application(user, form):
@@ -318,15 +306,7 @@ def render_registration_form(form):
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
-    return render_template(
-        "auth/register.html",
-        title=_("Register"),
-        form=form,
-        site=g.site,
-        google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
-        mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
-        discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"],
-    )
+    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site, google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"], mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"], discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 def redirect_next_page():
@@ -363,9 +343,7 @@ def find_user(form):
         user = User.query.filter_by(email=username, ap_id=None, deleted=False).first()
     if not user:
         ap_id = f"https://{current_app.config['SERVER_NAME']}/u/{username.lower()}"
-        user = User.query.filter(
-            User.ap_profile_id.ilike(ap_id), User.deleted.is_(False)
-        ).first()
+        user = User.query.filter(User.ap_profile_id.ilike(ap_id), User.deleted.is_(False)).first()
 
     return user
 
@@ -395,11 +373,7 @@ def validate_user_login(user, password, ip):
 
 def handle_invalid_password(user):
     if user.password_hash is None:
-        message = Markup(
-            _(
-                'Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'
-            )
-        )
+        message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
         flash(message, "error")
     else:
         flash(_("Invalid password"), "error")
@@ -415,9 +389,7 @@ def handle_banned_user(user, ip):
         db.session.commit()
         cache.delete_memoized(banned_ip_addresses)
 
-    response.set_cookie(
-        "sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30)
-    )
+    response.set_cookie("sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30))
     return response
 
 
@@ -459,17 +431,11 @@ def determine_next_page():
 
 def configure_bandwidth_cookies(response, low_bandwidth_mode):
     mode = "1" if low_bandwidth_mode else "0"
-    response.set_cookie(
-        "low_bandwidth", mode, expires=datetime(year=2099, month=12, day=30)
-    )
+    response.set_cookie("low_bandwidth", mode, expires=datetime(year=2099, month=12, day=30))
 
 
 def render_login_form(form):
-    return render_template(
-        "auth/login.html",
-        title=_("Login"),
-        form=form,
-        google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
-        mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
-        discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"],
-    )
+    return render_template("auth/login.html", title=_("Login"), form=form,
+                           google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])

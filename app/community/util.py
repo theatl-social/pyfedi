@@ -286,7 +286,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                   WHERE post.community_id = :community_id;
                                  """), {'community_id': community.id})
             session.commit()
-        except Exception as e:
+        except Exception:
             session.rollback()
             raise
         finally:

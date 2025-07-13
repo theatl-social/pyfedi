@@ -7,8 +7,7 @@ from app.activitypub.signature import send_post_request
 from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
-from app.models import User, Topic, Community, \
-    CommunityJoinRequest, CommunityMember, Filter
+from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter
 from app.utils import render_template, joined_communities, community_membership, get_setting
 
 
@@ -19,11 +18,7 @@ def trump_musk():
         form = ChooseTrumpMuskForm()
         if form.validate_on_submit():
             if form.trump_musk_level.data >= 0:
-                content_filter = Filter(title='Trump & Musk', filter_home=True,
-                                        filter_posts=True,
-                                        filter_replies=False, hide_type=form.trump_musk_level.data,
-                                        keywords='trump\nmusk',
-                                        expire_after=None, user_id=current_user.id)
+                content_filter = Filter(title='Trump & Musk', filter_home=True, filter_posts=True, filter_replies=False, hide_type=form.trump_musk_level.data, keywords='trump\nmusk', expire_after=None, user_id=current_user.id)
                 db.session.add(content_filter)
                 db.session.commit()
             return redirect(url_for('auth.choose_topics'))
@@ -72,8 +67,7 @@ def join_topic(topic_id):
                 db.session.commit()
                 send_community_follow(community.id, join_request.id, current_user.id)
 
-            existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id,
-                                                           CommunityMember.user_id == current_user.id).first()
+            existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id, CommunityMember.user_id == current_user.id).first()
             if not existing_member:
                 member = CommunityMember(user_id=current_user.id, community_id=community.id)
                 db.session.add(member)

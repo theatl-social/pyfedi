@@ -93,20 +93,18 @@ def reset_password_request():
     form = ResetPasswordRequestForm()
     if form.validate_on_submit():
         form.email.data = form.email.data.strip()
-        if form.email.data.lower().startswith('postmaster@') or form.email.data.lower().startswith('abuse@') or \
-                form.email.data.lower().startswith('noc@'):
+        if form.email.data.lower().startswith('postmaster@') or form.email.data.lower().startswith('abuse@') \
+                or form.email.data.lower().startswith('noc@'):
             flash(_('Sorry, you cannot use that email address.'), 'error')
         else:
-            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None,
-                                                                                                      deleted=False).first()
+            user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
             if user:
                 send_password_reset_email(user)
                 flash(_('Check your email for a link to reset your password.'))
                 return redirect(url_for('auth.login'))
             else:
                 flash(_('No account with that email address exists'), 'warning')
-    return render_template('auth/reset_password_request.html',
-                           title=_('Reset Password'), form=form)
+    return render_template('auth/reset_password_request.html', title=_('Reset Password'), form=form)
 
 
 @bp.route('/reset_password/<token>', methods=['GET', 'POST'])
@@ -234,9 +232,7 @@ def mastodon_login():
     # If user is already logged in, redirect to the connect route
     if current_user.is_authenticated:
         return redirect(url_for('auth.mastodon_connect'))
-    return oauth.mastodon.authorize_redirect(redirect_uri=url_for(
-        'auth.mastodon_authorize', _external=True
-    ))
+    return oauth.mastodon.authorize_redirect(redirect_uri=url_for('auth.mastodon_authorize', _external=True))
 
 
 @bp.route("/mastodon_authorize", methods=["GET", "POST"])
@@ -288,9 +284,7 @@ def mastodon_authorize():
 
 @bp.route("/mastodon_connect")
 def mastodon_connect():
-    return oauth.mastodon.authorize_redirect(redirect_uri=url_for(
-        'auth.mastodon_connect_callback', _external=True
-    ))
+    return oauth.mastodon.authorize_redirect(redirect_uri=url_for('auth.mastodon_connect_callback', _external=True))
 
 
 @bp.route("/mastodon_connect_callback")

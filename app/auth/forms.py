@@ -3,8 +3,7 @@ import re
 from flask_babel import _, lazy_gettext as _l
 from flask_wtf import FlaskForm
 from sqlalchemy import func
-from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, RadioField, \
-    EmailField, TextAreaField
+from wtforms import StringField, PasswordField, SubmitField, HiddenField, BooleanField, RadioField, EmailField, TextAreaField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length
 
 from app.models import User, Community, Feed
@@ -12,8 +11,9 @@ from app.utils import MultiCheckboxField, CaptchaField, get_setting
 
 
 class LoginForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired()],
-                            render_kw={'autofocus': True, 'autocomplete': 'username', 'placeholder': _l('or email')})
+    user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True,
+                                                                                     'autocomplete': 'username',
+                                                                                     'placeholder': _l('or email')})
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)])
     low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     timezone = HiddenField(render_kw={'id': 'timezone'})
@@ -21,19 +21,14 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)],
-                            render_kw={'autofocus': True, 'autocomplete': 'username'})
+    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)], render_kw={'autofocus': True,
+                                                                                                     'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
-    real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)],
-                            render_kw={'autocomplete': 'email'})
-    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)],
-                             render_kw={'autocomplete': 'new-password'})
-    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password'),
-                                                                 Length(min=8, max=129)])
-    question = TextAreaField(_l('Why would you like to join this site?'),  validators=[DataRequired(),
-                                                                                       Length(min=1, max=512)])
-    terms = BooleanField(_l('I agree to the terms of service & privacy policy (see links in footer)'),
-                         validators=[DataRequired()])
+    real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
+    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)], render_kw={'autocomplete': 'new-password'})
+    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password'), Length(min=8, max=129)])
+    question = TextAreaField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
+    terms = BooleanField(_l('I agree to the terms of service & privacy policy (see links in footer)'), validators=[DataRequired()])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
     timezone = HiddenField(render_kw={'id': 'timezone'})
 
@@ -107,9 +102,7 @@ class ResetPasswordRequestForm(FlaskForm):
 
 class ResetPasswordForm(FlaskForm):
     password = PasswordField(_l('Password'), validators=[DataRequired()], render_kw={'autofocus': True})
-    password2 = PasswordField(
-        _l('Repeat password'), validators=[DataRequired(),
-                                           EqualTo('password')])
+    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password')])
     submit = SubmitField(_l('Set password'))
 
 
@@ -118,8 +111,7 @@ class ChooseTrumpMuskForm(FlaskForm):
                (0, _l('A little is ok')),
                (-1, _l('Bring it on')),
                ]
-    trump_musk_level = RadioField(_l('How tired of Trump and Musk news are you?'), choices=options, default=1,
-                                  coerce=int,
+    trump_musk_level = RadioField(_l('How tired of Trump and Musk news are you?'), choices=options, default=1, coerce=int,
                                   render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Choose'))
 
