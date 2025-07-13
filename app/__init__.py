@@ -18,6 +18,7 @@ from celery import Celery
 from sqlalchemy_searchable import make_searchable
 import httpx
 from authlib.integrations.flask_client import OAuth
+from app.orjson_provider import ORJSONProvider
 
 from config import Config
 
@@ -81,6 +82,8 @@ def create_app(config_class=Config):
     cache.init_app(app)
     limiter.init_app(app)
     celery.conf.update(app.config)
+    app.json_provider_class = ORJSONProvider
+    app.json = app.json_provider_class(app)
 
     celery.conf.update(CELERY_ROUTES={
         'app.shared.tasks.users.check_user_application': {'queue': 'background'},
