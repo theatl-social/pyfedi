@@ -505,16 +505,16 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                   'child_count': reply.child_count if reply.child_count is not None else 0}
 
         if bookmarked_replies is None:
-            bookmarked = db.session.execute(text(
-                'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
-                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalar()
+            bookmarked = list(db.session.execute(text(
+                'SELECT post_reply_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalars())
         else:
             bookmarked = reply.id in bookmarked_replies
 
         if reply_subscriptions is None:
-            reply_sub = db.session.execute(text(
-                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
-                                           {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar()
+            reply_sub = list(db.session.execute(text(
+                'SELECT entity_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                           {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalars())
         else:
             reply_sub = reply.id in reply_subscriptions
 

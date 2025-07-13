@@ -204,14 +204,14 @@ def get_user_replies(auth, data, mentions=False):
     replies = replies.paginate(page=page, per_page=limit, error_out=False)
 
     banned_from = communities_banned_from(user_id)
-    bookmarked_replies = db.session.execute(text(
+    bookmarked_replies = list(db.session.execute(text(
         'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
-        {'user_id': user_id}).scalar()
+        {'user_id': user_id}).scalars())
     if bookmarked_replies is None:
         bookmarked_replies = []
-    reply_subscriptions = db.session.execute(text(
+    reply_subscriptions = list(db.session.execute(text(
         'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
-        {'type': NOTIF_REPLY, 'user_id': user_id}).scalar()
+        {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
     if reply_subscriptions is None:
         reply_subscriptions = []
 
