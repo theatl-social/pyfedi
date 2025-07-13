@@ -84,7 +84,7 @@
                    hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                    hx-target="#reply_to_{{ post_reply.id }}"
                    hx-swap="innerHTML"
-                   rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">reply</span></a>
+                   rel="nofollow noindex"><span class="fe fe-reply"></span> <span class="hide_skinny_mobile">{{ _('reply') }}</span></a>
             </div>
             <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
                 {% with comment=post_reply, community=post_reply.post.community -%}

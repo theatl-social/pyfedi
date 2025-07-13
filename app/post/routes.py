@@ -569,6 +569,60 @@ def continue_discussion(post_id, comment_id):
     return response
 
 
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/ajax/<nonce>', methods=['POST'])
+@login_required_if_private_instance
+def continue_discussion_ajax(post_id, comment_id, nonce):
+    post = Post.query.get_or_404(post_id)
+    comment = PostReply.query.get_or_404(comment_id)
+
+    mods = post.community.moderators()
+    if post.community.private_mods:
+        mod_list = []
+    else:
+        mod_user_ids = [mod.user_id for mod in mods]
+        mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
+    replies = get_comment_branch(post.id, comment.id, 'top')
+
+    # user flair
+    user_flair = {}
+    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community.id):
+        user_flair[u_flair.user_id] = u_flair.flair
+
+    # Voting history
+    if current_user.is_authenticated:
+        recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
+        recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
+        reply_collapse_threshold = current_user.reply_collapse_threshold if current_user.reply_collapse_threshold else -1000
+
+    else:
+        recently_upvoted_replies = []
+        recently_downvoted_replies = []
+        reply_collapse_threshold = -10
+
+    communities_banned_from_list = communities_banned_from(current_user.get_id()) if current_user.is_authenticated else []
+
+    response = render_template('post/continue_discussion_ajax.html',
+                               post=post, mods=mod_list,
+                               replies=replies,
+                               community=post.community,
+                               nonce=nonce,
+                               THREAD_CUTOFF_DEPTH=1000,
+                               reply_collapse_threshold=reply_collapse_threshold,
+                               recently_upvoted_replies=recently_upvoted_replies,
+                               recently_downvoted_replies=recently_downvoted_replies,
+                               can_upvote_here=can_upvote(current_user, post.community),
+                               can_downvote_here=can_downvote(current_user, post.community),
+                               communities_banned_from_list=communities_banned_from_list,
+                               user_notes=user_notes(current_user.get_id()) if current_user.is_authenticated else {},
+                               show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
+                               user_flair=user_flair if current_user.is_authenticated else {},
+                               upvoted_class='',
+                               downvoted_class='')
+    response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+    return response
+
+
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/reply', methods=['GET', 'POST'])
 @login_required
 def add_reply(post_id: int, comment_id: int):

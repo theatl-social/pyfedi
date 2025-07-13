@@ -79,12 +79,12 @@
                            hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                            hx-target="#reply_to_{{ post_reply.id }}"
                            hx-swap="innerHTML focus-scroll:true"
-                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
+                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
                     {% else -%}
-                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
+                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
                     {% endif -%}
                 {% else -%}
-                    <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span>
+                    <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span>
                 {% endif -%}
             {% endif -%}
         </div>
@@ -135,9 +135,9 @@
                         {% endwith %}
                     {% endfor -%}
             {% else -%}
-                <div class="continue_thread hidable">
-                    <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}">Continue thread</a>
-                </div>
+                <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}"
+                   hx-post="{{ url_for('post.continue_discussion_ajax', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
+                   hx-target="#comment_{{ post_reply.id }}" hx-swap="outerHTML">{{ _('Continue thread') }}</a>
             {% endif -%}
         </div>
     {% endif -%}
