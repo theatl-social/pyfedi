@@ -39,10 +39,10 @@
         <li>
             <a href="#" data-url="{{ url_for("post.post_reply_distinguish", post_id=post.id, comment_id=post_reply.id) }}" class="send_post dropdown-item no-underline" rel="nofollow">
                 {% if not post_reply.distinguished -%}
-                    <span class="fe fe-shield text-success"></span>
+                    <span class="fe fe-distinguished text-success"></span>
                     {{ _('Distinguish') }}
                 {% else -%}
-                    <span class="fe fe-shield text-danger"></span>
+                    <span class="fe fe-distinguished text-danger"></span>
                     {{ _('Undistinguish') }}
                 {% endif -%}
             </a>
