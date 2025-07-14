@@ -57,6 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupDynamicContentObserver();
     setupCommunityFilter();
     setupPopupTooltips();
+    setupPasswordEye();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1955,4 +1956,37 @@ function setupPopupTooltips() {
           delay: { show: 750, hide: 200 }
       })
     );
+}
+
+function setupPasswordEye() {
+    const showPasswordBtn = document.querySelector('.showPassword');
+    const hidePasswordBtn = document.querySelector('.hidePassword');
+    const passwordElement = document.getElementById('password');
+
+    if(showPasswordBtn && hidePasswordBtn && passwordElement) {
+            function togglePassword() {
+                if (passwordElement.type === 'password') {
+                    passwordElement.type = 'text';
+                    showPasswordBtn.style.display = 'inline';
+                    hidePasswordBtn.style.display = 'none';
+                } else {
+                    passwordElement.type = 'password';
+                    showPasswordBtn.style.display = 'none';
+                    hidePasswordBtn.style.display = 'inline';
+                }
+            }
+
+            showPasswordBtn.addEventListener('click', function (e) {
+                togglePassword();
+                e.preventDefault();
+            });
+
+            hidePasswordBtn.addEventListener('click', function (e) {
+                togglePassword();
+                e.preventDefault();
+            });
+
+            // Initially hide the showPassword button
+            showPasswordBtn.style.display = 'none';
+    }
 }

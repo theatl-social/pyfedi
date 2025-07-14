@@ -4,7 +4,7 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% from 'bootstrap5/form.html' import render_form -%}
+{% from 'bootstrap5/form.html' import render_field -%}
 
 {% block app_content -%}
 <script src="/static/js/simplewebauthn13.umd.min.js" nonce="{{ session.nonce }}"></script>
@@ -13,7 +13,18 @@
             <div class="card mt-5">
                 <div class="card-body p-6">
                     <div class="card-title text-center">{{ _('Log in') }}</div>
-                    {{ render_form(form) }}
+                    <form method="post">
+                        {{ form.csrf_token() }}
+                        {{ render_field(form.user_name) }}
+                        <div class="password-container">
+                            {{ render_field(form.password) }}
+                            <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
+						    <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
+                        </div>
+                        {{ render_field(form.low_bandwidth_mode) }}
+                        {{ render_field(form.timezone) }}
+                        {{ render_field(form.submit) }}
+                    </form>
                     <hr />
                     <p align="center">
                         <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _('Log in with a passkey') }}</button>

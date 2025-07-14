@@ -255,8 +255,8 @@ def edit_profile(actor):
                   'warning')
         current_user.email = form.email.data.strip()
         password_updated = False
-        if form.password_field.data.strip() != '':
-            current_user.set_password(form.password_field.data)
+        if form.password.data.strip() != '':
+            current_user.set_password(form.password.data)
             current_user.password_updated_at = utcnow()
             password_updated = True
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
@@ -310,7 +310,7 @@ def edit_profile(actor):
         # Sync to LDAP if password was provided
         if password_updated:
             try:
-                sync_user_to_ldap(current_user.user_name, current_user.email, form.password_field.data.strip())
+                sync_user_to_ldap(current_user.user_name, current_user.email, form.password.data.strip())
             except Exception as e:
                 # Log error but don't fail the profile update
                 current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
@@ -330,7 +330,7 @@ def edit_profile(actor):
             i += 1
         form.matrixuserid.data = current_user.matrix_user_id
         form.bot.data = current_user.bot
-        form.password_field.data = ''
+        form.password.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
                            markdown_editor=current_user.markdown_editor, delete_form=delete_form,

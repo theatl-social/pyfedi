@@ -2452,6 +2452,23 @@ form {
 
 }
 
+/* password eye */
+.password-container {
+	position: relative;
+}
+
+.showPassword, .hidePassword {
+	position: absolute;
+	right: 6px;
+    top: 30px;
+
+	img {
+		opacity: 0.5;
+  	    width: 30px;
+  		height: 30px;
+	}
+}
+
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;

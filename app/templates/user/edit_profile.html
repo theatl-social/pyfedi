@@ -27,7 +27,11 @@
             {{ form.csrf_token() }}
             <h5>{{ _('Login') }}</h5>
             {{ render_field(form.email) }}
-            {{ render_field(form.password_field) }}
+            <div class="password-container">
+                {{ render_field(form.password) }}
+                <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
+                <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
+            </div>
             <h5>{{ _('Profile') }}</h5>
             {{ render_field(form.title) }}
             {{ render_field(form.about) }}
