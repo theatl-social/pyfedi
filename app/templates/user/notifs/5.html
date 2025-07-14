@@ -1,5 +1,5 @@
-<tr>
-    <td>
+<tr class="align-middle">
+    <td width="*">
         <div class="overflow-ellipses-parent text-truncate">
             <div class="child my-1 {% if not notification.read %}unread{% endif %}">
                 <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
@@ -18,35 +18,5 @@
             </a>
         </div>
     </td>
-    <td class="text-nowrap align-middle text-center p-1">
-        {{ arrow.get(notification.created_at).humanize(locale=locale) }}
-    </td>
-    <td class="align-middle text-center p-1">
-        {% if not notification.read -%}
-            <a class="no-underline border border-0" role="button" aria-label="{{ _('Mark as read') }}" tabindex="0" title="{{ _('Mark as read') }}" 
-                    hx-post="/notification/{{ notification.id }}/read" 
-                    hx-trigger="click throttle:1s" 
-                    hx-target="closest tr" 
-                    hx-swap="outerHTML">
-                <span class="fe fe-read"></span>
-            </a>
-        {% else -%}
-            <a class="no-underline border border-0" role="button" aria-label="{{ _('Mark as unread') }}" tabindex="0" title="{{ _('Mark as unread') }}" 
-                    hx-post="/notification/{{ notification.id }}/unread" 
-                    hx-trigger="click throttle:1s" 
-                    hx-target="closest tr" 
-                    hx-swap="outerHTML">
-                <span class="fe fe-circle"></span>
-            </a>
-        {% endif -%}
-    </td>
-    <td class="align-middle text-center pe-0">
-        <a class="no-underline border border-0" role="button" aria-label="{{ _('Delete') }}" tabindex="0" title="{{ _('Delete') }}" 
-                hx-post="/notification/{{ notification.id }}/delete" 
-                hx-trigger="click throttle:1s" 
-                hx-target="closest tr" 
-                hx-swap="outerHTML">
-            <span class="fe fe-delete"></span>
-        </a>
-    </td>
+    {% include "user/notifs/_time_and_buttons.html" %}
 </tr>
