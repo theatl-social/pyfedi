@@ -4,9 +4,9 @@ set -e
 export FLASK_APP=pyfedi.py
 
 echo "Running database migrations..."
-flask db upgrade
+python3 -m flask db upgrade
 
-flask populate_community_search
+python3 -m flask populate_community_search
 
 if [ "${FLASK_DEBUG:-}" = "1" ] && [ "${FLASK_ENV:-}" = "development" ]; then
   export FLASK_RUN_EXTRA_FILES=$(find app/templates app/static -type f | tr '\n' ':')
