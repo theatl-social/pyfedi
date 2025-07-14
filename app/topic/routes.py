@@ -66,8 +66,9 @@ def show_topic(topic_path):
             text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
             {'topic_ids': tuple(topic_ids)}).scalars()
 
-        topic_communities = Community.query.filter(Community.topic_id == current_topic.id,
-                                                   Community.banned == False).order_by(Community.name)
+        topic_communities = Community.query.filter(
+            Community.topic_id == current_topic.id, Community.banned == False).\
+            order_by(desc(Community.total_subscriptions_count))
 
         posts = None
         comments = None

@@ -7,6 +7,7 @@ from flask import g, current_app, request, redirect, url_for, flash, abort, Mark
 from flask_babel import _
 from flask_login import current_user
 from slugify import slugify
+from sqlalchemy import desc
 
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
@@ -728,7 +729,9 @@ def show_feed(feed):
         post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
         posts = post_ids_to_models(post_ids, sort)
 
-        feed_communities = Community.query.filter(Community.id.in_(feed_community_ids), Community.banned == False)
+        feed_communities = Community.query.filter(
+            Community.id.in_(feed_community_ids),Community.banned == False).\
+            order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
                            page=page + 1, sort=sort, layout=post_layout, result_id=result_id) if has_next_page else None
