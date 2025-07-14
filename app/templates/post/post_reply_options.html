@@ -33,6 +33,22 @@
             {% endif -%}
         {% endif -%}
     {% endif -%}
+
+    {# Distinguish/Undistinguish comment #}
+    {% if (post.community.is_moderator() or post.community.is_owner()) and current_user.get_id() == post_reply.user_id -%}
+        <li>
+            <a href="#" data-url="{{ url_for("post.post_reply_distinguish", post_id=post.id, comment_id=post_reply.id) }}" class="send_post dropdown-item no-underline" rel="nofollow">
+                {% if not post_reply.distinguished -%}
+                    <span class="fe fe-shield text-success"></span>
+                    {{ _('Distinguish') }}
+                {% else -%}
+                    <span class="fe fe-shield text-danger"></span>
+                    {{ _('Undistinguish') }}
+                {% endif -%}
+            </a>
+        </li>
+    {% endif -%}
+
     {% if existing_bookmark -%}
         <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Remove bookmark') }}"
           hx-post="/post/{{ post.id }}/comment/{{ post_reply.id }}/remove_bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0"><span class="fe fe-bookmark"></span> {{ _('Remove bookmark') }}</a></li>

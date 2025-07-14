@@ -140,6 +140,10 @@
   content: "\e9ee";
 }
 
+.fe-shield::before {
+  content: "\e9c7";
+}
+
 .fe-home::before {
   content: "\e979";
 }
@@ -1645,7 +1649,10 @@ time {
   padding-right: 8px;
 }
 .comment.distinguished > .row:first-child {
-  background-color: #eee;
+  background-color: var(--bs-secondary-bg-subtle);
+  border: solid;
+  border-color: var(--bs-success);
+  border-width: 2px;
 }
 .comment .limit_height {
   position: relative;
