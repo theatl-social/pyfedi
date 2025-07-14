@@ -68,7 +68,7 @@ def show_topic(topic_path):
 
         topic_communities = Community.query.filter(
             Community.topic_id == current_topic.id, Community.banned == False).\
-            order_by(desc(Community.total_subscriptions_count))
+            order_by(asc(Community.total_subscriptions_count))
 
         posts = None
         comments = None

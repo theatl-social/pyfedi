@@ -101,13 +101,13 @@
         {% if topic_communities %}
         <div id="topic_communities" class="card mt-3">
             <div class="card-header">
-                 <h2>{{ _('Topic communities') }}</h2>
+                <h2>{{ _('Topic communities') }}</h2>
             </div>
             <div class="card-body">
                 <ul class="list-group list-group-flush">
                     {% for community in topic_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }}
+                            {{ render_communityname(community) }} - {{ community.humanize_subscribers() }}
                         </li>
                     {% endfor %}
                 </ul>
