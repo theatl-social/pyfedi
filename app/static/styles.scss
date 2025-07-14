@@ -2237,7 +2237,7 @@ form {
   background-color: var(--bs-secondary-bg);
 }
 
-.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {  
+.post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
   img {
     filter: grayscale(100%) blur(6px)!important;
   }
