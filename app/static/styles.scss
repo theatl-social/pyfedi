@@ -2230,8 +2230,11 @@ form {
   width: 96%;
 }
 
-.reported {
-  background-color: antiquewhite;
+.post_teaser.reported, .comment.reported {
+  border-style: solid !important;
+  border-color: var(--bs-danger) !important;
+  border-width: 2px !important;
+  background-color: var(--bs-secondary-bg);
 }
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
