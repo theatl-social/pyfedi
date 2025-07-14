@@ -1586,7 +1586,8 @@ a.unread, div.unread {
       .accordion-body {
         max-height: 4rem;
         position: relative;
-        overflow: hidden;
+        overflow-y: hidden;
+        overflow-x: auto;
 
         &:after {
           position: absolute;
@@ -1623,6 +1624,10 @@ a.unread, div.unread {
   }
 }
 
+.notification-table {
+  table-layout: fixed;
+}
+
 .profile_action_buttons, .rh_action_buttons {
   float: right;
 }
@@ -1652,7 +1657,7 @@ a.unread, div.unread {
   float: right;
 }
 
-.post_body, .comment_body, #preview, .reply_preview {
+.post_body, .comment_body, #preview, .reply_preview, .accordion-body {
   word-wrap: break-word;
 
   img {
