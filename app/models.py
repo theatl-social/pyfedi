@@ -697,6 +697,22 @@ class Community(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
+    def humanize_subscribers(self, total=True):
+        """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
+
+        if total:
+            subscribers = self.total_subscriptions_count
+        else:
+            subscribers = self.subscriptions_count
+        
+        if not subscribers:
+            return "0"
+
+        if subscribers < 1000:
+            return str(subscribers)
+        else:
+            return str(int(subscribers / 100) / 10) + "k"
+    
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
                                                                       NotificationSubscription.user_id == user_id,
