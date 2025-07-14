@@ -14,7 +14,8 @@ class LoginForm(FlaskForm):
     user_name = StringField(_l('User name'), validators=[DataRequired()], render_kw={'autofocus': True,
                                                                                      'autocomplete': 'username',
                                                                                      'placeholder': _l('or email')})
-    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)])
+    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)],
+                             render_kw={'title': _l('Minimum length 8, maximum 128')})
     low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     timezone = HiddenField(render_kw={'id': 'timezone'})
     submit = SubmitField(_l('Log In'))
@@ -25,8 +26,10 @@ class RegistrationForm(FlaskForm):
                                                                                                      'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
     real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
-    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)], render_kw={'autocomplete': 'new-password'})
-    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password'), Length(min=8, max=129)])
+    password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)],
+                             render_kw={'autocomplete': 'new-password', 'title': _l('Minimum length 8, maximum 128')})
+    password2 = PasswordField(_l('Repeat password'), validators=[DataRequired(), EqualTo('password'), Length(min=8, max=129)],
+                              render_kw={'autocomplete': 'new-password', 'title': _l('Minimum length 8, maximum 128')})
     question = TextAreaField(_l('Why would you like to join this site?'), validators=[DataRequired(), Length(min=1, max=512)])
     terms = BooleanField(_l('I agree to the terms of service & privacy policy (see links in footer)'), validators=[DataRequired()])
     captcha = CaptchaField(_l('Enter captcha code'), validators=[DataRequired()])
