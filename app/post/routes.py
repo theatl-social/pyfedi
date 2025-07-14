@@ -1605,6 +1605,23 @@ def post_reply_block_instance(post_id: int, comment_id: int):
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
 
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/distinguish', methods=['POST'])
+@login_required
+def post_reply_distinguish(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+
+    if (post.community.is_moderator() or post.community.is_owner()) and current_user.id == post_reply.user_id:
+        if post_reply.distinguished:
+            post_reply.distinguished = False
+        else:
+            post_reply.distinguished = True
+        db.session.commit()
+        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    else:
+        abort(401)
+
+
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
 @login_required
 def post_reply_edit(post_id: int, comment_id: int):

@@ -1264,7 +1264,10 @@ time {
 
   &.distinguished {
     > .row:first-child {
-      background-color: $lightest-grey;
+      background-color: var(--bs-secondary-bg-subtle);
+      border: solid;
+      border-color: var(--bs-success);
+      border-width: 2px;
     }
   }
 
