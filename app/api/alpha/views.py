@@ -788,7 +788,7 @@ def federated_instances_view():
 @cache.memoize(timeout=60)
 def cached_modlist_for_community(community_id):
     moderator_ids = db.session.execute(
-        text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and is_moderator = True'),
+        text('SELECT user_id FROM "community_member" WHERE community_id = :community_id and (is_moderator = True or is_owner = True)'),
         {'community_id': community_id}).scalars()
     modlist = []
     for m_id in moderator_ids:
@@ -803,7 +803,7 @@ def cached_modlist_for_community(community_id):
 @cache.memoize(timeout=60)
 def cached_modlist_for_user(user):
     community_ids = db.session.execute(
-        text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and is_moderator = True'),
+        text('SELECT community_id FROM "community_member" WHERE user_id = :user_id and (is_moderator = True or is_owner = True)'),
         {'user_id': user.id}).scalars()
     modlist = []
     for c_id in community_ids:
