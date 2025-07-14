@@ -2496,7 +2496,7 @@ form h5 {
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
-  border-width: 2px;
+  border-width: 2px !important;
   background-color: var(--bs-secondary-bg);
 }
 
