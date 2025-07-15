@@ -2098,6 +2098,8 @@ class PostReply(db.Model):
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
     deleted = db.Column(db.Boolean, default=False, index=True)
     deleted_by = db.Column(db.Integer, index=True)
+    replies_enabled = db.Column(db.Boolean, default=True)
+    sticky = db.Column(db.Boolean, default=False, index=True)
     ip = db.Column(db.String(50))
     from_bot = db.Column(db.Boolean, default=False, index=True)
     up_votes = db.Column(db.Integer, default=0)
