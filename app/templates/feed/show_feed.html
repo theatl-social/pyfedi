@@ -175,7 +175,7 @@
                 <ul class="list-group list-group-flush">
                     {% for community in feed_communities %}
                         <li class="list-group-item">
-                            {{ render_communityname(community) }} - {{ community.humanize_subscribers() }}
+                            {{ render_communityname(community) }} - <span class="text-muted">{{ community.humanize_subscribers() }}</span>
                         </li>
                     {% endfor %}
                 </ul>

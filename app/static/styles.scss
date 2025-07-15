@@ -2458,6 +2458,17 @@ form {
 
 }
 
+#topic_communities {
+  .list-group-item {
+    padding-left: 0;
+    padding-right: 0;
+
+    .text-muted {
+      font-size: 87%;
+    }
+  }
+}
+
 /* password eye */
 .password-container {
 	position: relative;
