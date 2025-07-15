@@ -69,6 +69,8 @@ def register():
     form = RegistrationForm()
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
+    if g.site.registration_mode == 'Open':
+        del form.question
     if request.method == "POST" and form.validate_on_submit():
         return process_registration_form(form)
 
