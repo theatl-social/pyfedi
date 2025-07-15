@@ -229,9 +229,9 @@ def show_topic_rss(topic_path):
 
 
 @bp.route('/topic/<topic_name>/submit', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def topic_create_post(topic_name):
     topic = Topic.query.filter(Topic.machine_name == topic_name.strip().lower()).first()
     if not topic:

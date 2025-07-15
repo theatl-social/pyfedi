@@ -59,9 +59,9 @@ from datetime import timezone, timedelta
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def add_local():
     if current_user.banned:
         return show_ban_message()
@@ -129,9 +129,9 @@ def add_local():
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def add_remote():
     if current_user.banned:
         return show_ban_message()
@@ -626,9 +626,9 @@ def show_community_rss(actor):
 
 
 @bp.route('/<actor>/subscribe', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def subscribe(actor):
     # POST is used by htmx, GET when JS is disabled
     do_subscribe(actor, current_user.id, admin_preload=request.method == 'POST')
@@ -799,9 +799,9 @@ def unsubscribe(actor):
 
 
 @bp.route('/<actor>/join_then_add', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def join_then_add(actor):
     community = actor_to_community(actor)
     if not current_user.subscribed(community.id):
@@ -835,9 +835,9 @@ def join_then_add(actor):
 
 @bp.route('/<actor>/submit/<string:type>', methods=['GET', 'POST'])
 @bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def add_post(actor, type):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()

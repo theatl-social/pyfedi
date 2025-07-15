@@ -461,9 +461,9 @@ def post_oembed(post_id):
 
 
 @bp.route('/post/<int:post_id>/<vote_direction>/<federate>', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def post_vote(post_id: int, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -473,9 +473,9 @@ def post_vote(post_id: int, vote_direction, federate):
 
 
 @bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>', methods=['POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def comment_vote(comment_id, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -485,9 +485,9 @@ def comment_vote(comment_id, vote_direction, federate):
 
 
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def poll_vote(post_id):
     poll_data = Poll.query.get_or_404(post_id)
     if poll_data.mode == 'single':

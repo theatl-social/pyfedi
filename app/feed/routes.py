@@ -785,9 +785,9 @@ def get_all_child_feed_ids(feed: Feed) -> List[int]:
 
 
 @bp.route('/f/<feed_name>/submit', methods=['GET', 'POST'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def feed_create_post(feed_name):
     feed = Feed.query.filter(Feed.machine_name == feed_name.strip().lower()).first()
     if not feed:
@@ -818,9 +818,9 @@ def feed_create_post(feed_name):
 
 
 @bp.route('/feed/<actor>/subscribe', methods=['GET'])
-@approval_required
-@validation_required
 @login_required
+@validation_required
+@approval_required
 def subscribe(actor):
     do_feed_subscribe(actor, current_user.id)
     referrer = request.headers.get('Referer', None)
