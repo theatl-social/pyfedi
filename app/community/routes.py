@@ -57,6 +57,7 @@ from datetime import timezone, timedelta
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
+@validation_required
 @login_required
 def add_local():
     if current_user.banned:
@@ -125,6 +126,7 @@ def add_local():
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
+@validation_required
 @login_required
 def add_remote():
     if current_user.banned:
@@ -827,8 +829,8 @@ def join_then_add(actor):
 
 @bp.route('/<actor>/submit/<string:type>', methods=['GET', 'POST'])
 @bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
-@login_required
 @validation_required
+@login_required
 def add_post(actor, type):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()
