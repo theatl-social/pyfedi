@@ -14,6 +14,10 @@ skill levels can easily understand what's going on and onboard quickly without a
 time investment. Sometimes this will mean writing slightly more verbose/boring code or avoiding the
 use of advanced design patterns.
 
+When you find a security issue, please email contact@piefed.social, DO NOT post about it publicly,
+including in the codeberg issue queue. This gives us space to fix it and without attackers knowing about the
+problem before we do.
+
 # Technology stack
 
 - Python 

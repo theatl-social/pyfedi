@@ -20,7 +20,8 @@ from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
     gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
-    login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids
+    login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
+    approval_required
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -228,8 +229,9 @@ def show_topic_rss(topic_path):
 
 
 @bp.route('/topic/<topic_name>/submit', methods=['GET', 'POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def topic_create_post(topic_name):
     topic = Topic.query.filter(Topic.machine_name == topic_name.strip().lower()).first()
     if not topic:

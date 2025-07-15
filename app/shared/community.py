@@ -192,6 +192,9 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         discussion_languages = input.languages.data
         user = current_user
 
+    if user.verified is False or user.private_key is None:
+        raise Exception("You can't create a community until your account is verified.")
+
     # test user with this name doesn't already exist
     ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/u/' + name.lower()
     existing_user = User.query.filter_by(ap_profile_id=ap_profile_id).first()

@@ -47,7 +47,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts
+    total_comments_on_post_and_cross_posts, approval_required
 
 
 @login_required_if_private_instance
@@ -461,8 +461,9 @@ def post_oembed(post_id):
 
 
 @bp.route('/post/<int:post_id>/<vote_direction>/<federate>', methods=['GET', 'POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def post_vote(post_id: int, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -472,8 +473,9 @@ def post_vote(post_id: int, vote_direction, federate):
 
 
 @bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>', methods=['POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def comment_vote(comment_id, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -483,8 +485,9 @@ def comment_vote(comment_id, vote_direction, federate):
 
 
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def poll_vote(post_id):
     poll_data = Poll.query.get_or_404(post_id)
     if poll_data.mode == 'single':

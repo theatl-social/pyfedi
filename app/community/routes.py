@@ -43,12 +43,14 @@ from app.shared.community import invite_with_chat, invite_with_email, subscribe_
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
-    joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, blocked_instances, \
+    joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
+    blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
-    possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session
+    possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
+    approval_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -57,6 +59,7 @@ from datetime import timezone, timedelta
 
 
 @bp.route('/add_local', methods=['GET', 'POST'])
+@approval_required
 @validation_required
 @login_required
 def add_local():
@@ -126,6 +129,7 @@ def add_local():
 
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
+@approval_required
 @validation_required
 @login_required
 def add_remote():
@@ -622,8 +626,9 @@ def show_community_rss(actor):
 
 
 @bp.route('/<actor>/subscribe', methods=['GET', 'POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def subscribe(actor):
     # POST is used by htmx, GET when JS is disabled
     do_subscribe(actor, current_user.id, admin_preload=request.method == 'POST')
@@ -794,8 +799,9 @@ def unsubscribe(actor):
 
 
 @bp.route('/<actor>/join_then_add', methods=['GET', 'POST'])
-@login_required
+@approval_required
 @validation_required
+@login_required
 def join_then_add(actor):
     community = actor_to_community(actor)
     if not current_user.subscribed(community.id):
@@ -829,6 +835,7 @@ def join_then_add(actor):
 
 @bp.route('/<actor>/submit/<string:type>', methods=['GET', 'POST'])
 @bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
+@approval_required
 @validation_required
 @login_required
 def add_post(actor, type):
