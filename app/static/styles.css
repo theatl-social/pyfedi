@@ -2696,11 +2696,12 @@ form h5 {
   margin-right: 0.5rem;
 }
 
-#topic_communities .list-group-item {
+#topic_communities .list-group-item, #feed_communities .list-group-item {
   padding-left: 0;
   padding-right: 0;
 }
-#topic_communities .list-group-item .text-muted {
+
+#side_pane .list-group-item .text-muted {
   font-size: 87%;
 }
 

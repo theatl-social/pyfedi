@@ -2458,15 +2458,17 @@ form {
 
 }
 
-#topic_communities {
+#topic_communities, #feed_communities {
   .list-group-item {
     padding-left: 0;
     padding-right: 0;
+  }
+}
 
-    .text-muted {
+#side_pane {
+    .list-group-item .text-muted {
       font-size: 87%;
     }
-  }
 }
 
 /* password eye */
