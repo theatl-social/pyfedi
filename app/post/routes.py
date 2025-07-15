@@ -702,6 +702,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
 
     if in_reply_to.author.has_blocked_user(current_user.id):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
+    if not in_reply_to.replies_enabled:
+        return _('This comment cannot be replied to.')
 
     if request.method == 'GET':
         # Get the language of the user being replied to

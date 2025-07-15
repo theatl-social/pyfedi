@@ -154,6 +154,8 @@ def make_reply(input, post, parent_id, src, auth=None):
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
             raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
+        if not parent_reply.replies_enabled:
+            raise Exception('This comment cannot be replied to.')
     else:
         parent_reply = None
 

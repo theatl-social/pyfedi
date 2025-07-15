@@ -400,6 +400,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
                    'distinguished': reply.distinguished,
+                   'repliesEnabled': reply.replies_enabled,
                    'removed': False})
 
         if not reply.path:

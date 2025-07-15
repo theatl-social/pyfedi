@@ -72,7 +72,7 @@
     {% if not banned_from_community %}
     <div class="comment_actions hidable">
         <div class="post_replies_link">
-            {% if post_reply.post.comments_enabled -%}
+            {% if post_reply.post.comments_enabled and post_reply.replies_enabled -%}
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
                     {% if current_user.is_authenticated -%}
                         <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"

@@ -218,7 +218,8 @@ def comment_model_to_json(reply: PostReply) -> dict:
             'identifier': reply.language_code(),
             'name': reply.language_name()
         },
-        'flair': reply.author.community_flair(reply.community_id)
+        'flair': reply.author.community_flair(reply.community_id),
+        'repliesEnabled': reply.replies_enabled
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
@@ -1851,6 +1852,9 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             if parent_comment.author.has_blocked_user(user.id) or parent_comment.author.has_blocked_instance(user.instance_id):
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Parent comment author blocked replier')
                 return None
+            if not parent_comment.replies_enabled:
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Parent comment is locked')
+                return None
         else:
             parent_comment = None
         if post_id is None:
@@ -2202,6 +2206,9 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     # Distinguished
     if 'distinguished' in request_json['object']:
         reply.distinguished = request_json['object']['distinguished']
+
+    if 'repliesEnabled' in request_json['object']:
+        reply.replies_enabled = request_json['object']['repliesEnabled']
 
     reply.edited_at = utcnow()
 
