@@ -701,7 +701,7 @@ class Community(db.Model):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
 
         if total:
-            subscribers = self.total_subscriptions_count
+            subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
         else:
             subscribers = self.subscriptions_count
         

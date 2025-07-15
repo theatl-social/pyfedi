@@ -67,8 +67,8 @@ def show_topic(topic_path):
             {'topic_ids': tuple(topic_ids)}).scalars()
 
         topic_communities = Community.query.filter(
-            Community.topic_id == current_topic.id, Community.banned == False).\
-            order_by(asc(Community.total_subscriptions_count))
+            Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
+            order_by(desc(Community.total_subscriptions_count))
 
         posts = None
         comments = None
@@ -156,8 +156,7 @@ def show_topic(topic_path):
                                sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                comments=comments,
-                               topic_communities=topic_communities, content_filters=user_filters_posts(
-                current_user.id) if current_user.is_authenticated else {},
+                               topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",

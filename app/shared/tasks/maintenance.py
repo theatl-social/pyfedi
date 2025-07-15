@@ -205,6 +205,10 @@ def update_community_stats():
             community.subscriptions_count = session.execute(text(
                 'SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'
             ), {'community_id': community.id}).scalar()
+            # ensure local communities have something their total_subscriptions_count, for use in topic and feed sidebar
+            if community.is_local() and \
+                    (community.total_subscriptions_count is None or community.total_subscriptions_count < community.subscriptions_count):
+                community.total_subscriptions_count = community.subscriptions_count
 
             community.post_count = session.execute(text(
                 'SELECT COUNT(id) as c FROM post WHERE deleted is false and community_id = :community_id'
