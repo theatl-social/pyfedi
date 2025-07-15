@@ -12,7 +12,8 @@ from app.models import Post, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
-    site_language_id, filtered_out_communities
+    site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
+    moderating_communities_ids
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -199,10 +200,32 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
+    banned_from = communities_banned_from(user_id)
+
+    bookmarked_posts = list(db.session.execute(text(
+        'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+        {'user_id': user_id}).scalars())
+    if bookmarked_posts is None:
+        bookmarked_posts = []
+
+    post_subscriptions = list(db.session.execute(text(
+        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+        {'type': NOTIF_POST, 'user_id': user_id}).scalars())
+    if post_subscriptions is None:
+        post_subscriptions = []
+
+    read_posts = list(db.session.execute(
+        text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+        {'user_id': user_id}).scalars())
+
     postlist = []
     for post in posts:
         try:
-            postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id))
+            postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
+                                      communities_moderating=moderating_communities_ids(user.id),
+                                      banned_from=banned_from, bookmarked_posts=bookmarked_posts,
+                                      post_subscriptions=post_subscriptions, read_posts=read_posts,
+                                      communities_joined=joined_or_modding_communities(user.id)))
         except:
             continue
     list_json = {

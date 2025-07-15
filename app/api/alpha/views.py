@@ -13,7 +13,8 @@ from app.utils import blocked_communities, blocked_instances, blocked_users, com
 # 'stub' param: set to True to exclude optional fields
 
 
-def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) -> dict:
+def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, communities_moderating=None, banned_from=None,
+              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None) -> dict:
     if isinstance(post, int):
         post = Post.query.filter_by(id=post, deleted=False).one()
 
@@ -61,24 +62,45 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0) ->
                   'published': post.posted_at.isoformat() + 'Z',
                   'newest_comment_time': post.last_active.isoformat() + 'Z'}
         if user_id:
-            bookmarked = db.session.execute(
-                text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'),
-                {'post_id': post.id, 'user_id': user_id}).scalar()
-            post_sub = db.session.execute(text(
-                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
-                                          {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
-            followed = db.session.execute(text(
-                'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
-                                          {"community_id": post.community_id, "user_id": user_id}).scalar()
-            read_post = db.session.execute(
-                text('SELECT user_id FROM "read_posts" WHERE read_post_id = :post_id and user_id = :user_id'),
-                {'post_id': post.id, 'user_id': user_id}).scalar()
+            if bookmarked_posts is None:
+                bookmarked = db.session.execute(
+                    text('SELECT user_id FROM "post_bookmark" WHERE post_id = :post_id and user_id = :user_id'),
+                    {'post_id': post.id, 'user_id': user_id}).scalar()
+            else:
+                bookmarked = post.id in bookmarked_posts
+
+            if post_subscriptions is None:
+                post_sub = db.session.execute(text(
+                    'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                                              {'type': NOTIF_POST, 'entity_id': post.id, 'user_id': user_id}).scalar()
+            else:
+                post_sub = post.id in post_subscriptions
+
+            if communities_joined is None:
+                followed = db.session.execute(text(
+                    'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
+                                              {"community_id": post.community_id, "user_id": user_id}).scalar()
+            else:
+                followed = post.community_id in communities_joined
+
+            if read_posts is None:
+                read_post = db.session.execute(
+                    text('SELECT user_id FROM "read_posts" WHERE read_post_id = :post_id and user_id = :user_id'),
+                    {'post_id': post.id, 'user_id': user_id}).scalar()
+            else:
+                read_post = post.id in read_posts
         else:
             bookmarked = post_sub = followed = read_post = False
         if not stub:
-            banned = post.community_id in communities_banned_from(post.user_id)
-            moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
-            admin = post.author.is_admin()
+            if banned_from is None:
+                banned = post.community_id in communities_banned_from(post.user_id)
+            else:
+                banned = post.community_id in banned_from
+            if communities_moderating is None:
+                moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
+            else:
+                moderator = post.community_id in communities_moderating
+            admin = post.user_id in g.admin_ids
         else:
             banned = False
             moderator = False
