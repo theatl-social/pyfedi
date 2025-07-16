@@ -1176,20 +1176,20 @@ def community_make_owner(community_id: int, user_id: int):
     user = User.query.get_or_404(user_id)
     
     if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
-        # Use raw SQL because these queries were just really slow with sqlalchemy models
-        new_owner_query = (
-            'UPDATE "community_member" SET is_owner = :owner WHERE user_id = :user_id AND community_id = :community_id')
-        db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
-
+        # Use raw SQL because these queries were really slow with sqlalchemy models
         old_owners_query = (
             'UPDATE "community_member" SET is_owner = :not_owner WHERE is_owner = :is_owner AND '
             'community_id = :community_id')
-        db.session.execute(text(old_owners_query), {"not_owner": False,
-                                                    "is_owner": True,
-                                                    "community_id": community_id})
+        new_owner_query = (
+            'UPDATE "community_member" SET is_owner = :owner WHERE user_id = :user_id AND community_id = :community_id')
         
+        db.session.execute(
+            text(old_owners_query), 
+            {"not_owner": False, "is_owner": True, "community_id": community_id})
+        db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
         community.user_id = user_id
         db.session.commit()
+    
     else:
         abort(401)
     
