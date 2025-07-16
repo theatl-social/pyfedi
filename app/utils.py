@@ -24,7 +24,8 @@ import jwt
 import markdown2
 import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
-import orjson
+#import orjson
+import json # changing back to native json
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
@@ -2902,7 +2903,7 @@ def low_value_reposters() -> List[int]:
 
 def orjson_response(obj, status=200, headers=None):
     return Response(
-        response=orjson.dumps(obj),
+        response=json.dumps(obj),
         status=status,
         headers=headers,
         mimetype="application/json"
