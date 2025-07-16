@@ -742,7 +742,7 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a feed or a community')
                         return
                 else:
-                    actor = find_actor_or_create(actor_id, create_if_not_found=False)
+                    actor = find_actor_or_create(actor_id)
                     if actor and isinstance(actor, User):
                         user = actor
                         # Update user's last_seen in a separate transaction to avoid deadlocks
@@ -824,7 +824,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Follow':
                     target_ap_id = core_activity['object']
                     follow_id = core_activity['id']
-                    target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                    target = find_actor_or_create(target_ap_id)
                     if not target:
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, saved_json, 'Could not find target of Follow')
                         return
@@ -945,7 +945,7 @@ def process_inbox_request(request_json, store_ap_json):
                             user = session.query(User).get(join_request.user_id)
                     elif core_activity['object']['type'] == 'Follow':
                         user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                        user = find_actor_or_create(user_ap_id)
                         if user and user.banned:
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                             return
@@ -993,7 +993,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Reject':
                     if core_activity['object']['type'] == 'Follow':
                         user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                        user = find_actor_or_create(user_ap_id)
                         if not user:
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                             return
@@ -1429,7 +1429,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Undo':
                     if core_activity['object']['type'] == 'Follow':  # Unsubscribe from a community or user
                         target_ap_id = core_activity['object']['object']
-                        target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                        target = find_actor_or_create(target_ap_id)
                         if isinstance(target, Community):
                             community = target
                             member = session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).first()
@@ -1564,8 +1564,7 @@ def process_inbox_request(request_json, store_ap_json):
                             session.commit()
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
                         else:  # undo community ban (community will already known if activity was Announced)
-                            community = community if community else find_actor_or_create(target, create_if_not_found=False,
-                                                                                         community_only=True)
+                            community = community if community else find_actor_or_create(target, community_only=True)
                             if not community:
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json,
                                                 'Blocked or unfound community')
@@ -1998,7 +1997,7 @@ def process_chat(user, store_ap_json, core_activity, session):
             len(core_activity['object']['to']) > 0):
         return False
     recipient_ap_id = core_activity['object']['to'][0]
-    recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+    recipient = find_actor_or_create(recipient_ap_id)
     if recipient and recipient.is_local():
         if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and (sender.created_recently() or sender.reputation <= -10):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send', session=session)
