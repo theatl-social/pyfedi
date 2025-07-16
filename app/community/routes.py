@@ -1176,22 +1176,17 @@ def community_make_owner(community_id: int, user_id: int):
     user = User.query.get_or_404(user_id)
     
     if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
-        new_owner = CommunityMember.query.filter(
-            CommunityMember.user_id == user_id,
-            CommunityMember.community_id == community_id).first()
-        
-        old_owners = CommunityMember.query.filter(
-            CommunityMember.is_owner == True,
-            CommunityMember.community_id == community_id).all()
-        
-        if new_owner:
-            new_owner.is_owner = True
-        else:
-            abort(404)
-        
-        if old_owners:
-            for owner in old_owners:
-                owner.is_owner = False
+        # Use raw SQL because these queries were just really slow with sqlalchemy models
+        new_owner_query = (
+            'UPDATE "community_member" SET is_owner = :owner WHERE user_id = :user_id AND community_id = :community_id')
+        db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
+
+        old_owners_query = (
+            'UPDATE "community_member" SET is_owner = :not_owner WHERE is_owner = :is_owner AND '
+            'community_id = :community_id')
+        db.session.execute(text(old_owners_query), {"not_owner": False,
+                                                    "is_owner": True,
+                                                    "community_id": community_id})
         
         community.user_id = user_id
         db.session.commit()
