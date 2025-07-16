@@ -1176,22 +1176,64 @@ def community_make_owner(community_id: int, user_id: int):
     user = User.query.get_or_404(user_id)
     
     if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
-        # Use raw SQL because these queries were really slow with sqlalchemy models
-        old_owners_query = (
-            'UPDATE "community_member" SET is_owner = :not_owner WHERE is_owner = :is_owner AND '
-            'community_id = :community_id')
-        new_owner_query = (
-            'UPDATE "community_member" SET is_owner = :owner WHERE user_id = :user_id AND community_id = :community_id')
-        
-        db.session.execute(
-            text(old_owners_query), 
-            {"not_owner": False, "is_owner": True, "community_id": community_id})
-        db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
+
+        new_owner_membership = CommunityMember.query.filter(CommunityMember.community_id == community_id, CommunityMember.user_id == user.id).first()
+        new_owner_membership.is_owner = True
+
         db.session.commit()
+
+        # Flush cache
+        cache.delete_memoized(moderating_communities, current_user.id)
+        cache.delete_memoized(moderating_communities, user.id)
+
+        cache.delete_memoized(moderating_communities_ids, current_user.id)
+        cache.delete_memoized(moderating_communities_ids, user.id)
+
+        cache.delete_memoized(joined_communities, current_user.id)
+        cache.delete_memoized(joined_communities, user.id)
+
+        cache.delete_memoized(community_moderators, community_id)
+        cache.delete_memoized(Community.moderators, community)
     
     else:
         abort(401)
     
+    return redirect(url_for("community.community_mod_list", community_id=community_id))
+
+
+@bp.route('/community/<int:community_id>/remove_owner/<int:user_id>', methods=['POST'])
+@login_required
+def community_remove_owner(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+
+    if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
+
+        if community.num_owners() == 1:
+            flash(_('A community must have one or more owners. Make someone else an owner before removing this owner.'), 'error')
+        else:
+            new_owner_membership = CommunityMember.query.filter(CommunityMember.community_id == community_id,
+                                                                CommunityMember.user_id == user.id).first()
+            new_owner_membership.is_owner = False
+
+            db.session.commit()
+
+            # Flush cache
+            cache.delete_memoized(moderating_communities, current_user.id)
+            cache.delete_memoized(moderating_communities, user.id)
+
+            cache.delete_memoized(moderating_communities_ids, current_user.id)
+            cache.delete_memoized(moderating_communities_ids, user.id)
+
+            cache.delete_memoized(joined_communities, current_user.id)
+            cache.delete_memoized(joined_communities, user.id)
+
+            cache.delete_memoized(community_moderators, community_id)
+            cache.delete_memoized(Community.moderators, community)
+
+    else:
+        abort(401)
+
     return redirect(url_for("community.community_mod_list", community_id=community_id))
 
 
@@ -1200,10 +1242,8 @@ def community_make_owner(community_id: int, user_id: int):
 def community_add_moderator(community_id: int, user_id: int):
     if current_user.banned:
         return show_ban_message()
-    try:
-        add_mod_to_community(community_id, user_id, SRC_WEB)
-    except Exception:
-        abort(401)
+
+    add_mod_to_community(community_id, user_id, SRC_WEB)
 
     return redirect(url_for('community.community_mod_list', community_id=community_id))
 
