@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import current_app
+from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
@@ -36,9 +36,12 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if auth:
         user_id = authorise_api_user(auth)
 
+    user_id = 1
+
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
         user = User.query.get(user_id)
+        g.user = user   # save the currently logged in user into g, to save loading it up again and again in post_view.
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested

@@ -128,12 +128,14 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
 
-        creator = user_view(user=post.user_id, variant=1, stub=True, flair_community_id=post.community_id)
-        community = community_view(community=post.community_id, variant=1, stub=True)
+        creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
+        community = community_view(community=post.community, variant=1, stub=True)
         if user_id:
-            user = User.query.get(user_id)
-            post_community = Community.query.get(post.community_id)
-            can_auth_user_moderate = post_community.is_moderator(user) or post_community.is_owner(user)
+            if hasattr(g, 'user'):
+                user = g.user
+            else:
+                user = User.query.get(user_id)
+            can_auth_user_moderate = post.community.is_moderator(user)
             v2.update({'canAuthUserModerate': can_auth_user_moderate})
 
         v2.update({'creator': creator, 'community': community})
@@ -151,7 +153,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                 xplist.append(entry)
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
-              'community_view': community_view(community=post.community_id, variant=2),
+              'community_view': community_view(community=post.community, variant=2),
               'moderators': modlist,
               'cross_posts': xplist}
 
@@ -493,7 +495,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
               'creator': user_view(user=reply.author, variant=1, flair_community_id=reply.community_id),
               'post': post_view(post=reply.post, variant=1),
               'community': community_view(community=reply.community, variant=1),
-              'recipient': user_view(user=user_id, variant=1),
+              'recipient': user_view(user=user_id if not hasattr(g, 'user') else g.user, variant=1),
               'counts': {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
                          'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat() + 'Z',
                          'child_count': 0},
