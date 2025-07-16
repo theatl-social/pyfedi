@@ -200,32 +200,44 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
-    banned_from = communities_banned_from(user_id)
+    if user_id:
 
-    bookmarked_posts = list(db.session.execute(text(
-        'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
-        {'user_id': user_id}).scalars())
-    if bookmarked_posts is None:
+        banned_from = communities_banned_from(user_id)
+
+        bookmarked_posts = list(db.session.execute(text(
+            'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+        if bookmarked_posts is None:
+            bookmarked_posts = []
+
+        post_subscriptions = list(db.session.execute(text(
+            'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+            {'type': NOTIF_POST, 'user_id': user_id}).scalars())
+        if post_subscriptions is None:
+            post_subscriptions = []
+
+        read_posts = list(db.session.execute(
+            text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+
+        communities_moderating = moderating_communities_ids(user.id)
+        communities_joined = joined_or_modding_communities(user.id)
+    else:
         bookmarked_posts = []
-
-    post_subscriptions = list(db.session.execute(text(
-        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
-        {'type': NOTIF_POST, 'user_id': user_id}).scalars())
-    if post_subscriptions is None:
+        banned_from = []
         post_subscriptions = []
-
-    read_posts = list(db.session.execute(
-        text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
-        {'user_id': user_id}).scalars())
+        read_posts = []
+        communities_moderating = []
+        communities_joined = []
 
     postlist = []
     for post in posts:
         try:
             postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
-                                      communities_moderating=moderating_communities_ids(user.id),
+                                      communities_moderating=communities_moderating,
                                       banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                       post_subscriptions=post_subscriptions, read_posts=read_posts,
-                                      communities_joined=joined_or_modding_communities(user.id)))
+                                      communities_joined=communities_joined))
         except:
             continue
     list_json = {
