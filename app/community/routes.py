@@ -1187,7 +1187,6 @@ def community_make_owner(community_id: int, user_id: int):
             text(old_owners_query), 
             {"not_owner": False, "is_owner": True, "community_id": community_id})
         db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
-        community.user_id = user_id
         db.session.commit()
     
     else:
