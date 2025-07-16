@@ -3,6 +3,9 @@ set -e
 
 export FLASK_APP=pyfedi.py
 
+echo "Starting cron daemon..."
+cron
+
 echo "Running database migrations..."
 python3 -m flask db upgrade
 
