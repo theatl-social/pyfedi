@@ -456,7 +456,7 @@ upstream app_server {
 
     # for a TCP configuration
     server 127.0.0.1:5000 fail_timeout=0;
-    keepalive 4;
+    keepalive 2;
 }
 
 server {
