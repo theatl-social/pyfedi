@@ -2000,19 +2000,19 @@ def process_chat(user, store_ap_json, core_activity, session):
     recipient = find_actor_or_create(recipient_ap_id)
     if recipient and recipient.is_local():
         if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and (sender.created_recently() or sender.reputation <= -10):
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
             return True
         elif recipient.accept_private_messages is None or recipient.accept_private_messages == 0:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs')
             return True
         elif recipient.accept_private_messages == 1:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs')
             return True
         elif recipient.accept_private_messages == 2 and not sender.instance.trusted:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance')
             return True
         else:
             blocked_phrases_list = blocked_phrases()
@@ -2053,7 +2053,7 @@ def process_chat(user, store_ap_json, core_activity, session):
             recipient.unread_notifications += 1
             existing_conversation.read = False
             session.commit()
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json, session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
 
         return True
 
