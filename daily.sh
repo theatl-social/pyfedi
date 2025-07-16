@@ -1,4 +1,4 @@
 #!/bin/bash
 
 export FLASK_APP=pyfedi.py
-python3 -m flask daily-maintenance-celery
+pypy -m flask daily-maintenance-celery
