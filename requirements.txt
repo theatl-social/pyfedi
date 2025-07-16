@@ -9,7 +9,7 @@ Flask-Limiter[redis]
 email-validator==2.0.0
 flask-mail==0.9.1
 flask-babel==3.1.0
-psycopg3-binary
+psycopg[binary]
 httpx[http2]
 pyjwt==2.8.0
 SQLAlchemy-Searchable==2.1.0
