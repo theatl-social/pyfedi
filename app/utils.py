@@ -875,6 +875,16 @@ def approval_required(func):
     return decorated_view
 
 
+def trustworthy_account_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if current_user.trustworthy():
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.not_trustworthy'))
+
+    return decorated_view
+
 
 def login_required_if_private_instance(func):
     @wraps(func)

@@ -82,6 +82,11 @@ def please_wait():
     return render_template('auth/please_wait.html', title=_('Account under review'))
 
 
+@bp.route('/not_trustworthy', methods=['GET'])
+def not_trustworthy():
+    return render_template('generic_message.html', title=_('Sorry'), message=_('You are not able to do this action due to being a very new account or because of a low reputation.'))
+
+
 @bp.route('/check_email', methods=['GET'])
 def check_email():
     return render_template('auth/check_email.html', title=_('Check your email'))
