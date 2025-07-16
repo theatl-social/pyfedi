@@ -236,6 +236,10 @@
   content: "\e930";
 }
 
+.fe-star::before {
+  content: "\e9d5";
+}
+
 .fe-feather::before {
   content: "\e960";
 }
