@@ -1155,7 +1155,8 @@ def community_mod_list(community_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin() or community.is_moderator(current_user):
+    is_owner = community.is_owner()
+    if is_owner or current_user.is_admin() or community.is_moderator(current_user):
 
         moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id). \
             filter(CommunityMember.community_id == community_id,
@@ -1163,9 +1164,41 @@ def community_mod_list(community_id: int):
 
         return render_template('community/community_mod_list.html',
                                title=_('Moderators for %(community)s', community=community.display_name()),
-                               moderators=moderators, community=community, current="moderators")
+                               moderators=moderators, community=community, current="moderators", is_owner=is_owner)
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/make_owner/<int:user_id>', methods=['POST'])
+@login_required
+def community_make_owner(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+    
+    if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
+        new_owner = CommunityMember.query.filter(
+            CommunityMember.user_id == user_id,
+            CommunityMember.community_id == community_id).first()
+        
+        old_owners = CommunityMember.query.filter(
+            CommunityMember.is_owner == True,
+            CommunityMember.community_id == community_id).all()
+        
+        if new_owner:
+            new_owner.is_owner = True
+        else:
+            abort(404)
+        
+        if old_owners:
+            for owner in old_owners:
+                owner.is_owner = False
+        
+        community.user_id = user_id
+        db.session.commit()
+    else:
+        abort(401)
+    
+    return redirect(url_for("community.community_mod_list", community_id=community_id))
 
 
 @bp.route('/community/<int:community_id>/moderators/add/<int:user_id>', methods=['GET', 'POST'])
