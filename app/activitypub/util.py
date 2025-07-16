@@ -333,6 +333,10 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
     existing_flair = CommunityFlair.query.filter(CommunityFlair.flair == flair['display_name'].strip(),
                                                  CommunityFlair.community_id == community_id).first()
     if existing_flair:
+        # Update colors and blur in case they have changed
+        existing_flair.text_color = flair['text_color']
+        existing_flair.background_color = flair['background_color']
+        existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
         return existing_flair
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
@@ -1026,6 +1030,8 @@ def actor_json_to_model(activity_json, address, server):
                     flair_dict['text_color'] = flair['text_color']
                 if 'background_color' in flair:
                     flair_dict['background_color'] = flair['background_color']
+                if 'blur_images' in flair:
+                    flair_dict['blur_images'] = flair['blur_images']
                 community.flair.append(find_flair_or_create(flair_dict, community.id))
             db.session.commit()
         if community.icon_id:
