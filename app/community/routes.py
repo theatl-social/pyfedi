@@ -1155,7 +1155,8 @@ def community_mod_list(community_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin() or community.is_moderator(current_user):
+    is_owner = community.is_owner()
+    if is_owner or current_user.is_admin() or community.is_moderator(current_user):
 
         moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id). \
             filter(CommunityMember.community_id == community_id,
@@ -1163,9 +1164,35 @@ def community_mod_list(community_id: int):
 
         return render_template('community/community_mod_list.html',
                                title=_('Moderators for %(community)s', community=community.display_name()),
-                               moderators=moderators, community=community, current="moderators")
+                               moderators=moderators, community=community, current="moderators", is_owner=is_owner)
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/make_owner/<int:user_id>', methods=['POST'])
+@login_required
+def community_make_owner(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+    
+    if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
+        # Use raw SQL because these queries were really slow with sqlalchemy models
+        old_owners_query = (
+            'UPDATE "community_member" SET is_owner = :not_owner WHERE is_owner = :is_owner AND '
+            'community_id = :community_id')
+        new_owner_query = (
+            'UPDATE "community_member" SET is_owner = :owner WHERE user_id = :user_id AND community_id = :community_id')
+        
+        db.session.execute(
+            text(old_owners_query), 
+            {"not_owner": False, "is_owner": True, "community_id": community_id})
+        db.session.execute(text(new_owner_query), {"owner": True, "user_id": user_id, "community_id": community_id})
+        db.session.commit()
+    
+    else:
+        abort(401)
+    
+    return redirect(url_for("community.community_mod_list", community_id=community_id))
 
 
 @bp.route('/community/<int:community_id>/moderators/add/<int:user_id>', methods=['GET', 'POST'])
