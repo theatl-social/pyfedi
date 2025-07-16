@@ -56,6 +56,7 @@ class SettingsForm(FlaskForm):
     reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'), validators=[Optional()])
     reply_hide_threshold = IntegerField(_l('Reply hide threshold'), validators=[Optional()])
     markdown_editor = BooleanField(_l('Use markdown editor GUI when writing'))
+    low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
