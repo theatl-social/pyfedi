@@ -1026,6 +1026,8 @@ def actor_json_to_model(activity_json, address, server):
                     flair_dict['text_color'] = flair['text_color']
                 if 'background_color' in flair:
                     flair_dict['background_color'] = flair['background_color']
+                if 'blur_images' in flair:
+                    flair_dict['blur_images'] = flair['blur_images']
                 community.flair.append(find_flair_or_create(flair_dict, community.id))
             db.session.commit()
         if community.icon_id:
