@@ -1166,7 +1166,7 @@ class User(UserMixin, db.Model):
         total_downvotes = downvotes + comment_downvotes
 
         # Calculate the new attitude value
-        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes
+        if total_upvotes + total_downvotes > 9:  # Only calculate attitude if they've done 10 or more votes
             new_attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
             new_attitude = None
