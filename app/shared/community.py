@@ -496,7 +496,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     cache.delete_memoized(joined_communities, new_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, new_moderator.id)
-    cache.delete_memoized(Community.moderators(), community)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 
@@ -519,6 +519,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
                                                    CommunityMember.community_id == community_id).first()
     if existing_member:
         existing_member.is_moderator = False
+        existing_member.is_owner = False
         db.session.commit()
     if src == SRC_WEB:
         flash(_('Moderator removed'))
@@ -531,7 +532,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     cache.delete_memoized(joined_communities, old_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, old_moderator.id)
-    cache.delete_memoized(Community.moderators(), community)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 

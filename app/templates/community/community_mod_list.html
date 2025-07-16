@@ -85,17 +85,27 @@
                                                 href="#"
                                                 data-url="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
                                                 rel="nofollow">
-                                            <span class="fe fe-delete"></span> {{ _('Remove') }}
+                                            <span class="fe fe-delete"></span> {{ _('Remove mod') }}
                                         </a>
                                     </li>
                                 {% endif %}
-                                {% if (is_owner and moderator.id != current_user.id) or (current_user.is_admin_or_staff() and not community.is_owner(moderator)) %}
+                                {% if not community.is_owner(moderator) and ((is_owner and moderator.id != current_user.id) or current_user.is_admin_or_staff()) %}
                                     <li>
                                         <a class="no-underline confirm_first send_post"
                                                 href="#"
                                                 data-url="{{ url_for('community.community_make_owner', community_id=community.id, user_id=moderator.id)}}"
                                                 rel="nofollow">
-                                            <span class="fe fe-star"></span> {{ _('Transfer Ownership') }}
+                                            <span class="fe fe-add-person"></span> {{ _('Make owner') }}
+                                        </a>
+                                    </li>
+                                {% endif %}
+                                {% if (is_owner or current_user.is_admin_or_staff()) and community.is_owner(moderator) %}
+                                    <li>
+                                        <a class="no-underline confirm_first send_post"
+                                                href="#"
+                                                data-url="{{ url_for('community.community_remove_owner', community_id=community.id, user_id=moderator.id)}}"
+                                                rel="nofollow">
+                                            <span class="fe fe-remove-person"></span> {{ _('Remove owner') }}
                                         </a>
                                     </li>
                                 {% endif %}

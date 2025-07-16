@@ -664,6 +664,13 @@ class Community(db.Model):
         else:
             return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
 
+    def num_owners(self):
+        result = 0
+        for moderator in self.moderators():
+            if moderator.is_owner:
+                result += 1
+        return result
+
     def is_instance_admin(self, user):
         if self.instance_id:
             instance_role = InstanceRole.query.filter(InstanceRole.instance_id == self.instance_id,

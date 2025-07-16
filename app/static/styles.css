@@ -409,6 +409,14 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e907";
 }
 
+.fe-add-person::before {
+  content: "\e9f2";
+}
+
+.fe-remove-person::before {
+  content: "\e9f3";
+}
+
 .fe-cross-post::before {
   content: "\e9ba";
 }
