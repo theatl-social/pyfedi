@@ -110,7 +110,7 @@ def show_topic(topic_path):
                     comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
 
             if sort == '' or sort == 'hot':
-                comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+                comments = comments.order_by(desc(PostReply.posted_at))
             elif sort == 'top_12h':
                 comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=12)).order_by(
                     desc(PostReply.up_votes - PostReply.down_votes))
