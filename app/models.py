@@ -1896,8 +1896,8 @@ class Post(db.Model):
     def public_url(self):
         return self.profile_id()
 
-    def blocked_by_content_filter(self, content_filters):
-        if current_user.is_authenticated and self.user_id == current_user.id:
+    def blocked_by_content_filter(self, content_filters, user_id):
+        if self.user_id == user_id:
             return False
         lowercase_title = self.title.lower()
         for name, keywords in content_filters.items() if content_filters else {}:
@@ -1905,6 +1905,15 @@ class Post(db.Model):
                 if keyword in lowercase_title:
                     return name
         return False
+
+    def blurred(self, user):
+        if user is None:
+            return self.nsfw or self.nsfl or self.spoiler_flair()
+        else:
+            return (user.hide_nsfw == 2 and self.nsfw) or \
+                (user.hide_nsfl == 2 and self.nsfl) or \
+                (user.ignore_bots == 2 and self.from_bot) or \
+                self.spoiler_flair()
 
     def posted_at_localized(self, sort, locale):
         # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
