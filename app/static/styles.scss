@@ -294,6 +294,31 @@ div.navbar {
       margin-right: 5px;
     }
   }
+
+  .community_filter {
+    position: relative;
+    margin-left: 10px;
+    padding-right: 20px;
+
+    .fe-search {
+      position: absolute;
+      right: 27px;
+      top: 11px;
+    }
+
+    @include breakpoint(laptop) {
+      margin-left: 0;
+      padding-right: 0;
+
+      #community-filter {
+        margin-left: 0;
+      }
+
+      .fe-search {
+        right: 7px;
+      }
+    }
+  }
 }
 
 .communities_menu_parent .show {

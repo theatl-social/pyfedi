@@ -813,6 +813,28 @@ div.navbar {
 .communities_menu .jump_links a {
   margin-right: 5px;
 }
+.communities_menu .community_filter {
+  position: relative;
+  margin-left: 10px;
+  padding-right: 20px;
+}
+.communities_menu .community_filter .fe-search {
+  position: absolute;
+  right: 27px;
+  top: 11px;
+}
+@media (min-width: 1280px) {
+  .communities_menu .community_filter {
+    margin-left: 0;
+    padding-right: 0;
+  }
+  .communities_menu .community_filter #community-filter {
+    margin-left: 0;
+  }
+  .communities_menu .community_filter .fe-search {
+    right: 7px;
+  }
+}
 
 .communities_menu_parent .show {
   display: block !important;

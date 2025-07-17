@@ -42,14 +42,9 @@
     {% set something_displayed = true -%}
     <div class="communities_menu_body" id="communities_mega_menu">
         <h4 class="dropdown-header">{{ _('Communities') }}</h4>
-        <div class="input-group input-group-sm">
-            <span class="input-group-text border-0" style="background-color: transparent; padding: 0; margin: 0;">
-                <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0;"></span>
-            </span>
-            <input type="text" class="form-control border-0" id="community-filter" placeholder="{{ _('Filter communities...') }}" autocomplete="off" style="background-color: transparent;">
-            <button class="btn btn-outline-secondary border-0" type="button" id="clear-community-filter" style="display: none; background-color: transparent;">
-                <span class="fe fe-delete" aria-hidden="true"></span>
-            </button>
+        <div class="community_filter">
+            <input type="search" class="form-control" id="community-filter" placeholder="{{ _('Filter communities...') }}">
+            <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0;"></span>
         </div>
         <ul class="text-end text-lg-start">
             <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
