@@ -1958,7 +1958,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
     # ...existing code...
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
-    ap_id = request_json['object'] if not announced : request_json['object']['object']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
         ap_id = ap_id['id']
     parent = retry_find_object_with_fetch(find_object_by_ap_id, ap_id)
