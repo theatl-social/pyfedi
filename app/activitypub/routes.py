@@ -1502,7 +1502,7 @@ def process_inbox_request(request_json, store_ap_json):
                         if post_or_comment:
                             log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, saved_json)
                             if not announced:
-                                announce_activity_to_followers(post_or_comment.community, user, request_json)
+                                announce_activity_to_followers(post_or_comment.community, user, request_json, can_batch=True)
                         else:
                             log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, saved_json,
                                             'Unfound object ' + target_ap_id)
