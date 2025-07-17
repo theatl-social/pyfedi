@@ -34,6 +34,8 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases, orjson_response
+    
+from app.activitypub.util_extras import retry_activitypub_action
 
 
 @bp.route('/testredis')
@@ -1950,7 +1952,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 
 
 
-from app.activitypub.util_extras import retry_activitypub_action
+
 
 @retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
