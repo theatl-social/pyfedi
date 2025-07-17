@@ -1625,7 +1625,7 @@ function hookupCommunityFilter() {
         
         // Show/hide clear button
         if (clearButton) {
-            clearButton.style.display = filterText ? 'block' : 'none';
+            //clearButton.style.display = filterText ? 'block' : 'none';
         }
         
         communityItems.forEach((item, index) => {
@@ -1676,7 +1676,7 @@ function hookupCommunityFilter() {
     if (clearButton) {
         clearButton.addEventListener('click', clearFilter);
     }
-    
+
     // Focus the input when the dropdown becomes visible
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
