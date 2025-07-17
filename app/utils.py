@@ -447,7 +447,7 @@ def handle_double_bolds(text: str) -> str:
     Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
     same sentence.
     """
-    
+
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text)
 
