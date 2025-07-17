@@ -2,7 +2,7 @@ import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
 from flask_login import current_user
-from psycopg import IntegrityError
+from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 
 from app import db, cache, celery, limiter
