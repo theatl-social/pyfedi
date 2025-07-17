@@ -488,7 +488,6 @@ def refresh_user_profile_task(user_id):
                         make_image_sizes(user.avatar_id, 40, 250, 'users')
                     if user.cover_id and cover_changed:
                         make_image_sizes(user.cover_id, 700, 1600, 'users')
-                        cache.delete_memoized(User.cover_image, user)
     except Exception:
         session.rollback()
         raise
@@ -1064,7 +1063,7 @@ def actor_json_to_model(activity_json, address, server):
         if owners_data.status_code == 200:
             owners_json = owners_data.json()
             for owner in owners_json['orderedItems']:
-                owner_user = find_actor_or_create(owner)
+                owner_user = find_actor_or_create(owner['id'])
                 owner_users.append(owner_user)
 
         # also get the communities in the remote feed's /following list 
@@ -1119,24 +1118,25 @@ def actor_json_to_model(activity_json, address, server):
             else:
                 feed.description = html_to_text(feed.description_html)
 
-        if 'icon' in activity_json and activity_json['icon'] is not None:
+        icon_changed = cover_changed = False
+        if 'icon' in activity_json:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
                 icon_entry = activity_json['icon']['url']
             elif isinstance(activity_json['icon'], list) and 'url' in activity_json['icon'][-1]:
                 icon_entry = activity_json['icon'][-1]['url']
-            elif isinstance(activity_json['icon'], str):
-                icon_entry = activity_json['icon']
             else:
                 icon_entry = None
             if icon_entry:
-                icon = File(source_url=icon_entry)
-                feed.icon = icon
-                db.session.add(icon)
-        if 'image' in activity_json and activity_json['image'] is not None:
+                if feed.icon_id and icon_entry != feed.icon.source_url:
+                    feed.icon.delete_from_disk()
+                if not feed.icon_id or (feed.icon_id and icon_entry != feed.icon.source_url):
+                    icon = File(source_url=icon_entry)
+                    feed.icon = icon
+                    session.add(icon)
+                    icon_changed = True
+        if 'image' in activity_json:
             if isinstance(activity_json['image'], dict) and 'url' in activity_json['image']:
                 image_entry = activity_json['image']['url']
-            elif isinstance(activity_json['image'], list) and 'url' in activity_json['image'][0]:
-                image_entry = activity_json['image'][0]['url']
             else:
                 image_entry = None
             if image_entry:
