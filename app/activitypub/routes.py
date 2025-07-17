@@ -9,7 +9,7 @@ from psycopg import IntegrityError
 from sqlalchemy import desc, or_, text
 
 from app.activitypub.util import find_object_by_ap_id, save_activitypub_object, users_total, active_half_year, active_month, local_posts, local_comments, post_to_activity, find_actor_or_create, find_liked_object, lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, create_post, create_post_reply, update_post_reply_from_activity, update_post_from_activity, undo_vote, post_to_page, find_reported_object, process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, post_replies_for_ap
-from app import db, cache, celery, limiter
+from app import db, cache, celery_app, limiter
 from app.activitypub import bp
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, send_post_request
 from app.community.routes import show_community
@@ -702,7 +702,7 @@ def replay_inbox_request(request_json):
     return
 
 
-@celery.task
+@celery_app.task
 def process_inbox_request(request_json, store_ap_json):
     with current_app.app_context():
         session = get_task_session()
