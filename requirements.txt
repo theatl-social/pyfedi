@@ -9,7 +9,7 @@ Flask-Limiter[redis]
 email-validator==2.0.0
 flask-mail==0.9.1
 flask-babel==3.1.0
-psycopg[binary]
+psycopg2-binary
 httpx[http2]
 pyjwt==2.8.0
 SQLAlchemy-Searchable==2.1.0
@@ -42,3 +42,11 @@ webauthn~=2.5.0
 ldap3~=2.9.0
 sqlalchemy
 orjson~=3.10.0
+# --- Explicitly ensure all required dependencies for ActivityPub federation logic ---
+httpx>=0.27.0
+flask>=2.3.2
+flask-babel>=3.1.0
+flask-login>=0.6.2
+psycopg>=3.1.0
+sqlalchemy>=2.0.0
+werkzeug>=2.3.3

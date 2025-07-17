@@ -1,3 +1,6 @@
+import os
+import time
+import httpx
 import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
@@ -5,35 +8,19 @@ from flask_login import current_user
 from psycopg import IntegrityError
 from sqlalchemy import desc, or_, text
 
+from app.activitypub.util import find_object_by_ap_id, save_activitypub_object, users_total, active_half_year, active_month, local_posts, local_comments, post_to_activity, find_actor_or_create, find_liked_object, lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, create_post, create_post_reply, update_post_reply_from_activity, update_post_from_activity, undo_vote, post_to_page, find_reported_object, process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, post_replies_for_ap
 from app import db, cache, celery, limiter
 from app.activitypub import bp
-from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
-    send_post_request
-from app.activitypub.util import users_total, active_half_year, active_month, local_posts, local_comments, \
-    post_to_activity, find_actor_or_create, find_liked_object, \
-    lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, \
-    create_post, create_post_reply, update_post_reply_from_activity, \
-    update_post_from_activity, undo_vote, post_to_page, find_reported_object, \
-    process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
-    comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
-    log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap
+from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, send_post_request
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance
 from app.constants import *
 from app.feed.routes import show_feed
-from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
-    PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
-    ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan, ActivityBatch
+from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, IpBan, ActivityBatch
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
-from app.utils import gibberish, get_setting, community_membership, ap_datetime, ip_address, can_downvote, \
-    can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
-    community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
-    feed_membership, get_task_session, patch_db_session, \
-    blocked_phrases, orjson_response
+from app.utils import gibberish, get_setting, community_membership, ap_datetime, ip_address, can_downvote, can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, feed_membership, get_task_session, patch_db_session, blocked_phrases, orjson_response
 
 
 @bp.route('/testredis')
@@ -1056,12 +1043,12 @@ def process_inbox_request(request_json, store_ap_json):
                                 if not was_chat_message:
                                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Blocked or unfound community')
                                 return
-                            if not ensure_domains_match(core_activity['object']):
-                                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Domains do not match')
-                                return
-                            if community.local_only:
-                                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Remote Create in local_only community')
-                                return
+                        if not ensure_domains_match(core_activity['object']):
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Domains do not match')
+                            return
+                        if community.local_only:
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Remote Create in local_only community')
+                            return
 
                         object_type = core_activity['object']['type']
                         new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
@@ -1947,14 +1934,15 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 
 
 def process_upvote(user, store_ap_json, request_json, announced):
+    # ...existing code...
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
         ap_id = ap_id['id']
-    liked = find_liked_object(ap_id)
+    liked = retry_find_object_with_fetch(find_liked_object, ap_id)
     if liked is None:
-        log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, f'Unfound object {ap_id} after {AP_OBJECT_FETCH_RETRIES} attempts')
         return
     if can_upvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
@@ -1967,14 +1955,35 @@ def process_upvote(user, store_ap_json, request_json, announced):
 
 
 def process_downvote(user, store_ap_json, request_json, announced):
+    # ...existing code...
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced : request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+    parent = retry_find_object_with_fetch(find_object_by_ap_id, ap_id)
+    if parent is None:
+        log_incoming_ap(id, APLOG_COMMENT, APLOG_FAILURE, saved_json, f'Unfound object {ap_id} after {AP_OBJECT_FETCH_RETRIES} attempts')
+        return
+    # ...existing comment logic...
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
     if isinstance(ap_id, dict) and 'id' in ap_id:
         ap_id = ap_id['id']
-    liked = find_liked_object(ap_id)
+    announced_obj = retry_find_object_with_fetch(find_object_by_ap_id, ap_id)
+    if announced_obj is None:
+        log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'Unfound object {ap_id} after {AP_OBJECT_FETCH_RETRIES} attempts')
+        return
+    # ...existing announce logic...
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+    liked = retry_find_object_with_fetch(find_liked_object, ap_id)
     if liked is None:
-        log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, f'Unfound object {ap_id} after {AP_OBJECT_FETCH_RETRIES} attempts')
         return
     if can_downvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
