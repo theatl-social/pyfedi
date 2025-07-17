@@ -418,17 +418,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
+    
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets = []
-
-    def store_code(match):
-        code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
-
-    # Fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', store_code, text)
-    # Inline code (`...`)
-    text = re.sub(r'`[^`\n]+`', store_code, text)
+    code_snippets, text = stash_code_md(text)
 
     # Step 2: Escape <...> unless they look like valid HTML tags
     def escape_tag(match):
@@ -446,8 +438,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
     text = re.sub(r'<([^<>]+?)>', escape_tag, text)
 
     # Step 3: Restore code blocks
-    for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    text = pop_code(code_snippets=code_snippets, text=text)
 
     return text
 
@@ -456,18 +447,9 @@ def handle_double_bolds(text: str) -> str:
     Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
     same sentence.
     """
-
+    
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets = []
-
-    def store_code(match):
-        code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
-
-    # Fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', store_code, text)
-    # Inline code (`...`)
-    text = re.sub(r'`[^`\n]+`', store_code, text)
+    code_snippets, text = stash_code_md(text)
 
     # Step 2: Wrap **bold** sections with <strong></strong>
     # Regex is slightly modified from markdown2 source code
@@ -475,8 +457,7 @@ def handle_double_bolds(text: str) -> str:
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
     # Step 3: Restore code blocks
-    for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    text = pop_code(code_snippets=code_snippets, text=text)
 
     return text
 
@@ -621,23 +602,134 @@ def first_paragraph(html):
         return ''
 
 
-def community_link_to_href(link: str) -> str:
-    pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+def community_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/community/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'!\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def feed_link_to_href(link: str) -> str:
-    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
+def feed_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/feed/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'~\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def person_link_to_href(link: str) -> str:
-    pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = f'https://{current_app.config["SERVER_NAME"]}/user/lookup/'
+def person_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+    
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
+    pattern = r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = f'https://{server_name}/user/lookup/'
     replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
-    return re.sub(pattern, replacement, link)
+    link = re.sub(pattern, replacement, link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+    
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+    
+    return link
+
+
+def stash_code_html(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
+
+    return (code_snippets, text)
+
+
+def stash_code_md(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    # Fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', store_code, text)
+    # Inline code (`...`)
+    text = re.sub(r'`[^`\n]+`', store_code, text)
+
+    return (code_snippets, text)
+
+
+def pop_code(code_snippets: list, text: str) -> str:
+    for i, code in enumerate(code_snippets):
+        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    
+    return text
+
+
+def stash_link_html(text: str) -> tuple[list, str]:
+    link_snippets = []
+
+    def store_link(match):
+        link_snippets.append(match.group(0))
+        return f"__LINK_PLACEHOLDER_{len(link_snippets) - 1}__"
+    
+    text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
+
+    return (link_snippets, text)
+
+
+def pop_link(link_snippets: list, text: str) -> str:
+    for i, link in enumerate(link_snippets):
+        text = text.replace(f"__LINK_PLACEHOLDER_{i}__", link)
+    
+    return text
 
 
 def domain_from_url(url: str, create=True) -> Domain:
