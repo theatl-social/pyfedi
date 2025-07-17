@@ -14,7 +14,7 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow
+    Report, Site, User, utcnow, Instance
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
@@ -611,11 +611,14 @@ def report_post(post_id, input, src, auth=None):
             return
 
     suspect_user = User.query.get(post.user_id)
+    source_instance = Instance.query.get(suspect_user.instance_id)
     reporter_user = User.query.get(user_id)
     targets_data = {'gen': '0',
                     'suspect_post_id': post.id,
                     'suspect_user_id': post.user_id,
                     'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                    'source_instance_id': suspect_user.instance_id,
+                    'source_instance_domain': source_instance.domain,
                     'reporter_id': user_id,
                     'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
                     'orig_post_title': post.title,

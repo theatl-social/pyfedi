@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app import db
 from app.constants import *
 from app.models import Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, \
-    utcnow
+    utcnow, Instance
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
@@ -297,11 +297,14 @@ def report_reply(reply_id, input, src, auth=None):
             return
 
     suspect_author = User.query.get(reply.author.id)
+    source_instance = Instance.query.get(suspect_author.instance_id)
     reporter_user = User.query.get(user_id)
     targets_data = {'gen': '0',
                     'suspect_comment_id': reply.id,
                     'suspect_user_id': reply.author.id,
                     'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                    'source_instance_id': suspect_author.instance_id,
+                    'source_instance_domain': source_instance.domain,
                     'reporter_id': user_id,
                     'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
                     'orig_comment_body': reply.body
