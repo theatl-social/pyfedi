@@ -1780,8 +1780,6 @@ def user_followers(actor):
 
 
 @bp.route('/comment/<int:comment_id>', methods=['GET', 'HEAD'])
-
-
 @retry_activitypub_action()
 def comment_ap(comment_id):
     reply = PostReply.query.get_or_404(comment_id)
