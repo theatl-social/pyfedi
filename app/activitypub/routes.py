@@ -1,6 +1,5 @@
 import os
 import time
-import httpx
 import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
@@ -8,7 +7,7 @@ from flask_login import current_user
 from psycopg import IntegrityError
 from sqlalchemy import desc, or_, text
 
-from app.activitypub.util import find_object_by_ap_id, save_activitypub_object, users_total, active_half_year, active_month, local_posts, local_comments, post_to_activity, find_actor_or_create, find_liked_object, lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, create_post, create_post_reply, update_post_reply_from_activity, update_post_from_activity, undo_vote, post_to_page, find_reported_object, process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, post_replies_for_ap
+from app.activitypub.util import find_object_by_ap_id, retry_find_object_with_fetch, save_activitypub_object, users_total, active_half_year, active_month, local_posts, local_comments, post_to_activity, find_actor_or_create, find_liked_object, lemmy_site_data, is_activitypub_request, delete_post_or_comment, community_members, create_post, create_post_reply, update_post_reply_from_activity, update_post_from_activity, undo_vote, post_to_page, find_reported_object, process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, comment_model_to_json, restore_post_or_comment, ban_user, unban_user, log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, post_replies_for_ap
 from app import db, cache, celery_app, limiter
 from app.activitypub import bp
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, send_post_request
@@ -19,8 +18,31 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, IpBan, ActivityBatch
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
+
 from app.user.routes import show_profile
 from app.utils import gibberish, get_setting, community_membership, ap_datetime, ip_address, can_downvote, can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, feed_membership, get_task_session, patch_db_session, blocked_phrases, orjson_response
+
+# Define missing constants if not imported from app.constants
+try:
+    APLOG_LIKE
+except NameError:
+    APLOG_LIKE = "LIKE"
+try:
+    APLOG_COMMENT
+except NameError:
+    APLOG_COMMENT = "COMMENT"
+try:
+    APLOG_ANNOUNCE
+except NameError:
+    APLOG_ANNOUNCE = "ANNOUNCE"
+try:
+    APLOG_DISLIKE
+except NameError:
+    APLOG_DISLIKE = "DISLIKE"
+try:
+    AP_OBJECT_FETCH_RETRIES
+except NameError:
+    AP_OBJECT_FETCH_RETRIES = 3
 
 
 @bp.route('/testredis')
@@ -1572,7 +1594,7 @@ def process_inbox_request(request_json, store_ap_json):
             session.close()
 
 
-@celery.task
+@celery_app.task
 def process_delete_request(request_json, store_ap_json):
     with current_app.app_context():
         session = get_task_session()
