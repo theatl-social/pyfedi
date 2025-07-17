@@ -79,7 +79,7 @@
                         </td>
                         <td>
                             <ul class="list-unstyled my-0">
-                                {% if (is_owner and moderator.id != current_user.id) or (not community.is_owner(moderator) and (current_user.is_admin_or_staff() or moderator.id == current_user.id)) %}
+                                {% if (is_owner and not community.is_owner(moderator)) or (current_user.is_admin_or_staff() and not community.is_owner(moderator)) %}
                                     <li>
                                         <a class="no-underline confirm_first send_post" 
                                                 href="#"
@@ -99,7 +99,7 @@
                                         </a>
                                     </li>
                                 {% endif %}
-                                {% if (is_owner or current_user.is_admin_or_staff()) and community.is_owner(moderator) %}
+                                {% if (current_user.is_admin_or_staff() and community.is_owner(moderator)) or (is_owner and moderator.id == current_user.id) %}
                                     <li>
                                         <a class="no-underline confirm_first send_post"
                                                 href="#"
