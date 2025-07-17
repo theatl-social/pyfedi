@@ -13,7 +13,7 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
-    moderating_communities_ids
+    moderating_communities_ids, user_filters_home, user_filters_posts
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -56,6 +56,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         blocked_person_ids = []
         blocked_community_ids = []
         blocked_instance_ids = []
+
+    content_filters = {}
 
     # Post.user_id.not_in(blocked_person_ids)               # exclude posts by blocked users
     # Post.community_id.not_in(blocked_community_ids)       # exclude posts in blocked communities
@@ -107,6 +109,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                           Community.ap_domain == ap_domain,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
         elif community_id:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
@@ -116,6 +119,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                           Community.id == community_id,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
         elif person_id:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.community_id.not_in(blocked_community_ids),
@@ -130,6 +134,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_home(user_id) if user_id else {}
 
     # change when polls are supported
     posts = posts.filter(Post.type != POST_TYPE_POLL)
@@ -238,7 +243,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                       communities_moderating=communities_moderating,
                                       banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                       post_subscriptions=post_subscriptions, read_posts=read_posts,
-                                      communities_joined=communities_joined))
+                                      communities_joined=communities_joined, content_filters=content_filters))
         except:
             continue
     list_json = {
