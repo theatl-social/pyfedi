@@ -125,7 +125,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'subscribed': subscribe_type,
               'saved': saved, 'read': read, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote,
               'filtered': post.blocked_by_content_filter(content_filters, user_id) == '-1',
-              'blurred': post.blurred(user_id),
+              'blurred': post.blurred(g.user if hasattr(g, 'user') else None),
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
