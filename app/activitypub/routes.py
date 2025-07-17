@@ -1778,6 +1778,9 @@ def user_followers(actor):
 
 
 @bp.route('/comment/<int:comment_id>', methods=['GET', 'HEAD'])
+
+
+@retry_activitypub_action()
 def comment_ap(comment_id):
     reply = PostReply.query.get_or_404(comment_id)
     if is_activitypub_request():
@@ -1946,6 +1949,9 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                 return
 
 
+from app.activitypub.util_extras import retry_activitypub_action
+
+@retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -1966,6 +1972,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, saved_json, 'Cannot upvote this')
 
 
+@retry_activitypub_action()
 def process_downvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
