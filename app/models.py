@@ -1282,6 +1282,7 @@ class User(UserMixin, db.Model):
         if self.waiting_for_approval():
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
+        db.session.query(Filter).filter(Filter.user_id == self.id).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
