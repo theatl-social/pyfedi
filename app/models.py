@@ -1990,101 +1990,92 @@ class Post(db.Model):
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
-        existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
-        if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
-            if existing_vote.effect == 1:
-                vote_direction = 'upvote'
-            elif existing_vote.effect == -1:
-                vote_direction = 'downvote'
-        assert vote_direction == 'upvote' or vote_direction == 'downvote'
-        undo = None
-        if existing_vote:
-            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
-                if not self.community.low_quality:
-                    with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                        db.session.execute(
-                            text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
-                            {'effect': existing_vote.effect, 'user_id': self.user_id})
-                        db.session.commit()
-                if existing_vote.effect > 0:  # previous vote was up
-                    if vote_direction == 'upvote':  # new vote is also up, so remove it
-                        db.session.delete(existing_vote)
-                        db.session.commit()
-                        self.up_votes -= 1
-                        self.score -= existing_vote.effect  # score - (+1) = score-1
-                        undo = 'Like'
-                    else:  # new vote is down while previous vote was up, so reverse their previous vote
-                        existing_vote.effect = -1
-                        db.session.commit()
-                        self.up_votes -= 1
-                        self.down_votes += 1
-                        self.score += existing_vote.effect * 2  # score + (-2) = score-2
-                else:  # previous vote was down
-                    if vote_direction == 'downvote':  # new vote is also down, so remove it
-                        db.session.delete(existing_vote)
-                        db.session.commit()
-                        self.down_votes -= 1
-                        self.score -= existing_vote.effect  # score - (-1) = score+1
-                        undo = 'Dislike'
-                    else:  # new vote is up while previous vote was down, so reverse their previous vote
-                        existing_vote.effect = 1
-                        db.session.commit()
-                        self.up_votes += 1
-                        self.down_votes -= 1
-                        self.score += existing_vote.effect * 2  # score + (+2) = score+2
-                db.session.commit()
-        else:
-            if vote_direction == 'upvote':
-                effect = Instance.weight(user.ap_domain)
-                spicy_effect = effect
-                # Make 'hot' sort more spicy by amplifying the effect of early upvotes
-                if self.up_votes + self.down_votes <= 10:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_10']
-                elif self.up_votes + self.down_votes <= 30:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_30']
-                elif self.up_votes + self.down_votes <= 60:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_60']
-                if user.cannot_vote():
-                    effect = spicy_effect = 0
-                self.up_votes += 1
-                self.score += spicy_effect  # score + (+1) = score+1
-            else:
-                effect = -1.0
-                spicy_effect = effect
-                self.down_votes += 1
-                # Make 'hot' sort more spicy by amplifying the effect of early downvotes
-                if self.up_votes + self.down_votes <= 30:
-                    spicy_effect *= current_app.config['SPICY_UNDER_30']
-                elif self.up_votes + self.down_votes <= 60:
-                    spicy_effect *= current_app.config['SPICY_UNDER_60']
-                if user.cannot_vote():
-                    effect = spicy_effect = 0
-                self.score += spicy_effect  # score + (-1) = score-1
-            vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
-                            effect=effect)
-            # upvotes do not increase reputation in low quality communities
-            if self.community.low_quality and effect > 0:
-                effect = 0
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
-                                   {'effect': effect, 'user_id': self.user_id})
-                db.session.commit()
-            db.session.add(vote)
-
-        db.session.commit()
-
-        # Calculate new ranking values
-        new_ranking = self.post_ranking(self.score, self.created_at)
-        new_ranking_scaled = int(new_ranking + self.community.scale_by())
-
-        # Update post ranking
         with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
-            db.session.execute(text("""UPDATE "post" 
-                               SET ranking=:ranking, ranking_scaled=:ranking_scaled 
-                               WHERE id=:post_id"""),
-                               {"ranking": new_ranking,
-                                "ranking_scaled": new_ranking_scaled,
-                                "post_id": self.id})
+            existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
+            if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+                if existing_vote.effect == 1:
+                    vote_direction = 'upvote'
+                elif existing_vote.effect == -1:
+                    vote_direction = 'downvote'
+            assert vote_direction == 'upvote' or vote_direction == 'downvote'
+            undo = None
+            if existing_vote:
+                with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+                    if not self.community.low_quality:
+                        with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                            db.session.execute(
+                                text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                {'effect': existing_vote.effect, 'user_id': self.user_id})
+                            db.session.commit()
+                    if existing_vote.effect > 0:  # previous vote was up
+                        if vote_direction == 'upvote':  # new vote is also up, so remove it
+                            db.session.delete(existing_vote)
+                            db.session.commit()
+                            self.up_votes -= 1
+                            self.score -= existing_vote.effect  # score - (+1) = score-1
+                            undo = 'Like'
+                        else:  # new vote is down while previous vote was up, so reverse their previous vote
+                            existing_vote.effect = -1
+                            db.session.commit()
+                            self.up_votes -= 1
+                            self.down_votes += 1
+                            self.score += existing_vote.effect * 2  # score + (-2) = score-2
+                    else:  # previous vote was down
+                        if vote_direction == 'downvote':  # new vote is also down, so remove it
+                            db.session.delete(existing_vote)
+                            db.session.commit()
+                            self.down_votes -= 1
+                            self.score -= existing_vote.effect  # score - (-1) = score+1
+                            undo = 'Dislike'
+                        else:  # new vote is up while previous vote was down, so reverse their previous vote
+                            existing_vote.effect = 1
+                            db.session.commit()
+                            self.up_votes += 1
+                            self.down_votes -= 1
+                            self.score += existing_vote.effect * 2  # score + (+2) = score+2
+                    db.session.commit()
+            else:
+                if vote_direction == 'upvote':
+                    effect = Instance.weight(user.ap_domain)
+                    spicy_effect = effect
+                    # Make 'hot' sort more spicy by amplifying the effect of early upvotes
+                    if self.up_votes + self.down_votes <= 10:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
+                    elif self.up_votes + self.down_votes <= 30:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
+                    elif self.up_votes + self.down_votes <= 60:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
+                    if user.cannot_vote():
+                        effect = spicy_effect = 0
+                    self.up_votes += 1
+                    self.score += spicy_effect  # score + (+1) = score+1
+                else:
+                    effect = -1.0
+                    spicy_effect = effect
+                    self.down_votes += 1
+                    # Make 'hot' sort more spicy by amplifying the effect of early downvotes
+                    if self.up_votes + self.down_votes <= 30:
+                        spicy_effect *= current_app.config['SPICY_UNDER_30']
+                    elif self.up_votes + self.down_votes <= 60:
+                        spicy_effect *= current_app.config['SPICY_UNDER_60']
+                    if user.cannot_vote():
+                        effect = spicy_effect = 0
+                    self.score += spicy_effect  # score + (-1) = score-1
+                vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
+                                effect=effect)
+                # upvotes do not increase reputation in low quality communities
+                if self.community.low_quality and effect > 0:
+                    effect = 0
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                       {'effect': effect, 'user_id': self.user_id})
+                    db.session.commit()
+                db.session.add(vote)
+
+            # Calculate new ranking values
+            self.ranking = self.post_ranking(self.score, self.created_at)
+            self.ranking_scaled = int(self.ranking + self.community.scale_by())
+
             db.session.commit()
         return undo
 
@@ -2371,16 +2362,16 @@ class PostReply(db.Model):
     def vote(self, user: User, vote_direction: str):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
-        existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
-        if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
-            if existing_vote.effect == 1:
-                vote_direction = 'upvote'
-            elif existing_vote.effect == -1:
-                vote_direction = 'downvote'
-        assert vote_direction == 'upvote' or vote_direction == 'downvote'
-        undo = None
-        if existing_vote:
-            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
+            existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+            if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+                if existing_vote.effect == 1:
+                    vote_direction = 'upvote'
+                elif existing_vote.effect == -1:
+                    vote_direction = 'downvote'
+            assert vote_direction == 'upvote' or vote_direction == 'downvote'
+            undo = None
+            if existing_vote:
                 with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})
@@ -2411,32 +2402,27 @@ class PostReply(db.Model):
                         self.up_votes += 1
                         self.down_votes -= 1
                         self.score += 2
-        else:
-            if user.cannot_vote():
-                effect = 0
             else:
-                effect = 1
-            if vote_direction == 'upvote':
-                self.up_votes += 1
-            else:
-                effect = effect * -1
-                self.down_votes += 1
-            self.score += effect
-            vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
-                                 effect=effect)
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
-                                   {'effect': effect, 'user_id': self.user_id})
-                db.session.commit()
-            db.session.add(vote)
-        db.session.commit()
+                if user.cannot_vote():
+                    effect = 0
+                else:
+                    effect = 1
+                if vote_direction == 'upvote':
+                    self.up_votes += 1
+                else:
+                    effect = effect * -1
+                    self.down_votes += 1
+                self.score += effect
+                vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
+                                     effect=effect)
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                       {'effect': effect, 'user_id': self.user_id})
+                    db.session.commit()
+                db.session.add(vote)
 
-        # Calculate the new ranking value
-        new_ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
-
-        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
-            db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
-                               {"ranking": new_ranking, "post_reply_id": self.id})
+            # Calculate the new ranking value
+            self.ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
             db.session.commit()
         return undo
 
