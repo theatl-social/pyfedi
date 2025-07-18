@@ -268,17 +268,24 @@ def put_user_subscribe(auth, data):
 
 def put_user_save_user_settings(auth, data):
     user: User = authorise_api_user(auth, return_type='model')
-    show_nfsw = data['show_nsfw'] if 'show_nsfw' in data else None
+    show_nsfw = data['show_nsfw'] if 'show_nsfw' in data else None
+    show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
     avatar = data['avatar'] if 'avatar' in data else None
     cover = data['cover'] if 'cover' in data else None
+    default_sort = data['default_sort_type'] if 'default_sort' in data else None
+    default_comment_sort = data['default_comment_sort_type'] if 'default_comment_sort' in data else None
 
     # english is fun, so lets do the reversing and update the user settings
-    if show_nfsw == True:
+    if show_nsfw == True:
         user.hide_nsfw = 0
-    elif show_nfsw == False:
+    elif show_nsfw == False:
         user.hide_nsfw = 1
+    if show_nsfl == True:
+        user.hide_nsfl = 0
+    elif show_nsfl == False:
+        user.hide_nsfl = 1
 
     if show_read_posts == True:
         user.hide_read_posts = False
@@ -314,6 +321,11 @@ def put_user_save_user_settings(auth, data):
         user.cover_id = file.id
         make_image_sizes(user.cover_id, 700, 1600, 'users')
         cache.delete_memoized(User.cover_image, user)
+
+    if default_sort is not None:
+        user.default_sort = default_sort.lower()
+    if default_comment_sort is not None:
+        user.default_comment_sort = default_comment_sort.lower()
 
     # save the change to the db
     db.session.commit()
