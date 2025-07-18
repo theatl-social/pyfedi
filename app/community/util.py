@@ -254,6 +254,14 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                     reply_data['object'] = {'id': reply_data['id']}
                                                     post_reply = PostReply.new(reply_author, post, in_reply_to, body, body_html,
                                                                                False, language_id, distinguished, reply_data, session=session)
+                                                    
+                                                    # Handle repliesEnabled field from ActivityPub message (for backfill)
+                                                    if 'repliesEnabled' in reply_data:
+                                                        post_reply.replies_enabled = reply_data['repliesEnabled']
+                                                    else:
+                                                        # Default to True if not specified (for compatibility with instances that don't send this field)
+                                                        post_reply.replies_enabled = True
+                                                    
                                                     session.add(post_reply)
                                                     community.post_reply_count += 1
                                                     session.commit()
