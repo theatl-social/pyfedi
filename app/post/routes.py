@@ -66,7 +66,7 @@ def show_post(post_id: int):
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
-        sort = request.args.get('sort', 'hot')
+        sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
