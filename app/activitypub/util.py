@@ -1937,6 +1937,15 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
                                        language_id=language_id, distinguished=distinguished, request_json=request_json,
                                        announce_id=announce_id)
+            
+            # Handle repliesEnabled field from ActivityPub message
+            if 'repliesEnabled' in request_json['object']:
+                post_reply.replies_enabled = request_json['object']['repliesEnabled']
+            else:
+                # Default to True if not specified (for compatibility with instances that don't send this field)
+                post_reply.replies_enabled = True
+            db.session.commit()
+            
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
                 if recipient:
@@ -2209,6 +2218,9 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
     if 'repliesEnabled' in request_json['object']:
         reply.replies_enabled = request_json['object']['repliesEnabled']
+    else:
+        # Default to True if not specified (for compatibility with instances that don't send this field)
+        reply.replies_enabled = True
 
     reply.edited_at = utcnow()
 
