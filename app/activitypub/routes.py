@@ -572,9 +572,8 @@ def shared_inbox():
 
     # Ignore account deletion requests from users that do not already exist here
     account_deletion = False
-    if (request_json['type'] == 'Delete' and
-            'object' in request_json and isinstance(request_json['object'], str) and
-            request_json['actor'] == request_json['object']):
+    if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and \
+            request_json['actor'] == request_json['object']:
         account_deletion = True
         actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
         if not actor:

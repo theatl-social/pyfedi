@@ -1271,12 +1271,12 @@ class User(UserMixin, db.Model):
 
     def delete_dependencies(self):
         if self.cover_id:
-            file = File.query.get(self.cover_id)
+            file = db.session.query(File).get(self.cover_id)
             file.delete_from_disk()
             self.cover_id = None
             db.session.delete(file)
         if self.avatar_id:
-            file = File.query.get(self.avatar_id)
+            file = db.session.query(File).get(self.avatar_id)
             file.delete_from_disk()
             self.avatar_id = None
             db.session.delete(file)
@@ -1859,7 +1859,7 @@ class Post(db.Model):
             
             # Only delete the File if no other Posts reference it
             if other_posts_count == 0:
-                file = File.query.get(self.image_id)
+                file = db.session.query(File).get(self.image_id)
                 if file:
                     file.delete_from_disk()
                     db.session.delete(file)
@@ -2350,17 +2350,17 @@ class PostReply(db.Model):
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
         if self.image_id:
-            file = File.query.get(self.image_id)
+            file = db.session.query(File).get(self.image_id)
             file.delete_from_disk()
 
     def child_replies(self):
-        return PostReply.query.filter_by(parent_id=self.id).all()
+        return db.session(PostReply).filter_by(parent_id=self.id).all()
 
     def has_replies(self, include_deleted=False):
         if include_deleted:
-            reply = PostReply.query.filter_by(parent_id=self.id).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).first()
         else:
-            reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
     def has_been_reported(self):
