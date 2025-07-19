@@ -2162,8 +2162,21 @@ class PostReply(db.Model):
     )
 
     @classmethod
-    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished,
-            request_json: dict = None, announce_id=None, session=None):
+    def new(
+        cls,
+        user: User,
+        post: Post,
+        in_reply_to,
+        body,
+        body_html,
+        notify_author,
+        language_id,
+        distinguished,
+        request_json: dict = None,
+        announce_id=None,
+        session=None,
+        replies_enabled=None
+    ):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
             reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound
         from app.activitypub.util import notify_about_post_reply
@@ -2184,26 +2197,53 @@ class PostReply(db.Model):
             parent_id = None
             depth = 0
 
-        reply = PostReply(user_id=user.id, post_id=post.id, parent_id=parent_id,
-                          depth=depth,
-                          community_id=post.community.id, body=body,
-                          body_html=body_html, body_html_safe=True,
-                          from_bot=user.bot or user.bot_override, nsfw=post.nsfw,
-                          notify_author=notify_author, instance_id=user.instance_id,
-                          language_id=language_id,
-                          distinguished=distinguished,
-                          ap_id=request_json['object']['id'] if request_json else None,
-                          ap_create_id=request_json['id'] if request_json else None,
-                          ap_announce_id=announce_id)
+        # Defensive: handle malformed request_json
+        ap_id = None
+        ap_create_id = None
+        if request_json:
+            try:
+                ap_id = request_json.get('object', {}).get('id')
+            except Exception:
+                ap_id = None
+            try:
+                ap_create_id = request_json.get('id')
+            except Exception:
+                ap_create_id = None
+
+        reply = PostReply(
+            user_id=user.id,
+            post_id=post.id,
+            parent_id=parent_id,
+            depth=depth,
+            community_id=post.community.id,
+            body=body,
+            body_html=body_html,
+            body_html_safe=True,
+            from_bot=user.bot or user.bot_override,
+            nsfw=post.nsfw,
+            notify_author=notify_author,
+            instance_id=user.instance_id,
+            language_id=language_id,
+            distinguished=distinguished,
+            ap_id=ap_id,
+            ap_create_id=ap_create_id,
+            ap_announce_id=announce_id,
+            replies_enabled=replies_enabled if replies_enabled is not None else True
+        )
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_('Blocked phrase in comment'))
+
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:
             notification_target = PostReply.query.get(in_reply_to.parent_id)
+            if notification_target is None:
+                raise PostReplyValidationError(_('Parent reply not found'))
 
+        if not hasattr(notification_target, 'author') or notification_target.author is None:
+            raise PostReplyValidationError(_('Notification target missing author'))
         if notification_target.author.has_blocked_user(reply.user_id):
             raise PostReplyValidationError(_('Replier blocked'))
 
@@ -2228,6 +2268,7 @@ class PostReply(db.Model):
             session.rollback()
             return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
+
         if in_reply_to and in_reply_to.path:
             reply.path = in_reply_to.path[:]
             reply.path.append(reply.id)
@@ -2235,6 +2276,9 @@ class PostReply(db.Model):
                                {'parents': tuple(in_reply_to.path)})
         else:
             reply.path = [0, reply.id]
+        # Defensive: ensure reply.path has at least 2 elements
+        if not isinstance(reply.path, list) or len(reply.path) < 2:
+            raise PostReplyValidationError(_('Reply path is malformed'))
         reply.root_id = reply.path[1]
 
         # Notify subscribers
