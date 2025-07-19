@@ -21,7 +21,7 @@
                 <label for="local_remote_remote">
                     <input type="radio" name="local_remote" value="remote"
                            id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> Remote</label>
-                <select name="report_types" id="report_types" multiple class="form-select" style="width: 200px">
+                <select name="report_types" id="report_types" class="form-select" style="width: 200px">
                     {% for value, label in report_types_list %}
                         <option value="{{ value }}" {% if value in report_types %}selected{% endif %}>
                             {{ label }}
