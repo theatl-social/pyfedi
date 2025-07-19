@@ -1839,17 +1839,26 @@ class Post(db.Model):
                                        {'post_id': self.id}).scalars()
         reply_ids = tuple(reply_ids)
         if reply_ids:
+            # Handle file deletions for reply images first
+            reply_image_ids = db.session.execute(text('SELECT image_id FROM "post_reply" WHERE post_id = :post_id AND image_id IS NOT NULL'),
+                                                 {'post_id': self.id}).scalars()
+            for image_id in reply_image_ids:
+                file = db.session.query(File).get(image_id)
+                if file:
+                    file.delete_from_disk()
+            
+            # Delete all reply-related data
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
+            # Update ModLog entries to remove references to deleted replies
+            db.session.execute(text('UPDATE "mod_log" SET reply_id = NULL WHERE reply_id IN :reply_ids'),
+                               {'reply_ids': reply_ids})
+            # Finally delete all the replies
             db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
-
-            self.community.post_reply_count = db.session.execute(
-                text('SELECT COUNT(id) as c FROM "post_reply" WHERE community_id = :community_id AND deleted = false'),
-                {'community_id': self.community_id}).scalar()
 
         if self.image_id:
             # Check if any other Posts reference this File

@@ -971,8 +971,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
         # Federation
         if not community.local_only:  # local_only communities do not federate
             # if this is a remote community and we are a mod of that community
-            if not post.community.is_local() and user.is_local() and (
-                    post.user_id == user.id or community.is_moderator(user) or community.is_owner(user)):
+            if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user)):
                 send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
                                   user.public_url() + '#main-key')
             elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
