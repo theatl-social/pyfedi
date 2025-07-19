@@ -67,6 +67,16 @@ def render_template(template_name: str, **context) -> Response:
         if 'etag' in context:
             resp.headers.add_header('ETag', context['etag'])
         resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+
+    # Early Hints-compatible Link headers (for Cloudflare or supporting proxies)
+    resp.headers['Link'] = (
+        '</bootstrap/static/css/bootstrap.min.css>; rel=preload; as=style, '
+        '</bootstrap/static/umd/popper.min.js>; rel=preload; as=script, '
+        '</bootstrap/static/js/bootstrap.min.js>; rel=preload; as=script, '
+        '</static/js/htmx.min.js>; rel=preload; as=script, '
+        '</static/fonts/feather/feather.woff>; rel=preload; as=font; crossorigin'
+    )
+    
     return resp
 
 
