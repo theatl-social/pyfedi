@@ -71,7 +71,7 @@ services:
     entrypoint: ./entrypoint.sh
 
   internal_api:
-    image: piefed_app1:3
+    image: piefed_app1:4
     container_name: piefed_internal_api
     restart: unless-stopped
     platform: linux/amd64
