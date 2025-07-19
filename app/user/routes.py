@@ -931,9 +931,12 @@ def report_profile(actor):
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
+            source_instance = Instance.query.get(user.instance_id)
             targets_data = {'gen': '0',
                             'suspect_user_id': user.id,
                             'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'source_instance_id': user.instance_id,
+                            'source_instance_domain': source_instance.domain,
                             'reporter_id': current_user.id,
                             'reporter_user_name': current_user.user_name
                             }

@@ -1157,12 +1157,15 @@ def post_report(post_id: int):
             return redirect(post.community.local_url())
         
         suspect_user = User.query.get(post.author.id)
+        source_instance = Instance.query.get(suspect_user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_post_id': post.id,
                         'suspect_user_id': post.author.id,
                         'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_user.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_post_title': post.title,
                         'orig_post_body': post.body
                         }
@@ -1480,12 +1483,15 @@ def post_reply_report(post_id: int, comment_id: int):
             return redirect(post.community.local_url())
 
         suspect_author = User.query.get(post_reply.author.id)
+        source_instance = Instance.query.get(suspect_author.instance_id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': post_reply.id,
                         'suspect_user_id': post_reply.author.id,
                         'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_author.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_comment_body': post_reply.body
                         }
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
