@@ -2,9 +2,9 @@ services:
 
   db:
     shm_size: 128mb
-    image: postgres
+    image: postgres:16
     restart: unless-stopped
-    user: "1000:1000"
+    platform: linux/amd64
     env_file:
      - ./.env.docker
     volumes:
@@ -17,6 +17,7 @@ services:
   redis:
     image: redis:6.2
     restart: unless-stopped
+    platform: linux/amd64
     env_file:
      - ./.env.docker
     networks:
@@ -28,6 +29,7 @@ services:
       target: builder
     container_name: piefed_celery1
     restart: unless-stopped
+    platform: linux/amd64
     depends_on:
       - db
       - redis
@@ -42,11 +44,10 @@ services:
       - pf_network
 
   web:
-    build:
-      context: .
-      target: builder
+    image: piefed_app1:2
     container_name: piefed_app1
     restart: unless-stopped
+    platform: linux/amd64
     depends_on:
       - db
       - redis
@@ -63,13 +64,40 @@ services:
      - ./tmp/:/app/app/static/tmp/
      - ./:/app:z
     ports:
-      - '8030:5000'
+      - '5050:5000'
+      - '5932:5932'
     networks:
       - pf_network
+    entrypoint: ./entrypoint.sh
+
+  internal_api:
+    image: piefed_app1:3
+    container_name: piefed_internal_api
+    restart: unless-stopped
+    platform: linux/amd64
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - ./.env.docker
+    environment:
+      - PYTHONUNBUFFERED=1
+      - INTERNAL_API_PORT=5932
+    volumes:
+      - ./media/:/app/app/static/media/
+      - ./logs/:/app/logs/
+      - ./tmp/:/app/app/static/tmp/
+      - ./:/app:z
+    ports:
+      - '5933:5932'
+    networks:
+      - pf_network
+    entrypoint: python3 -m gunicorn --bind 0.0.0.0:5932 --workers 1 run_internal_api:app
 
   adminer:
     image: adminer
     restart: unless-stopped
+    platform: linux/amd64
     ports:
       - "8888:8080"
     depends_on:
