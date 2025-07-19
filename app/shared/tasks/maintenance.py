@@ -6,16 +6,11 @@ from sqlalchemy import text
 from app import celery, cache
 from app.activitypub.util import find_actor_or_create
 from app.constants import NOTIF_UNBAN
-from app.models import (
-    Notification, SendQueue, CommunityBan, CommunityMember, User, Community,
-    Post, PostReply, DefederationSubscription, Instance, ActivityPubLog,
-    InstanceRole, utcnow
-)
+from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
+    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow
 from app.post.routes import post_delete_post
-from app.utils import (
-    get_task_session, download_defeds, instance_banned, get_request_instance,
-    get_request, shorten_string
-)
+from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
+    shorten_string, patch_db_session
 
 
 @celery.task
@@ -105,17 +100,17 @@ def remove_old_community_content():
     try:
         communities = session.query(Community).filter(Community.content_retention > 0).all()
 
-        for community in communities:
-            cut_off = utcnow() - timedelta(days=community.content_retention)
-            old_posts = session.query(Post).filter_by(
-                deleted=False,
-                sticky=False,
-                community_id=community.id
-            ).filter(Post.posted_at < cut_off).all()
+        with patch_db_session(session):
+            for community in communities:
+                cut_off = utcnow() - timedelta(days=community.content_retention)
+                old_posts = session.query(Post).filter_by(
+                    deleted=False,
+                    sticky=False,
+                    community_id=community.id
+                ).filter(Post.posted_at < cut_off).all()
 
-            for post in old_posts:
-                post_delete_post(community, post, post.user_id, reason=None, federate_all_communities=False)
-                community.post_count -= 1
+                for post in old_posts:
+                    post_delete_post(community, post, post.user_id, reason=None)
 
         session.commit()
     except Exception:
@@ -151,38 +146,39 @@ def delete_old_soft_deleted_content():
     """Delete soft-deleted content after 7 days"""
     session = get_task_session()
     try:
-        cutoff = utcnow() - timedelta(days=7)
+        with patch_db_session(session):
+            cutoff = utcnow() - timedelta(days=7)
 
-        # Delete old post replies
-        post_reply_ids = list(
-            session.execute(
-                text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
-                {'cutoff': cutoff}
-            ).scalars()
-        )
+            # Delete old post replies
+            post_reply_ids = list(
+                session.execute(
+                    text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
+                    {'cutoff': cutoff}
+                ).scalars()
+            )
 
-        for post_reply_id in post_reply_ids:
-            post_reply = session.query(PostReply).get(post_reply_id)
-            if post_reply:  # Check if still exists
-                post_reply.delete_dependencies()
-                if not post_reply.has_replies(include_deleted=True):
-                    session.delete(post_reply)
+            for post_reply_id in post_reply_ids:
+                post_reply = session.query(PostReply).get(post_reply_id)
+                if post_reply:  # Check if still exists
+                    post_reply.delete_dependencies()
+                    if not post_reply.has_replies(include_deleted=True):
+                        session.delete(post_reply)
+                        session.commit()
+
+            # Delete old posts
+            post_ids = list(
+                session.execute(
+                    text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
+                    {'cutoff': cutoff}
+                ).scalars()
+            )
+
+            for post_id in post_ids:
+                post = session.query(Post).get(post_id)
+                if post:  # Check if still exists
+                    post.delete_dependencies()
+                    session.delete(post)
                     session.commit()
-
-        # Delete old posts
-        post_ids = list(
-            session.execute(
-                text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
-                {'cutoff': cutoff}
-            ).scalars()
-        )
-
-        for post_id in post_ids:
-            post = session.query(Post).get(post_id)
-            if post:  # Check if still exists
-                post.delete_dependencies()
-                session.delete(post)
-                session.commit()
 
     except Exception:
         session.rollback()
@@ -238,48 +234,53 @@ def cleanup_old_voting_data():
         if local_months != -1:
             cutoff_local = utcnow() - timedelta(days=28 * local_months)
 
-            # Delete local user votes
+            # Delete local user post votes
             session.execute(text('''
-                DELETE FROM "post_vote" pv
-                USING "user" u, "instance" i
-                WHERE pv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id = :instance_id
-                  AND pv.created_at < :cutoff
+                DELETE FROM "post_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id = :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_local, 'instance_id': 1})
 
+            session.commit()
+
+            # Delete local user post reply votes
             session.execute(text('''
-                DELETE FROM "post_reply_vote" prv
-                USING "user" u, "instance" i
-                WHERE prv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id = :instance_id
-                  AND prv.created_at < :cutoff
+                DELETE FROM "post_reply_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id = :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+            session.commit()
 
         if remote_months != -1:
             cutoff_remote = utcnow() - timedelta(days=28 * remote_months)
 
-            # Delete remote user votes
+            # Delete remote user post votes
             session.execute(text('''
-                DELETE FROM "post_vote" pv
-                USING "user" u, "instance" i
-                WHERE pv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id != :instance_id
-                  AND pv.created_at < :cutoff
+                DELETE FROM "post_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id != :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_remote, 'instance_id': 1})
 
+            session.commit()
+
+            # Delete remote user post reply votes
             session.execute(text('''
-                DELETE FROM "post_reply_vote" prv
-                USING "user" u, "instance" i
-                WHERE prv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id != :instance_id
-                  AND prv.created_at < :cutoff
+                DELETE FROM "post_reply_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id != :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_remote, 'instance_id': 1})
 
-        session.commit()
+            session.commit()
+
     except Exception:
         session.rollback()
         raise
@@ -326,74 +327,75 @@ def check_instance_health():
     """Check for dormant or dead instances"""
     session = get_task_session()
     try:
-        HEADERS = {'Accept': 'application/activity+json'}
+        with patch_db_session(session):
+            HEADERS = {'Accept': 'application/activity+json'}
 
-        # Mark dormant instances as gone_forever after 5 days
-        five_days_ago = utcnow() - timedelta(days=5)
-        dormant_instances = session.query(Instance).filter(
-            Instance.dormant == True,
-            Instance.start_trying_again < five_days_ago
-        ).all()
+            # Mark dormant instances as gone_forever after 5 days
+            five_days_ago = utcnow() - timedelta(days=5)
+            dormant_instances = session.query(Instance).filter(
+                Instance.dormant == True,
+                Instance.start_trying_again < five_days_ago
+            ).all()
 
-        for instance in dormant_instances:
-            instance.gone_forever = True
-        session.commit()
+            for instance in dormant_instances:
+                instance.gone_forever = True
+            session.commit()
 
-        # Re-check dormant instances that are not gone_forever
-        dormant_to_recheck = session.query(Instance).filter(
-            Instance.dormant == True,
-            Instance.gone_forever == False,
-            Instance.id != 1
-        ).all()
+            # Re-check dormant instances that are not gone_forever
+            dormant_to_recheck = session.query(Instance).filter(
+                Instance.dormant == True,
+                Instance.gone_forever == False,
+                Instance.id != 1
+            ).all()
 
-        for instance in dormant_to_recheck:
-            if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
-                continue
+            for instance in dormant_to_recheck:
+                if instance_banned(instance.domain) or instance.domain == 'flipboard.com':
+                    continue
 
-            try:
-                # Try the nodeinfo endpoint first
-                if instance.nodeinfo_href:
-                    node = get_request_instance(instance.nodeinfo_href, headers=HEADERS, instance=instance)
-                    if node.status_code == 200:
-                        try:
-                            node_json = node.json()
-                            if 'software' in node_json:
-                                instance.software = node_json['software']['name'].lower()[:50]
-                                instance.version = node_json['software']['version'][:50]
-                                instance.failures = 0
-                                instance.dormant = False
-                                current_app.logger.info(f"Dormant instance {instance.domain} is back online")
-                        finally:
-                            node.close()
-                else:
-                    # Try to discover nodeinfo
-                    nodeinfo = get_request_instance(
-                        f"https://{instance.domain}/.well-known/nodeinfo",
-                        headers=HEADERS,
-                        instance=instance
-                    )
-                    if nodeinfo.status_code == 200:
-                        try:
-                            nodeinfo_json = nodeinfo.json()
-                            for links in nodeinfo_json['links']:
-                                if isinstance(links, dict) and 'rel' in links and links['rel'] in [
-                                    'http://nodeinfo.diaspora.software/ns/schema/2.0',
-                                    'https://nodeinfo.diaspora.software/ns/schema/2.0',
-                                    'http://nodeinfo.diaspora.software/ns/schema/2.1'
-                                ]:
-                                    instance.nodeinfo_href = links['href']
+                try:
+                    # Try the nodeinfo endpoint first
+                    if instance.nodeinfo_href:
+                        node = get_request_instance(instance.nodeinfo_href, headers=HEADERS, instance=instance)
+                        if node.status_code == 200:
+                            try:
+                                node_json = node.json()
+                                if 'software' in node_json:
+                                    instance.software = node_json['software']['name'].lower()[:50]
+                                    instance.version = node_json['software']['version'][:50]
                                     instance.failures = 0
                                     instance.dormant = False
                                     current_app.logger.info(f"Dormant instance {instance.domain} is back online")
-                                    break
-                        finally:
-                            nodeinfo.close()
-            except Exception as e:
-                session.rollback()
-                instance.failures += 1
-                current_app.logger.warning(f"Error rechecking dormant instance {instance.domain}: {e}")
+                            finally:
+                                node.close()
+                    else:
+                        # Try to discover nodeinfo
+                        nodeinfo = get_request_instance(
+                            f"https://{instance.domain}/.well-known/nodeinfo",
+                            headers=HEADERS,
+                            instance=instance
+                        )
+                        if nodeinfo.status_code == 200:
+                            try:
+                                nodeinfo_json = nodeinfo.json()
+                                for links in nodeinfo_json['links']:
+                                    if isinstance(links, dict) and 'rel' in links and links['rel'] in [
+                                        'http://nodeinfo.diaspora.software/ns/schema/2.0',
+                                        'https://nodeinfo.diaspora.software/ns/schema/2.0',
+                                        'http://nodeinfo.diaspora.software/ns/schema/2.1'
+                                    ]:
+                                        instance.nodeinfo_href = links['href']
+                                        instance.failures = 0
+                                        instance.dormant = False
+                                        current_app.logger.info(f"Dormant instance {instance.domain} is back online")
+                                        break
+                            finally:
+                                nodeinfo.close()
+                except Exception as e:
+                    session.rollback()
+                    instance.failures += 1
+                    current_app.logger.warning(f"Error rechecking dormant instance {instance.domain}: {e}")
 
-        session.commit()
+            session.commit()
 
     except Exception:
         session.rollback()
@@ -548,14 +550,13 @@ def recalculate_user_attitudes():
     """Recalculate recent active user attitudes"""
     session = get_task_session()
     try:
-        recent_users = session.query(User).filter(
-            User.last_seen > utcnow() - timedelta(days=1)
-        ).all()
+        with patch_db_session(session):
+            recent_users = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).all()
 
-        for user in recent_users:
-            user.recalculate_attitude()
+            for user in recent_users:
+                user.recalculate_attitude()
 
-        session.commit()
+            session.commit()
     except Exception:
         session.rollback()
         raise

@@ -245,7 +245,9 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             "local_user_view": {
                 "local_user": {
                     "show_nsfw": not user.hide_nsfw == 1,
+                    "show_nsfl": not user.hide_nsfl == 1,
                     "default_sort_type": user.default_sort.capitalize(),
+                    "default_comment_sort_type": user.default_comment_sort.capitalize() if user.default_comment_sort else 'HOT',
                     "default_listing_type": user.default_filter.capitalize(),
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,

@@ -74,6 +74,13 @@ class SettingsForm(FlaskForm):
              ]
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})
+    comment_sorts = [('hot', _l('Hot')),
+                     ('top', _l('Top')),
+                     ('new', _l('New')),
+                     ('old', _l('Old')),
+                     ]
+    default_comment_sort = SelectField(_l('Default comment sort'), choices=comment_sorts, validators=[DataRequired()], coerce=str,
+                               render_kw={'class': 'form-select'})
     filters = [('subscribed', _l('Subscribed')),
                ('moderating', _l('Moderating')),
                ('local', _l('Local')),

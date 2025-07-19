@@ -66,7 +66,7 @@ def show_post(post_id: int):
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
-        sort = request.args.get('sort', 'hot')
+        sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
@@ -938,7 +938,7 @@ def post_delete(post_id: int):
                                    form=form)
 
 
-def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_all_communities=True):
+def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_deletion=True):
     user: User = User.query.get(user_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
@@ -950,56 +950,57 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
         flash(_('Post deleted.'))
     db.session.commit()
 
-    delete_json = {
-        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-        'type': 'Delete',
-        'actor': user.public_url(),
-        'audience': post.community.public_url(),
-        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-        'published': ap_datetime(utcnow()),
-        'cc': [
-            user.followers_url()
-        ],
-        'object': post.ap_id,
-        'uri': post.ap_id
-    }
-    if post.user_id != user.id:
-        delete_json['summary'] = 'Deleted by mod'
+    if federate_deletion:
 
-    # Federation
-    if not community.local_only:  # local_only communities do not federate
-        # if this is a remote community and we are a mod of that community
-        if not post.community.is_local() and user.is_local() and (
-                post.user_id == user.id or community.is_moderator(user) or community.is_owner(user)):
-            send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                              user.public_url() + '#main-key')
-        elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.ap_profile_id,
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
-            for instance in post.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+        delete_json = {
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            'type': 'Delete',
+            'actor': user.public_url(),
+            'audience': post.community.public_url(),
+            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'published': ap_datetime(utcnow()),
+            'cc': [
+                user.followers_url()
+            ],
+            'object': post.ap_id,
+            'uri': post.ap_id
+        }
+        if post.user_id != user.id:
+            delete_json['summary'] = 'Deleted by mod'
 
-    # Federate to microblog followers
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if followers:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
-                                                                                    UserFollower.remote_user_id == User.id)
-        instances = instances.filter(UserFollower.local_user_id == post.user_id)
-        for instance in instances:
-            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
-                send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
+        # Federation
+        if not community.local_only:  # local_only communities do not federate
+            # if this is a remote community and we are a mod of that community
+            if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user)):
+                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
+                                  user.public_url() + '#main-key')
+            elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
+                announce = {
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "type": 'Announce',
+                    "to": [
+                        "https://www.w3.org/ns/activitystreams#Public"
+                    ],
+                    "actor": post.community.ap_profile_id,
+                    "cc": [
+                        post.community.ap_followers_url
+                    ],
+                    '@context': default_context(),
+                    'object': delete_json
+                }
+                for instance in post.community.following_instances():
+                    if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                        send_to_remote_instance(instance.id, post.community.id, announce)
+
+        # Federate to microblog followers
+        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+        if followers:
+            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
+                                                                                        UserFollower.remote_user_id == User.id)
+            instances = instances.filter(UserFollower.local_user_id == post.user_id)
+            for instance in instances:
+                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
+                    send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
     if post.user_id != user.id and reason is not None:
         add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
@@ -1156,12 +1157,15 @@ def post_report(post_id: int):
             return redirect(post.community.local_url())
         
         suspect_user = User.query.get(post.author.id)
+        source_instance = Instance.query.get(suspect_user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_post_id': post.id,
                         'suspect_user_id': post.author.id,
                         'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_user.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_post_title': post.title,
                         'orig_post_body': post.body
                         }
@@ -1479,12 +1483,15 @@ def post_reply_report(post_id: int, comment_id: int):
             return redirect(post.community.local_url())
 
         suspect_author = User.query.get(post_reply.author.id)
+        source_instance = Instance.query.get(suspect_author.instance_id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': post_reply.id,
                         'suspect_user_id': post_reply.author.id,
                         'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_author.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_comment_body': post_reply.body
                         }
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,

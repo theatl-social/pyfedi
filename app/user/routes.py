@@ -535,6 +535,7 @@ def user_settings():
         current_user.indexable = form.indexable.data
         current_user.hide_read_posts = form.hide_read_posts.data
         current_user.default_sort = form.default_sort.data
+        current_user.default_comment_sort = form.default_comment_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
         current_user.email_unread = form.email_unread.data
@@ -571,6 +572,7 @@ def user_settings():
         form.indexable.data = current_user.indexable
         form.hide_read_posts.data = current_user.hide_read_posts
         form.default_sort.data = current_user.default_sort
+        form.default_comment_sort.data = current_user.default_comment_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
@@ -929,9 +931,12 @@ def report_profile(actor):
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
+            source_instance = Instance.query.get(user.instance_id)
             targets_data = {'gen': '0',
                             'suspect_user_id': user.id,
                             'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'source_instance_id': user.instance_id,
+                            'source_instance_domain': source_instance.domain,
                             'reporter_id': current_user.id,
                             'reporter_user_name': current_user.user_name
                             }

@@ -880,6 +880,7 @@ class User(UserMixin, db.Model):
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     reports = db.Column(db.Integer, default=0)  # how many times this user has been reported.
     default_sort = db.Column(db.String(25), default='hot')
+    default_comment_sort = db.Column(db.String(10), default='hot')
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
     font = db.Column(db.String(25), default='')
@@ -1270,12 +1271,12 @@ class User(UserMixin, db.Model):
 
     def delete_dependencies(self):
         if self.cover_id:
-            file = File.query.get(self.cover_id)
+            file = db.session.query(File).get(self.cover_id)
             file.delete_from_disk()
             self.cover_id = None
             db.session.delete(file)
         if self.avatar_id:
-            file = File.query.get(self.avatar_id)
+            file = db.session.query(File).get(self.avatar_id)
             file.delete_from_disk()
             self.avatar_id = None
             db.session.delete(file)
@@ -1430,7 +1431,7 @@ class Post(db.Model):
 
     search_vector = db.Column(TSVectorType('title', 'body'))
 
-    image = db.relationship(File, lazy='joined', foreign_keys=[image_id], cascade="all, delete")
+    image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
@@ -1838,21 +1839,40 @@ class Post(db.Model):
                                        {'post_id': self.id}).scalars()
         reply_ids = tuple(reply_ids)
         if reply_ids:
+            # Handle file deletions for reply images first
+            reply_image_ids = db.session.execute(text('SELECT image_id FROM "post_reply" WHERE post_id = :post_id AND image_id IS NOT NULL'),
+                                                 {'post_id': self.id}).scalars()
+            for image_id in reply_image_ids:
+                file = db.session.query(File).get(image_id)
+                if file:
+                    file.delete_from_disk()
+            
+            # Delete all reply-related data
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
+            # Update ModLog entries to remove references to deleted replies
+            db.session.execute(text('UPDATE "mod_log" SET reply_id = NULL WHERE reply_id IN :reply_ids'),
+                               {'reply_ids': reply_ids})
+            # Finally delete all the replies
             db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
 
-            self.community.post_reply_count = db.session.execute(
-                text('SELECT COUNT(id) as c FROM "post_reply" WHERE community_id = :community_id AND deleted = false'),
-                {'community_id': self.community_id}).scalar()
-
         if self.image_id:
-            file = File.query.get(self.image_id)
-            file.delete_from_disk()
+            # Check if any other Posts reference this File
+            other_posts_count = db.session.execute(
+                text("SELECT COUNT(*) FROM post WHERE image_id = :image_id AND id != :post_id"),
+                {"image_id": self.image_id, "post_id": self.id}).scalar()
+            
+            # Only delete the File if no other Posts reference it
+            if other_posts_count == 0:
+                file = db.session.query(File).get(self.image_id)
+                if file:
+                    file.delete_from_disk()
+                    db.session.delete(file)
+            self.image_id = None
 
     def has_been_reported(self):
         return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
@@ -2383,17 +2403,17 @@ class PostReply(db.Model):
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
         if self.image_id:
-            file = File.query.get(self.image_id)
+            file = db.session.query(File).get(self.image_id)
             file.delete_from_disk()
 
     def child_replies(self):
-        return PostReply.query.filter_by(parent_id=self.id).all()
+        return db.session(PostReply).filter_by(parent_id=self.id).all()
 
     def has_replies(self, include_deleted=False):
         if include_deleted:
-            reply = PostReply.query.filter_by(parent_id=self.id).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).first()
         else:
-            reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
     def has_been_reported(self):
