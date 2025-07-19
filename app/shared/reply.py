@@ -166,9 +166,32 @@ def make_reply(input, post, parent_id, src, auth=None):
         raise Exception('You are not permitted to comment in this community')
 
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
-    reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
-                          body_html=markdown_to_html(content), notify_author=notify_author,
-                          language_id=language_id, distinguished=distinguished)
+    # Determine replies_enabled: only False if explicitly set to False, otherwise True
+    replies_enabled = False
+    if src == SRC_API:
+        # For API, check if 'replies_enabled' is present and exactly False
+        if 'replies_enabled' in input and input['replies_enabled'] is False:
+            replies_enabled = False
+        else:
+            replies_enabled = True
+    else:
+        # For web, check if attribute exists and is exactly False
+        if hasattr(input, 'replies_enabled') and hasattr(input.replies_enabled, 'data') and input.replies_enabled.data is False:
+            replies_enabled = False
+        else:
+            replies_enabled = True
+
+    reply = PostReply.new(
+        user,
+        post,
+        in_reply_to=parent_reply,
+        body=piefed_markdown_to_lemmy_markdown(content),
+        body_html=markdown_to_html(content),
+        notify_author=notify_author,
+        language_id=language_id,
+        distinguished=distinguished,
+        replies_enabled=replies_enabled
+    )
 
     user.language_id = language_id
     user.post_reply_count += 1
