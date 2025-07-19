@@ -1431,7 +1431,7 @@ class Post(db.Model):
 
     search_vector = db.Column(TSVectorType('title', 'body'))
 
-    image = db.relationship(File, lazy='joined', foreign_keys=[image_id], cascade="all, delete")
+    image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
@@ -1852,8 +1852,18 @@ class Post(db.Model):
                 {'community_id': self.community_id}).scalar()
 
         if self.image_id:
-            file = File.query.get(self.image_id)
-            file.delete_from_disk()
+            # Check if any other Posts reference this File
+            other_posts_count = db.session.execute(
+                text("SELECT COUNT(*) FROM post WHERE image_id = :image_id AND id != :post_id"),
+                {"image_id": self.image_id, "post_id": self.id}).scalar()
+            
+            # Only delete the File if no other Posts reference it
+            if other_posts_count == 0:
+                file = File.query.get(self.image_id)
+                if file:
+                    file.delete_from_disk()
+                    db.session.delete(file)
+            self.image_id = None
 
     def has_been_reported(self):
         return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()

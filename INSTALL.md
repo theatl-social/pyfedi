@@ -523,7 +523,7 @@ Once a week or so it's good to run `remove_orphan_files.sh` to save disk space:
 5 4 * * 1 rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/remove_orphan_files.sh
 ```
 
-One per day there are some maintenance tasks that PieFed needs to do:
+One per day there are some maintenance tasks that PieFed needs to do (run it at a time of low usage):
 
 ```
 5 2 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/daily.sh

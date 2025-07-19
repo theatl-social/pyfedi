@@ -110,7 +110,7 @@ def remove_old_community_content():
                 ).filter(Post.posted_at < cut_off).all()
 
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id, reason=None, federate_all_communities=False)
+                    post_delete_post(community, post, post.user_id, reason=None, federate_deletion=community.is_local())
 
         session.commit()
     except Exception:
@@ -234,48 +234,53 @@ def cleanup_old_voting_data():
         if local_months != -1:
             cutoff_local = utcnow() - timedelta(days=28 * local_months)
 
-            # Delete local user votes
+            # Delete local user post votes
             session.execute(text('''
-                DELETE FROM "post_vote" pv
-                USING "user" u, "instance" i
-                WHERE pv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id = :instance_id
-                  AND pv.created_at < :cutoff
+                DELETE FROM "post_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id = :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_local, 'instance_id': 1})
 
+            session.commit()
+
+            # Delete local user post reply votes
             session.execute(text('''
-                DELETE FROM "post_reply_vote" prv
-                USING "user" u, "instance" i
-                WHERE prv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id = :instance_id
-                  AND prv.created_at < :cutoff
+                DELETE FROM "post_reply_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id = :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_local, 'instance_id': 1})
+
+            session.commit()
 
         if remote_months != -1:
             cutoff_remote = utcnow() - timedelta(days=28 * remote_months)
 
-            # Delete remote user votes
+            # Delete remote user post votes
             session.execute(text('''
-                DELETE FROM "post_vote" pv
-                USING "user" u, "instance" i
-                WHERE pv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id != :instance_id
-                  AND pv.created_at < :cutoff
+                DELETE FROM "post_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id != :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_remote, 'instance_id': 1})
 
+            session.commit()
+
+            # Delete remote user post reply votes
             session.execute(text('''
-                DELETE FROM "post_reply_vote" prv
-                USING "user" u, "instance" i
-                WHERE prv.user_id = u.id
-                  AND u.instance_id = i.id
-                  AND u.instance_id != :instance_id
-                  AND prv.created_at < :cutoff
+                DELETE FROM "post_reply_vote"
+                WHERE user_id IN (
+                    SELECT id FROM "user" WHERE instance_id != :instance_id
+                )
+                AND created_at < :cutoff
             '''), {'cutoff': cutoff_remote, 'instance_id': 1})
 
-        session.commit()
+            session.commit()
+
     except Exception:
         session.rollback()
         raise
