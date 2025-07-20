@@ -1,18 +1,17 @@
 from collections import namedtuple
 
 from flask import request, url_for, g, abort, flash, redirect, make_response
-from flask_login import current_user
 from flask_babel import _
+from flask_login import current_user
 from sqlalchemy import or_, desc
 
-from app import db, cache
 from app.constants import *
 from app.instance import bp
 from app.models import Instance, User, Post, read_posts
-from app.utils import render_template, moderating_communities, joined_communities, menu_topics, blocked_domains, \
-    blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
-    recently_downvoted_posts, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, reported_posts, login_required
 from app.shared.site import block_remote_instance, unblock_remote_instance
+from app.utils import render_template, blocked_domains, \
+    blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
+    recently_downvoted_posts, reported_posts, login_required, moderating_communities_ids
 
 
 @bp.route('/instances', methods=['GET'])
@@ -53,7 +52,6 @@ def list_instances():
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
 def instance_overview(instance_domain):
-
     instance = Instance.query.filter(Instance.domain == instance_domain).first()
     if instance is None:
         abort(404)
@@ -73,16 +71,22 @@ def instance_people(instance_domain):
         abort(404)
 
     if current_user.is_authenticated and current_user.is_admin():
-        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False).order_by(desc(User.last_seen))
+        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False).\
+            order_by(desc(User.last_seen))
     else:
-        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).order_by(desc(User.last_seen))
+        people = User.query.filter_by(instance_id=instance.id, deleted=False, banned=False, searchable=True).\
+            order_by(desc(User.last_seen))
 
     # Pagination
-    people = people.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50, error_out=False)
-    next_url = url_for('instance.instance_people', page=people.next_num, instance_domain=instance_domain) if people.has_next else None
-    prev_url = url_for('instance.instance_people', page=people.prev_num, instance_domain=instance_domain) if people.has_prev and page != 1 else None
+    people = people.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                             error_out=False)
+    next_url = url_for('instance.instance_people', page=people.next_num,
+                       instance_domain=instance_domain) if people.has_next else None
+    prev_url = url_for('instance.instance_people', page=people.prev_num,
+                       instance_domain=instance_domain) if people.has_prev and page != 1 else None
 
-    return render_template('instance/people.html', people=people, instance=instance, next_url=next_url, prev_url=prev_url,
+    return render_template('instance/people.html', people=people, instance=instance, next_url=next_url,
+                           prev_url=prev_url,
                            title=_('People from %(instance)s', instance=instance.domain),
                            )
 
@@ -97,10 +101,12 @@ def instance_posts(instance_domain):
         abort(404)
 
     if current_user.is_anonymous:
-        posts = Post.query.filter(Post.instance_id == instance.id, Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+        posts = Post.query.filter(Post.instance_id == instance.id, Post.from_bot == False, Post.nsfw == False,
+                                  Post.nsfl == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
         content_filters = {}
     else:
-        posts = Post.query.filter(Post.instance_id == instance.id, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+        posts = Post.query.filter(Post.instance_id == instance.id, Post.deleted == False,
+                                  Post.status > POST_STATUS_REVIEWING)
 
         if current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
@@ -133,8 +139,10 @@ def instance_posts(instance_domain):
     # Pagination
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                            error_out=False)
-    next_url = url_for('instance.instance_posts', page=posts.next_num, instance_domain=instance_domain) if posts.has_next else None
-    prev_url = url_for('instance.instance_posts', page=posts.prev_num, instance_domain=instance_domain) if posts.has_prev and page != 1 else None
+    next_url = url_for('instance.instance_posts', page=posts.next_num,
+                       instance_domain=instance_domain) if posts.has_next else None
+    prev_url = url_for('instance.instance_posts', page=posts.prev_num,
+                       instance_domain=instance_domain) if posts.has_prev and page != 1 else None
 
     # Voting history
     if current_user.is_authenticated:
@@ -163,8 +171,9 @@ def instance_posts(instance_domain):
                            recently_downvoted=recently_downvoted,
                            next_url=next_url, prev_url=prev_url,
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
-                           #rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
-                           #rss_feed_name=f"Posts on " + g.site.name,
+                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
+                           # rss_feed=f"https://{current_app.config['SERVER_NAME']}/feed",
+                           # rss_feed_name=f"Posts on " + g.site.name,
                            title=_("Posts from %(instance)s", instance=instance.domain),
                            content_filters=content_filters)
 
@@ -179,7 +188,7 @@ def instance_block(instance_id):
     if request.headers.get('HX-Request'):
         resp = make_response()
         resp.headers["HX-Redirect"] = url_for("instance.instance_overview", instance_domain=instance.domain)
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
@@ -196,7 +205,7 @@ def instance_unblock(instance_id):
     if request.headers.get('HX-Request'):
         resp = make_response()
         resp.headers["HX-Redirect"] = request.headers.get('HX-Current-Url')
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')

@@ -1,26 +1,25 @@
+from flask import current_app, flash, render_template
+from flask_babel import _, force_locale, gettext
+from flask_login import current_user
+from slugify import slugify
+from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
+
 from app import db, cache
 from app.activitypub.signature import RsaKeys
 from app.activitypub.util import make_image_sizes
 from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
-from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, utcnow, Conversation, Community, Language, File
-from app.shared.upload import process_upload
+from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
+    Community, Language, File
 from app.shared.tasks import task_selector
+from app.shared.upload import process_upload
 from app.user.utils import search_for_user
-from app.utils import authorise_api_user, blocked_communities, shorten_string, gibberish, markdown_to_html, \
+from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
     communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
-    add_to_modlog_activitypub, get_recipient_language
-from app.constants import *
-
-from flask import current_app, flash, render_template
-from flask_babel import _, force_locale, gettext
-from flask_login import current_user
-
-from slugify import slugify
-from sqlalchemy.exc import IntegrityError
-from sqlalchemy import text
+    get_recipient_language, moderating_communities_ids
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -29,7 +28,7 @@ def join_community(community_id: int, src, auth=None, user_id=None):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
 
-    send_async = not (current_app.debug or src == SRC_WEB)     # False if using a browser
+    send_async = not (current_app.debug or src == SRC_WEB)  # False if using a browser
 
     sync_retval = task_selector('join_community', send_async, user_id=user_id, community_id=community_id, src=src)
 
@@ -91,7 +90,7 @@ def block_community(community_id: int, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect
 
 
 def unblock_community(community_id: int, src, auth=None):
@@ -109,7 +108,7 @@ def unblock_community(community_id: int, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect
 
 
 def invite_with_chat(community_id: int, handle: str, src, auth=None):
@@ -140,7 +139,8 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
             elif recipient.instance.software.lower() == 'lemmy' or recipient.instance.software.lower() == 'mbin':
                 message += f"Join the community by clicking 'Join' at https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain} or if that doesn't work try pasting {community.lemmy_link()} into your search function."
             else:
-                message = render_template('email/invite_to_community.txt', user=user, community=community, host=current_app.config['SERVER_NAME'])
+                message = render_template('email/invite_to_community.txt', user=user, community=community,
+                                          host=current_app.config['SERVER_NAME'])
 
         reply = send_message(message, conversation.id)
 
@@ -159,7 +159,8 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
     if community.banned:
         return 0
 
-    message = render_template('email/invite_to_community.txt', user=user, community=community, host=current_app.config['SERVER_NAME'])
+    message = render_template('email/invite_to_community.txt', user=user, community=community,
+                              host=current_app.config['SERVER_NAME'])
 
     send_email(f"{community.display_name()} on {current_app.config['SERVER_NAME']}",
                f"{user.display_name()} <{current_app.config['MAIL_FROM']}>",
@@ -191,6 +192,9 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         discussion_languages = input.languages.data
         user = current_user
 
+    if user.verified is False or user.private_key is None:
+        raise Exception("You can't create a community until your account is verified.")
+
     # test user with this name doesn't already exist
     ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/u/' + name.lower()
     existing_user = User.query.filter_by(ap_profile_id=ap_profile_id).first()
@@ -203,7 +207,8 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         raise Exception('community with that name already exists')
 
     private_key, public_key = RsaKeys.generate_keypair()
-    community = Community(title=title, name=name, nsfw=nsfw, restricted_to_mods=restricted_to_mods, local_only=local_only,
+    community = Community(title=title, name=name, nsfw=nsfw, restricted_to_mods=restricted_to_mods,
+                          local_only=local_only,
                           private_key=private_key, public_key=public_key,
                           ap_profile_id=ap_profile_id,
                           ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
@@ -287,7 +292,8 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
         if not community.image_id:
             cache.delete_memoized(Community.header_image, community)
             banner_url_changed = True
-        db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'), {'community_id': community.id})
+        db.session.execute(text('DELETE FROM "community_language" WHERE community_id = :community_id'),
+                           {'community_id': community.id})
 
     if icon_url and (from_scratch or icon_url_changed) and is_image_url(icon_url):
         file = File(source_url=icon_url)
@@ -369,8 +375,9 @@ def subscribe_community(community_id: int, subscribe, src, auth=None):
                 else:
                     flash(_(msg))
             else:
-                new_notification = NotificationSubscription(name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
-                                                            user_id=user_id, entity_id=community_id, type=NOTIF_COMMUNITY)
+                new_notification = NotificationSubscription(
+                    name=shorten_string(_('New posts in %(community_name)s', community_name=community.title)),
+                    user_id=user_id, entity_id=community_id, type=NOTIF_COMMUNITY)
                 db.session.add(new_notification)
                 db.session.commit()
 
@@ -457,18 +464,18 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
     # Notify new mod
     if new_moderator.is_local():
-        targets_data = {'gen':'0', 'community_id':community.id}
+        targets_data = {'gen': '0', 'community_id': community.id}
         with force_locale(get_recipient_language(new_moderator.id)):
             notify = Notification(title=gettext('You are now a moderator of %(name)s', name=community.display_name()),
-                                url='/c/' + community.name, user_id=new_moderator.id,
-                                author_id=user.id, notif_type=NOTIF_NEW_MOD,
-                                subtype='new_moderator',
-                                targets=targets_data)
+                                  url='/c/' + community.name, user_id=new_moderator.id,
+                                  author_id=user.id, notif_type=NOTIF_NEW_MOD,
+                                  subtype='new_moderator',
+                                  targets=targets_data)
             new_moderator.unread_notifications += 1
             db.session.add(notify)
             db.session.commit()
     else:
-	      # for remote users, send a chat message to let them know
+        # for remote users, send a chat message to let them know
         existing_conversation = Conversation.find_existing_conversation(recipient=new_moderator,
                                                                         sender=user)
         if not existing_conversation:
@@ -480,17 +487,16 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
         server = current_app.config['SERVER_NAME']
         send_message(f"Hi there. I've added you as a moderator to the community !{community.name}@{server}.",
                      existing_conversation.id, user=user)
-    if src == SRC_WEB:
-        add_to_modlog('add_mod', community_id=community_id, link_text=new_moderator.display_name(),
-                      link=new_moderator.link())
-    else:
-        add_to_modlog_activitypub('add_mod', community_id=community_id, actor=user,
-                                  link_text=new_moderator.display_name(), link=new_moderator.link())
+
+    add_to_modlog('add_mod', actor=user, target_user=new_moderator, community=community, link_text=new_moderator.display_name(),
+                    link=new_moderator.link())
 
     # Flush cache
     cache.delete_memoized(moderating_communities, new_moderator.id)
     cache.delete_memoized(joined_communities, new_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
+    cache.delete_memoized(moderating_communities_ids, new_moderator.id)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 
@@ -513,19 +519,20 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
                                                    CommunityMember.community_id == community_id).first()
     if existing_member:
         existing_member.is_moderator = False
+        existing_member.is_owner = False
         db.session.commit()
     if src == SRC_WEB:
         flash(_('Moderator removed'))
-        add_to_modlog('remove_mod', community_id=community_id, link_text=old_moderator.display_name(),
-                      link=old_moderator.link())
-    else:
-        add_to_modlog_activitypub('remove_mod', community_id=community_id, actor=user,
-                                  link_text=old_moderator.display_name(), link=old_moderator.link())
+
+    add_to_modlog('remove_mod', actor=user, target_user=old_moderator, community=community, link_text=old_moderator.display_name(),
+                    link=old_moderator.link())
 
     # Flush cache
     cache.delete_memoized(moderating_communities, old_moderator.id)
     cache.delete_memoized(joined_communities, old_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
+    cache.delete_memoized(moderating_communities_ids, old_moderator.id)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 

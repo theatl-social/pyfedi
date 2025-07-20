@@ -1,20 +1,24 @@
-from app import db, cache
-from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, array_of_integers_expected
-from app.community.util import search_for_community
-from app.utils import authorise_api_user
-from app.constants import *
-from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
-     NotificationSubscription, Post
-from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, remove_mod_from_community
-from app.shared.tasks import task_selector
-from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
-     joined_communities, moderating_communities
-
 from datetime import datetime
+
 from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import desc, or_
+
+from app import db, cache
+from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
+    array_of_integers_expected
+from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
+from app.community.util import search_for_community
+from app.constants import *
+from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
+    NotificationSubscription, Post
+from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
+    edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
+    remove_mod_from_community
+from app.shared.tasks import task_selector
+from app.utils import authorise_api_user
+from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
+    joined_communities, moderating_communities
 
 
 def get_community_list(auth, data):
@@ -35,7 +39,8 @@ def get_community_list(auth, data):
         query = query[1:]
 
     if user_id and type_ == 'Subscribed':
-        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user_id)
+        communities = Community.query.filter_by(banned=False).join(CommunityMember).filter(
+            CommunityMember.user_id == user_id)
     elif type_ == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
     else:
@@ -75,7 +80,7 @@ def get_community_list(auth, data):
 
     communitylist = []
     for community in communities:
-        communitylist.append(community_view(community=community, variant=2, stub=True, user_id=user_id))
+        communitylist.append(community_view(community=community, variant=2, stub=False, user_id=user_id))
     list_json = {
         "communities": communitylist,
         'next_page': str(communities.next_num) if communities.next_num else None
@@ -249,7 +254,7 @@ def get_community_moderate_bans(auth, data):
     # get the page for pagination from the data.page
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
-    
+
     # validate that the user is a mod or owner of the community, or an instance admin
     if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
         raise Exception('incorrect_login')
@@ -264,7 +269,7 @@ def get_community_moderate_bans(auth, data):
     for cb in community_bans:
         ban_json = {}
         ban_json['reason'] = cb.reason
-        ban_json['expiredAt'] = cb.ban_until 
+        ban_json['expiredAt'] = cb.ban_until
         ban_json['community'] = community_view(community, variant=1)
         ban_json['bannedUser'] = user_view(user=cb.user_id, variant=1)
         ban_json['bannedBy'] = user_view(user=cb.banned_by, variant=1)
@@ -275,19 +280,19 @@ def get_community_moderate_bans(auth, data):
     res = {}
     res['items'] = items
     res['next_page'] = str(community_bans.next_num) if community_bans.next_num is not None else None
-    
+
     return res
 
 
 def put_community_moderate_unban(auth, data):
-    required(['community_id','user_id'], data)
+    required(['community_id', 'user_id'], data)
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
 
     # get the user to unban
     user_id = data['user_id']
     blocked = User.query.get(user_id)
-    
+
     # get the community from the data
     community = Community.query.filter_by(id=data['community_id']).one()
 
@@ -306,47 +311,49 @@ def put_community_moderate_unban(auth, data):
     # build the response before deleting the record in the db
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until 
+    res['expiredAt'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
     res['bannedUser'] = user_view(user=cb.user_id, variant=1)
     res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = True
 
     # unban in the db
-    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id, CommunityBan.user_id == blocked.id).delete()
+    db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id,
+                                          CommunityBan.user_id == blocked.id).delete()
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
         community_membership_record.is_banned = False
     db.session.commit()
 
     # federate the unban
-    task_selector('unban_from_community', user_id=user_id, mod_id=user.id, community_id=community.id, expiry=res['expiredAt'], reason=res['reason'])
+    task_selector('unban_from_community', user_id=user_id, mod_id=user.id, community_id=community.id,
+                  expiry=res['expiredAt'], reason=res['reason'])
 
     # notify the unbanned user if they are local to this instance
     if blocked.is_local():
         # Notify unbanned person
-        targets_data = {'gen':'0', 'community_id': community.id}
+        targets_data = {'gen': '0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been unbanned from ' + community.display_name()),
-                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id, 
+                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
                               author_id=user.id, notif_type=NOTIF_UNBAN,
                               subtype='user_unbanned_from_community',
                               targets=targets_data)
         db.session.add(notify)
-        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
-            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+        if not current_app.debug:  # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1  # who pressed 'Re-submit this activity'.
 
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
         cache.delete_memoized(joined_communities, blocked.id)
-        cache.delete_memoized(moderating_communities, blocked.id)    
+        cache.delete_memoized(moderating_communities, blocked.id)
 
-    # return the res{} json
-    return res 
+        # return the res{} json
+    return res
 
 
-def post_community_moderate_ban(auth,data):
-    required(['community_id','user_id','reason','expiredAt'], data)
+def post_community_moderate_ban(auth, data):
+    required(['community_id', 'user_id', 'reason', 'expiredAt'], data)
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
     string_expected(['reason'], data)
@@ -369,14 +376,14 @@ def post_community_moderate_ban(auth,data):
         raise Exception('Community not local to this instance.')
 
     # get the ban_until time if it exists, if not default to one year
-    if isinstance(data['expiredAt'],str):
-        ban_until = datetime.strptime(data['expiredAt'],'%Y-%m-%dT%H:%M:%S')
-    else: 
+    if isinstance(data['expiredAt'], str):
+        ban_until = datetime.strptime(data['expiredAt'], '%Y-%m-%dT%H:%M:%S')
+    else:
         ban_until = datetime.now() + relativedelta(years=1)
 
     # create the community ban
-    cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id, 
-                      reason=data['reason'],ban_until=ban_until)
+    cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
+                      reason=data['reason'], ban_until=ban_until)
     db.session.add(cb)
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
@@ -384,25 +391,27 @@ def post_community_moderate_ban(auth,data):
     db.session.commit()
 
     # federate the ban
-    task_selector('ban_from_community', user_id=user_id, mod_id=blocker.id, community_id=community.id, expiry=ban_until, reason=data['reason'])
+    task_selector('ban_from_community', user_id=user_id, mod_id=blocker.id, community_id=community.id, expiry=ban_until,
+                  reason=data['reason'])
 
     if blocked.is_local():
-        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id, CommunityJoinRequest.user_id == blocked.id).delete()
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.community_id == community.id,
+                                                      CommunityJoinRequest.user_id == blocked.id).delete()
 
         # Notify banned person
-        targets_data = {'gen':'0', 'community_id': community.id}
+        targets_data = {'gen': '0', 'community_id': community.id}
         notify = Notification(title=shorten_string('You have been banned from ' + community.title),
-                                url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
-                                author_id=blocker.id, notif_type=NOTIF_BAN, subtype='user_banned_from_community',
-                                targets=targets_data)
+                              url=f'/chat/ban_from_mod/{blocked.id}/{community.id}', user_id=blocked.id,
+                              author_id=blocker.id, notif_type=NOTIF_BAN, subtype='user_banned_from_community',
+                              targets=targets_data)
         db.session.add(notify)
-        if not current_app.debug:                           # user.unread_notifications += 1 hangs app if 'user' is the same person
-            blocked.unread_notifications += 1               # who pressed 'Re-submit this activity'.
+        if not current_app.debug:  # user.unread_notifications += 1 hangs app if 'user' is the same person
+            blocked.unread_notifications += 1  # who pressed 'Re-submit this activity'.
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
-                                                            NotificationSubscription.user_id == blocked.id,
-                                                            NotificationSubscription.type == NOTIF_COMMUNITY).delete()
+                                                          NotificationSubscription.user_id == blocked.id,
+                                                          NotificationSubscription.type == NOTIF_COMMUNITY).delete()
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
@@ -412,18 +421,18 @@ def post_community_moderate_ban(auth,data):
     # build the response
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until 
+    res['expiredAt'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
     res['bannedUser'] = user_view(user=cb.user_id, variant=1)
     res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = False
-    
+
     # return the res{} json
-    return res 
+    return res
 
 
 def post_community_moderate_post_nsfw(auth, data):
-    required(['post_id','nsfw_status'], data)
+    required(['post_id', 'nsfw_status'], data)
     integer_expected(['post_id'], data)
     boolean_expected(['nsfw_status'], data)
 
@@ -471,4 +480,3 @@ def post_community_mod(auth, data):
         'moderators': cached_modlist_for_community(community_id)
     }
     return community_json
-

@@ -1,29 +1,35 @@
+import json as python_json
+import os
+import re
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
-from random import randint
 from io import BytesIO
 
 from feedgen.feed import FeedGenerator
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, json, g, send_file
-from flask_login import logout_user, current_user
+from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, json, g, send_file
 from flask_babel import _, lazy_gettext as _l
+from flask_login import logout_user, current_user
+from sqlalchemy import desc, or_, text, asc
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery
-from app.activitypub.signature import post_request, default_context, send_post_request
+from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
 from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
 from app.constants import *
 from app.email import send_verification_email
+from app.ldap_utils import sync_user_to_ldap
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
     UserExtraField, Feed, FeedMember, IpBan
+from app.shared.site import block_remote_instance
+from app.shared.user import subscribe_user
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
-from app.ldap_utils import sync_user_to_ldap
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, theme_list, \
@@ -31,13 +37,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-    recently_downvoted_post_replies, reported_posts, user_notes, login_required
-from sqlalchemy import desc, or_, text, asc
-from sqlalchemy.orm.exc import NoResultFound
-import os
-import json as python_json
-from app.shared.user import subscribe_user
-from app.shared.site import block_remote_instance
+    recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
+    moderating_communities_ids, is_valid_xml_utf8
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -56,7 +57,7 @@ def show_profile_by_id(user_id):
 def _get_user_posts(user, post_page):
     """Get posts for a user based on current user's permissions."""
     base_query = Post.query.filter_by(user_id=user.id)
-    
+
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
         return base_query.order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
@@ -67,19 +68,21 @@ def _get_user_posts(user, post_page):
         ).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
     else:
         # Everyone else sees only public, non-deleted posts
-        return base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        return base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(
+            desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
 
 
 def _get_user_post_replies(user, replies_page):
     """Get post replies for a user based on current user's permissions."""
     base_query = PostReply.query.filter_by(user_id=user.id)
-    
+
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
         return base_query.order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
     elif current_user.is_authenticated and current_user.id == user.id:
         # Users see their own replies including soft-deleted ones they deleted
-        return base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+        return base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(
+            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
     else:
         # Everyone else sees only non-deleted replies
         return base_query.filter(PostReply.deleted == False).order_by(
@@ -88,8 +91,6 @@ def _get_user_post_replies(user, replies_page):
 
 def _get_user_posts_and_replies(user, page):
     """Get list of posts and replies in reverse chronological order based on current user's permissions"""
-    engine = db.session.get_bind()
-    connection = engine.connect()
     returned_list = []
     user_id = user.id
     per_page = 20
@@ -110,45 +111,48 @@ def _get_user_posts_and_replies(user, page):
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
 
     full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
-    query_result = connection.execute(text(full_query))
+    query_result = db.session.execute(text(full_query))
 
     for row in query_result:
         if row.type == "post":
             returned_list.append(Post.query.get(row.id))
         elif row.type == "reply":
             returned_list.append(PostReply.query.get(row.id))
-    
+
     if len(returned_list) > per_page:
         next_page = True
         returned_list = returned_list[:-1]
-    
+
     return (returned_list, next_page)
 
 
 def _get_user_moderates(user):
     """Get communities moderated by user."""
 
-    moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).\
+    moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(
+        CommunityMember.user_id == user.id). \
         filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
-    
+
     # Hide private mod communities unless user is admin or viewing their own profile
     if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
         moderates = moderates.filter(Community.private_mods == False)
-    
+
     return moderates.all()
 
 
 def _get_user_upvoted_posts(user):
     """Get posts upvoted by user (only for user themselves or admins)."""
     if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
-        return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id).\
+        return Post.query.join(PostVote, PostVote.post_id == Post.id).filter(PostVote.effect > 0, PostVote.user_id == user.id). \
             order_by(desc(PostVote.created_at)).limit(10).all()
     return []
 
 
 def _get_user_subscribed_communities(user):
     """Get communities subscribed to by user."""
-    if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_staff() or current_user.is_admin() or user.show_subscribed_communities):
+    if current_user.is_authenticated and (user.id == current_user.get_id()
+                                          or current_user.is_staff() or current_user.is_admin()
+                                          or user.show_subscribed_communities):
         return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
     return []
 
@@ -178,8 +182,8 @@ def show_profile(user):
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
     description = shorten_string(markdown_to_text(user.about), 150) if user.about else None
-    user.recalculate_post_stats()
     if current_user.is_authenticated and current_user.is_admin_or_staff():
+        user.recalculate_post_stats()
         user.recalculate_attitude()
     db.session.commit()
 
@@ -192,27 +196,33 @@ def show_profile(user):
 
     # pagination urls
     post_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                       post_page=posts.next_num) if posts.has_next else None
+                            post_page=posts.next_num) if posts.has_next else None
     post_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                       post_page=posts.prev_num) if posts.has_prev and post_page != 1 else None
-    replies_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                       replies_page=post_replies.next_num) if post_replies.has_next else None
-    replies_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                       replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
-    overview_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                        overview_page=overview_page + 1) if overview_has_next_page else None
-    overview_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                        overview_page=overview_page - 1) if overview_page != 1 else None
+                            post_page=posts.prev_num) if posts.has_prev and post_page != 1 else None
+    replies_next_url = url_for('activitypub.user_profile',
+                               actor=user.ap_id if user.ap_id is not None else user.user_name,
+                               replies_page=post_replies.next_num) if post_replies.has_next else None
+    replies_prev_url = url_for('activitypub.user_profile',
+                               actor=user.ap_id if user.ap_id is not None else user.user_name,
+                               replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+    overview_next_url = url_for('activitypub.user_profile',
+                                actor=user.ap_id if user.ap_id is not None else user.user_name,
+                                overview_page=overview_page + 1) if overview_has_next_page else None
+    overview_prev_url = url_for('activitypub.user_profile',
+                                actor=user.ap_id if user.ap_id is not None else user.user_name,
+                                overview_page=overview_page - 1) if overview_page != 1 else None
 
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
-                                                                                   user_name=user.user_name),
+                                                                             user_name=user.user_name),
                            description=description, subscribed=subscribed, upvoted=upvoted, disable_voting=True,
                            user_notes=user_notes(current_user.get_id()),
                            post_next_url=post_next_url, post_prev_url=post_prev_url,
                            replies_next_url=replies_next_url, replies_prev_url=replies_prev_url,
-                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True, show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
+                           noindex=not user.indexable, show_post_community=True, hide_vote_buttons=True,
+                           show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
@@ -236,16 +246,18 @@ def edit_profile(actor):
         current_user.title = form.title.data.strip()
         current_user.email = form.email.data.strip()
         # Email address has changed - request verification of new address
-        if form.email.data.strip() != old_email:
+        if form.email.data.strip() != old_email and get_setting('email_verification', True):
             current_user.verified = False
             verification_token = random_token(16)
             current_user.verification_token = verification_token
             send_verification_email(current_user)
-            flash(_('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'), 'warning')
+            flash(_('You have changed your email address so we need to verify it. Please check your email inbox for a verification link.'),
+                  'warning')
         current_user.email = form.email.data.strip()
         password_updated = False
-        if form.password_field.data.strip() != '':
-            current_user.set_password(form.password_field.data)
+        if form.password.data.strip() != '':
+            current_user.set_password(form.password.data)
+            current_user.password_updated_at = utcnow()
             password_updated = True
         current_user.about = piefed_markdown_to_lemmy_markdown(form.about.data)
         current_user.about_html = markdown_to_html(form.about.data)
@@ -253,13 +265,17 @@ def edit_profile(actor):
         current_user.extra_fields = []
         current_user.timezone = form.timezone.data
         if form.extra_label_1.data.strip() != '' and form.extra_text_1.data.strip() != '':
-            current_user.extra_fields.append(UserExtraField(label=form.extra_label_1.data.strip(), text=form.extra_text_1.data.strip()))
+            current_user.extra_fields.append(
+                UserExtraField(label=form.extra_label_1.data.strip(), text=form.extra_text_1.data.strip()))
         if form.extra_label_2.data.strip() != '' and form.extra_text_2.data.strip() != '':
-            current_user.extra_fields.append(UserExtraField(label=form.extra_label_2.data.strip(), text=form.extra_text_2.data.strip()))
+            current_user.extra_fields.append(
+                UserExtraField(label=form.extra_label_2.data.strip(), text=form.extra_text_2.data.strip()))
         if form.extra_label_3.data.strip() != '' and form.extra_text_3.data.strip() != '':
-            current_user.extra_fields.append(UserExtraField(label=form.extra_label_3.data.strip(), text=form.extra_text_3.data.strip()))
+            current_user.extra_fields.append(
+                UserExtraField(label=form.extra_label_3.data.strip(), text=form.extra_text_3.data.strip()))
         if form.extra_label_4.data.strip() != '' and form.extra_text_4.data.strip() != '':
-            current_user.extra_fields.append(UserExtraField(label=form.extra_label_4.data.strip(), text=form.extra_text_4.data.strip()))
+            current_user.extra_fields.append(
+                UserExtraField(label=form.extra_label_4.data.strip(), text=form.extra_text_4.data.strip()))
         current_user.bot = form.bot.data
         profile_file = request.files['profile_file']
         if profile_file and profile_file.filename != '':
@@ -294,7 +310,7 @@ def edit_profile(actor):
         # Sync to LDAP if password was provided
         if password_updated:
             try:
-                sync_user_to_ldap(current_user.user_name, current_user.email, form.password_field.data.strip())
+                sync_user_to_ldap(current_user.user_name, current_user.email, form.password.data.strip())
             except Exception as e:
                 # Log error but don't fail the profile update
                 current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
@@ -306,6 +322,7 @@ def edit_profile(actor):
         form.title.data = current_user.title
         form.email.data = current_user.email
         form.about.data = current_user.about
+        form.timezone.data = current_user.timezone
         i = 1
         for extra_field in current_user.extra_fields:
             getattr(form, f"extra_label_{i}").data = extra_field.label
@@ -313,7 +330,7 @@ def edit_profile(actor):
             i += 1
         form.matrixuserid.data = current_user.matrix_user_id
         form.bot.data = current_user.bot
-        form.password_field.data = ''
+        form.password.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
                            markdown_editor=current_user.markdown_editor, delete_form=delete_form,
@@ -351,145 +368,145 @@ def remove_cover():
 
 # export settings function. used in the /user/settings for a user to export their own settings
 def export_user_settings(user):
-        # make the empty dict
-        user_dict = {}
+    # make the empty dict
+    user_dict = {}
 
-        # take the current_user already found
-        # add user's settings to the dict for output
-        # arranged to match the lemmy settings output order
-        user_dict['display_name'] = user.title
-        user_dict['bio'] = user.about
-        if user.avatar_image() != '':
-            user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
-        if user.cover_image() != '':
-            user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        user_dict['matrix_id'] = user.matrix_user_id
-        user_dict['bot_account'] = user.bot
-        if user.hide_nsfw == 1:
-            lemmy_show_nsfw = False
+    # take the current_user already found
+    # add user's settings to the dict for output
+    # arranged to match the lemmy settings output order
+    user_dict['display_name'] = user.title
+    user_dict['bio'] = user.about
+    if user.avatar_image() != '':
+        user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+    if user.cover_image() != '':
+        user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+    user_dict['matrix_id'] = user.matrix_user_id
+    user_dict['bot_account'] = user.bot
+    if user.hide_nsfw == 1:
+        lemmy_show_nsfw = False
+    else:
+        lemmy_show_nsfw = True
+    if user.ignore_bots == 1:
+        lemmy_show_bot_accounts = False
+    else:
+        lemmy_show_bot_accounts = True
+    user_dict['settings'] = {
+        "email": f"{user.email}",
+        "show_nsfw": lemmy_show_nsfw,
+        "theme": user.theme,
+        "default_sort_type": f'{user.default_sort}'.capitalize(),
+        "default_listing_type": f'{user.default_filter}'.capitalize(),
+        "interface_language": user.interface_language,
+        "show_bot_accounts": lemmy_show_bot_accounts,
+        # the below items are needed for lemmy to do the import
+        # the "id" and "person_id" are just set to 42
+        # as they expect an int, but it does not override the
+        # existing user's "id"  and "public_id"
+        "id": 42,
+        "person_id": 42,
+        "show_avatars": True,
+        "send_notifications_to_email": False,
+        "show_scores": True,
+        "show_read_posts": True,
+        "email_verified": False,
+        "accepted_application": True,
+        "open_links_in_new_tab": False,
+        "blur_nsfw": True,
+        "auto_expand": False,
+        "infinite_scroll_enabled": False,
+        "admin": False,
+        "post_listing_mode": "List",
+        "totp_2fa_enabled": False,
+        "enable_keyboard_navigation": False,
+        "enable_animated_images": True,
+        "collapse_bot_comments": False
+
+    }
+    # get the user subscribed communities' ap_profile_id
+    user_subscribed_communities = []
+    for c in user.communities():
+        if c.ap_profile_id is None:
+            continue
         else:
-            lemmy_show_nsfw = True
-        if user.ignore_bots == 1:
-            lemmy_show_bot_accounts = False
-        else:
-            lemmy_show_bot_accounts = True
-        user_dict['settings'] = {
-            "email": f"{user.email}",
-            "show_nsfw": lemmy_show_nsfw,
-            "theme": user.theme,
-            "default_sort_type": f'{user.default_sort}'.capitalize(),
-            "default_listing_type": f'{user.default_filter}'.capitalize(),
-            "interface_language": user.interface_language,
-            "show_bot_accounts": lemmy_show_bot_accounts,
-            # the below items are needed for lemmy to do the import
-            # the "id" and "person_id" are just set to 42
-            # as they expect an int, but it does not override the
-            # existing user's "id"  and "public_id"
-            "id": 42,
-            "person_id": 42,
-            "show_avatars": True,
-            "send_notifications_to_email": False,
-            "show_scores": True,
-            "show_read_posts": True,
-            "email_verified": False,
-            "accepted_application": True,
-            "open_links_in_new_tab": False,
-            "blur_nsfw": True,
-            "auto_expand": False,
-            "infinite_scroll_enabled": False,
-            "admin": False,
-            "post_listing_mode": "List",
-            "totp_2fa_enabled": False,
-            "enable_keyboard_navigation": False,
-            "enable_animated_images": True,
-            "collapse_bot_comments": False
+            user_subscribed_communities.append(c.ap_profile_id)
+    user_dict['followed_communities'] = user_subscribed_communities
 
-        }
-        # get the user subscribed communities' ap_profile_id
-        user_subscribed_communities = []
-        for c in user.communities():
-            if c.ap_profile_id is None:
-                continue
-            else:
-                user_subscribed_communities.append(c.ap_profile_id)
-        user_dict['followed_communities'] = user_subscribed_communities
+    # get bookmarked/saved posts
+    bookmarked_posts = []
+    post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()
+    for pb in post_bookmarks:
+        p = Post.query.filter_by(id=pb.post_id).first()
+        bookmarked_posts.append(p.ap_id)
+    user_dict['saved_posts'] = bookmarked_posts
 
-        # get bookmarked/saved posts
-        bookmarked_posts = []
-        post_bookmarks = PostBookmark.query.filter_by(user_id=user.id).all()        
-        for pb in post_bookmarks:
-            p = Post.query.filter_by(id=pb.post_id).first()
-            bookmarked_posts.append(p.ap_id)
-        user_dict['saved_posts'] = bookmarked_posts
+    # get bookmarked/saved comments
+    saved_comments = []
+    post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
+    for prb in post_reply_bookmarks:
+        pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
+        saved_comments.append(pr.ap_id)
+    user_dict['saved_comments'] = saved_comments
 
-        # get bookmarked/saved comments
-        saved_comments = []
-        post_reply_bookmarks = PostReplyBookmark.query.filter_by(user_id=user.id).all()
-        for prb in post_reply_bookmarks:
-            pr = PostReply.query.filter_by(id=prb.post_reply_id).first()
-            saved_comments.append(pr.ap_id)
-        user_dict['saved_comments'] = saved_comments
+    # get blocked communities
+    blocked_communities = []
+    community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
+    for cb in community_blocks:
+        c = Community.query.filter_by(id=cb.community_id).first()
+        blocked_communities.append(c.ap_public_url)
+    user_dict['blocked_communities'] = blocked_communities
 
-        # get blocked communities
-        blocked_communities = []
-        community_blocks = CommunityBlock.query.filter_by(user_id=user.id).all()
-        for cb in community_blocks:
-            c = Community.query.filter_by(id=cb.community_id).first()
-            blocked_communities.append(c.ap_public_url)
-        user_dict['blocked_communities'] = blocked_communities
+    # get blocked users
+    blocked_users = []
+    user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
+    for ub in user_blocks:
+        blocked_user = User.query.filter_by(id=ub.blocked_id).first()
+        blocked_users.append(blocked_user.ap_public_url)
+    user_dict['blocked_users'] = blocked_users
 
-        # get blocked users
-        blocked_users = []
-        user_blocks = UserBlock.query.filter_by(blocker_id=user.id).all()
-        for ub in user_blocks:
-            blocked_user = User.query.filter_by(id=ub.blocked_id).first()
-            blocked_users.append(blocked_user.ap_public_url)
-        user_dict['blocked_users'] = blocked_users
+    # get blocked instances
+    blocked_instances = []
+    instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
+    for ib in instance_blocks:
+        i = Instance.query.filter_by(id=ib.instance_id).first()
+        blocked_instances.append(i.domain)
+    user_dict['blocked_instances'] = blocked_instances
 
-        # get blocked instances
-        blocked_instances = []
-        instance_blocks = InstanceBlock.query.filter_by(user_id=user.id).all()
-        for ib in instance_blocks:
-            i = Instance.query.filter_by(id=ib.instance_id).first()
-            blocked_instances.append(i.domain)
-        user_dict['blocked_instances'] = blocked_instances
+    # piefed versions of (most of) the same settings
+    # TO-DO: adjust the piefed side import method to just take the doubled
+    # settings from the lemmy formatted output. Then remove the duplicate
+    # items here.
+    user_dict['user_name'] = user.user_name
+    user_dict['title'] = user.title
+    user_dict['email'] = user.email
+    user_dict['about'] = user.about
+    user_dict['about_html'] = user.about_html
+    user_dict['keywords'] = user.keywords
+    user_dict['matrix_user_id'] = user.matrix_user_id
+    user_dict['hide_nsfw'] = user.hide_nsfw
+    user_dict['hide_nsfl'] = user.hide_nsfl
+    user_dict['receive_message_mode'] = user.receive_message_mode
+    user_dict['bot'] = user.bot
+    user_dict['ignore_bots'] = user.ignore_bots
+    user_dict['default_sort'] = user.default_sort
+    user_dict['default_filter'] = user.default_filter
+    user_dict['theme'] = user.theme
+    user_dict['markdown_editor'] = user.markdown_editor
+    user_dict['interface_language'] = user.interface_language
+    user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
+    if user.avatar_image() != '':
+        user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+    if user.cover_image() != '':
+        user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+    user_dict['user_blocks'] = blocked_users
 
-        # piefed versions of (most of) the same settings
-        # TO-DO: adjust the piefed side import method to just take the doubled
-        # settings from the lemmy formatted output. Then remove the duplicate
-        # items here.
-        user_dict['user_name'] = user.user_name
-        user_dict['title'] = user.title
-        user_dict['email'] = user.email
-        user_dict['about'] = user.about
-        user_dict['about_html'] = user.about_html
-        user_dict['keywords'] = user.keywords
-        user_dict['matrix_user_id'] = user.matrix_user_id
-        user_dict['hide_nsfw'] = user.hide_nsfw
-        user_dict['hide_nsfl'] = user.hide_nsfl
-        user_dict['receive_message_mode'] = user.receive_message_mode
-        user_dict['bot'] = user.bot
-        user_dict['ignore_bots'] = user.ignore_bots
-        user_dict['default_sort'] = user.default_sort
-        user_dict['default_filter'] = user.default_filter
-        user_dict['theme'] = user.theme
-        user_dict['markdown_editor'] = user.markdown_editor
-        user_dict['interface_language'] = user.interface_language
-        user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
-        if user.avatar_image() != '':
-            user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
-        if user.cover_image() != '':
-            user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        user_dict['user_blocks'] = blocked_users
+    # setup the BytesIO buffer
+    buffer = BytesIO()
+    buffer.write(str(python_json.dumps(user_dict)).encode('utf-8'))
+    buffer.seek(0)
 
-        # setup the BytesIO buffer
-        buffer = BytesIO()
-        buffer.write(str(python_json.dumps(user_dict)).encode('utf-8'))
-        buffer.seek(0)
-        
-        # pass the buffer back to the calling function, so it can be given to the 
-        # user for downloading
-        return buffer
+    # pass the buffer back to the calling function, so it can be given to the
+    # user for downloading
+    return buffer
 
 
 @bp.route('/user/settings', methods=['GET', 'POST'])
@@ -518,6 +535,7 @@ def user_settings():
         current_user.indexable = form.indexable.data
         current_user.hide_read_posts = form.hide_read_posts.data
         current_user.default_sort = form.default_sort.data
+        current_user.default_comment_sort = form.default_comment_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
         current_user.email_unread = form.email_unread.data
@@ -543,6 +561,8 @@ def user_settings():
 
         resp = make_response(redirect(url_for('user.user_settings')))
         resp.set_cookie('compact_level', form.compaction.data, expires=datetime(year=2099, month=12, day=30))
+        resp.set_cookie('low_bandwidth', '1' if form.low_bandwidth_mode.data else '0',
+                        expires=datetime(year=2099, month=12, day=30))
         return resp
 
     elif request.method == 'GET':
@@ -550,11 +570,13 @@ def user_settings():
         form.email_unread.data = current_user.email_unread
         form.searchable.data = current_user.searchable
         form.indexable.data = current_user.indexable
-        form.hide_read_posts.data =  current_user.hide_read_posts
+        form.hide_read_posts.data = current_user.hide_read_posts
         form.default_sort.data = current_user.default_sort
+        form.default_comment_sort.data = current_user.default_comment_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
+        form.low_bandwidth_mode.data = request.cookies.get('low_bandwidth', '0') == '1'
         form.interface_language.data = current_user.interface_language
         form.federate_votes.data = not current_user.vote_privately
         form.feed_auto_follow.data = current_user.feed_auto_follow
@@ -566,8 +588,47 @@ def user_settings():
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
 
-    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
-                           )
+    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user)
+
+
+@bp.route('/user/connect_oauth', methods=['GET', 'POST'])
+@login_required
+def connect_oauth():
+    user = User.query.filter_by(id=current_user.id, deleted=False, banned=False, ap_id=None).first()
+    if user is None:
+        abort(404)
+
+    # Check if any OAuth providers are connected
+    oauth_connections = {
+        'google': user.google_oauth_id is not None,
+        'discord': user.discord_oauth_id is not None,
+        'mastodon': user.mastodon_oauth_id is not None
+    }
+
+    oauth_providers = {
+        'google': current_app.config["GOOGLE_OAUTH_CLIENT_ID"] != '',
+        'mastodon': current_app.config["MASTODON_OAUTH_CLIENT_ID"] != '',
+        'discord': current_app.config["DISCORD_OAUTH_CLIENT_ID"] != ''
+    }
+
+    # Handle disconnect requests
+    if request.method == 'POST':
+        provider = request.form.get('disconnect_provider')
+        if provider in oauth_connections:
+            if provider == 'google':
+                user.google_oauth_id = None
+            elif provider == 'discord':
+                user.discord_oauth_id = None
+            elif provider == 'mastodon':
+                user.mastodon_oauth_id = None
+
+            db.session.commit()
+            flash(_('Your %(provider)s account has been disconnected.', provider=provider.capitalize()), 'success')
+            return redirect(url_for('user.connect_oauth'))
+
+    return render_template('user/connect_oauth.html', title=_('Connect OAuth'), user=user,
+                           oauth_providers=oauth_providers,
+                           oauth_connections=oauth_connections)
 
 
 @bp.route('/user/settings/import_export', methods=['GET', 'POST'])
@@ -672,9 +733,9 @@ def ban_profile(actor):
                             db.session.commit()
                         flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
-                    add_to_modlog('delete_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                    add_to_modlog('delete_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
                 else:
-                    add_to_modlog('ban_user', reason=form.reason.data, link_text=user.display_name(), link=user.link())
+                    add_to_modlog('ban_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
 
                     if user.is_instance_admin():
                         flash(_('Banned user was a remote instance admin.'), 'warning')
@@ -707,8 +768,6 @@ def ban_profile(actor):
         abort(401)
 
 
-
-
 @bp.route('/u/<actor>/unban', methods=['POST'])
 @login_required
 def unban_profile(actor):
@@ -726,7 +785,7 @@ def unban_profile(actor):
             user.banned = False
             db.session.commit()
 
-            add_to_modlog('unban_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
             flash(_('%(actor)s has been unbanned.', actor=actor))
     else:
@@ -757,8 +816,9 @@ def block_profile(actor):
         if not existing_block:
             block = UserBlock(blocker_id=current_user.id, blocked_id=user.id)
             db.session.add(block)
-            db.session.execute(text('DELETE FROM "notification_subscription" WHERE entity_id = :current_user AND user_id = :user_id'),
-                               {'current_user': current_user.id, 'user_id': user.id})
+            db.session.execute(
+                text('DELETE FROM "notification_subscription" WHERE entity_id = :current_user AND user_id = :user_id'),
+                {'current_user': current_user.id, 'user_id': user.id})
             db.session.commit()
 
         if not user.is_local():
@@ -767,7 +827,7 @@ def block_profile(actor):
 
         flash(_('%(actor)s has been blocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
-    
+
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
@@ -776,7 +836,7 @@ def block_profile(actor):
             resp.headers['HX-Redirect'] = curr_url
         else:
             resp.headers['HX-Redirect'] = url_for("main.index")
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -803,7 +863,7 @@ def user_block_instance(actor):
             resp.headers["HX-Redirect"] = url_for("main.index")
         else:
             resp.headers["HX-Redirect"] = curr_url
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -838,12 +898,12 @@ def unblock_profile(actor):
 
         flash(_('%(actor)s has been unblocked.', actor=actor))
         cache.delete_memoized(blocked_users, current_user.id)
-    
+
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
         resp.headers['HX-Redirect'] = curr_url
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
@@ -860,7 +920,8 @@ def report_profile(actor):
     form = ReportUserForm()
 
     if user and user.reports == -1:  # When a mod decides to ignore future reports, user.reports is set to -1
-        flash(_('Moderators have already assessed reports regarding this person, no further reports are necessary.'), 'warning')
+        flash(_('Moderators have already assessed reports regarding this person, no further reports are necessary.'),
+              'warning')
 
     if user and not user.banned:
         if form.validate_on_submit():
@@ -870,21 +931,25 @@ def report_profile(actor):
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
+            source_instance = Instance.query.get(user.instance_id)
+            targets_data = {'gen': '0',
+                            'suspect_user_id': user.id,
+                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'source_instance_id': user.instance_id,
+                            'source_instance_domain': source_instance.domain,
+                            'reporter_id': current_user.id,
+                            'reporter_user_name': current_user.user_name
+                            }
             report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, source_instance_id=1)
+                            type=0, reporter_id=current_user.id, suspect_user_id=user.id, 
+                            source_instance_id=1, targets=targets_data)
             db.session.add(report)
 
             # Notify site admin
             already_notified = set()
-            targets_data = {'gen':'0',
-                            'suspect_user_id': user.id,
-                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
-                            'reporter_id':current_user.id,
-                            'reporter_user_name':current_user.user_name
-                            }
             for admin in Site.admins():
                 if admin.id not in already_notified:
-                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id, 
+                    notify = Notification(title='Reported user', url='/admin/reports', user_id=admin.id,
                                           author_id=current_user.id, notif_type=NOTIF_REPORT,
                                           subtype='user_reported',
                                           targets=targets_data)
@@ -911,7 +976,7 @@ def report_profile(actor):
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user:User = User.query.filter_by(user_name=actor, deleted=False).first()
+        user: User = User.query.filter_by(user_name=actor, deleted=False).first()
         if user is None:
             user = User.query.filter_by(ap_id=actor, deleted=False).first()
             if user is None:
@@ -928,7 +993,7 @@ def delete_profile(actor):
             user.delete_dependencies()
             db.session.commit()
 
-            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
             if user.is_instance_admin():
                 flash(_('Deleted user was a remote instance admin.'), 'warning')
@@ -952,7 +1017,7 @@ def user_community_unblock(community_id):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
         flash(_('%(community_name)s has been unblocked.', community_name=community.display_name()))
-    
+
     if request.headers.get('HX-Request'):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
@@ -961,7 +1026,7 @@ def user_community_unblock(community_id):
             resp.headers['HX-Redirect'] = curr_url
         else:
             resp.headers['HX-Redirect'] = url_for("main.index")
-        
+
         return resp
 
     goto = request.args.get('redirect') if 'redirect' in request.args else url_for('user.user_settings_filters')
@@ -1028,7 +1093,7 @@ def send_deletion_requests(user_id):
             "type": "Delete"
         }
         for instance in instances:
-            if instance.inbox and instance.online() and instance.id != 1: # instance id 1 is always the current instance
+            if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
                 send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
         user.banned = True
@@ -1065,7 +1130,8 @@ def ban_purge_profile(actor):
             if user.is_local():
                 user.deleted_by = current_user.id
                 purge_user_then_delete(user.id)
-                flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.', actor=actor))
+                flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
+                      actor=actor))
             else:
                 user.deleted = True
                 user.deleted_by = current_user.id
@@ -1074,7 +1140,7 @@ def ban_purge_profile(actor):
                 db.session.commit()
                 flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
 
-            add_to_modlog('delete_user', link_text=user.display_name(), link=user.link())
+            add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
     else:
         abort(401)
@@ -1086,7 +1152,6 @@ def ban_purge_profile(actor):
 @bp.route('/notifications', methods=['GET', 'POST'])
 @login_required
 def notifications():
-
     # Update unread notifications count, just to be sure
     current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
     db.session.commit()
@@ -1097,7 +1162,8 @@ def notifications():
 
     notification_types = defaultdict(int)
     notification_links = defaultdict(set)
-    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(desc(Notification.created_at)).limit(100).all()
+    notification_list = Notification.query.filter_by(user_id=current_user.id).order_by(
+        desc(Notification.created_at)).limit(100).all()
     # Build a list of the types of notifications this person has, by going through all their notifications
     for notification in notification_list:
         has_notifications = True
@@ -1109,8 +1175,9 @@ def notifications():
             notification_links[notif_id_to_string(notification.notif_type)].add(notification.notif_type)
 
     if type_:
-        type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))   # convert '{41, 10}' to a tuple containing 41 and 10
-        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
+        type_ = tuple(int(x.strip()) for x in type_.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
+        notification_list = Notification.query.filter_by(user_id=current_user.id).filter(
+            Notification.notif_type.in_(type_)).order_by(desc(Notification.created_at)).all()
 
     return render_template('user/notifications.html', title=_('Notifications'), notifications=notification_list,
                            notification_types=notification_types, has_notifications=has_notifications,
@@ -1183,11 +1250,14 @@ def notifications_all_read():
     notif_type = request.args.get('type', '')
     original_notif_type = notif_type
     if notif_type == '':
-        db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'), {'user_id': current_user.id})
+        db.session.execute(text('UPDATE notification SET read=true WHERE user_id = :user_id'),
+                           {'user_id': current_user.id})
     else:
-        notif_type = tuple(int(x.strip()) for x in notif_type.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
-        db.session.execute(text('UPDATE notification SET read=true WHERE notif_type IN :notif_type AND user_id = :user_id'),
-                           {'notif_type': notif_type, 'user_id': current_user.id})
+        notif_type = tuple(int(x.strip()) for x in
+                           notif_type.strip('{}').split(','))  # convert '{41, 10}' to a tuple containing 41 and 10
+        db.session.execute(
+            text('UPDATE notification SET read=true WHERE notif_type IN :notif_type AND user_id = :user_id'),
+            {'notif_type': notif_type, 'user_id': current_user.id})
     db.session.commit()
     flash(_('All notifications marked as read.'))
     return redirect(url_for('user.notifications', type=original_notif_type))
@@ -1231,18 +1301,19 @@ def import_settings_task(user_id, filename):
                             db.session.commit()
                         if not community.instance.gone_forever:
                             follow = {
-                              "actor": user.public_url(),
-                              "to": [community.public_url()],
-                              "object": community.public_url(),
-                              "type": "Follow",
-                              "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                                "actor": user.public_url(),
+                                "to": [community.public_url()],
+                                "object": community.public_url(),
+                                "type": "Follow",
+                                "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                             }
                             send_post_request(community.ap_inbox_url, follow, user.private_key,
                                               user.public_url() + '#main-key')
                     else:  # for local communities, joining is instant
                         banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
                         if not banned:
-                            existing_member = CommunityMember.query.filter_by(user_id=user.id, community_id=community.id).first()
+                            existing_member = CommunityMember.query.filter_by(user_id=user.id,
+                                                                              community_id=community.id).first()
                             if not existing_member:
                                 member = CommunityMember(user_id=user.id, community_id=community.id)
                                 db.session.add(member)
@@ -1284,10 +1355,14 @@ def user_settings_filters():
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
+        current_user.community_keyword_filter = form.community_keyword_filter.data
         db.session.commit()
+
+        cache.delete_memoized(filtered_out_communities, current_user)
 
         flash(_('Your changes have been saved.'), 'success')
         return redirect(url_for('user.user_settings_filters'))
+
     elif request.method == 'GET':
         form.ignore_bots.data = current_user.ignore_bots
         form.hide_nsfw.data = current_user.hide_nsfw
@@ -1295,15 +1370,17 @@ def user_settings_filters():
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
         form.hide_low_quality.data = current_user.hide_low_quality
+        form.community_keyword_filter.data = current_user.community_keyword_filter
     filters = Filter.query.filter_by(user_id=current_user.id).order_by(Filter.title).all()
-    blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id).\
+    blocked_users = User.query.filter_by(deleted=False).join(UserBlock, UserBlock.blocked_id == User.id). \
         filter(UserBlock.blocker_id == current_user.id).order_by(User.user_name).all()
-    blocked_communities = Community.query.join(CommunityBlock, CommunityBlock.community_id == Community.id).\
+    blocked_communities = Community.query.join(CommunityBlock, CommunityBlock.community_id == Community.id). \
         filter(CommunityBlock.user_id == current_user.id).order_by(Community.title).all()
-    blocked_domains = Domain.query.join(DomainBlock, DomainBlock.domain_id == Domain.id).\
+    blocked_domains = Domain.query.join(DomainBlock, DomainBlock.domain_id == Domain.id). \
         filter(DomainBlock.user_id == current_user.id).order_by(Domain.name).all()
-    blocked_instances = Instance.query.join(InstanceBlock, InstanceBlock.instance_id == Instance.id).\
+    blocked_instances = Instance.query.join(InstanceBlock, InstanceBlock.instance_id == Instance.id). \
         filter(InstanceBlock.user_id == current_user.id).order_by(Instance.domain).all()
+
     return render_template('user/filters.html', form=form, filters=filters, user=current_user,
                            blocked_users=blocked_users, blocked_communities=blocked_communities,
                            blocked_domains=blocked_domains, blocked_instances=blocked_instances)
@@ -1315,8 +1392,10 @@ def user_settings_filters_add():
     form = KeywordFilterEditForm()
     form.filter_replies.render_kw = {'disabled': True}
     if form.validate_on_submit():
-        content_filter = Filter(title=form.title.data, filter_home=form.filter_home.data, filter_posts=form.filter_posts.data,
-                                filter_replies=form.filter_replies.data, hide_type=form.hide_type.data, keywords=form.keywords.data,
+        content_filter = Filter(title=form.title.data, filter_home=form.filter_home.data,
+                                filter_posts=form.filter_posts.data,
+                                filter_replies=form.filter_replies.data, hide_type=form.hide_type.data,
+                                keywords=form.keywords.data,
                                 expire_after=form.expire_after.data, user_id=current_user.id)
         db.session.add(content_filter)
         db.session.commit()
@@ -1333,7 +1412,6 @@ def user_settings_filters_add():
 @bp.route('/user/settings/filters/<int:filter_id>/edit', methods=['GET', 'POST'])
 @login_required
 def user_settings_filters_edit(filter_id):
-
     content_filter = Filter.query.get_or_404(filter_id)
     if current_user.id != content_filter.user_id:
         abort(401)
@@ -1364,7 +1442,8 @@ def user_settings_filters_edit(filter_id):
         form.keywords.data = content_filter.keywords
         form.expire_after.data = content_filter.expire_after
 
-    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter, user=current_user)
+    return render_template('user/edit_filters.html', title=_('Edit filter'), form=form, content_filter=content_filter,
+                           user=current_user)
 
 
 @bp.route('/user/settings/filters/<int:filter_id>/delete', methods=['POST'])
@@ -1406,7 +1485,8 @@ def user_bookmarks():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).join(PostBookmark, PostBookmark.post_id == Post.id).\
+    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).join(PostBookmark,
+                                                                                               PostBookmark.post_id == Post.id). \
         filter(PostBookmark.user_id == current_user.id).order_by(desc(PostBookmark.created_at))
 
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
@@ -1420,7 +1500,7 @@ def user_bookmarks():
 
     return render_template('user/bookmarks.html', title=_('Bookmarks'), posts=posts, show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            next_url=next_url, prev_url=prev_url)
 
 
@@ -1430,21 +1510,26 @@ def user_bookmarks_comments():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    post_replies = PostReply.query.filter(PostReply.deleted == False).join(PostReplyBookmark, PostReplyBookmark.post_reply_id == PostReply.id).\
+    post_replies = PostReply.query.filter(PostReply.deleted == False).join(PostReplyBookmark,
+                                                                           PostReplyBookmark.post_reply_id == PostReply.id). \
         filter(PostReplyBookmark.user_id == current_user.id).order_by(desc(PostReplyBookmark.created_at))
 
-    post_replies = post_replies.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
-                           error_out=False)
+    post_replies = post_replies.paginate(page=page,
+                                         per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                                         error_out=False)
     next_url = url_for('user.user_bookmarks_comments', page=post_replies.next_num) if post_replies.has_next else None
-    prev_url = url_for('user.user_bookmarks_comments', page=post_replies.prev_num) if post_replies.has_prev and page != 1 else None
+    prev_url = url_for('user.user_bookmarks_comments',
+                       page=post_replies.prev_num) if post_replies.has_prev and page != 1 else None
 
     # Voting history
     recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
     recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
 
-    return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies, show_post_community=True,
+    return render_template('user/bookmarks_comments.html', title=_('Comment bookmarks'), post_replies=post_replies,
+                           show_post_community=True,
                            low_bandwidth=low_bandwidth, user=current_user,
-                            recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies,
+                           recently_upvoted_replies=recently_upvoted_replies,
+                           recently_downvoted_replies=recently_downvoted_replies,
                            next_url=next_url, prev_url=prev_url)
 
 
@@ -1457,89 +1542,97 @@ def user_alerts(type='posts', filter='all'):
 
     if type == 'comments':
         if filter == 'mine':
-            entities = PostReply.query.filter_by(deleted=False, user_id=current_user.id).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
-                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = PostReply.query.filter_by(deleted=False, user_id=current_user.id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         elif filter == 'others':
-            entities = PostReply.query.filter(PostReply.deleted == False, PostReply.user_id != current_user.id).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
-                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
-        else:   # default to 'all' filter
-            entities = PostReply.query.filter_by(deleted=False).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id).\
-                        filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = PostReply.query.filter(PostReply.deleted == False, PostReply.user_id != current_user.id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        else:  # default to 'all' filter
+            entities = PostReply.query.filter_by(deleted=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == PostReply.id). \
+                filter_by(type=NOTIF_REPLY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Reply Alerts')
 
     elif type == 'communities':
         if filter == 'mine':
-            entities = Community.query.\
-                        join(CommunityMember, CommunityMember.community_id == Community.id).\
-                        filter_by(user_id=current_user.id, is_moderator=True).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id).\
-                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = Community.query. \
+                join(CommunityMember, CommunityMember.community_id == Community.id). \
+                filter_by(user_id=current_user.id, is_moderator=True). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(
+                desc(NotificationSubscription.created_at))
         elif filter == 'others':
-            entities = Community.query.\
-                        join(CommunityMember, CommunityMember.community_id == Community.id).\
-                        filter_by(user_id=current_user.id, is_moderator=False).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id).\
-                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
-        else:   # default to 'all' filter
-            entities = Community.query.\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == Community.id).\
-                        filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = Community.query. \
+                join(CommunityMember, CommunityMember.community_id == Community.id). \
+                filter_by(user_id=current_user.id, is_moderator=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == CommunityMember.community_id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(
+                desc(NotificationSubscription.created_at))
+        else:  # default to 'all' filter
+            entities = Community.query. \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Community.id). \
+                filter_by(type=NOTIF_COMMUNITY, user_id=current_user.id).order_by(
+                desc(NotificationSubscription.created_at))
         title = _('Community Alerts')
 
     elif type == 'topics':
         # ignore filter
-        entities = Topic.query.join(NotificationSubscription, NotificationSubscription.entity_id == Topic.id).\
-                        filter_by(type=NOTIF_TOPIC, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        entities = Topic.query.join(NotificationSubscription, NotificationSubscription.entity_id == Topic.id). \
+            filter_by(type=NOTIF_TOPIC, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Topic Alerts')
 
     elif type == 'feeds':
         # ignore filter
-        entities = Feed.query.join(NotificationSubscription, NotificationSubscription.entity_id == Feed.id).\
-                        filter_by(type=NOTIF_FEED, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        entities = Feed.query.join(NotificationSubscription, NotificationSubscription.entity_id == Feed.id). \
+            filter_by(type=NOTIF_FEED, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Feed Alerts')
 
     elif type == 'users':
         # ignore filter
-        entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id).\
-                        filter_by(type=NOTIF_USER, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
+            filter_by(type=NOTIF_USER, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('User Alerts')
 
-    else:   # default to 'posts' type
+    else:  # default to 'posts' type
         if filter == 'mine':
-            entities = Post.query.filter_by(deleted=False, user_id=current_user.id).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
-                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = Post.query.filter_by(deleted=False, user_id=current_user.id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         elif filter == 'others':
-            entities = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.user_id != current_user.id).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
-                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
-        else:   # default to 'all' filter
-            entities = Post.query.filter_by(deleted=False).\
-                        join(NotificationSubscription, NotificationSubscription.entity_id == Post.id).\
-                        filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+            entities = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                         Post.user_id != current_user.id). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        else:  # default to 'all' filter
+            entities = Post.query.filter_by(deleted=False). \
+                join(NotificationSubscription, NotificationSubscription.entity_id == Post.id). \
+                filter_by(type=NOTIF_POST, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
         title = _('Post Alerts')
 
     entities = entities.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
-    next_url = url_for('user.user_alerts', page=entities.next_num, type=type, filter=filter) if entities.has_next else None
-    prev_url = url_for('user.user_alerts', page=entities.prev_num, type=type, filter=filter) if entities.has_prev and page != 1 else None
+    next_url = url_for('user.user_alerts', page=entities.next_num, type=type,
+                       filter=filter) if entities.has_next else None
+    prev_url = url_for('user.user_alerts', page=entities.prev_num, type=type,
+                       filter=filter) if entities.has_prev and page != 1 else None
 
     return render_template('user/alerts.html', title=title, entities=entities,
                            low_bandwidth=low_bandwidth, user=current_user, type=type, filter=filter,
                            next_url=next_url, prev_url=prev_url)
 
+
 @bp.route('/scheduled_posts')
 @login_required
 def user_scheduled_posts(type='posts', filter='all'):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id)
+    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id).all()
     title = _('Scheduled posts')
 
     return render_template('user/scheduled_posts.html', title=title, entities=entities,
                            low_bandwidth=low_bandwidth, user=current_user, site=g.site,
                            )
+
 
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
 def fediverse_redirect(actor):
@@ -1553,7 +1646,8 @@ def fediverse_redirect(actor):
                 redirect_url = f'https://{form.instance_url.data}/@{user.user_name}@{current_app.config["SERVER_NAME"]}'
             elif form.instance_type.data == 'lemmy':
                 flash(_("Lemmy can't follow profiles, sorry"), 'error')
-                return render_template('user/fediverse_redirect.html', form=form, user=user, send_to='', current_app=current_app)
+                return render_template('user/fediverse_redirect.html', form=form, user=user, send_to='',
+                                       current_app=current_app)
             elif form.instance_type.data == 'friendica':
                 redirect_url = f'https://{form.instance_url.data}/search?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
             elif form.instance_type.data == 'hubzilla':
@@ -1562,14 +1656,16 @@ def fediverse_redirect(actor):
                 redirect_url = f'https://{form.instance_url.data}/i/results?q={user.user_name}@{current_app.config["SERVER_NAME"]}'
 
             resp = make_response(redirect(redirect_url))
-            resp.set_cookie('remote_instance_url', form.instance_url.data, expires=datetime(year=2099, month=12, day=30))
+            resp.set_cookie('remote_instance_url', form.instance_url.data,
+                            expires=datetime(year=2099, month=12, day=30))
             return resp
         else:
             send_to = ''
             if request.cookies.get('remote_instance_url'):
                 send_to = request.cookies.get('remote_instance_url')
                 form.instance_url.data = send_to
-            return render_template('user/fediverse_redirect.html', form=form, user=user, send_to=send_to, current_app=current_app)
+            return render_template('user/fediverse_redirect.html', form=form, user=user, send_to=send_to,
+                                   current_app=current_app)
 
 
 @bp.route('/read-posts')
@@ -1598,7 +1694,8 @@ def user_read_posts(sort=None):
     if sort == 'hot':
         posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == 'top':
-        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(desc(Post.up_votes - Post.down_votes))
+        posts = posts.filter(Post.posted_at > utcnow() - timedelta(days=7)).order_by(desc(Post.sticky)).order_by(
+            desc(Post.up_votes - Post.down_votes))
     elif sort == 'new':
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == 'oldest':
@@ -1709,7 +1806,7 @@ def lookup(person, domain):
 
 # ----- user feed related routes
 
-@bp.route('/u/myfeeds', methods=['GET','POST'])
+@bp.route('/u/myfeeds', methods=['GET', 'POST'])
 @login_required
 def user_myfeeds():
     # this will show a user's personal feeds
@@ -1720,17 +1817,19 @@ def user_myfeeds():
 
     # this is for feeds the user is subscribed to
     user_has_feed_subscriptions = False
-    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).all()) > 0:
+    if current_user.is_authenticated and len(Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(
+            FeedMember.user_id == current_user.id).all()) > 0:
         user_has_feed_subscriptions = True
-    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == current_user.id).filter_by(is_owner=False)
-    
+    subbed_feeds = Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(
+        FeedMember.user_id == current_user.id).filter_by(is_owner=False)
+
     return render_template('user/user_feeds.html', user_has_feeds=user_has_feeds, user_feeds_list=current_user_feeds,
                            user_has_feed_subscriptions=user_has_feed_subscriptions,
                            subbed_feeds=subbed_feeds,
                            )
 
 
-@bp.route('/u/<actor>/feeds', methods=['GET','POST'])
+@bp.route('/u/<actor>/feeds', methods=['GET', 'POST'])
 def user_feeds(actor):
     # this will show a specific user's public feeds
     user_has_public_feeds = False
@@ -1742,14 +1841,14 @@ def user_feeds(actor):
         user = User.query.filter_by(ap_id=actor, deleted=False).first()
         if user is None:
             abort(404)
-    
+
     # find all user feeds marked as public
     user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
 
     if len(user_public_feeds) > 0:
         user_has_public_feeds = True
 
-    return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds, 
+    return render_template('user/user_public_feeds.html', user_has_public_feeds=user_has_public_feeds,
                            creator_name=user.user_name, user_feeds_list=user_public_feeds
                            )
 
@@ -1773,7 +1872,8 @@ def show_profile_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(100).all()
+        posts = user.posts.filter(Post.from_bot == False, Post.deleted == False,
+                                  Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
         description = shorten_string(user.about, 150) if user.about else None
         og_image = user.avatar_image() if user.avatar_id else None
         fg = FeedGenerator()
@@ -1793,8 +1893,16 @@ def show_profile_rss(actor):
 
         already_added = set()
         for post in posts:
+            # Validate title and body - skip this post if invalid
+            if not is_valid_xml_utf8(post.title.strip()):
+                continue
+            if post.body_html is None:
+                continue
+            if post.body_html.strip() and not is_valid_xml_utf8(post.body_html.strip()):
+                continue
+            
             fe = fg.add_entry()
-            fe.title(post.title)
+            fe.title(post.title.strip())
             fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
@@ -1803,7 +1911,8 @@ def show_profile_rss(actor):
                 if type and not type.startswith('text/'):
                     fe.enclosure(post.url, type=type)
                 already_added.add(post.url)
-            fe.description(post.body_html)
+            if post.body_html.strip():
+                fe.description(post.body_html.strip())
             fe.guid(post.profile_id(), permalink=True)
             fe.author(name=post.author.user_name)
             fe.pubDate(post.created_at.replace(tzinfo=timezone.utc))

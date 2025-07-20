@@ -24,6 +24,8 @@
                 <a href="{{ user.cover_image() }}"><img class="user_icon_big" src="{{ user.cover_image() }}" style="width: 300px; height: auto;" /></a>
             {% endif %}
             {{ render_field(form.bot) }}
+            {{ render_field(form.bot_override) }}
+            {{ render_field(form.suppress_crossposts) }}
             {{ render_field(form.verified) }}
             {{ render_field(form.banned) }}
             {{ render_field(form.ban_posts) }}

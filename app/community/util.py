@@ -19,7 +19,7 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensu
 from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type
+    store_files_in_s3, guess_mime_type, patch_db_session
 from sqlalchemy import func, desc, text
 import os
 
@@ -84,126 +84,213 @@ def search_for_community(address: str) -> Community | None:
 @celery.task
 def retrieve_mods_and_backfill(community_id: int, server, name, community_json=None):
     with current_app.app_context():
-        community = Community.query.get(community_id)
-        if not community:
-            return
-        site = Site.query.get(1)
-
-        is_peertube = is_guppe = is_wordpress = False
-        if community.ap_profile_id == f"https://{server}/video-channels/{name}":
-            is_peertube = True
-        elif community.ap_profile_id.startswith('https://a.gup.pe/u'):
-            is_guppe = True
-
-        # get mods
-        if community.ap_moderators_url:
-            mods_data = remote_object_to_json(community.ap_moderators_url)
-            if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
-                for actor in mods_data['orderedItems']:
-                    sleep(0.5)
-                    mod = find_actor_or_create(actor)
-                    if mod:
-                        existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
-                        if existing_membership:
-                            existing_membership.is_moderator = True
-                        else:
-                            new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
-                            db.session.add(new_membership)
-                        try:
-                            db.session.commit()
-                        except IntegrityError:
-                            db.session.rollback()
-
-        elif community_json and 'attributedTo' in community_json:
-            mods = community_json['attributedTo']
-            if isinstance(mods, list):
-                for m in mods:
-                    if 'type' in m and m['type'] == 'Person' and 'id' in m:
-                        mod = find_actor_or_create(m['id'])
-                        if mod:
-                            existing_membership = CommunityMember.query.filter_by(community_id=community.id, user_id=mod.id).first()
-                            if existing_membership:
-                                existing_membership.is_moderator = True
-                            else:
-                                new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
-                                db.session.add(new_membership)
-                            try:
-                                db.session.commit()
-                            except IntegrityError:
-                                db.session.rollback()
-        if is_peertube:
-            community.restricted_to_mods = True
-        db.session.commit()
-
-        # only backfill nsfw if nsfw communities are allowed
-        if (community.nsfw and not site.enable_nsfw) or (community.nsfl and not site.enable_nsfl):
-            return
-
-        # download 50 old posts from unpaginated outboxes or 10 posts from page 1 if outbox is paginated (with Celery, or just 2 without)
-        if community.ap_outbox_url:
-            outbox_data = remote_object_to_json(community.ap_outbox_url)
-            if not outbox_data or ('totalItems' in outbox_data and outbox_data['totalItems'] == 0):
-                return
-            if 'first' in outbox_data:
-                outbox_data = remote_object_to_json(outbox_data['first'])
-                if not outbox_data:
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = session.query(Community).get(community_id)
+                if not community:
                     return
-                max = 10
-            else:
-                max = 50
-            if current_app.debug:
-                max = 2
-            if 'type' in outbox_data and (outbox_data['type'] == 'OrderedCollection' or outbox_data['type'] == 'OrderedCollectionPage') and 'orderedItems' in outbox_data:
-                activities_processed = 0
-                for announce in outbox_data['orderedItems']:
-                    activity = None
-                    if is_peertube or is_guppe:
-                        activity = remote_object_to_json(announce['object'])
-                    elif 'object' in announce and 'object' in announce['object']:
-                        activity = announce['object']['object']
-                    elif 'type' in announce and announce['type'] == 'Create':
-                        activity = announce['object']
-                        is_wordpress = True
-                    if not activity:
-                        return
-                    if is_peertube:
-                        user = mod
-                    elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
-                        user = find_actor_or_create(activity['attributedTo'])
-                        if not user:
-                            continue
-                    else:
-                        continue
-                    if user.is_local():
-                        continue
-                    if is_peertube or is_guppe:
-                        request_json = {'id': f"https://{server}/activities/create/{gibberish(15)}", 'object': activity}
-                    elif is_wordpress:
-                        request_json = announce
-                    else:
-                        request_json = announce['object']
-                    post = create_post(True, community, request_json, user, announce['id'])
-                    if post:
-                        if 'published' in activity:
-                            post.posted_at = activity['published']
-                            post.last_active = activity['published']
-                            db.session.commit()
+                site = session.query(Site).get(1)
 
-                            # todo: create post_replies based on activity['replies'], if it exists
-                    activities_processed += 1
-                    if activities_processed >= max:
-                        break
-                if community.post_count > 0:
-                    community.last_active = Post.query.filter(Post.community_id == community.id).order_by(desc(Post.posted_at)).first().posted_at
-                    db.session.commit()
-        if community.ap_featured_url:
-            featured_data = remote_object_to_json(community.ap_featured_url)
-            if featured_data and 'type' in featured_data and featured_data['type'] == 'OrderedCollection' and 'orderedItems' in featured_data:
-                for item in featured_data['orderedItems']:
-                    post = Post.get_by_ap_id(item['id'])
-                    if post:
-                        post.sticky = True
-                        db.session.commit()
+                is_peertube = is_guppe = is_wordpress = False
+                if community.ap_profile_id == f"https://{server}/video-channels/{name}":
+                    is_peertube = True
+                elif community.ap_profile_id.startswith('https://a.gup.pe/u'):
+                    is_guppe = True
+
+                # get mods
+                if community.ap_moderators_url:
+                    mods_data = remote_object_to_json(community.ap_moderators_url)
+                    if mods_data and mods_data['type'] == 'OrderedCollection' and 'orderedItems' in mods_data:
+                        for actor in mods_data['orderedItems']:
+                            sleep(0.5)
+                            mod = find_actor_or_create(actor)
+                            if mod:
+                                existing_membership = session.query(CommunityMember).filter_by(community_id=community.id, user_id=mod.id).first()
+                                if existing_membership:
+                                    existing_membership.is_moderator = True
+                                else:
+                                    new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
+                                    session.add(new_membership)
+                                try:
+                                    session.commit()
+                                except IntegrityError:
+                                    session.rollback()
+
+                elif community_json and 'attributedTo' in community_json:
+                    mods = community_json['attributedTo']
+                    if isinstance(mods, list):
+                        for m in mods:
+                            if 'type' in m and m['type'] == 'Person' and 'id' in m:
+                                mod = find_actor_or_create(m['id'])
+                                if mod:
+                                    existing_membership = session.query(CommunityMember).filter_by(community_id=community.id, user_id=mod.id).first()
+                                    if existing_membership:
+                                        existing_membership.is_moderator = True
+                                    else:
+                                        new_membership = CommunityMember(community_id=community.id, user_id=mod.id, is_moderator=True)
+                                        session.add(new_membership)
+                                    try:
+                                        session.commit()
+                                    except IntegrityError:
+                                        session.rollback()
+                if is_peertube:
+                    community.restricted_to_mods = True
+                session.commit()
+
+                # only backfill nsfw if nsfw communities are allowed
+                if (community.nsfw and not site.enable_nsfw) or (community.nsfl and not site.enable_nsfl):
+                    return
+
+                # download 50 old posts from unpaginated outboxes or 10 posts from page 1 if outbox is paginated (with Celery, or just 2 without)
+                if community.ap_outbox_url:
+                    outbox_data = remote_object_to_json(community.ap_outbox_url)
+                    if not outbox_data or ('totalItems' in outbox_data and outbox_data['totalItems'] == 0):
+                        return
+                    if 'first' in outbox_data:
+                        outbox_data = remote_object_to_json(outbox_data['first'])
+                        if not outbox_data:
+                            return
+                        max = 10
+                    else:
+                        max = 50
+                    if current_app.debug:
+                        max = 2
+                    if 'type' in outbox_data and (outbox_data['type'] == 'OrderedCollection' or outbox_data['type'] == 'OrderedCollectionPage') and 'orderedItems' in outbox_data:
+                        activities_processed = 0
+                        for announce in outbox_data['orderedItems']:
+                            activity = None
+                            if is_peertube or is_guppe:
+                                activity = remote_object_to_json(announce['object'])
+                            elif 'object' in announce and 'object' in announce['object']:
+                                activity = announce['object']['object']
+                            elif 'type' in announce and announce['type'] == 'Create':
+                                activity = announce['object']
+                                is_wordpress = True
+                            if not activity:
+                                return
+                            if is_peertube:
+                                user = mod
+                            elif 'attributedTo' in activity and isinstance(activity['attributedTo'], str):
+                                user = find_actor_or_create(activity['attributedTo'])
+                                if not user:
+                                    continue
+                            else:
+                                continue
+                            if user.is_local():
+                                continue
+                            if is_peertube or is_guppe:
+                                request_json = {'id': f"https://{server}/activities/create/{gibberish(15)}", 'object': activity}
+                            elif is_wordpress:
+                                request_json = announce
+                            else:
+                                request_json = announce['object']
+                            try:
+                                post = create_post(True, community, request_json, user, announce['id'])
+                            except Exception as e:
+                                session.rollback()
+                                # Log the error but continue processing other posts
+                                print(f"Error creating post: {e}")
+                                continue
+                            if post:
+                                if 'published' in activity:
+                                    post.posted_at = activity['published']
+                                    post.last_active = activity['published']
+                                    session.commit()
+
+                                    # create post_replies based on activity['replies'], if it exists
+                                    if 'replies' in activity and isinstance(activity['replies'], str):
+                                        replies = remote_object_to_json(activity['replies'])
+                                        if replies and replies['type'] == 'OrderedCollection' and 'orderedItems' in replies:
+                                            for reply_data in replies['orderedItems']:
+                                                # Skip if reply already exists
+                                                if session.query(PostReply).filter_by(ap_id=reply_data['id']).first():
+                                                    continue
+                                                
+                                                # Find the author of the reply
+                                                reply_author = find_actor_or_create(reply_data['attributedTo'])
+                                                if not reply_author:
+                                                    continue
+                                                
+                                                # Extract reply content
+                                                body = body_html = ''
+                                                if 'content' in reply_data:
+                                                    if not (reply_data['content'].startswith('<p>') or reply_data['content'].startswith('<blockquote>')):
+                                                        reply_data['content'] = '<p>' + reply_data['content'] + '</p>'
+                                                    from app.utils import allowlist_html, markdown_to_html, html_to_text
+                                                    body_html = allowlist_html(reply_data['content'])
+                                                    if 'source' in reply_data and isinstance(reply_data['source'], dict) and \
+                                                            'mediaType' in reply_data['source'] and reply_data['source']['mediaType'] == 'text/markdown':
+                                                        body = reply_data['source']['content']
+                                                        body_html = markdown_to_html(body)
+                                                    else:
+                                                        body = html_to_text(body_html)
+                                                
+                                                # Find parent (post or comment this is replying to)
+                                                in_reply_to = None
+                                                if 'inReplyTo' in reply_data:
+                                                    # Check if replying to the post itself
+                                                    if reply_data['inReplyTo'] == post.ap_id:
+                                                        in_reply_to = None  # Direct reply to post
+                                                    else:
+                                                        # Check if replying to another comment
+                                                        parent_comment = session.query(PostReply).filter_by(ap_id=reply_data['inReplyTo']).first()
+                                                        if parent_comment:
+                                                            in_reply_to = parent_comment
+                                                
+                                                # Get language
+                                                language_id = None
+                                                if 'language' in reply_data and isinstance(reply_data['language'], dict):
+                                                    from app.activitypub.util import find_language_or_create
+                                                    language = find_language_or_create(reply_data['language']['identifier'],
+                                                                                     reply_data['language']['name'])
+                                                    language_id = language.id
+                                                
+                                                # Check if distinguished
+                                                distinguished = reply_data.get('distinguished', False)
+                                                
+                                                # Create the reply
+                                                try:
+                                                    reply_data['object'] = {'id': reply_data['id']}
+                                                    post_reply = PostReply.new(reply_author, post, in_reply_to, body, body_html,
+                                                                               False, language_id, distinguished, reply_data, session=session)
+                                                    session.add(post_reply)
+                                                    community.post_reply_count += 1
+                                                    session.commit()
+                                                except Exception as e:
+                                                    session.rollback()
+                                                    # Log the error but continue processing other replies
+                                                    print(f"Error creating post reply: {e}")
+                                                    continue
+                            activities_processed += 1
+                            if activities_processed >= max:
+                                break
+                        if community.post_count > 0:
+                            community.last_active = session.query(Post).filter(Post.community_id == community.id).order_by(desc(Post.posted_at)).first().posted_at
+                            session.commit()
+                if community.ap_featured_url:
+                    featured_data = remote_object_to_json(community.ap_featured_url)
+                    if featured_data and 'type' in featured_data and featured_data['type'] == 'OrderedCollection' and 'orderedItems' in featured_data:
+                        for item in featured_data['orderedItems']:
+                            post = session.query(Post).filter_by(ap_id=item['id']).first()
+                            if post:
+                                post.sticky = True
+                                session.commit()
+            session.execute(text("""UPDATE "post"
+                                  SET reply_count = (
+                                      SELECT COUNT(*)
+                                      FROM post_reply
+                                      WHERE post_reply.post_id = post.id
+                                      AND post_reply.deleted = false
+                                  )
+                                  WHERE post.community_id = :community_id;
+                                 """), {'community_id': community.id})
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def actor_to_community(actor) -> Community:
@@ -279,53 +366,56 @@ def delete_post_from_community(post_id):
 
 @celery.task
 def delete_post_from_community_task(post_id):
-    try:
-        post = Post.query.get(post_id)
-        community = post.community
-        post.deleted = True
-        post.deleted_by = current_user.id
-        db.session.commit()
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.get(post_id)
+                community = post.community
+                post.deleted = True
+                post.deleted_by = current_user.id
+                db.session.commit()
 
-        if not community.local_only:
-            delete_json = {
-                'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-                'type': 'Delete',
-                'actor': current_user.public_url(),
-                'audience': post.community.public_url(),
-                'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                'published': ap_datetime(utcnow()),
-                'cc': [
-                    current_user.followers_url()
-                ],
-                'object': post.ap_id,
-            }
+                if not community.local_only:
+                    delete_json = {
+                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'type': 'Delete',
+                        'actor': current_user.public_url(),
+                        'audience': post.community.public_url(),
+                        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                        'published': ap_datetime(utcnow()),
+                        'cc': [
+                            current_user.followers_url()
+                        ],
+                        'object': post.ap_id,
+                    }
 
-            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-            else:  # local community - send it to followers on remote instances
-                announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": post.community.ap_profile_id,
-                    "cc": [
-                        post.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': delete_json
-                }
+                    if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                        send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+                    else:  # local community - send it to followers on remote instances
+                        announce = {
+                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "type": 'Announce',
+                            "to": [
+                                "https://www.w3.org/ns/activitystreams#Public"
+                            ],
+                            "actor": post.community.ap_profile_id,
+                            "cc": [
+                                post.community.ap_followers_url
+                            ],
+                            '@context': default_context(),
+                            'object': delete_json
+                        }
 
-                for instance in post.community.following_instances():
-                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                            instance.domain):
-                        send_to_remote_instance(instance.id, post.community.id, announce)
-    except Exception:
-        db.session.rollback()
-        raise
-    finally:
-        db.session.remove()
+                        for instance in post.community.following_instances():
+                            if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                                    instance.domain):
+                                send_to_remote_instance(instance.id, post.community.id, announce)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def delete_post_reply_from_community(post_reply_id):
@@ -337,57 +427,59 @@ def delete_post_reply_from_community(post_reply_id):
 
 @celery.task
 def delete_post_reply_from_community_task(post_reply_id):
-    try:
-        post_reply = PostReply.query.get(post_reply_id)
-        post = post_reply.post
-        community = post.community
-        if post_reply.user_id == current_user.id or community.is_moderator():
-            post_reply.deleted = True
-            post_reply.deleted_by = current_user.id
-            db.session.commit()
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post_reply = session.query(PostReply).get(post_reply_id)
+                post = post_reply.post
 
-            # federate delete
-            if not post.community.local_only:
-                delete_json = {
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-                    'type': 'Delete',
-                    'actor': current_user.public_url(),
-                    'audience': post.community.public_url(),
-                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
-                    'cc': [
-                        current_user.followers_url()
-                    ],
-                    'object': post_reply.ap_id,
-                }
+                post_reply.deleted = True
+                post_reply.deleted_by = current_user.id
+                session.commit()
 
-                if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                    send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
-
-                else:  # local community - send it to followers on remote instances
-                    announce = {
-                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                        "type": 'Announce',
-                        "to": [
-                            "https://www.w3.org/ns/activitystreams#Public"
+                # federate delete
+                if not post.community.local_only:
+                    delete_json = {
+                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'type': 'Delete',
+                        'actor': current_user.public_url(),
+                        'audience': post.community.public_url(),
+                        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                        'published': ap_datetime(utcnow()),
+                        'cc': [
+                            current_user.followers_url()
                         ],
-                        "actor": post.community.ap_profile_id,
-                        "cc": [
-                            post.community.ap_followers_url
-                        ],
-                        '@context': default_context(),
-                        'object': delete_json
+                        'object': post_reply.ap_id,
                     }
 
-                    for instance in post.community.following_instances():
-                        if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
-                                instance.domain):
-                            send_to_remote_instance(instance.id, post.community.id, announce)
-    except Exception:
-        db.session.rollback()
-        raise
-    finally:
-        db.session.remove()
+                    if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                        send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+
+                    else:  # local community - send it to followers on remote instances
+                        announce = {
+                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "type": 'Announce',
+                            "to": [
+                                "https://www.w3.org/ns/activitystreams#Public"
+                            ],
+                            "actor": post.community.ap_profile_id,
+                            "cc": [
+                                post.community.ap_followers_url
+                            ],
+                            '@context': default_context(),
+                            'object': delete_json
+                        }
+
+                        for instance in post.community.following_instances():
+                            if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(
+                                    instance.domain):
+                                send_to_remote_instance(instance.id, post.community.id, announce)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def remove_old_file(file_id):
@@ -418,7 +510,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
     if file_ext.lower() == '.heic':
         register_heif_opener()
     elif file_ext.lower() == '.avif':
-        import pillow_avif
+        import pillow_avif  # NOQA
 
     # resize if necessary or if using MEDIA_IMAGE_FORMAT
     if file_ext.lower() in allowed_extensions:
@@ -460,7 +552,7 @@ def save_icon_file(icon_file, directory='communities') -> File:
             thumbnail_ext = file_ext
 
             if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-                import pillow_avif
+                import pillow_avif  # NOQA
 
             if img.width > 250 or img.height > 250 or image_format or thumbnail_image_format:
                 img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
@@ -551,7 +643,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
     if file_ext.lower() == '.heic':
         register_heif_opener()
     elif file_ext.lower() == '.avif':
-        import pillow_avif
+        import pillow_avif  # NOQA
 
     # resize if necessary
     Image.MAX_IMAGE_PIXELS = 89478485
@@ -570,7 +662,7 @@ def save_banner_file(banner_file, directory='communities') -> File:
         img_height = img.height
 
         if image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
-            import pillow_avif
+            import pillow_avif  # NOQA
 
         if img.width > 1600 or img.height > 600 or image_format or thumbnail_image_format:
             img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')

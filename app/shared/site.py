@@ -1,11 +1,11 @@
-from app import cache, db
-from app.models import InstanceBlock
-from app.utils import authorise_api_user, blocked_instances
-from app.constants import *
-
 from flask import flash
 from flask_babel import _
 from flask_login import current_user
+
+from app import cache, db
+from app.constants import *
+from app.models import InstanceBlock
+from app.utils import authorise_api_user, blocked_instances
 
 
 def block_remote_instance(instance_id, src, auth=None):
@@ -28,7 +28,7 @@ def block_remote_instance(instance_id, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect
 
 
 def unblock_remote_instance(instance_id, src, auth=None):
@@ -44,4 +44,4 @@ def unblock_remote_instance(instance_id, src, auth=None):
     if src == SRC_API:
         return user_id
     else:
-        return              # let calling function handle confirmation flash message and redirect
+        return  # let calling function handle confirmation flash message and redirect

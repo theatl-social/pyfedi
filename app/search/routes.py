@@ -1,17 +1,17 @@
-from flask import request, flash, json, url_for, current_app, redirect, g, abort
-from flask_login import current_user
+from flask import request, flash, url_for, redirect, abort
 from flask_babel import _
+from flask_login import current_user
 from sqlalchemy import or_, desc, text
 
 from app import limiter, db
+from app.activitypub.util import resolve_remote_post_from_search
+from app.community.forms import RetrieveRemotePost
 from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
 from app.utils import render_template, blocked_domains, blocked_instances, \
-    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, menu_topics, \
-    blocked_communities, show_ban_message, login_required, login_required_if_private_instance
-from app.community.forms import RetrieveRemotePost
-from app.activitypub.util import resolve_remote_post_from_search
+    communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, blocked_communities, \
+    show_ban_message, login_required, login_required_if_private_instance, moderating_communities_ids
 
 
 @bp.route('/search', methods=['GET', 'POST'])
@@ -83,7 +83,8 @@ def run_search():
             elif sort_by == 'top':
                 posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
 
-            posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+            posts = posts.paginate(page=page,
+                                   per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                                    error_out=False)
 
             next_url = url_for('search.run_search', page=posts.next_num, q=q) if posts.has_next else None
@@ -99,7 +100,8 @@ def run_search():
                     replies = replies.filter(PostReply.nsfw == False)
                 instance_ids = blocked_instances(current_user.id)
                 if instance_ids:
-                    replies = replies.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+                    replies = replies.filter(
+                        or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
                 community_ids = blocked_communities(current_user.id)
                 if community_ids:
                     replies = replies.filter(PostReply.community_id.not_in(community_ids))
@@ -113,7 +115,9 @@ def run_search():
                 replies = replies.filter(PostReply.from_bot == False)
                 replies = replies.filter(PostReply.nsfw == False)
 
-            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+            replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True,
+                                                                              Post.deleted == False,
+                                                                              Post.status > POST_STATUS_REVIEWING)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
             if type != 0:
@@ -123,18 +127,21 @@ def run_search():
             if language_id:
                 replies = replies.filter(PostReply.language_id == language_id)
             if software:
-                replies = replies.join(Instance, PostReply.instance_id == Instance.id).filter(Instance.software == software)
+                replies = replies.join(Instance, PostReply.instance_id == Instance.id).filter(
+                    Instance.software == software)
             if sort_by == 'date':
                 replies = replies.order_by(desc(PostReply.posted_at))
             elif sort_by == 'top':
                 replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
 
             replies = replies.paginate(page=page,
-                                   per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
-                                   error_out=False)
+                                       per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
+                                       error_out=False)
 
-            next_url = url_for('search.run_search', page=replies.next_num, q=q, search_for=search_for) if replies.has_next else None
-            prev_url = url_for('search.run_search', page=replies.prev_num, q=q, search_for=search_for) if replies.has_prev and page != 1 else None
+            next_url = url_for('search.run_search', page=replies.next_num, q=q,
+                               search_for=search_for) if replies.has_next else None
+            prev_url = url_for('search.run_search', page=replies.prev_num, q=q,
+                               search_for=search_for) if replies.has_prev and page != 1 else None
 
         communities = None
         if search_for == 'communities':
@@ -148,14 +155,16 @@ def run_search():
             recently_upvoted = []
             recently_downvoted = []
 
-        return render_template('search/results.html', title=_('Search results for %(q)s', q=q), posts=posts, replies=replies,
+        return render_template('search/results.html', title=_('Search results for %(q)s', q=q), posts=posts,
+                               replies=replies,
                                community_results=communities, q=q,
                                community_id=community_id, language_id=language_id,
                                search_for=search_for,
                                next_url=next_url, prev_url=prev_url, show_post_community=True,
                                recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
-                                
+                               moderated_community_ids=moderating_communities_ids(current_user.get_id()),
+
                                )
 
     else:
@@ -167,7 +176,7 @@ def run_search():
 
         return render_template('search/start.html', title=_('Search'), communities=communities.all(),
                                languages=languages, instance_software=instance_software,
-                                
+
                                )
 
 

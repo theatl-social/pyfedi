@@ -1,9 +1,9 @@
 import pytest
-from flask import Flask
-from app import create_app, db
-from config import Config
-from app.models import User
 from sqlalchemy import text
+
+from app import create_app, db
+from app.models import User
+from config import Config
 
 
 class TestConfig(Config):
@@ -33,7 +33,9 @@ def test_api_user_subscriptions(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove subscription
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'),
+            {"user_id": user_id}).scalars()
         person = User.query.filter(User.id.not_in(existing_subs), User.banned == False).first()
         assert person is not None and hasattr(person, 'id')
 
@@ -51,7 +53,9 @@ def test_api_user_subscriptions(app):
         assert str(ex.value) == 'A subscription for this user did not exist.'
 
         # add to existing
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'),
+            {"user_id": user_id}).scalars()
         person = User.query.filter(User.id.in_(existing_subs), User.banned == False).first()
         assert person is not None and hasattr(user, 'id')
         if user:
@@ -68,7 +72,9 @@ def test_api_user_subscriptions(app):
                 result = put_user_subscribe(auth, data)
 
         # remove from a banned user
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'),
+            {"user_id": user_id}).scalars()
         person = User.query.filter(User.id.in_(existing_subs), User.banned == True).first()
         if person:
             data = {"person_id": person.id, "subscribe": False}
@@ -81,9 +87,13 @@ def test_api_user_subscriptions(app):
             result = put_user_subscribe(auth, data)
 
         # subscribe to a user who has blocked this user
-        existing_bans = db.session.execute(text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :user_id'), {"user_id": user_id}).scalars()
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'), {"user_id": user_id}).scalars()
-        person = User.query.filter(User.id.in_(existing_bans), User.id.not_in(existing_subs), User.banned == False).first()
+        existing_bans = db.session.execute(text('SELECT blocker_id FROM "user_block" WHERE blocker_id = :user_id'),
+                                           {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 0'),
+            {"user_id": user_id}).scalars()
+        person = User.query.filter(User.id.in_(existing_bans), User.id.not_in(existing_subs),
+                                   User.banned == False).first()
         if person:
             data = {"person_id": person.id, "subscribe": True}
             with pytest.raises(Exception) as ex:

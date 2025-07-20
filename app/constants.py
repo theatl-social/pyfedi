@@ -1,4 +1,4 @@
-VERSION = '1.0.0'
+VERSION = '1.0.1-dev'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -33,31 +33,29 @@ REPORT_STATE_DISCARDED = -1
 # see NotificationSubscription in models.py
 
 # -- user level ---
-NOTIF_USER = 0                 # if I am following userA I get notified if that user posts something
-NOTIF_COMMUNITY = 1            # if I elect to get notified about new posts in a community
-NOTIF_TOPIC = 2                # if I elect to get notified about new posts in communities in a topic
-NOTIF_POST = 3                 # this is new top-level comments on a post I am subscribed to
-                               # I am auto subscribed to my posts, but I can elect to sub to other posts
-NOTIF_REPLY = 4                # replies to a comment I made, or one I subscribed to
-NOTIF_FEED = 5                 # not actually used anywhere yet, but will be the same as NOTIF_TOPIC
-                               # but for communities in a feed
-NOTIF_MENTION = 6              # I have been mentioned in a post or comment
-NOTIF_MESSAGE = 7              # I have a new chat message
-NOTIF_BAN = 8                  # I have been banned from a community
-NOTIF_UNBAN = 9                # I have been un-banned from a community
-NOTIF_NEW_MOD = 10             # I have been made a moderator for a community
+NOTIF_USER = 0  # if I am following userA I get notified if that user posts something
+NOTIF_COMMUNITY = 1  # if I elect to get notified about new posts in a community
+NOTIF_TOPIC = 2  # if I elect to get notified about new posts in communities in a topic
+NOTIF_POST = 3  # this is new top-level comments on a post I am subscribed to
+# I am auto subscribed to my posts, but I can elect to sub to other posts
+NOTIF_REPLY = 4  # replies to a comment I made, or one I subscribed to
+NOTIF_FEED = 5  # not actually used anywhere yet, but will be the same as NOTIF_TOPIC
+# but for communities in a feed
+NOTIF_MENTION = 6  # I have been mentioned in a post or comment
+NOTIF_MESSAGE = 7  # I have a new chat message
+NOTIF_BAN = 8  # I have been banned from a community
+NOTIF_UNBAN = 9  # I have been un-banned from a community
+NOTIF_NEW_MOD = 10  # I have been made a moderator for a community
 
 # --- mod/admin level ---
-NOTIF_REPORT = 20              # a user, post, comment, or community have been reported
+NOTIF_REPORT = 20  # a user, post, comment, or community have been reported
 
 # --- admin level ---
-NOTIF_REPORT_ESCALATION = 40   # a USER, POST, or COMMENT report has been escalated from mods to admins
-NOTIF_REGISTRATION = 41        # a new registration / sign up has been generated
+NOTIF_REPORT_ESCALATION = 40  # a USER, POST, or COMMENT report has been escalated from mods to admins
+NOTIF_REGISTRATION = 41  # a new registration / sign up has been generated
 
 # --model/db default--
-NOTIF_DEFAULT = 999            # default entry
-
-
+NOTIF_DEFAULT = 999  # default entry
 
 ROLE_STAFF = 3
 ROLE_ADMIN = 4
@@ -72,40 +70,40 @@ MICROBLOG_APPS = ["mastodon", "misskey", "akkoma", "iceshrimp", "pleroma", "fedi
 SRC_WEB = 1
 SRC_PUB = 2
 SRC_API = 3
-SRC_PLD = 4     # admin preload form to seed communities
+SRC_PLD = 4  # admin preload form to seed communities
 
-APLOG_IN            = True
+APLOG_IN = True
 
-APLOG_MONITOR       = (True, 'Debug this')
+APLOG_MONITOR = (True, 'Debug this')
 
-APLOG_SUCCESS       = (True, 'success')
-APLOG_FAILURE       = (True, 'failure')
-APLOG_IGNORED       = (True, 'ignored')
-APLOG_PROCESSING    = (True, 'processing')
+APLOG_SUCCESS = (True, 'success')
+APLOG_FAILURE = (True, 'failure')
+APLOG_IGNORED = (True, 'ignored')
+APLOG_PROCESSING = (True, 'processing')
 
-APLOG_NOTYPE        = (True, 'Unknown')
-APLOG_DUPLICATE     = (True, 'Duplicate')
-APLOG_FOLLOW        = (True, 'Follow')
-APLOG_ACCEPT        = (True, 'Accept')
-APLOG_DELETE        = (True, 'Delete')
-APLOG_CHATMESSAGE   = (True, 'Create ChatMessage')
-APLOG_CREATE        = (True, 'Create')
-APLOG_UPDATE        = (True, 'Update')
-APLOG_LIKE          = (True, 'Like')
-APLOG_DISLIKE       = (True, 'Dislike')
-APLOG_REPORT        = (True, 'Report')
-APLOG_USERBAN       = (True, 'User Ban')
-APLOG_LOCK          = (True, 'Post Lock')
+APLOG_NOTYPE = (True, 'Unknown')
+APLOG_DUPLICATE = (True, 'Duplicate')
+APLOG_FOLLOW = (True, 'Follow')
+APLOG_ACCEPT = (True, 'Accept')
+APLOG_DELETE = (True, 'Delete')
+APLOG_CHATMESSAGE = (True, 'Create ChatMessage')
+APLOG_CREATE = (True, 'Create')
+APLOG_UPDATE = (True, 'Update')
+APLOG_LIKE = (True, 'Like')
+APLOG_DISLIKE = (True, 'Dislike')
+APLOG_REPORT = (True, 'Report')
+APLOG_USERBAN = (True, 'User Ban')
+APLOG_LOCK = (True, 'Post Lock')
 
-APLOG_UNDO_FOLLOW   = (True, 'Undo Follow')
-APLOG_UNDO_DELETE   = (True, 'Undo Delete')
-APLOG_UNDO_VOTE     = (True, 'Undo Vote')
-APLOG_UNDO_USERBAN  = (True, 'Undo User Ban')
+APLOG_UNDO_FOLLOW = (True, 'Undo Follow')
+APLOG_UNDO_DELETE = (True, 'Undo Delete')
+APLOG_UNDO_VOTE = (True, 'Undo Vote')
+APLOG_UNDO_USERBAN = (True, 'Undo User Ban')
 
-APLOG_ADD           = (True, 'Add')
-APLOG_REMOVE        = (True, 'Remove')
+APLOG_ADD = (True, 'Add')
+APLOG_REMOVE = (True, 'Remove')
 
-APLOG_ANNOUNCE      = (True, 'Announce')
-APLOG_PT_VIEW       = (True, 'PeerTube View')
+APLOG_ANNOUNCE = (True, 'Announce')
+APLOG_PT_VIEW = (True, 'PeerTube View')
 
 REQUEST_TIMEOUT = 2

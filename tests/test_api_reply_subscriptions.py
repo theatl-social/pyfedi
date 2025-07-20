@@ -1,9 +1,9 @@
 import pytest
-from flask import Flask
-from app import create_app, db
-from config import Config
-from app.models import User, Post, PostReply
 from sqlalchemy import text
+
+from app import create_app, db
+from app.models import User, Post, PostReply
+from config import Config
 
 
 class TestConfig(Config):
@@ -33,7 +33,9 @@ def test_api_reply_subscriptions(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove subscription
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
+            {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.not_in(existing_subs), PostReply.deleted == False).first()
         assert reply is not None and hasattr(reply, 'id')
 
@@ -51,7 +53,9 @@ def test_api_reply_subscriptions(app):
         assert str(ex.value) == 'A subscription for this comment did not exist.'
 
         # add to existing
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
+            {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == False).first()
         if reply:
             data = {"comment_id": reply.id, "subscribe": True}
@@ -65,21 +69,28 @@ def test_api_reply_subscriptions(app):
             data = {"comment_id": reply.id, "subscribe": True}
             with pytest.raises(Exception):
                 result = put_reply_subscribe(auth, data)
-        reply = PostReply.query.filter_by(deleted=True).join(Post, Post.id == PostReply.post_id).filter_by(deleted=True).first()
+        reply = PostReply.query.filter_by(deleted=True).join(Post, Post.id == PostReply.post_id).filter_by(
+            deleted=True).first()
         if reply:
             data = {"comment_id": reply.id, "subscribe": True}
             with pytest.raises(Exception):
                 result = put_reply_subscribe(auth, data)
 
         # remove from deleted (reply or post)
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'), {"user_id": user_id}).scalars()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
+            {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == True).first()
         if reply:
             data = {"comment_id": reply.id, "subscribe": False}
             with pytest.raises(Exception):
                 result = put_reply_subscribe(auth, data)
-        existing_subs = db.session.execute(text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'), {"user_id": user_id}).scalars()
-        reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == True).join(Post, Post.id == PostReply.post_id).filter_by(deleted=True).first()
+        existing_subs = db.session.execute(
+            text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
+            {"user_id": user_id}).scalars()
+        reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == True).join(Post,
+                                                                                                        Post.id == PostReply.post_id).filter_by(
+            deleted=True).first()
         if reply:
             data = {"comment_id": reply.id, "subscribe": False}
             with pytest.raises(Exception):

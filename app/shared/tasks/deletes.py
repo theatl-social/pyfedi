@@ -1,7 +1,7 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
 from app.models import Community, Instance, Post, PostReply, User, UserFollower, File
-from app.utils import gibberish, instance_banned
+from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
 
@@ -25,42 +25,96 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 @celery.task
 def delete_reply(send_async, user_id, reply_id, reason=None):
-    reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply, reason=reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                reply = PostReply.query.filter_by(id=reply_id).one()
+                delete_object(user_id, reply, reason=reason, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def restore_reply(send_async, user_id, reply_id, reason=None):
-    reply = PostReply.query.filter_by(id=reply_id).one()
-    delete_object(user_id, reply, is_restore=True, reason=reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                reply = PostReply.query.filter_by(id=reply_id).one()
+                delete_object(user_id, reply, is_restore=True, reason=reason, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def delete_post(send_async, user_id, post_id, reason=None):
-    post = Post.query.filter_by(id=post_id).one()
-    delete_object(user_id, post, is_post=True, reason=reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = session.query(Post).filter_by(id=post_id).one()
+                delete_object(user_id, post, is_post=True, reason=reason, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def restore_post(send_async, user_id, post_id, reason=None):
-    post = Post.query.filter_by(id=post_id).one()
-    delete_object(user_id, post, is_post=True, is_restore=True, reason=reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.filter_by(id=post_id).one()
+                delete_object(user_id, post, is_post=True, is_restore=True, reason=reason, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def delete_community(send_async, user_id, community_id):
-    community = Community.query.filter_by(id=community_id).one()
-    delete_object(user_id, community)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = Community.query.filter_by(id=community_id).one()
+                delete_object(user_id, community, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def restore_community(send_async, user_id, community_id):
-    community = Community.query.filter_by(id=community_id).one()
-    delete_object(user_id, community, is_restore=True)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                community = Community.query.filter_by(id=community_id).one()
+                delete_object(user_id, community, is_restore=True, session=session)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
-def delete_object(user_id, object, is_post=False, is_restore=False, reason=None):
-    user = User.query.filter_by(id=user_id).one()
+def delete_object(user_id, object, is_post=False, is_restore=False, reason=None, session=None):
+    user = session.query(User).filter_by(id=user_id).one()
     if isinstance(object, Community):
         community = object
     else:
@@ -70,7 +124,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None)
     # return now though, if there aren't any
     if not is_post and community.local_only:
         return
-    followers = UserFollower.query.filter_by(local_user_id=user.id).all()
+    followers = session.query(UserFollower).filter_by(local_user_id=user.id).all()
     if not followers and community.local_only:
         return
 
@@ -152,10 +206,10 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None)
     if is_post and followers:
         payload = undo if is_restore else delete
         for follower in followers:
-            user_details = User.query.get(follower.remote_user_id)
+            user_details = session.query(User).get(follower.remote_user_id)
             if user_details:
                 payload['cc'].append(user_details.public_url())
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+        instances = session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
         instances = instances.filter(UserFollower.local_user_id == user.id).filter(Instance.gone_forever == False)
         for instance in instances:
             if instance.domain not in domains_sent_to:
@@ -164,24 +218,27 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None)
 
 @celery.task
 def delete_posts_with_blocked_images(post_ids, user_id, send_async):
-    try:
-        for post_id in post_ids:
-            post = Post.query.get(post_id)
-            if post:
-                if post.url:
-                    post.calculate_cross_posts(delete_only=True)
-                post.deleted = True
-                post.deleted_by = user_id
-                post.author.post_count -= 1
-                post.community.post_count -= 1
-                if post.image_id:
-                    file = File.query.get(post.image_id)
-                    file.delete_from_disk()
-                db.session.commit()
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                for post_id in post_ids:
+                    post = session.query(Post).get(post_id)
+                    if post:
+                        if post.url:
+                            post.calculate_cross_posts(delete_only=True)
+                        post.deleted = True
+                        post.deleted_by = user_id
+                        post.author.post_count -= 1
+                        post.community.post_count -= 1
+                        if post.image_id:
+                            file = session.query(File).get(post.image_id)
+                            file.delete_from_disk()
+                        session.commit()
 
-            delete_object(user_id, post, is_post=True, reason='Contains blocked image')
-    except Exception:
-        db.session.rollback()
-        raise
-    finally:
-        db.session.remove()
+                        delete_object(user_id, post, is_post=True, reason='Contains blocked image')
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()

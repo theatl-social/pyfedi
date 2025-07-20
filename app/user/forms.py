@@ -5,14 +5,14 @@ from wtforms import StringField, SubmitField, PasswordField, BooleanField, Email
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
-from app.utils import MultiCheckboxField
+from app.utils import MultiCheckboxField, get_timezones
 
 
 class ProfileForm(FlaskForm):
     title = StringField(_l('Display name'), validators=[Optional(), Length(max=255)])
     email = EmailField(_l('Email address'), validators=[Email(), DataRequired(), Length(min=5, max=255)])
-    password_field = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=1, max=50)],
-                                   render_kw={"autocomplete": 'new-password'})
+    password = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=8, max=129)],
+                             render_kw={'autocomplete': 'new-password', 'title': _l('Minimum length 8, maximum 128')})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5})
     extra_label_1 = StringField(_l('Extra field 1 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
     extra_text_1 = StringField(_l('Extra field 1 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
@@ -27,8 +27,12 @@ class ProfileForm(FlaskForm):
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Top banner image'), render_kw={'accept': 'image/*'})
     bot = BooleanField(_l('This profile is a bot'))
-    timezone = HiddenField(render_kw={'id': 'timezone'})
+    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', 'class': 'form-control tom-select'})
     submit = SubmitField(_l('Save profile'))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.timezone.choices = get_timezones()
 
     def validate_email(self, field):
         if current_user.another_account_using_email(field.data):
@@ -52,6 +56,7 @@ class SettingsForm(FlaskForm):
     reply_collapse_threshold = IntegerField(_l('Reply collapse threshold'), validators=[Optional()])
     reply_hide_threshold = IntegerField(_l('Reply hide threshold'), validators=[Optional()])
     markdown_editor = BooleanField(_l('Use markdown editor GUI when writing'))
+    low_bandwidth_mode = BooleanField(_l('Low bandwidth mode'))
     searchable = BooleanField(_l('Show profile in user list'))
     indexable = BooleanField(_l('My posts appear in search results'))
     hide_read_posts = BooleanField(_l('Do not display posts with which I have already interacted (opened/upvoted/downvoted)'))
@@ -68,6 +73,13 @@ class SettingsForm(FlaskForm):
              ('scaled', _l('Scaled')),
              ]
     default_sort = SelectField(_l('Default post sort'), choices=sorts, validators=[DataRequired()], coerce=str,
+                               render_kw={'class': 'form-select'})
+    comment_sorts = [('hot', _l('Hot')),
+                     ('top', _l('Top')),
+                     ('new', _l('New')),
+                     ('old', _l('Old')),
+                     ]
+    default_comment_sort = SelectField(_l('Default comment sort'), choices=comment_sorts, validators=[DataRequired()], coerce=str,
                                render_kw={'class': 'form-select'})
     filters = [('subscribed', _l('Subscribed')),
                ('moderating', _l('Moderating')),
@@ -150,6 +162,7 @@ class ReportUserForm(FlaskForm):
 
 
 class FilterForm(FlaskForm):
+    community_keyword_filter = StringField(_l('Hide posts in communities with these words in their name'))
     hide_type_choices = [(0, _l('Show')),
                          (1, _l('Hide completely')),
                          (2, _l('Blur thumbnail')),

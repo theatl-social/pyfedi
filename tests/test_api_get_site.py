@@ -1,8 +1,9 @@
 import pytest
-from flask import Flask, g
-from app import create_app, db
-from config import Config
+from flask import g
+
+from app import create_app
 from app.models import Site, User
+from config import Config
 
 
 class TestConfig(Config):
@@ -39,5 +40,5 @@ def test_api_get_site(app):
         logged_in_response = get_site(auth)
         assert logged_in_response is not None and 'version' in logged_in_response
         assert 'my_user' in logged_in_response
-        assert logged_in_response['my_user']['local_user_view']['show_read_posts'] == False if user.hide_read_posts == True else True
-
+        assert logged_in_response['my_user']['local_user_view'][
+                   'show_read_posts'] == False if user.hide_read_posts == True else True

@@ -1,27 +1,26 @@
 import os
-import sys
 from zoneinfo import ZoneInfo
+
+import boto3
+from PIL import Image, ImageOps
+from flask import flash, request, current_app, g
+from flask_babel import _, force_locale, gettext
+from flask_login import current_user
+from pillow_heif import register_heif_opener
+from sqlalchemy import text
 
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
-from app.constants import *
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
-from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, Report, Site, User, utcnow
+from app.constants import *
+from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
+    Report, Site, User, utcnow, Instance
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
-    is_image_url, add_to_modlog_activitypub, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
+    is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
     hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
-
-from flask import abort, flash, request, current_app, g
-from flask_babel import _, force_locale, gettext
-from flask_login import current_user
-import boto3
-from pillow_heif import register_heif_opener
-from PIL import Image, ImageOps
-
-from sqlalchemy import text
 
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
@@ -36,9 +35,12 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
         post = Post.query.get_or_404(post_id)
         user = current_user
 
-        if (vote_direction == 'upvote' and not can_upvote(user, post.community)) or (vote_direction == 'downvote' and not can_downvote(user, post.community)):
-            template = 'post/_post_voting_buttons.html' if request.args.get('style', '') == '' else 'post/_post_voting_buttons_masonry.html'
-            return render_template(template, post=post, community=post.community, recently_upvoted=[], recently_downvoted=[])
+        if (vote_direction == 'upvote' and not can_upvote(user, post.community)) or (
+                vote_direction == 'downvote' and not can_downvote(user, post.community)):
+            template = 'post/_post_voting_buttons.html' if request.args.get('style',
+                                                                            '') == '' else 'post/_post_voting_buttons_masonry.html'
+            return render_template(template, post=post, community=post.community, recently_upvoted=[],
+                                   recently_downvoted=[])
 
     undo = post.vote(user, vote_direction)
 
@@ -108,7 +110,7 @@ def subscribe_post(post_id: int, subscribe, src, auth=None):
         subscribe = False if post.notify_new_replies(user_id) else True
 
     existing_notification = NotificationSubscription.query.filter_by(entity_id=post_id, user_id=user_id,
-                                                                         type=NOTIF_POST).first()
+                                                                     type=NOTIF_POST).first()
     if subscribe == False:
         if existing_notification:
             db.session.delete(existing_notification)
@@ -128,8 +130,9 @@ def subscribe_post(post_id: int, subscribe, src, auth=None):
             else:
                 flash(_(msg))
         else:
-            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
-                                                        user_id=user_id, entity_id=post_id, type=NOTIF_POST)
+            new_notification = NotificationSubscription(
+                name=shorten_string(_('Replies to my post %(post_title)s', post_title=post.title)),
+                user_id=user_id, entity_id=post_id, type=NOTIF_POST)
             db.session.add(new_notification)
             db.session.commit()
 
@@ -230,13 +233,14 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
         if not user:
-             user = authorise_api_user(auth, return_type='model')
+            user = authorise_api_user(auth, return_type='model')
         title = input['title']
         body = input['body']
         url = input['url']
         nsfw = input['nsfw']
         notify_author = input['notify_author']
         language_id = input['language_id']
+        timezone = input['timezone'] if 'timezone' in input else user.timezone
         tags = []
         flair = []
         scheduled_for = None
@@ -263,10 +267,8 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         else:
             flair = []
         scheduled_for = input.scheduled_for.data
-        if scheduled_for and hasattr(input, 'timezone') and input.timezone.data:
-            scheduled_for = scheduled_for.replace(tzinfo=ZoneInfo(input.timezone.data))
-            scheduled_for = scheduled_for.astimezone(ZoneInfo('UTC'))
         repeat = input.repeat.data
+        timezone = input.timezone.data
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -280,10 +282,13 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     post.type = type
     post.scheduled_for = scheduled_for
     post.repeat = repeat
+    post.timezone = timezone
 
-    if post.scheduled_for and post.scheduled_for.replace(tzinfo=None) > utcnow():
-        post.status = POST_STATUS_SCHEDULED
-
+    if scheduled_for:
+        date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
+        if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
+            post.status = POST_STATUS_SCHEDULED
+    
     url_changed = False
     hash = None
 
@@ -341,12 +346,12 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         uploaded_file.seek(0)
         uploaded_file.save(final_place)
 
-        final_ext = file_ext # track file extension for conversion
+        final_ext = file_ext  # track file extension for conversion
 
         if file_ext.lower() == '.heic':
             register_heif_opener()
         if file_ext.lower() == '.avif':
-            import pillow_avif
+            import pillow_avif  # NOQA  # do not remove
 
         Image.MAX_IMAGE_PIXELS = 89478485
 
@@ -356,7 +361,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
 
         if image_format == 'AVIF':
-            import pillow_avif
+            import pillow_avif  # NOQA  # do not remove
 
         if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
             img = Image.open(final_place)
@@ -376,7 +381,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 img.save(final_place, optimize=True, **kwargs)
             else:
                 raise Exception('filetype not allowed')
-        
+
         if final_place.endswith('.gif'):
             gif_image = Image.open(final_place)
             gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
@@ -386,7 +391,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
-        if current_app.config['IMAGE_HASHING_ENDPOINT']: # and not user.trustworthy():
+        if current_app.config['IMAGE_HASHING_ENDPOINT']:  # and not user.trustworthy():
             hash = retrieve_image_hash(url)
             if hash and hash_matches_blocked_image(hash):
                 raise Exception('This image is blocked')
@@ -402,13 +407,12 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
             s3.upload_file(final_place, current_app.config['S3_BUCKET'], 'posts/' +
-                        new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
-                        ExtraArgs={'ContentType': guess_mime_type(final_place)})
+                           new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
+                           ExtraArgs={'ContentType': guess_mime_type(final_place)})
             url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/" + \
-                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
+                  new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
             s3.close()
             os.unlink(final_place)
-
 
     if url and (from_scratch or url_changed):
         domain = domain_from_url(url)
@@ -418,17 +422,17 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             post.domain = domain
             domain.post_count += 1
             already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-            targets_data = {'gen':'0',
+            targets_data = {'gen': '0',
                             'post_id': post.id,
-                            'orig_post_title':post.title,
-                            'orig_post_body':post.body,
-                            'orig_post_domain':post.domain,
-                            'author_user_name':user.ap_id if user.ap_id else user.user_name
+                            'orig_post_title': post.title,
+                            'orig_post_body': post.body,
+                            'orig_post_domain': post.domain,
+                            'author_user_name': user.ap_id if user.ap_id else user.user_name
                             }
             if domain.notify_mods:
                 for community_member in post.community.moderators():
                     if community_member.is_local():
-                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                        notify = Notification(title='Suspicious content', url=post.ap_id,
                                               user_id=community_member.user_id, author_id=user.id,
                                               notif_type=NOTIF_REPORT,
                                               subtype='post_from_suspicious_domain',
@@ -438,7 +442,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             if domain.notify_admins:
                 for admin in Site.admins():
                     if admin.id not in already_notified:
-                        notify = Notification(title='Suspicious content', url=post.ap_id, 
+                        notify = Notification(title='Suspicious content', url=post.ap_id,
                                               user_id=admin.id, author_id=user.id,
                                               notif_type=NOTIF_REPORT,
                                               subtype='post_from_suspicious_domain',
@@ -502,14 +506,14 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if poll.local_only:
             federate = False
 
-
     # add tags & flair
     post.tags = tags
     post.flair = flair
 
     # Add subscription if necessary
     if notify_author:
-        new_notification = NotificationSubscription(name=post.title, user_id=user.id, entity_id=post.id, type=NOTIF_POST)
+        new_notification = NotificationSubscription(name=post.title, user_id=user.id, entity_id=post.id,
+                                                    type=NOTIF_POST)
         db.session.add(new_notification)
 
     db.session.commit()
@@ -606,23 +610,28 @@ def report_post(post_id, input, src, auth=None):
             flash(_('Post has already been reported, thank you!'))
             return
 
-    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id, suspect_community_id=post.community_id,
-                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1)
+    suspect_user = User.query.get(post.user_id)
+    source_instance = Instance.query.get(suspect_user.instance_id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen': '0',
+                    'suspect_post_id': post.id,
+                    'suspect_user_id': post.user_id,
+                    'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                    'source_instance_id': suspect_user.instance_id,
+                    'source_instance_domain': source_instance.domain,
+                    'reporter_id': user_id,
+                    'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_post_title': post.title,
+                    'orig_post_body': post.body
+                    }
+    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id,
+                    suspect_community_id=post.community_id,
+                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1,
+                    targets=targets_data)
     db.session.add(report)
 
     # Notify moderators
     already_notified = set()
-    suspect_user = User.query.get(post.user_id)
-    reporter_user = User.query.get(user_id)
-    targets_data = {'gen':'0',
-                    'suspect_post_id':post.id,
-                    'suspect_user_id':post.user_id,
-                    'suspect_user_user_name':suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
-                    'reporter_id':user_id,
-                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
-                    'orig_post_title':post.title,
-                    'orig_post_body':post.body
-                    }
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
@@ -638,7 +647,7 @@ def report_post(post_id, input, src, auth=None):
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
                                   author_id=user_id, notif_type=NOTIF_REPORT,
                                   subtype='post_reported',
                                   targets=targets_data)
@@ -677,8 +686,9 @@ def lock_post(post_id, locked, src, auth=None):
     if post.community.is_moderator(user) or post.community.is_instance_admin(user):
         post.comments_enabled = comments_enabled
         db.session.commit()
-        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
-                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
+        add_to_modlog(modlog_type, actor=user, target_user=post.author, reason='',
+                      community=post.community, post=post,
+                      link_text=shorten_string(post.title), link=f'post/{post.id}')
 
         if locked:
             if src == SRC_WEB:
@@ -711,8 +721,9 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
         if not community.ap_featured_url:
             community.ap_featured_url = community.ap_profile_id + '/featured'
         db.session.commit()
-        add_to_modlog_activitypub(modlog_type, user, community_id=post.community_id,
-                                  link_text=shorten_string(post.title), link=f'post/{post.id}', reason='')
+        add_to_modlog(modlog_type, actor=user, target_user=post.author, reason='',
+                      community=post.community, post=post,
+                      link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     if featured:
         task_selector('sticky_post', user_id=user.id, post_id=post_id)
@@ -744,8 +755,9 @@ def mod_remove_post(post_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Post deleted.'))
 
-    add_to_modlog_activitypub('delete_post', user, community_id=post.community_id,
-                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+    add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason,
+                  community=post.community, post=post,
+                  link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
 
@@ -776,8 +788,9 @@ def mod_restore_post(post_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Post restored.'))
 
-    add_to_modlog_activitypub('restore_post', user, community_id=post.community_id,
-                              link_text=shorten_string(post.title), link=f'post/{post.id}', reason=reason)
+    add_to_modlog('restore_post', actor=user, target_user=post.author, reason=reason,
+                  community=post.community, post=post,
+                  link_text=shorten_string(post.title), link=f'post/{post.id}')
 
     task_selector('restore_post', user_id=user.id, post_id=post.id, reason=reason)
 

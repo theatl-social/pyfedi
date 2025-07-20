@@ -5,7 +5,7 @@ from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, PO
     POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION
 from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
 from app.user.utils import search_for_user
-from app.utils import gibberish, instance_banned, ap_datetime, get_recipient_language
+from app.utils import gibberish, instance_banned, ap_datetime, get_recipient_language, get_task_session
 
 from flask import current_app
 from flask_babel import _, force_locale, gettext
@@ -58,28 +58,30 @@ import re
 
 @celery.task
 def make_post(send_async, post_id):
+    session = get_task_session()
     try:
-        send_post(post_id)
+        send_post(post_id, session=session)
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
 @celery.task
 def edit_post(send_async, post_id):
+    session = get_task_session()
     try:
-        send_post(post_id, edit=True)
+        send_post(post_id, edit=True, session=session)
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
-def send_post(post_id, edit=False):
-    post = Post.query.filter_by(id=post_id).one()
+def send_post(post_id, edit=False, session=None):
+    post = session.query(Post).filter_by(id=post_id).one()
     user = post.author
     community = post.community
 
@@ -119,7 +121,7 @@ def send_post(post_id, edit=False):
     for recipient in recipients:
         if recipient.is_local():
             if edit:
-                existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
+                existing_notification = session.query(Notification).filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
             else:
                 existing_notification = None
             if not existing_notification:
@@ -136,19 +138,19 @@ def send_post(post_id, edit=False):
                                                 subtype='post_mention',
                                                 targets=targets_data)
                     recipient.unread_notifications += 1
-                    db.session.add(notification)
-                    db.session.commit()
+                    session.add(notification)
+                    session.commit()
 
     if not community.instance.online():
         return
 
     # local_only communities can also be used to send activity to User Followers
     # return now though, if there aren't any
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id).all()
+    followers = session.query(UserFollower).filter_by(local_user_id=post.user_id).all()
     if not followers and community.local_only:
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+    banned = session.query(CommunityBan).filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():

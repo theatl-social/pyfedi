@@ -174,7 +174,11 @@
 }
 
 .fe-chevron-right::before {
-  content: "\e930"
+  content: "\e930";
+}
+
+.fe-star::before {
+  content: "\e9d5";
 }
 
 .fe-feather::before {
@@ -202,8 +206,18 @@
   font-weight: normal;
 }
 
+.fe-arrow-up-circle::before {
+  content: "\e915";
+  font-weight: normal;
+}
+
 .fe-arrow-down::before {
   content: "\e90c";
+  font-weight: normal;
+}
+
+.fe-arrow-down-circle::before {
+  content: "\e90d";
   font-weight: normal;
 }
 
@@ -337,6 +351,14 @@ h1 {
 
 .fe-rules::before {
   content: "\e907";
+}
+
+.fe-add-person::before {
+  content: "\e9f2";
+}
+
+.fe-remove-person::before {
+  content: "\e9f3";
 }
 
 .fe-cross-post::before {

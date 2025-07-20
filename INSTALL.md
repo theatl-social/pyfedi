@@ -312,8 +312,9 @@ also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
 
 [PgBouncer](https://www.pgbouncer.org) can be helpful for instances with > 800 MAU.
 
-To assess whether to accept a registration application it can be helpful to know the country of the applicant. This can be
-automatically discovered by using [the ipinfo service](https://ipinfo.io/) - register with them to get an API token and put it into your .env file.
+To assess whether to accept a registration application it can be helpful to know the country of the applicant. If you are using
+CloudFlare then add COUNTRY_SOURCE_HEADER='CF-IPCountry' to your .env. Otherwise, use [the ipinfo service](https://ipinfo.io/) - register with them to get an API token
+and put it into your .env file (IPINFO_TOKEN).
 
 If the search function is not returning any results, you need to [add some database triggers](https://codeberg.org/rimu/pyfedi/issues/358#issuecomment-2475019).
 
@@ -413,7 +414,7 @@ CELERYD_LOG_LEVEL=INFO
 
 # Path to celery binary, that is in your virtual environment
 CELERY_BIN=/home/rimu/pyfedi/venv/bin/celery
-CELERYD_OPTS="--autoscale=5,1 --max-tasks-per-child=1000"
+CELERYD_OPTS="--autoscale=5,1 --queues=celery,background,send"
 ```
 
 #### Enable and start background services
@@ -455,7 +456,7 @@ upstream app_server {
 
     # for a TCP configuration
     server 127.0.0.1:5000 fail_timeout=0;
-    keepalive 4;
+    keepalive 2;
 }
 
 server {
@@ -522,7 +523,7 @@ Once a week or so it's good to run `remove_orphan_files.sh` to save disk space:
 5 4 * * 1 rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/remove_orphan_files.sh
 ```
 
-One per day there are some maintenance tasks that PieFed needs to do:
+One per day there are some maintenance tasks that PieFed needs to do (run it at a time of low usage):
 
 ```
 5 2 * * * rimu cd /home/rimu/pyfedi && /home/rimu/pyfedi/daily.sh
@@ -557,7 +558,9 @@ Some Cloudflare tips:
 
 - Ensure you exclude the URL "/inbox" from the Cloudflare WAF [as shown here](https://join.piefed.social/wp-content/uploads/2024/10/disable-waf-on-inbox.png). If you don't do this there will be federation issues.
 - Under Speed -> Optimization -> Content Optimization, turn everything off especially "Rocket Loader" to avoid JavaScript problems.
+- Under Speed -> Optimization -> Protocol Optimization, turn off HTTP/3 to avoid problems with Firefox.
 - Paying careful attention to the caching settings can sharply reduce the load on your server - see [these Cloudflare caching tips](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
+- Cloudflare's bot protection / AI scraper blocker tends to play havoc with the API, you'll have a much better time if you turn this off entirely.
 
 PieFed has the capability to automatically remove file copies from the Cloudflare cache whenever
  those files are deleted from the server. To enable this, set these variables in your `.env` file:

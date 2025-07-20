@@ -1,17 +1,21 @@
+from flask import g
+from sqlalchemy import desc, or_, text
+
 from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view
-from app.models import Notification, PostReply, Post
 from app.constants import *
-from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, edit_reply, \
-                             delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
-from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, recently_upvoted_post_replies
-
-from sqlalchemy import desc, or_, text
+from app.models import Notification, PostReply, Post, User
+from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
+    edit_reply, \
+    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
+from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
+    recently_upvoted_post_replies, communities_banned_from
 
 
 def get_reply_list(auth, data, user_id=None):
     sort = data['sort'] if data and 'sort' in data else "New"
+    depth_first = data['depth_first'] if data and 'depth_first' in data else ""  # sort by depth before sorting by anything else
     max_depth = data['max_depth'] if data and 'max_depth' in data else None
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
@@ -30,12 +34,16 @@ def get_reply_list(auth, data, user_id=None):
     if auth:
         user_id = authorise_api_user(auth)
 
+    if user_id:
+        g.user = User.query.get(user_id)    # save the currently logged in user into g, to save loading it up again and again in reply_view.
+
     post_is_same = False
     community_is_same = False
     if parent_id and post_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id, PostReply.post_id == post_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
+            reply_ids = db.session.execute(text('select id from "post_reply" where path @> ARRAY[:id]'),
+                                           {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids), PostReply.post_id == post_id)
         post_is_same = community_is_same = True
     elif post_id:
@@ -44,7 +52,8 @@ def get_reply_list(auth, data, user_id=None):
     elif parent_id:
         replies = PostReply.query.filter(PostReply.root_id == parent_id)
         if replies.count() == 0:
-            reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE path @> ARRAY[:id]'), {"id": int(parent_id)}).scalars()
+            reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE path @> ARRAY[:id]'),
+                                           {"id": int(parent_id)}).scalars()
             replies = PostReply.query.filter(PostReply.id.in_(reply_ids))
         post_is_same = community_is_same = True
     elif person_id:
@@ -70,9 +79,13 @@ def get_reply_list(auth, data, user_id=None):
         upvoted_reply_ids = recently_upvoted_post_replies(user_id)
         replies = replies.filter(PostReply.id.in_(upvoted_reply_ids), PostReply.user_id != user_id)
     elif user_id and saved_only:
-        bookmarked_reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'), {"user_id": user_id}).scalars()
+        bookmarked_reply_ids = db.session.execute(
+            text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+            {"user_id": user_id}).scalars()
         replies = replies.filter(PostReply.id.in_(bookmarked_reply_ids))
 
+    if depth_first:
+        replies = replies.order_by(PostReply.depth)
     if sort == "Hot":
         replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
     elif sort == "Top":
@@ -89,25 +102,43 @@ def get_reply_list(auth, data, user_id=None):
     inner_post_view = None
     inner_community_view = None
     can_auth_user_moderate = False
+    mods = None
+    banned_from = communities_banned_from(user_id)
+    bookmarked_replies = list(db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+        {'user_id': user_id}).scalars())
+    if bookmarked_replies is None:
+        bookmarked_replies = []
+    reply_subscriptions = list(db.session.execute(text(
+        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+        {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
+    if reply_subscriptions is None:
+        reply_subscriptions = []
+
     for reply in replies:
         if post_is_same and community_is_same:
-            view = reply_view(reply=reply, variant=7, user_id=user_id)
+            if mods is None:
+                mods = [moderator.user_id for moderator in reply.community.moderators()]
+            view = reply_view(reply=reply, variant=7, user_id=user_id, mods=mods, banned_from=banned_from,
+                              bookmarked_replies=bookmarked_replies, reply_subscriptions=reply_subscriptions)
             if not inner_post_view:
                 inner_post_view = post_view(reply.post, variant=1)
             view['post'] = inner_post_view
             if not inner_community_view:
                 inner_community_view = community_view(reply.community, variant=1, stub=True)
                 if user_id:
-                    can_auth_user_moderate = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+                    can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
             view['canAuthUserModerate'] = can_auth_user_moderate
             replylist.append(view)
         elif community_is_same:
-            view = reply_view(reply=reply, variant=8, user_id=user_id)
+            if mods is None:
+                mods = [moderator.user_id for moderator in reply.community.moderators()]
+            view = reply_view(reply=reply, variant=8, user_id=user_id, mods=mods, banned_from=banned_from)
             if not inner_community_view:
                 inner_community_view = community_view(reply.community, variant=1, stub=True)
                 if user_id:
-                    can_auth_user_moderate = any(moderator.user_id == user_id for moderator in reply.community.moderators())
+                    can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
             view['canAuthUserModerate'] = can_auth_user_moderate
             replylist.append(view)
@@ -183,7 +214,7 @@ def put_reply_subscribe(auth, data):
 
 def post_reply(auth, data):
     required(['body', 'post_id'], data)
-    string_expected(['body',], data)
+    string_expected(['body', ], data)
     integer_expected(['post_id', 'parent_id', 'language_id'], data)
 
     body = data['body']
@@ -204,7 +235,7 @@ def post_reply(auth, data):
 
 def put_reply(auth, data):
     required(['comment_id'], data)
-    string_expected(['body',], data)
+    string_expected(['body', ], data)
     integer_expected(['comment_id', 'language_id'], data)
     boolean_expected(['distinguished'], data)
 
@@ -286,7 +317,7 @@ def post_reply_mark_as_read(auth, data):
     reply_id = data['comment_reply_id']
     read = data['read']
 
-    user_id = authorise_api_user(auth)
+    user = authorise_api_user(auth, return_type='model')
 
     # no real support for this. Just marking the Notification for the reply really
     # notification has its own id, which would be handy, but reply_view is currently just returning the reply.id for that
@@ -294,15 +325,16 @@ def post_reply_mark_as_read(auth, data):
 
     reply_url = '#comment_' + str(reply.id)
     mention_url = '/comment/' + str(reply.id)
-    notification = Notification.query.filter(Notification.user_id == user_id, or_(Notification.url.ilike(f"%{reply_url}%"), Notification.url.ilike(f"%{mention_url}%"))).first()
+    notification = Notification.query.filter(Notification.user_id == user.id,
+                                             or_(Notification.url.ilike(f"%{reply_url}%"),
+                                                 Notification.url.ilike(f"%{mention_url}%"))).first()
     if notification:
         notification.read = read
+        if read == True and user.unread_notifications > 0:
+            user.unread_notifications -= 1
+        elif read == False:
+            user.unread_notifications += 1
         db.session.commit()
 
-    reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user_id, read=True)}
+    reply_json = {'comment_reply_view': reply_view(reply=reply, variant=5, user_id=user.id, read=True)}
     return reply_json
-
-
-
-
-

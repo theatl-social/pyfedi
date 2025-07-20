@@ -1,27 +1,32 @@
-from flask import current_app, render_template, escape, g
-from app import db, celery
-from flask_babel import _, lazy_gettext as _l  # todo: set the locale based on account_id so that _() works
+import smtplib
+import uuid
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import List
+
 import boto3
 from botocore.exceptions import ClientError
-from typing import List
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+from flask import current_app, render_template, g, url_for, flash
+from flask_babel import _  # todo: set the locale based on account_id so that _() works
 
-from app.utils import get_setting, html_to_text, markdown_to_html, markdown_to_text
+from app import celery
+from app.utils import get_setting, markdown_to_html, markdown_to_text
 
 CHARSET = "UTF-8"
 
 
 def send_password_reset_email(user):
     token = user.get_reset_password_token()
+    if current_app.debug:
+        flash(_('Check the console for a link.'), 'warning')
+        print(url_for('auth.reset_password', token=token, _external=True))
     send_email(_('[PieFed] Reset Your Password'),
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
                text_body=render_template('email/reset_password.txt',
-                                         user=user, token=token),
+                                         user=user, token=token, domain=current_app.config['SERVER_NAME']),
                html_body=render_template('email/reset_password.html',
-                                         user=user, token=token))
+                                         user=user, token=token, domain=current_app.config['SERVER_NAME']))
 
 
 def send_verification_email(user):
@@ -36,9 +41,10 @@ def send_registration_approved_email(user):
     subject = _('Your application has been approved - welcome to PieFed')
     body = get_setting('registration_approved_email', '')
     if body:
-        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body))
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(body), domain=current_app.config['SERVER_NAME'])
     else:
-        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'))
+        body = render_template('email/welcome.html', user=user, email_body=markdown_to_html(f'\n\nYour account at https://{current_app.config["SERVER_NAME"]} has been approved. Welcome!\n\n'),
+                               domain=current_app.config['SERVER_NAME'])
     mail_from = current_app.config["MAIL_FROM"] if current_app.config["MAIL_FROM"] else g.site.contact_email
     send_email(subject,
                sender=f'{g.site.name} <{mail_from}>',
@@ -52,16 +58,17 @@ def send_topic_suggestion(communities_for_topic, user, recipients, subject, topi
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=recipients,
                text_body=render_template('email/suggested_topic.txt', site_name=g.site.name,
-                                               current_user_name=user.user_name, topic_name=topic_name,
-                                               communities_for_topic=communities_for_topic),
+                                         current_user_name=user.user_name, topic_name=topic_name,
+                                         communities_for_topic=communities_for_topic),
                html_body=render_template('email/suggested_topic.html', site_name=g.site.name,
-                                               current_user_name=user.user_name, topic_name=topic_name,
-                                               communities_for_topic=communities_for_topic,
-                                               domain=current_app.config['SERVER_NAME']))
+                                         current_user_name=user.user_name, topic_name=topic_name,
+                                         communities_for_topic=communities_for_topic,
+                                         domain=current_app.config['SERVER_NAME']))
+
 
 @celery.task
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
-    if 'ngrok.app' in sender:   # for local development
+    if 'ngrok.app' in sender:  # for local development
         sender = 'PieFed <noreply@piefed.social>'
         return_path = 'bounces@piefed.social'
     else:
@@ -162,7 +169,7 @@ class SMTPEmailService:
                "Connection to server {}, port {} \n" \
                "Connected: {} \n" \
                "Username: {}, Password: {}".format(
-                   self.server_name, self.server_port, self.connected, self.username, self.password)
+            self.server_name, self.server_port, self.connected, self.username, self.password)
 
     def set_message(self, plaintext, subject="", in_from=None, htmltext=None):
         """
@@ -194,6 +201,7 @@ class SMTPEmailService:
         self.msg["To"] = None
         self.msg["CC"] = None
         self.msg["BCC"] = None
+        self.msg["Message-ID"] = f"<{uuid.uuid4()}@{self.server_name}>"
 
     def clear_message(self):
         """

@@ -1,8 +1,8 @@
 import pytest
-from flask import Flask, g
-from app import create_app, db
-from config import Config
+
+from app import create_app
 from app.models import User, Community, CommunityMember
+from config import Config
 
 
 class TestConfig(Config):
@@ -53,4 +53,3 @@ def test_api_get_community(app):
         data = {"id": cm.community_id}
         logged_in_response = get_community(auth, data)
         assert logged_in_response is not None and logged_in_response['community_view']['subscribed'] == "NotSubscribed"
-

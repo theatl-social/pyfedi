@@ -5,10 +5,9 @@ from flask_login import current_user
 from sqlalchemy import desc, asc, text, or_
 
 from app import db
+from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
 from app.models import PostReply, Post, Community, User
 from app.utils import blocked_instances, blocked_users, is_video_hosting_site
-
-from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL
 
 
 # replies to a post, in a tree, sorted by a variety of methods
@@ -26,7 +25,8 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
         if viewer.reply_hide_threshold and not (viewer.is_admin() or community.is_owner() or community.is_moderator()):
             comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
         if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
-            comments = comments.filter(or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
+            comments = comments.filter(
+                or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
     else:
         comments.filter(PostReply.score > -20)
 
@@ -39,7 +39,7 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
     elif sort_by == 'old':
         comments = comments.order_by(asc(PostReply.posted_at))
 
-    comments = comments.limit(2000) # paginating indented replies is too hard so just get the first 2000.
+    comments = comments.limit(2000)  # paginating indented replies is too hard so just get the first 2000.
 
     comments_dict = {comment.id: {'comment': comment, 'replies': []} for comment in comments.all()}
 
@@ -83,8 +83,9 @@ def get_comment_branch(post_id: int, comment_id: int, sort_by: str) -> List[Post
 
 # The number of replies a post has
 def get_post_reply_count(post_id) -> int:
-    return db.session.execute(text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'),
-                              {'post_id': post_id}).scalar()
+    return db.session.execute(
+        text('SELECT COUNT(id) as c FROM "post_reply" WHERE post_id = :post_id AND deleted is false'),
+        {'post_id': post_id}).scalar()
 
 
 def tags_to_string(post: Post) -> str:
@@ -119,6 +120,7 @@ def url_needs_archive(url) -> bool:
 
 def generate_archive_link(url) -> bool:
     return 'https://archive.ph/' + url
+
 
 # Forms like the cross post form need the type for the url
 def post_type_to_form_url_type(post_type: int, post_url: str):

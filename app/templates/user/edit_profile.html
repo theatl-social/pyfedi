@@ -6,6 +6,10 @@
 {% set active_child = 'edit_profile' %}
 {% from 'bootstrap5/form.html' import render_field, render_form %}
 
+{% block extra_css %}
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+{% endblock %}
+
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
@@ -23,7 +27,11 @@
             {{ form.csrf_token() }}
             <h5>{{ _('Login') }}</h5>
             {{ render_field(form.email) }}
-            {{ render_field(form.password_field) }}
+            <div class="password-container">
+                {{ render_field(form.password) }}
+                <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
+                <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
+            </div>
             <h5>{{ _('Profile') }}</h5>
             {{ render_field(form.title) }}
             {{ render_field(form.about) }}
@@ -66,6 +74,7 @@
                     </tr>
                 </table>
             </fieldset>
+            {{ render_field(form.timezone) }}
             {{ render_field(form.bot) }}
             {{ render_field(form.matrixuserid) }}
             <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
@@ -116,5 +125,15 @@
           </div>
         </div>
     </main>
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <script nonce="{{ nonce }}">
+      document.addEventListener("DOMContentLoaded", () => {
+        new TomSelect(".tom-select", {
+          plugins: ['dropdown_input'],
+          create: false,
+          maxOptions: 2000,
+       })
+    });
+    </script>
 </div>
 {% endblock %}

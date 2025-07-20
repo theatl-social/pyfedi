@@ -5,7 +5,7 @@ When it matures enough, PieFed will aim to work in a way consistent with the [Co
 Please discuss your ideas in an issue at https://codeberg.org/rimu/pyfedi/issues before 
 starting any large pieces of work to ensure alignment with the roadmap, architecture and processes.
 
-Check out [the Matrix chatroom](https://matrix.to/#/#piefed-community:matrix.org).
+Check out [the chatroom](https://chat.piefed.social).
 
 The general style and philosophy behind the way things have been constructed is well described by 
 [The Grug Brained Developer](https://grugbrain.dev/). If that page resonates with you then you'll
@@ -14,7 +14,9 @@ skill levels can easily understand what's going on and onboard quickly without a
 time investment. Sometimes this will mean writing slightly more verbose/boring code or avoiding the
 use of advanced design patterns.
 
-Mailing list, Matrix channel, etc still to come.
+When you find a security issue, please email contact@piefed.social, DO NOT post about it publicly,
+including in the codeberg issue queue. This gives us space to fix it and without attackers knowing about the
+problem before we do.
 
 # Technology stack
 

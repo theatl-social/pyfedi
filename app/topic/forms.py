@@ -1,7 +1,7 @@
+from flask_babel import lazy_gettext as _l
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, TextAreaField
-from wtforms.validators import ValidationError, DataRequired, Length, Optional
-from flask_babel import _, lazy_gettext as _l
+from wtforms import SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Length, Optional
 
 
 class SuggestTopicsForm(FlaskForm):

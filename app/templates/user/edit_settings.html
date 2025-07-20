@@ -35,6 +35,7 @@
             {{ render_field(form.interface_language) }}
             <small class="field_hint">{{ _('This is used for menus and labels in the user interface') }}</small>
             {{ render_field(form.markdown_editor) }}
+            {{ render_field(form.low_bandwidth_mode) }}
             {{ render_field(form.theme) }}
             {{ render_field(form.compaction) }}
             {{ render_field(form.font) }}
@@ -52,6 +53,7 @@
             <small class="field_hint">{{ _('Only posts and replies in these selected languages will be visible. Choose none to allow all.') }}</small>
             {{ render_field(form.accept_private_messages) }}
             {{ render_field(form.default_sort) }}
+            {{ render_field(form.default_comment_sort) }}
             {{ render_field(form.default_filter) }}
             {{ render_field(form.federate_votes) }}
             <small class="field_hint d-md-none">{{ _('Long press to vote differently.') }}</small>

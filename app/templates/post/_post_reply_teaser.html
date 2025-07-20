@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -72,19 +72,19 @@
     {% if not banned_from_community %}
     <div class="comment_actions hidable">
         <div class="post_replies_link">
-            {% if post_reply.post.comments_enabled -%}
+            {% if post_reply.post.comments_enabled and post_reply.replies_enabled -%}
                 {% if not post_reply.post.deleted and not post_reply.deleted -%}
                     {% if current_user.is_authenticated -%}
                         <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
                            hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                            hx-target="#reply_to_{{ post_reply.id }}"
                            hx-swap="innerHTML focus-scroll:true"
-                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
+                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
                     {% else -%}
-                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span></a>
+                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
                     {% endif -%}
                 {% else -%}
-                    <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;reply</span>
+                    <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span>
                 {% endif -%}
             {% endif -%}
         </div>
@@ -135,9 +135,9 @@
                         {% endwith %}
                     {% endfor -%}
             {% else -%}
-                <div class="continue_thread hidable">
-                    <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}">Continue thread</a>
-                </div>
+                <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}"
+                   hx-post="{{ url_for('post.continue_discussion_ajax', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
+                   hx-target="#comment_{{ post_reply.id }}" hx-swap="outerHTML">{{ _('Continue thread') }}</a>
             {% endif -%}
         </div>
     {% endif -%}

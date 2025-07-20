@@ -1,16 +1,10 @@
-import re
-
-from flask import request, g
-from flask_login import current_user
+from flask_babel import lazy_gettext as _l
 from flask_wtf import FlaskForm
 from sqlalchemy import func
-from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField
-from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Regexp, Optional
-from wtforms.fields.choices import SelectMultipleField
-from app.models import Feed, utcnow, Community, User
-from flask_babel import _, lazy_gettext as _l
+from wtforms import StringField, SubmitField, TextAreaField, BooleanField, SelectField, FileField
+from wtforms.validators import DataRequired, Length, Optional
 
+from app.models import Community, User
 from app.utils import apply_feed_url_rules
 
 
@@ -18,7 +12,8 @@ class AddCopyFeedForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[Length(max=30)])
     description = TextAreaField(_l('Description'))
-    parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()],
+                                 render_kw={'class': 'form-select'})
     show_child_posts = BooleanField('Show posts from child feeds')
     communities = TextAreaField(_l('Communities'), validators=[DataRequired()], render_kw={'rows': 5})
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
@@ -38,24 +33,27 @@ class AddCopyFeedForm(FlaskForm):
         else:
             if not apply_feed_url_rules(self):
                 return False
-            community = Community.query.filter(Community.name == self.url.data.strip().lower(), Community.ap_id == None).first()
+            community = Community.query.filter(Community.name == self.url.data.strip().lower(),
+                                               Community.ap_id == None).first()
             if community is not None:
                 self.url.errors.append(_l('A community with this url already exists.'))
                 return False
-            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(ap_id=None).first()
+            user = User.query.filter(func.lower(User.user_name) == func.lower(self.url.data.strip())).filter_by(
+                ap_id=None).first()
             if user is not None:
                 if user.deleted:
                     self.url.errors.append(_l('This name was used in the past and cannot be reused.'))
                 else:
                     self.url.errors.append(_l('This name is in use already.'))
                 return False
-        
+
         input_communities = self.communities.data.strip().split('\n')
         for community_ap_id in input_communities:
             if not '@' in community_ap_id:
-                self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
+                self.communities.errors.append(
+                    _l('Please make sure each community is formatted as "community_name@instance.tld"'))
                 return False
-        return True    
+        return True
 
 
 class EditFeedForm(FlaskForm):
@@ -63,7 +61,8 @@ class EditFeedForm(FlaskForm):
     title = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[Length(max=50)])
     description = TextAreaField(_l('Description'))
-    parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
+    parent_feed_id = SelectField(_l('Parent feed'), coerce=int, validators=[Optional()],
+                                 render_kw={'class': 'form-select'})
     show_child_posts = BooleanField('Show posts from child feeds')
     communities = TextAreaField(_l('Communities'), validators=[DataRequired()], render_kw={'rows': 5})
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
@@ -77,14 +76,14 @@ class EditFeedForm(FlaskForm):
     def validate(self, extra_validators=None):
         if not super().validate():
             return False
-        if self.url.data is not None:   # when editing a feed with subscribers this field is disabled
+        if self.url.data is not None:  # when editing a feed with subscribers this field is disabled
             if self.url.data.strip() == '':
                 self.url.errors.append(_l('This field is required.'))
                 return False
             else:
                 if not apply_feed_url_rules(self):
                     return False
-        
+
         input_communities = self.communities.data.strip().split('\n')
         for community_ap_id in input_communities:
             if not '@' in community_ap_id:
@@ -94,5 +93,7 @@ class EditFeedForm(FlaskForm):
 
 
 class SearchRemoteFeed(FlaskForm):
-    address = StringField(_l('Feed address'), render_kw={'placeholder': 'e.g. https://server.name/f/feedname', 'autofocus': True}, validators=[DataRequired()])
+    address = StringField(_l('Feed address'),
+                          render_kw={'placeholder': 'e.g. https://server.name/f/feedname', 'autofocus': True},
+                          validators=[DataRequired()])
     submit = SubmitField(_l('Search'))

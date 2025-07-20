@@ -1,19 +1,16 @@
-import json
-from sqlalchemy import text
-
-from app import cache, db
-from app.activitypub.signature import default_context, send_post_request, post_request
-from app.community.util import send_to_remote_instance
-from app.constants import *
-from app.models import Instance, Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, utcnow
-from app.shared.tasks import task_selector
-from app.utils import gibberish, instance_banned, render_template, authorise_api_user, recently_upvoted_post_replies, recently_downvoted_post_replies, shorten_string, \
-                      piefed_markdown_to_lemmy_markdown, markdown_to_html, ap_datetime, add_to_modlog_activitypub, can_create_post_reply, \
-                      can_upvote, can_downvote, get_recipient_language
-
-from flask import abort, current_app, flash, redirect, request, url_for
+from flask import current_app, flash
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
+from sqlalchemy import text
+
+from app import db
+from app.constants import *
+from app.models import Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, \
+    utcnow, Instance
+from app.shared.tasks import task_selector
+from app.utils import render_template, authorise_api_user, shorten_string, \
+    piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
+    can_upvote, can_downvote, get_recipient_language
 
 
 def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
@@ -30,7 +27,8 @@ def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None
 
     undo = reply.vote(user, vote_direction)
 
-    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
+    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo,
+                  vote_direction=vote_direction, federate=federate)
 
     if src == SRC_API:
         return user.id
@@ -49,7 +47,8 @@ def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None
 
 
 def bookmark_reply(reply_id: int, src, auth=None):
-    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(
+        deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
@@ -115,7 +114,8 @@ def subscribe_reply(reply_id: int, subscribe, src, auth=None):
                 flash(_(msg))
         else:
             new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                        post_title=reply.post.title)), user_id=user_id, entity_id=reply_id,
+                                                                              post_title=reply.post.title)),
+                                                        user_id=user_id, entity_id=reply_id,
                                                         type=NOTIF_REPLY)
             db.session.add(new_notification)
             db.session.commit()
@@ -154,6 +154,8 @@ def make_reply(input, post, parent_id, src, auth=None):
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
             raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
+        if not parent_reply.replies_enabled:
+            raise Exception('This comment cannot be replied to.')
     else:
         parent_reply = None
 
@@ -169,6 +171,7 @@ def make_reply(input, post, parent_id, src, auth=None):
                           language_id=language_id, distinguished=distinguished)
 
     user.language_id = language_id
+    user.post_reply_count += 1
     reply.ap_id = reply.profile_id()
     db.session.commit()
     if src == SRC_WEB:
@@ -293,22 +296,27 @@ def report_reply(reply_id, input, src, auth=None):
             flash(_('Comment has already been reported, thank you!'))
             return
 
-    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id, suspect_community_id=reply.community.id,
-                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id, source_instance_id=1)
+    suspect_author = User.query.get(reply.author.id)
+    source_instance = Instance.query.get(suspect_author.instance_id)
+    reporter_user = User.query.get(user_id)
+    targets_data = {'gen': '0',
+                    'suspect_comment_id': reply.id,
+                    'suspect_user_id': reply.author.id,
+                    'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                    'source_instance_id': suspect_author.instance_id,
+                    'source_instance_domain': source_instance.domain,
+                    'reporter_id': user_id,
+                    'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
+                    'orig_comment_body': reply.body
+                    }
+    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id,
+                    suspect_community_id=reply.community.id,
+                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id,
+                    source_instance_id=1, targets=targets_data)
     db.session.add(report)
 
     # Notify moderators
     already_notified = set()
-    suspect_author = User.query.get(reply.author.id)
-    reporter_user = User.query.get(user_id)
-    targets_data = {'gen':'0',
-                    'suspect_comment_id':reply.id,
-                    'suspect_user_id':reply.author.id,
-                    'suspect_user_user_name':suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                    'reporter_id':user_id,
-                    'reporter_user_name':reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
-                    'orig_comment_body':reply.body
-                    }
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
@@ -324,7 +332,7 @@ def report_reply(reply_id, input, src, auth=None):
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id, 
+            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
                                   author_id=user_id, notif_type=NOTIF_REPORT,
                                   subtype='comment_reported',
                                   targets=targets_data)
@@ -369,9 +377,10 @@ def mod_remove_reply(reply_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Comment deleted.'))
 
-    add_to_modlog_activitypub('delete_post_reply', user, community_id=reply.community_id,
-                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+    add_to_modlog('delete_post_reply', actor=user, target_user=reply.author, reason=reason,
+                  community=reply.community, post=reply.post, reply=reply,
+                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                  link=f'post/{reply.post_id}#comment_{reply.id}')
 
     task_selector('delete_reply', user_id=user.id, reply_id=reply.id, reason=reason)
 
@@ -403,9 +412,10 @@ def mod_restore_reply(reply_id, reason, src, auth):
     if src == SRC_WEB:
         flash(_('Comment restored.'))
 
-    add_to_modlog_activitypub('restore_post_reply', user, community_id=reply.community_id,
-                              link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                              link=f'post/{reply.post_id}#comment_{reply.id}', reason=reason)
+    add_to_modlog('restore_post_reply', actor=user, target_user=reply.author, reason=reason,
+                  community=reply.community, post=reply.post, reply=reply,
+                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
+                  link=f'post/{reply.post_id}#comment_{reply.id}')
 
     task_selector('restore_reply', user_id=user.id, reply_id=reply.id, reason=reason)
 

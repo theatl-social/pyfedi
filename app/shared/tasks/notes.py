@@ -7,7 +7,7 @@ from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityM
 from app.user.utils import search_for_user
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
                       recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-                      recently_downvoted_post_replies, get_recipient_language
+                      recently_downvoted_post_replies, get_recipient_language, get_task_session
 
 from flask import current_app
 from flask_babel import _, force_locale, gettext
@@ -53,31 +53,33 @@ import re
 
 @celery.task
 def make_reply(send_async, reply_id, parent_id):
+    session = get_task_session()
     try:
-        send_reply(reply_id, parent_id)
+        send_reply(reply_id, parent_id, session=session)
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
 @celery.task
 def edit_reply(send_async, reply_id, parent_id):
+    session = get_task_session()
     try:
-        send_reply(reply_id, parent_id, edit=True)
+        send_reply(reply_id, parent_id, edit=True, session=session)
     except Exception:
-        db.session.rollback()
+        session.rollback()
         raise
     finally:
-        db.session.remove()
+        session.close()
 
 
-def send_reply(reply_id, parent_id, edit=False):
-    reply = PostReply.query.filter_by(id=reply_id).one()
+def send_reply(reply_id, parent_id, edit=False, session=None):
+    reply = session.query(PostReply).filter_by(id=reply_id).one()
     user = reply.author
     if parent_id:
-        parent = PostReply.query.filter_by(id=parent_id).one()
+        parent = session.query(PostReply).filter_by(id=parent_id).one()
     else:
         parent = reply.post
     community = reply.community
@@ -115,11 +117,11 @@ def send_reply(reply_id, parent_id, edit=False):
     for recipient in recipients:
         if recipient.is_local() and recipient.id != parent.author.id:
             if edit:
-                existing_notification = Notification.query.filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                existing_notification = session.query(Notification).filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
             else:
                 existing_notification = None
             if not existing_notification:
-                author = User.query.get(user.id)
+                author = session.query(User).get(user.id)
                 targets_data = {'gen':'0',
                                 'post_id':reply.post_id,
                                 'author_user_name': author.ap_id if author.ap_id else author.user_name,
@@ -133,13 +135,13 @@ def send_reply(reply_id, parent_id, edit=False):
                                                 subtype='comment_mention',
                                                 targets=targets_data)
                     recipient.unread_notifications += 1
-                    db.session.add(notification)
-                    db.session.commit()
+                    session.add(notification)
+                    session.commit()
 
     if community.local_only or not community.instance.online():
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user.id, community_id=community.id).first()
+    banned = session.query(CommunityBan).filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():

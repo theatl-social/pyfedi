@@ -4,7 +4,6 @@
 @import "scss/typography";
 @import "scss/controls";
 
-
 $min-touch-target: 44px;
 
 @view-transition {
@@ -295,6 +294,31 @@ div.navbar {
       margin-right: 5px;
     }
   }
+
+  .community_filter {
+    position: relative;
+    margin-left: 10px;
+    padding-right: 20px;
+
+    .fe-search {
+      position: absolute;
+      right: 27px;
+      top: 11px;
+    }
+
+    @include breakpoint(laptop) {
+      margin-left: 0;
+      padding-right: 0;
+
+      #community-filter {
+        margin-left: 0;
+      }
+
+      .fe-search {
+        right: 7px;
+      }
+    }
+  }
 }
 
 .communities_menu_parent .show {
@@ -362,6 +386,7 @@ form {
 
 .form-label {
   font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
 .post_reply_form {
@@ -798,6 +823,11 @@ time {
   }
 }
 
+.community_instance {
+  margin-left: -2px;
+  display: none;
+}
+
 .max_width_512 {
   max-width: 512px;
   display: inline-block;
@@ -1038,6 +1068,9 @@ time {
     p {
       padding-right: 9px;
     }
+    p:last-child {
+      margin-bottom: 0px;
+    }
   }
 
   &:first-child {
@@ -1125,7 +1158,8 @@ time {
       }
     }
     &.voted_down {
-      color: darkred;
+      /* light red with a little transparnecy */
+      color: rgba(251, 74, 74, 0.846); 
       .fe {
         font-weight: bold;
         &:before {
@@ -1255,7 +1289,10 @@ time {
 
   &.distinguished {
     > .row:first-child {
-      background-color: $lightest-grey;
+      background-color: var(--bs-secondary-bg-subtle);
+      border: solid;
+      border-color: var(--bs-success);
+      border-width: 2px;
     }
   }
 
@@ -1316,7 +1353,6 @@ time {
   }
 
   .comment_actions {
-    margin-top: -18px;
     display: flex;
     min-height: $min-touch-target;
     container-type: inline-size;
@@ -1566,6 +1602,60 @@ a.unread, div.unread {
   }
 }
 
+.accordion-preview {
+  .collapse {
+    &:not(.show) {
+      display: block;
+
+      p:last-of-type {
+        margin-bottom: 0;
+      }
+
+      .accordion-body {
+        max-height: 4rem;
+        position: relative;
+        overflow-y: hidden;
+        overflow-x: auto;
+
+        &:after {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          height: 100%;
+          width: 100%;
+          content: "";
+          background: linear-gradient(to bottom,
+            transparent,
+            transparent 60%,
+            var(--bs-secondary-bg)
+          );
+          pointer-events: none;
+        }
+      }
+    }
+  }
+
+  .collapsing {
+    transition: none;
+  }
+
+  .accordion-item:first-of-type {
+    .accordion-button {
+      border-top-right-radius: 0;
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+
+      &:not(.collapsed) {
+        background-color: var(--bs-accordion-active-bg) !important;
+      }
+    }
+  }
+}
+
+.notification-table {
+  table-layout: fixed;
+}
+
 .profile_action_buttons, .rh_action_buttons {
   float: right;
 }
@@ -1595,7 +1685,7 @@ a.unread, div.unread {
   float: right;
 }
 
-.post_body, .comment_body {
+.post_body, .comment_body, #preview, .reply_preview, .accordion-body {
   word-wrap: break-word;
 
   img {
@@ -1915,6 +2005,26 @@ h1 .warning_badge {
   }
 }
 
+[data-bs-theme="dark"] .full .ts-control {
+  background-color: #424549 !important;
+  color: #eee !important;
+}
+
+[data-bs-theme="dark"] .ts-dropdown {
+  background-color: #424549 !important;
+  color: #eee !important;
+}
+
+[data-bs-theme="dark"] .ts-dropdown .active {
+  background-color: #424549 !important;
+  color: #eee !important;
+}
+
+[data-bs-theme="dark"] .ts-dropdown .optgroup-header {
+  background-color: #424549 !important;
+  color: #eee !important;
+}
+
 .community_icon {
   width: 20vw;
   height: 20vw;
@@ -2148,8 +2258,11 @@ form {
   width: 96%;
 }
 
-.reported {
-  background-color: antiquewhite;
+.post_teaser.reported, .comment.reported {
+  border-style: solid !important;
+  border-color: var(--bs-danger) !important;
+  border-width: 2px !important;
+  background-color: var(--bs-secondary-bg);
 }
 
 .post_type_image.reported, .post_teaser_body.reported, .masonry_thumb.reported {
@@ -2370,8 +2483,34 @@ form {
 
 }
 
-#registration_form #question {
-  margin-top: -0.5rem;
+#topic_communities, #feed_communities {
+  .list-group-item {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+#side_pane {
+    .list-group-item .text-muted {
+      font-size: 87%;
+    }
+}
+
+/* password eye */
+.password-container {
+	position: relative;
+}
+
+.showPassword, .hidePassword {
+	position: absolute;
+	right: 6px;
+    top: 30px;
+
+	img {
+		opacity: 0.5;
+  	    width: 30px;
+  		height: 30px;
+	}
 }
 
 .blink {

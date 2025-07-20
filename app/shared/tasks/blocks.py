@@ -3,7 +3,7 @@ import datetime
 from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityMember, User, Instance
-from app.utils import gibberish, ap_datetime
+from app.utils import gibberish, ap_datetime, get_task_session, patch_db_session
 
 from flask import current_app
 
@@ -39,22 +39,58 @@ remove @context from inner object
 
 @celery.task
 def ban_from_site(send_async, user_id, mod_id, expiry, reason):
-    ban_person(user_id, mod_id, None, expiry, reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                ban_person(user_id, mod_id, None, expiry, reason)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def unban_from_site(send_async, user_id, mod_id, expiry, reason):
-    ban_person(user_id, mod_id, None, expiry, reason, is_undo=True)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                ban_person(user_id, mod_id, None, expiry, reason, is_undo=True)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def ban_from_community(send_async, user_id, mod_id, community_id, expiry, reason):
-    ban_person(user_id, mod_id, community_id, expiry, reason)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                ban_person(user_id, mod_id, community_id, expiry, reason)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reason):
-    ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=True)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=True)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=False):

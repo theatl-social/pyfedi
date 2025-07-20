@@ -1,12 +1,13 @@
+from sqlalchemy import desc, or_, text
+
 from app import db
+from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
 from app.api.alpha.views import private_message_view
-from app.api.alpha.utils.validators import required, string_expected, integer_expected
+from app.constants import NOTIF_MESSAGE
 from app.chat.util import send_message
-from app.models import ChatMessage, Conversation, User
+from app.models import ChatMessage, Conversation, User, Notification
 from app.utils import authorise_api_user
 
-from flask import current_app
-from sqlalchemy import desc
 
 def get_private_message_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
@@ -19,7 +20,8 @@ def get_private_message_list(auth, data):
     if unread_only:
         private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False).order_by(desc(ChatMessage.created_at))
     else:
-        private_messages = ChatMessage.query.filter_by(recipient_id=user_id).order_by(desc(ChatMessage.created_at))
+        private_messages = ChatMessage.query.filter(or_(ChatMessage.recipient_id == user_id,
+                    ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
     private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
@@ -29,6 +31,40 @@ def get_private_message_list(auth, data):
     pm_json = {
         "private_messages": pm_list,
         'next_page': str(private_messages.next_num) if private_messages.next_num else None
+    }
+    return pm_json
+
+
+def get_private_message_conversation(auth, data):
+    page = int(data['page']) if data and 'page' in data else 1
+    limit = int(data['limit']) if data and 'limit' in data else 10
+    if not data or 'person_id' not in data:
+        raise Exception('Missing person_id parameter')
+    person_id = int(data['person_id'])
+    person = User.query.filter_by(id=person_id).one()
+
+    if person is None:
+        raise Exception('person not found')
+
+    user_id = authorise_api_user(auth)
+
+    conversation_ids = db.session.execute(text("SELECT conversation_id FROM conversation_member WHERE user_id = :person_id"),
+                                         {"person_id": person_id}).scalars()
+    pm_list = []
+    next_page = None
+    if conversation_ids:
+        private_messages = ChatMessage.query.filter(ChatMessage.conversation_id.in_(conversation_ids),
+                              or_(ChatMessage.recipient_id == user_id,
+                                  ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
+        private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
+        for private_message in private_messages:
+            pm_list.append(private_message_view(private_message, variant=1))
+
+        next_page = str(private_messages.next_num) if private_messages.next_num else None
+
+    pm_json = {
+        "private_messages": pm_list,
+        'next_page': next_page
     }
     return pm_json
 
@@ -53,3 +89,33 @@ def post_private_message(auth, data):
 
     pm_json = private_message_view(private_message, variant=2)
     return pm_json
+
+
+def post_private_message_mark_as_read(auth, data):
+    required(['private_message_id', 'read'], data)
+    integer_expected(['private_message_id'], data)
+    boolean_expected(['read'], data)
+
+    user = authorise_api_user(auth, return_type='model')
+    message_id = data['private_message_id']
+    read = data['read']
+
+    private_message = ChatMessage.query.filter_by(id=message_id, recipient_id=user.id).one()
+    private_message.read = read
+
+    notif_read = not read
+    notifications = Notification.query.filter_by(user_id=user.id, notif_type=NOTIF_MESSAGE, subtype='chat_message', read=notif_read)
+    for notification in notifications:
+        if 'message_id' in notification.targets and notification.targets['message_id'] == message_id:
+            notification.read = read
+            if read == True and user.unread_notifications > 0:
+                user.unread_notifications -= 1
+            elif read == False:
+                user.unread_notifications += 1
+            break
+    db.session.commit()
+
+
+    return private_message_view(private_message, variant=2)
+
+

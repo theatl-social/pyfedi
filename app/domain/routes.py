@@ -2,20 +2,21 @@ from datetime import timezone
 from random import randint
 
 from feedgen.feed import FeedGenerator
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
-from flask_login import login_user, logout_user, current_user, login_required
+from flask import redirect, url_for, flash, request, make_response, current_app, abort, g
 from flask_babel import _
+from flask_login import current_user, login_required
+from sqlalchemy import desc, or_
 
 from app import db, constants, cache, limiter
 from app.constants import POST_STATUS_REVIEWING
+from app.domain import bp
 from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
-from app.domain import bp
 from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
-    return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts
-from sqlalchemy import desc, or_
+    return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
+    moderating_communities_ids
 
 
 @bp.route('/d/<domain_id>', methods=['GET', 'POST'])
@@ -41,11 +42,15 @@ def show_domain(domain_id):
             else:
                 form = None
             if current_user.is_anonymous or current_user.ignore_bots == 1:
-                posts = Post.query.join(Community, Community.id == Post.community_id).\
-                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
+                posts = Post.query.join(Community, Community.id == Post.community_id). \
+                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
+                           Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
                     order_by(desc(Post.posted_at))
             else:
-                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at))
+                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False,
+                                                          Post.deleted == False,
+                                                          Post.status > POST_STATUS_REVIEWING).order_by(
+                    desc(Post.posted_at))
 
             if current_user.is_authenticated:
                 instance_ids = blocked_instances(current_user.id)
@@ -62,8 +67,10 @@ def show_domain(domain_id):
 
             # pagination
             posts = posts.paginate(page=page, per_page=100, error_out=False)
-            next_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.next_num) if posts.has_next else None
-            prev_url = url_for('domain.show_domain', domain_id=domain_id, page=posts.prev_num) if posts.has_prev and page != 1 else None
+            next_url = url_for('domain.show_domain', domain_id=domain_id,
+                               page=posts.next_num) if posts.has_next else None
+            prev_url = url_for('domain.show_domain', domain_id=domain_id,
+                               page=posts.prev_num) if posts.has_prev and page != 1 else None
 
             # Voting history
             if current_user.is_authenticated:
@@ -77,9 +84,11 @@ def show_domain(domain_id):
                                    POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
                                    POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                    next_url=next_url, prev_url=prev_url, form=form,
-                                   content_filters=content_filters, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                   content_filters=content_filters, recently_upvoted=recently_upvoted,
+                                   recently_downvoted=recently_downvoted,
                                    reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                    joined_communities=joined_or_modding_communities(current_user.get_id()),
+                                   moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                    rss_feed=f"https://{current_app.config['SERVER_NAME']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
                                    rss_feed_name=f"{domain.name} on {g.site.name}" if domain.post_count > 0 else None,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
@@ -106,7 +115,7 @@ def show_domain_rss(domain_id):
             posts = Post.query.join(Community, Community.id == Post.community_id). \
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
                        Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
-                order_by(desc(Post.posted_at)).limit(100)
+                order_by(desc(Post.posted_at)).limit(20)
 
             fg = FeedGenerator()
             fg.id(f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}")
@@ -164,7 +173,8 @@ def domains():
     prev_url = url_for('domain.domains', page=domains.prev_num) if domains.has_prev and page != 1 else None
 
     return render_template('domain/domains.html', title='All known domains', domains=domains,
-                           next_url=next_url, prev_url=prev_url, search=search, ban_visibility_permission=ban_visibility_permission)
+                           next_url=next_url, prev_url=prev_url, search=search,
+                           ban_visibility_permission=ban_visibility_permission)
 
 
 @bp.route('/domains/banned', methods=['GET'])
@@ -204,7 +214,7 @@ def domain_block(domain_id):
     if request.headers.get("HX-Request"):
         resp = make_response()
         resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
-        
+
         return resp
 
     return redirect(url_for('domain.show_domain', domain_id=domain.id))
@@ -229,7 +239,7 @@ def domain_unblock(domain_id):
             resp.headers["HX-Redirect"] = url_for("domain.show_domain", domain_id=domain.id)
         else:
             resp.headers["HX-Redirect"] = curr_url
-        
+
         return resp
 
     return redirect(url_for('domain.show_domain', domain_id=domain.id))

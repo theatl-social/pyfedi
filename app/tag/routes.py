@@ -2,19 +2,19 @@ from datetime import timezone
 from random import randint
 
 from feedgen.feed import FeedGenerator
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g
-from flask_login import current_user
+from flask import redirect, url_for, flash, request, make_response, current_app, abort, g
 from flask_babel import _
+from flask_login import current_user
+from sqlalchemy import desc, or_
 
-from app import db, constants, cache
+from app import db, constants
 from app.constants import POST_STATUS_REVIEWING
 from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag
 from app.tag import bp
-from app.utils import render_template, permission_required, joined_communities, moderating_communities, \
-    user_filters_posts, blocked_instances, blocked_users, blocked_domains, menu_topics, mimetype_from_url, \
-    blocked_communities, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, login_required
-from sqlalchemy import desc, or_
+from app.utils import render_template, permission_required, user_filters_posts, blocked_instances, blocked_users, \
+    blocked_domains, mimetype_from_url, \
+    blocked_communities, login_required, moderating_communities_ids
 
 
 @bp.route('/tag/<tag>', methods=['GET'])
@@ -61,6 +61,7 @@ def show_tag(tag):
                                POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                next_url=next_url, prev_url=prev_url,
                                content_filters=content_filters,
+                               moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
                                rss_feed_name=f"#{tag.display_as} on {g.site.name}",
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
@@ -79,7 +80,7 @@ def show_tag_rss(tag):
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
-        posts = posts.order_by(desc(Post.posted_at)).limit(100).all()
+        posts = posts.order_by(desc(Post.posted_at)).limit(20).all()
 
         description = None
         og_image = None
@@ -138,7 +139,8 @@ def tags():
     prev_url = url_for('tag.tags', page=tags.prev_num) if tags.has_prev and page != 1 else None
 
     return render_template('tag/tags.html', title='All known tags', tags=tags,
-                           next_url=next_url, prev_url=prev_url, search=search, ban_visibility_permission=ban_visibility_permission)
+                           next_url=next_url, prev_url=prev_url, search=search,
+                           ban_visibility_permission=ban_visibility_permission)
 
 
 @bp.route('/tags/banned', methods=['GET'])
@@ -186,3 +188,22 @@ def tag_unban(tag):
         db.session.commit()
         flash(_('%(name)s un-banned for all users.', name=tag.name))
         return redirect(url_for('tag.show_tag', tag=tag.name))
+
+
+@bp.route('/tags/community/<community_id>', methods=['GET'])
+def tags_community(community_id: int):
+    try:
+        community = Community.query.filter_by(id=community_id).one()
+    except Exception:
+        abort(404)
+
+    search = request.args.get('search', '')
+
+    tags = Tag.query.filter_by(banned=False).join(post_tag, post_tag.c.tag_id == Tag.id).join(
+              Post, Post.id == post_tag.c.post_id).filter_by(community_id=community_id, deleted=False)
+    if search != '':
+        tags = tags.filter(Tag.name.ilike(f'%{search}%'))
+    tags = tags.order_by(Tag.name)
+
+    return render_template('tag/tags_community.html', title='Community tags',
+                           community=community, tags=tags, search=search)

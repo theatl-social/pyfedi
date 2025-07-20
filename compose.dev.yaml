@@ -9,6 +9,8 @@ services:
      - ./.env.docker
     volumes:
      - ./pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
     networks:
       - pf_network
 
@@ -53,6 +55,7 @@ services:
     environment:
       - FLASK_DEBUG=1
       - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1  # Displays prints and logger.info in console
     volumes:
      - ./gunicorn.conf.py:/app/gunicorn.conf.py
      - ./media/:/app/app/static/media/
@@ -68,7 +71,7 @@ services:
     image: adminer
     restart: unless-stopped
     ports:
-      - 8888:8080
+      - "8888:8080"
     depends_on:
       - db
     networks:

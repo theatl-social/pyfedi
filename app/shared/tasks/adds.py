@@ -1,7 +1,7 @@
 from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, Post, User
-from app.utils import gibberish, instance_banned
+from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
 
@@ -25,14 +25,32 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 @celery.task
 def sticky_post(send_async, user_id, post_id):
-    post = Post.query.filter_by(id=post_id).one()
-    add_object(user_id, post)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = Post.query.filter_by(id=post_id).one()
+                add_object(user_id, post)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
 def add_mod(send_async, user_id, mod_id, community_id):
-    mod = User.query.filter_by(id=mod_id).one()
-    add_object(user_id, mod, community_id)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                mod = User.query.filter_by(id=mod_id).one()
+                add_object(user_id, mod, community_id)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def add_object(user_id, object, community_id=None):

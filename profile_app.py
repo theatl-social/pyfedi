@@ -9,13 +9,15 @@ import arrow
 from flask import session, g, json, request, current_app
 from flask_babel import get_locale
 from flask_login import current_user
+from flask_wtf.csrf import generate_csrf
+from sqlalchemy import text
 from werkzeug.middleware.profiler import ProfilerMiddleware
 from app import create_app, db, cli
 from app.models import Site
 from app.utils import gibberish, shorten_number, community_membership, getmtime, digits, user_access, ap_datetime, \
     can_create_post, can_upvote, can_downvote, current_theme, shorten_string, shorten_url, feed_membership, role_access, \
     in_sorted_list, first_paragraph, html_to_text, community_link_to_href, person_link_to_href, remove_images, \
-    notif_id_to_string, feed_link_to_href
+    notif_id_to_string, feed_link_to_href, get_setting, set_setting
 from app.constants import *
 
 app = create_app()
@@ -51,6 +53,7 @@ with app.app_context():
     app.jinja_env.globals['file_exists'] = os.path.exists
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
+    app.jinja_env.globals['csrf_token'] = generate_csrf
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
@@ -58,7 +61,7 @@ with app.app_context():
     app.jinja_env.filters['shorten_url'] = shorten_url
     app.jinja_env.filters['remove_images'] = remove_images
     app.config['PROFILE'] = True
-    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[100])
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[500])
     app.run(debug = True, host='127.0.0.1')
 
 
@@ -74,9 +77,19 @@ def before_request():
     # Store nonce in g (g is per-request, unlike session)
     g.nonce = gibberish()
     g.locale = str(get_locale())
-    if request.path != '/inbox' and not request.path.startswith(
-            '/static/'):  # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
+    if request.path != '/inbox' and not request.path.startswith('/static/'):  # do not load g.site on shared inbox, to increase chance of duplicate detection working properly
         g.site = Site.query.get(1)
+        g.admin_ids = get_setting('admin_ids')    # get_setting is cached in redis
+        if g.admin_ids is None:
+            g.admin_ids = list(db.session.execute(
+                text("""SELECT u.id FROM "user" u WHERE u.id = 1
+                        UNION
+                        SELECT u.id
+                        FROM "user" u
+                        JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                        ORDER BY id"""),
+                {'role_admin': ROLE_ADMIN}).scalars())
+            set_setting('admin_ids', g.admin_ids)
     if current_user.is_authenticated:
         current_user.last_seen = datetime.utcnow()
         current_user.email_unread_sent = False
@@ -121,7 +134,7 @@ def after_request(response):
         profiler.disable()
         s = io.StringIO()
         ps = pstats.Stats(profiler, stream=s).sort_stats('cumulative')
-        ps.print_stats(50)  # Top 50 lines by cumulative time
+        ps.print_stats(500)  # Top 50 lines by cumulative time
 
         # Output to stderr, or save to file, or add to response
         print(f"--- PROFILE ({request.path}) ---\n{s.getvalue()}")

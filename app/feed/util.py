@@ -1,16 +1,17 @@
-import httpx
+from random import randint
+from time import sleep
 from typing import List, Tuple
+
+import httpx
+from flask import current_app
+from flask_babel import _
+from sqlalchemy import func, text
 
 from app import db
 from app.activitypub.util import actor_json_to_model
 from app.community.util import search_for_community, retrieve_mods_and_backfill
 from app.models import BannedInstances, Feed, FeedItem, Community
 from app.utils import feed_tree, get_request
-from flask import current_app
-from flask_babel import _
-from time import sleep
-from random import randint
-from sqlalchemy import func, text
 
 
 def feeds_for_form(current_feed: int, user_id: int) -> List[Tuple[int, str]]:
@@ -54,12 +55,12 @@ def search_for_feed(address: str):
         # Look up the profile address of the Feed using WebFinger
         try:
             webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                         params={'resource': f"acct:{address}"})    # include the ~ on the start to indicate we're searching for a feed
+                                         params={'resource': f"acct:{address}"})  # include the ~ on the start to indicate we're searching for a feed
         except httpx.HTTPError:
             sleep(randint(3, 10))
             try:
                 webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                            params={'resource': f"acct:{address}"})
+                                             params={'resource': f"acct:{address}"})
             except httpx.HTTPError:
                 return None
 
@@ -92,7 +93,8 @@ def actor_to_feed(actor) -> Feed:
 
 def feed_communities_for_edit(feed_id: int) -> str:
     return_value = []
-    for community in Community.query.filter(Community.banned == False).join(FeedItem, FeedItem.community_id == Community.id).filter(FeedItem.feed_id == feed_id).all():
+    for community in Community.query.filter(Community.banned == False).join(FeedItem, FeedItem.community_id == Community.id).\
+            filter(FeedItem.feed_id == feed_id).all():
         ap_id = community.link()
         if '@' not in ap_id:
             ap_id = f'{ap_id}@{current_app.config["SERVER_NAME"]}'
@@ -101,7 +103,8 @@ def feed_communities_for_edit(feed_id: int) -> str:
 
 
 def existing_communities(feed_id: int) -> List:
-    return db.session.execute(text('SELECT community_id FROM feed_item WHERE feed_id = :feed_id'), {'feed_id': feed_id}).scalars()
+    return db.session.execute(text('SELECT community_id FROM feed_item WHERE feed_id = :feed_id'),
+                              {'feed_id': feed_id}).scalars()
 
 
 def form_communities_to_ids(form_communities: str) -> set:
@@ -127,9 +130,6 @@ def initialise_new_communities(feed):
         if community and community.post_count == 0:
             if current_app.debug:
                 retrieve_mods_and_backfill(community.id, community.ap_domain, community.name)
-                break             # just get 2 posts from 1 new community when in debug
+                break  # just get 2 posts from 1 new community when in debug
             else:
                 retrieve_mods_and_backfill.delay(community.id, community.ap_domain, community.name)
-
-
-

@@ -1,11 +1,11 @@
-from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
+import os
 
-from pillow_heif import register_heif_opener
+import boto3
 from PIL import Image, ImageOps
 from flask import current_app
-import boto3
+from pillow_heif import register_heif_opener
 
-import os
+from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
 
 
 def process_upload(image_file, destination='posts'):
@@ -31,12 +31,12 @@ def process_upload(image_file, destination='posts'):
     image_file.seek(0)
     image_file.save(final_place)
 
-    final_ext = file_ext # track file extension for conversion
+    final_ext = file_ext  # track file extension for conversion
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
     if file_ext.lower() == '.avif':
-        import pillow_avif
+        import pillow_avif  # NOQA
 
     Image.MAX_IMAGE_PIXELS = 89478485
 
@@ -46,7 +46,7 @@ def process_upload(image_file, destination='posts'):
     image_quality = current_app.config['MEDIA_IMAGE_QUALITY']
 
     if image_format == 'AVIF':
-        import pillow_avif
+        import pillow_avif  # NOQA
 
     if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
         img = Image.open(final_place)
@@ -93,5 +93,3 @@ def process_upload(image_file, destination='posts'):
         raise Exception('unable to process upload')
 
     return url
-
-

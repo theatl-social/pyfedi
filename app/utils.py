@@ -1,28 +1,30 @@
 from __future__ import annotations
 
+import base64
 import bisect
 import hashlib
 import mimetypes
+import math
 import random
 import urllib
-from collections import defaultdict
+import warnings
+from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
 from datetime import datetime, timedelta, date
+from functools import wraps, lru_cache
 from json import JSONDecodeError
 from time import sleep
-from typing import List
-
-
-import app
-import redis
-import httpx
-import markdown2
+from typing import List, Tuple, Optional
 from urllib.parse import urlparse, parse_qs, urlencode
-from functools import wraps
+from zoneinfo import available_timezones
+
 import flask
-from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
-import warnings
+import httpx
 import jwt
-import base64
+import markdown2
+import redis
+from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
+import orjson
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
@@ -33,8 +35,8 @@ from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
 from sqlalchemy import text, or_, desc, asc, event
 from sqlalchemy.orm import Session
-from wtforms.fields  import SelectField, SelectMultipleField, StringField
-from wtforms.widgets import Select, html_params, ListWidget, CheckboxInput, TextInput
+from wtforms.fields import SelectMultipleField, StringField
+from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
@@ -46,8 +48,8 @@ from PIL import Image, ImageOps
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
 
-from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, ActivityPubLog, IpBan, \
-    Site, Post, PostReply, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
+from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
+    Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
 
 
@@ -65,6 +67,16 @@ def render_template(template_name: str, **context) -> Response:
         if 'etag' in context:
             resp.headers.add_header('ETag', context['etag'])
         resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+
+    # Early Hints-compatible Link headers (for Cloudflare or supporting proxies)
+    resp.headers['Link'] = (
+        '</bootstrap/static/css/bootstrap.min.css>; rel=preload; as=style, '
+        '</bootstrap/static/umd/popper.min.js>; rel=preload; as=script, '
+        '</bootstrap/static/js/bootstrap.min.js>; rel=preload; as=script, '
+        '</static/js/htmx.min.js>; rel=preload; as=script, '
+        '</static/fonts/feather/feather.woff>; rel=preload; as=font; crossorigin'
+    )
+    
     return resp
 
 
@@ -108,16 +120,18 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
         # Convert to a more generic error we handle
         raise httpx.HTTPError(f"HTTPError: {str(ex)}") from None
     except httpx.ReadError as connection_error:
-        try:    # retry, this time with a longer timeout
+        try:  # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
-            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2,
+                                        follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {connection_error}")
             raise httpx_client.ReadError(f"HTTPReadError: {str(e)}") from connection_error
     except httpx.HTTPError as read_timeout:
-        try:    # retry, this time with a longer timeout
+        try:  # retry, this time with a longer timeout
             sleep(random.randint(3, 10))
-            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2, follow_redirects=True)
+            response = httpx_client.get(uri, params=payload_str, headers=headers, timeout=timeout * 2,
+                                        follow_redirects=True)
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
             raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
@@ -200,7 +214,8 @@ def make_cache_key(sort=None, post_id=None, view_filter=None):
 
 
 def is_image_url(url):
-    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml', '.svg+xml; charset=utf-8']
+    common_image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.webp', '.avif', '.svg+xml',
+                               '.svg+xml; charset=utf-8']
     mime_type = mime_type_using_head(url)
     if mime_type:
         mime_type_parts = mime_type.split('/')
@@ -233,12 +248,14 @@ def is_video_url(url: str) -> bool:
 def is_video_hosting_site(url: str) -> bool:
     if url is None or url == '':
         return False
-    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be', 'https://www.vimeo.com', 'https://vimeo.com', 'https://streamable.com', 'https://www.redgifs.com/watch/']
+    video_hosting_sites = ['https://youtube.com', 'https://www.youtube.com', 'https://youtu.be',
+                           'https://www.vimeo.com', 'https://vimeo.com', 'https://streamable.com',
+                           'https://www.redgifs.com/watch/']
     for starts_with in video_hosting_sites:
         if url.startswith(starts_with):
             return True
 
-    if 'videos/watch' in url:   # PeerTube
+    if 'videos/watch' in url:  # PeerTube
         return True
 
     return False
@@ -261,20 +278,59 @@ def mime_type_using_head(url):
         return ''
 
 
-allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre',
-                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small', 'sub', 'sup',
+allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
+                'h6', 'pre',
+                'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
+                'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
+
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
+    # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
     if html is None or html == '':
         return ''
+
+    # Pre-escape angle brackets that aren't valid HTML tags before BeautifulSoup parsing
+    # We need to distinguish between:
+    # 1. Valid HTML tags (allowed or disallowed) - let BeautifulSoup handle them
+    # 2. Invalid/non-HTML content in angle brackets - escape them
+    def escape_non_html_brackets(match):
+        tag_content = match.group(1).strip().lower()
+        # Handle closing tags by removing the leading slash before extracting tag name
+        if tag_content.startswith('/'):
+            tag_name = tag_content[1:].split()[0]
+        else:
+            tag_name = tag_content.split()[0]
+        
+        # Check if this looks like a valid HTML tag (allowed or not)
+        # Valid HTML tags have specific patterns
+        html_tags = ['a', 'abbr', 'acronym', 'address', 'area', 'article', 'aside', 'audio', 'b', 'bdi', 'bdo', 'big',
+                     'blockquote', 'body', 'br', 'button', 'canvas', 'caption', 'center', 'cite', 'code', 'col',
+                     'colgroup', 'data', 'datalist', 'dd', 'del', 'details', 'dfn', 'dialog', 'dir', 'div', 'dl', 'dt',
+                     'em', 'embed', 'fieldset', 'figcaption', 'figure', 'font', 'footer', 'form', 'frame', 'frameset',
+                     'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'head', 'header', 'hr', 'html', 'i', 'iframe', 'img', 'input',
+                     'ins', 'kbd', 'label', 'legend', 'li', 'link', 'main', 'map', 'mark', 'meta', 'meter', 'nav',
+                     'noframes', 'noscript', 'object', 'ol', 'optgroup', 'option', 'output', 'p', 'param', 'picture',
+                     'pre', 'progress', 'q', 'rp', 'rt', 'ruby', 's', 'samp', 'script', 'section', 'select', 'small',
+                     'source', 'span', 'strike', 'strong', 'style', 'sub', 'summary', 'sup', 'svg', 'table', 'tbody',
+                     'tg-spoiler', 'td', 'template', 'textarea', 'tfoot', 'th', 'thead', 'time', 'title', 'tr', 'track',
+                     'tt', 'u', 'ul', 'var', 'video', 'wbr']
+        
+        if tag_name in html_tags:
+            # This is a valid HTML tag - let BeautifulSoup handle it (it will remove if not allowed)
+            return match.group(0)
+        else:
+            # This doesn't look like a valid HTML tag - escape it
+            return f"&lt;{match.group(1)}&gt;"
+    
+    html = re.sub(r'<([^<>]+?)>', escape_non_html_brackets, html)
 
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
     # Find all plain text links, convert to <a> tags
-    re_url = re.compile(r'(http[s]?://[!-~]+)')   # http(s):// followed by chars in ASCII range 33 to 126
+    re_url = re.compile(r'(http[s]?://[!-~]+)')  # http(s):// followed by chars in ASCII range 33 to 126
     for tag in soup.find_all(text=True):
         tags = []
         url = False
@@ -327,6 +383,7 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
 
     # replace lemmy's spoiler markdown left in HTML
+    clean_html = clean_html.replace('<h2>:::</h2>', '<p>:::</p>')   # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
     re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
     clean_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', clean_html)
 
@@ -344,11 +401,15 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
     re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
-    clean_html = re_embedded_mp4.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>', clean_html)
+    clean_html = re_embedded_mp4.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
+        clean_html)
 
     # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
     re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
-    clean_html = re_embedded_webm.sub(r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>', clean_html)
+    clean_html = re_embedded_webm.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
+        clean_html)
 
     # replace <img src> for mp3 with <audio>
     re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
@@ -356,7 +417,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     # replace the 'static' for images hotlinked to fandom sites with 'vignette'
     re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
-    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net', clean_html)
+    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
+                                       clean_html)
 
     # replace ruby markdown like {漢字|かんじ}
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
@@ -366,22 +428,18 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
+    
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets = []
-
-    def store_code(match):
-        code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
-
-    # Fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', store_code, text)
-    # Inline code (`...`)
-    text = re.sub(r'`[^`\n]+`', store_code, text)
+    code_snippets, text = stash_code_md(text)
 
     # Step 2: Escape <...> unless they look like valid HTML tags
     def escape_tag(match):
         tag_content = match.group(1).strip().lower()
-        tag_name = re.split(r'\s|/', tag_content)[0]
+        # Handle closing tags by removing the leading slash before extracting tag name
+        if tag_content.startswith('/'):
+            tag_name = tag_content[1:].split()[0]
+        else:
+            tag_name = tag_content.split()[0]
         if tag_name in allowed_tags:
             return match.group(0)
         else:
@@ -390,33 +448,71 @@ def escape_non_html_angle_brackets(text: str) -> str:
     text = re.sub(r'<([^<>]+?)>', escape_tag, text)
 
     # Step 3: Restore code blocks
-    for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    text = pop_code(code_snippets=code_snippets, text=text)
+
+    return text
+
+def handle_double_bolds(text: str) -> str:
+    """
+    Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
+    same sentence.
+    """
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text)
+
+    # Step 2: Wrap **bold** sections with <strong></strong>
+    # Regex is slightly modified from markdown2 source code
+    re_bold = re.compile(r"(\*\*)(?=\S)(.+?[*]?)(?<=\S)\1")
+    text = re_bold.sub(r"<strong>\2</strong>", text)
+
+    # Step 3: Restore code blocks
+    text = pop_code(code_snippets=code_snippets, text=text)
 
     return text
 
 
+def escape_img(raw_html: str) -> str:
+    """Prevents embedding images for places where an image would break formatting."""
+    
+    re_img = re.compile(r"<img.+?>")
+    raw_html = re_img.sub(r"<code><image placeholder></code>", raw_html)
+
+    return raw_html
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
-def markdown_to_html(markdown_text, anchors_new_tab=True) -> str:
+def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str:
     if markdown_text:
 
         # Escape <...> if it’s not a real HTML tag
-        markdown_text = escape_non_html_angle_brackets(markdown_text)   # To handle situations like https://ani.social/comment/9666667
+        markdown_text = escape_non_html_angle_brackets(
+            markdown_text)  # To handle situations like https://ani.social/comment/9666667
+        
+        markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                        extras={'tables': True, 'fenced-code-blocks': True, 'strike': True, 'tg-spoiler': True,
-                                'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                                  'tg-spoiler': True,
+                                                  'breaks': {'on_newline': True, 'on_backslash': True},
+                                                  'tag-friendly': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
                 raw_html = markdown2.markdown(markdown_text,
-                            extras={'middle-word-em': False, 'tables': True, 'strike': True, 'tg-spoiler': True,
-                                    'breaks': {'on_newline': True, 'on_backslash': True}, 'tag-friendly': True})
+                                              extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                                                      'tg-spoiler': True,
+                                                      'breaks': {'on_newline': True, 'on_backslash': True},
+                                                      'tag-friendly': True})
             except TypeError:
                 raw_html = ''
+        
+        if not allow_img:
+            raw_html = escape_img(raw_html)
+
         return allowlist_html(raw_html, a_target='_blank' if anchors_new_tab else '')
     else:
         return ''
@@ -516,23 +612,134 @@ def first_paragraph(html):
         return ''
 
 
-def community_link_to_href(link: str) -> str:
-    pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+def community_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/community/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'!\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def feed_link_to_href(link: str) -> str:
-    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
+def feed_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/feed/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'~\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def person_link_to_href(link: str) -> str:
-    pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = f'https://{current_app.config["SERVER_NAME"]}/user/lookup/'
+def person_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+    
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
+    pattern = r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = f'https://{server_name}/user/lookup/'
     replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
-    return re.sub(pattern, replacement, link)
+    link = re.sub(pattern, replacement, link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+    
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+    
+    return link
+
+
+def stash_code_html(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
+
+    return (code_snippets, text)
+
+
+def stash_code_md(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    # Fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', store_code, text)
+    # Inline code (`...`)
+    text = re.sub(r'`[^`\n]+`', store_code, text)
+
+    return (code_snippets, text)
+
+
+def pop_code(code_snippets: list, text: str) -> str:
+    for i, code in enumerate(code_snippets):
+        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    
+    return text
+
+
+def stash_link_html(text: str) -> tuple[list, str]:
+    link_snippets = []
+
+    def store_link(match):
+        link_snippets.append(match.group(0))
+        return f"__LINK_PLACEHOLDER_{len(link_snippets) - 1}__"
+    
+    text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
+
+    return (link_snippets, text)
+
+
+def pop_link(link_snippets: list, text: str) -> str:
+    for i, link in enumerate(link_snippets):
+        text = text.replace(f"__LINK_PLACEHOLDER_{i}__", link)
+    
+    return text
 
 
 def domain_from_url(url: str, create=True) -> Domain:
@@ -607,8 +814,8 @@ def user_access(permission: str, user_id: int) -> bool:
     if user_id == 1:
         return True
     has_access = db.session.execute(text('SELECT * FROM "role_permission" as rp ' +
-                                    'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
-                                    'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
+                                         'INNER JOIN user_role ur on rp.role_id = ur.role_id ' +
+                                         'WHERE ur.user_id = :user_id AND rp.permission = :permission'),
                                     {'user_id': user_id, 'permission': permission}).first()
     return has_access is not None
 
@@ -698,6 +905,7 @@ def blocked_referrers() -> List[str]:
     else:
         return []
 
+
 def retrieve_block_list():
     try:
         response = httpx_client.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
@@ -730,7 +938,7 @@ def ensure_directory_exists(directory):
         if not os.path.isdir(rebuild_directory):
             os.mkdir(rebuild_directory)
         rebuild_directory += '/'
-    
+
     # Check if the final directory is writable
     if not os.access(directory, os.W_OK):
         current_app.logger.warning(f"Directory '{directory}' is not writable")
@@ -743,6 +951,10 @@ def mimetype_from_url(url):
     return mime_type
 
 
+def is_activitypub_request():
+    return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
+
+
 def validation_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -750,16 +962,40 @@ def validation_required(func):
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.validation_required'))
+
+    return decorated_view
+
+
+def approval_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not (current_user.private_key is None and (g.site.registration_mode == 'RequireApplication' or g.site.registration_mode == 'Closed')):
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.please_wait'))
+
+    return decorated_view
+
+
+def trustworthy_account_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if current_user.trustworthy():
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.not_trustworthy'))
+
     return decorated_view
 
 
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if (g.site.private_instance and current_user.is_authenticated) or g.site.private_instance is False:
+        if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.login'))
+
     return decorated_view
 
 
@@ -776,7 +1012,6 @@ def permission_required(permission):
         return decorated_view
 
     return decorator
-
 
 
 def login_required(csrf=True):
@@ -799,7 +1034,7 @@ def login_required(csrf=True):
             return func(*args, **kwargs)
 
         return decorated_view
-    
+
     # Handle both @login_required and @login_required()
     if callable(csrf):
         # Called as @login_required (csrf is actually the function)
@@ -817,7 +1052,8 @@ def debug_mode_only(func):
         if current_app.debug:
             return func(*args, **kwargs)
         else:
-            return abort(403, description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
+            return abort(403,
+                         description="Not available in production mode. Set the FLASK_DEBUG environment variable to 1.")
 
     return decorated_function
 
@@ -866,7 +1102,7 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 def ip_address() -> str:
-    ip = request.headers.get('X-Forwarded-For') or request.remote_addr
+    ip = request.headers.get('CF-Connecting-IP') or request.headers.get('X-Forwarded-For') or request.remote_addr
     if ',' in ip:  # Remove all but first ip addresses
         ip = ip[:ip.index(',')].strip()
     return ip
@@ -879,20 +1115,27 @@ def user_ip_banned() -> bool:
 
 
 @cache.memoize(timeout=150)
-def instance_banned(domain: str) -> bool:   # see also activitypub.util.instance_blocked()
-    if domain is None or domain == '':
-        return False
-    domain = domain.lower().strip()
-    if 'https://' in domain or 'http://' in domain:
-        domain = urlparse(domain).hostname
-    banned = BannedInstances.query.filter_by(domain=domain).first()
-    if banned is not None:
-        return True
+def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
+    session = get_task_session()
+    try:
+        if domain is None or domain == '':
+            return False
+        domain = domain.lower().strip()
+        if 'https://' in domain or 'http://' in domain:
+            domain = urlparse(domain).hostname
+        banned = session.query(BannedInstances).filter_by(domain=domain).first()
+        if banned is not None:
+            return True
 
-    # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
-    regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
-                      BannedInstances.query.filter(BannedInstances.domain.like('%*%')).all()]
-    return any(pattern.match(domain) for pattern in regex_patterns)
+        # Mastodon sometimes bans with a * in the domain name, meaning "any letter", e.g. "cum.**mp"
+        regex_patterns = [re.compile(f"^{cond.domain.replace('*', '[a-zA-Z0-9]')}$") for cond in
+                          session.query(BannedInstances).filter(BannedInstances.domain.like('%*%')).all()]
+        return any(pattern.match(domain) for pattern in regex_patterns)
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @cache.memoize(timeout=150)
@@ -902,11 +1145,18 @@ def instance_online(domain: str) -> bool:
     domain = domain.lower().strip()
     if 'https://' in domain or 'http://' in domain:
         domain = urlparse(domain).hostname
-    instance = Instance.query.filter_by(domain=domain).first()
-    if instance is not None:
-        return instance.online()
-    else:
-        return False
+    session = get_task_session()
+    try:
+        instance = session.query(Instance).filter_by(domain=domain).first()
+        if instance is not None:
+            return instance.online()
+        else:
+            return False
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 @cache.memoize(timeout=150)
@@ -916,11 +1166,18 @@ def instance_gone_forever(domain: str) -> bool:
     domain = domain.lower().strip()
     if 'https://' in domain or 'http://' in domain:
         domain = urlparse(domain).hostname
-    instance = Instance.query.filter_by(domain=domain).first()
-    if instance is not None:
-        return instance.gone_forever
-    else:
-        return True
+    session = get_task_session()
+    try:
+        instance = Instance.query.filter_by(domain=domain).first()
+        if instance is not None:
+            return instance.gone_forever
+        else:
+            return True
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def user_cookie_banned() -> bool:
@@ -930,8 +1187,15 @@ def user_cookie_banned() -> bool:
 
 @cache.memoize(timeout=30)
 def banned_ip_addresses() -> List[str]:
-    ips = IpBan.query.all()
-    return [ip.ip_address for ip in ips]
+    session = get_task_session()
+    try:
+        ips = session.query(IpBan).all()
+        return [ip.ip_address for ip in ips]
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 
 def guess_mime_type(file_path: str) -> str:
@@ -1004,7 +1268,6 @@ def can_upvote(user, community: Community, communities_banned_from_list=None) ->
 
 
 def can_create_post(user, content: Community) -> bool:
-
     if content is None:
         return False
 
@@ -1013,6 +1276,10 @@ def can_create_post(user, content: Community) -> bool:
 
     if user.ban_posts:
         return False
+
+    if user.is_local():
+        if user.verified is False or user.private_key is None:
+            return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1035,6 +1302,10 @@ def can_create_post_reply(user, content: Community) -> bool:
 
     if user.ban_comments:
         return False
+
+    if user.is_local():
+        if user.verified is False or user.private_key is None:
+            return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1124,20 +1395,22 @@ def shorten_number(number):
 
 @cache.memoize(timeout=300)
 def user_filters_home(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_home=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_home=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
         if filter.hide_type == 0:
             result[filter.title].update(keywords)
-        else:   # type == 1 means hide completely. These posts are excluded from output by the jinja template
+        else:  # type == 1 means hide completely. These posts are excluded from output by the jinja template
             result['-1'].update(keywords)
     return result
 
 
 @cache.memoize(timeout=300)
 def user_filters_posts(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_posts=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_posts=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
@@ -1150,7 +1423,8 @@ def user_filters_posts(user_id):
 
 @cache.memoize(timeout=300)
 def user_filters_replies(user_id):
-    filters = Filter.query.filter_by(user_id=user_id, filter_replies=True).filter(or_(Filter.expire_after > date.today(), Filter.expire_after == None))
+    filters = Filter.query.filter_by(user_id=user_id, filter_replies=True).filter(
+        or_(Filter.expire_after > date.today(), Filter.expire_after == None))
     result = defaultdict(set)
     for filter in filters:
         keywords = [keyword.strip().lower() for keyword in filter.keywords.splitlines()]
@@ -1165,22 +1439,22 @@ def user_filters_replies(user_id):
 def moderating_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
-    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
-        filter(Community.banned == False).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
+        filter(Community.banned == False). \
         filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
-    
+
     # Track display names to identify duplicates
     display_name_counts = {}
     for community in communities:
         display_name = community.title
         display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
-    
+
     # Flag communities as duplicates if their display name appears more than once
     for community in communities:
         community.is_duplicate = display_name_counts[community.title] > 1
-    
+
     return communities
 
 
@@ -1191,7 +1465,7 @@ def moderating_communities_ids(user_id) -> List[int]:
     """
     if user_id is None or user_id == 0:
         return []
-    
+
     sql = text("""
         SELECT c.id
         FROM community c
@@ -1202,7 +1476,7 @@ def moderating_communities_ids(user_id) -> List[int]:
           AND cm.user_id = :user_id
         ORDER BY c.title
     """)
-    
+
     return db.session.execute(sql, {'user_id': user_id}).scalars().all()
 
 
@@ -1210,29 +1484,30 @@ def moderating_communities_ids(user_id) -> List[int]:
 def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
-    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id).\
+    communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
-    
+
     # track display names to identify duplicates
     display_name_counts = {}
     for community in communities:
         display_name = community.title
         display_name_counts[display_name] = display_name_counts.get(display_name, 0) + 1
-    
+
     # flag communities as duplicates if their display name appears more than once
     for community in communities:
         community.is_duplicate = display_name_counts[community.title] > 1
-    
+
     return communities
 
 
 def joined_or_modding_communities(user_id):
     if user_id is None or user_id == 0:
         return []
-    return db.session.execute(text('SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
+    return db.session.execute(text(
+        'SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
                               {'user_id': user_id}).scalars().all()
 
 
@@ -1252,7 +1527,8 @@ def menu_topics():
 
 @cache.memoize(timeout=3000)
 def menu_instance_feeds():
-    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(Feed.name).all()
+    return Feed.query.filter(Feed.parent_feed_id == None).filter(Feed.is_instance_feed == True).order_by(
+        Feed.name).all()
 
 
 # @cache.memoize(timeout=3000)
@@ -1262,14 +1538,16 @@ def menu_my_feeds(user_id):
 
 @cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
-    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(is_owner=False).all()
+    return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(
+        is_owner=False).all()
 
 
 # @cache.memoize(timeout=3000)
 def subscribed_feeds(user_id: int) -> List[int]:
     if user_id is None or user_id == 0:
         return []
-    return [feed.id for feed in Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
+    return [feed.id for feed in
+            Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id)]
 
 
 @cache.memoize(timeout=300)
@@ -1294,24 +1572,25 @@ def finalize_user_setup(user):
         private_key, public_key = RsaKeys.generate_keypair()
         user.private_key = private_key
         user.public_key = public_key
-    
+
     # Only set AP profile IDs if they haven't been set already
     if user.ap_profile_id is None:
         user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
         user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
         user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
-    
+
     # find all notifications from this registration and mark them as read
-    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION,author_id=user.id)
+    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION, author_id=user.id)
     for rn in reg_notifs:
         rn.read = True
-    
+
     db.session.commit()
 
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
-    return list(db.session.execute(text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :entity_id AND type = :type '),
-                                  {'entity_id': entity_id, 'type': entity_type}).scalars())
+    return list(db.session.execute(
+        text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :entity_id AND type = :type '),
+        {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
 # topics, in a tree
@@ -1370,11 +1649,11 @@ def opengraph_parse(url):
 
 def url_to_thumbnail_file(filename) -> File:
     try:
-        timeout = 15 if 'washingtonpost.com' in filename else 5 # Washington Post is really slow for some reason
+        timeout = 15 if 'washingtonpost.com' in filename else 5  # Washington Post is really slow for some reason
         response = httpx_client.get(filename, timeout=timeout)
     except:
         return None
-    
+
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
@@ -1413,13 +1692,13 @@ def url_to_thumbnail_file(filename) -> File:
             final_ext = file_extension
 
             if medium_image_format == 'AVIF':
-                import pillow_avif
+                import pillow_avif  # NOQA
 
             Image.MAX_IMAGE_PIXELS = 89478485
             with Image.open(temp_file_path) as img:
                 img = ImageOps.exif_transpose(img)
                 img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
-                
+
                 # Create 170px thumbnail
                 img_170 = img.copy()
                 img_170.thumbnail((170, 170), resample=Image.LANCZOS)
@@ -1435,18 +1714,17 @@ def url_to_thumbnail_file(filename) -> File:
                 img_170.save(temp_file_path, optimize=True, **kwargs)
                 thumbnail_width = img_170.width
                 thumbnail_height = img_170.height
-                
+
                 # Create 512px thumbnail
                 img_512 = img.copy()
                 img_512.thumbnail((512, 512), resample=Image.LANCZOS)
-                
+
                 # Create filename for 512px thumbnail
                 temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
                 img_512.save(temp_file_path_512, optimize=True, **kwargs)
                 thumbnail_512_width = img_512.width
                 thumbnail_512_height = img_512.height
 
-                
             if store_files_in_s3():
                 content_type = guess_mime_type(temp_file_path)
                 boto3_session = boto3.session.Session()
@@ -1468,14 +1746,15 @@ def url_to_thumbnail_file(filename) -> File:
                 os.unlink(temp_file_path)
                 os.unlink(temp_file_path_512)
                 thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                              '/' + new_filename + final_ext
+                                    '/' + new_filename + final_ext
                 thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                  '/' + new_filename + '_512' + final_ext
+                                    '/' + new_filename + '_512' + final_ext
             else:
                 # For local storage, use the temp file paths as final URLs
                 thumbnail_170_url = temp_file_path
                 thumbnail_512_url = temp_file_path_512
-            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width, height=thumbnail_512_height,
+            return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width,
+                        height=thumbnail_512_height,
                         thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
                         source_url=filename)
 
@@ -1494,10 +1773,10 @@ KNOWN_OPENGRAPH_TAGS = [
     "og:image:width",
     "og:image:height",
     "og:image:alt",
-    ]
+]
 
 
-def parse_page(page_url, tags_to_search = KNOWN_OPENGRAPH_TAGS, fallback_tags = None):
+def parse_page(page_url, tags_to_search=KNOWN_OPENGRAPH_TAGS, fallback_tags=None):
     '''
     Parses a page, returns a JSON style dictionary of all OG tags found on that page.
 
@@ -1518,7 +1797,7 @@ def parse_page(page_url, tags_to_search = KNOWN_OPENGRAPH_TAGS, fallback_tags = 
     found_tags = {}
 
     for og_tag in tags_to_search:
-        new_found_tag = soup.find("meta",  property=og_tag)
+        new_found_tag = soup.find("meta", property=og_tag)
         if new_found_tag is not None:
             found_tags[new_found_tag["property"]] = new_found_tag["content"]
         elif fallback_tags is not None and og_tag in fallback_tags:
@@ -1665,29 +1944,33 @@ def in_sorted_list(arr, target):
 
 @cache.memoize(timeout=600)
 def recently_upvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
-    return sorted(post_ids)     # sorted so that in_sorted_list can be used
+    post_ids = db.session.execute(
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 300'),
+        {'user_id': user_id}).scalars()
+    return sorted(post_ids)  # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_posts(user_id) -> List[int]:
-    post_ids = db.session.execute(text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
+    post_ids = db.session.execute(
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 300'),
+        {'user_id': user_id}).scalars()
     return sorted(post_ids)
 
 
 @cache.memoize(timeout=600)
 def recently_upvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
-    return sorted(reply_ids)     # sorted so that in_sorted_list can be used
+    reply_ids = db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 300'),
+                                   {'user_id': user_id}).scalars()
+    return sorted(reply_ids)  # sorted so that in_sorted_list can be used
 
 
 @cache.memoize(timeout=600)
 def recently_downvoted_post_replies(user_id) -> List[int]:
-    reply_ids = db.session.execute(text('SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 100'),
-                               {'user_id': user_id}).scalars()
+    reply_ids = db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 300'),
+                                   {'user_id': user_id}).scalars()
     return sorted(reply_ids)
 
 
@@ -1711,7 +1994,7 @@ def languages_for_form(all=False):
                                                                     GROUP BY language_id
                                                                     ORDER BY MAX(posted_at) DESC
                                                                     LIMIT 10"""),
-                                                              {'user_id': current_user.id}).scalars().all()
+                                                            {'user_id': current_user.id}).scalars().all()
 
             # note: recently_used_language_ids is now a List, ordered with the most recently used at the top
             # but Language.query.filter(Language.id.in_(recently_used_language_ids)) isn't guaranteed to return
@@ -1748,7 +2031,8 @@ def flair_for_form(community_id):
 
 
 def find_flair_id(flair: str, community_id: int) -> int | None:
-    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id, CommunityFlair.flair == flair.strip()).first()
+    flair = CommunityFlair.query.filter(CommunityFlair.community_id == community_id,
+                                        CommunityFlair.flair == flair.strip()).first()
     if flair:
         return flair.id
     else:
@@ -1795,30 +2079,23 @@ def actor_profile_contains_blocked_words(user: User) -> bool:
     return False
 
 
-def add_to_modlog(action: str, community_id: int = None, reason: str = '', link: str = '', link_text: str = ''):
+def add_to_modlog(action: str, actor: User, target_user: User = None, reason: str = '',
+                  community: Community = None, post: Post = None, reply: PostReply = None,
+                  link: str = '', link_text: str = ''):
     """ Adds a new entry to the Moderation Log """
     if action not in ModLog.action_map.keys():
         raise Exception('Invalid action: ' + action)
-    if current_user.is_admin() or current_user.is_staff():
+    if actor.is_instance_admin() or actor.is_admin() or actor.is_staff():
         action_type = 'admin'
     else:
         action_type = 'mod'
-    db.session.add(ModLog(user_id=current_user.id, community_id=community_id, type=action_type, action=action,
-                          reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
-    db.session.commit()
-
-
-def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None, reason: str = '', link: str = '',
-                              link_text: str = ''):
-    """ Adds a new entry to the Moderation Log - identical to above except has an 'actor' parameter """
-    if action not in ModLog.action_map.keys():
-        raise Exception('Invalid action: ' + action)
-    if actor.is_instance_admin():
-        action_type = 'admin'
-    else:
-        action_type = 'mod'
-    reason=shorten_string(reason, 512)
-    db.session.add(ModLog(user_id=actor.id, community_id=community_id, type=action_type, action=action,
+    community_id = community.id if community else None
+    target_user_id = target_user.id if target_user else None
+    post_id = post.id if post else None
+    reply_id = reply.id if reply else None
+    reason = shorten_string(reason, 512)
+    db.session.add(ModLog(user_id=actor.id, type=action_type, action=action, target_user_id=target_user_id,
+                          community_id=community_id, post_id=post_id, reply_id=reply_id,
                           reason=reason, link=link, link_text=link_text, public=get_setting('public_modlog', False)))
     db.session.commit()
 
@@ -1826,7 +2103,7 @@ def add_to_modlog_activitypub(action: str, actor: User, community_id: int = None
 def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if not auth:
         raise Exception('incorrect_login')
-    token = auth[7:]     # remove 'Bearer '
+    token = auth[7:]  # remove 'Bearer '
 
     if current_app.debug and request.host == 'piefed.ngrok.app':
         if return_type and return_type == 'model':
@@ -1838,6 +2115,11 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if decoded:
         user_id = decoded['sub']
         user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        if user.password_updated_at:
+            issued_at_time = decoded['iat']
+            password_updated_time = int(user.password_updated_at.timestamp())
+            if issued_at_time < password_updated_time:
+                raise Exception('incorrect_login')
         if id_match and user.id != id_match:
             raise Exception('incorrect_login')
         if return_type and return_type == 'model':
@@ -1850,6 +2132,42 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
 def get_task_session() -> Session:
     # Use the same engine as the main app, but create an independent session
     return Session(bind=db.engine)
+
+
+@contextmanager
+def patch_db_session(task_session):
+    """Temporarily replace db.session with task_session for functions that use it internally"""
+    from app import db
+    from flask import has_request_context
+    
+    # Only patch if we're not in a Flask request context (i.e., in a Celery worker)
+    if has_request_context():
+        # In Flask request context, don't patch - just use the existing session
+        yield
+        return
+    
+    original_session = db.session
+    
+    # Create a wrapper that makes the task session work with Flask-SQLAlchemy's Model.query
+    class SessionWrapper:
+        def __init__(self, session):
+            self._session = session
+            
+        def __call__(self):
+            return self._session
+            
+        def __getattr__(self, name):
+            # Handle scoped session methods that don't exist on regular Session
+            if name == 'remove':
+                # For task sessions, we don't want to remove since we manage the lifecycle
+                return lambda: None
+            return getattr(self._session, name)
+    
+    db.session = SessionWrapper(task_session)
+    try:
+        yield
+    finally:
+        db.session = original_session
 
 
 def get_redis_connection(connection_string=None) -> redis.Redis:
@@ -1928,7 +2246,7 @@ def retrieve_defederation_list(domain: str) -> List[str]:
             instance_data = response.json()
             for row in instance_data['federated_instances']['blocked']:
                 result.append(row['domain'])
-    else:   # Assume mastodon-compatible API
+    else:  # Assume mastodon-compatible API
         try:
             response = get_request(f'https://{domain}/api/v1/instance/domain_blocks')
         except:
@@ -1948,7 +2266,7 @@ def instance_software(domain: str):
 
 # ----------------------------------------------------------------------
 # Return contents of referrer with a fallback
-def referrer(default: str=None) -> str:
+def referrer(default: str = None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
     if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
@@ -1964,17 +2282,17 @@ def create_captcha(length=4):
         code += str(random.choice(['2', '3', '4', '5', '6', '8', '9']))
 
     imagedata = ImageCaptcha().generate(code)
-    image = "data:image/jpeg;base64,"+base64.encodebytes(imagedata.read()).decode()
+    image = "data:image/jpeg;base64," + base64.encodebytes(imagedata.read()).decode()
 
     audiodata = AudioCaptcha().generate(code)
-    audio = "data:audio/wav;base64,"+base64.encodebytes(audiodata).decode()
+    audio = "data:audio/wav;base64," + base64.encodebytes(audiodata).decode()
 
     uuid = os.urandom(12).hex()
 
     redis_client = get_redis_connection()
-    redis_client.set("captcha_" + uuid, code, ex=30*60)
+    redis_client.set("captcha_" + uuid, code, ex=30 * 60)
 
-    return {"uuid":uuid, "audio":audio, "image":image}
+    return {"uuid": uuid, "audio": audio, "image": image}
 
 
 def decode_captcha(uuid: str, code: str):
@@ -1997,16 +2315,17 @@ def decode_captcha(uuid: str, code: str):
 class CaptchaField(StringField):
     widget = TextInput()
 
-    def  __call__(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         self.data = ''
         captcha = create_captcha()
-        input_field_html = super(CaptchaField, self).__call__(*args,**kwargs)
+        input_field_html = super(CaptchaField, self).__call__(*args, **kwargs)
         return Markup("""<input type="hidden" name="captcha_uuid" value="{uuid}" id="captcha-uuid">
                          <img src="{image}" class="border mb-2" id="captcha-image">
                          <audio src="{audio}" type="audio/wav" controls></audio>
                          <!--<button type="button" id="captcha-refresh-button">Refresh</button>-->
                          <br />
-                      """).format(uuid=captcha["uuid"], image=captcha["image"], audio=captcha["audio"]) + input_field_html
+                      """).format(uuid=captcha["uuid"], image=captcha["image"],
+                                  audio=captcha["audio"]) + input_field_html
 
     def post_validate(self, form, validation_stopped):
         if decode_captcha(request.form.get('captcha_uuid', None), self.data):
@@ -2016,6 +2335,23 @@ class CaptchaField(StringField):
 
 
 user2_cache = {}
+
+
+def wilson_confidence_lower_bound(ups, downs, z = 1.281551565545) -> float:
+    if ups is None or ups < 0:
+        ups = 0
+    if downs is None or downs < 0:
+        downs = 0
+    n = ups + downs
+    if n == 0:
+        return 0.0
+    p = float(ups) / n
+    left = p + 1 / (2 * n) * z * z
+    right = z * math.sqrt(p * (1 - p) / n + z * z / (4 * n * n))
+    under = 1 + 1 / n * z * z
+    return (left - right) / under
+
+
 def jaccard_similarity(user1_upvoted: set, user2_id: int):
     if user2_id not in user2_cache:
         user2_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(user2_id)]
@@ -2033,14 +2369,45 @@ def jaccard_similarity(user1_upvoted: set, user2_id: int):
         return 0
 
 
-def dedupe_post_ids(post_ids) -> List[int]:
+def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], is_all_view: bool) -> List[int]:
+    # Remove duplicate posts based on cross-posting rules
+    # post_ids is a list of tuples: (post_id, cross_post_ids, user_id, reply_count)
     result = []
     if post_ids is None or len(post_ids) == 0:
         return result
-    seen_before = set()
+
+    seen_before = set()  # Track which post IDs we've already processed to avoid duplicates
+    priority = set()     # Track post IDs that should be prioritized (kept over their cross-posts)
+    lvp = low_value_reposters()
+
     for post_id in post_ids:
-        if post_id[1]:
+        # If this post has cross-posts AND the author is a low-value reposter
+        # Only applies to 'All' feed to avoid suppressing posts when alternatives aren't viewable to user
+        if post_id[1] and is_all_view and post_id[2] in lvp:
+            # Mark this post as seen (will be filtered out)
+            seen_before.add(post_id[0])
+            # Find the cross-post with the most replies and prioritize only that one
+            cross_posts = list(post_id[1])
+            if cross_posts:
+                # Find reply counts for each cross-post from remaining tuples
+                cross_post_replies = {}
+                for other_post in post_ids:
+                    if other_post[0] in cross_posts:
+                        cross_post_replies[other_post[0]] = other_post[3]
+
+                # Prioritize the cross-post with most replies
+                best_cross_post = max(cross_posts, key=lambda x: cross_post_replies.get(x, 0))
+                priority.add(best_cross_post)
+                # Mark all other cross-posts as seen to avoid duplicates
+                seen_before.update(cp for cp in cross_posts if cp != best_cross_post)
+        # If this post has cross-posts AND it's not already prioritized or seen
+        elif post_id[1] and post_id[0] not in priority and post_id[0] not in seen_before:
+            # Mark all its cross-posts as seen (they'll be filtered out)
             seen_before.update(post_id[1])
+            # Remove cross-posts from priority set (this post takes precedence)
+            priority.difference_update(post_id[1])
+
+        # Only add the post to results if we haven't seen it before
         if post_id[0] not in seen_before:
             result.append(post_id[0])
     return result
@@ -2061,15 +2428,23 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             return json.loads(redis_client.get(result_id))
 
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
-        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ['c.banned is false ']
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_where = ['c.banned is false AND c.show_all is true']
         if current_user.is_authenticated and current_user.hide_low_quality:
             post_id_where.append('c.low_quality is false')
         params = {}
     else:
-        post_id_sql = 'SELECT p.id, p.cross_posts FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
+        post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
+
+    # filter out posts in communities where the community name is objectionable to them
+    if current_user.is_authenticated:
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
+            params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
+
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
         post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
@@ -2122,7 +2497,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
         post_id_where.append('p.ranking_scaled is not null ')
     elif sort.startswith('top'):
-        post_id_where.append('p.posted_at > :top_cutoff ')
+        if sort != 'top_all':
+            post_id_where.append('p.posted_at > :top_cutoff ')
         post_id_sort = 'ORDER BY p.up_votes - p.down_votes DESC'
         if sort == 'top_1h':
             params['top_cutoff'] = utcnow() - timedelta(hours=1)
@@ -2136,7 +2512,9 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
             params['top_cutoff'] = utcnow() - timedelta(days=7)
         elif sort == 'top_1m':
             params['top_cutoff'] = utcnow() - timedelta(days=28)
-        else:
+        elif sort == 'top_1y':
+            params['top_cutoff'] = utcnow() - timedelta(days=365)
+        elif sort != 'top_all':
             params['top_cutoff'] = utcnow() - timedelta(days=1)
     elif sort == 'new':
         post_id_sort = 'ORDER BY p.posted_at DESC'
@@ -2146,10 +2524,10 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()
-    post_ids = dedupe_post_ids(post_ids)
+    post_ids = dedupe_post_ids(post_ids, community_ids[0] == -1)
 
     if current_user.is_authenticated:
-        redis_client.set(result_id, json.dumps(post_ids), ex=86400)    # 86400 is 1 day
+        redis_client.set(result_id, json.dumps(post_ids), ex=86400)  # 86400 is 1 day
     return post_ids
 
 
@@ -2171,8 +2549,23 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     return posts
 
 
+def total_comments_on_post_and_cross_posts(post_id):
+    sql = """SELECT
+            p.reply_count + (
+                SELECT COALESCE(SUM(cp.reply_count), 0)
+                FROM post cp
+                WHERE cp.id = ANY(p.cross_posts)
+            ) AS total_reply_count
+        FROM post p
+        WHERE p.id = :post_id;
+    """
+    result = db.session.execute(text(sql), {'post_id': post_id}).scalar_one_or_none()
+    return result if result is not None else 0
+
+
 def store_files_in_s3():
-    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and current_app.config['S3_ENDPOINT'] != ''
+    return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and \
+        current_app.config['S3_ENDPOINT'] != ''
 
 
 def move_file_to_s3(file_id, s3):
@@ -2184,7 +2577,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.thumbnail_path):
                     content_type = guess_mime_type(file.thumbnail_path)
                     new_path = file.thumbnail_path.replace('app/static/media/', "")
-                    s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.thumbnail_path, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.thumbnail_path)
                     file.thumbnail_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2194,7 +2588,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.file_path):
                     content_type = guess_mime_type(file.file_path)
                     new_path = file.file_path.replace('app/static/media/', "")
-                    s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.file_path, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.file_path)
                     file.file_path = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2204,7 +2599,8 @@ def move_file_to_s3(file_id, s3):
                 if os.path.isfile(file.source_url):
                     content_type = guess_mime_type(file.source_url)
                     new_path = file.source_url.replace('app/static/media/', "")
-                    s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path, ExtraArgs={'ContentType': content_type})
+                    s3.upload_file(file.source_url, current_app.config['S3_BUCKET'], new_path,
+                                   ExtraArgs={'ContentType': content_type})
                     os.unlink(file.source_url)
                     file.source_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{new_path}"
                     db.session.commit()
@@ -2291,6 +2687,21 @@ def notif_id_to_string(notif_id) -> str:
     # --model/db default--
     if notif_id == NOTIF_DEFAULT:
         return _('All')
+
+
+@cache.memoize(timeout=6000)
+def filtered_out_communities(user: User) -> List[int]:
+    if user.community_keyword_filter:
+        communities = Community.query
+        for community_filter in user.community_keyword_filter.split(','):
+            if community_filter.strip():
+                communities = communities.filter(or_(Community.name.ilike(f"%{community_filter}%"),
+                                                     Community.title.ilike(f"%{community_filter}%"))
+                                                 )
+
+        return [community.id for community in communities.all()]
+    else:
+        return []
 
 
 @cache.memoize(timeout=300)
@@ -2386,7 +2797,7 @@ def reported_post_replies(user_id, admin_ids) -> List[int]:
     else:
         community_ids = [community.id for community in moderating_communities(user_id)]
         post_reply_ids = list(db.session.execute(text('SELECT id FROM "post_reply" WHERE reports > 0 AND community_id IN :community_ids'),
-                                           {'community_ids': community_ids}).scalars())
+                                                 {'community_ids': community_ids}).scalars())
     return post_reply_ids
 
 
@@ -2476,6 +2887,7 @@ def apply_feed_url_rules(self):
         return False
     return True
 
+
 # notification destination user helper function to make sure the
 # notification text is stored in the database using the language of the
 # recipient, rather than the language of the originator
@@ -2499,6 +2911,44 @@ def get_recipient_language(user_id):
         lang_to_use = 'en'
 
     return lang_to_use
+
+
+def safe_order_by(sort_param: str, model, allowed_fields: set):
+    """
+    Returns a SQLAlchemy order_by clause for a given model and sort parameter. Guards against SQL injection.
+
+    Parameters:
+        sort_param (str): The user-supplied sort string (e.g., 'name desc').
+        model (db.Model): The SQLAlchemy model class to sort on.
+        allowed_fields (set): A set of allowed field names (str) from the model.
+
+    Returns:
+        A SQLAlchemy order_by clause (asc/desc column expression).
+
+    Example usage:
+        sort_param = request.args.get('sort_by', 'post_reply_count desc')
+        allowed_fields = {'name', 'created_at', 'post_reply_count'}
+
+        communities = communities.order_by(
+            safe_order_by(sort_param, Community, allowed_fields)
+        )
+    """
+    parts = sort_param.strip().split()
+    field_name = parts[0]
+    direction = parts[1].lower() if len(parts) > 1 else 'asc'
+
+    if field_name in allowed_fields and hasattr(model, field_name):
+        column = getattr(model, field_name)
+        if direction == 'desc':
+            return desc(column)
+        else:
+            return asc(column)
+    else:
+        # Return a default safe order if invalid input
+        default_field = next(iter(allowed_fields))
+        return desc(getattr(model, default_field))
+
+
 
 def render_from_tpl(tpl: str) -> str:
     """
@@ -2524,3 +2974,70 @@ def render_from_tpl(tpl: str) -> str:
         return replacements.get(key, match.group(0))
 
     return pattern.sub(_sub, tpl)
+
+
+@lru_cache(maxsize=None)
+def get_timezones():
+    """
+    returns an OrderedDict of timezones:
+    {
+       'Africa': [('Africa/Abidjan','Africa/Abidjan'), ...],
+       'America': [('America/New_York','America/New_York'), ...],
+       ...
+    }
+    """
+    by_region = OrderedDict()
+    for tz in sorted(available_timezones()):
+        if '/' in tz:
+            region, _ = tz.split('/', 1)
+            if region in ['Arctic', 'Atlantic', 'Etc', 'Other']:
+                continue
+            by_region.setdefault(region, []).append((tz, tz))
+    return by_region
+
+
+@cache.memoize(timeout=6000)
+def low_value_reposters() -> List[int]:
+    result = db.session.execute(text('SELECT id FROM "user" WHERE bot = true or bot_override = true or suppress_crossposts = true')).scalars()
+    return list(result)
+
+
+def orjson_response(obj, status=200, headers=None):
+    return Response(
+        response=orjson.dumps(obj),
+        status=status,
+        headers=headers,
+        mimetype="application/json"
+    )
+
+
+def is_valid_xml_utf8(pystring):
+    """Check if a string is like valid UTF-8 XML content."""
+    if isinstance(pystring, str):
+        pystring = pystring.encode('utf-8', errors='ignore')
+
+    s = pystring
+    c_end = len(s)
+    i = 0
+
+    while i < c_end - 2:
+        if s[i] & 0x80:
+            # Check for forbidden characters
+            if i + 2 < c_end:
+                next3 = (s[i] << 16) | (s[i + 1] << 8) | s[i + 2]
+                # 0xefbfbe and 0xefbfbf are utf-8 encodings of forbidden characters \ufffe and \uffff
+                if next3 == 0xefbfbe or next3 == 0xefbfbf:
+                    return False
+                # 0xeda080 and 0xedbfbf are utf-8 encodings of \ud800 and \udfff (surrogate blocks)
+                if 0xeda080 <= next3 <= 0xedbfbf:
+                    return False
+        elif s[i] < 9 or s[i] == 11 or s[i] == 12 or (14 <= s[i] <= 31) or s[i] == 127:
+            return False  # invalid ascii char
+        i += 1
+
+    while i < c_end:
+        if not (s[i] & 0x80) and (s[i] < 9 or s[i] == 11 or s[i] == 12 or (14 <= s[i] <= 31) or s[i] == 127):
+            return False  # invalid ascii char
+        i += 1
+
+    return True
