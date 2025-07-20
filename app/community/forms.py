@@ -156,7 +156,7 @@ class CreatePostForm(FlaskForm):
                                          'hx-params': '*',
                                          'hx-target': '#communityFlair'})
     title = StringField(_l('Title'), validators=[DataRequired(), Length(min=3, max=255)])
-    body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5})
+    body = TextAreaField(_l('Body'), validators=[Optional(), Length(min=3, max=50000)], render_kw={'rows': 5, 'class': 'autoresize'})
     tags = StringField(_l('Tags'), validators=[Optional(), Length(min=2, max=5000)])
     flair = MultiCheckboxField(_l('Flair'), coerce=int, validators=[Optional()],
                                render_kw={'class': 'form-multicheck-columns'})
