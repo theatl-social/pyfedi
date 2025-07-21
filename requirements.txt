@@ -42,3 +42,5 @@ webauthn~=2.5.0
 ldap3~=2.9.0
 sqlalchemy
 orjson~=3.10.0
+marshmallow  # 3.26.1 is automatically resolved
+flask-smorest  # 0.42.3 is automatically resolved

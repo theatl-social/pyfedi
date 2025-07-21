@@ -1,9 +1,10 @@
 from flask import current_app, jsonify, request
+from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp
+from app.api.alpha import bp, api_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -24,6 +25,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
 from app.constants import *
 from app.utils import orjson_response
+from app.api.alpha.schema import *
 
 
 def enable_api():
@@ -39,15 +41,21 @@ def is_trusted_request():
 
 
 # Site
-@bp.route('/api/alpha/site', methods=['GET'])
+# @bp.route('/api/alpha/site', methods=['GET'])
+@api_bp.route('/site', methods=['GET'])
+@api_bp.doc(summary="Gets the site, and your user data.")
+@api_bp.response(200, GetSiteResponse)
 def get_alpha_site():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        # return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        return jsonify(get_site(auth))
+        # return jsonify(get_site(auth))
+        return get_site(auth)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        # return jsonify({"error": str(ex)}), 400
+        return abort(400, str(ex))
 
 
 @bp.route('/api/alpha/site/block', methods=['POST'])
