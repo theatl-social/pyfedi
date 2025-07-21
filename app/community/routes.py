@@ -904,6 +904,8 @@ def add_post(actor, type):
             return redirect(url_for('activitypub.community_profile',
                                     actor=community.ap_id if community.ap_id is not None else community.name))
 
+        current_user.language_id = form.language_id.data
+
         if form.timezone.data:
             db.session.execute(text('UPDATE "user" SET timezone = :timezone WHERE id = :user_id'),
                                {'user_id': current_user.id, 'timezone': form.timezone.data})
@@ -927,6 +929,7 @@ def add_post(actor, type):
             flash(community.posting_warning)
 
         form.timezone.data = current_user.timezone
+        form.language_id.data = current_user.language_id or g.site.language_id
 
         # The source query parameter is used when cross-posting - load the source post's content into the form
         if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('source'):

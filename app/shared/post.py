@@ -178,6 +178,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         raise Exception('You are not permitted to make posts in this community')
 
     if url:
+        url = url.strip()
         domain = domain_from_url(url)
         if domain:
             if domain.banned or domain.name.endswith('.pages.dev'):

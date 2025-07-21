@@ -138,6 +138,7 @@ def show_post(post_id: int):
                 lazy_load_replies = True
 
             form.notify_author.data = True
+            form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
             user_flair = {}
@@ -672,6 +673,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
+        form.language_id.data = current_user.language_id or g.site.language_id
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to,
@@ -710,7 +712,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
         recipient_language_id = in_reply_to.language_id or in_reply_to.author.language_id
         recipient_language_code = None
         recipient_language_name = None
-        if recipient_language_id:
+        if recipient_language_id and (current_user.language_id and current_user.language_id != recipient_language_id):
             lang = Language.query.get(recipient_language_id)
             if lang:
                 recipient_language_code = lang.code
