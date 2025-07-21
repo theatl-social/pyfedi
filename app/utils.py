@@ -2105,12 +2105,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
 
-    if current_app.debug and request.host == 'piefed.ngrok.app':
-        if return_type and return_type == 'model':
-            return User.query.get(1)
-        else:
-            return 1
-
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
