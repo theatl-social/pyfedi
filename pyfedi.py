@@ -19,8 +19,14 @@ from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, 
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
     notif_id_to_string, feed_link_to_href, get_setting, set_setting
 
+
 app = create_app()
 cli.register(app)
+
+# Print EXTRA_AP_LOGGING banner at startup, not per request
+EXTRA_AP_LOGGING = os.environ.get('EXTRA_AP_LOGGING', '0') == '1'
+if EXTRA_AP_LOGGING:
+    print("\n==============================\nEXTRA_AP_LOGGING ENABLED!\nAll incoming ActivityPub POSTs will be logged to /app/logs/\n==============================\n")
 
 
 @app.context_processor

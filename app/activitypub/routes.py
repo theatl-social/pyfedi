@@ -530,30 +530,44 @@ def community_profile(actor):
 def shared_inbox():
     import os
     import traceback
+    import json as _json
     from datetime import datetime
     EXTRA_AP_LOGGING = os.environ.get('EXTRA_AP_LOGGING', '0') == '1'
-    if EXTRA_AP_LOGGING:
-        print("\n\n==============================\nEXTRA_AP_LOGGING ENABLED!\nAll incoming ActivityPub POSTs will be logged to /app/logs/\n==============================\n\n")
+
     def save_ap_debug_log(log_type, headers, body, error=None):
         log_dir = os.path.join(os.path.dirname(__file__), '../../logs')
         os.makedirs(log_dir, exist_ok=True)
-        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
-        fname = f"ap_debug_{log_type}_{ts}.log"
-        fpath = os.path.join(log_dir, fname)
-        with open(fpath, 'w', encoding='utf-8') as f:
-            f.write(f"--- Headers ---\n")
-            for k, v in headers.items():
-                f.write(f"{k}: {v}\n")
-            f.write(f"\n--- Body ---\n")
-            f.write(body.decode('utf-8', errors='replace'))
-            if error:
-                f.write(f"\n--- Error ---\n{error}\n")
+        # Use a chunked log file: ap_debug_{timestamp}_N.log, chunked at ~2MB
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        base = f"ap_debug_{log_type}_{ts}"
+        chunk_size = 2 * 1024 * 1024  # 2MB
+        # Find the latest chunk file or start a new one
+        chunk = 0
+        while True:
+            fname = f"{base}_{chunk}.log"
+            fpath = os.path.join(log_dir, fname)
+            if not os.path.exists(fpath) or os.path.getsize(fpath) < chunk_size:
+                break
+            chunk += 1
+        # Prepare log entry as JSON
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + 'Z',
+            "log_type": log_type,
+            "headers": dict(headers),
+            "body": body.decode('utf-8', errors='replace'),
+        }
+        if error:
+            entry["error"] = error
+        # Append JSON entry
+        with open(fpath, 'a', encoding='utf-8') as f:
+            f.write(_json.dumps(entry, ensure_ascii=False) + '\n')
         return fpath
+
     # Save incoming headers/body as early as possible
     if EXTRA_AP_LOGGING:
         try:
             save_ap_debug_log('incoming', dict(request.headers), request.get_data())
-        except Exception as e:
+        except Exception:
             pass
     from app import redis_client
 
