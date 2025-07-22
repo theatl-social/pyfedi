@@ -269,10 +269,10 @@ def get_community_moderate_bans(auth, data):
     for cb in community_bans:
         ban_json = {}
         ban_json['reason'] = cb.reason
-        ban_json['expiredAt'] = cb.ban_until
+        ban_json['expired_at'] = cb.ban_until
         ban_json['community'] = community_view(community, variant=1)
-        ban_json['bannedUser'] = user_view(user=cb.user_id, variant=1)
-        ban_json['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+        ban_json['banned_user'] = user_view(user=cb.user_id, variant=1)
+        ban_json['banned_by'] = user_view(user=cb.banned_by, variant=1)
         ban_json['expired'] = True if cb.ban_until < datetime.now() else False
         items.append(ban_json)
 
@@ -311,10 +311,10 @@ def put_community_moderate_unban(auth, data):
     # build the response before deleting the record in the db
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until
+    res['expired_at'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
-    res['bannedUser'] = user_view(user=cb.user_id, variant=1)
-    res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+    res['banned_user'] = user_view(user=cb.user_id, variant=1)
+    res['banned_by'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = True
 
     # unban in the db
@@ -327,7 +327,7 @@ def put_community_moderate_unban(auth, data):
 
     # federate the unban
     task_selector('unban_from_community', user_id=user_id, mod_id=user.id, community_id=community.id,
-                  expiry=res['expiredAt'], reason=res['reason'])
+                  expiry=res['expired_at'], reason=res['reason'])
 
     # notify the unbanned user if they are local to this instance
     if blocked.is_local():
@@ -353,11 +353,11 @@ def put_community_moderate_unban(auth, data):
 
 
 def post_community_moderate_ban(auth, data):
-    required(['community_id', 'user_id', 'reason', 'expiredAt'], data)
+    required(['community_id', 'user_id', 'reason', 'expired_at'], data)
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
     string_expected(['reason'], data)
-    string_expected(['expiredAt'], data)
+    string_expected(['expired_at'], data)
 
     # get the user to ban
     user_id = data['user_id']
@@ -376,8 +376,8 @@ def post_community_moderate_ban(auth, data):
         raise Exception('Community not local to this instance.')
 
     # get the ban_until time if it exists, if not default to one year
-    if isinstance(data['expiredAt'], str):
-        ban_until = datetime.strptime(data['expiredAt'], '%Y-%m-%dT%H:%M:%S')
+    if isinstance(data['expired_at'], str):
+        ban_until = datetime.strptime(data['expired_at'], '%Y-%m-%dT%H:%M:%S')
     else:
         ban_until = datetime.now() + relativedelta(years=1)
 
@@ -423,10 +423,10 @@ def post_community_moderate_ban(auth, data):
     # build the response
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until
+    res['expired_at'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
-    res['bannedUser'] = user_view(user=cb.user_id, variant=1)
-    res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+    res['banned_user'] = user_view(user=cb.user_id, variant=1)
+    res['banned_by'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = False
 
     # return the res{} json
