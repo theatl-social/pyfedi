@@ -1,6 +1,40 @@
 from enum import Enum
 from marshmallow import Schema, fields, EXCLUDE
 
+
+# Enums used in other schema
+reg_enum = Enum("RegistrationEnum", [("Closed", "Closed"),
+                                     ("RequireApplication", "RequireApplication"),
+                                     ("Open", "Open")])
+
+sort_enum = Enum("SortEnum", [("Active", "Active"),
+                              ("Hot", "Hot"),
+                              ("New", "New"),
+                              ("TopHour", "TopHour"),
+                              ("TopSixHour", "TopSixHour"),
+                              ("TopTwelveHour", "TopTwelveHour"),
+                              ("TopDay", "TopDay"),
+                              ("TopWeek", "TopWeek"),
+                              ("TopMonth", "TopMonth"),
+                              ("TopThreeMonths", "TopThreeMonths"),
+                              ("TopSixMonths", "TopSixMonths"),
+                              ("TopNineMonths", "TopNineMonths"),
+                              ("TopYear", "TopYear"),
+                              ("TopAll", "TopAll"),
+                              ("Scaled", "Scaled")])
+
+comment_sort_enum = Enum("CommentEnum", [("Hot", "Hot"), ("Top", "Top"), ("New", "New"), ("Old", "Old")])
+
+listing_type_enum = Enum("ListingEnum", [("All", "All"),
+                                         ("Local", "Local"),
+                                         ("Subscribed", "Subscribed"),
+                                         ("Popular", "Popular"),
+                                         ("Moderating", "Moderating")])
+
+
+class DefaultError(Schema):
+    message = fields.String()
+
 class Person(Schema):
     class Meta:
         unknown = EXCLUDE
@@ -16,7 +50,7 @@ class Person(Schema):
     id = fields.Integer(required=True)
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
-    published = fields.String()
+    published = fields.String(example="2025-06-07T02:29:07.980084Z")
     title = fields.String()
     user_name = fields.String(required=True)
 
@@ -41,22 +75,23 @@ class LanguageView(Schema):
     class Meta:
         unknown = EXCLUDE
     
-    code = fields.String()
-    id = fields.Integer()
-    name = fields.String()
+    code = fields.String(example="en")
+    id = fields.Integer(example=2)
+    name = fields.String(example="English")
 
 
 class Site(Schema):
     class Meta:
         unknown = EXCLUDE
     
-    actor_id = fields.Url(required=True)
+    actor_id = fields.Url(required=True, example="https://piefed.social/")
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
     icon = fields.Url()
     name = fields.String(required=True)
-    registration_mode = fields.String()
+    registration_mode = fields.Enum(reg_enum)
+    # registration_mode = fields.String()
     sidebar = fields.String()
     user_count = fields.String()
 
@@ -79,11 +114,11 @@ class Community(Schema):
     name = fields.String(required=True)
     nsfw = fields.Boolean(required=True)
     posting_warning = fields.String()
-    published = fields.String(required=True)
+    published = fields.String(required=True, example="2025-06-07T02:29:07.980084Z")
     removed = fields.Boolean(required=True)
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
-    updated = fields.String()
+    updated = fields.String(example="2025-06-07T02:29:07.980084Z")
 
 
 class CommunityBlockView(Schema):
@@ -108,9 +143,9 @@ class Instance(Schema):
     
     domain = fields.String(required=True)
     id = fields.Integer(required=True)
-    published = fields.String(required=True)
+    published = fields.String(required=True, example="2025-06-07T02:29:07.980084Z")
     software = fields.String()
-    updated = fields.String()
+    updated = fields.String(example="2025-06-07T02:29:07.980084Z")
     version = fields.String()
 
 
@@ -124,8 +159,9 @@ class InstanceBlockView(Schema):
 
 
 class LocalUser(Schema):
-    default_listing_type = fields.String(required=True)
-    default_sort_type = fields.String(required=True)
+    default_comment_sort_type = fields.Enum(comment_sort_enum, required=True)
+    default_listing_type = fields.Enum(listing_type_enum, required=True)
+    default_sort_type = fields.Enum(sort_enum, required=True)
     show_bot_accounts = fields.Boolean(required=True)
     show_nsfw = fields.Boolean(required=True)
     show_read_posts = fields.Boolean(required=True)
@@ -178,6 +214,3 @@ class GetSiteResponse(Schema):
     my_user = fields.Nested(MyUserInfo)
     site = fields.Nested(Site, required=True)
     version = fields.String(required=True, example="alpha", title="Software version", foo="bar")
-
-
-

@@ -1,12 +1,15 @@
 from flask import Blueprint
 from flask_smorest import Blueprint as ApiBlueprint
 
+# Non-documented routes in swagger UI
 bp = Blueprint('api_alpha', __name__)
-api_bp = ApiBlueprint(
-    "alpha_api",
+
+# Different blueprints to organize different api namespaces
+site_bp = ApiBlueprint(
+    "Site",
     __name__,
     url_prefix="/api/alpha",
-    description="Testing flask_smorest with piefed.",
+    description="",
 )
 
 from app.api.alpha import routes

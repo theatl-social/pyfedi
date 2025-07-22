@@ -4,7 +4,7 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, api_bp
+from app.api.alpha import bp, site_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -41,21 +41,18 @@ def is_trusted_request():
 
 
 # Site
-# @bp.route('/api/alpha/site', methods=['GET'])
-@api_bp.route('/site', methods=['GET'])
-@api_bp.doc(summary="Gets the site, and your user data.")
-@api_bp.response(200, GetSiteResponse)
+@site_bp.route('/site', methods=['GET'])
+@site_bp.doc(summary="Gets the site, and your user data.")
+@site_bp.response(200, GetSiteResponse)
+@site_bp.alt_response(400, schema=DefaultError)
 def get_alpha_site():
     if not enable_api():
-        # return jsonify({'error': 'alpha api is not enabled'}), 400
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        # return jsonify(get_site(auth))
         return get_site(auth)
     except Exception as ex:
-        # return jsonify({"error": str(ex)}), 400
-        return abort(400, str(ex))
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/site/block', methods=['POST'])

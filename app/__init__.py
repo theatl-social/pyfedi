@@ -73,15 +73,16 @@ def create_app(config_class=Config):
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
-    # if app.config["ENABLE_ALPHA_API"]:
     app.config["API_TITLE"] = "PieFed Alpha API"
     app.config["API_VERSION"] = "alpha"
     app.config["OPENAPI_VERSION"] = "3.0.2"
-    app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
-    app.config["OPENAPI_JSON_PATH"] = "swagger.json"
-    app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger"
-    app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    if app.config["SERVE_API_DOCS"]:
+        app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
+        app.config["OPENAPI_JSON_PATH"] = "/swagger.json"
+        app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger"
+        app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
     rest_api.init_app(app)
+    rest_api.DEFAULT_ERROR_RESPONSE_NAME = None  # Don't include default errors, define them ourselves
 
     db.init_app(app)
     migrate.init_app(app, db, render_as_batch=True)
@@ -192,9 +193,9 @@ def create_app(config_class=Config):
     from app.api.alpha import bp as app_api_bp
     app.register_blueprint(app_api_bp)
 
-    # if app.config["ENABLE_ALPHA_API"]:
-    from app.api.alpha import api_bp as auto_api_bp
-    rest_api.register_blueprint(auto_api_bp)
+    # API Namespaces
+    from app.api.alpha import site_bp as site_api_bp
+    rest_api.register_blueprint(site_api_bp)
 
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['ERRORS_TO']:
