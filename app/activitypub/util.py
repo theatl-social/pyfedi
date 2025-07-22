@@ -1594,6 +1594,7 @@ def is_activitypub_request():
 
 
 def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reason):
+    from app import redis_client
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     community = to_delete.community
@@ -1602,28 +1603,30 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.is_moderator(deletor) or
             community.is_instance_admin(deletor)):
         if isinstance(to_delete, Post):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            community.post_count -= 1
-            to_delete.author.post_count -= 1
-            if to_delete.url and to_delete.cross_posts is not None:
-                to_delete.calculate_cross_posts(delete_only=True)
-            db.session.commit()
+            with redis_client.lock(f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                community.post_count -= 1
+                to_delete.author.post_count -= 1
+                if to_delete.url and to_delete.cross_posts is not None:
+                    to_delete.calculate_cross_posts(delete_only=True)
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete,
                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
         elif isinstance(to_delete, PostReply):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            to_delete.author.post_reply_count -= 1
-            community.post_reply_count -= 1
-            if not to_delete.author.bot:
-                to_delete.post.reply_count -= 1
-            if to_delete.path:
-                db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
-                                   {'parents': tuple(to_delete.path[:-1])})
-            db.session.commit()
+            with redis_client.lock(f"lock:post_reply:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                to_delete.author.post_reply_count -= 1
+                community.post_reply_count -= 1
+                if not to_delete.author.bot:
+                    to_delete.post.reply_count -= 1
+                if to_delete.path:
+                    db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                       {'parents': tuple(to_delete.path[:-1])})
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post_reply', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete.post, reply=to_delete,
