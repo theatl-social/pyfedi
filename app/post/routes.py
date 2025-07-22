@@ -138,7 +138,8 @@ def show_post(post_id: int):
                 lazy_load_replies = True
 
             form.notify_author.data = True
-            form.language_id.data = current_user.language_id or g.site.language_id
+            if current_user.is_authenticated:
+                form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
             user_flair = {}
