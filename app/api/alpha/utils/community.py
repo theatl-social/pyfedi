@@ -382,9 +382,11 @@ def post_community_moderate_ban(auth, data):
         ban_until = datetime.now() + relativedelta(years=1)
 
     # create the community ban
-    cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
-                      reason=data['reason'], ban_until=ban_until)
-    db.session.add(cb)
+    cb = CommunityBan.query.filter(CommunityBan.user_id == blocked.id, CommunityBan.community_id == community.id).first()
+    if not cb:
+        cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
+                          reason=data['reason'], ban_until=ban_until)
+        db.session.add(cb)
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
         community_membership_record.is_banned = True
@@ -414,9 +416,9 @@ def post_community_moderate_ban(auth, data):
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
         db.session.commit()
 
-        cache.delete_memoized(communities_banned_from, blocked.id)
-        cache.delete_memoized(joined_communities, blocked.id)
-        cache.delete_memoized(moderating_communities, blocked.id)
+    cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(joined_communities, blocked.id)
+    cache.delete_memoized(moderating_communities, blocked.id)
 
     # build the response
     res = {}
