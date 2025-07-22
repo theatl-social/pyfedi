@@ -1914,38 +1914,44 @@ def post_block_image_purge_posts(post_id: int):
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_view_voting_activity(post_id: int):
     post = Post.query.get_or_404(post_id)
 
-    post_title = post.title
-    upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        post_title = post.title
+        upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
-                           post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
+                               post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_reply_view_voting_activity(comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
 
-    reply_text = post_reply.body
-    upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post_reply.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        reply_text = post_reply.body
+        upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
-                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
+                               reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/post/<int:post_id>/fixup_from_remote', methods=['POST'])
