@@ -528,120 +528,158 @@ def community_profile(actor):
 
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    import os
+    import traceback
+    from datetime import datetime
+    EXTRA_AP_LOGGING = os.environ.get('EXTRA_AP_LOGGING', '0') == '1'
+    if EXTRA_AP_LOGGING:
+        print("\n\n==============================\nEXTRA_AP_LOGGING ENABLED!\nAll incoming ActivityPub POSTs will be logged to /app/logs/\n==============================\n\n")
+    def save_ap_debug_log(log_type, headers, body, error=None):
+        log_dir = os.path.join(os.path.dirname(__file__), '../../logs')
+        os.makedirs(log_dir, exist_ok=True)
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S_%f')
+        fname = f"ap_debug_{log_type}_{ts}.log"
+        fpath = os.path.join(log_dir, fname)
+        with open(fpath, 'w', encoding='utf-8') as f:
+            f.write(f"--- Headers ---\n")
+            for k, v in headers.items():
+                f.write(f"{k}: {v}\n")
+            f.write(f"\n--- Body ---\n")
+            f.write(body.decode('utf-8', errors='replace'))
+            if error:
+                f.write(f"\n--- Error ---\n{error}\n")
+        return fpath
+    # Save incoming headers/body as early as possible
+    if EXTRA_AP_LOGGING:
+        try:
+            save_ap_debug_log('incoming', dict(request.headers), request.get_data())
+        except Exception as e:
+            pass
     from app import redis_client
+
     try:
         request_json = request.get_json(force=True)
-    except werkzeug.exceptions.BadRequest as e:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
+    except Exception as e:
+        if EXTRA_AP_LOGGING:
+            err_str = traceback.format_exc()
+            save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + str(e))
         return '', 200
 
-    g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
-    store_ap_json = g.site.log_activitypub_json or False
-    saved_json = request_json if store_ap_json else None
-
-    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
-        return '', 200
-
-    id = request_json['id']
-    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
-        object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
-            else:
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
-                                'Missing minimum expected fields in JSON Announce object')
-            return '', 200
-
-        if isinstance(object['actor'], str) and object['actor'].startswith(
-                'https://' + current_app.config['SERVER_NAME']):
-            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
-                            'Activity about local content which is already present')
-            return '', 200
-
-        id = object['id']
-
-    if redis_client.exists(id):  # Something is sending same activity multiple times
-        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
-        return '', 200
-    redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
-
-    # Ignore unutilised PeerTube activity
-    if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
-        log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
-        return ''
-
-    # Ignore account deletion requests from users that do not already exist here
-    account_deletion = False
-    if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and \
-            request_json['actor'] == request_json['object']:
-        account_deletion = True
-        actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
-        if not actor:
-            log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
-            return '', 200
-    else:
-        actor = find_actor_or_create(request_json['actor'])
-
-    if not actor:
-        actor_name = request_json['actor']
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
-        return '', 200
-
-    if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
-        return '', 200
-
-    bounced = False
+    # Trap and log any errors between POST receipt and log_incoming_ap
     try:
-        HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-    except VerificationError as e:
-        bounced = True
-        # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
-        if 'signature' in request_json:
-            try:
-                LDSignature.verify_signature(request_json, actor.public_key)
-            except VerificationError as e:
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+        g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
+        store_ap_json = g.site.log_activitypub_json or False
+        saved_json = request_json if store_ap_json else None
+
+        if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
+            return '', 200
+
+        id = request_json['id']
+        if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+            object = request_json['object']
+            if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+                if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
+                else:
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
+                                    'Missing minimum expected fields in JSON Announce object')
+                return '', 200
+
+            if isinstance(object['actor'], str) and object['actor'].startswith(
+                    'https://' + current_app.config['SERVER_NAME']):
+                log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
+                                'Activity about local content which is already present')
+                return '', 200
+
+            id = object['id']
+
+        if redis_client.exists(id):  # Something is sending same activity multiple times
+            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
+            return '', 200
+        redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
+
+        # Ignore unutilised PeerTube activity
+        if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
+            log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
+            return ''
+
+        # Ignore account deletion requests from users that do not already exist here
+        account_deletion = False
+        if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and \
+                request_json['actor'] == request_json['object']:
+            account_deletion = True
+            actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
+                return '', 200
+        else:
+            actor = find_actor_or_create(request_json['actor'])
+
+        if not actor:
+            actor_name = request_json['actor']
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
+            return '', 200
+
+        if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
+            return '', 200
+
+        bounced = False
+        try:
+            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+        except VerificationError as e:
+            bounced = True
+            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
+            if 'signature' in request_json:
+                try:
+                    LDSignature.verify_signature(request_json, actor.public_key)
+                except VerificationError as e:
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+                    return '', 400
+            elif (
+                    actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
+                    request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
+                    'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
+                ...
+            # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+            elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+                  isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
+                        request_json['object']['id'], str)):
+                request_json['object'] = request_json['object']['id']
+            else:
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
                 return '', 400
-        elif (
-                actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
-                request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
-                'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
-            ...
-        # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
-        elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
-              isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
-                    request_json['object']['id'], str)):
-            request_json['object'] = request_json['object']['id']
-        else:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
-            return '', 400
 
-    if actor.instance_id:
-        actor.instance.last_seen = utcnow()
-        actor.instance.dormant = False
-        actor.instance.gone_forever = False
-        actor.instance.failures = 0
-        actor.instance.ip_address = ip_address() if not bounced else ''
-    db.session.commit()
+        if actor.instance_id:
+            actor.instance.last_seen = utcnow()
+            actor.instance.dormant = False
+            actor.instance.gone_forever = False
+            actor.instance.failures = 0
+            actor.instance.ip_address = ip_address() if not bounced else ''
+        db.session.commit()
 
-    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-    # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
-    if account_deletion == True:
+        # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
+        # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
+        if account_deletion == True:
+            if current_app.debug:
+                process_delete_request(request_json, store_ap_json)
+            else:
+                process_delete_request.delay(request_json, store_ap_json)
+            return ''
+
         if current_app.debug:
-            process_delete_request(request_json, store_ap_json)
+            process_inbox_request(request_json, store_ap_json)
         else:
-            process_delete_request.delay(request_json, store_ap_json)
+            process_inbox_request.delay(request_json, store_ap_json)
+
         return ''
-
-    if current_app.debug:
-        process_inbox_request(request_json, store_ap_json)
-    else:
-        process_inbox_request.delay(request_json, store_ap_json)
-
-    return ''
+    except Exception as e:
+        if EXTRA_AP_LOGGING:
+            err_str = traceback.format_exc()
+            save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+        raise
 
 
 @bp.route('/site_inbox', methods=['POST'])
