@@ -21,14 +21,14 @@ def log_user_in(input, src):
     ip = ip_address()
     country = get_country(ip)
     if src == SRC_WEB:
-        username = input.user_name.data
+        username = input.user_name.data.lower()
         password = input.password.data
         user = User.query.filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
         required(["username", "password"], input)
         string_expected(["username", "password"], input)
 
-        username = input['username']
+        username = input['username'].lower()
         password = input['password']
         try:
             user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
