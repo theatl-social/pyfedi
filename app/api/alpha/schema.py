@@ -91,7 +91,6 @@ class Site(Schema):
     icon = fields.Url()
     name = fields.String(required=True)
     registration_mode = fields.Enum(reg_enum)
-    # registration_mode = fields.String()
     sidebar = fields.String()
     user_count = fields.Integer()
 
