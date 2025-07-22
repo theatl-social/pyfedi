@@ -93,7 +93,7 @@ class Site(Schema):
     registration_mode = fields.Enum(reg_enum)
     # registration_mode = fields.String()
     sidebar = fields.String()
-    user_count = fields.String()
+    user_count = fields.Integer()
 
 
 class Community(Schema):
