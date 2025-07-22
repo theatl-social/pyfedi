@@ -45,7 +45,6 @@ def user_passkey_options():
         user_display_name=current_user.display_name(),
         attestation=AttestationConveyancePreference.NONE,
         authenticator_selection=AuthenticatorSelectionCriteria(
-            authenticator_attachment=AuthenticatorAttachment.CROSS_PLATFORM,
             resident_key=ResidentKeyRequirement.PREFERRED),
         exclude_credentials=exclude_credentials(),
         timeout=320000,
