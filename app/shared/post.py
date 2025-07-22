@@ -713,7 +713,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     post = Post.query.filter_by(id=post_id).one()
     community = post.community
 
-    if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin():
+    if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin_or_staff():
         post.sticky = featured
         if featured:
             modlog_type = 'featured_post'
