@@ -3,7 +3,8 @@ from collections import namedtuple
 from random import randint
 from typing import List
 
-from flask import g, current_app, request, redirect, url_for, flash, abort, Markup
+from flask import g, current_app, request, redirect, url_for, flash, abort
+from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
 from slugify import slugify

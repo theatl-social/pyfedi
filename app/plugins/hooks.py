@@ -1,6 +1,7 @@
 """
 Plugin hook system
 """
+import os
 from functools import wraps
 from typing import Dict, List, Callable, Any
 import logging
@@ -28,7 +29,8 @@ def hook(hook_name: str):
             _hooks[hook_name] = []
         
         _hooks[hook_name].append(func)
-        logger.info(f"Registered hook '{hook_name}' -> {func.__name__}")
+        if int(os.environ.get('FLASK_DEBUG', '0')):
+            logger.info(f"Registered hook '{hook_name}' -> {func.__name__}")
         
         # Try to determine which plugin this hook belongs to from the function's module
         try:
@@ -38,7 +40,8 @@ def hook(hook_name: str):
             if module_name and module_name.startswith('app.plugins.') and module_name.count('.') >= 2:
                 plugin_name = module_name.split('.')[2]
                 register_plugin_hook(plugin_name, hook_name, func.__name__)
-                logger.info(f"Auto-registered hook {hook_name} -> {func.__name__} for plugin {plugin_name}")
+                if int(os.environ.get('FLASK_DEBUG', '0')):
+                    logger.info(f"Auto-registered hook {hook_name} -> {func.__name__} for plugin {plugin_name}")
         except Exception as e:
             logger.debug(f"Could not determine plugin for hook {hook_name}: {e}")
         

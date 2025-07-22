@@ -448,7 +448,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
     community = Community.query.filter_by(id=community_id).one()
     new_moderator = User.query.filter_by(id=person_id, banned=False).one()
-    if not community.is_owner() and not user.is_admin():
+    if not community.is_owner(user) and not user.is_admin_or_staff():
         raise Exception('incorrect_login')
 
     existing_member = CommunityMember.query.filter(CommunityMember.user_id == new_moderator.id,
@@ -512,7 +512,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
 
     community = Community.query.filter_by(id=community_id).one()
     old_moderator = User.query.filter_by(id=person_id).one()
-    if not community.is_owner() and not user.is_admin():
+    if not community.is_owner(user) and not user.is_admin_or_staff():
         raise Exception('incorrect_login')
 
     existing_member = CommunityMember.query.filter(CommunityMember.user_id == old_moderator.id,

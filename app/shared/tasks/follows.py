@@ -4,7 +4,8 @@ from app.activitypub.signature import default_context, post_request, send_post_r
 from app.models import Community, CommunityBan, CommunityJoinRequest, User
 from app.utils import community_membership, gibberish, joined_communities, instance_banned, get_task_session
 
-from flask import current_app, flash, Markup
+from flask import current_app, flash
+from markupsafe import Markup
 from flask_babel import _
 
 

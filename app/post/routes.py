@@ -138,6 +138,8 @@ def show_post(post_id: int):
                 lazy_load_replies = True
 
             form.notify_author.data = True
+            if current_user.is_authenticated:
+                form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
             user_flair = {}
@@ -672,6 +674,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
+        form.language_id.data = current_user.language_id or g.site.language_id
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to,
@@ -710,7 +713,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
         recipient_language_id = in_reply_to.language_id or in_reply_to.author.language_id
         recipient_language_code = None
         recipient_language_name = None
-        if recipient_language_id:
+        if recipient_language_id and (current_user.language_id and current_user.language_id != recipient_language_id):
             lang = Language.query.get(recipient_language_id)
             if lang:
                 recipient_language_code = lang.code
@@ -1911,38 +1914,44 @@ def post_block_image_purge_posts(post_id: int):
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_view_voting_activity(post_id: int):
     post = Post.query.get_or_404(post_id)
 
-    post_title = post.title
-    upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        post_title = post.title
+        upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
-                           post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
+                               post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_reply_view_voting_activity(comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
 
-    reply_text = post_reply.body
-    upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post_reply.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        reply_text = post_reply.body
+        upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
-                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
+                               reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/post/<int:post_id>/fixup_from_remote', methods=['POST'])

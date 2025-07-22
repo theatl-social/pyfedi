@@ -15,7 +15,7 @@ from flask import current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
-from flask_sqlalchemy import BaseQuery
+from flask_sqlalchemy.query import Query
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
@@ -44,7 +44,7 @@ class PostReplyValidationError(Exception):
     pass
 
 
-class FullTextSearchQuery(BaseQuery, SearchQueryMixin):
+class FullTextSearchQuery(Query, SearchQueryMixin):
     pass
 
 
