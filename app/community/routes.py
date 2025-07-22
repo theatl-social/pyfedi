@@ -5,7 +5,8 @@ from random import randint
 import flask
 from bs4 import BeautifulSoup
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
+from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, g, json
+from markupsafe import Markup
 from flask_login import current_user
 from flask_babel import _, force_locale, gettext
 from slugify import slugify

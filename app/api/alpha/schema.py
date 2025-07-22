@@ -50,7 +50,7 @@ class Person(Schema):
     id = fields.Integer(required=True)
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
-    published = fields.String(example="2025-06-07T02:29:07.980084Z")
+    published = fields.String()
     title = fields.String()
     user_name = fields.String(required=True)
 
@@ -75,16 +75,16 @@ class LanguageView(Schema):
     class Meta:
         unknown = EXCLUDE
     
-    code = fields.String(example="en")
-    id = fields.Integer(example=2)
-    name = fields.String(example="English")
+    code = fields.String()
+    id = fields.Integer()
+    name = fields.String()
 
 
 class Site(Schema):
     class Meta:
         unknown = EXCLUDE
     
-    actor_id = fields.Url(required=True, example="https://piefed.social/")
+    actor_id = fields.Url(required=True)
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
@@ -114,11 +114,11 @@ class Community(Schema):
     name = fields.String(required=True)
     nsfw = fields.Boolean(required=True)
     posting_warning = fields.String()
-    published = fields.String(required=True, example="2025-06-07T02:29:07.980084Z")
+    published = fields.String(required=True)
     removed = fields.Boolean(required=True)
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
-    updated = fields.String(example="2025-06-07T02:29:07.980084Z")
+    updated = fields.String()
 
 
 class CommunityBlockView(Schema):
@@ -143,9 +143,9 @@ class Instance(Schema):
     
     domain = fields.String(required=True)
     id = fields.Integer(required=True)
-    published = fields.String(required=True, example="2025-06-07T02:29:07.980084Z")
+    published = fields.String(required=True)
     software = fields.String()
-    updated = fields.String(example="2025-06-07T02:29:07.980084Z")
+    updated = fields.String()
     version = fields.String()
 
 
@@ -213,4 +213,4 @@ class GetSiteResponse(Schema):
     admins = fields.List(fields.Nested(PersonView), required=True)
     my_user = fields.Nested(MyUserInfo)
     site = fields.Nested(Site, required=True)
-    version = fields.String(required=True, example="alpha", title="Software version", foo="bar")
+    version = fields.String(required=True, metadata={"title": "Software version"})

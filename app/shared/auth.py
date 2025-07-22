@@ -1,7 +1,8 @@
 from datetime import datetime
 from urllib.parse import urlsplit
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup
+from flask import redirect, url_for, flash, request, make_response, session
+from markupsafe import Markup
 from flask_babel import _
 from flask_login import login_user
 from sqlalchemy.exc import NoResultFound
