@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>ActivityPub Request Status</h1>
+    
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Quick Stats</h5>
+                    <p class="card-text">
+                        <strong>Total Incomplete Requests:</strong> {{ total_count }}<br>
+                        <small class="text-muted">Requests that haven't completed successfully</small>
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Actions</h5>
+                    <a href="{{ url_for('activitypub.admin_ap_stats') }}" class="btn btn-primary btn-sm">View 24h Stats</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <h5>Incomplete Requests</h5>
+            <small class="text-muted">These requests failed or are still processing</small>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Request ID</th>
+                            <th>Checkpoint</th>
+                            <th>Status</th>
+                            <th>Activity ID</th>
+                            <th>Details</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for req in incomplete_requests %}
+                        <tr class="{% if req.status == 'error' %}table-danger{% elif req.status == 'warning' %}table-warning{% endif %}">
+                            <td>
+                                <small>{{ req.timestamp[:19] if req.timestamp else 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <code class="small">{{ req.request_id[:8] }}...</code>
+                            </td>
+                            <td>
+                                <span class="badge badge-secondary">{{ req.checkpoint }}</span>
+                            </td>
+                            <td>
+                                <span class="badge 
+                                    {% if req.status == 'ok' %}badge-success
+                                    {% elif req.status == 'error' %}badge-danger
+                                    {% elif req.status == 'warning' %}badge-warning
+                                    {% elif req.status == 'ignored' %}badge-info
+                                    {% else %}badge-secondary{% endif %}">
+                                    {{ req.status }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if req.activity_id %}
+                                <small class="text-truncate d-inline-block" style="max-width: 200px;">
+                                    {{ req.activity_id }}
+                                </small>
+                                {% else %}
+                                <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if req.details %}
+                                <small class="text-truncate d-inline-block" style="max-width: 300px;" 
+                                       title="{{ req.details }}">
+                                    {{ req.details }}
+                                </small>
+                                {% else %}
+                                <span class="text-muted">No details</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        onclick="viewDetails('{{ req.request_id }}')">
+                                    View Full
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not incomplete_requests %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                No incomplete requests found
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if total_count > per_page %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page > 1 %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('activitypub.admin_ap_requests', page=page-1) }}">Previous</a>
+            </li>
+            {% endif %}
+            
+            {% set total_pages = (total_count + per_page - 1) // per_page %}
+            {% for p in range(1, total_pages + 1) %}
+                {% if p == page %}
+                <li class="page-item active">
+                    <span class="page-link">{{ p }}</span>
+                </li>
+                {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 2 and p <= page + 2) %}
+                <li class="page-item">
+                    <a class="page-link" href="{{ url_for('activitypub.admin_ap_requests', page=p) }}">{{ p }}</a>
+                </li>
+                {% elif p == 4 or p == total_pages - 3 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+            {% endfor %}
+            
+            {% if page < total_pages %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('activitypub.admin_ap_requests', page=page+1) }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Modal for detailed view -->
+<div class="modal fade" id="detailModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Request Details</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="detailContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="sr-only">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function viewDetails(requestId) {
+    $('#detailModal').modal('show');
+    $('#detailContent').html('<div class="text-center"><div class="spinner-border" role="status"><span class="sr-only">Loading...</span></div></div>');
+    
+    fetch(`{{ url_for('activitypub.admin_ap_request_detail', request_id='REQUEST_ID') }}`.replace('REQUEST_ID', requestId))
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                $('#detailContent').html(`<div class="alert alert-danger">Error: ${data.error}</div>`);
+                return;
+            }
+            
+            let html = `
+                <div class="mb-3">
+                    <h6>Request Overview</h6>
+                    <p><strong>Request ID:</strong> <code>${data.request_id}</code></p>
+                    <p><strong>Total Checkpoints:</strong> ${data.total_checkpoints}</p>
+                    <p><strong>Completed:</strong> ${data.completed ? 'Yes' : 'No'}</p>
+                    <p><strong>Has Errors:</strong> ${data.has_errors ? 'Yes' : 'No'}</p>
+                </div>
+                
+                <h6>Processing Timeline</h6>
+                <div class="timeline">
+            `;
+            
+            data.checkpoints.forEach(checkpoint => {
+                const statusClass = checkpoint.status === 'ok' ? 'success' : 
+                                  checkpoint.status === 'error' ? 'danger' :
+                                  checkpoint.status === 'warning' ? 'warning' : 'info';
+                
+                html += `
+                    <div class="card mb-2">
+                        <div class="card-body py-2">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge badge-${statusClass}">${checkpoint.status}</span>
+                                    <strong>${checkpoint.checkpoint}</strong>
+                                </div>
+                                <small class="text-muted">${checkpoint.timestamp ? new Date(checkpoint.timestamp).toLocaleString() : 'N/A'}</small>
+                            </div>
+                            ${checkpoint.details ? `<div class="mt-2"><small>${checkpoint.details}</small></div>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            $('#detailContent').html(html);
+        })
+        .catch(error => {
+            $('#detailContent').html(`<div class="alert alert-danger">Failed to load details: ${error}</div>`);
+        });
+}
+</script>
+{% endblock %}
