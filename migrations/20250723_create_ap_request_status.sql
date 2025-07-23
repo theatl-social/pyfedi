@@ -1,4 +1,14 @@
 -- Migration: Create ap_request_status table for ActivityPub POST debug tracking
+
+-- Drop existing objects if they exist (safe cleanup)
+DROP VIEW IF EXISTS ap_request_status_incomplete;
+DROP VIEW IF EXISTS ap_request_status_last;
+DROP INDEX IF EXISTS idx_ap_request_status_post_object_uri;
+DROP INDEX IF EXISTS idx_ap_request_status_activity_id;
+DROP INDEX IF EXISTS idx_ap_request_status_request_id;
+DROP TABLE IF EXISTS ap_request_status;
+
+-- Create the table
 CREATE TABLE ap_request_status (
     id SERIAL PRIMARY KEY,
     request_id UUID NOT NULL,
