@@ -38,7 +38,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
-    moderating_communities_ids, is_valid_xml_utf8
+    moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -1328,6 +1328,7 @@ def import_settings_task(user_id, filename):
                     block = CommunityBlock(user_id=user.id, community_id=community.id)
                     db.session.add(block)
 
+
         for user_ap_id in contents_json['blocked_users'] if 'blocked_users' in contents_json else []:
             blocked_user = find_actor_or_create(user_ap_id)
             if blocked_user:
@@ -1342,6 +1343,10 @@ def import_settings_task(user_id, filename):
             ...
 
         db.session.commit()
+        cache.delete_memoized(blocked_communities, current_user.id)
+        cache.delete_memoized(blocked_instances, current_user.id)
+        cache.delete_memoized(blocked_users, current_user.id)
+        cache.delete_memoized(blocked_domains, current_user.id)
 
 
 @bp.route('/user/settings/filters', methods=['GET', 'POST'])
