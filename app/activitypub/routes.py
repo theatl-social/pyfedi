@@ -923,43 +923,43 @@ def shared_inbox():
         else:
             if logger:
                 logger.log_checkpoint('actor_lookup', 'ok', 'Looking up actor')
-            log_ap_status(request_id, 'actor_lookup_start', 'ok', 'Looking up actor', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'actor_lookup_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Looking up actor')
             actor = find_actor_or_create(request_json['actor'])
 
         if not actor:
             actor_name = request_json['actor']
             if logger:
                 logger.log_null_check_failure('actor_lookup', 'actor', 'User/Community object')
-            log_ap_status(request_id, 'actor_lookup', 'fail', f'Actor could not be found: {actor_name}', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'actor_lookup', 'fail', activity_id=id, post_object_uri=post_object_uri, details=f'Actor could not be found: {actor_name}')
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
             return '', 200
 
         if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
             if logger:
                 logger.log_validation_failure('actor_validation', 'Activity from local actor')
-            log_ap_status(request_id, 'actor_validation', 'fail', 'Activity from local actor', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'actor_validation', 'fail', activity_id=id, post_object_uri=post_object_uri, details='Activity from local actor')
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
             return '', 200
 
         if logger:
             logger.log_checkpoint('actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
-        log_ap_status(request_id, 'actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}', activity_id=id, post_object_uri=post_object_uri)
+        log_ap_status(request_id, 'actor_validation', 'ok', activity_id=id, post_object_uri=post_object_uri, details=f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
 
         # Signature verification
         bounced = False
         try:
             if logger:
                 logger.log_checkpoint('signature_verify_start', 'ok', 'Starting HTTP signature verification')
-            log_ap_status(request_id, 'signature_verify_start', 'ok', 'Starting HTTP signature verification', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting HTTP signature verification')
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if logger:
                 logger.log_checkpoint('signature_verify', 'ok', 'HTTP signature verified successfully')
-            log_ap_status(request_id, 'signature_verify', 'ok', 'HTTP signature verified successfully', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'signature_verify', 'ok', activity_id=id, post_object_uri=post_object_uri, details='HTTP signature verified successfully')
         except VerificationError as e:
             bounced = True
             if logger:
                 logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
-            log_ap_status(request_id, 'signature_verify', 'warning', f'HTTP signature failed: {str(e)}', activity_id=id, post_object_uri=post_object_uri)
+            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {str(e)}')
             # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
             if 'signature' in request_json:
                 try:
