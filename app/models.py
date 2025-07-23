@@ -3300,6 +3300,20 @@ class ActivityBatch(db.Model):
     created = db.Column(db.DateTime, default=utcnow)
 
 
+class APRequestStatus(db.Model):
+    """Model for tracking ActivityPub request processing status"""
+    __tablename__ = 'ap_request_status'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(UUID(as_uuid=True), nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, default=utcnow, nullable=False)
+    checkpoint = db.Column(db.String(64), nullable=False)
+    status = db.Column(db.String(32), nullable=False)
+    activity_id = db.Column(db.Text, index=True)
+    post_object_uri = db.Column(db.Text, index=True)
+    details = db.Column(db.Text)
+
+
 class BlockedImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(255), index=True)
