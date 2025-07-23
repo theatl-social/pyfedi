@@ -51,8 +51,7 @@ def get_alpha_site():
     try:
         auth = request.headers.get('Authorization')
         res = get_site(auth)
-        GetSiteResponse().load(res)  # Validates that output conforms to schema, raises Exception otherwise
-        return res
+        return GetSiteResponse().load(res)  # Validates that output conforms to schema, raises Exception otherwise
     except Exception as ex:
         return abort(400, message=str(ex))
 
