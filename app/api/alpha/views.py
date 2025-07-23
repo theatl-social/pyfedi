@@ -1,5 +1,4 @@
 from __future__ import annotations
-from enum import Enum
 
 from flask import current_app, g
 from sqlalchemy import text, func
@@ -179,30 +178,6 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 def user_view(user: User | int, variant, stub=False, user_id=None, flair_community_id=None) -> dict:
     if isinstance(user, int):
         user = User.query.filter_by(id=user).one()
-    
-    post_sort_type_enum = Enum("SortEnum", [("Active", "Active"),
-                                            ("Hot", "Hot"),
-                                            ("New", "New"),
-                                            ("TopHour", "TopHour"),
-                                            ("TopSixHour", "TopSixHour"),
-                                            ("TopTwelveHour", "TopTwelveHour"),
-                                            ("TopDay", "TopDay"),
-                                            ("TopWeek", "TopWeek"),
-                                            ("TopMonth", "TopMonth"),
-                                            ("TopThreeMonths", "TopThreeMonths"),
-                                            ("TopSixMonths", "TopSixMonths"),
-                                            ("TopNineMonths", "TopNineMonths"),
-                                            ("TopYear", "TopYear"),
-                                            ("TopAll", "TopAll"),
-                                            ("Scaled", "Scaled")])
-    
-    comment_sort_type_enum = Enum("CommentEnum", [("Hot", "Hot"), ("Top", "Top"), ("New", "New"), ("Old", "Old")])
-    
-    listing_type_enum = Enum("ListingEnum", [("All", "All"),
-                                             ("Local", "Local"),
-                                             ("Subscribed", "Subscribed"),
-                                             ("Popular", "Popular"),
-                                             ("Moderating", "Moderating")])
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -271,9 +246,9 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 "local_user": {
                     "show_nsfw": not user.hide_nsfw == 1,
                     "show_nsfl": not user.hide_nsfl == 1,
-                    "default_sort_type": post_sort_type_enum[user.default_sort.capitalize()],
-                    "default_comment_sort_type": comment_sort_type_enum[user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot'],
-                    "default_listing_type": listing_type_enum[user.default_filter.capitalize()],
+                    "default_sort_type": user.default_sort.capitalize(),
+                    "default_comment_sort_type": user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot',
+                    "default_listing_type": user.default_filter.capitalize(),
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
                     "show_read_posts": not user.hide_read_posts == True
@@ -777,12 +752,11 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
 
 def site_view(user) -> dict:
     logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
-    reg_mode_enum = Enum("RegistrationEnum",
-                         [("Closed", "Closed"), ("RequireApplication", "RequireApplication"), ("Open", "Open")])
+
     site = {
         "enable_downvotes": g.site.enable_downvotes,
         "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
-        "registration_mode": reg_mode_enum[g.site.registration_mode],
+        "registration_mode": g.site.registration_mode,
         "name": g.site.name,
         "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
         "user_count": users_total(),

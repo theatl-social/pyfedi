@@ -50,7 +50,9 @@ def get_alpha_site():
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        return get_site(auth)
+        res = get_site(auth)
+        GetSiteResponse().load(res)  # Validates that output conforms to schema, raises Exception otherwise
+        return res
     except Exception as ex:
         return abort(400, message=str(ex))
 
