@@ -86,9 +86,19 @@ def admin_site():
     if form.validate_on_submit():
         site.name = form.name.data
         site.description = form.description.data  # tagline
+
         site.about = form.about.data
+        if form.about.data:
+            site.about_html = markdown_to_html(form.about.data)
+
         site.sidebar = form.sidebar.data
+        if form.sidebar.data:
+            site.sidebar_html = markdown_to_html(form.sidebar.data)
+
         site.legal_information = form.legal_information.data
+        if form.legal_information.data:
+            site.legal_information_html = markdown_to_html(form.legal_information.data)
+
         site.tos_url = form.tos_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
@@ -159,13 +169,14 @@ def admin_site():
 
         db.session.commit()
         set_setting('announcement', form.announcement.data)
+        set_setting('announcement_html', markdown_to_html(form.announcement.data))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.name.data = site.name
         form.description.data = site.description
-        form.about.data = site.about
-        form.sidebar.data = site.sidebar
-        form.legal_information.data = site.legal_information
+        form.about.data = site.about if site.about is not None else ''
+        form.sidebar.data = site.sidebar if site.sidebar is not None else ''
+        form.legal_information.data = site.legal_information if site.legal_information is not None else ''
         form.tos_url.data = site.tos_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')

@@ -22,14 +22,14 @@
         <p>{{ g.site.contact_email | safe }}</p>
         <h2>{{ _('About Us') }} </h2>
         <p> {{ g.site.description | safe }} </p>
-        {% if g.site.about %}
-        <p> {{ g.site.about | safe }} </p>
-        {% elif g.site.sidebar %}
-        <p> {{ g.site.sidebar | safe }} </p>
+        {% if g.site.about_html %}
+        <p> {{ g.site.about_html | safe }} </p>
+        {% elif g.site.sidebar_html %}
+        <p> {{ g.site.sidebar_html | safe }} </p>
         {% endif %}
-        {% if g.site.legal_information %}
+        {% if g.site.legal_information_html %}
         <h2>{{ _('Legal Information') }} </h2>
-        <p> {{ g.site.legal_information | safe }} </p>
+        <p> {{ g.site.legal_information_html | safe }} </p>
         <p> <a href="/privacy">{{ _('Our Privacy Policy') }}</a> </p>
         {% endif %}
         {% if cms_page -%}
