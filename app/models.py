@@ -834,7 +834,7 @@ class User(UserMixin, db.Model):
     alt_user_name = db.Column(db.String(255), index=True)
     title = db.Column(db.String(256))
     email = db.Column(db.String(255), index=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(150))
     verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(16), index=True)
     banned = db.Column(db.Boolean, default=False, index=True)
