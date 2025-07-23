@@ -481,17 +481,19 @@ def get_alpha_feed_list(data):
 
 
 # Post
-@bp.route('/api/alpha/post/list', methods=['GET'])
-def get_alpha_post_list():
+@post_bp.route('/post/list', methods=['GET'])
+@post_bp.doc(summary="List posts.")
+@post_bp.arguments(ListPostsRequest, location="query")
+@post_bp.response(200, ListPostsResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def get_alpha_post_list(query_args):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return orjson_response(get_post_list(auth, data))
+        return get_post_list(auth, query_args)
     except Exception as ex:
-        current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @post_bp.route('/post', methods=['GET'])
@@ -511,170 +513,219 @@ def get_alpha_post(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/replies', methods=['GET'])
-def get_alpha_post_replies():
+@post_bp.route('/post/replies', methods=['GET'])
+@post_bp.doc(summary="Get replies/comments for a post with nested structure.")
+@post_bp.arguments(GetPostRepliesRequest, location="query")
+@post_bp.response(200, GetPostRepliesResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def get_alpha_post_replies(data):
     if not enable_api():
-        return jsonify({'error': 'api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return orjson_response(get_post_replies(auth, data))
+        resp = get_post_replies(auth, data)
+        validated = GetPostRepliesResponse().load(resp)
+        return orjson_response(validated)
     except NoResultFound:
-        return jsonify({"error": "Post not found"}), 400
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/like', methods=['POST'])
-def post_alpha_post_like():
+@post_bp.route('/post/like', methods=['POST'])
+@post_bp.doc(summary="Like or unlike a post.")
+@post_bp.arguments(LikePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_like(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_like(auth, data))
+        return GetPostResponse().load(post_post_like(auth, data))
     except Exception as ex:
-        current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/save', methods=['PUT'])
-def put_alpha_post_save():
+@post_bp.route('/post/save', methods=['PUT'])
+@post_bp.doc(summary="Save or unsave a post.")
+@post_bp.arguments(SavePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def put_alpha_post_save(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_post_save(auth, data))
+        resp = put_post_save(auth, data)
+        return GetPostResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Post not found"}), 400
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/subscribe', methods=['PUT'])
-def put_alpha_post_subscribe():
+@post_bp.route('/post/subscribe', methods=['PUT'])
+@post_bp.doc(summary="Subscribe or unsubscribe to a post.")
+@post_bp.arguments(SubscribePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def put_alpha_post_subscribe(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_post_subscribe(auth, data))
+        resp = put_post_subscribe(auth, data)
+        return GetPostResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Post not found"}), 400
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post', methods=['POST'])
-def post_alpha_post():
+@post_bp.route('/post', methods=['POST'])
+@post_bp.doc(summary="Create a new post.")
+@post_bp.arguments(CreatePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+@post_bp.alt_response(429, schema=DefaultError)
+def post_alpha_post(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('3/minute'):
             auth = request.headers.get('Authorization')
-            data = request.get_json(force=True) or {}
-            return jsonify(post_post(auth, data))
+            resp = post_post(auth, data)
+            return GetPostResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post', methods=['PUT'])
-def put_alpha_post():
+@post_bp.route('/post', methods=['PUT'])
+@post_bp.doc(summary="Edit a post.")
+@post_bp.arguments(EditPostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def put_alpha_post(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_post(auth, data))
+        resp = put_post(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/delete', methods=['POST'])
-def post_alpha_post_delete():
+@post_bp.route('/post/delete', methods=['POST'])
+@post_bp.doc(summary="Delete or restore a post.")
+@post_bp.arguments(DeletePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_delete(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_delete(auth, data))
-    except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
-
-
-@bp.route('/api/alpha/post/report', methods=['POST'])
-def post_alpha_post_report():
-    if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
-    try:
-        auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_report(auth, data))
+        resp = post_post_delete(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/lock', methods=['POST'])
-def post_alpha_post_lock():
+@post_bp.route('/post/report', methods=['POST'])
+@post_bp.doc(summary="Report a post.")
+@post_bp.arguments(ReportPostRequest)
+@post_bp.response(200, PostReportResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_report(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_lock(auth, data))
+        resp = post_post_report(auth, data)
+        return PostReportResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/feature', methods=['POST'])
-def post_alpha_post_feature():
+@post_bp.route('/post/lock', methods=['POST'])
+@post_bp.doc(summary="Lock or unlock a post.")
+@post_bp.arguments(LockPostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_lock(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_feature(auth, data))
+        resp = post_post_lock(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/remove', methods=['POST'])
-def post_alpha_post_remove():
+@post_bp.route('/post/feature', methods=['POST'])
+@post_bp.doc(summary="Feature or unfeature a post.")
+@post_bp.arguments(FeaturePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_feature(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_remove(auth, data))
+        resp = post_post_feature(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/post/mark_as_read', methods=['POST'])
-def post_alpha_post_mark_as_read():
+@post_bp.route('/post/remove', methods=['POST'])
+@post_bp.doc(summary="Remove or restore a post as a moderator.")
+@post_bp.arguments(RemovePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_remove(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_post_mark_as_read(auth, data))
+        resp = post_post_remove(auth, data)
+        return GetPostResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@post_bp.route('/post/mark_as_read', methods=['POST'])
+@post_bp.doc(summary="Mark one or more posts as read or unread.")
+@post_bp.arguments(MarkPostAsReadRequest)
+@post_bp.response(200, SuccessResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_mark_as_read(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_post_mark_as_read(auth, data)
+        return SuccessResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Post not found"}), 400
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @post_bp.route('/post/like/list', methods=['GET'])
