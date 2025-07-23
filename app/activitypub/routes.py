@@ -1,3 +1,41 @@
+import uuid
+
+# Debug flag for DB tracking
+EXTRA_AP_DB_DEBUG = os.environ.get('EXTRA_AP_DB_DEBUG', '0') == '1'
+
+# Model for AP request status tracking
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
+from app import db
+
+class APRequestStatus(db.Model):
+    __tablename__ = 'ap_request_status'
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(PG_UUID(as_uuid=True), nullable=False)
+    timestamp = db.Column(db.DateTime(timezone=True), server_default=db.func.now())
+    checkpoint = db.Column(db.String(64), nullable=False)
+    status = db.Column(db.String(32), nullable=False)
+    activity_id = db.Column(db.Text)
+    post_object_uri = db.Column(db.Text)
+    details = db.Column(db.Text)
+
+# Helper to log status to DB, resilient to errors
+def log_ap_status(request_id, checkpoint, status, activity_id=None, post_object_uri=None, details=None):
+    if not EXTRA_AP_DB_DEBUG:
+        return
+    try:
+        entry = APRequestStatus(
+            request_id=request_id,
+            checkpoint=checkpoint,
+            status=status,
+            activity_id=activity_id,
+            post_object_uri=post_object_uri,
+            details=details
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception as e:
+        import sys
+        print(f"[APRequestStatus-DB-FAIL] {request_id} {checkpoint} {status} {activity_id} {post_object_uri} {details} error={e}", file=sys.stderr)
 import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
@@ -528,6 +566,9 @@ def community_profile(actor):
 
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    # Generate a unique request_id for this POST
+    request_id = str(uuid.uuid4())
+    log_ap_status(request_id, "raw_received", "ok", details="POST received at /inbox")
     import os
     import traceback
     import json as _json
@@ -569,64 +610,78 @@ def shared_inbox():
             save_ap_debug_log('incoming', dict(request.headers), request.get_data())
         except Exception:
             pass
+    log_ap_status(request_id, "headers_logged", "ok", details="Headers/body logged to file")
     from app import redis_client
 
     try:
         request_json = request.get_json(force=True)
+        # Try to extract the original object URI if present
+        post_object_uri = None
+        if isinstance(request_json, dict):
+            if 'object' in request_json:
+                obj = request_json['object']
+                if isinstance(obj, dict) and 'id' in obj:
+                    post_object_uri = obj['id']
+                elif isinstance(obj, str):
+                    post_object_uri = obj
+        log_ap_status(request_id, "json_parsed", "ok", post_object_uri=post_object_uri)
     except Exception as e:
         if EXTRA_AP_LOGGING:
             err_str = traceback.format_exc()
             save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+        log_ap_status(request_id, "json_parsed", "fail", details=str(e))
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + str(e))
         return '', 200
 
     # Trap and log any errors between POST receipt and log_incoming_ap
     try:
-        g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
+        g.site = Site.query.get(1)
         store_ap_json = g.site.log_activitypub_json or False
         saved_json = request_json if store_ap_json else None
 
-        if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+        # Validate required fields
+        if not all(k in request_json for k in ('id', 'type', 'actor', 'object')):
+            log_ap_status(request_id, "field_validation", "fail", activity_id=request_json.get('id'), post_object_uri=post_object_uri, details="Missing required fields")
             log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
             return '', 200
+        log_ap_status(request_id, "field_validation", "ok", activity_id=request_json.get('id'), post_object_uri=post_object_uri)
 
         id = request_json['id']
         if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
             object = request_json['object']
-            if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
+            if not all(k in object for k in ('id', 'type', 'actor', 'object')):
                 if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
                 else:
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
-                                    'Missing minimum expected fields in JSON Announce object')
+                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON Announce object')
+                log_ap_status(request_id, "announce_object_validation", "fail", activity_id=id, post_object_uri=object.get('id'), details="Announce object missing fields")
                 return '', 200
-
-            if isinstance(object['actor'], str) and object['actor'].startswith(
-                    'https://' + current_app.config['SERVER_NAME']):
-                log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
-                                'Activity about local content which is already present')
+            if isinstance(object['actor'], str) and object['actor'].startswith('https://' + current_app.config['SERVER_NAME']):
+                log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Activity about local content which is already present')
+                log_ap_status(request_id, "announce_duplicate", "ignored", activity_id=id, post_object_uri=object.get('id'))
                 return '', 200
-
             id = object['id']
+            post_object_uri = id
 
-        if redis_client.exists(id):  # Something is sending same activity multiple times
+        if redis_client.exists(id):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
+            log_ap_status(request_id, "duplicate_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
             return '', 200
-        redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
+        redis_client.set(id, 1, ex=90)
+        log_ap_status(request_id, "duplicate_check", "ok", activity_id=id, post_object_uri=post_object_uri)
 
-        # Ignore unutilised PeerTube activity
         if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
             log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
+            log_ap_status(request_id, "peertube_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
             return ''
 
-        # Ignore account deletion requests from users that do not already exist here
         account_deletion = False
-        if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and \
-                request_json['actor'] == request_json['object']:
+        if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and request_json['actor'] == request_json['object']:
             account_deletion = True
             actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
             if not actor:
                 log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
+                log_ap_status(request_id, "delete_actor_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
                 return '', 200
         else:
             actor = find_actor_or_create(request_json['actor'])
@@ -634,36 +689,39 @@ def shared_inbox():
         if not actor:
             actor_name = request_json['actor']
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
+            log_ap_status(request_id, "actor_lookup", "fail", activity_id=id, post_object_uri=post_object_uri, details=f"Actor not found: {actor_name}")
             return '', 200
 
-        if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
+        if actor.is_local():
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
+            log_ap_status(request_id, "actor_local_check", "fail", activity_id=id, post_object_uri=post_object_uri)
             return '', 200
 
         bounced = False
         try:
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+            log_ap_status(request_id, "signature_verification", "ok", activity_id=id, post_object_uri=post_object_uri)
         except VerificationError as e:
             bounced = True
-            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
             if 'signature' in request_json:
                 try:
                     LDSignature.verify_signature(request_json, actor.public_key)
+                    log_ap_status(request_id, "ld_signature_verification", "ok", activity_id=id, post_object_uri=post_object_uri)
                 except VerificationError as e:
                     log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+                    log_ap_status(request_id, "ld_signature_verification", "fail", activity_id=id, post_object_uri=post_object_uri, details=str(e))
                     return '', 400
             elif (
-                    actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
+                    actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and
                     request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
                     'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
                 ...
-            # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
             elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
-                  isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
-                        request_json['object']['id'], str)):
+                  isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(request_json['object']['id'], str)):
                 request_json['object'] = request_json['object']['id']
             else:
                 log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
+                log_ap_status(request_id, "signature_verification", "fail", activity_id=id, post_object_uri=post_object_uri, details=str(e))
                 return '', 400
 
         if actor.instance_id:
@@ -673,26 +731,28 @@ def shared_inbox():
             actor.instance.failures = 0
             actor.instance.ip_address = ip_address() if not bounced else ''
         db.session.commit()
+        log_ap_status(request_id, "actor_instance_update", "ok", activity_id=id, post_object_uri=post_object_uri)
 
-        # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-        # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
         if account_deletion == True:
             if current_app.debug:
                 process_delete_request(request_json, store_ap_json)
             else:
                 process_delete_request.delay(request_json, store_ap_json)
+            log_ap_status(request_id, "account_deletion", "ok", activity_id=id, post_object_uri=post_object_uri)
             return ''
 
         if current_app.debug:
             process_inbox_request(request_json, store_ap_json)
         else:
             process_inbox_request.delay(request_json, store_ap_json)
+        log_ap_status(request_id, "process_inbox_request", "ok", activity_id=id, post_object_uri=post_object_uri)
 
         return ''
     except Exception as e:
         if EXTRA_AP_LOGGING:
             err_str = traceback.format_exc()
             save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+        log_ap_status(request_id, "exception", "fail", post_object_uri=post_object_uri, details=traceback.format_exc())
         raise
 
 
