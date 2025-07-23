@@ -810,15 +810,15 @@ def register(app):
         publish_scheduled_posts()
 
     def publish_scheduled_posts():
-            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED,
-                                          Post.deleted == False, Post.repeat != 'none', Post.scheduled_for != None):
+            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.deleted == False,
+                                          Post.scheduled_for != None):
                 if post.timezone is None:
                     post.timezone = post.author.timezone
                 if post.scheduled_for and post.timezone:
                     date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
                     if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
                         continue
-                    if post.repeat and post.repeat != 'once':
+                    if post.repeat and post.repeat != 'none':
                         next_occurrence = post.scheduled_for + find_next_occurrence(post)
                     else:
                         next_occurrence = None

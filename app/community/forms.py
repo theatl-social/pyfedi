@@ -168,7 +168,7 @@ class CreatePostForm(FlaskForm):
                               render_kw={'class': 'form-select'})
     scheduled_for = DateTimeLocalField(_l('Publish at'), validators=[Optional()], format="%Y-%m-%dT%H:%M")
     repeat = SelectField(_l('Repeat'), validators=[Optional()],
-                         choices=[('none', _l('None')), ('once', _l('Only once')), ('daily', _l('Daily')),
+                         choices=[('none', _l('None')), ('daily', _l('Daily')),
                                   ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
                          render_kw={'class': 'form-select'})
     timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control tom-select"})
@@ -198,12 +198,6 @@ class CreatePostForm(FlaskForm):
             if date_with_tz.astimezone(ZoneInfo('UTC')) < utcnow(naive=False):
                 self.scheduled_for.errors.append(_l('Choose a time in the future.'))
                 return False
-        return True
-
-    def validate_repeat(self, field):
-        if self.scheduled_for.data and field.data == 'none':
-            self.repeat.errors.append(_l('A scheduled post must have a frequency set.'))
-            return False
         return True
 
 
