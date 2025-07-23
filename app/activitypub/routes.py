@@ -24,7 +24,7 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan, ActivityBatch, APRequestStatus
+    IpBan, ActivityBatch, APRequestStatus, APRequestBody
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
@@ -37,6 +37,74 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
 from app.activitypub.util_extras import retry_activitypub_action
 from app.activitypub.request_logger import create_request_logger, log_request_completion
 
+import os
+import uuid
+import sys
+import json as _json
+import traceback
+from datetime import datetime
+
+# Debug flag for DB tracking
+EXTRA_AP_DB_DEBUG = os.environ.get('EXTRA_AP_DB_DEBUG', '0') == '1'
+
+# Helper to log status to DB, resilient to errors
+def log_ap_status(request_id, checkpoint, status, activity_id=None, post_object_uri=None, details=None):
+    """
+    Log ActivityPub request status checkpoint to database
+    This is the original simple logging function that works alongside the new request logger
+    """
+    if not EXTRA_AP_DB_DEBUG:
+        return
+    try:
+        entry = APRequestStatus(
+            request_id=request_id,
+            checkpoint=checkpoint,
+            status=status,
+            activity_id=activity_id,
+            post_object_uri=post_object_uri,
+            details=details
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception as e:
+        print(f"[APRequestStatus-DB-FAIL] {request_id} {checkpoint} {status} {activity_id} {post_object_uri} {details} error={e}", file=sys.stderr)
+
+
+def store_request_body(request_id, request_obj, parsed_json=None):
+    """Store the POST body content linked to the request_id"""
+    if not EXTRA_AP_DB_DEBUG:
+        return
+    try:
+        from app.utils import ip_address
+        
+        # Get raw body data
+        body_data = request_obj.get_data(as_text=True)
+        
+        # Extract headers (excluding sensitive ones)
+        headers_dict = {}
+        excluded_headers = {'authorization', 'cookie', 'x-api-key'}
+        for key, value in request_obj.headers:
+            if key.lower() not in excluded_headers:
+                headers_dict[key] = value
+        
+        # Create APRequestBody record
+        body_record = APRequestBody(
+            request_id=request_id,
+            headers=headers_dict,
+            body=body_data,
+            parsed_json=parsed_json,
+            content_type=request_obj.content_type,
+            content_length=request_obj.content_length,
+            remote_addr=ip_address(),
+            user_agent=request_obj.headers.get('User-Agent')
+        )
+        
+        db.session.add(body_record)
+        db.session.commit()
+        
+    except Exception as e:
+        print(f"[APRequestBody-DB-FAIL] {request_id} error={e}", file=sys.stderr)
+
 
 @bp.route('/testredis')
 def testredis_get():
@@ -47,6 +115,134 @@ def testredis_get():
         return "Redis: OK"
     else:
         return "Redis: FAIL"
+
+
+@bp.route('/debug/ap_requests')
+def debug_ap_requests():
+    """Debug endpoint to view recent ActivityPub requests and their bodies"""
+    if not current_user.is_authenticated or not current_user.is_admin():
+        abort(403)
+    
+    from app.activitypub.request_body_utils import get_recent_requests, get_activity_type_stats
+    
+    try:
+        recent = get_recent_requests(20)
+        stats = get_activity_type_stats(24)
+        
+        html = """
+        <html>
+        <head><title>ActivityPub Request Debug</title></head>
+        <body>
+        <h1>ActivityPub Request Debug</h1>
+        
+        <h2>Activity Type Stats (Last 24h)</h2>
+        <table border="1">
+        <tr><th>Type</th><th>Total</th><th>Failed</th><th>Avg Checkpoints</th></tr>
+        """
+        
+        for stat in stats:
+            html += f"""
+            <tr>
+                <td>{stat.get('activity_type', 'Unknown')}</td>
+                <td>{stat.get('total_requests', 0)}</td>
+                <td>{stat.get('failed_requests', 0)}</td>
+                <td>{stat.get('avg_checkpoints', 0):.1f}</td>
+            </tr>
+            """
+        
+        html += """
+        </table>
+        
+        <h2>Recent Requests</h2>
+        <table border="1">
+        <tr><th>Time</th><th>Type</th><th>Actor</th><th>Status</th><th>Errors</th><th>Details</th></tr>
+        """
+        
+        for req in recent:
+            html += f"""
+            <tr>
+                <td>{req.get('received_at', 'Unknown')}</td>
+                <td>{req.get('activity_type', 'Unknown')}</td>
+                <td>{req.get('actor', 'Unknown')[:50]}...</td>
+                <td>{req.get('latest_status', 'Unknown')}</td>
+                <td>{req.get('error_count', 0)}</td>
+                <td><a href="/activitypub/debug/ap_request/{req.get('request_id')}">View</a></td>
+            </tr>
+            """
+        
+        html += """
+        </table>
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+
+@bp.route('/debug/ap_request/<request_id>')
+def debug_ap_request(request_id):
+    """Debug endpoint to view a specific request's details"""
+    if not current_user.is_authenticated or not current_user.is_admin():
+        abort(403)
+    
+    from app.activitypub.request_body_utils import get_request_details
+    
+    try:
+        details = get_request_details(request_id)
+        if not details:
+            return "Request not found", 404
+        
+        html = f"""
+        <html>
+        <head><title>Request {request_id}</title></head>
+        <body>
+        <h1>Request Details</h1>
+        <h2>Metadata</h2>
+        <p><strong>Request ID:</strong> {details['request_id']}</p>
+        <p><strong>Received:</strong> {details['received_at']}</p>
+        <p><strong>Remote Address:</strong> {details['remote_addr']}</p>
+        <p><strong>User Agent:</strong> {details.get('user_agent', 'N/A')}</p>
+        <p><strong>Content Type:</strong> {details.get('content_type', 'N/A')}</p>
+        <p><strong>Content Length:</strong> {details.get('content_length', 'N/A')}</p>
+        
+        <h2>Processing Timeline</h2>
+        <table border="1">
+        <tr><th>Checkpoint</th><th>Status</th><th>Time</th><th>Details</th></tr>
+        """
+        
+        for checkpoint in details.get('timeline', []):
+            html += f"""
+            <tr>
+                <td>{checkpoint['checkpoint']}</td>
+                <td>{checkpoint['status']}</td>
+                <td>{checkpoint['timestamp']}</td>
+                <td>{checkpoint.get('details', '')[:100]}...</td>
+            </tr>
+            """
+        
+        html += f"""
+        </table>
+        
+        <h2>Request Headers</h2>
+        <pre>{details.get('headers', {})}</pre>
+        
+        <h2>Parsed JSON</h2>
+        <pre>{details.get('parsed_json', 'N/A')}</pre>
+        
+        <h2>Raw POST Body</h2>
+        <pre>{details.get('raw_body', 'N/A')[:2000]}...</pre>
+        
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 
 @bp.route('/.well-known/webfinger')
@@ -571,6 +767,11 @@ def shared_inbox():
             pass
     from app import redis_client
 
+    # Generate a unique request_id for this POST (for both logging systems)
+    request_id = str(uuid.uuid4())
+    log_ap_status(request_id, "raw_received", "ok", details="POST received at /inbox")
+    store_request_body(request_id, request)
+
     # Initialize request logger as early as possible
     logger = None
     try:
@@ -585,9 +786,24 @@ def shared_inbox():
 
     try:
         request_json = request.get_json(force=True)
+        # Try to extract the original object URI if present
+        post_object_uri = None
+        if isinstance(request_json, dict):
+            if 'object' in request_json:
+                obj = request_json['object']
+                if isinstance(obj, dict) and 'id' in obj:
+                    post_object_uri = obj['id']
+                elif isinstance(obj, str):
+                    post_object_uri = obj
+        log_ap_status(request_id, "json_parsed", "ok", post_object_uri=post_object_uri)
+        store_request_body(request_id, request, request_json)
+        
         if logger:
             logger.log_checkpoint('json_parse', 'ok', 'Successfully parsed JSON body')
     except Exception as e:
+        log_ap_status(request_id, "json_parsed", "fail", details=str(e))
+        store_request_body(request_id, request, None)
+        
         if logger:
             logger.log_error('json_parse', e, 'Unable to parse JSON body')
         if EXTRA_AP_LOGGING:
@@ -631,8 +847,10 @@ def shared_inbox():
                 logger.log_checkpoint('field_validation', 'ok', 'All required fields present')
 
         if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+            log_ap_status(request_id, "field_validation", "fail", post_object_uri=post_object_uri, details="Missing required fields")
             log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
             return '', 200
+        log_ap_status(request_id, "field_validation", "ok", activity_id=request_json.get('id'), post_object_uri=post_object_uri)
 
         id = request_json['id']
         if logger:
@@ -669,17 +887,20 @@ def shared_inbox():
 
         # Duplicate check
         if redis_client.exists(id):  # Something is sending same activity multiple times
+            log_ap_status(request_id, "duplicate_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
             if logger:
                 logger.log_checkpoint('duplicate_check', 'ignored', 'Activity already processed')
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
             return '', 200
         
         redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
+        log_ap_status(request_id, "duplicate_check", "ok", activity_id=id, post_object_uri=post_object_uri)
         if logger:
             logger.log_checkpoint('duplicate_check', 'ok', 'Activity marked as processing')
 
         # Ignore unutilised PeerTube activity
         if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
+            log_ap_status(request_id, "peertube_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
             if logger:
                 logger.log_checkpoint('peertube_filter', 'ignored', 'PeerTube activity ignored')
             log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
@@ -694,6 +915,7 @@ def shared_inbox():
                 logger.log_checkpoint('account_deletion_check', 'ok', 'Processing account deletion')
             actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
             if not actor:
+                log_ap_status(request_id, "delete_actor_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
                 if logger:
                     logger.log_checkpoint('account_deletion_check', 'ignored', 'User does not exist here')
                 log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
@@ -701,36 +923,43 @@ def shared_inbox():
         else:
             if logger:
                 logger.log_checkpoint('actor_lookup', 'ok', 'Looking up actor')
+            log_ap_status(request_id, 'actor_lookup_start', 'ok', 'Looking up actor', activity_id=id, post_object_uri=post_object_uri)
             actor = find_actor_or_create(request_json['actor'])
 
         if not actor:
             actor_name = request_json['actor']
             if logger:
                 logger.log_null_check_failure('actor_lookup', 'actor', 'User/Community object')
+            log_ap_status(request_id, 'actor_lookup', 'fail', f'Actor could not be found: {actor_name}', activity_id=id, post_object_uri=post_object_uri)
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
             return '', 200
 
         if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
             if logger:
                 logger.log_validation_failure('actor_validation', 'Activity from local actor')
+            log_ap_status(request_id, 'actor_validation', 'fail', 'Activity from local actor', activity_id=id, post_object_uri=post_object_uri)
             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
             return '', 200
 
         if logger:
             logger.log_checkpoint('actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
+        log_ap_status(request_id, 'actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}', activity_id=id, post_object_uri=post_object_uri)
 
         # Signature verification
         bounced = False
         try:
             if logger:
                 logger.log_checkpoint('signature_verify_start', 'ok', 'Starting HTTP signature verification')
+            log_ap_status(request_id, 'signature_verify_start', 'ok', 'Starting HTTP signature verification', activity_id=id, post_object_uri=post_object_uri)
             HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if logger:
                 logger.log_checkpoint('signature_verify', 'ok', 'HTTP signature verified successfully')
+            log_ap_status(request_id, 'signature_verify', 'ok', 'HTTP signature verified successfully', activity_id=id, post_object_uri=post_object_uri)
         except VerificationError as e:
             bounced = True
             if logger:
                 logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
+            log_ap_status(request_id, 'signature_verify', 'warning', f'HTTP signature failed: {str(e)}', activity_id=id, post_object_uri=post_object_uri)
             # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
             if 'signature' in request_json:
                 try:

@@ -3314,6 +3314,22 @@ class APRequestStatus(db.Model):
     details = db.Column(db.Text)
 
 
+class APRequestBody(db.Model):
+    """Model for storing ActivityPub request POST body content"""
+    __tablename__ = 'ap_request_body'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(UUID(as_uuid=True), nullable=False, unique=True, index=True)
+    timestamp = db.Column(db.DateTime, default=utcnow, nullable=False)
+    headers = db.Column(db.JSON)  # Store request headers as JSON
+    body = db.Column(db.Text, nullable=False)  # Store raw POST body
+    parsed_json = db.Column(db.JSON)  # Store parsed JSON if successful
+    content_type = db.Column(db.String(128))
+    content_length = db.Column(db.Integer)
+    remote_addr = db.Column(db.String(45))  # IPv4 or IPv6 address
+    user_agent = db.Column(db.Text)
+
+
 class BlockedImage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_name = db.Column(db.String(255), index=True)

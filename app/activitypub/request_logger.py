@@ -118,6 +118,54 @@ class APRequestLogger:
             pass
         
         self.log_checkpoint(checkpoint, 'error', error_details)
+
+    def store_request_body(self, request_obj, parsed_json: Optional[Dict] = None):
+        """
+        Store the raw POST body and headers for this request
+        
+        Args:
+            request_obj: Flask request object
+            parsed_json: Parsed JSON content if successful
+        """
+        # Skip if logging is disabled
+        if not self.enabled:
+            return
+            
+        try:
+            from app.models import APRequestBody
+            from app.utils import ip_address
+            
+            # Get raw body data
+            body_data = request_obj.get_data(as_text=True)
+            
+            # Extract headers (excluding sensitive ones)
+            headers_dict = {}
+            excluded_headers = {'authorization', 'cookie', 'x-api-key'}
+            for key, value in request_obj.headers:
+                if key.lower() not in excluded_headers:
+                    headers_dict[key] = value
+            
+            # Create APRequestBody record
+            body_record = APRequestBody(
+                request_id=self.request_id,
+                headers=headers_dict,
+                body=body_data,
+                parsed_json=parsed_json,
+                content_type=request_obj.content_type,
+                content_length=request_obj.content_length,
+                remote_addr=ip_address(),
+                user_agent=request_obj.headers.get('User-Agent')
+            )
+            
+            db.session.add(body_record)
+            db.session.commit()
+            
+            self.log_checkpoint('request_body_stored', 'ok', 
+                              f'Stored {len(body_data)} bytes of POST data')
+            
+        except Exception as e:
+            self.log_checkpoint('request_body_stored', 'error', 
+                              f'Failed to store request body: {str(e)}')
     
     def log_null_check_failure(self, checkpoint: str, field_name: str, expected_type: str = None):
         """
