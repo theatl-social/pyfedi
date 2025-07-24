@@ -1562,7 +1562,10 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                         # find the feed
                         feed = session.query(Feed).filter_by(ap_public_url=core_activity['object']['id']).first()
 
-                        # make sure the user sending the delete owns the feed
+                        # make sure the feed exists and the user sending the delete owns it
+                        if not feed:
+                            log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete rejected, feed not found.')
+                            return
                         if not user.id == feed.user_id:
                             log_incoming_ap(id, APLOG_DELETE, APLOG_FAILURE, saved_json, 'Delete rejected, request came from non-owner.')
                             return
@@ -2696,7 +2699,8 @@ def feed_outbox(actor):
     items = []
     for fi in feed_items:
         c = Community.query.get(fi.community_id)
-        items.append(c.ap_public_url)
+        if c:
+            items.append(c.ap_public_url)
     result = {
         "@context": default_context(),
         "id": feed.ap_outbox_url,
@@ -2729,7 +2733,8 @@ def feed_following(actor):
     items = []
     for fi in feed_items:
         c = Community.query.get(fi.community_id)
-        items.append(c.public_url())
+        if c:
+            items.append(c.public_url())
     result = {
         "@context": default_context(),
         "id": feed.ap_following_url,

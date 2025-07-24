@@ -388,8 +388,9 @@ def feed_copy(feed_id: int):
             if item.community_id not in member_of_ids and current_user.feed_auto_follow:
                 from app.community.routes import do_subscribe
                 community = Community.query.get(item.community_id)
-                actor = community.ap_id if community.ap_id else community.name
-                do_subscribe(actor, current_user.id, joined_via_feed=True)
+                if community:
+                    actor = community.ap_id if community.ap_id else community.name
+                    do_subscribe(actor, current_user.id, joined_via_feed=True)
 
         feed.num_communities = len(old_feed_items)
         db.session.add(feed)
@@ -490,10 +491,11 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
         # announce the change to any potential subscribers
         if current_feed.public:
             community = Community.query.get(community_id)
-            if current_app.debug:
-                announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
-            else:
-                announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
+            if community:
+                if current_app.debug:
+                    announce_feed_add_remove_to_subscribers("Remove", current_feed.id, community.id)
+                else:
+                    announce_feed_add_remove_to_subscribers.delay("Remove", current_feed.id, community.id)
 
     # make the new feeditem and commit it
     feed_item = FeedItem(feed_id=feed_id, community_id=community_id)
@@ -509,10 +511,11 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
     # announce the change to any potential subscribers
     if feed.public:
         community = Community.query.get(community_id)
-        if current_app.debug:
-            announce_feed_add_remove_to_subscribers("Add", feed.id, community.id)
-        else:
-            announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
+        if community:
+            if current_app.debug:
+                announce_feed_add_remove_to_subscribers("Add", feed.id, community.id)
+            else:
+                announce_feed_add_remove_to_subscribers.delay("Add", feed.id, community.id)
 
     # subscribe the user to the community if they are not already subscribed
     current_membership = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).first()
@@ -520,8 +523,9 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
         # import do_subscribe here, otherwise we get import errors from circular import problems
         from app.community.routes import do_subscribe
         community = Community.query.get(community_id)
-        actor = community.ap_id if community.ap_id else community.name
-        do_subscribe(actor, user_id, joined_via_feed=True)
+        if community:
+            actor = community.ap_id if community.ap_id else community.name
+            do_subscribe(actor, user_id, joined_via_feed=True)
 
 
 @bp.route('/feed/remove_community', methods=['POST'])
@@ -860,11 +864,12 @@ def do_feed_subscribe(actor, user_id):
                     feed_items = FeedItem.query.filter_by(feed_id=feed.id).all()
                     for fi in feed_items:
                         community = Community.query.get(fi.community_id)
-                        actor = community.ap_id if community.ap_id else community.name
-                        if current_app.debug:
-                            do_subscribe(actor, user.id, joined_via_feed=True)
-                        else:
-                            do_subscribe.delay(actor, user.id, joined_via_feed=True)
+                        if community:
+                            actor = community.ap_id if community.ap_id else community.name
+                            if current_app.debug:
+                                do_subscribe(actor, user.id, joined_via_feed=True)
+                            else:
+                                do_subscribe.delay(actor, user.id, joined_via_feed=True)
 
                 # feed is remote
                 if remote:

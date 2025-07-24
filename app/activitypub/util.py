@@ -2638,6 +2638,8 @@ def update_post_from_activity(post: Post, request_json: dict):
 
 
 def undo_vote(comment, post, target_ap_id, user):
+    if not user:
+        return None
     voted_on = find_liked_object(target_ap_id)
     if isinstance(voted_on, Post):
         post = voted_on

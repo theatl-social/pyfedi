@@ -161,11 +161,15 @@ def show_post(post_id: int):
                 filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
             topics = []
             previous_topic = Topic.query.get(community.topic_id)
-            topics.append(previous_topic)
-            while previous_topic.parent_id:
+            if previous_topic:
+                topics.append(previous_topic)
+            while previous_topic and previous_topic.parent_id:
                 topic = Topic.query.get(previous_topic.parent_id)
-                topics.append(topic)
-                previous_topic = topic
+                if topic:
+                    topics.append(topic)
+                    previous_topic = topic
+                else:
+                    break
             topics = list(reversed(topics))
 
             breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
@@ -429,10 +433,11 @@ def post_embed_code(post_id):
         breadcrumb.url = '/communities'
         breadcrumbs.append(breadcrumb)
 
-        breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
-        breadcrumb.text = post.community.display_name()
-        breadcrumb.url = '/c/' + post.community.link()
-        breadcrumbs.append(breadcrumb)
+        if post.community:
+            breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
+            breadcrumb.text = post.community.display_name()
+            breadcrumb.url = '/c/' + post.community.link()
+            breadcrumbs.append(breadcrumb)
 
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
         breadcrumb.text = post.title
@@ -457,7 +462,7 @@ def post_oembed(post_id):
             "html": f"<p><iframe src='{iframe_url}' class='piefed-embed' style='max-width: 100%; border: 0' width='400' allowfullscreen='allowfullscreen'></iframe><script src='https://{current_app.config['SERVER_NAME']}/static/js/embed.js' async='async'></script></p>",
             "width": 400,
             "height": 300,
-            "author_name": post.author.display_name(),
+            "author_name": post.author.display_name() if post.author else "Unknown",
         }
         return jsonify(oembed)
 
@@ -505,9 +510,9 @@ def poll_vote(post_id):
         poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
             PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
         for pv in poll_votes:
-            if post.author.is_local():
+            if post.author and post.author.is_local():
                 task_selector('edit_post', post_id=post.id)
-            else:
+            elif post.author:
                 pollvote_json = {
                     '@context': default_context(),
                     'actor': current_user.public_url(),
@@ -649,7 +654,7 @@ def add_reply(post_id: int, comment_id: int):
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
 
-    if in_reply_to.author.has_blocked_user(current_user.id):
+    if in_reply_to.author and in_reply_to.author.has_blocked_user(current_user.id):
         flash(_('You cannot reply to %(name)s', name=in_reply_to.author.display_name()))
         return redirect(url_for('activitypub.post_ap', post_id=post_id))
 
@@ -703,7 +708,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
 
     in_reply_to = PostReply.query.get_or_404(comment_id)
 
-    if in_reply_to.author.has_blocked_user(current_user.id):
+    if in_reply_to.author and in_reply_to.author.has_blocked_user(current_user.id):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
     if not in_reply_to.replies_enabled:
         return _('This comment cannot be replied to.')
@@ -1159,16 +1164,16 @@ def post_report(post_id: int):
             flash(_('Post has already been reported, thank you!'))
             return redirect(post.community.local_url())
         
-        suspect_user = User.query.get(post.author.id)
-        source_instance = Instance.query.get(suspect_user.instance_id)
+        suspect_user = User.query.get(post.author.id) if post.author else None
+        source_instance = Instance.query.get(suspect_user.instance_id) if suspect_user else None
         targets_data = {'gen': '0',
                         'suspect_post_id': post.id,
-                        'suspect_user_id': post.author.id,
-                        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+                        'suspect_user_id': post.author.id if post.author else None,
+                        'suspect_user_user_name': (suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name) if suspect_user else "Unknown",
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
-                        'source_instance_id': suspect_user.instance_id,
-                        'source_instance_domain': source_instance.domain,
+                        'source_instance_id': suspect_user.instance_id if suspect_user else None,
+                        'source_instance_domain': source_instance.domain if source_instance else "Unknown",
                         'orig_post_title': post.title,
                         'orig_post_body': post.body
                         }
