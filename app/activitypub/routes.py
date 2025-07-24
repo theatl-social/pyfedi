@@ -790,9 +790,10 @@ def shared_inbox():
     logger = None
     try:
         logger = create_request_logger()
-        # Use the same request_id for both logging systems
-        logger.request_id = request_id
-        logger.log_checkpoint('initial_receipt', 'ok', f'Request received at {request.path}')
+        if logger:
+            # Use the same request_id for both logging systems
+            logger.request_id = request_id
+            logger.log_checkpoint('initial_receipt', 'ok', f'Request received at {request.path}')
     except Exception as e:
         # If logger creation fails, continue without it but try to log the failure
         try:
