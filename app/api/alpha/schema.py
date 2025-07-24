@@ -97,7 +97,7 @@ class Community(DefaultSchema):
     banner = fields.Url(allow_none=True)
     description = fields.String()
     icon = fields.Url(allow_none=True)
-    posting_warning = fields.String()
+    posting_warning = fields.String(allow_none=True)
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
 
 
