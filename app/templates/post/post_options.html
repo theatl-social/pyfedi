@@ -25,10 +25,10 @@
                 {{ _('Sticky') }}</a></li>
         {% endif -%}
         {% if post.comments_enabled -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
                 {{ _('Lock') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
     {% endif -%}

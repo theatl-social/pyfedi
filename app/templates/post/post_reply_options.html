@@ -70,10 +70,10 @@
     {% endif -%}
     {% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post_reply.community.is_moderator() ) -%}
         {% if post_reply.replies_enabled -%}
-            <li><a href="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
                 {{ _('Lock') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
     <li><a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>

@@ -1457,14 +1457,14 @@ def post_flair_list(post_id):
         abort(401)
 
 
-@bp.route('/post/<int:post_id>/lock/<mode>', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/lock/<mode>', methods=['POST'])
 @login_required
 def post_lock(post_id: int, mode):
     lock_post(post_id, mode == 'yes', SRC_WEB)
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
 
 
-@bp.route('/post/<int:post_id>/<int:post_reply_id>/lock/<mode>', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/<int:post_reply_id>/lock/<mode>', methods=['POST'])
 @login_required
 def post_reply_lock(post_id: int, post_reply_id: int, mode):
     lock_post_reply(post_reply_id, mode == 'yes', SRC_WEB)
