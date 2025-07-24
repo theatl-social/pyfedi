@@ -1267,16 +1267,13 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                                     log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                                     return
 
-                            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
-                                user.last_seen = utcnow()
-                                user.instance.last_seen = utcnow()
-                                user.instance.dormant = False
-                                user.instance.gone_forever = False
-                                user.instance.failures = 0
-                                session.commit()
-                        else:
-                            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                            return
+                                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                                    user.last_seen = utcnow()
+                                    user.instance.last_seen = utcnow()
+                                    user.instance.dormant = False
+                                    user.instance.gone_forever = False
+                                    user.instance.failures = 0
+                                    session.commit()
                     else:
                         user = None
 
