@@ -218,7 +218,8 @@ def comment_model_to_json(reply: PostReply) -> dict:
             'identifier': reply.language_code(),
             'name': reply.language_name()
         },
-        'flair': reply.author.community_flair(reply.community_id)
+        'flair': reply.author.community_flair(reply.community_id),
+        'repliesEnabled': reply.replies_enabled
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
@@ -332,6 +333,10 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
     existing_flair = CommunityFlair.query.filter(CommunityFlair.flair == flair['display_name'].strip(),
                                                  CommunityFlair.community_id == community_id).first()
     if existing_flair:
+        # Update colors and blur in case they have changed
+        existing_flair.text_color = flair['text_color']
+        existing_flair.background_color = flair['background_color']
+        existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
         return existing_flair
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
@@ -1025,6 +1030,8 @@ def actor_json_to_model(activity_json, address, server):
                     flair_dict['text_color'] = flair['text_color']
                 if 'background_color' in flair:
                     flair_dict['background_color'] = flair['background_color']
+                if 'blur_images' in flair:
+                    flair_dict['blur_images'] = flair['blur_images']
                 community.flair.append(find_flair_or_create(flair_dict, community.id))
             db.session.commit()
         if community.icon_id:
@@ -1587,6 +1594,7 @@ def is_activitypub_request():
 
 
 def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reason):
+    from app import redis_client
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     community = to_delete.community
@@ -1595,28 +1603,30 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.is_moderator(deletor) or
             community.is_instance_admin(deletor)):
         if isinstance(to_delete, Post):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            community.post_count -= 1
-            to_delete.author.post_count -= 1
-            if to_delete.url and to_delete.cross_posts is not None:
-                to_delete.calculate_cross_posts(delete_only=True)
-            db.session.commit()
+            with redis_client.lock(f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                community.post_count -= 1
+                to_delete.author.post_count -= 1
+                if to_delete.url and to_delete.cross_posts is not None:
+                    to_delete.calculate_cross_posts(delete_only=True)
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete,
                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
         elif isinstance(to_delete, PostReply):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            to_delete.author.post_reply_count -= 1
-            community.post_reply_count -= 1
-            if not to_delete.author.bot:
-                to_delete.post.reply_count -= 1
-            if to_delete.path:
-                db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
-                                   {'parents': tuple(to_delete.path[:-1])})
-            db.session.commit()
+            with redis_client.lock(f"lock:post_reply:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                to_delete.author.post_reply_count -= 1
+                community.post_reply_count -= 1
+                if not to_delete.author.bot:
+                    to_delete.post.reply_count -= 1
+                if to_delete.path:
+                    db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                       {'parents': tuple(to_delete.path[:-1])})
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post_reply', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete.post, reply=to_delete,
@@ -1851,6 +1861,9 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             if parent_comment.author.has_blocked_user(user.id) or parent_comment.author.has_blocked_instance(user.instance_id):
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Parent comment author blocked replier')
                 return None
+            if not parent_comment.replies_enabled:
+                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Parent comment is locked')
+                return None
         else:
             parent_comment = None
         if post_id is None:
@@ -1933,6 +1946,15 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
                                        language_id=language_id, distinguished=distinguished, request_json=request_json,
                                        announce_id=announce_id)
+            
+            # Handle repliesEnabled field from ActivityPub message
+            if 'repliesEnabled' in request_json['object']:
+                post_reply.replies_enabled = request_json['object']['repliesEnabled']
+            else:
+                # Default to True if not specified (for compatibility with instances that don't send this field)
+                post_reply.replies_enabled = True
+            db.session.commit()
+            
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
                 if recipient:
@@ -2202,6 +2224,12 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
     # Distinguished
     if 'distinguished' in request_json['object']:
         reply.distinguished = request_json['object']['distinguished']
+
+    if 'repliesEnabled' in request_json['object']:
+        reply.replies_enabled = request_json['object']['repliesEnabled']
+    else:
+        # Default to True if not specified (for compatibility with instances that don't send this field)
+        reply.replies_enabled = True
 
     reply.edited_at = utcnow()
 

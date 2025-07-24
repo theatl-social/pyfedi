@@ -21,7 +21,7 @@
                 <label for="local_remote_remote">
                     <input type="radio" name="local_remote" value="remote"
                            id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> Remote</label>
-                <select name="report_types" id="report_types" multiple class="form-select" style="width: 200px">
+                <select name="report_types" id="report_types" class="form-select" style="width: 200px">
                     {% for value, label in report_types_list %}
                         <option value="{{ value }}" {% if value in report_types %}selected{% endif %}>
                             {{ label }}
@@ -32,35 +32,8 @@
                 <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
             </form>
             <table class="table table-striped">
-                <tr>
-                    <th>Local/Remote</th>
-                    <th>Reasons</th>
-                    <th>Description</th>
-                    <th>Type</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
                 {% for report in reports.items %}
-                    <tr>
-                        <td>{{ 'Local' if report.is_local() else 'Remote' }}</td>
-                        <td>{{ report.reasons }}</td>
-                        <td>{{ report.description }}</td>
-                        <td>{{ report.type_text() }}</td>
-                        <td>{{ arrow.get(report.created_at).humanize(locale=locale) }}</td>
-                        <td>
-                            {% if report.suspect_conversation_id %}
-                                <a href="/chat/{{ report.suspect_conversation_id }}#message">View</a>
-                            {% elif report.suspect_post_reply_id %}
-                                <a href="/post/{{ report.suspect_post_id }}#comment_{{ report.suspect_post_reply_id }}">View</a>
-                            {% elif report.suspect_post_id %}
-                                <a href="/post/{{ report.suspect_post_id }}">View</a>
-                            {% elif report.suspect_user_id %}
-                                <a href="/user/{{ report.suspect_user_id }}">View</a>
-                            {% elif report.suspect_community_id %}
-                                <a href="/user/{{ report.suspect_community_id }}">View</a>
-                            {% endif %}
-                        </td>
-                    </tr>
+                    {% include "admin/reports/" + str(report.type_text()).lower() + "_report.html" %}
                 {% endfor %}
             </table>
             <nav aria-label="Pagination" class="mt-4" role="navigation">

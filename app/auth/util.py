@@ -245,6 +245,7 @@ def create_new_user(form, ip, country, verification_token):
         font=get_font_preference(),
         ip_address_country=country,
         timezone=form.timezone.data,
+        language_id=g.site.language_id
     )
     user.set_password(form.password.data)
 

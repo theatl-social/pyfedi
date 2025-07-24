@@ -11,7 +11,7 @@ from app.constants import NOTIF_REPORT, SRC_WEB
 from app.models import Site, User, Report, ChatMessage, Notification, Conversation, conversation_member, CommunityBan, \
     ModLog
 from app.shared.site import block_remote_instance
-from app.utils import render_template, login_required
+from app.utils import render_template, login_required, trustworthy_account_required
 
 
 @bp.route('/chat', methods=['GET', 'POST'])
@@ -61,6 +61,7 @@ def chat_home(conversation_id=None):
 
 @bp.route('/chat/<int:to>/new', methods=['GET', 'POST'])
 @login_required
+@trustworthy_account_required
 def new_message(to):
     recipient = User.query.get_or_404(to)
     if (current_user.created_very_recently() or current_user.reputation <= -10 or current_user.banned or not current_user.verified) and not current_user.is_admin_or_staff():

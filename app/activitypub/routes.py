@@ -1,4 +1,3 @@
-import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
 from flask_login import current_user
@@ -25,7 +24,7 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan, ActivityBatch
+    IpBan, ActivityBatch, APRequestStatus, APRequestBody
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
@@ -34,6 +33,77 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases, orjson_response
+    
+from app.activitypub.util_extras import retry_activitypub_action
+from app.activitypub.request_logger import create_request_logger, log_request_completion
+
+import os
+import uuid
+import sys
+import json as _json
+import traceback
+from datetime import datetime
+
+# Debug flag for DB tracking
+EXTRA_AP_DB_DEBUG = os.environ.get('EXTRA_AP_DB_DEBUG', '0') == '1'
+
+# Helper to log status to DB, resilient to errors
+def log_ap_status(request_id, checkpoint, status, activity_id=None, post_object_uri=None, details=None):
+    """
+    Log ActivityPub request status checkpoint to database
+    This is the original simple logging function that works alongside the new request logger
+    """
+    if not EXTRA_AP_DB_DEBUG:
+        return
+    try:
+        entry = APRequestStatus(
+            request_id=request_id,
+            checkpoint=checkpoint,
+            status=status,
+            activity_id=activity_id,
+            post_object_uri=post_object_uri,
+            details=details
+        )
+        db.session.add(entry)
+        db.session.commit()
+    except Exception as e:
+        print(f"[APRequestStatus-DB-FAIL] {request_id} {checkpoint} {status} {activity_id} {post_object_uri} {details} error={e}", file=sys.stderr)
+
+
+def store_request_body(request_id, request_obj, parsed_json=None):
+    """Store the POST body content linked to the request_id"""
+    if not EXTRA_AP_DB_DEBUG:
+        return
+    try:
+        from app.utils import ip_address
+        
+        # Get raw body data
+        body_data = request_obj.get_data(as_text=True)
+        
+        # Extract headers (excluding sensitive ones)
+        headers_dict = {}
+        excluded_headers = {'authorization', 'cookie', 'x-api-key'}
+        for key, value in request_obj.headers:
+            if key.lower() not in excluded_headers:
+                headers_dict[key] = value
+        
+        # Create APRequestBody record
+        body_record = APRequestBody(
+            request_id=request_id,
+            headers=headers_dict,
+            body=body_data,
+            parsed_json=parsed_json,
+            content_type=request_obj.content_type,
+            content_length=request_obj.content_length,
+            remote_addr=ip_address(),
+            user_agent=request_obj.headers.get('User-Agent')
+        )
+        
+        db.session.add(body_record)
+        db.session.commit()
+        
+    except Exception as e:
+        print(f"[APRequestBody-DB-FAIL] {request_id} error={e}", file=sys.stderr)
 
 
 @bp.route('/testredis')
@@ -45,6 +115,134 @@ def testredis_get():
         return "Redis: OK"
     else:
         return "Redis: FAIL"
+
+
+@bp.route('/debug/ap_requests')
+def debug_ap_requests():
+    """Debug endpoint to view recent ActivityPub requests and their bodies"""
+    if not current_user.is_authenticated or not current_user.is_admin():
+        abort(403)
+    
+    from app.activitypub.request_body_utils import get_recent_requests, get_activity_type_stats
+    
+    try:
+        recent = get_recent_requests(20)
+        stats = get_activity_type_stats(24)
+        
+        html = """
+        <html>
+        <head><title>ActivityPub Request Debug</title></head>
+        <body>
+        <h1>ActivityPub Request Debug</h1>
+        
+        <h2>Activity Type Stats (Last 24h)</h2>
+        <table border="1">
+        <tr><th>Type</th><th>Total</th><th>Failed</th><th>Avg Checkpoints</th></tr>
+        """
+        
+        for stat in stats:
+            html += f"""
+            <tr>
+                <td>{stat.get('activity_type', 'Unknown')}</td>
+                <td>{stat.get('total_requests', 0)}</td>
+                <td>{stat.get('failed_requests', 0)}</td>
+                <td>{stat.get('avg_checkpoints', 0):.1f}</td>
+            </tr>
+            """
+        
+        html += """
+        </table>
+        
+        <h2>Recent Requests</h2>
+        <table border="1">
+        <tr><th>Time</th><th>Type</th><th>Actor</th><th>Status</th><th>Errors</th><th>Details</th></tr>
+        """
+        
+        for req in recent:
+            html += f"""
+            <tr>
+                <td>{req.get('received_at', 'Unknown')}</td>
+                <td>{req.get('activity_type', 'Unknown')}</td>
+                <td>{req.get('actor', 'Unknown')[:50]}...</td>
+                <td>{req.get('latest_status', 'Unknown')}</td>
+                <td>{req.get('error_count', 0)}</td>
+                <td><a href="/activitypub/debug/ap_request/{req.get('request_id')}">View</a></td>
+            </tr>
+            """
+        
+        html += """
+        </table>
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
+
+
+@bp.route('/debug/ap_request/<request_id>')
+def debug_ap_request(request_id):
+    """Debug endpoint to view a specific request's details"""
+    if not current_user.is_authenticated or not current_user.is_admin():
+        abort(403)
+    
+    from app.activitypub.request_body_utils import get_request_details
+    
+    try:
+        details = get_request_details(request_id)
+        if not details:
+            return "Request not found", 404
+        
+        html = f"""
+        <html>
+        <head><title>Request {request_id}</title></head>
+        <body>
+        <h1>Request Details</h1>
+        <h2>Metadata</h2>
+        <p><strong>Request ID:</strong> {details['request_id']}</p>
+        <p><strong>Received:</strong> {details['received_at']}</p>
+        <p><strong>Remote Address:</strong> {details['remote_addr']}</p>
+        <p><strong>User Agent:</strong> {details.get('user_agent', 'N/A')}</p>
+        <p><strong>Content Type:</strong> {details.get('content_type', 'N/A')}</p>
+        <p><strong>Content Length:</strong> {details.get('content_length', 'N/A')}</p>
+        
+        <h2>Processing Timeline</h2>
+        <table border="1">
+        <tr><th>Checkpoint</th><th>Status</th><th>Time</th><th>Details</th></tr>
+        """
+        
+        for checkpoint in details.get('timeline', []):
+            html += f"""
+            <tr>
+                <td>{checkpoint['checkpoint']}</td>
+                <td>{checkpoint['status']}</td>
+                <td>{checkpoint['timestamp']}</td>
+                <td>{checkpoint.get('details', '')[:100]}...</td>
+            </tr>
+            """
+        
+        html += f"""
+        </table>
+        
+        <h2>Request Headers</h2>
+        <pre>{details.get('headers', {})}</pre>
+        
+        <h2>Parsed JSON</h2>
+        <pre>{details.get('parsed_json', 'N/A')}</pre>
+        
+        <h2>Raw POST Body</h2>
+        <pre>{details.get('raw_body', 'N/A')[:2000]}...</pre>
+        
+        </body>
+        </html>
+        """
+        
+        return html
+        
+    except Exception as e:
+        return f"Error: {str(e)}", 500
 
 
 @bp.route('/.well-known/webfinger')
@@ -526,121 +724,350 @@ def community_profile(actor):
 
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
+    import os
+    import traceback
+    import json as _json
+    from datetime import datetime
+    EXTRA_AP_LOGGING = os.environ.get('EXTRA_AP_LOGGING', '0') == '1'
+
+    def save_ap_debug_log(log_type, headers, body, error=None):
+        log_dir = os.path.join(os.path.dirname(__file__), '../../logs')
+        os.makedirs(log_dir, exist_ok=True)
+        # Use a chunked log file: ap_debug_{timestamp}_N.log, chunked at ~2MB
+        ts = datetime.utcnow().strftime('%Y%m%d_%H%M%S')
+        base = f"ap_debug_{log_type}_{ts}"
+        chunk_size = 2 * 1024 * 1024  # 2MB
+        # Find the latest chunk file or start a new one
+        chunk = 0
+        while True:
+            fname = f"{base}_{chunk}.log"
+            fpath = os.path.join(log_dir, fname)
+            if not os.path.exists(fpath) or os.path.getsize(fpath) < chunk_size:
+                break
+            chunk += 1
+        # Prepare log entry as JSON
+        entry = {
+            "timestamp": datetime.utcnow().isoformat() + 'Z',
+            "log_type": log_type,
+            "headers": dict(headers),
+            "body": body.decode('utf-8', errors='replace'),
+        }
+        if error:
+            entry["error"] = error
+        # Append JSON entry
+        with open(fpath, 'a', encoding='utf-8') as f:
+            f.write(_json.dumps(entry, ensure_ascii=False) + '\n')
+        return fpath
+
     from app import redis_client
+    
+    # Early content-length validation to prevent OOM
+    content_length = request.content_length
+    if content_length and content_length > current_app.config.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024):
+        current_app.logger.warning(f'Rejected oversized request: {content_length} bytes from {request.remote_addr}')
+        return 'Request entity too large', 413
+    
+    # Read body once and cache it
     try:
-        request_json = request.get_json(force=True)
-    except werkzeug.exceptions.BadRequest as e:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
+        raw_body = request.get_data(cache=True)  # cache=True allows multiple reads
+    except Exception as e:
+        current_app.logger.error(f'Failed to read request body: {str(e)}')
+        return '', 400
+    
+    # Save incoming headers/body as early as possible
+    if EXTRA_AP_LOGGING:
+        try:
+            save_ap_debug_log('incoming', dict(request.headers), raw_body)
+        except Exception:
+            pass
+
+    # Generate a unique request_id for this POST (for both logging systems)
+    request_id = str(uuid.uuid4())
+    log_ap_status(request_id, "raw_received", "ok", details="POST received at /inbox")
+    store_request_body(request_id, request)
+
+    # Initialize request logger as early as possible
+    logger = None
+    try:
+        logger = create_request_logger()
+        if logger:
+            # Use the same request_id for both logging systems
+            logger.request_id = request_id
+            logger.log_checkpoint('initial_receipt', 'ok', f'Request received at {request.path}')
+    except Exception as e:
+        # If logger creation fails, continue without it but try to log the failure
+        try:
+            current_app.logger.error(f'Failed to create request logger: {str(e)}')
+        except:
+            pass
+
+    try:
+        request_json = request.get_json(force=True, cache=True)  # Use cached body
+        # Try to extract the original object URI if present
+        post_object_uri = None
+        if isinstance(request_json, dict):
+            if 'object' in request_json:
+                obj = request_json['object']
+                if isinstance(obj, dict) and 'id' in obj:
+                    post_object_uri = obj['id']
+                elif isinstance(obj, str):
+                    post_object_uri = obj
+        log_ap_status(request_id, "json_parsed", "ok", post_object_uri=post_object_uri)
+        store_request_body(request_id, request, request_json)
+        
+        if logger:
+            logger.log_checkpoint('json_parse', 'ok', 'Successfully parsed JSON body')
+            logger.store_request_body(request, request_json)
+    except Exception as e:
+        log_ap_status(request_id, "json_parsed", "fail", details=str(e))
+        store_request_body(request_id, request, None)
+        
+        if logger:
+            logger.log_error('json_parse', e, 'Unable to parse JSON body')
+        if EXTRA_AP_LOGGING:
+            err_str = traceback.format_exc()
+            save_ap_debug_log('error', dict(request.headers), raw_body, error=err_str)
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + str(e))
         return '', 200
 
-    g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
-    store_ap_json = g.site.log_activitypub_json or False
-    saved_json = request_json if store_ap_json else None
+    # Update logger with request info
+    if logger:
+        try:
+            # Extract activity info without re-initializing the logger
+            if request_json:
+                logger.activity_id = request_json.get('id')
+                if 'object' in request_json:
+                    obj = request_json['object']
+                    if isinstance(obj, dict):
+                        logger.post_object_uri = obj.get('id')
+                    elif isinstance(obj, str):
+                        logger.post_object_uri = obj
+            logger.log_checkpoint('request_info_extracted', 'ok', f'Activity ID: {logger.activity_id}')
+        except Exception as e:
+            logger.log_error('request_info_extracted', e)
 
-    if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
-        return '', 200
+    # Trap and log any errors between POST receipt and log_incoming_ap
+    try:
+        g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
+        if logger:
+            logger.log_checkpoint('site_loaded', 'ok', 'Site configuration loaded')
+        
+        store_ap_json = g.site.log_activitypub_json or False
+        saved_json = request_json if store_ap_json else None
 
-    id = request_json['id']
-    if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
-        object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
+        # Validate required fields
+        if logger:
+            required_fields = ['id', 'type', 'actor', 'object']
+            missing_fields = [field for field in required_fields if field not in request_json]
+            if missing_fields:
+                logger.log_validation_failure('field_validation', f'Missing required fields: {missing_fields}')
             else:
+                logger.log_checkpoint('field_validation', 'ok', 'All required fields present')
+
+        if not 'id' in request_json or not 'type' in request_json or not 'actor' in request_json or not 'object' in request_json:
+            log_ap_status(request_id, "field_validation", "fail", post_object_uri=post_object_uri, details="Missing required fields")
+            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Missing minimum expected fields in JSON')
+            return '', 200
+        log_ap_status(request_id, "field_validation", "ok", activity_id=request_json.get('id'), post_object_uri=post_object_uri)
+
+        id = request_json['id']
+        # Validate activity ID length to prevent database/memory issues
+        if not isinstance(id, str) or len(id) > 2048:
+            log_ap_status(request_id, "field_validation", "fail", details="Invalid activity ID format or length")
+            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Invalid activity ID format or length')
+            return '', 200
+        
+        if logger:
+            logger.update_activity_info(activity_id=id)
+        
+        if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
+            if logger:
+                logger.log_checkpoint('announce_processing', 'ok', 'Processing Announce activity')
+            
+            object = request_json['object']
+            # Only reject if absolutely essential fields are missing
+            # We need at minimum an 'id' to process the announcement
+            if not 'id' in object:
+                if logger:
+                    logger.log_validation_failure('announce_processing', 'Missing id field in Announce object')
                 log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
-                                'Missing minimum expected fields in JSON Announce object')
+                                'Missing id field in Announce object')
+                return '', 200
+            
+            # Validate the id field is a string and reasonable length
+            if not isinstance(object['id'], str) or len(object['id']) > 2048:
+                if logger:
+                    logger.log_validation_failure('announce_processing', 'Invalid id field in Announce object')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
+                                'Invalid id field format or length in Announce object')
+                return '', 200
+            
+            # For better compatibility, we'll process the announcement even if other fields are missing
+            # and let the downstream processing handle any issues
+
+            # Check if it's about local content (but safely handle missing 'actor' field)
+            if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
+                    'https://' + current_app.config['SERVER_NAME']):
+                if logger:
+                    logger.log_checkpoint('local_content_check', 'ignored', 'Activity about local content')
+                log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
+                                'Activity about local content which is already present')
+                return '', 200
+
+            id = object['id']
+            if logger:
+                logger.update_activity_info(activity_id=id)
+
+        # Duplicate check
+        if redis_client.exists(id):  # Something is sending same activity multiple times
+            log_ap_status(request_id, "duplicate_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
+            if logger:
+                logger.log_checkpoint('duplicate_check', 'ignored', 'Activity already processed')
+            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
             return '', 200
+        
+        redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
+        log_ap_status(request_id, "duplicate_check", "ok", activity_id=id, post_object_uri=post_object_uri)
+        if logger:
+            logger.log_checkpoint('duplicate_check', 'ok', 'Activity marked as processing')
 
-        if isinstance(object['actor'], str) and object['actor'].startswith(
-                'https://' + current_app.config['SERVER_NAME']):
-            log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json,
-                            'Activity about local content which is already present')
-            return '', 200
+        # Ignore unutilised PeerTube activity
+        if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
+            log_ap_status(request_id, "peertube_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
+            if logger:
+                logger.log_checkpoint('peertube_filter', 'ignored', 'PeerTube activity ignored')
+            log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
+            return ''
 
-        id = object['id']
+        # Ignore account deletion requests from users that do not already exist here
+        account_deletion = False
+        if request_json['type'] == 'Delete' and 'object' in request_json and isinstance(request_json['object'], str) and \
+                request_json['actor'] == request_json['object']:
+            account_deletion = True
+            if logger:
+                logger.log_checkpoint('account_deletion_check', 'ok', 'Processing account deletion')
+            actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
+            if not actor:
+                log_ap_status(request_id, "delete_actor_check", "ignored", activity_id=id, post_object_uri=post_object_uri)
+                if logger:
+                    logger.log_checkpoint('account_deletion_check', 'ignored', 'User does not exist here')
+                log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
+                return '', 200
+        else:
+            if logger:
+                logger.log_checkpoint('actor_lookup', 'ok', 'Looking up actor')
+            log_ap_status(request_id, 'actor_lookup_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Looking up actor')
+            actor = find_actor_or_create(request_json['actor'])
 
-    if redis_client.exists(id):  # Something is sending same activity multiple times
-        log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
-        return '', 200
-    redis_client.set(id, 1, ex=90)  # Save the activity ID into redis, to avoid duplicate activities
-
-    # Ignore unutilised PeerTube activity
-    if isinstance(request_json['actor'], str) and request_json['actor'].endswith('accounts/peertube'):
-        log_incoming_ap(id, APLOG_PT_VIEW, APLOG_IGNORED, saved_json, 'PeerTube View or CacheFile activity')
-        return ''
-
-    # Ignore account deletion requests from users that do not already exist here
-    account_deletion = False
-    if (request_json['type'] == 'Delete' and
-            'object' in request_json and isinstance(request_json['object'], str) and
-            request_json['actor'] == request_json['object']):
-        account_deletion = True
-        actor = db.session.query(User).filter_by(ap_profile_id=request_json['actor'].lower()).first()
         if not actor:
-            log_incoming_ap(id, APLOG_DELETE, APLOG_IGNORED, saved_json, 'Does not exist here')
+            actor_name = request_json['actor']
+            if logger:
+                logger.log_null_check_failure('actor_lookup', 'actor', 'User/Community object')
+            log_ap_status(request_id, 'actor_lookup', 'fail', activity_id=id, post_object_uri=post_object_uri, details=f'Actor could not be found: {actor_name}')
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
             return '', 200
-    else:
-        actor = find_actor_or_create(request_json['actor'])
 
-    if not actor:
-        actor_name = request_json['actor']
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
-        return '', 200
+        if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
+            if logger:
+                logger.log_validation_failure('actor_validation', 'Activity from local actor')
+            log_ap_status(request_id, 'actor_validation', 'fail', activity_id=id, post_object_uri=post_object_uri, details='Activity from local actor')
+            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
+            return '', 200
 
-    if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
-        return '', 200
+        if logger:
+            logger.log_checkpoint('actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
+        log_ap_status(request_id, 'actor_validation', 'ok', activity_id=id, post_object_uri=post_object_uri, details=f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
 
-    bounced = False
-    try:
-        HttpSignature.verify_request(request, actor.public_key, skip_date=True)
-    except VerificationError as e:
-        bounced = True
-        # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
-        if 'signature' in request_json:
-            try:
-                LDSignature.verify_signature(request_json, actor.public_key)
-            except VerificationError as e:
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+        # Signature verification
+        bounced = False
+        try:
+            if logger:
+                logger.log_checkpoint('signature_verify_start', 'ok', 'Starting HTTP signature verification')
+            log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting HTTP signature verification')
+            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+            if logger:
+                logger.log_checkpoint('signature_verify', 'ok', 'HTTP signature verified successfully')
+            log_ap_status(request_id, 'signature_verify', 'ok', activity_id=id, post_object_uri=post_object_uri, details='HTTP signature verified successfully')
+        except VerificationError as e:
+            bounced = True
+            if logger:
+                logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
+            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {str(e)}')
+            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
+            if 'signature' in request_json:
+                try:
+                    if logger:
+                        logger.log_checkpoint('ld_signature_verify', 'ok', 'Trying LD signature verification')
+                    LDSignature.verify_signature(request_json, actor.public_key)
+                    if logger:
+                        logger.log_checkpoint('ld_signature_verify', 'ok', 'LD signature verified successfully')
+                except VerificationError as e:
+                    if logger:
+                        logger.log_error('ld_signature_verify', e, 'LD signature verification failed')
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+                    return '', 400
+            elif (
+                    actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
+                    request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
+                    'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
+                if logger:
+                    logger.log_checkpoint('fediseer_exception', 'ok', 'Fediseer unsigned message accepted')
+            # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+            elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+                  isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
+                        request_json['object']['id'], str)):
+                if logger:
+                    logger.log_checkpoint('object_reduction', 'ok', 'Reducing object to remote ID for later verification')
+                request_json['object'] = request_json['object']['id']
+            else:
+                if logger:
+                    logger.log_error('signature_verify', e, 'No valid signature found')
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
                 return '', 400
-        elif (
-                actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
-                request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
-                'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
-            ...
-        # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
-        elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
-              isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
-                    request_json['object']['id'], str)):
-            request_json['object'] = request_json['object']['id']
-        else:
-            log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
-            return '', 400
 
-    if actor.instance_id:
-        actor.instance.last_seen = utcnow()
-        actor.instance.dormant = False
-        actor.instance.gone_forever = False
-        actor.instance.failures = 0
-        actor.instance.ip_address = ip_address() if not bounced else ''
-    db.session.commit()
+        # Update instance information
+        if actor.instance_id:
+            if logger:
+                logger.log_checkpoint('instance_update', 'ok', 'Updating instance information')
+            actor.instance.last_seen = utcnow()
+            actor.instance.dormant = False
+            actor.instance.gone_forever = False
+            actor.instance.failures = 0
+            actor.instance.ip_address = ip_address() if not bounced else ''
+        db.session.commit()
 
-    # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
-    # Earlier check means this is only for users that already exist, processing it here means that http signature will have been verified
-    if account_deletion == True:
+        # Handle account deletion
+        if account_deletion == True:
+            if logger:
+                logger.log_checkpoint('account_deletion_dispatch', 'ok', 'Dispatching account deletion processing')
+            if current_app.debug:
+                process_delete_request(request_json, store_ap_json, logger.request_id if logger else None)
+            else:
+                process_delete_request.delay(request_json, store_ap_json, logger.request_id if logger else None)
+            return ''
+
+        # Dispatch to main processing
+        if logger:
+            logger.log_checkpoint('main_processing_dispatch', 'ok', 'Dispatching to main inbox processing')
+        
         if current_app.debug:
-            process_delete_request(request_json, store_ap_json)
+            process_inbox_request(request_json, store_ap_json, logger.request_id if logger else None)
         else:
-            process_delete_request.delay(request_json, store_ap_json)
+            process_inbox_request.delay(request_json, store_ap_json, logger.request_id if logger else None)
+
         return ''
-
-    if current_app.debug:
-        process_inbox_request(request_json, store_ap_json)
-    else:
-        process_inbox_request.delay(request_json, store_ap_json)
-
-    return ''
+    except Exception as e:
+        if logger:
+            logger.log_error('shared_inbox_error', e, 'Unhandled error in shared_inbox')
+        if EXTRA_AP_LOGGING:
+            err_str = traceback.format_exc()
+            # Note: raw_body may not be available here if we're in the main exception handler
+            try:
+                body = request.get_data()
+            except:
+                body = b'[Body read failed]'
+            save_ap_debug_log('error', dict(request.headers), body, error=err_str)
+        raise
 
 
 @bp.route('/site_inbox', methods=['POST'])
@@ -666,14 +1093,13 @@ def replay_inbox_request(request_json):
     id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
-            else:
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
+        # Only reject if absolutely essential fields are missing
+        if not 'id' in object:
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing id field in Announce object')
             return
 
-        if isinstance(object['actor'], str) and object['actor'].startswith(
+        # Check if it's about local content (but safely handle missing 'actor' field)
+        if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
                 'https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
@@ -707,18 +1133,35 @@ def replay_inbox_request(request_json):
 
     # When a user is deleted, the only way to be fairly sure they get deleted everywhere is to tell the whole fediverse.
     if account_deletion == True:
-        process_delete_request(request_json, True)
+        process_delete_request(request_json, True, None)  # No logger available for replay
         return
 
-    process_inbox_request(request_json, True)
+    process_inbox_request(request_json, True, None)  # No logger available for replay
 
     return
 
 
 @celery.task
-def process_inbox_request(request_json, store_ap_json):
+def process_inbox_request(request_json, store_ap_json, request_id=None):
     with current_app.app_context():
         session = get_task_session()
+        
+        # Create logger from request_id if provided, otherwise create new one
+        if request_id:
+            try:
+                from app.activitypub.request_logger import APRequestLogger
+                logger = APRequestLogger()
+                logger.request_id = request_id
+                logger.log_checkpoint('process_inbox_request_start', 'ok', 'Starting main processing task')
+            except Exception as e:
+                logger = None
+                current_app.logger.error(f'Failed to recreate logger for request {request_id}: {str(e)}')
+        else:
+            logger = create_request_logger(request_json)
+            # Generate a new request_id for tasks without one
+            if logger:
+                request_id = logger.request_id
+            
         try:
             # patch_db_session makes all db.session.whatever() use the session created with get_task_session, to guarantee proper connection clean-up at the end of the task.
             # although process_inbox_request uses session instead of db.session, many of the functions it calls, like find_actor_or_create, do not which makes this necessary.
@@ -732,38 +1175,62 @@ def process_inbox_request(request_json, store_ap_json):
                 #   Using actors from inner objects has a vulnerability to spoofing attacks (e.g. if 'attributedTo' doesn't match the 'Create' actor)
                 saved_json = request_json if store_ap_json else None
                 id = request_json['id']
+                if logger:
+                    logger.update_activity_info(activity_id=id)
+                    logger.log_checkpoint('task_initialization', 'ok', f'Processing activity: {id}')
+                
                 actor_id = request_json['actor']
                 feed = community = None
                 if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
+                    if logger:
+                        logger.log_checkpoint('actor_type_detection', 'ok', f'Processing {request_json["type"]} activity')
                     community = find_actor_or_create(actor_id, community_only=True, create_if_not_found=False)
                     if not community:
                         feed = find_actor_or_create(actor_id, feed_only=True, create_if_not_found=False)
                     if not community and not feed:
+                        if logger:
+                            logger.log_validation_failure('actor_type_detection', 'Actor was not a feed or a community')
                         log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Actor was not a feed or a community')
                         return
                 else:
-                    actor = find_actor_or_create(actor_id, create_if_not_found=False)
+                    if logger:
+                        logger.log_checkpoint('actor_lookup_main', 'ok', 'Looking up main actor')
+                    actor = find_actor_or_create(actor_id)
                     if actor and isinstance(actor, User):
                         user = actor
+                        if logger:
+                            logger.log_checkpoint('user_last_seen_update', 'ok', f'Updating last_seen for user {user.id}')
                         # Update user's last_seen in a separate transaction to avoid deadlocks
                         with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                             session.execute(text('UPDATE "user" SET last_seen=:last_seen WHERE id = :user_id'),
                                                {"last_seen": utcnow(), "user_id": user.id})
                             session.commit()
                     elif actor and isinstance(actor, Community):  # Process a few activities from NodeBB and a.gup.pe
+                        if logger:
+                            logger.log_checkpoint('community_activity_handling', 'ok', f'Processing community activity: {request_json["type"]}')
                         if request_json['type'] == 'Add' or request_json['type'] == 'Remove':
+                            if logger:
+                                logger.log_checkpoint('nodebb_topic_management', 'ignored', 'NodeBB Topic Management')
                             log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'NodeBB Topic Management')
                             return
                         elif request_json['type'] == 'Update' and 'type' in request_json['object']:
                             if request_json['object']['type'] == 'Group':
                                 community = actor  # process it same as Update/Group from Lemmy
+                                if logger:
+                                    logger.log_checkpoint('group_update', 'ok', 'Processing Group update')
                             elif request_json['object']['type'] == 'OrderedCollection':
+                                if logger:
+                                    logger.log_checkpoint('follower_count_update', 'ignored', 'a.gup.pe follower count update')
                                 log_incoming_ap(id, APLOG_ADD, APLOG_IGNORED, saved_json, 'Follower count update from a.gup.pe')
                                 return
                             else:
+                                if logger:
+                                    logger.log_validation_failure('update_activity_validation', 'Unexpected Update activity from Group')
                                 log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected Update activity from Group')
                                 return
                         else:
+                            if logger:
+                                logger.log_validation_failure('group_activity_validation', 'Unexpected activity from Group')
                             log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Unexpected activity from Group')
                             return
                     else:
@@ -788,27 +1255,26 @@ def process_inbox_request(request_json, store_ap_json):
                             if obj['audience'] == request_json['actor']:    # Check if same community. This ensures the HTTP Sig on the original announce is valid for all objects.
                                 fake_activity = request_json.copy()
                                 fake_activity['object'] = obj
-                                process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
+                                process_inbox_request(fake_activity, store_ap_json, request_id)  # Process the Announce (with single object) as normal
                         return
 
                     if not feed:
-                        user_ap_id = request_json['object']['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        if user and isinstance(user, User):
-                            if user.banned:
-                                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
-                                return
+                        # Check if the announced object has an actor field
+                        if 'actor' in request_json['object']:
+                            user_ap_id = request_json['object']['actor']
+                            user = find_actor_or_create(user_ap_id)
+                            if user and isinstance(user, User):
+                                if user.banned:
+                                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                                    return
 
-                            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
-                                user.last_seen = utcnow()
-                                user.instance.last_seen = utcnow()
-                                user.instance.dormant = False
-                                user.instance.gone_forever = False
-                                user.instance.failures = 0
-                                session.commit()
-                        else:
-                            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
-                            return
+                                with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                                    user.last_seen = utcnow()
+                                    user.instance.last_seen = utcnow()
+                                    user.instance.dormant = False
+                                    user.instance.gone_forever = False
+                                    user.instance.failures = 0
+                                    session.commit()
                     else:
                         user = None
 
@@ -824,7 +1290,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Follow':
                     target_ap_id = core_activity['object']
                     follow_id = core_activity['id']
-                    target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                    target = find_actor_or_create(target_ap_id)
                     if not target:
                         log_incoming_ap(id, APLOG_FOLLOW, APLOG_FAILURE, saved_json, 'Could not find target of Follow')
                         return
@@ -945,7 +1411,7 @@ def process_inbox_request(request_json, store_ap_json):
                             user = session.query(User).get(join_request.user_id)
                     elif core_activity['object']['type'] == 'Follow':
                         user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                        user = find_actor_or_create(user_ap_id)
                         if user and user.banned:
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
                             return
@@ -993,7 +1459,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Reject':
                     if core_activity['object']['type'] == 'Follow':
                         user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create(user_ap_id, create_if_not_found=False)
+                        user = find_actor_or_create(user_ap_id)
                         if not user:
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                             return
@@ -1429,7 +1895,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Undo':
                     if core_activity['object']['type'] == 'Follow':  # Unsubscribe from a community or user
                         target_ap_id = core_activity['object']['object']
-                        target = find_actor_or_create(target_ap_id, create_if_not_found=False)
+                        target = find_actor_or_create(target_ap_id)
                         if isinstance(target, Community):
                             community = target
                             member = session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).first()
@@ -1502,7 +1968,7 @@ def process_inbox_request(request_json, store_ap_json):
                         if post_or_comment:
                             log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_SUCCESS, saved_json)
                             if not announced:
-                                announce_activity_to_followers(post_or_comment.community, user, request_json)
+                                announce_activity_to_followers(post_or_comment.community, user, request_json, can_batch=True)
                         else:
                             log_incoming_ap(id, APLOG_UNDO_VOTE, APLOG_FAILURE, saved_json,
                                             'Unfound object ' + target_ap_id)
@@ -1564,8 +2030,7 @@ def process_inbox_request(request_json, store_ap_json):
                             session.commit()
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
                         else:  # undo community ban (community will already known if activity was Announced)
-                            community = community if community else find_actor_or_create(target, create_if_not_found=False,
-                                                                                         community_only=True)
+                            community = community if community else find_actor_or_create(target, community_only=True)
                             if not community:
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_IGNORED, saved_json,
                                                 'Blocked or unfound community')
@@ -1578,8 +2043,17 @@ def process_inbox_request(request_json, store_ap_json):
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
                         return
 
+                    if logger:
+                        logger.log_checkpoint('unmatched_activity', 'warning', f'Unmatched activity type: {request_json.get("type", "unknown")}')
                     log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
-        except Exception:
+                    
+                # If we reach here without explicit success logging, log completion
+                if logger:
+                    log_request_completion(logger, True, 'Request processing completed')
+                    
+        except Exception as e:
+            if logger:
+                logger.log_error('process_inbox_request', e, 'Unhandled error in process_inbox_request')
             session.rollback()
             raise
         finally:
@@ -1587,26 +2061,61 @@ def process_inbox_request(request_json, store_ap_json):
 
 
 @celery.task
-def process_delete_request(request_json, store_ap_json):
+def process_delete_request(request_json, store_ap_json, request_id=None):
     with current_app.app_context():
         session = get_task_session()
+        
+        # Create logger from request_id if provided, otherwise create new one
+        if request_id:
+            try:
+                from app.activitypub.request_logger import APRequestLogger
+                logger = APRequestLogger()
+                logger.request_id = request_id
+                logger.log_checkpoint('process_delete_request_start', 'ok', 'Starting delete processing task')
+            except Exception as e:
+                logger = None
+                current_app.logger.error(f'Failed to recreate logger for request {request_id}: {str(e)}')
+        else:
+            logger = create_request_logger(request_json)
+            # Generate a new request_id for tasks without one
+            if logger:
+                request_id = logger.request_id
+            
         try:
             with patch_db_session(session):
                 # this function processes self-deletes (retain case here, as user_removed_from_remote_server() uses a JSON request)
                 saved_json = request_json if store_ap_json else None
                 id = request_json['id']
+                if logger:
+                    logger.update_activity_info(activity_id=id)
+                    logger.log_checkpoint('delete_processing_start', 'ok', 'Processing account deletion')
+                
                 user_ap_id = request_json['actor']
                 user = session.query(User).filter_by(ap_profile_id=user_ap_id.lower()).first()
                 if user:
+                    if logger:
+                        logger.log_checkpoint('user_found', 'ok', f'Found user to delete: {user.id}')
                     if 'removeData' in request_json and request_json['removeData'] is True:
+                        if logger:
+                            logger.log_checkpoint('content_purge', 'ok', 'Purging user content')
                         user.purge_content()
                     user.deleted = True
                     user.deleted_by = user.id
                     user.delete_dependencies()
                     session.commit()
+                    if logger:
+                        logger.log_checkpoint('user_deleted', 'ok', 'User successfully deleted')
                     with patch_db_session(session):
                         log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json)
-        except Exception:
+                    if logger:
+                        log_request_completion(logger, True, 'Account deletion completed successfully')
+                else:
+                    if logger:
+                        logger.log_null_check_failure('user_lookup', 'user', 'User object')
+                        log_request_completion(logger, False, 'User not found for deletion')
+        except Exception as e:
+            if logger:
+                logger.log_error('process_delete_request', e, 'Error during account deletion')
             session.rollback()
             raise
         finally:
@@ -1779,6 +2288,7 @@ def user_followers(actor):
 
 
 @bp.route('/comment/<int:comment_id>', methods=['GET', 'HEAD'])
+@retry_activitypub_action()
 def comment_ap(comment_id):
     reply = PostReply.query.get_or_404(comment_id)
     if is_activitypub_request():
@@ -1919,7 +2429,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
                 return
-            if user.id == reply.user_id:
+            if user.id == reply.user_id or reply.community.is_moderator(user):
                 update_post_reply_from_activity(reply, activity_json)
                 log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                 if not announced:
@@ -1947,6 +2457,10 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                 return
 
 
+
+
+
+@retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -1967,6 +2481,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_LIKE, APLOG_IGNORED, saved_json, 'Cannot upvote this')
 
 
+@retry_activitypub_action()
 def process_downvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -1998,22 +2513,22 @@ def process_chat(user, store_ap_json, core_activity, session):
             len(core_activity['object']['to']) > 0):
         return False
     recipient_ap_id = core_activity['object']['to'][0]
-    recipient = find_actor_or_create(recipient_ap_id, create_if_not_found=False)
+    recipient = find_actor_or_create(recipient_ap_id)
     if recipient and recipient.is_local():
-        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and (sender.created_recently() or sender.reputation <= -10):
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send', session=session)
+        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and not sender.trustworthy():
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
             return True
         elif recipient.accept_private_messages is None or recipient.accept_private_messages == 0:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient has turned off PMs')
             return True
         elif recipient.accept_private_messages == 1:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Recipient only accepts local PMs')
             return True
         elif recipient.accept_private_messages == 2 and not sender.instance.trusted:
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance', session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender from untrusted instance')
             return True
         else:
             blocked_phrases_list = blocked_phrases()
@@ -2054,7 +2569,7 @@ def process_chat(user, store_ap_json, core_activity, session):
             recipient.unread_notifications += 1
             existing_conversation.read = False
             session.commit()
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json, session=session)
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
 
         return True
 

@@ -535,6 +535,7 @@ def user_settings():
         current_user.indexable = form.indexable.data
         current_user.hide_read_posts = form.hide_read_posts.data
         current_user.default_sort = form.default_sort.data
+        current_user.default_comment_sort = form.default_comment_sort.data
         current_user.default_filter = form.default_filter.data
         current_user.theme = form.theme.data
         current_user.email_unread = form.email_unread.data
@@ -560,6 +561,8 @@ def user_settings():
 
         resp = make_response(redirect(url_for('user.user_settings')))
         resp.set_cookie('compact_level', form.compaction.data, expires=datetime(year=2099, month=12, day=30))
+        resp.set_cookie('low_bandwidth', '1' if form.low_bandwidth_mode.data else '0',
+                        expires=datetime(year=2099, month=12, day=30))
         return resp
 
     elif request.method == 'GET':
@@ -569,9 +572,11 @@ def user_settings():
         form.indexable.data = current_user.indexable
         form.hide_read_posts.data = current_user.hide_read_posts
         form.default_sort.data = current_user.default_sort
+        form.default_comment_sort.data = current_user.default_comment_sort
         form.default_filter.data = current_user.default_filter
         form.theme.data = current_user.theme
         form.markdown_editor.data = current_user.markdown_editor
+        form.low_bandwidth_mode.data = request.cookies.get('low_bandwidth', '0') == '1'
         form.interface_language.data = current_user.interface_language
         form.federate_votes.data = not current_user.vote_privately
         form.feed_auto_follow.data = current_user.feed_auto_follow
@@ -583,8 +588,7 @@ def user_settings():
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
 
-    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user,
-                           )
+    return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user)
 
 
 @bp.route('/user/connect_oauth', methods=['GET', 'POST'])
@@ -927,9 +931,12 @@ def report_profile(actor):
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
+            source_instance = Instance.query.get(user.instance_id)
             targets_data = {'gen': '0',
                             'suspect_user_id': user.id,
                             'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'source_instance_id': user.instance_id,
+                            'source_instance_domain': source_instance.domain,
                             'reporter_id': current_user.id,
                             'reporter_user_name': current_user.user_name
                             }

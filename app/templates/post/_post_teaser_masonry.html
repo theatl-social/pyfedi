@@ -1,5 +1,5 @@
 {# do not use any back ticks in the HTML produced by this template - javascript needs to load it as a string. See community.html #}
-{% set content_blocked = post.blocked_by_content_filter(content_filters)
+{% set content_blocked = post.blocked_by_content_filter(content_filters, current_user.get_id())
                          or (current_user.hide_nsfw == 3 and post.nsfw)
                          or (current_user.hide_nsfl == 3 and post.nsfl)
                          or (current_user.ignore_bots == 3 and post.from_bot) -%}

@@ -140,3 +140,14 @@ def after_request(response):
         print(f"--- PROFILE ({request.path}) ---\n{s.getvalue()}")
 
     return response
+
+# Register the internal API blueprint
+try:
+    from app.internal_api import internal_bp
+    app.register_blueprint(internal_bp)
+except ImportError:
+    pass  # If not present, skip
+
+# Run the internal API on port 5932 if requested
+if os.environ.get('RUN_INTERNAL_API') == '1':
+    app.run(host='0.0.0.0', port=5932)

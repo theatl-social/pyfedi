@@ -6,7 +6,7 @@ from sqlalchemy import text
 from app import db
 from app.constants import *
 from app.models import Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, \
-    utcnow
+    utcnow, Instance
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
@@ -154,6 +154,8 @@ def make_reply(input, post, parent_id, src, auth=None):
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
             raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
+        if not parent_reply.replies_enabled:
+            raise Exception('This comment cannot be replied to.')
     else:
         parent_reply = None
 
@@ -164,9 +166,32 @@ def make_reply(input, post, parent_id, src, auth=None):
         raise Exception('You are not permitted to comment in this community')
 
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
-    reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
-                          body_html=markdown_to_html(content), notify_author=notify_author,
-                          language_id=language_id, distinguished=distinguished)
+    # Determine replies_enabled: only False if explicitly set to False, otherwise True
+    replies_enabled = False
+    if src == SRC_API:
+        # For API, check if 'replies_enabled' is present and exactly False
+        if 'replies_enabled' in input and input['replies_enabled'] is False:
+            replies_enabled = False
+        else:
+            replies_enabled = True
+    else:
+        # For web, check if attribute exists and is exactly False
+        if hasattr(input, 'replies_enabled') and hasattr(input.replies_enabled, 'data') and input.replies_enabled.data is False:
+            replies_enabled = False
+        else:
+            replies_enabled = True
+
+    reply = PostReply.new(
+        user,
+        post,
+        in_reply_to=parent_reply,
+        body=piefed_markdown_to_lemmy_markdown(content),
+        body_html=markdown_to_html(content),
+        notify_author=notify_author,
+        language_id=language_id,
+        distinguished=distinguished,
+        replies_enabled=replies_enabled
+    )
 
     user.language_id = language_id
     user.post_reply_count += 1
@@ -295,11 +320,14 @@ def report_reply(reply_id, input, src, auth=None):
             return
 
     suspect_author = User.query.get(reply.author.id)
+    source_instance = Instance.query.get(suspect_author.instance_id)
     reporter_user = User.query.get(user_id)
     targets_data = {'gen': '0',
                     'suspect_comment_id': reply.id,
                     'suspect_user_id': reply.author.id,
                     'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
+                    'source_instance_id': suspect_author.instance_id,
+                    'source_instance_domain': source_instance.domain,
                     'reporter_id': user_id,
                     'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
                     'orig_comment_body': reply.body
@@ -357,7 +385,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
         user = current_user
 
     reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin():
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin_or_staff():
         raise Exception('Does not have permission')
 
     reply.deleted = True

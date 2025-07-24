@@ -67,6 +67,16 @@ def render_template(template_name: str, **context) -> Response:
         if 'etag' in context:
             resp.headers.add_header('ETag', context['etag'])
         resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+
+    # Early Hints-compatible Link headers (for Cloudflare or supporting proxies)
+    resp.headers['Link'] = (
+        '</bootstrap/static/css/bootstrap.min.css>; rel=preload; as=style, '
+        '</bootstrap/static/umd/popper.min.js>; rel=preload; as=script, '
+        '</bootstrap/static/js/bootstrap.min.js>; rel=preload; as=script, '
+        '</static/js/htmx.min.js>; rel=preload; as=script, '
+        '</static/fonts/feather/feather.woff>; rel=preload; as=font; crossorigin'
+    )
+    
     return resp
 
 
@@ -418,17 +428,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
+    
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets = []
-
-    def store_code(match):
-        code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
-
-    # Fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', store_code, text)
-    # Inline code (`...`)
-    text = re.sub(r'`[^`\n]+`', store_code, text)
+    code_snippets, text = stash_code_md(text)
 
     # Step 2: Escape <...> unless they look like valid HTML tags
     def escape_tag(match):
@@ -446,8 +448,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
     text = re.sub(r'<([^<>]+?)>', escape_tag, text)
 
     # Step 3: Restore code blocks
-    for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    text = pop_code(code_snippets=code_snippets, text=text)
 
     return text
 
@@ -458,16 +459,7 @@ def handle_double_bolds(text: str) -> str:
     """
 
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets = []
-
-    def store_code(match):
-        code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
-
-    # Fenced code blocks (```...```)
-    text = re.sub(r'```[\s\S]*?```', store_code, text)
-    # Inline code (`...`)
-    text = re.sub(r'`[^`\n]+`', store_code, text)
+    code_snippets, text = stash_code_md(text)
 
     # Step 2: Wrap **bold** sections with <strong></strong>
     # Regex is slightly modified from markdown2 source code
@@ -475,8 +467,7 @@ def handle_double_bolds(text: str) -> str:
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
     # Step 3: Restore code blocks
-    for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    text = pop_code(code_snippets=code_snippets, text=text)
 
     return text
 
@@ -621,23 +612,134 @@ def first_paragraph(html):
         return ''
 
 
-def community_link_to_href(link: str) -> str:
-    pattern = r"!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/community/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'!\g<1>@\g<2></a>', link)
+def community_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/community/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'!\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def feed_link_to_href(link: str) -> str:
-    pattern = r"~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = r'<a href=https://' + current_app.config['SERVER_NAME'] + r'/feed/lookup/'
-    return re.sub(pattern, server + r'\g<1>/\g<2>>' + r'~\g<1>@\g<2></a>', link)
+def feed_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    pattern = r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = r'<a href="https://' + server_name + r'/feed/lookup/'
+    link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'~\g<1>@\g<2></a>', link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+
+    return link
 
 
-def person_link_to_href(link: str) -> str:
-    pattern = r"@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
-    server = f'https://{current_app.config["SERVER_NAME"]}/user/lookup/'
+def person_link_to_href(link: str, server_name_override: str | None = None) -> str:
+    if server_name_override:
+        server_name = server_name_override
+    else:
+        server_name = current_app.config['SERVER_NAME']
+    
+    # Stash the <code> portions so they are not formatted
+    code_snippets, link = stash_code_html(link)
+
+    # Stash the existing links so they are not formatted
+    link_snippets, link = stash_link_html(link)
+
+    # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
+    pattern = r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    server = f'https://{server_name}/user/lookup/'
     replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
-    return re.sub(pattern, replacement, link)
+    link = re.sub(pattern, replacement, link)
+
+    # Bring back the links
+    link = pop_link(link_snippets=link_snippets, text=link)
+    
+    # Bring back the <code> portions
+    link = pop_code(code_snippets=code_snippets, text=link)
+    
+    return link
+
+
+def stash_code_html(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
+
+    return (code_snippets, text)
+
+
+def stash_code_md(text: str) -> tuple[list, str]:
+    code_snippets = []
+
+    def store_code(match):
+        code_snippets.append(match.group(0))
+        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+    
+    # Fenced code blocks (```...```)
+    text = re.sub(r'```[\s\S]*?```', store_code, text)
+    # Inline code (`...`)
+    text = re.sub(r'`[^`\n]+`', store_code, text)
+
+    return (code_snippets, text)
+
+
+def pop_code(code_snippets: list, text: str) -> str:
+    for i, code in enumerate(code_snippets):
+        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+    
+    return text
+
+
+def stash_link_html(text: str) -> tuple[list, str]:
+    link_snippets = []
+
+    def store_link(match):
+        link_snippets.append(match.group(0))
+        return f"__LINK_PLACEHOLDER_{len(link_snippets) - 1}__"
+    
+    text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
+
+    return (link_snippets, text)
+
+
+def pop_link(link_snippets: list, text: str) -> str:
+    for i, link in enumerate(link_snippets):
+        text = text.replace(f"__LINK_PLACEHOLDER_{i}__", link)
+    
+    return text
 
 
 def domain_from_url(url: str, create=True) -> Domain:
@@ -864,6 +966,28 @@ def validation_required(func):
     return decorated_view
 
 
+def approval_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not (current_user.private_key is None and (g.site.registration_mode == 'RequireApplication' or g.site.registration_mode == 'Closed')):
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.please_wait'))
+
+    return decorated_view
+
+
+def trustworthy_account_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if current_user.trustworthy():
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.not_trustworthy'))
+
+    return decorated_view
+
+
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
@@ -978,8 +1102,8 @@ class MultiCheckboxField(SelectMultipleField):
 
 
 def ip_address() -> str:
-    ip = request.headers.get('CF-Connecting-IP') or request.headers.get('X-Forwarded-For') or request.remote_addr
-    if ',' in ip:  # Remove all but first ip addresses
+    ip = request.headers.get('X-Forwarded-For') or request.headers.get('CF-Connecting-IP') or request.remote_addr
+    if ip and ',' in ip:  # Remove all but first ip addresses
         ip = ip[:ip.index(',')].strip()
     return ip
 
@@ -1153,6 +1277,10 @@ def can_create_post(user, content: Community) -> bool:
     if user.ban_posts:
         return False
 
+    if user.is_local():
+        if user.verified is False or user.private_key is None:
+            return False
+
     if content.is_moderator(user) or user.is_admin():
         return True
 
@@ -1174,6 +1302,10 @@ def can_create_post_reply(user, content: Community) -> bool:
 
     if user.ban_comments:
         return False
+
+    if user.is_local():
+        if user.verified is False or user.private_key is None:
+            return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1972,12 +2104,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
-
-    if current_app.debug and request.host == 'piefed.ngrok.app':
-        if return_type and return_type == 'model':
-            return User.query.get(1)
-        else:
-            return 1
 
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:

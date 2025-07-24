@@ -15,7 +15,7 @@ from flask import current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
-from flask_sqlalchemy import BaseQuery
+from flask_sqlalchemy.query import Query
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
@@ -44,7 +44,7 @@ class PostReplyValidationError(Exception):
     pass
 
 
-class FullTextSearchQuery(BaseQuery, SearchQueryMixin):
+class FullTextSearchQuery(Query, SearchQueryMixin):
     pass
 
 
@@ -632,7 +632,7 @@ class Community(db.Model):
         else:
             return f"!{self.ap_id.lower()}"
 
-    @cache.memoize(timeout=3)
+    @cache.memoize(timeout=300)
     def moderators(self):
         return CommunityMember.query.filter((CommunityMember.community_id == self.id) &
                                             (or_(
@@ -660,10 +660,16 @@ class Community(db.Model):
     def is_owner(self, user=None):
         if user is None:
             return any(moderator.user_id == current_user.get_id() and moderator.is_owner for moderator in
-                       self.moderators()) or current_user.get_id() == self.user_id
+                       self.moderators())
         else:
-            return any(moderator.user_id == user.id and moderator.is_owner for moderator in
-                       self.moderators()) or user.id == self.user_id
+            return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
+
+    def num_owners(self):
+        result = 0
+        for moderator in self.moderators():
+            if moderator.is_owner:
+                result += 1
+        return result
 
     def is_instance_admin(self, user):
         if self.instance_id:
@@ -697,6 +703,22 @@ class Community(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
+    def humanize_subscribers(self, total=True):
+        """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
+
+        if total:
+            subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
+        else:
+            subscribers = self.subscriptions_count
+        
+        if not subscribers:
+            return "0"
+
+        if subscribers < 1000:
+            return str(subscribers)
+        else:
+            return str(int(subscribers / 100) / 10) + "k"
+    
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
                                                                       NotificationSubscription.user_id == user_id,
@@ -858,6 +880,7 @@ class User(UserMixin, db.Model):
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     reports = db.Column(db.Integer, default=0)  # how many times this user has been reported.
     default_sort = db.Column(db.String(25), default='hot')
+    default_comment_sort = db.Column(db.String(10), default='hot')
     default_filter = db.Column(db.String(25), default='subscribed')
     theme = db.Column(db.String(20), default='')
     font = db.Column(db.String(25), default='')
@@ -1150,7 +1173,7 @@ class User(UserMixin, db.Model):
         total_downvotes = downvotes + comment_downvotes
 
         # Calculate the new attitude value
-        if total_upvotes + total_downvotes > 2:  # Only calculate attitude if they've done 3 or more votes
+        if total_upvotes + total_downvotes > 9:  # Only calculate attitude if they've done 10 or more votes
             new_attitude = (total_upvotes - total_downvotes) / (total_upvotes + total_downvotes)
         else:
             new_attitude = None
@@ -1248,24 +1271,35 @@ class User(UserMixin, db.Model):
 
     def delete_dependencies(self):
         if self.cover_id:
-            file = File.query.get(self.cover_id)
+            file = db.session.query(File).get(self.cover_id)
             file.delete_from_disk()
             self.cover_id = None
             db.session.delete(file)
         if self.avatar_id:
-            file = File.query.get(self.avatar_id)
+            file = db.session.query(File).get(self.avatar_id)
             file.delete_from_disk()
             self.avatar_id = None
             db.session.delete(file)
         if self.waiting_for_approval():
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
+        db.session.execute(text('DELETE FROM "user_role" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
+        db.session.query(Filter).filter(Filter.user_id == self.id).delete()
+        db.session.query(UserFlair).filter(UserFlair.user_id == self.id).delete()
+        db.session.query(UserFollower).filter(or_(UserFollower.local_user_id == self.id, UserFollower.remote_user_id == self.id)).delete()
+        db.session.query(UserFollowRequest).filter(UserFollowRequest.user_id == self.id).delete()
+        db.session.query(CommunityMember).filter(CommunityMember.user_id == self.id).delete()
+        db.session.query(CommunityBlock).filter(CommunityBlock.user_id == self.id).delete()
+        db.session.query(CommunityBan).filter(CommunityBan.user_id == self.id).delete()
+        db.session.query(ChatMessage).filter(or_(ChatMessage.sender_id == self.id, ChatMessage.recipient_id == self.id)).delete()
+        db.session.query(UserBlock).filter(or_(UserBlock.blocker_id == self.id, UserBlock.blocked_id == self.id)).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
         db.session.query(PollChoiceVote).filter(PollChoiceVote.user_id == self.id).delete()
         db.session.query(PostBookmark).filter(PostBookmark.user_id == self.id).delete()
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.user_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.user_id == self.id).update({ModLog.user_id: None})
         db.session.query(ModLog).filter(ModLog.target_user_id == self.id).update({ModLog.target_user_id: None})
+        db.session.query(CommunityWikiPageRevision).filter(CommunityWikiPageRevision.user_id == self.id).update({CommunityWikiPageRevision.user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
 
     def purge_content(self, soft=True):
@@ -1397,7 +1431,7 @@ class Post(db.Model):
 
     search_vector = db.Column(TSVectorType('title', 'body'))
 
-    image = db.relationship(File, lazy='joined', foreign_keys=[image_id], cascade="all, delete")
+    image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
@@ -1805,21 +1839,40 @@ class Post(db.Model):
                                        {'post_id': self.id}).scalars()
         reply_ids = tuple(reply_ids)
         if reply_ids:
+            # Handle file deletions for reply images first
+            reply_image_ids = db.session.execute(text('SELECT image_id FROM "post_reply" WHERE post_id = :post_id AND image_id IS NOT NULL'),
+                                                 {'post_id': self.id}).scalars()
+            for image_id in reply_image_ids:
+                file = db.session.query(File).get(image_id)
+                if file:
+                    file.delete_from_disk()
+            
+            # Delete all reply-related data
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
             db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'),
                                {'reply_ids': reply_ids})
+            # Update ModLog entries to remove references to deleted replies
+            db.session.execute(text('UPDATE "mod_log" SET reply_id = NULL WHERE reply_id IN :reply_ids'),
+                               {'reply_ids': reply_ids})
+            # Finally delete all the replies
             db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
 
-            self.community.post_reply_count = db.session.execute(
-                text('SELECT COUNT(id) as c FROM "post_reply" WHERE community_id = :community_id AND deleted = false'),
-                {'community_id': self.community_id}).scalar()
-
         if self.image_id:
-            file = File.query.get(self.image_id)
-            file.delete_from_disk()
+            # Check if any other Posts reference this File
+            other_posts_count = db.session.execute(
+                text("SELECT COUNT(*) FROM post WHERE image_id = :image_id AND id != :post_id"),
+                {"image_id": self.image_id, "post_id": self.id}).scalar()
+            
+            # Only delete the File if no other Posts reference it
+            if other_posts_count == 0:
+                file = db.session.query(File).get(self.image_id)
+                if file:
+                    file.delete_from_disk()
+                    db.session.delete(file)
+            self.image_id = None
 
     def has_been_reported(self):
         return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
@@ -1873,8 +1926,8 @@ class Post(db.Model):
     def public_url(self):
         return self.profile_id()
 
-    def blocked_by_content_filter(self, content_filters):
-        if current_user.is_authenticated and self.user_id == current_user.id:
+    def blocked_by_content_filter(self, content_filters, user_id):
+        if self.user_id == user_id:
             return False
         lowercase_title = self.title.lower()
         for name, keywords in content_filters.items() if content_filters else {}:
@@ -1882,6 +1935,15 @@ class Post(db.Model):
                 if keyword in lowercase_title:
                     return name
         return False
+
+    def blurred(self, user):
+        if user is None:
+            return self.nsfw or self.nsfl or self.spoiler_flair()
+        else:
+            return (user.hide_nsfw == 2 and self.nsfw) or \
+                (user.hide_nsfl == 2 and self.nsfl) or \
+                (user.ignore_bots == 2 and self.from_bot) or \
+                self.spoiler_flair()
 
     def posted_at_localized(self, sort, locale):
         # some locales do not have a definition for 'weeks' so are unable to display some dates in some languages. Fall back to english for those languages.
@@ -1958,101 +2020,92 @@ class Post(db.Model):
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
                 return None
-        existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
-        if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
-            if existing_vote.effect == 1:
-                vote_direction = 'upvote'
-            elif existing_vote.effect == -1:
-                vote_direction = 'downvote'
-        assert vote_direction == 'upvote' or vote_direction == 'downvote'
-        undo = None
-        if existing_vote:
-            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
-                if not self.community.low_quality:
-                    with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                        db.session.execute(
-                            text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
-                            {'effect': existing_vote.effect, 'user_id': self.user_id})
-                        db.session.commit()
-                if existing_vote.effect > 0:  # previous vote was up
-                    if vote_direction == 'upvote':  # new vote is also up, so remove it
-                        db.session.delete(existing_vote)
-                        db.session.commit()
-                        self.up_votes -= 1
-                        self.score -= existing_vote.effect  # score - (+1) = score-1
-                        undo = 'Like'
-                    else:  # new vote is down while previous vote was up, so reverse their previous vote
-                        existing_vote.effect = -1
-                        db.session.commit()
-                        self.up_votes -= 1
-                        self.down_votes += 1
-                        self.score += existing_vote.effect * 2  # score + (-2) = score-2
-                else:  # previous vote was down
-                    if vote_direction == 'downvote':  # new vote is also down, so remove it
-                        db.session.delete(existing_vote)
-                        db.session.commit()
-                        self.down_votes -= 1
-                        self.score -= existing_vote.effect  # score - (-1) = score+1
-                        undo = 'Dislike'
-                    else:  # new vote is up while previous vote was down, so reverse their previous vote
-                        existing_vote.effect = 1
-                        db.session.commit()
-                        self.up_votes += 1
-                        self.down_votes -= 1
-                        self.score += existing_vote.effect * 2  # score + (+2) = score+2
-                db.session.commit()
-        else:
-            if vote_direction == 'upvote':
-                effect = Instance.weight(user.ap_domain)
-                spicy_effect = effect
-                # Make 'hot' sort more spicy by amplifying the effect of early upvotes
-                if self.up_votes + self.down_votes <= 10:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_10']
-                elif self.up_votes + self.down_votes <= 30:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_30']
-                elif self.up_votes + self.down_votes <= 60:
-                    spicy_effect = effect * current_app.config['SPICY_UNDER_60']
-                if user.cannot_vote():
-                    effect = spicy_effect = 0
-                self.up_votes += 1
-                self.score += spicy_effect  # score + (+1) = score+1
-            else:
-                effect = -1.0
-                spicy_effect = effect
-                self.down_votes += 1
-                # Make 'hot' sort more spicy by amplifying the effect of early downvotes
-                if self.up_votes + self.down_votes <= 30:
-                    spicy_effect *= current_app.config['SPICY_UNDER_30']
-                elif self.up_votes + self.down_votes <= 60:
-                    spicy_effect *= current_app.config['SPICY_UNDER_60']
-                if user.cannot_vote():
-                    effect = spicy_effect = 0
-                self.score += spicy_effect  # score + (-1) = score-1
-            vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
-                            effect=effect)
-            # upvotes do not increase reputation in low quality communities
-            if self.community.low_quality and effect > 0:
-                effect = 0
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
-                                   {'effect': effect, 'user_id': self.user_id})
-                db.session.commit()
-            db.session.add(vote)
-
-        db.session.commit()
-
-        # Calculate new ranking values
-        new_ranking = self.post_ranking(self.score, self.created_at)
-        new_ranking_scaled = int(new_ranking + self.community.scale_by())
-
-        # Update post ranking
         with redis_client.lock(f"lock:post:{self.id}", timeout=10, blocking_timeout=6):
-            db.session.execute(text("""UPDATE "post" 
-                               SET ranking=:ranking, ranking_scaled=:ranking_scaled 
-                               WHERE id=:post_id"""),
-                               {"ranking": new_ranking,
-                                "ranking_scaled": new_ranking_scaled,
-                                "post_id": self.id})
+            existing_vote = PostVote.query.filter_by(user_id=user.id, post_id=self.id).first()
+            if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+                if existing_vote.effect == 1:
+                    vote_direction = 'upvote'
+                elif existing_vote.effect == -1:
+                    vote_direction = 'downvote'
+            assert vote_direction == 'upvote' or vote_direction == 'downvote'
+            undo = None
+            if existing_vote:
+                with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+                    if not self.community.low_quality:
+                        with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                            db.session.execute(
+                                text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
+                                {'effect': existing_vote.effect, 'user_id': self.user_id})
+                            db.session.commit()
+                    if existing_vote.effect > 0:  # previous vote was up
+                        if vote_direction == 'upvote':  # new vote is also up, so remove it
+                            db.session.delete(existing_vote)
+                            db.session.commit()
+                            self.up_votes -= 1
+                            self.score -= existing_vote.effect  # score - (+1) = score-1
+                            undo = 'Like'
+                        else:  # new vote is down while previous vote was up, so reverse their previous vote
+                            existing_vote.effect = -1
+                            db.session.commit()
+                            self.up_votes -= 1
+                            self.down_votes += 1
+                            self.score += existing_vote.effect * 2  # score + (-2) = score-2
+                    else:  # previous vote was down
+                        if vote_direction == 'downvote':  # new vote is also down, so remove it
+                            db.session.delete(existing_vote)
+                            db.session.commit()
+                            self.down_votes -= 1
+                            self.score -= existing_vote.effect  # score - (-1) = score+1
+                            undo = 'Dislike'
+                        else:  # new vote is up while previous vote was down, so reverse their previous vote
+                            existing_vote.effect = 1
+                            db.session.commit()
+                            self.up_votes += 1
+                            self.down_votes -= 1
+                            self.score += existing_vote.effect * 2  # score + (+2) = score+2
+                    db.session.commit()
+            else:
+                if vote_direction == 'upvote':
+                    effect = Instance.weight(user.ap_domain)
+                    spicy_effect = effect
+                    # Make 'hot' sort more spicy by amplifying the effect of early upvotes
+                    if self.up_votes + self.down_votes <= 10:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_10']
+                    elif self.up_votes + self.down_votes <= 30:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_30']
+                    elif self.up_votes + self.down_votes <= 60:
+                        spicy_effect = effect * current_app.config['SPICY_UNDER_60']
+                    if user.cannot_vote():
+                        effect = spicy_effect = 0
+                    self.up_votes += 1
+                    self.score += spicy_effect  # score + (+1) = score+1
+                else:
+                    effect = -1.0
+                    spicy_effect = effect
+                    self.down_votes += 1
+                    # Make 'hot' sort more spicy by amplifying the effect of early downvotes
+                    if self.up_votes + self.down_votes <= 30:
+                        spicy_effect *= current_app.config['SPICY_UNDER_30']
+                    elif self.up_votes + self.down_votes <= 60:
+                        spicy_effect *= current_app.config['SPICY_UNDER_60']
+                    if user.cannot_vote():
+                        effect = spicy_effect = 0
+                    self.score += spicy_effect  # score + (-1) = score-1
+                vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
+                                effect=effect)
+                # upvotes do not increase reputation in low quality communities
+                if self.community.low_quality and effect > 0:
+                    effect = 0
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                       {'effect': effect, 'user_id': self.user_id})
+                    db.session.commit()
+                db.session.add(vote)
+
+            # Calculate new ranking values
+            self.ranking = self.post_ranking(self.score, self.created_at)
+            self.ranking_scaled = int(self.ranking + self.community.scale_by())
+
             db.session.commit()
         return undo
 
@@ -2082,6 +2135,8 @@ class PostReply(db.Model):
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)
     deleted = db.Column(db.Boolean, default=False, index=True)
     deleted_by = db.Column(db.Integer, index=True)
+    replies_enabled = db.Column(db.Boolean, default=True)
+    sticky = db.Column(db.Boolean, default=False, index=True)
     ip = db.Column(db.String(50))
     from_bot = db.Column(db.Boolean, default=False, index=True)
     up_votes = db.Column(db.Integer, default=0)
@@ -2127,8 +2182,21 @@ class PostReply(db.Model):
     )
 
     @classmethod
-    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished,
-            request_json: dict = None, announce_id=None, session=None):
+    def new(
+        cls,
+        user: User,
+        post: Post,
+        in_reply_to,
+        body,
+        body_html,
+        notify_author,
+        language_id,
+        distinguished,
+        request_json: dict = None,
+        announce_id=None,
+        session=None,
+        replies_enabled=None
+    ):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
             reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound
         from app.activitypub.util import notify_about_post_reply
@@ -2149,26 +2217,53 @@ class PostReply(db.Model):
             parent_id = None
             depth = 0
 
-        reply = PostReply(user_id=user.id, post_id=post.id, parent_id=parent_id,
-                          depth=depth,
-                          community_id=post.community.id, body=body,
-                          body_html=body_html, body_html_safe=True,
-                          from_bot=user.bot or user.bot_override, nsfw=post.nsfw,
-                          notify_author=notify_author, instance_id=user.instance_id,
-                          language_id=language_id,
-                          distinguished=distinguished,
-                          ap_id=request_json['object']['id'] if request_json else None,
-                          ap_create_id=request_json['id'] if request_json else None,
-                          ap_announce_id=announce_id)
+        # Defensive: handle malformed request_json
+        ap_id = None
+        ap_create_id = None
+        if request_json:
+            try:
+                ap_id = request_json.get('object', {}).get('id')
+            except Exception:
+                ap_id = None
+            try:
+                ap_create_id = request_json.get('id')
+            except Exception:
+                ap_create_id = None
+
+        reply = PostReply(
+            user_id=user.id,
+            post_id=post.id,
+            parent_id=parent_id,
+            depth=depth,
+            community_id=post.community.id,
+            body=body,
+            body_html=body_html,
+            body_html_safe=True,
+            from_bot=user.bot or user.bot_override,
+            nsfw=post.nsfw,
+            notify_author=notify_author,
+            instance_id=user.instance_id,
+            language_id=language_id,
+            distinguished=distinguished,
+            ap_id=ap_id,
+            ap_create_id=ap_create_id,
+            ap_announce_id=announce_id,
+            replies_enabled=replies_enabled if replies_enabled is not None else True
+        )
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_('Blocked phrase in comment'))
+
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:
             notification_target = PostReply.query.get(in_reply_to.parent_id)
+            if notification_target is None:
+                raise PostReplyValidationError(_('Parent reply not found'))
 
+        if not hasattr(notification_target, 'author') or notification_target.author is None:
+            raise PostReplyValidationError(_('Notification target missing author'))
         if notification_target.author.has_blocked_user(reply.user_id):
             raise PostReplyValidationError(_('Replier blocked'))
 
@@ -2193,6 +2288,7 @@ class PostReply(db.Model):
             session.rollback()
             return PostReply.query.filter_by(ap_id=request_json['object']['id']).one()
 
+
         if in_reply_to and in_reply_to.path:
             reply.path = in_reply_to.path[:]
             reply.path.append(reply.id)
@@ -2200,6 +2296,9 @@ class PostReply(db.Model):
                                {'parents': tuple(in_reply_to.path)})
         else:
             reply.path = [0, reply.id]
+        # Defensive: ensure reply.path has at least 2 elements
+        if not isinstance(reply.path, list) or len(reply.path) < 2:
+            raise PostReplyValidationError(_('Reply path is malformed'))
         reply.root_id = reply.path[1]
 
         # Notify subscribers
@@ -2304,17 +2403,17 @@ class PostReply(db.Model):
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
                            {'post_reply_id': self.id})
         if self.image_id:
-            file = File.query.get(self.image_id)
+            file = db.session.query(File).get(self.image_id)
             file.delete_from_disk()
 
     def child_replies(self):
-        return PostReply.query.filter_by(parent_id=self.id).all()
+        return db.session(PostReply).filter_by(parent_id=self.id).all()
 
     def has_replies(self, include_deleted=False):
         if include_deleted:
-            reply = PostReply.query.filter_by(parent_id=self.id).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).first()
         else:
-            reply = PostReply.query.filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
+            reply = db.session.query(PostReply).filter_by(parent_id=self.id).filter(PostReply.deleted == False).first()
         return reply is not None
 
     def has_been_reported(self):
@@ -2337,16 +2436,16 @@ class PostReply(db.Model):
     def vote(self, user: User, vote_direction: str):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
-        existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
-        if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
-            if existing_vote.effect == 1:
-                vote_direction = 'upvote'
-            elif existing_vote.effect == -1:
-                vote_direction = 'downvote'
-        assert vote_direction == 'upvote' or vote_direction == 'downvote'
-        undo = None
-        if existing_vote:
-            with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
+        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
+            existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+            if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
+                if existing_vote.effect == 1:
+                    vote_direction = 'upvote'
+                elif existing_vote.effect == -1:
+                    vote_direction = 'downvote'
+            assert vote_direction == 'upvote' or vote_direction == 'downvote'
+            undo = None
+            if existing_vote:
                 with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})
@@ -2377,32 +2476,27 @@ class PostReply(db.Model):
                         self.up_votes += 1
                         self.down_votes -= 1
                         self.score += 2
-        else:
-            if user.cannot_vote():
-                effect = 0
             else:
-                effect = 1
-            if vote_direction == 'upvote':
-                self.up_votes += 1
-            else:
-                effect = effect * -1
-                self.down_votes += 1
-            self.score += effect
-            vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
-                                 effect=effect)
-            with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
-                db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
-                                   {'effect': effect, 'user_id': self.user_id})
-                db.session.commit()
-            db.session.add(vote)
-        db.session.commit()
+                if user.cannot_vote():
+                    effect = 0
+                else:
+                    effect = 1
+                if vote_direction == 'upvote':
+                    self.up_votes += 1
+                else:
+                    effect = effect * -1
+                    self.down_votes += 1
+                self.score += effect
+                vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
+                                     effect=effect)
+                with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
+                    db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
+                                       {'effect': effect, 'user_id': self.user_id})
+                    db.session.commit()
+                db.session.add(vote)
 
-        # Calculate the new ranking value
-        new_ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
-
-        with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
-            db.session.execute(text("UPDATE post_reply SET ranking=:ranking WHERE id=:post_reply_id"),
-                               {"ranking": new_ranking, "post_reply_id": self.id})
+            # Calculate the new ranking value
+            self.ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
             db.session.commit()
         return undo
 
@@ -3204,6 +3298,36 @@ class ActivityBatch(db.Model):
     source_id = db.Column(db.Integer, index=True)         # the ID of the vote that caused this. When undo-ing a vote, look it up by source_id and delete it from this table (before the batch is sent). If not found, federate the undo.
     payload = db.Column(db.JSON)
     created = db.Column(db.DateTime, default=utcnow)
+
+
+class APRequestStatus(db.Model):
+    """Model for tracking ActivityPub request processing status"""
+    __tablename__ = 'ap_request_status'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(UUID(as_uuid=True), nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, default=utcnow, nullable=False)
+    checkpoint = db.Column(db.String(64), nullable=False)
+    status = db.Column(db.String(32), nullable=False)
+    activity_id = db.Column(db.Text, index=True)
+    post_object_uri = db.Column(db.Text, index=True)
+    details = db.Column(db.Text)
+
+
+class APRequestBody(db.Model):
+    """Model for storing ActivityPub request POST body content"""
+    __tablename__ = 'ap_request_body'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    request_id = db.Column(UUID(as_uuid=True), nullable=False, unique=True, index=True)
+    timestamp = db.Column(db.DateTime, default=utcnow, nullable=False)
+    headers = db.Column(db.JSON)  # Store request headers as JSON
+    body = db.Column(db.Text, nullable=False)  # Store raw POST body
+    parsed_json = db.Column(db.JSON)  # Store parsed JSON if successful
+    content_type = db.Column(db.String(128))
+    content_length = db.Column(db.Integer)
+    remote_addr = db.Column(db.String(45))  # IPv4 or IPv6 address
+    user_agent = db.Column(db.Text)
 
 
 class BlockedImage(db.Model):

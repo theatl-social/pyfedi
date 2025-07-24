@@ -1,5 +1,5 @@
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
-{% set content_blocked = post.blocked_by_content_filter(content_filters)
+{% set content_blocked = post.blocked_by_content_filter(content_filters, current_user.get_id())
                          or (current_user.hide_nsfw == 3 and post.nsfw)
                          or (current_user.hide_nsfl == 3 and post.nsfl)
                          or (current_user.ignore_bots == 3 and post.from_bot) -%}

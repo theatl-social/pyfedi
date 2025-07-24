@@ -73,12 +73,13 @@ def load_plugins(plugins_dir: str = None) -> Dict[str, Any]:
             }
             
             loaded_count += 1
-            logger.info(f"Loaded plugin: {plugin_name}")
+            if int(os.environ.get('FLASK_DEBUG', '0')):
+                logger.info(f"Loaded plugin: {plugin_name}")
             
         except Exception as e:
             logger.error(f"Failed to load plugin {plugin_name}: {e}")
-    
-    logger.info(f"Successfully loaded {loaded_count} plugins")
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        logger.info(f"Successfully loaded {loaded_count} plugins")
     return _loaded_plugins
 
 

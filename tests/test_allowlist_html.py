@@ -1,6 +1,6 @@
 import unittest
 
-from app.utils import allowlist_html
+from app.utils import allowlist_html, community_link_to_href, feed_link_to_href, person_link_to_href
 
 
 class TestAllowlistHtml(unittest.TestCase):
@@ -56,6 +56,115 @@ class TestAllowlistHtml(unittest.TestCase):
         print(f"Original: {html}")
         print(f"Result: {result}")
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
+    
+    def test_community_link_basic_html(self):
+        """Test link creation of !community@instance.tld"""
+        text = "!community@instance.tld"
+        correct_html = '<a href="https://instance.tld/community/lookup/community/instance.tld">!community@instance.tld</a>'
+        result = community_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_community_link_markdown_link(self):
+        """
+        Ignore link creation inside a markdown-created link
+
+        Test input came from parsing markdown: [Link to !community@instance.tld is not here](https://other_site.tld)
+        """
+        text = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                'Link to !community@instance.tld is not here</a>')
+        correct_html = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                        'Link to !community@instance.tld is not here</a>')
+        result = community_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_community_link_code_block(self):
+        """Ignore link creation if in a <code> block"""
+        text = "<code>!community@instance.tld</code>"
+        correct_html = "<code>!community@instance.tld</code>"
+        result = community_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+
+    def test_community_link_masto_link(self):
+        """
+        Ignore link creation if preceded by a / (mastodon links are sometimes like this, more often for people links)
+        """
+        text = "https://masto.tld/!community@instance.tld/12345"
+        correct_html = "https://masto.tld/!community@instance.tld/12345"
+        result = community_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_feed_link_basic_html(self):
+        """Test link creation of ~feed@instance.tld"""
+        text = "~feed@instance.tld"
+        correct_html = '<a href="https://instance.tld/feed/lookup/feed/instance.tld">~feed@instance.tld</a>'
+        result = feed_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_feed_link_markdown_link(self):
+        """
+        Ignore link creation inside a markdown-created link
+
+        Test input came from parsing markdown: [Link to ~feed@instance.tld is not here](https://other_site.tld)
+        """
+        text = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                'Link to ~feed@instance.tld is not here</a>')
+        correct_html = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                        'Link to ~feed@instance.tld is not here</a>')
+        result = feed_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_feed_link_code_block(self):
+        """Ignore link creation if in a <code> block"""
+        text = "<code>~feed@instance.tld</code>"
+        correct_html = "<code>~feed@instance.tld</code>"
+        result = feed_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+
+    def test_feed_link_masto_link(self):
+        """
+        Ignore link creation if preceded by a / (mastodon links are sometimes like this, more often for people links)
+        """
+        text = "https://masto.tld/~feed@instance.tld/12345"
+        correct_html = "https://masto.tld/~feed@instance.tld/12345"
+        result = feed_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_person_link_basic_html(self):
+        """Test link creation of @person@instance.tld"""
+        text = "@person@instance.tld"
+        correct_html = ('<a href="https://instance.tld/user/lookup/person/instance.tld" '
+                        'rel="nofollow noindex">@person@instance.tld</a>')
+        result = person_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_person_link_markdown_link(self):
+        """
+        Ignore link creation inside a markdown-created link
+
+        Test input came from parsing markdown: [Link to @person@instance.tld is not here](https://other_site.tld)
+        """
+        text = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                'Link to @person@instance.tld is not here</a>')
+        correct_html = ('<a href="https://other_site.tld" rel="nofollow ugc" target="_blank">'
+                        'Link to @person@instance.tld is not here</a>')
+        result = person_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+    
+    def test_person_link_code_block(self):
+        """Ignore link creation if in a <code> block"""
+        text = "<code>@person@instance.tld</code>"
+        correct_html = "<code>@person@instance.tld</code>"
+        result = person_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
+
+    def test_person_link_masto_link(self):
+        """
+        Ignore link creation if preceded by a / (mastodon links are sometimes like this, more often for people links)
+        """
+        text = "https://masto.tld/@person@instance.tld/12345"
+        correct_html = "https://masto.tld/@person@instance.tld/12345"
+        result = person_link_to_href(text, server_name_override="instance.tld")
+        self.assertEqual(result, correct_html)
 
 
 if __name__ == '__main__':

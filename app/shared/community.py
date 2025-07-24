@@ -192,6 +192,9 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         discussion_languages = input.languages.data
         user = current_user
 
+    if user.verified is False or user.private_key is None:
+        raise Exception("You can't create a community until your account is verified.")
+
     # test user with this name doesn't already exist
     ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/u/' + name.lower()
     existing_user = User.query.filter_by(ap_profile_id=ap_profile_id).first()
@@ -445,7 +448,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
 
     community = Community.query.filter_by(id=community_id).one()
     new_moderator = User.query.filter_by(id=person_id, banned=False).one()
-    if not community.is_owner() and not user.is_admin():
+    if not community.is_owner(user) and not user.is_admin_or_staff():
         raise Exception('incorrect_login')
 
     existing_member = CommunityMember.query.filter(CommunityMember.user_id == new_moderator.id,
@@ -493,6 +496,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     cache.delete_memoized(joined_communities, new_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, new_moderator.id)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 
@@ -508,13 +512,14 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
 
     community = Community.query.filter_by(id=community_id).one()
     old_moderator = User.query.filter_by(id=person_id).one()
-    if not community.is_owner() and not user.is_admin():
+    if not community.is_owner(user) and not user.is_admin_or_staff():
         raise Exception('incorrect_login')
 
     existing_member = CommunityMember.query.filter(CommunityMember.user_id == old_moderator.id,
                                                    CommunityMember.community_id == community_id).first()
     if existing_member:
         existing_member.is_moderator = False
+        existing_member.is_owner = False
         db.session.commit()
     if src == SRC_WEB:
         flash(_('Moderator removed'))
@@ -527,6 +532,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     cache.delete_memoized(joined_communities, old_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, old_moderator.id)
+    cache.delete_memoized(Community.moderators, community)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
 

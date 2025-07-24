@@ -47,7 +47,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts
+    total_comments_on_post_and_cross_posts, approval_required
 
 
 @login_required_if_private_instance
@@ -66,7 +66,7 @@ def show_post(post_id: int):
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
-        sort = request.args.get('sort', 'hot')
+        sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
@@ -138,6 +138,8 @@ def show_post(post_id: int):
                 lazy_load_replies = True
 
             form.notify_author.data = True
+            if current_user.is_authenticated:
+                form.language_id.data = current_user.language_id or g.site.language_id
 
             # user flair
             user_flair = {}
@@ -463,6 +465,7 @@ def post_oembed(post_id):
 @bp.route('/post/<int:post_id>/<vote_direction>/<federate>', methods=['GET', 'POST'])
 @login_required
 @validation_required
+@approval_required
 def post_vote(post_id: int, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -474,6 +477,7 @@ def post_vote(post_id: int, vote_direction, federate):
 @bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>', methods=['POST'])
 @login_required
 @validation_required
+@approval_required
 def comment_vote(comment_id, vote_direction, federate):
     if federate == 'default':
         federate = not current_user.vote_privately
@@ -485,6 +489,7 @@ def comment_vote(comment_id, vote_direction, federate):
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])
 @login_required
 @validation_required
+@approval_required
 def poll_vote(post_id):
     poll_data = Poll.query.get_or_404(post_id)
     if poll_data.mode == 'single':
@@ -669,6 +674,7 @@ def add_reply(post_id: int, comment_id: int):
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
         form.notify_author.data = True
+        form.language_id.data = current_user.language_id or g.site.language_id
 
         return render_template('post/add_reply.html', title=_('Discussing %(title)s', title=post.title), post=post,
                                is_moderator=is_moderator, form=form, comment=in_reply_to,
@@ -699,13 +705,15 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
 
     if in_reply_to.author.has_blocked_user(current_user.id):
         return _('You cannot reply to %(name)s', name=in_reply_to.author.display_name())
+    if not in_reply_to.replies_enabled:
+        return _('This comment cannot be replied to.')
 
     if request.method == 'GET':
         # Get the language of the user being replied to
         recipient_language_id = in_reply_to.language_id or in_reply_to.author.language_id
         recipient_language_code = None
         recipient_language_name = None
-        if recipient_language_id:
+        if recipient_language_id and (current_user.language_id and current_user.language_id != recipient_language_id):
             lang = Language.query.get(recipient_language_id)
             if lang:
                 recipient_language_code = lang.code
@@ -933,7 +941,7 @@ def post_delete(post_id: int):
                                    form=form)
 
 
-def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_all_communities=True):
+def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_deletion=True):
     user: User = User.query.get(user_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
@@ -945,56 +953,57 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
         flash(_('Post deleted.'))
     db.session.commit()
 
-    delete_json = {
-        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-        'type': 'Delete',
-        'actor': user.public_url(),
-        'audience': post.community.public_url(),
-        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-        'published': ap_datetime(utcnow()),
-        'cc': [
-            user.followers_url()
-        ],
-        'object': post.ap_id,
-        'uri': post.ap_id
-    }
-    if post.user_id != user.id:
-        delete_json['summary'] = 'Deleted by mod'
+    if federate_deletion:
 
-    # Federation
-    if not community.local_only:  # local_only communities do not federate
-        # if this is a remote community and we are a mod of that community
-        if not post.community.is_local() and user.is_local() and (
-                post.user_id == user.id or community.is_moderator(user) or community.is_owner(user)):
-            send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                              user.public_url() + '#main-key')
-        elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
-            announce = {
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                "type": 'Announce',
-                "to": [
-                    "https://www.w3.org/ns/activitystreams#Public"
-                ],
-                "actor": post.community.ap_profile_id,
-                "cc": [
-                    post.community.ap_followers_url
-                ],
-                '@context': default_context(),
-                'object': delete_json
-            }
-            for instance in post.community.following_instances():
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                    send_to_remote_instance(instance.id, post.community.id, announce)
+        delete_json = {
+            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            'type': 'Delete',
+            'actor': user.public_url(),
+            'audience': post.community.public_url(),
+            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+            'published': ap_datetime(utcnow()),
+            'cc': [
+                user.followers_url()
+            ],
+            'object': post.ap_id,
+            'uri': post.ap_id
+        }
+        if post.user_id != user.id:
+            delete_json['summary'] = 'Deleted by mod'
 
-    # Federate to microblog followers
-    followers = UserFollower.query.filter_by(local_user_id=post.user_id)
-    if followers:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
-                                                                                    UserFollower.remote_user_id == User.id)
-        instances = instances.filter(UserFollower.local_user_id == post.user_id)
-        for instance in instances:
-            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
-                send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
+        # Federation
+        if not community.local_only:  # local_only communities do not federate
+            # if this is a remote community and we are a mod of that community
+            if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user)):
+                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
+                                  user.public_url() + '#main-key')
+            elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
+                announce = {
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "type": 'Announce',
+                    "to": [
+                        "https://www.w3.org/ns/activitystreams#Public"
+                    ],
+                    "actor": post.community.ap_profile_id,
+                    "cc": [
+                        post.community.ap_followers_url
+                    ],
+                    '@context': default_context(),
+                    'object': delete_json
+                }
+                for instance in post.community.following_instances():
+                    if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
+                        send_to_remote_instance(instance.id, post.community.id, announce)
+
+        # Federate to microblog followers
+        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+        if followers:
+            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
+                                                                                        UserFollower.remote_user_id == User.id)
+            instances = instances.filter(UserFollower.local_user_id == post.user_id)
+            for instance in instances:
+                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
+                    send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
 
     if post.user_id != user.id and reason is not None:
         add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
@@ -1151,12 +1160,15 @@ def post_report(post_id: int):
             return redirect(post.community.local_url())
         
         suspect_user = User.query.get(post.author.id)
+        source_instance = Instance.query.get(suspect_user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_post_id': post.id,
                         'suspect_user_id': post.author.id,
                         'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_user.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_post_title': post.title,
                         'orig_post_body': post.body
                         }
@@ -1474,12 +1486,15 @@ def post_reply_report(post_id: int, comment_id: int):
             return redirect(post.community.local_url())
 
         suspect_author = User.query.get(post_reply.author.id)
+        source_instance = Instance.query.get(suspect_author.instance_id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': post_reply.id,
                         'suspect_user_id': post_reply.author.id,
                         'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
                         'reporter_id': current_user.id,
                         'reporter_user_name': current_user.user_name,
+                        'source_instance_id': suspect_author.instance_id,
+                        'source_instance_domain': source_instance.domain,
                         'orig_comment_body': post_reply.body
                         }
         report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
@@ -1603,6 +1618,23 @@ def post_reply_block_instance(post_id: int, comment_id: int):
         return resp
 
     return redirect(url_for('activitypub.post_ap', post_id=post_id))
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/distinguish', methods=['POST'])
+@login_required
+def post_reply_distinguish(post_id: int, comment_id: int):
+    post = Post.query.get_or_404(post_id)
+    post_reply = PostReply.query.get_or_404(comment_id)
+
+    if (post.community.is_moderator() or post.community.is_owner()) and current_user.id == post_reply.user_id:
+        if post_reply.distinguished:
+            post_reply.distinguished = False
+        else:
+            post_reply.distinguished = True
+        db.session.commit()
+        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    else:
+        abort(401)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
@@ -1882,38 +1914,44 @@ def post_block_image_purge_posts(post_id: int):
 
 @bp.route('/post/<int:post_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_view_voting_activity(post_id: int):
     post = Post.query.get_or_404(post_id)
 
-    post_title = post.title
-    upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        post_title = post.title
+        upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
-                           post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_voting_activity.html', title=_('Voting Activity'),
+                               post_title=post_title, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/comment/<int:comment_id>/voting_activity', methods=['GET'])
 @login_required
-@permission_required('change instance settings')
 def post_reply_view_voting_activity(comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
 
-    reply_text = post_reply.body
-    upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
-        order_by(User.ap_domain, User.user_name)
-    downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
-        order_by(User.ap_domain, User.user_name)
+    if current_user.is_admin_or_staff() or post_reply.community.is_moderator():
 
-    # local users will be at the bottom of each list as ap_domain is empty for those.
+        reply_text = post_reply.body
+        upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
+            order_by(User.ap_domain, User.user_name)
+        downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
+            order_by(User.ap_domain, User.user_name)
 
-    return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
-                           reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+        # local users will be at the bottom of each list as ap_domain is empty for those.
+
+        return render_template('post/post_reply_voting_activity.html', title=_('Voting Activity'),
+                               reply_text=reply_text, upvoters=upvoters, downvoters=downvoters)
+    else:
+        abort(403)
 
 
 @bp.route('/post/<int:post_id>/fixup_from_remote', methods=['POST'])

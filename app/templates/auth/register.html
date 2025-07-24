@@ -46,16 +46,18 @@
                                     <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
                                 </div>
                                 {{ render_field(form.password2) }}
-                                {% if form.question -%}
-                                    <div class="mb-3 required">{{ form.question.label.text | safe }}
-                                        {{ form.question(class_="form-control", maxlength=255) }}
-                                        {% if len(form.question.errors) -%}
-                                            <br>
-                                            {% for error in form.question.errors %}
-                                                <span style="color: red;">[{{ error }}]</span>
-                                            {% endfor %}
-                                        {% endif -%}
-                                    </div>
+                                {% if site.registration_mode != "Open"%}
+                                    {% if form.question -%}
+                                        <div class="mb-3 required">{{ form.question.label.text | safe }}
+                                            {{ form.question(class_="form-control", maxlength=255) }}
+                                            {% if len(form.question.errors) -%}
+                                                <br>
+                                                {% for error in form.question.errors %}
+                                                    <span style="color: red;">[{{ error }}]</span>
+                                                {% endfor %}
+                                            {% endif -%}
+                                        </div>
+                                    {% endif -%}
                                 {% endif -%}
                                 {% if form.terms -%}
                                     {{ render_field(form.terms) }}

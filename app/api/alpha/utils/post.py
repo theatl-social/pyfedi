@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from flask import current_app
+from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
@@ -12,7 +12,8 @@ from app.models import Post, Community, CommunityMember, utcnow, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
-    site_language_id, filtered_out_communities
+    site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
+    moderating_communities_ids, user_filters_home, user_filters_posts
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -38,6 +39,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
         user = User.query.get(user_id)
+        g.user = user   # save the currently logged in user into g, to save loading it up again and again in post_view.
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested
@@ -54,6 +56,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         blocked_person_ids = []
         blocked_community_ids = []
         blocked_instance_ids = []
+
+    content_filters = {}
 
     # Post.user_id.not_in(blocked_person_ids)               # exclude posts by blocked users
     # Post.community_id.not_in(blocked_community_ids)       # exclude posts in blocked communities
@@ -105,6 +109,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                           Community.ap_domain == ap_domain,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
         elif community_id:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.user_id.not_in(blocked_person_ids),
@@ -114,6 +119,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                           Community.id == community_id,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
         elif person_id:
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                       Post.community_id.not_in(blocked_community_ids),
@@ -128,6 +134,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                 join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
+            content_filters = user_filters_home(user_id) if user_id else {}
 
     # change when polls are supported
     posts = posts.filter(Post.type != POST_TYPE_POLL)
@@ -199,12 +206,44 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
+    if user_id:
+
+        banned_from = communities_banned_from(user_id)
+
+        bookmarked_posts = list(db.session.execute(text(
+            'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+        if bookmarked_posts is None:
+            bookmarked_posts = []
+
+        post_subscriptions = list(db.session.execute(text(
+            'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+            {'type': NOTIF_POST, 'user_id': user_id}).scalars())
+        if post_subscriptions is None:
+            post_subscriptions = []
+
+        read_posts = list(db.session.execute(
+            text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+
+        communities_moderating = moderating_communities_ids(user.id)
+        communities_joined = joined_or_modding_communities(user.id)
+    else:
+        bookmarked_posts = []
+        banned_from = []
+        post_subscriptions = []
+        read_posts = []
+        communities_moderating = []
+        communities_joined = []
+
     postlist = []
     for post in posts:
-        try:
-            postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id))
-        except:
-            continue
+        postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
+                                  communities_moderating=communities_moderating,
+                                  banned_from=banned_from, bookmarked_posts=bookmarked_posts,
+                                  post_subscriptions=post_subscriptions, read_posts=read_posts,
+                                  communities_joined=communities_joined, content_filters=content_filters))
+
     list_json = {
         "posts": postlist,
         "next_page": str(posts.next_num) if posts.next_num is not None else None

@@ -1,10 +1,11 @@
+from flask import g
 from sqlalchemy import desc, or_, text
 
 from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view
 from app.constants import *
-from app.models import Notification, PostReply, Post
+from app.models import Notification, PostReply, Post, User
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
     edit_reply, \
     delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
@@ -32,6 +33,9 @@ def get_reply_list(auth, data, user_id=None):
 
     if auth:
         user_id = authorise_api_user(auth)
+
+    if user_id:
+        g.user = User.query.get(user_id)    # save the currently logged in user into g, to save loading it up again and again in reply_view.
 
     post_is_same = False
     community_is_same = False

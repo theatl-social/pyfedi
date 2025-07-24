@@ -3,10 +3,12 @@ from collections import namedtuple
 from random import randint
 from typing import List
 
-from flask import g, current_app, request, redirect, url_for, flash, abort, Markup
+from flask import g, current_app, request, redirect, url_for, flash, abort
+from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
 from slugify import slugify
+from sqlalchemy import desc
 
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
@@ -26,7 +28,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
-    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids
+    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -728,7 +730,9 @@ def show_feed(feed):
         post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
         posts = post_ids_to_models(post_ids, sort)
 
-        feed_communities = Community.query.filter(Community.id.in_(feed_community_ids), Community.banned == False)
+        feed_communities = Community.query.filter(
+            Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
+            order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
                            page=page + 1, sort=sort, layout=post_layout, result_id=result_id) if has_next_page else None
@@ -784,6 +788,7 @@ def get_all_child_feed_ids(feed: Feed) -> List[int]:
 @bp.route('/f/<feed_name>/submit', methods=['GET', 'POST'])
 @login_required
 @validation_required
+@approval_required
 def feed_create_post(feed_name):
     feed = Feed.query.filter(Feed.machine_name == feed_name.strip().lower()).first()
     if not feed:
@@ -816,6 +821,7 @@ def feed_create_post(feed_name):
 @bp.route('/feed/<actor>/subscribe', methods=['GET'])
 @login_required
 @validation_required
+@approval_required
 def subscribe(actor):
     do_feed_subscribe(actor, current_user.id)
     referrer = request.headers.get('Referer', None)

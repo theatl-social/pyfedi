@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupCommunityFilter();
     setupPopupTooltips();
     setupPasswordEye();
+    setupBasicAutoResize();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1475,12 +1476,14 @@ function setupDynamicContentObserver() {
                             node.querySelector('.hide_button') ||
                             node.querySelector('.unhide') ||
                             node.querySelector('.comment') ||
+                            node.querySelector('.autoresize') ||
                             node.classList.contains('send_post') ||
                             node.classList.contains('confirm_first') ||
                             node.classList.contains('showElement') ||
                             node.classList.contains('hide_button') ||
                             node.classList.contains('unhide') ||
-                            node.classList.contains('comment')
+                            node.classList.contains('comment') ||
+                            node.classList.contains('autoresize')
                         )) {
                             shouldResetup = true;
                         }
@@ -1538,6 +1541,7 @@ function setupDynamicContent() {
     setupDynamicKeyboardShortcuts();
     setupHideButtons();
     setupPopupTooltips();
+    setupBasicAutoResize();
     
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -1625,7 +1629,7 @@ function hookupCommunityFilter() {
         
         // Show/hide clear button
         if (clearButton) {
-            clearButton.style.display = filterText ? 'block' : 'none';
+            //clearButton.style.display = filterText ? 'block' : 'none';
         }
         
         communityItems.forEach((item, index) => {
@@ -1676,7 +1680,7 @@ function hookupCommunityFilter() {
     if (clearButton) {
         clearButton.addEventListener('click', clearFilter);
     }
-    
+
     // Focus the input when the dropdown becomes visible
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
@@ -1988,5 +1992,33 @@ function setupPasswordEye() {
 
             // Initially hide the showPassword button
             showPasswordBtn.style.display = 'none';
+    }
+}
+
+function autoResize(textarea) {
+    if (textarea.closest('.downarea-wrapper')) {
+        return;
+    }
+    textarea.style.height = 'auto';
+    const maxHeight = window.innerHeight - textarea.getBoundingClientRect().top - 10; // 10px padding
+    const scrollHeight = textarea.scrollHeight;
+
+    textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
+    textarea.style.height = Math.min(scrollHeight, maxHeight) + 'px';
+}
+
+function applyAutoResize(textarea) {
+    textarea.addEventListener('input', () => autoResize(textarea));
+    autoResize(textarea); // initial sizing
+}
+
+function setupBasicAutoResize() {
+    // automatically increase height of textareas as people type in them.
+    const textareas = document.querySelectorAll('textarea.autoresize');
+    if(textareas) {
+        textareas.forEach(applyAutoResize);
+        window.addEventListener('resize', () => {
+            textareas.forEach(autoResize);
+        });
     }
 }

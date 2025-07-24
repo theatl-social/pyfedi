@@ -5,7 +5,8 @@ from random import randint
 import flask
 from bs4 import BeautifulSoup
 
-from flask import redirect, url_for, flash, request, make_response, session, Markup, current_app, abort, g, json
+from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, g, json
+from markupsafe import Markup
 from flask_login import current_user
 from flask_babel import _, force_locale, gettext
 from slugify import slugify
@@ -43,12 +44,14 @@ from app.shared.community import invite_with_chat, invite_with_email, subscribe_
 from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, ap_datetime, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
-    joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, blocked_instances, \
+    joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
+    blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, menu_topics, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
-    possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session
+    possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
+    approval_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -58,6 +61,8 @@ from datetime import timezone, timedelta
 
 @bp.route('/add_local', methods=['GET', 'POST'])
 @login_required
+@validation_required
+@approval_required
 def add_local():
     if current_user.banned:
         return show_ban_message()
@@ -126,6 +131,8 @@ def add_local():
 
 @bp.route('/add_remote', methods=['GET', 'POST'])
 @login_required
+@validation_required
+@approval_required
 def add_remote():
     if current_user.banned:
         return show_ban_message()
@@ -413,7 +420,7 @@ def show_community(community: Community):
                 comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
 
         if sort == '' or sort == 'hot':
-            comments = comments.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
+            comments = comments.order_by(desc(PostReply.posted_at))
         elif sort == 'top_12h':
             comments = comments.filter(PostReply.posted_at > utcnow() - timedelta(hours=12)).order_by(
                 desc(PostReply.up_votes - PostReply.down_votes))
@@ -622,6 +629,7 @@ def show_community_rss(actor):
 @bp.route('/<actor>/subscribe', methods=['GET', 'POST'])
 @login_required
 @validation_required
+@approval_required
 def subscribe(actor):
     # POST is used by htmx, GET when JS is disabled
     do_subscribe(actor, current_user.id, admin_preload=request.method == 'POST')
@@ -794,6 +802,7 @@ def unsubscribe(actor):
 @bp.route('/<actor>/join_then_add', methods=['GET', 'POST'])
 @login_required
 @validation_required
+@approval_required
 def join_then_add(actor):
     community = actor_to_community(actor)
     if not current_user.subscribed(community.id):
@@ -829,6 +838,7 @@ def join_then_add(actor):
 @bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
 @login_required
 @validation_required
+@approval_required
 def add_post(actor, type):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()
@@ -895,6 +905,8 @@ def add_post(actor, type):
             return redirect(url_for('activitypub.community_profile',
                                     actor=community.ap_id if community.ap_id is not None else community.name))
 
+        current_user.language_id = form.language_id.data
+
         if form.timezone.data:
             db.session.execute(text('UPDATE "user" SET timezone = :timezone WHERE id = :user_id'),
                                {'user_id': current_user.id, 'timezone': form.timezone.data})
@@ -918,6 +930,7 @@ def add_post(actor, type):
             flash(community.posting_warning)
 
         form.timezone.data = current_user.timezone
+        form.language_id.data = current_user.language_id or g.site.language_id
 
         # The source query parameter is used when cross-posting - load the source post's content into the form
         if (post_type == POST_TYPE_LINK or post_type == POST_TYPE_VIDEO) and request.args.get('source'):
@@ -1146,7 +1159,8 @@ def community_mod_list(community_id: int):
     if current_user.banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
-    if community.is_owner() or current_user.is_admin() or community.is_moderator(current_user):
+    is_owner = community.is_owner()
+    if is_owner or current_user.is_admin() or community.is_moderator(current_user):
 
         moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id). \
             filter(CommunityMember.community_id == community_id,
@@ -1154,9 +1168,79 @@ def community_mod_list(community_id: int):
 
         return render_template('community/community_mod_list.html',
                                title=_('Moderators for %(community)s', community=community.display_name()),
-                               moderators=moderators, community=community, current="moderators")
+                               moderators=moderators, community=community, current="moderators", is_owner=is_owner)
     else:
         abort(401)
+
+
+@bp.route('/community/<int:community_id>/make_owner/<int:user_id>', methods=['POST'])
+@login_required
+def community_make_owner(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+    
+    if (community.is_owner() or current_user.is_admin_or_staff()) and community.is_moderator(user):
+
+        new_owner_membership = CommunityMember.query.filter(CommunityMember.community_id == community_id, CommunityMember.user_id == user.id).first()
+        new_owner_membership.is_owner = True
+
+        db.session.commit()
+
+        # Flush cache
+        cache.delete_memoized(moderating_communities, current_user.id)
+        cache.delete_memoized(moderating_communities, user.id)
+
+        cache.delete_memoized(moderating_communities_ids, current_user.id)
+        cache.delete_memoized(moderating_communities_ids, user.id)
+
+        cache.delete_memoized(joined_communities, current_user.id)
+        cache.delete_memoized(joined_communities, user.id)
+
+        cache.delete_memoized(community_moderators, community_id)
+        cache.delete_memoized(Community.moderators, community)
+    
+    else:
+        abort(401)
+    
+    return redirect(url_for("community.community_mod_list", community_id=community_id))
+
+
+@bp.route('/community/<int:community_id>/remove_owner/<int:user_id>', methods=['POST'])
+@login_required
+def community_remove_owner(community_id: int, user_id: int):
+    community = Community.query.get_or_404(community_id)
+    user = User.query.get_or_404(user_id)
+
+    if ((current_user.is_admin_or_staff() and community.is_owner(user)) or 
+        (community.is_owner() and community.is_moderator(user) and not community.is_owner(user)) or 
+        (community.is_owner() and user.id == current_user.id)):
+
+        if community.num_owners() == 1:
+            flash(_('A community must have one or more owners. Make someone else an owner before removing this owner.'), 'error')
+        else:
+            new_owner_membership = CommunityMember.query.filter(CommunityMember.community_id == community_id,
+                                                                CommunityMember.user_id == user.id).first()
+            new_owner_membership.is_owner = False
+
+            db.session.commit()
+
+            # Flush cache
+            cache.delete_memoized(moderating_communities, current_user.id)
+            cache.delete_memoized(moderating_communities, user.id)
+
+            cache.delete_memoized(moderating_communities_ids, current_user.id)
+            cache.delete_memoized(moderating_communities_ids, user.id)
+
+            cache.delete_memoized(joined_communities, current_user.id)
+            cache.delete_memoized(joined_communities, user.id)
+
+            cache.delete_memoized(community_moderators, community_id)
+            cache.delete_memoized(Community.moderators, community)
+
+    else:
+        abort(401)
+
+    return redirect(url_for("community.community_mod_list", community_id=community_id))
 
 
 @bp.route('/community/<int:community_id>/moderators/add/<int:user_id>', methods=['GET', 'POST'])
@@ -1164,10 +1248,8 @@ def community_mod_list(community_id: int):
 def community_add_moderator(community_id: int, user_id: int):
     if current_user.banned:
         return show_ban_message()
-    try:
-        add_mod_to_community(community_id, user_id, SRC_WEB)
-    except Exception:
-        abort(401)
+
+    add_mod_to_community(community_id, user_id, SRC_WEB)
 
     return redirect(url_for('community.community_mod_list', community_id=community_id))
 

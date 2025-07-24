@@ -69,6 +69,8 @@ def register():
     form = RegistrationForm()
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
+    if g.site.registration_mode == 'Open':
+        del form.question
     if request.method == "POST" and form.validate_on_submit():
         return process_registration_form(form)
 
@@ -78,6 +80,11 @@ def register():
 @bp.route('/please_wait', methods=['GET'])
 def please_wait():
     return render_template('auth/please_wait.html', title=_('Account under review'))
+
+
+@bp.route('/not_trustworthy', methods=['GET'])
+def not_trustworthy():
+    return render_template('generic_message.html', title=_('Sorry'), message=_('You are not able to do this action due to being a very new account or because of a low reputation.'))
 
 
 @bp.route('/check_email', methods=['GET'])
