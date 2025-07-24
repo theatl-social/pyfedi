@@ -234,16 +234,16 @@
             {% block app_content %}{% endblock %}
         </div>
         <footer class="footer mt-auto" role="contentinfo">
-            <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PieFed app') }}</button></p>
-            <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
+            <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PeachPie app') }}</button></p>
+            <p class="text-center"><a href="https://join.theATL.social">{{ _('theATL.social') }}</a></p>
             <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
             <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
-            <p class="text-center"><a href="https://github.com/theatl-social/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://github.com/theatl-social/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
+            <p class="text-center"><a href="https://github.com/theatl-social/pyfedi">{{ _('PeachPie v%(version)s is free and open source', version=VERSION) }}</a>, <a href="https://codeberg.org/rimu/pyfedi">a fork of pyfedi</a>.<br />Please <a href="https://github.com/theatl-social/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             {% if g.site.tos_url %}
                 <p class="text-center"><a href="{{ g.site.tos_url }}">{{ _('Terms of service') }}</a></p>
             {% endif -%}
             <p class="text-center"><a href="/privacy">{{ _('Privacy policy') }}</a></p>
-            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
+            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PeachPie during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
         <dialog id="voting_dialog">
             <div class="p-3">
