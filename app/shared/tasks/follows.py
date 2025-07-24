@@ -119,7 +119,7 @@ def leave_community(send_async, user_id, community_id):
         if community.is_local():
             return
 
-        join_request = session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).one()
+        join_request = session.query(CommunityJoinRequest).filter_by(user_id=user_id, community_id=community_id).first()
         session.delete(join_request)
         session.commit()
 
