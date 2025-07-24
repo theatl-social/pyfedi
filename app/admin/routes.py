@@ -1208,9 +1208,6 @@ def admin_community_delete(community_id):
 
     unsubscribe_everyone_then_delete(community.id)
 
-    reason = f"Community {community.name} deleted by {current_user.user_name}"
-    add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
-
     flash(_('Community deleted'))
     return redirect(url_for('admin.admin_communities'))
 
@@ -1228,17 +1225,17 @@ def unsubscribe_everyone_then_delete_task(community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                community = Community.query.get_or_404(community_id)
+                community = session.query(Community).get(community_id)
                 if not community.is_local():
-                    members = CommunityMember.query.filter_by(community_id=community_id).all()
+                    members = session.query(CommunityMember).filter_by(community_id=community_id).all()
                     for member in members:
-                        user = User.query.get(member.user_id)
+                        user = session.query(User).get(member.user_id)
                         unsubscribe_from_community(community, user)
+                    sleep(5)
                 else:
                     # todo: federate delete of local community out to all following instances
                     ...
 
-                sleep(5)
                 community.delete_dependencies()
                 session.delete(community)  # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
                 session.commit()

@@ -784,9 +784,12 @@ class Community(db.Model):
         return result
 
     def delete_dependencies(self):
-        for post in self.posts:
-            post.delete_dependencies()
-            db.session.delete(post)
+        from app import redis_client
+        for post in db.session.query(Post).filter_by(community_id=self.id):
+            with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+                post.delete_dependencies()
+                db.session.delete(post)
+                db.session.commit()
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -796,6 +799,7 @@ class Community(db.Model):
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).update({ModLog.community_id: None})
         db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
+        db.session.commit()
 
 
 user_role = db.Table('user_role',
