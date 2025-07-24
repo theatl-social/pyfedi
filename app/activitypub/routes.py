@@ -759,13 +759,27 @@ def shared_inbox():
             f.write(_json.dumps(entry, ensure_ascii=False) + '\n')
         return fpath
 
+    from app import redis_client
+    
+    # Early content-length validation to prevent OOM
+    content_length = request.content_length
+    if content_length and content_length > current_app.config.get('MAX_CONTENT_LENGTH', 10 * 1024 * 1024):
+        current_app.logger.warning(f'Rejected oversized request: {content_length} bytes from {request.remote_addr}')
+        return 'Request entity too large', 413
+    
+    # Read body once and cache it
+    try:
+        raw_body = request.get_data(cache=True)  # cache=True allows multiple reads
+    except Exception as e:
+        current_app.logger.error(f'Failed to read request body: {str(e)}')
+        return '', 400
+    
     # Save incoming headers/body as early as possible
     if EXTRA_AP_LOGGING:
         try:
-            save_ap_debug_log('incoming', dict(request.headers), request.get_data())
+            save_ap_debug_log('incoming', dict(request.headers), raw_body)
         except Exception:
             pass
-    from app import redis_client
 
     # Generate a unique request_id for this POST (for both logging systems)
     request_id = str(uuid.uuid4())
@@ -787,7 +801,7 @@ def shared_inbox():
             pass
 
     try:
-        request_json = request.get_json(force=True)
+        request_json = request.get_json(force=True, cache=True)  # Use cached body
         # Try to extract the original object URI if present
         post_object_uri = None
         if isinstance(request_json, dict):
@@ -811,7 +825,7 @@ def shared_inbox():
             logger.log_error('json_parse', e, 'Unable to parse JSON body')
         if EXTRA_AP_LOGGING:
             err_str = traceback.format_exc()
-            save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+            save_ap_debug_log('error', dict(request.headers), raw_body, error=err_str)
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + str(e))
         return '', 200
 
@@ -856,6 +870,12 @@ def shared_inbox():
         log_ap_status(request_id, "field_validation", "ok", activity_id=request_json.get('id'), post_object_uri=post_object_uri)
 
         id = request_json['id']
+        # Validate activity ID length to prevent database/memory issues
+        if not isinstance(id, str) or len(id) > 2048:
+            log_ap_status(request_id, "field_validation", "fail", details="Invalid activity ID format or length")
+            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Invalid activity ID format or length')
+            return '', 200
+        
         if logger:
             logger.update_activity_info(activity_id=id)
         
@@ -864,19 +884,28 @@ def shared_inbox():
                 logger.log_checkpoint('announce_processing', 'ok', 'Processing Announce activity')
             
             object = request_json['object']
-            if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-                if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                    if logger:
-                        logger.log_checkpoint('announce_processing', 'ignored', 'Intended for Mastodon')
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, saved_json, 'Intended for Mastodon')
-                else:
-                    if logger:
-                        logger.log_validation_failure('announce_processing', 'Missing fields in Announce object')
-                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
-                                    'Missing minimum expected fields in JSON Announce object')
+            # Only reject if absolutely essential fields are missing
+            # We need at minimum an 'id' to process the announcement
+            if not 'id' in object:
+                if logger:
+                    logger.log_validation_failure('announce_processing', 'Missing id field in Announce object')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
+                                'Missing id field in Announce object')
                 return '', 200
+            
+            # Validate the id field is a string and reasonable length
+            if not isinstance(object['id'], str) or len(object['id']) > 2048:
+                if logger:
+                    logger.log_validation_failure('announce_processing', 'Invalid id field in Announce object')
+                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json,
+                                'Invalid id field format or length in Announce object')
+                return '', 200
+            
+            # For better compatibility, we'll process the announcement even if other fields are missing
+            # and let the downstream processing handle any issues
 
-            if isinstance(object['actor'], str) and object['actor'].startswith(
+            # Check if it's about local content (but safely handle missing 'actor' field)
+            if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
                     'https://' + current_app.config['SERVER_NAME']):
                 if logger:
                     logger.log_checkpoint('local_content_check', 'ignored', 'Activity about local content')
@@ -1031,7 +1060,12 @@ def shared_inbox():
             logger.log_error('shared_inbox_error', e, 'Unhandled error in shared_inbox')
         if EXTRA_AP_LOGGING:
             err_str = traceback.format_exc()
-            save_ap_debug_log('error', dict(request.headers), request.get_data(), error=err_str)
+            # Note: raw_body may not be available here if we're in the main exception handler
+            try:
+                body = request.get_data()
+            except:
+                body = b'[Body read failed]'
+            save_ap_debug_log('error', dict(request.headers), body, error=err_str)
         raise
 
 
@@ -1058,14 +1092,13 @@ def replay_inbox_request(request_json):
     id = request_json['id']
     if request_json['type'] == 'Announce' and isinstance(request_json['object'], dict):
         object = request_json['object']
-        if not 'id' in object or not 'type' in object or not 'actor' in object or not 'object' in object:
-            if 'type' in object and (object['type'] == 'Page' or object['type'] == 'Note'):
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_IGNORED, request_json, 'REPLAY: Intended for Mastodon')
-            else:
-                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing minimum expected fields in JSON Announce object')
+        # Only reject if absolutely essential fields are missing
+        if not 'id' in object:
+            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, request_json, 'REPLAY: Missing id field in Announce object')
             return
 
-        if isinstance(object['actor'], str) and object['actor'].startswith(
+        # Check if it's about local content (but safely handle missing 'actor' field)
+        if 'actor' in object and isinstance(object['actor'], str) and object['actor'].startswith(
                 'https://' + current_app.config['SERVER_NAME']):
             log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, request_json, 'REPLAY: Activity about local content which is already present')
             return
@@ -1225,12 +1258,14 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                         return
 
                     if not feed:
-                        user_ap_id = request_json['object']['actor']
-                        user = find_actor_or_create(user_ap_id)
-                        if user and isinstance(user, User):
-                            if user.banned:
-                                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
-                                return
+                        # Check if the announced object has an actor field
+                        if 'actor' in request_json['object']:
+                            user_ap_id = request_json['object']['actor']
+                            user = find_actor_or_create(user_ap_id)
+                            if user and isinstance(user, User):
+                                if user.banned:
+                                    log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                                    return
 
                             with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                                 user.last_seen = utcnow()
