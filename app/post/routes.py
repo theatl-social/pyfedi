@@ -943,15 +943,17 @@ def post_delete(post_id: int):
 
 def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_deletion=True):
     user: User = User.query.get(user_id)
-    if post.url:
-        post.calculate_cross_posts(delete_only=True)
-    post.deleted = True
-    post.deleted_by = user_id
-    post.author.post_count -= 1
-    community.post_count -= 1
-    if hasattr(g, 'site'):  # g.site is invalid when running from cli
-        flash(_('Post deleted.'))
-    db.session.commit()
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+        if post.url:
+            post.calculate_cross_posts(delete_only=True)
+        post.deleted = True
+        post.deleted_by = user_id
+        post.author.post_count -= 1
+        community.post_count -= 1
+        if hasattr(g, 'site'):  # g.site is invalid when running from cli
+            flash(_('Post deleted.'))
+        db.session.commit()
 
     if federate_deletion:
 
@@ -962,9 +964,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
             'audience': post.community.public_url(),
             'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
             'published': ap_datetime(utcnow()),
-            'cc': [
-                user.followers_url()
-            ],
+            'cc': [user.followers_url()],
             'object': post.ap_id,
             'uri': post.ap_id
         }
@@ -975,8 +975,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
         if not community.local_only:  # local_only communities do not federate
             # if this is a remote community and we are a mod of that community
             if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user)):
-                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key,
-                                  user.public_url() + '#main-key')
+                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
             elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
                 announce = {
                     "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
@@ -1818,9 +1817,11 @@ def post_reply_purge(post_id: int, comment_id: int):
         abort(404)
     if post_reply.deleted_by == current_user.id or post.community.is_moderator() or current_user.is_admin():
         if not post_reply.has_replies():
-            post_reply.delete_dependencies()
-            db.session.delete(post_reply)
-            db.session.commit()
+            from app import redis_client
+            with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
+                post_reply.delete_dependencies()
+                db.session.delete(post_reply)
+                db.session.commit()
             flash(_('Comment purged.'))
         else:
             flash(_('Comments that have been replied to cannot be purged.'))

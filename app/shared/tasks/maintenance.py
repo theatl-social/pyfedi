@@ -144,47 +144,51 @@ def update_hashtag_counts():
 @celery.task
 def delete_old_soft_deleted_content():
     """Delete soft-deleted content after 7 days"""
-    session = get_task_session()
-    try:
-        with patch_db_session(session):
-            cutoff = utcnow() - timedelta(days=7)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                from app import redis_client
+                cutoff = utcnow() - timedelta(days=7)
 
-            # Delete old post replies
-            post_reply_ids = list(
-                session.execute(
-                    text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
-                    {'cutoff': cutoff}
-                ).scalars()
-            )
+                # Delete old posts
+                post_ids = list(
+                    session.execute(
+                        text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
+                        {'cutoff': cutoff}
+                    ).scalars()
+                )
 
-            for post_reply_id in post_reply_ids:
-                post_reply = session.query(PostReply).get(post_reply_id)
-                if post_reply:  # Check if still exists
-                    post_reply.delete_dependencies()
-                    if not post_reply.has_replies(include_deleted=True):
-                        session.delete(post_reply)
-                        session.commit()
+                for post_id in post_ids:
+                    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+                        post = session.query(Post).get(post_id)
+                        if post:  # Check if still exists
+                            post.delete_dependencies()
+                            session.delete(post)
+                            session.commit()
 
-            # Delete old posts
-            post_ids = list(
-                session.execute(
-                    text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
-                    {'cutoff': cutoff}
-                ).scalars()
-            )
+                # Delete old post replies
+                post_reply_ids = list(
+                    session.execute(
+                        text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
+                        {'cutoff': cutoff}
+                    ).scalars()
+                )
 
-            for post_id in post_ids:
-                post = session.query(Post).get(post_id)
-                if post:  # Check if still exists
-                    post.delete_dependencies()
-                    session.delete(post)
-                    session.commit()
+                for post_reply_id in post_reply_ids:
+                    with redis_client.lock(f"lock:post_reply:{post_reply_id}", timeout=10, blocking_timeout=6):
+                        post_reply = session.query(PostReply).get(post_reply_id)
+                        if post_reply:  # Check if still exists
+                            post_reply.delete_dependencies()
+                            if not post_reply.has_replies(include_deleted=True):
+                                session.delete(post_reply)
+                                session.commit()
 
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
