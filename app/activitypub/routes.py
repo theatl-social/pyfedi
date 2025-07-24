@@ -33,7 +33,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
-    blocked_phrases, orjson_response
+    blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids
 
 
 @bp.route('/testredis')
@@ -1258,6 +1258,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 add_to_modlog('add_mod', actor=mod, target_user=new_mod, community=community,
                                               link_text=new_mod.display_name(), link=new_mod.link())
                                 session.commit()
+                                cache.delete_memoized(moderating_communities, new_mod.id)
+                                cache.delete_memoized(joined_communities, new_mod.id)
+                                cache.delete_memoized(community_moderators, community.id)
+                                cache.delete_memoized(moderating_communities_ids, new_mod.id)
+                                cache.delete_memoized(Community.moderators, community)
                                 log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, saved_json)
                             else:
                                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json,
@@ -1352,6 +1357,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 if existing_membership:
                                     existing_membership.is_moderator = False
                                     session.commit()
+                                    cache.delete_memoized(moderating_communities, old_mod.id)
+                                    cache.delete_memoized(joined_communities, old_mod.id)
+                                    cache.delete_memoized(community_moderators, community.id)
+                                    cache.delete_memoized(moderating_communities_ids, old_mod.id)
+                                    cache.delete_memoized(Community.moderators, community)
                                     log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json)
                                 add_to_modlog('remove_mod', actor=mod, target_user=old_mod, community=community,
                                               link_text=old_mod.display_name(), link=old_mod.link())
