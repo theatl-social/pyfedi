@@ -129,7 +129,7 @@ def get_reply_list(auth, data, user_id=None):
                 if user_id:
                     can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
-            view['canAuthUserModerate'] = can_auth_user_moderate
+            view['can_auth_user_moderate'] = can_auth_user_moderate
             replylist.append(view)
         elif community_is_same:
             if mods is None:
@@ -140,7 +140,7 @@ def get_reply_list(auth, data, user_id=None):
                 if user_id:
                     can_auth_user_moderate = user_id in mods
             view['community'] = inner_community_view
-            view['canAuthUserModerate'] = can_auth_user_moderate
+            view['can_auth_user_moderate'] = can_auth_user_moderate
             replylist.append(view)
         else:
             replylist.append(reply_view(reply=reply, variant=9, user_id=user_id))

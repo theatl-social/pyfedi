@@ -11,5 +11,11 @@ site_bp = ApiBlueprint(
     url_prefix="/api/alpha",
     description="",
 )
+misc_bp = ApiBlueprint(
+    "Misc",
+    __name__,
+    url_prefix="/api/alpha",
+    description="",
+)
 
 from app.api.alpha import routes

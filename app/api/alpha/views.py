@@ -138,7 +138,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             else:
                 user = User.query.get(user_id)
             can_auth_user_moderate = post.community.is_moderator(user)
-            v2.update({'canAuthUserModerate': can_auth_user_moderate})
+            v2.update({'can_auth_user_moderate': can_auth_user_moderate})
 
         v2.update({'creator': creator, 'community': community})
 
@@ -193,6 +193,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             v1['avatar'] = user.avatar.medium_url()
         if user.cover_id and not stub:
             v1['banner'] = user.cover.medium_url()
+        if not v1['title']:
+            v1['title'] = v1['user_name']
         if flair_community_id:
             flair = user.community_flair(flair_community_id)
             if flair:
@@ -591,9 +593,9 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
             v9 = v7
             v9['post'] = post_view(post=reply.post, variant=1)
             v9['community'] = community_view(community=reply.community, variant=1, stub=True)
-            v9['canAuthUserModerate'] = False
+            v9['can_auth_user_moderate'] = False
             if user_id:
-                v9['canAuthUserModerate'] = any(
+                v9['can_auth_user_moderate'] = any(
                     moderator.user_id == user_id for moderator in reply.community.moderators())
             return v9
 
@@ -793,12 +795,15 @@ def federated_instances_view():
     allowed = []
     blocked = []
     for instance in AllowedInstances.query.all():
-        allowed.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
+        allowed.append({"id": instance.id, "domain": instance.domain, "published": utcnow().isoformat() + "Z",
+                        "updated": utcnow().isoformat() + "Z"})
     for instance in BannedInstances.query.all():
-        blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
+        blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow().isoformat() + "Z",
+                        "updated": utcnow().isoformat() + "Z"})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(),
-                         "updated": instance.updated_at.isoformat()}
+        instance_data = {"id": instance.id, "domain": instance.domain,
+                         "published": instance.created_at.isoformat() + "Z",
+                         "updated": instance.updated_at.isoformat() + "Z"}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
