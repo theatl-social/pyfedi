@@ -423,3 +423,39 @@ def mod_restore_reply(reply_id, reason, src, auth):
         return user.id, reply
     else:
         return
+
+
+def lock_post_reply(post_reply_id, locked, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post_reply = PostReply.query.get(post_reply_id)
+    if locked:
+        replies_enabled = False
+        modlog_type = 'lock_post_reply'
+    else:
+        replies_enabled = True
+        modlog_type = 'unlock_post_reply'
+
+    if post_reply.community.is_moderator(user) or post_reply.community.is_instance_admin(user):
+        post_reply.replies_enabled = replies_enabled
+        db.session.execute(text('update post_reply set replies_enabled = :replies_enabled where path @> ARRAY[:parent_id]'),
+                           {'parent_id': post_reply.id, 'replies_enabled': replies_enabled})
+        db.session.commit()
+        add_to_modlog(modlog_type, actor=user, target_user=post_reply.author, reason='',
+                      community=post_reply.community, reply=post_reply,
+                      link_text=shorten_string(post_reply.body), link=f'post/{post_reply.post_id}#comment_{post_reply.id}')
+
+        if locked:
+            if src == SRC_WEB:
+                flash(_('Comment has been locked.'))
+            task_selector('lock_post_reply', user_id=user.id, post_reply_id=post_reply_id)
+        else:
+            if src == SRC_WEB:
+                flash(_('Comment has been unlocked.'))
+            task_selector('unlock_post_reply', user_id=user.id, post_reply_id=post_reply_id)
+
+    if src == SRC_API:
+        return user.id, post_reply

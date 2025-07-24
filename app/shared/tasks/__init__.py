@@ -10,7 +10,7 @@ def task_selector(task_key, send_async=True, **kwargs):
         restore_community, delete_posts_with_blocked_images
     from app.shared.tasks.flags import report_reply, report_post
     from app.shared.tasks.pages import make_post, edit_post
-    from app.shared.tasks.locks import lock_post, unlock_post
+    from app.shared.tasks.locks import lock_post, unlock_post, lock_post_reply, unlock_post_reply
     from app.shared.tasks.adds import sticky_post, add_mod
     from app.shared.tasks.removes import unsticky_post, remove_mod
     from app.shared.tasks.groups import edit_community
@@ -35,6 +35,8 @@ def task_selector(task_key, send_async=True, **kwargs):
         'unlock_post': unlock_post,
         'sticky_post': sticky_post,
         'unsticky_post': unsticky_post,
+        'lock_post_reply': lock_post_reply,
+        'unlock_post_reply': unlock_post_reply,
         'edit_community': edit_community,
         'delete_community': delete_community,
         'restore_community': restore_community,

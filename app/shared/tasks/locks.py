@@ -1,6 +1,6 @@
 from app import celery
 from app.activitypub.signature import default_context, send_post_request
-from app.models import Post, User
+from app.models import Post, User, PostReply
 from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
@@ -44,6 +44,36 @@ def unlock_post(send_async, user_id, post_id):
         try:
             with patch_db_session(session):
                 post = Post.query.filter_by(id=post_id).one()
+                lock_object(user_id, post, is_undo=True)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+@celery.task
+def lock_post_reply(send_async, user_id, post_reply_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = PostReply.query.filter_by(id=post_reply_id).one()
+                lock_object(user_id, post)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+@celery.task
+def unlock_post_reply(send_async, user_id, post_reply_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                post = PostReply.query.filter_by(id=post_reply_id).one()
                 lock_object(user_id, post, is_undo=True)
         except Exception:
             session.rollback()

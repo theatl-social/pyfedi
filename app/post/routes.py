@@ -34,7 +34,7 @@ from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
-    delete_reply, mod_remove_reply, vote_for_reply
+    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
 from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
@@ -1460,11 +1460,15 @@ def post_flair_list(post_id):
 @bp.route('/post/<int:post_id>/lock/<mode>', methods=['GET', 'POST'])
 @login_required
 def post_lock(post_id: int, mode):
-    try:
-        lock_post(post_id, mode == 'yes', SRC_WEB)
-    except:
-        abort(404)
+    lock_post(post_id, mode == 'yes', SRC_WEB)
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id)))
+
+
+@bp.route('/post/<int:post_id>/<int:post_reply_id>/lock/<mode>', methods=['GET', 'POST'])
+@login_required
+def post_reply_lock(post_id: int, post_reply_id: int, mode):
+    lock_post_reply(post_reply_id, mode == 'yes', SRC_WEB)
+    return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{post_reply_id}')))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/report', methods=['GET', 'POST'])

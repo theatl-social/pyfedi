@@ -2903,6 +2903,8 @@ class ModLog(db.Model):
         'unban_user': _l('Un-banned account'),
         'lock_post': _l('Lock post'),
         'unlock_post': _l('Un-lock post'),
+        'lock_post_reply': _l('Lock comment'),
+        'unlock_post_reply': _l('Un-lock comment'),
     }
 
     def action_to_str(self):
