@@ -1940,7 +1940,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
                 return
-            if user.id == post.user_id or post.community.is_moderator(user):
+            if user.id == post.user_id or post.community.is_moderator(user) or post.community.is_instance_admin(user):
                 update_post_from_activity(post, activity_json)
                 log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                 if not announced:
