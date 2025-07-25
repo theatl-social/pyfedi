@@ -703,13 +703,16 @@ class Community(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
-    def humanize_subscribers(self, total=True):
+    def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
 
-        if total:
-            subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
+        if "value" in kwargs:
+            subscribers = kwargs.get("value")
         else:
-            subscribers = self.subscriptions_count
+            if total:
+                subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
+            else:
+                subscribers = self.subscriptions_count
         
         if not subscribers:
             return "0"
