@@ -75,8 +75,8 @@ class Site(DefaultSchema):
     enable_downvotes = fields.Boolean()
     icon = fields.Url(allow_none=True)
     registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
-    sidebar = fields.String()
-    sidebar_md = fields.String()
+    sidebar = fields.String(metadata={"format": "html"})
+    sidebar_md = fields.String(metadata={"format": "markdown"})
     user_count = fields.Integer()
 
 
