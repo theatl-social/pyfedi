@@ -194,8 +194,9 @@ def create_app(config_class=Config):
     app.register_blueprint(app_api_bp)
 
     # API Namespaces
-    from app.api.alpha import site_bp as site_api_bp
-    rest_api.register_blueprint(site_api_bp)
+    from app.api.alpha import site_bp, misc_bp
+    rest_api.register_blueprint(site_bp)
+    rest_api.register_blueprint(misc_bp)
 
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['ERRORS_TO']:

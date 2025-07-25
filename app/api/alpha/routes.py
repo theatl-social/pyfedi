@@ -4,7 +4,7 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp
+from app.api.alpha import bp, site_bp, misc_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -50,57 +50,75 @@ def get_alpha_site():
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        return get_site(auth)
+        resp = get_site(auth)
+        return GetSiteResponse().load(resp)
     except Exception as ex:
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/site/block', methods=['POST'])
-def get_alpha_site_block():
+@site_bp.route('/site/block', methods=['POST'])
+@site_bp.doc(summary="Block an instance.")
+@site_bp.arguments(BlockInstanceRequest)
+@site_bp.response(200, BlockInstanceResponse)
+@site_bp.alt_response(400, schema=DefaultError)
+def get_alpha_site_block(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_site_block(auth, data))
+        resp = post_site_block(auth, data)
+        return BlockInstanceResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # Misc
-@bp.route('/api/alpha/search', methods=['GET'])
-def get_alpha_search():
+@misc_bp.route('/search', methods=["GET"])
+@misc_bp.doc(summary="Search PieFed.")
+@misc_bp.arguments(SearchRequest, location="query")
+@misc_bp.response(200, SearchResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+def get_alpha_search(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_search(auth, data))
+        resp = get_search(auth, data)
+        return SearchResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/resolve_object', methods=['GET'])
-def get_alpha_resolve_object():
+@misc_bp.route('/resolve_object', methods=['GET'])
+@misc_bp.doc(summary="Fetch a non-local / federated object.")
+@misc_bp.arguments(ResolveObjectRequest, location="query")
+@misc_bp.response(200, ResolveObjectResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+def get_alpha_resolve_object(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_resolve_object(auth, data))
+        resp = get_resolve_object(auth, data)
+        return ResolveObjectResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/federated_instances', methods=['GET'])
+
+@misc_bp.route('/federated_instances', methods=['GET'])
+@misc_bp.doc(summary="Fetch federated instances.")
+@misc_bp.response(200, GetFederatedInstancesResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
 def get_alpha_federated_instances():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         data = {"include_federation_state": False}
-        return jsonify(get_federated_instances(data))
+        resp = get_federated_instances(data)
+        return GetFederatedInstancesResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # Community

@@ -1,201 +1,159 @@
-from enum import Enum
-from marshmallow import Schema, fields, EXCLUDE
+from datetime import datetime
+from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE
 
 
-# Enums used in other schema
-reg_enum = Enum("RegistrationEnum", [("Closed", "Closed"),
-                                     ("RequireApplication", "RequireApplication"),
-                                     ("Open", "Open")])
+# Lists used in schema for validation
+reg_mode_list = ["Closed", "RequireApplication", "Open"]
+sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
+             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled"]
+comment_sort_list = ["Hot", "Top", "New", "Old"]
+listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating"]
+content_type_list = ["Communities", "Posts", "Users", "Url"]
+subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 
-sort_enum = Enum("SortEnum", [("Active", "Active"),
-                              ("Hot", "Hot"),
-                              ("New", "New"),
-                              ("TopHour", "TopHour"),
-                              ("TopSixHour", "TopSixHour"),
-                              ("TopTwelveHour", "TopTwelveHour"),
-                              ("TopDay", "TopDay"),
-                              ("TopWeek", "TopWeek"),
-                              ("TopMonth", "TopMonth"),
-                              ("TopThreeMonths", "TopThreeMonths"),
-                              ("TopSixMonths", "TopSixMonths"),
-                              ("TopNineMonths", "TopNineMonths"),
-                              ("TopYear", "TopYear"),
-                              ("TopAll", "TopAll"),
-                              ("Scaled", "Scaled")])
 
-comment_sort_enum = Enum("CommentEnum", [("Hot", "Hot"), ("Top", "Top"), ("New", "New"), ("Old", "Old")])
-
-listing_type_enum = Enum("ListingEnum", [("All", "All"),
-                                         ("Local", "Local"),
-                                         ("Subscribed", "Subscribed"),
-                                         ("Popular", "Popular"),
-                                         ("Moderating", "Moderating")])
+def validate_datetime_string(text):
+    try:
+        # Ensures that string matches timestamp format used by lemmy/piefed api
+        datetime.strptime(text, "%Y-%m-%dT%H:%M:%S.%fZ")
+        return True
+    except ValueError:
+        raise ValidationError(f"Bad datetime string: {text}")
 
 
 class DefaultError(Schema):
     message = fields.String()
 
-class Person(Schema):
+
+class DefaultSchema(Schema):
     class Meta:
         unknown = EXCLUDE
-    
-    about = fields.String()
-    actor_id = fields.Url(required=True)
-    avatar = fields.Url()
+        datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
+
+
+class Person(DefaultSchema):
+    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
-    banner = fields.Url()
     bot = fields.Boolean(required=True)
     deleted = fields.Boolean(required=True)
-    flair = fields.String()
     id = fields.Integer(required=True)
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
-    published = fields.String()
-    title = fields.String()
     user_name = fields.String(required=True)
+    about = fields.String()
+    avatar = fields.Url(allow_none=True)
+    banner = fields.Url(allow_none=True)
+    flair = fields.String()
+    published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    title = fields.String(allow_none=True)
 
 
-class PersonAggregates(Schema):
+class PersonAggregates(DefaultSchema):
     comment_count = fields.Integer(required=True)
     person_id = fields.Integer(required=True)
     post_count = fields.Integer(required=True)
 
 
-class PersonView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class PersonView(DefaultSchema):
     activity_alert = fields.Boolean(required=True)
     counts = fields.Nested(PersonAggregates, required=True)
     is_admin = fields.Boolean(required=True)
     person = fields.Nested(Person, required=True)
 
 
-class LanguageView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
-    code = fields.String()
-    id = fields.Integer()
-    name = fields.String()
+class LanguageView(DefaultSchema):
+    code = fields.String(metadata={"example": "en"})
+    id = fields.Integer(metadata={"example": "2"})
+    name = fields.String(metadata={"example": "English"})
 
 
-class Site(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
-    actor_id = fields.Url(required=True)
+class Site(DefaultSchema):
+    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social"})
+    name = fields.String(required=True)
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
-    icon = fields.Url()
-    name = fields.String(required=True)
-    registration_mode = fields.Enum(reg_enum)
+    icon = fields.Url(allow_none=True)
+    registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
     sidebar = fields.String()
     user_count = fields.Integer()
 
 
-class Community(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
-    actor_id = fields.Url(required=True)
-    ap_domain = fields.String()
-    banned = fields.Boolean()
-    banner = fields.Url()
+class Community(DefaultSchema):
+    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/c/piefed_meta"})
+    ap_domain = fields.String(metadata={"example": "piefed.social"})
     deleted = fields.Boolean(required=True)
-    description = fields.String()
     hidden = fields.Boolean(required=True)
-    icon = fields.Url()
     id = fields.Integer(required=True)
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
     name = fields.String(required=True)
     nsfw = fields.Boolean(required=True)
-    posting_warning = fields.String()
-    published = fields.String(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
     removed = fields.Boolean(required=True)
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
-    updated = fields.String()
+    banned = fields.Boolean()
+    banner = fields.Url(allow_none=True)
+    description = fields.String()
+    icon = fields.Url(allow_none=True)
+    posting_warning = fields.String(allow_none=True)
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
 
 
-class CommunityBlockView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class CommunityBlockView(DefaultSchema):
     community = fields.Nested(Community)
     person = fields.Nested(Person)
 
 
-class CommunityFollowerView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class CommunityFollowerView(DefaultSchema):
     community = fields.Nested(Community, required=True)
     follower = fields.Nested(Person, required=True)
 
 
-class Instance(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
-    domain = fields.String(required=True)
+class Instance(DefaultSchema):
+    domain = fields.String(required=True, metadata={"example": "piefed.social"})
     id = fields.Integer(required=True)
-    published = fields.String(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
     software = fields.String()
-    updated = fields.String()
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
     version = fields.String()
 
 
-class InstanceBlockView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class InstanceBlockView(DefaultSchema):
     instance = fields.Nested(Instance, required=True)
     person = fields.Nested(Person, required=True)
     site = fields.Nested(Site, required=True)
 
 
-class LocalUser(Schema):
-    default_comment_sort_type = fields.Enum(comment_sort_enum, required=True)
-    default_listing_type = fields.Enum(listing_type_enum, required=True)
-    default_sort_type = fields.Enum(sort_enum, required=True)
+class LocalUser(DefaultSchema):
+    default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
+    default_listing_type = fields.String(required=True, validate=validate.OneOf(listing_type_list))
+    default_sort_type = fields.String(required=True, validate=validate.OneOf(sort_list))
     show_bot_accounts = fields.Boolean(required=True)
+    show_nsfl = fields.Boolean(required=True)
     show_nsfw = fields.Boolean(required=True)
     show_read_posts = fields.Boolean(required=True)
     show_scores = fields.Boolean(required=True)
 
 
-class LocalUserView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class LocalUserView(DefaultSchema):
     counts = fields.Nested(PersonAggregates, required=True)
     local_user = fields.Nested(LocalUser, required=True)
     person = fields.Nested(Person, required=True)
 
 
-class CommunityModeratorView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class CommunityModeratorView(DefaultSchema):
     community = fields.Nested(Community, required=True)
     moderator = fields.Nested(Person, required=True)
 
 
-class PersonBlockView(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class PersonBlockView(DefaultSchema):
     person = fields.Nested(Person, required=True)
     target = fields.Nested(Person, required=True)
 
 
-class MyUserInfo(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class MyUserInfo(DefaultSchema):
     community_blocks = fields.List(fields.Nested(CommunityBlockView), required=True)
     discussion_languages = fields.List(fields.Nested(LanguageView), required=True)
     follows = fields.List(fields.Nested(CommunityFollowerView), required=True)
@@ -205,11 +163,179 @@ class MyUserInfo(Schema):
     person_blocks = fields.List(fields.Nested(PersonBlockView), required=True)
 
 
-class GetSiteResponse(Schema):
-    class Meta:
-        unknown = EXCLUDE
-    
+class GetSiteResponse(DefaultSchema):
     admins = fields.List(fields.Nested(PersonView), required=True)
-    my_user = fields.Nested(MyUserInfo)
     site = fields.Nested(Site, required=True)
     version = fields.String(required=True, metadata={"title": "Software version"})
+    my_user = fields.Nested(MyUserInfo)
+
+
+class BlockInstanceRequest(DefaultSchema):
+    block = fields.Boolean(required=True)
+    instance_id = fields.Integer(required=True)
+
+
+class BlockInstanceResponse(DefaultSchema):
+    blocked = fields.Boolean(required=True)
+
+
+class SearchRequest(DefaultSchema):
+    q = fields.String(required=True)
+    type_ = fields.String(required=True, validate=validate.OneOf(content_type_list))
+    limit = fields.Integer()
+    listing_type = fields.String(validate=validate.OneOf(listing_type_list))
+    page = fields.Integer()
+    sort = fields.String(validate=validate.OneOf(sort_list))
+    
+
+
+class Post(DefaultSchema):
+    ap_id = fields.Url(required=True)
+    community_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+    id = fields.Integer(required=True)
+    language_id = fields.Integer(required=True)
+    local = fields.Boolean(required=True)
+    locked = fields.Boolean(required=True)
+    nsfw = fields.Boolean(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    removed = fields.Boolean(required=True)
+    sticky = fields.Boolean(required=True)
+    title = fields.String(required=True)
+    user_id = fields.Integer(required=True)
+    alt_text = fields.String()
+    body = fields.String()
+    small_thumbnail_url = fields.Url()
+    thumbnail_url = fields.Url()
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    url = fields.Url()   
+
+
+class PostAggregates(DefaultSchema):
+    comments = fields.Integer(required=True)
+    downvotes = fields.Integer(required=True)
+    newest_comment_time = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    post_id = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    score = fields.Integer(required=True)
+    upvotes = fields.Integer(required=True)
+
+
+class PostView(DefaultSchema):
+    banned_from_community = fields.Boolean(required=True)
+    community = fields.Nested(Community, required=True)
+    counts = fields.Nested(PostAggregates, required=True)
+    creator = fields.Nested(Person, required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_is_admin = fields.Boolean(required=True)
+    creator_is_moderator = fields.Boolean(required=True)
+    hidden = fields.Boolean(required=True)
+    post = fields.Nested(Post, required=True)
+    read = fields.Boolean(required=True)
+    saved = fields.Boolean(required=True)
+    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    unread_comments = fields.Integer(required=True)
+    activity_alert = fields.Boolean()
+    my_vote = fields.Integer()
+
+
+class CommunityAggregates(DefaultSchema):
+    id = fields.Integer(required=True)
+    post_count = fields.Integer(required=True)
+    post_reply_count = fields.Integer(required=True)
+    published = fields.String(required=True)
+    subscriptions_count = fields.Integer(required=True)
+    total_subscriptions_count = fields.Integer(required=True)
+    active_daily = fields.Integer()
+    active_weekly = fields.Integer()
+    active_monthly = fields.Integer()
+    active_6monthly = fields.Integer()
+
+
+class CommunityView(DefaultSchema):
+    activity_alert = fields.Boolean(required=True)
+    blocked = fields.Boolean(required=True)
+    community = fields.Nested(Community, required=True)
+    counts = fields.Nested(CommunityAggregates, required=True)
+    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+
+
+class Comment(DefaultSchema):
+    ap_id = fields.Url(required=True)
+    body = fields.String(required=True)
+    deleted = fields.Boolean(required=True)
+    id = fields.Integer(required=True)
+    language_id = fields.Integer(required=True)
+    local = fields.Boolean(required=True)
+    path = fields.String(required=True)
+    post_id = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    removed = fields.Boolean(required=True)
+    user_id = fields.Integer(required=True)
+    distinguished = fields.Boolean()
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+
+
+class CommentAggregates(DefaultSchema):
+    child_count = fields.Integer(required=True)
+    comment_id = fields.Integer(required=True)
+    downvotes = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    score = fields.Integer(required=True)
+    upvotes = fields.Integer(required=True)
+
+
+class CommentView(DefaultSchema):
+    activity_alert = fields.Boolean(required=True)
+    banned_from_community = fields.Boolean(required=True)
+    comment = fields.Nested(Comment, required=True)
+    community = fields.Nested(Community, required=True)
+    counts = fields.Nested(CommentAggregates, required=True)
+    creator = fields.Nested(Person, required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_blocked = fields.Boolean(required=True)
+    creator_is_admin = fields.Boolean(required=True)
+    creator_is_moderator = fields.Boolean(required=True) 
+    post = fields.Nested(Post, required=True)
+    saved = fields.Boolean(required=True)
+    subscribed = fields.String(required=True)
+    my_vote = fields.Integer()
+    can_auth_user_moderate = fields.Boolean()
+
+
+class SearchResponse(DefaultSchema):
+    type_ = fields.String(required=True, validate=validate.OneOf(content_type_list))
+    communities = fields.List(fields.Nested(CommunityView), required=True)
+    posts = fields.List(fields.Nested(PostView), required=True)
+    users = fields.List(fields.Nested(PersonView), required=True)
+    comments = fields.List(fields.Nested(CommentView), required=True)
+
+
+class ResolveObjectRequest(DefaultSchema):
+    q = fields.String(required=True)
+
+
+class ResolveObjectResponse(DefaultSchema):
+    comment = fields.Nested(CommentView)
+    post = fields.Nested(PostView)
+    community = fields.Nested(CommunityView)
+    person = fields.Nested(PersonView)
+
+
+class InstanceWithoutFederationState(DefaultSchema):
+    domain = fields.String(required=True)
+    id = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    software = fields.String()
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})
+    version = fields.String()
+
+
+class FederatedInstancesView(DefaultSchema):
+    allowed = fields.List(fields.Nested(InstanceWithoutFederationState), required=True)
+    blocked = fields.List(fields.Nested(InstanceWithoutFederationState), required=True)
+    linked = fields.List(fields.Nested(InstanceWithoutFederationState), required=True)
+
+
+class GetFederatedInstancesResponse(DefaultSchema):
+    federated_instances = fields.Nested(FederatedInstancesView)
