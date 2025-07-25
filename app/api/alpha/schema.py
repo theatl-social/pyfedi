@@ -123,7 +123,6 @@ class Instance(DefaultSchema):
 class InstanceBlockView(DefaultSchema):
     instance = fields.Nested(Instance, required=True)
     person = fields.Nested(Person, required=True)
-    site = fields.Nested(Site, required=True)
 
 
 class LocalUser(DefaultSchema):
