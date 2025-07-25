@@ -16,7 +16,8 @@ from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, pu
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
+    get_post_reply_list
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
@@ -309,6 +310,18 @@ def get_alpha_post():
         return jsonify(get_post(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/post/replies', methods=['GET'])
+def get_alpha_post_replies():
+    if not enable_api():
+        return jsonify({'error': 'api is not enabled'}), 400
+    #try:
+    auth = request.headers.get('Authorization')
+    data = request.args.to_dict() or None
+    return orjson_response(get_post_reply_list(auth, data))
+    #except Exception as ex:
+    #    return jsonify({"error": str(ex)}), 400
 
 
 @bp.route('/api/alpha/post/like', methods=['POST'])

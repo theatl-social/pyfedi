@@ -13,7 +13,7 @@ from app.utils import blocked_instances, blocked_users, is_video_hosting_site
 # replies to a post, in a tree, sorted by a variety of methods
 def post_replies(community: Community, post_id: int, sort_by: str, viewer: User) -> List[PostReply]:
     comments = PostReply.query.filter_by(post_id=post_id)
-    if viewer.is_authenticated:
+    if viewer:
         instance_ids = blocked_instances(viewer.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
@@ -22,7 +22,7 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
         blocked_accounts = blocked_users(viewer.id)
         if blocked_accounts:
             comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
-        if viewer.reply_hide_threshold and not (viewer.is_admin() or community.is_owner() or community.is_moderator()):
+        if viewer.reply_hide_threshold and not (viewer.is_admin_or_staff() or community.is_moderator()):
             comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
         if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
             comments = comments.filter(
@@ -52,17 +52,30 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
     return [comment for comment in comments_dict.values() if comment['comment'].parent_id is None]
 
 
-def get_comment_branch(post_id: int, comment_id: int, sort_by: str) -> List[PostReply]:
+def get_comment_branch(community: Community, post_id: int, comment_id: int, sort_by: str, viewer: User) -> List[PostReply]:
     # Fetch the specified parent comment and its replies
     parent_comment = PostReply.query.get(comment_id)
     if parent_comment is None:
         return []
 
     comments = PostReply.query.filter(PostReply.post_id == post_id)
-    if current_user.is_authenticated:
-        instance_ids = blocked_instances(current_user.id)
+    if viewer:
+        instance_ids = blocked_instances(viewer.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+        if viewer.ignore_bots == 1:
+            comments = comments.filter(PostReply.from_bot == False)
+        blocked_accounts = blocked_users(viewer.id)
+        if blocked_accounts:
+            comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
+        if viewer.reply_hide_threshold and not (viewer.is_admin_or_staff() or community.is_moderator()):
+            comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
+        if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
+            comments = comments.filter(
+                or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
+    else:
+        comments.filter(PostReply.score > -20)
+
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))
     elif sort_by == 'top':

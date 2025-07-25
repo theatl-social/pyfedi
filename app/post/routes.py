@@ -119,7 +119,7 @@ def show_post(post_id: int):
         else:
             if total_comments_on_post_and_cross_posts(post.id) < 100:   # if there are not many comments then we might as well load them with the post
                 lazy_load_replies = False
-                replies = post_replies(community, post.id, sort, current_user)
+                replies = post_replies(community, post.id, sort, current_user if current_user.is_authenticated else None)
                 more_replies = defaultdict(list)
                 if post.cross_posts:
                     cbf = communities_banned_from(current_user.get_id())
@@ -129,7 +129,8 @@ def show_post(post_id: int):
                         if cross_posted_post.community_id not in cbf \
                                 and cross_posted_post.community_id not in bc \
                                 and cross_posted_post.community.instance_id not in bi:
-                            cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort, current_user)
+                            cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort,
+                                                                current_user if current_user.is_authenticated else None)
                             if len(cross_posted_replies):
                                 more_replies[cross_posted_post.community].extend(cross_posted_replies)
             else:
@@ -314,7 +315,7 @@ def post_lazy_replies(post_id, nonce):
     # Get necessary data for comment rendering
     communities_banned_from_list = communities_banned_from(current_user.get_id()) if current_user.is_authenticated else []
     
-    replies = post_replies(post.community, post.id, sort, current_user)
+    replies = post_replies(post.community, post.id, sort, current_user if current_user.is_authenticated else None)
     more_replies = defaultdict(list)
     if post.cross_posts:
         cbf = communities_banned_from_list
@@ -325,7 +326,7 @@ def post_lazy_replies(post_id, nonce):
                     and cross_posted_post.community_id not in bc \
                     and cross_posted_post.community.instance_id not in bi:
                 cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort,
-                                                    current_user)
+                                                    current_user if current_user.is_authenticated else None)
                 if len(cross_posted_replies):
                     more_replies[cross_posted_post.community].extend(cross_posted_replies)
     
@@ -551,7 +552,7 @@ def continue_discussion(post_id, comment_id):
     else:
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-    replies = get_comment_branch(post.id, comment.id, 'top')
+    replies = get_comment_branch(post.community, post.id, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # Voting history
     if current_user.is_authenticated:
@@ -586,7 +587,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
     else:
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-    replies = get_comment_branch(post.id, comment.id, 'top')
+    replies = get_comment_branch(post.community, post.id, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # user flair
     user_flair = {}

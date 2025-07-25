@@ -6,6 +6,7 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view
 from app.constants import *
 from app.models import Notification, PostReply, Post, User
+from app.post.util import post_replies, get_comment_branch
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
     edit_reply, \
     delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
@@ -148,6 +149,178 @@ def get_reply_list(auth, data, user_id=None):
     list_json = {
         "comments": replylist,
         "next_page": str(replies.next_num) if replies.next_num is not None else None
+    }
+
+    return list_json
+
+
+def get_post_reply_list(auth, data, user_id=None):
+    sort = data['sort'] if data and 'sort' in data else "New"
+    max_depth = int(data['max_depth']) if data and 'max_depth' in data else None
+    page_cursor = data['page'] if data and 'page' in data else None  # Now expects reply ID or None for first page
+    limit = int(data['limit']) if data and 'limit' in data else 20
+    post_id = data['post_id'] if data and 'post_id' in data else None
+    parent_id = data['parent_id'] if data and 'parent_id' in data else None
+
+    if auth:
+        user_id = authorise_api_user(auth)
+
+    user_id = 1
+
+    if user_id:
+        g.user = User.query.get(user_id)    # save the currently logged in user into g, to save loading it up again and again in reply_view.
+
+    post = Post.query.get(post_id)
+    if parent_id:
+        replies = get_comment_branch(post.community, post_id, parent_id, sort.lower(), g.user if hasattr(g, 'user') else None)
+    else:
+        replies = post_replies(post.community, post_id, sort.lower(), g.user if hasattr(g, 'user') else None)
+
+    # Apply max_depth filter to the nested reply tree
+    def filter_max_depth(reply_tree, current_depth=0, parent_depth=0):
+        """Filter nested reply tree by max_depth"""
+        if max_depth is None:
+            return reply_tree
+            
+        filtered_tree = []
+        for item in reply_tree:
+            comment = item['comment']
+            # Calculate depth relative to parent_id if specified, otherwise use absolute depth
+            effective_depth = current_depth if parent_id else comment.depth
+            
+            if effective_depth <= max_depth:
+                filtered_item = {
+                    'comment': comment,
+                    'replies': filter_max_depth(item['replies'], current_depth + 1, parent_depth)
+                }
+                filtered_tree.append(filtered_item)
+        
+        return filtered_tree
+    
+    # Apply max_depth filter
+    if max_depth:
+        replies = filter_max_depth(replies)
+    
+    # Apply cursor-based pagination
+    def paginate_with_cursor(reply_tree, cursor_id, limit):
+        """Paginate using reply ID cursor while keeping complete branches together"""
+        if not reply_tree:
+            return [], None
+        
+        # Find starting position based on cursor
+        start_index = 0
+        if cursor_id:
+            try:
+                cursor_id = int(cursor_id)
+                # Find the top-level branch that matches this cursor
+                for i, branch in enumerate(reply_tree):
+                    if branch['comment'].id == cursor_id:
+                        start_index = i  # Start from the cursor branch itself
+                        break
+                else:
+                    # Cursor not found, return empty (past end)
+                    return [], None
+            except (ValueError, TypeError):
+                # Invalid cursor, start from beginning
+                start_index = 0
+        
+        # Count flattened items in branches to respect limit
+        def get_branch_size(branch):
+            """Count total items in a branch (including all descendants)"""
+            count = 1  # The branch itself
+            for child in branch['replies']:
+                count += get_branch_size(child)
+            return count
+        
+        # Collect branches starting from cursor position
+        included_branches = []
+        total_items = 0
+        
+        for i in range(start_index, len(reply_tree)):
+            branch = reply_tree[i]
+            branch_size = get_branch_size(branch)
+            
+            # Always include at least one branch, even if it exceeds limit
+            if not included_branches:
+                included_branches.append(branch)
+                total_items += branch_size
+            elif total_items + branch_size <= limit or total_items == 0:
+                # Include this branch if it fits within limit
+                included_branches.append(branch)
+                total_items += branch_size
+            else:
+                # Would exceed limit, stop here
+                break
+        
+        # Determine next cursor (ID of next top-level branch after those included)
+        next_cursor = None
+        if included_branches:
+            last_included_index = start_index + len(included_branches) - 1
+            if last_included_index + 1 < len(reply_tree):
+                next_cursor = reply_tree[last_included_index + 1]['comment'].id
+        
+        return included_branches, next_cursor
+    
+    # Apply pagination  
+    replies, next_cursor = paginate_with_cursor(replies, page_cursor, limit)
+
+    inner_post_view = None
+    inner_community_view = None
+    can_auth_user_moderate = False
+    mods = None
+    banned_from = communities_banned_from(user_id)
+    bookmarked_replies = list(db.session.execute(text(
+        'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+        {'user_id': user_id}).scalars())
+    if bookmarked_replies is None:
+        bookmarked_replies = []
+    reply_subscriptions = list(db.session.execute(text(
+        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+        {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
+    if reply_subscriptions is None:
+        reply_subscriptions = []
+
+    # Process nested reply tree while preserving structure
+    def process_nested_replies(reply_tree, is_top_level=True):
+        """Process nested reply tree while preserving nested structure"""
+        nonlocal mods, inner_post_view, inner_community_view, can_auth_user_moderate
+        processed_replies = []
+        
+        for item in reply_tree:
+            reply = item['comment']
+            if mods is None:
+                mods = [moderator.user_id for moderator in post.community.moderators()]
+            
+            view = reply_view(reply=reply, variant=7, user_id=user_id, mods=mods, banned_from=banned_from,
+                              bookmarked_replies=bookmarked_replies, reply_subscriptions=reply_subscriptions)
+            
+            # Only include post and community info on top-level replies
+            if is_top_level:
+                if not inner_post_view:
+                    inner_post_view = post_view(post, variant=1)
+                view['post'] = inner_post_view
+                if not inner_community_view:
+                    inner_community_view = community_view(post.community, variant=1, stub=True)
+                    if user_id:
+                        can_auth_user_moderate = user_id in mods
+                view['community'] = inner_community_view
+                view['can_auth_user_moderate'] = can_auth_user_moderate
+            
+            # Process nested replies
+            if item['replies']:
+                view['replies'] = process_nested_replies(item['replies'], is_top_level=False)
+            else:
+                view['replies'] = []
+            
+            processed_replies.append(view)
+        
+        return processed_replies
+    
+    replylist = process_nested_replies(replies)
+
+    list_json = {
+        "comments": replylist,
+        "next_page": str(next_cursor) if next_cursor is not None else None
     }
 
     return list_json
