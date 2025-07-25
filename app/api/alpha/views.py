@@ -764,8 +764,16 @@ def site_view(user) -> dict:
         "user_count": users_total(),
         "all_languages": []
     }
-    if g.site.sidebar:
-        site['sidebar'] = g.site.sidebar
+    
+    if g.site.sidebar and g.site.sidebar_html:
+        if g.site.sidebar == g.site.sidebar_html:
+            site['sidebar_html'] = g.site.sidebar_html
+        else:
+            site['sidebar'] = g.site.sidebar
+            site['sidebar_html'] = g.site.sidebar_html
+    elif g.site.sidebar:
+        site['sidebar_html'] = g.site.sidebar
+    
     if g.site.description:
         site['description'] = g.site.description
     for language in Language.query.all():

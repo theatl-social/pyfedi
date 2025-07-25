@@ -76,6 +76,7 @@ class Site(DefaultSchema):
     icon = fields.Url(allow_none=True)
     registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
     sidebar = fields.String()
+    sidebar_html = fields.String()
     user_count = fields.Integer()
 
 
