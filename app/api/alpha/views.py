@@ -22,7 +22,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
     if variant == 1:
         include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
-        v1.update({'published': post.posted_at.isoformat() + 'Z',
+        v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': post.profile_id(),
                    'local': post.is_local(),
                    'language_id': post.language_id if post.language_id else 0,
@@ -31,7 +31,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
-            v1['edited_at'] = post.edited_at.isoformat() + 'Z'
+            v1['edited_at'] = post.edited_at.isoformat(timespec="microseconds") + 'Z'
         if post.deleted == True:
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1['removed'] = True
@@ -59,8 +59,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         # counts - models/post/post_aggregates.dart
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes,
                   'downvotes': post.down_votes,
-                  'published': post.posted_at.isoformat() + 'Z',
-                  'newest_comment_time': post.last_active.isoformat() + 'Z'}
+                  'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
+                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z'}
         if user_id:
             if bookmarked_posts is None:
                 bookmarked = db.session.execute(
@@ -183,7 +183,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
     if variant == 1:
         include = ['id', 'user_name', 'title', 'banned', 'deleted', 'bot']
         v1 = {column.name: getattr(user, column.name) for column in user.__table__.columns if column.name in include}
-        v1.update({'published': user.created.isoformat() + 'Z',
+        v1.update({'published': user.created.isoformat(timespec="microseconds") + 'Z',
                    'actor_id': user.public_url(),
                    'local': user.is_local(),
                    'instance_id': user.instance_id if user.instance_id else 1})
@@ -259,7 +259,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "id": user.id,
                     "user_name": user.user_name,
                     "banned": user.banned,
-                    "published": user.created.isoformat() + 'Z',
+                    "published": user.created.isoformat(timespec="microseconds") + 'Z',
                     "actor_id": user.public_url(),
                     "local": True,
                     "deleted": user.deleted,
@@ -305,8 +305,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods']
         v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if
               column.name in include}
-        v1.update({'published': community.created_at.isoformat() + 'Z',
-                   'updated': community.created_at.isoformat() + 'Z',
+        v1.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z',
+                   'updated': community.created_at.isoformat(timespec="microseconds") + 'Z',
                    'deleted': community.banned,
                    'removed': False,
                    'actor_id': community.public_url(),
@@ -334,7 +334,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                   column.name in include}
         if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:
             counts['total_subscriptions_count'] = counts['subscriptions_count']
-        counts.update({'published': community.created_at.isoformat() + 'Z'})
+        counts.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z'})
         if user_id:
             followed = db.session.execute(text(
                 'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
@@ -425,7 +425,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         include = ['id', 'user_id', 'post_id', 'body', 'deleted']
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
 
-        v1.update({'published': reply.posted_at.isoformat() + 'Z',
+        v1.update({'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': reply.profile_id(),
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
@@ -437,7 +437,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
             calculate_path(reply)
         v1['path'] = '.'.join(str(id) for id in reply.path)
         if reply.edited_at:
-            v1['edited_at'] = reply.edited_at.isoformat() + 'Z'
+            v1['edited_at'] = reply.edited_at.isoformat(timespec="microseconds") + 'Z'
         if reply.deleted == True:
             v1['body'] = ''
             if reply.deleted_by and reply.user_id != reply.deleted_by:
@@ -496,14 +496,14 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         creator_is_admin = True if admin else False
 
         v5 = {'comment_reply': {'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id, 'read': read,
-                                'published': reply.posted_at.isoformat() + 'Z'},
+                                'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z'},
               'comment': reply_view(reply=reply, variant=1),
               'creator': user_view(user=reply.author, variant=1, flair_community_id=reply.community_id),
               'post': post_view(post=reply.post, variant=1),
               'community': community_view(community=reply.community, variant=1),
               'recipient': user_view(user=user_id if not hasattr(g, 'user') else g.user, variant=1),
               'counts': {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
-                         'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat() + 'Z',
+                         'downvotes': reply.down_votes, 'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
                          'child_count': 0},
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
@@ -532,7 +532,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
         # counts - models/comment/comment_aggregates.dart
         counts = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
                   'downvotes': reply.down_votes,
-                  'published': reply.posted_at.isoformat() + 'Z',
+                  'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
                   'child_count': reply.child_count if reply.child_count is not None else 0}
 
         if bookmarked_replies is None:
@@ -628,7 +628,7 @@ def reply_report_view(report, reply_id, user_id) -> dict:
                 'original_comment_text': reply_json['comment']['body'],
                 'reason': report.reasons,
                 'resolved': report.status == 3,
-                'published': report.created_at.isoformat() + 'Z'
+                'published': report.created_at.isoformat(timespec="microseconds") + 'Z'
             },
             'comment': reply_json['comment'],
             'post': post_json,
@@ -675,7 +675,7 @@ def post_report_view(report, post_id, user_id) -> dict:
                 'original_post_body': '',
                 'reason': report.reasons,
                 'resolved': report.status == 3,
-                'published': report.created_at.isoformat() + 'Z'
+                'published': report.created_at.isoformat(timespec="microseconds") + 'Z'
             },
             'post': post_json['post'],
             'community': community_json,
@@ -715,7 +715,8 @@ def instance_view(instance: Instance | int, variant) -> dict:
         if not v1['version']:
             v1.update({'version': '0.0.1'})
         v1.update(
-            {'published': instance.created_at.isoformat() + 'Z', 'updated': instance.updated_at.isoformat() + 'Z'})
+            {'published': instance.created_at.isoformat(timespec="microseconds") + 'Z',
+             'updated': instance.updated_at.isoformat(timespec="microseconds") + 'Z'})
 
         return v1
 
@@ -733,7 +734,7 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
             'content': cm.body,
             'deleted': False,
             'read': cm.read,
-            'published': cm.created_at.isoformat() + 'Z',
+            'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
             'ap_id': cm.ap_id,
             'local': is_local
         },
@@ -803,15 +804,20 @@ def federated_instances_view():
     allowed = []
     blocked = []
     for instance in AllowedInstances.query.all():
-        allowed.append({"id": instance.id, "domain": instance.domain, "published": utcnow().isoformat() + "Z",
-                        "updated": utcnow().isoformat() + "Z"})
+        allowed.append({"id": instance.id,
+                        "domain": instance.domain,
+                        "published": utcnow().isoformat(timespec="microseconds") + "Z",
+                        "updated": utcnow().isoformat(timespec="microseconds") + "Z"})
     for instance in BannedInstances.query.all():
-        blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow().isoformat() + "Z",
-                        "updated": utcnow().isoformat() + "Z"})
+        blocked.append({"id": instance.id,
+                        "domain": instance.domain,
+                        "published": utcnow().isoformat(timespec="microseconds") + "Z",
+                        "updated": utcnow().isoformat(timespec="microseconds") + "Z"})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain,
-                         "published": instance.created_at.isoformat() + "Z",
-                         "updated": instance.updated_at.isoformat() + "Z"}
+        instance_data = {"id": instance.id,
+                         "domain": instance.domain,
+                         "published": instance.created_at.isoformat(timespec="microseconds") + "Z",
+                         "updated": instance.updated_at.isoformat(timespec="microseconds") + "Z"}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
