@@ -3,8 +3,8 @@ URI validation to prevent SSRF and other URI-based attacks
 """
 import ipaddress
 import re
-from typing import Optional, List, Set
-from urllib.parse import urlparse, urljoin
+from typing import Optional, List
+from urllib.parse import urlparse
 from flask import current_app
 import socket
 import logging
@@ -117,7 +117,7 @@ class URIValidator:
         # Check for suspicious patterns
         for pattern in self.SUSPICIOUS_PATTERNS:
             if pattern.search(uri):
-                raise ValueError(f"URI contains suspicious pattern")
+                raise ValueError("URI contains suspicious pattern")
         
         # Parse URI
         try:

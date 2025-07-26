@@ -566,4 +566,3 @@ class TestPerformanceRegression:
         # Should cache public key fetches
         # Should cache signature verification results
         pass
-"""

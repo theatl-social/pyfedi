@@ -3,7 +3,7 @@ Test cases for signature validation security
 Tests protection against authentication bypass vulnerabilities
 """
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from datetime import datetime, timedelta
 from app.security.signature_validator import SignatureValidator, SecurityError
 from app.activitypub.signature import VerificationError

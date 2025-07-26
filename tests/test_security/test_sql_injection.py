@@ -576,4 +576,3 @@ class TestSQLInjectionReporting:
         assert "Use parameterized queries" in fixes
         assert "text(" in fixes  # Should suggest text() usage
         assert "{'id': user_id}" in fixes  # Should show parameter dict
-"""

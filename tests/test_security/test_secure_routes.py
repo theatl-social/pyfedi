@@ -338,4 +338,3 @@ class TestErrorHandling:
         # Both "user not found" and "invalid password" should return same error
         # This prevents user enumeration attacks
         pass
-"""

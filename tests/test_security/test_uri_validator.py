@@ -4,8 +4,7 @@ Tests protection against SSRF and other URI-based attacks
 """
 import pytest
 from unittest.mock import Mock, patch
-import ipaddress
-from app.security.uri_validator import URIValidator, validate_uri
+from app.security.uri_validator import URIValidator
 
 
 class TestURIValidator:

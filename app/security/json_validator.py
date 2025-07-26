@@ -2,7 +2,7 @@
 Safe JSON parsing with protection against DoS attacks
 """
 import json
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from flask import current_app
 
 

@@ -107,7 +107,7 @@ class SignatureValidator:
         try:
             data = request.get_json(force=True, cache=True)
             return isinstance(data, dict) and 'signature' in data
-        except:
+        except Exception:
             return False
     
     def _verify_http_signature(self, request: Request, actor: User) -> Tuple[bool, Optional[str]]:
@@ -213,7 +213,7 @@ class SignatureValidator:
             
             return True
             
-        except:
+        except Exception:
             return False
     
     def _handle_verification_failure(self, actor: User, request: Request):
