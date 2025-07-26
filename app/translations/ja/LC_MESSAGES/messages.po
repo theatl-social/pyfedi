@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-06-18 17:00+1200\n"
-"PO-Revision-Date: 2025-06-18 08:46+0000\n"
+"PO-Revision-Date: 2025-07-01 02:47+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
 "Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ja/>\n"
@@ -705,7 +705,7 @@ msgstr "メモ"
 #: app/admin/forms.py:186 app/auth/forms.py:14 app/auth/forms.py:22
 #: app/community/forms.py:108
 msgid "User name"
-msgstr "ユーザー名 (英数字とハイフン（a～z、0～9、- ) が使用できます)"
+msgstr "ユーザー名 (英数字（a～z、0～9 ) が使用できます)"
 
 #: app/admin/forms.py:188 app/user/forms.py:13
 msgid "Email address"
@@ -2100,7 +2100,7 @@ msgstr "コミュニティ Wiki"
 #: app/community/routes.py:1427
 #: app/templates/community/community_wiki_list.html:26
 msgid "Add wiki page"
-msgstr "ウィキを追加"
+msgstr "Wikiを追加"
 
 #: app/community/routes.py:1563
 msgid "Reverted to old version of the page."
@@ -4712,7 +4712,7 @@ msgstr ""
 #: app/templates/community/community_wiki_list.html:23
 #, python-format
 msgid "Wiki pages for %(community)s"
-msgstr "%(community)s のウィキ"
+msgstr "%(community)s のWiki"
 
 #: app/templates/community/community_wiki_list.html:49
 msgid "View page"
@@ -4724,11 +4724,11 @@ msgstr "履歴を表示"
 
 #: app/templates/community/community_wiki_list.html:64
 msgid "Add a link to the wiki in the community description."
-msgstr "コミュニティの説明にウィキへのリンクを追加する。"
+msgstr "コミュニティの説明にWikiへのリンクを追加する。"
 
 #: app/templates/community/community_wiki_list.html:66
 msgid "There are no wiki pages in this community."
-msgstr "このコミュニティにはまだウィキはありません。"
+msgstr "このコミュニティにはまだWikiはありません。"
 
 #: app/templates/community/community_wiki_revisions.html:23
 #, python-format
@@ -6464,15 +6464,15 @@ msgstr "テーマ"
 
 #: app/user/forms.py:81
 msgid "No - expand images"
-msgstr "いいえ — 画像を大きく表示"
+msgstr "適用しない：画像を大きく表示"
 
 #: app/user/forms.py:82
 msgid "Yes - thumbnails only"
-msgstr "はい — サムネイルで表示"
+msgstr "適用：サムネイルで表示"
 
 #: app/user/forms.py:83
 msgid "YEESSS - no images, only text"
-msgstr "はい — 画像は表示しません"
+msgstr "適用：画像は表示しません"
 
 #: app/user/forms.py:85
 msgid "Compact UI"

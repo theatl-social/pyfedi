@@ -8,23 +8,25 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-06-21 14:42+1200\n"
-"PO-Revision-Date: 2025-06-21 14:42+1200\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2025-06-24 07:47+0000\n"
+"Last-Translator: Ruud <ruud@schilders.email>\n"
+"Language-Team: Dutch <http://translate.piefed.social/projects/piefed/"
+"main-web-app/nl/>\n"
 "Language: nl\n"
-"Language-Team: nl <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:43
 msgid "Please log in to access this page."
-msgstr ""
+msgstr "Log aub. in om deze pagina te openen."
 
 #: app/cli.py:743 app/main/routes.py:721
 msgid "[PieFed] You have unread notifications"
-msgstr ""
+msgstr "[PieFed] U heeft ongelezen meldingen"
 
 #: app/cli.py:863 app/shared/post.py:127
 #, python-format
@@ -6886,4 +6888,3 @@ msgstr ""
 #: app/user/subscription.py:162
 msgid "Your donation has been cancelled."
 msgstr ""
-
