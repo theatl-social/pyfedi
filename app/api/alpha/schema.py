@@ -7,7 +7,9 @@ reg_mode_list = ["Closed", "RequireApplication", "Open"]
 sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
              "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled"]
 comment_sort_list = ["Hot", "Top", "New", "Old"]
+community_sort_list = ["Hot", "Top", "New"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating"]
+community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 
@@ -339,3 +341,130 @@ class FederatedInstancesView(DefaultSchema):
 
 class GetFederatedInstancesResponse(DefaultSchema):
     federated_instances = fields.Nested(FederatedInstancesView)
+
+
+class GetCommunityRequest(DefaultSchema):
+    id = fields.Integer()
+    name = fields.String()
+
+
+class GetCommunityResponse(DefaultSchema):
+    community_view = fields.Nested(CommunityView, required=True)
+    discussion_languages = fields.List(fields.Integer(), required=True)
+    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    site = fields.Nested(Site)
+
+
+class CreateCommunityRequest(DefaultSchema):
+    name = fields.String(required=True)
+    title = fields.String(required=True)
+    banner_url = fields.Url(allow_none=True)
+    description = fields.String()
+    discussion_languages = fields.List(fields.Integer())
+    icon_url = fields.Url(allow_none=True)
+    local_only = fields.Boolean()
+    nsfw = fields.Boolean()
+    restricted_to_mods = fields.Boolean()
+    rules = fields.String()
+
+
+class CommunityResponse(DefaultSchema):
+    community_view = fields.Nested(CommunityView, required=True)
+    discussion_languages = fields.List(fields.Integer(), required=True)
+
+
+class EditCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)  # this is proper name, old swagger wrong
+    title = fields.String(required=True)
+    banner_url = fields.Url(allow_none=True)
+    description = fields.String()
+    discussion_languages = fields.List(fields.Integer())
+    icon_url = fields.Url(allow_none=True)
+    local_only = fields.Boolean()
+    nsfw = fields.Boolean()
+    restricted_to_mods = fields.Boolean()
+    rules = fields.String()
+
+
+class DeleteCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ListCommunitiesRequest(DefaultSchema):
+    limit = fields.Integer()
+    page = fields.Integer()
+    show_nsfw = fields.Boolean()
+    sort = fields.String(validate=validate.OneOf(community_sort_list))
+    type_ = fields.String(validate=validate.OneOf(community_listing_type_list))
+
+
+class ListCommunitiesResponse(DefaultSchema):
+    communities = fields.List(fields.Nested(CommunityView), required=True)
+
+
+class FollowCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    follow = fields.Integer(required=True)
+
+
+class BlockCommunityRequest(DefaultSchema):
+    block = fields.Boolean(required=True)
+    community_id = fields.Integer(required=True)
+
+
+class BlockCommunityResponse(DefaultSchema):
+    community_view = fields.Nested(CommentView, required=True)
+    blocked = fields.Boolean(required=True)
+
+
+class ModCommunityRequest(DefaultSchema):
+    added = fields.Boolean(required=True)
+    community_id = fields.Integer(required=True)
+    person_id = fields.Integer(required=True)
+
+
+class ModCommunityResponse(DefaultSchema):
+    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+
+
+class SubscribeCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class CommunityModerationBansListRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+
+
+class CommunityModerationBanItem(DefaultSchema):
+    banned_by = fields.Nested(Person)  # being changed to snake case
+    banned_user = fields.Nested(Person)  # being changed to snake case
+    community = fields.Nested(CommunityView)
+    expired = fields.Boolean()
+    expired_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})  # confirm datetime formatting, being changed to snake case
+    reason = fields.String()
+
+
+class CommunityModerationBansListResponse(DefaultSchema):
+    items = fields.List(fields.Nested(CommunityModerationBanItem))
+    next_page = fields.String()
+
+
+class CommunityModerationBanRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    expired_at = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z"})  # confirm datetime formatting, being changed to snake case
+    reason = fields.String(required=True)
+    user_id = fields.Integer(required=True)
+
+
+class CommunityModerationUnbanRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    user_id = fields.Integer(required=True)
+
+
+class CommunityModerationNsfwRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    nsfw_status = fields.Boolean(required=True)
