@@ -33,8 +33,8 @@ def send_verification_email(user):
     send_email(_('[PieFed] Please verify your email address'),
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
-               text_body=render_template('email/verification.txt', user=user),
-               html_body=render_template('email/verification.html', user=user))
+               text_body=render_template('email/verification.txt', user=user, domain=current_app.config['SERVER_NAME']),
+               html_body=render_template('email/verification.html', user=user, domain=current_app.config['SERVER_NAME']))
 
 
 def send_registration_approved_email(user):
