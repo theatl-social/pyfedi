@@ -165,17 +165,17 @@ def get_post_reply_list(auth, data, user_id=None):
     if auth:
         user_id = authorise_api_user(auth)
 
-    user_id = 1
-
     if user_id:
         g.user = User.query.get(user_id)    # save the currently logged in user into g, to save loading it up again and again in reply_view.
 
     if parent_id:
+        parent = PostReply.query.get_or_404(parent_id)
         if post_id is None:
-            parent = PostReply.query.get(parent_id)
             post_id = parent.post_id
         post = Post.query.get(post_id)
-        replies = get_comment_branch(post.community, post_id, parent_id, sort.lower(), g.user if hasattr(g, 'user') else None)
+        replies = get_comment_branch(post.community, post_id, parent.id, sort.lower(), g.user if hasattr(g, 'user') else None)
+        if len(replies) > 0:
+            replies = replies[0]['replies']
     else:
         post = Post.query.get(post_id)
         replies = post_replies(post.community, post_id, sort.lower(), g.user if hasattr(g, 'user') else None)
