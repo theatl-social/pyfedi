@@ -11,6 +11,7 @@ RUN apt-get update && apt-get install -y \
     g++ \
     git \
     postgresql-client \
+    redis-tools \
     libpq-dev \
     libssl-dev \
     libffi-dev \

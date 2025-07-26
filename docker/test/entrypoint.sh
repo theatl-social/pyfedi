@@ -20,7 +20,7 @@ echo -e "${GREEN}PostgreSQL is ready!${NC}"
 
 # Wait for Redis
 echo -e "${YELLOW}Waiting for Redis...${NC}"
-until redis-cli -h "$REDIS_HOST" ping 2>/dev/null; do
+until python -c "import redis; r = redis.Redis(host='${REDIS_HOST:-test-redis}', port=6379); r.ping()" 2>/dev/null; do
   >&2 echo "Redis is unavailable - sleeping"
   sleep 2
 done
