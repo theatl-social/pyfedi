@@ -170,10 +170,14 @@ def get_post_reply_list(auth, data, user_id=None):
     if user_id:
         g.user = User.query.get(user_id)    # save the currently logged in user into g, to save loading it up again and again in reply_view.
 
-    post = Post.query.get(post_id)
     if parent_id:
+        if post_id is None:
+            parent = PostReply.query.get(parent_id)
+            post_id = parent.post_id
+        post = Post.query.get(post_id)
         replies = get_comment_branch(post.community, post_id, parent_id, sort.lower(), g.user if hasattr(g, 'user') else None)
     else:
+        post = Post.query.get(post_id)
         replies = post_replies(post.community, post_id, sort.lower(), g.user if hasattr(g, 'user') else None)
 
     # Apply max_depth filter to the nested reply tree
