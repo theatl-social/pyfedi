@@ -5,6 +5,7 @@ from flask import redirect, url_for, flash, request, make_response, session
 from markupsafe import Markup
 from flask_babel import _
 from flask_login import login_user
+from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
 
 from app import db, cache
@@ -31,10 +32,10 @@ def log_user_in(input, src):
         username = input['username'].lower()
         password = input['password']
         try:
-            user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+            user = User.query.filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
         except NoResultFound:
             try:
-                user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
+                user = User.query.filter(func.lower(User.email) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
             except NoResultFound:
                 raise Exception('incorrect_login')
     else:
