@@ -130,12 +130,12 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
         db.session.add(conversation)
         db.session.commit()
 
-        message = f"Hi there,\n\nI think you might appreciate this community, check it out: https://{current_app.config['SERVER_NAME']}/c/{community.link()}\n\n"
+        message = f"Hi there,\n\nI think you might appreciate this community, check it out: https://{current_app.config['SERVER_NAME']}/c/{community.link()}.\n\n"
         if recipient.is_local():
-            message += f"If you'd like to join it use this link: https://{current_app.config['SERVER_NAME']}/c/{community.link()}/subscribe"
+            message += f"If you'd like to join it use this link: https://{current_app.config['SERVER_NAME']}/c/{community.link()}/subscribe."
         else:
             if recipient.instance.software.lower() == 'piefed':
-                message += f"Join the community by going to https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain}/subscribe or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote"
+                message += f"Join the community by going to https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain}/subscribe or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote."
             elif recipient.instance.software.lower() == 'lemmy' or recipient.instance.software.lower() == 'mbin':
                 message += f"Join the community by clicking 'Join' at https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain} or if that doesn't work try pasting {community.lemmy_link()} into your search function."
             else:
