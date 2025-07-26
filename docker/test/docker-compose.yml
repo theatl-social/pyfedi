@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # Test database
+  test-db:
+    image: postgres:15-alpine
+    container_name: pyfedi-test-db
+    environment:
+      POSTGRES_USER: pyfedi
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: pyfedi_test
+    volumes:
+      - test-db-data:/var/lib/postgresql/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pyfedi"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test Redis
+  test-redis:
+    image: redis:7-alpine
+    container_name: pyfedi-test-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - test-redis-data:/data
+    networks:
+      - test-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Test runner
+  test-runner:
+    build:
+      context: ../..
+      dockerfile: docker/test/Dockerfile
+    container_name: pyfedi-test-runner
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    environment:
+      # Database
+      POSTGRES_HOST: test-db
+      POSTGRES_USER: pyfedi
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_DB: pyfedi_test
+      DATABASE_URL: postgresql://pyfedi:testpass@test-db:5432/pyfedi_test
+      
+      # Redis
+      REDIS_HOST: test-redis
+      REDIS_URL: redis://test-redis:6379/0
+      
+      # Flask
+      FLASK_ENV: testing
+      FLASK_APP: app
+      TESTING: 1
+      
+      # Security settings
+      SECRET_KEY: test-secret-key
+      REQUIRE_SIGNATURES: "true"
+      ALLOW_UNSIGNED_ACTIVITIES: "false"
+    volumes:
+      # Mount source code
+      - ../../app:/app/app:ro
+      - ../../tests:/app/tests:ro
+      - ../../scripts:/app/scripts:ro
+      - ../../migrations:/app/migrations:ro
+      
+      # Mount test outputs
+      - ./test-reports:/app/test-reports
+      - ./coverage-reports:/app/coverage-reports
+    networks:
+      - test-network
+    command: security  # Default: run security tests
+
+  # Standalone test commands
+  test-all:
+    extends: test-runner
+    command: all
+    profiles: ["all"]
+
+  test-watch:
+    extends: test-runner
+    command: watch
+    profiles: ["watch"]
+    volumes:
+      # Mount as read-write for watch mode
+      - ../../app:/app/app
+      - ../../tests:/app/tests
+
+  test-shell:
+    extends: test-runner
+    command: shell
+    profiles: ["debug"]
+    stdin_open: true
+    tty: true
+
+  test-lint:
+    extends: test-runner
+    command: lint
+    profiles: ["lint"]
+
+  test-security-scan:
+    extends: test-runner
+    command: security-scan
+    profiles: ["scan"]
+
+networks:
+  test-network:
+    driver: bridge
+
+volumes:
+  test-db-data:
+  test-redis-data:
