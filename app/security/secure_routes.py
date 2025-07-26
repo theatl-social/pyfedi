@@ -1,8 +1,8 @@
 """
 Secure ActivityPub routes with enhanced security checks
 """
-from flask import Blueprint, request, jsonify, current_app
-from typing import Dict, Any, Tuple
+from flask import Blueprint, request, jsonify
+from typing import Dict, Any
 import logging
 from app.security.json_validator import SafeJSONParser, validate_activitypub_object
 from app.security.signature_validator import SignatureValidator, SecurityError

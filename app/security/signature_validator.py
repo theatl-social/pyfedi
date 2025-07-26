@@ -227,8 +227,8 @@ class SignatureValidator:
         
         # Check if instance should be blocked
         if actor.instance and self._should_block_instance(actor.instance):
-            self._log_security_alert('INSTANCE_AUTO_BLOCKED', actor, 
-                                   f"Too many signature failures from {actor.instance.domain}")
+            self._log_security_alert('INSTANCE_AUTO_BLOCKED', actor,
+                                     f"Too many signature failures from {actor.instance.domain}")
             # TODO: Implement instance blocking
     
     def _increment_failure_counter(self, instance: Instance):
@@ -282,7 +282,7 @@ class SignatureValidator:
             'actor': actor.ap_profile_id,
             'instance': actor.instance.domain if actor.instance else None,
             'ip': ip_address(),
-            'user_agent': request.user_agent.string if request else None,
+            'user_agent': None,  # request context not available here
             'details': details
         }, level='CRITICAL')
     
