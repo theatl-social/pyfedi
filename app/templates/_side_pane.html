@@ -71,21 +71,7 @@
                     </p>
                 {% endif -%}
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
-                <hr>
-                <div>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(total=False) }} {{ _('Local Subscribers') }}</span>
-                </div>
-                <div>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_count) }} {{ _('Posts') }}</span>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_reply_count) }} {{ _('Comments') }}</span>
-                </div>
-                <div>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ community.humanize_subscribers(value=community.active_daily) }} {{ _('Daily Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ community.humanize_subscribers(value=community.active_weekly) }} {{ _('Weekly Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ community.humanize_subscribers(value=community.active_monthly) }} {{ _('Monthly Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
-                </div>
+
                 {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
                     <hr>
                     <h3>{{ _('Flair') }}</h3>
@@ -118,6 +104,21 @@
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
                 {% endif -%}
+                <hr>
+                <div>
+                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
+                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(total=False) }} {{ _('Local Subscribers') }}</span>
+                </div>
+                <div>
+                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_count) }} {{ _('Posts') }}</span>
+                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_reply_count) }} {{ _('Comments') }}</span>
+                </div>
+                <div>
+                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ community.humanize_subscribers(value=community.active_daily) }} {{ _('Daily Users') }}</span>
+                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ community.humanize_subscribers(value=community.active_weekly) }} {{ _('Weekly Users') }}</span>
+                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ community.humanize_subscribers(value=community.active_monthly) }} {{ _('Monthly Users') }}</span>
+                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
+                </div>
                 {% if rss_feed -%}
                 <p class="mt-4">
                     <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
