@@ -3369,3 +3369,20 @@ def _large_community_subscribers() -> float:
 def _store_files_in_s3():
     return current_app.config['S3_ACCESS_KEY'] != '' and current_app.config['S3_ACCESS_SECRET'] != '' and \
         current_app.config['S3_ENDPOINT'] != ''
+
+
+class FederationError(db.Model):
+    """Track federation errors for monitoring and debugging."""
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=utcnow, nullable=False, index=True)
+    instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), nullable=True)
+    activity_id = db.Column(db.String(255), nullable=True)
+    activity_type = db.Column(db.String(50), nullable=True)
+    error_type = db.Column(db.String(100), nullable=False)  # e.g., 'network_error', 'signature_failed', 'json_parse_error'
+    error_message = db.Column(db.Text, nullable=False)
+    retry_count = db.Column(db.Integer, default=0)
+    resolved = db.Column(db.Boolean, default=False)
+    resolved_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    instance = db.relationship('Instance', backref=db.backref('federation_errors', lazy='dynamic'))

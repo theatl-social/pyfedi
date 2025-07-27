@@ -1,0 +1,80 @@
+"""
+ActivityPub Routes - Main Entry Point
+
+This module imports all routes from the refactored modules and maintains
+backward compatibility. The actual route implementations are now organized
+in the routes/ subdirectory for better maintainability.
+
+Modules:
+    - routes.webfinger: WebFinger and host-meta endpoints
+    - routes.nodeinfo: NodeInfo endpoints
+    - routes.actors: Actor profiles and collections
+    - routes.inbox: Inbox endpoints for receiving activities
+    - routes.outbox: Outbox functionality for sending activities
+    - routes.api: API endpoints for compatibility
+    - routes.debug: Debug endpoints (dev only)
+    - routes.helpers: Shared utilities
+
+The original mega-file has been split into focused modules, each handling
+a specific aspect of the ActivityPub protocol.
+"""
+
+# Import the blueprint and all routes
+from app.activitypub.routes import bp
+
+# Re-export commonly used functions for backward compatibility
+from app.activitypub.routes.helpers import (
+    format_follow_response,
+    log_ap_status,
+    store_request_body,
+    is_activitypub_request,
+    make_activitypub_response
+)
+
+from app.activitypub.routes.inbox import (
+    shared_inbox,
+    site_inbox,
+    user_inbox,
+    community_inbox,
+    replay_inbox_request
+)
+
+from app.activitypub.routes.actors import (
+    user_profile,
+    user_outbox,
+    community_profile,
+    community_outbox,
+    community_followers,
+    community_moderators
+)
+
+# Import all the routes to register them
+from app.activitypub.routes import (
+    webfinger,
+    nodeinfo,
+    actors,
+    inbox,
+    outbox,
+    api,
+    debug,
+)
+
+__all__ = [
+    'bp',
+    'format_follow_response',
+    'log_ap_status',
+    'store_request_body',
+    'is_activitypub_request',
+    'make_activitypub_response',
+    'shared_inbox',
+    'site_inbox', 
+    'user_inbox',
+    'community_inbox',
+    'replay_inbox_request',
+    'user_profile',
+    'user_outbox',
+    'community_profile',
+    'community_outbox',
+    'community_followers',
+    'community_moderators'
+]

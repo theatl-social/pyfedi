@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-bookworm
+    container_name: pyfedi-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pyfedi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pyfedi}
+      POSTGRES_DB: ${POSTGRES_DB:-pyfedi}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - pyfedi-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pyfedi}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis
+  redis:
+    image: redis:7-bookworm
+    container_name: pyfedi-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - pyfedi-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Main PyFedi Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyfedi-app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Database
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-pyfedi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pyfedi}
+      POSTGRES_DB: ${POSTGRES_DB:-pyfedi}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pyfedi}:${POSTGRES_PASSWORD:-pyfedi}@db:5432/${POSTGRES_DB:-pyfedi}
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Flask
+      FLASK_ENV: ${FLASK_ENV:-production}
+      FLASK_DEBUG: ${FLASK_DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      SERVER_NAME: ${SERVER_NAME:-localhost}
+      
+      # Federation
+      FEDERATION_DOMAIN: ${FEDERATION_DOMAIN:-localhost}
+      REQUIRE_SIGNATURES: ${REQUIRE_SIGNATURES:-true}
+      
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    ports:
+      - "${APP_PORT:-5000}:5000"
+    networks:
+      - pyfedi-network
+    restart: unless-stopped
+
+  # Federation Worker (Redis Streams Processor)
+  federation-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyfedi-federation
+    command: ["/app/entrypoint_federation.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Same environment as app
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-pyfedi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pyfedi}
+      POSTGRES_DB: ${POSTGRES_DB:-pyfedi}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pyfedi}:${POSTGRES_PASSWORD:-pyfedi}@db:5432/${POSTGRES_DB:-pyfedi}
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+      
+      # Worker specific
+      MAX_WORKERS: ${FEDERATION_MAX_WORKERS:-5}
+      MAX_BATCH_SIZE: ${FEDERATION_BATCH_SIZE:-10}
+      MAX_RETRY_DURATION: ${MAX_RETRY_DURATION:-172800}
+      TASK_TTL: ${TASK_TTL:-86400}
+      
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pyfedi-network
+    restart: unless-stopped
+
+  # Optional: Redis Commander for monitoring
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: pyfedi-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8081}:8081"
+    networks:
+      - pyfedi-network
+    profiles:
+      - monitoring
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pyfedi-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+    ports:
+      - "${PGADMIN_PORT:-8082}:80"
+    networks:
+      - pyfedi-network
+    profiles:
+      - monitoring
+
+networks:
+  pyfedi-network:
+    driver: bridge
+
+volumes:
+  db-data:
+  redis-data:

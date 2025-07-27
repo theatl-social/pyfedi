@@ -184,6 +184,9 @@ def create_app(config_class=Config):
     from app.api.alpha import bp as app_api_bp
     app.register_blueprint(app_api_bp)
 
+    from app.monitoring import bp as monitoring_bp
+    app.register_blueprint(monitoring_bp)
+
     # API Namespaces
     from app.api.alpha import site_bp as site_api_bp
     rest_api.register_blueprint(site_api_bp)

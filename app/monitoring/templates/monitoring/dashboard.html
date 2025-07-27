@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+
+{% block title %}Federation Monitoring Dashboard{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-3">
+    <h1>Federation Monitoring Dashboard</h1>
+    
+    <!-- System Status Overview -->
+    <div class="row mt-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">System Status</h5>
+                    <div id="system-status">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Activities (1h)</h5>
+                    <h2 id="total-activities">-</h2>
+                    <small class="text-muted">
+                        <span class="text-success" id="success-count">-</span> success,
+                        <span class="text-danger" id="failure-count">-</span> failed
+                    </small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Success Rate</h5>
+                    <h2 id="success-rate">-</h2>
+                    <div class="progress">
+                        <div class="progress-bar" id="success-bar" role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Redis Memory</h5>
+                    <h2 id="redis-memory">-</h2>
+                    <small class="text-muted">Peak: <span id="redis-peak">-</span></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queue Status -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Queue Status</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Queue</th>
+                            <th>Pending</th>
+                            <th>Retry</th>
+                            <th>Dead Letter</th>
+                            <th>Consumers</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="queue-table">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instance Health -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Instance Health</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Instance</th>
+                            <th>Status</th>
+                            <th>Success Rate</th>
+                            <th>Failures (24h)</th>
+                            <th>Software</th>
+                            <th>Last Seen</th>
+                        </tr>
+                    </thead>
+                    <tbody id="instance-table">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Errors -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Recent Errors</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Instance</th>
+                            <th>Activity Type</th>
+                            <th>Error</th>
+                            <th>Retries</th>
+                        </tr>
+                    </thead>
+                    <tbody id="error-table">
+                        <tr>
+                            <td colspan="5" class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retry Queue -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Retry Queue</h3>
+            <div class="table-responsive">
+                <table class="table table-striped table-sm">
+                    <thead>
+                        <tr>
+                            <th>Queue</th>
+                            <th>Activity ID</th>
+                            <th>Type</th>
+                            <th>Destination</th>
+                            <th>Retry At</th>
+                            <th>Retry Count</th>
+                        </tr>
+                    </thead>
+                    <tbody id="retry-table">
+                        <tr>
+                            <td colspan="6" class="text-center">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh data every 5 seconds
+let refreshInterval;
+
+function formatTimestamp(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleString();
+}
+
+function formatRelativeTime(isoString) {
+    const date = new Date(isoString);
+    const now = new Date();
+    const diff = now - date;
+    
+    if (diff < 60000) return 'Just now';
+    if (diff < 3600000) return Math.floor(diff / 60000) + ' min ago';
+    if (diff < 86400000) return Math.floor(diff / 3600000) + ' hours ago';
+    return Math.floor(diff / 86400000) + ' days ago';
+}
+
+function getStatusBadge(status) {
+    const badges = {
+        'healthy': '<span class="badge bg-success">Healthy</span>',
+        'degraded': '<span class="badge bg-warning">Degraded</span>',
+        'unhealthy': '<span class="badge bg-danger">Unhealthy</span>'
+    };
+    return badges[status] || '<span class="badge bg-secondary">Unknown</span>';
+}
+
+async function refreshStats() {
+    try {
+        // Fetch main stats
+        const statsResponse = await fetch('/monitoring/api/stats');
+        const stats = await statsResponse.json();
+        
+        // Update system status
+        document.getElementById('system-status').innerHTML = 
+            '<span class="text-success">&#x2713; Operational</span>';
+        
+        // Update activity counts
+        const activity = stats.activity.last_hour;
+        document.getElementById('total-activities').textContent = activity.total;
+        document.getElementById('success-count').textContent = activity.success;
+        document.getElementById('failure-count').textContent = activity.failure;
+        
+        // Update success rate
+        const successRate = activity.total > 0 ? 
+            (activity.success / activity.total * 100).toFixed(1) : 0;
+        document.getElementById('success-rate').textContent = successRate + '%';
+        document.getElementById('success-bar').style.width = successRate + '%';
+        
+        // Update Redis memory
+        document.getElementById('redis-memory').textContent = 
+            stats.system.redis_memory.used_memory_human;
+        document.getElementById('redis-peak').textContent = 
+            stats.system.redis_memory.used_memory_peak_human;
+        
+        // Update queue table
+        const queueHtml = stats.queues.map(queue => `
+            <tr>
+                <td><strong>${queue.name}</strong></td>
+                <td>${queue.pending}</td>
+                <td>${queue.retry}</td>
+                <td>${queue.dlq}</td>
+                <td>${queue.consumers}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline-primary" 
+                            onclick="viewQueueDetails('${queue.name}')">
+                        Details
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        document.getElementById('queue-table').innerHTML = queueHtml;
+        
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        document.getElementById('system-status').innerHTML = 
+            '<span class="text-danger">&#x2717; Error</span>';
+    }
+}
+
+async function refreshInstances() {
+    try {
+        const response = await fetch('/monitoring/api/instances');
+        const instances = await response.json();
+        
+        const html = instances.map(instance => `
+            <tr>
+                <td><strong>${instance.domain}</strong></td>
+                <td>${getStatusBadge(instance.status)}</td>
+                <td>${instance.success_rate}%</td>
+                <td>${instance.failure_count}</td>
+                <td>${instance.software || '-'} ${instance.version || ''}</td>
+                <td>${instance.last_seen ? formatRelativeTime(instance.last_seen) : '-'}</td>
+            </tr>
+        `).join('');
+        
+        document.getElementById('instance-table').innerHTML = html || 
+            '<tr><td colspan="6" class="text-center">No instances found</td></tr>';
+            
+    } catch (error) {
+        console.error('Error fetching instances:', error);
+    }
+}
+
+async function refreshErrors() {
+    try {
+        const response = await fetch('/monitoring/api/errors?limit=10');
+        const errors = await response.json();
+        
+        const html = errors.map(error => `
+            <tr>
+                <td>${formatRelativeTime(error.timestamp)}</td>
+                <td>${error.instance}</td>
+                <td>${error.activity_type}</td>
+                <td class="text-truncate" style="max-width: 300px;" 
+                    title="${error.error_message}">
+                    ${error.error_message}
+                </td>
+                <td>${error.retry_count}</td>
+            </tr>
+        `).join('');
+        
+        document.getElementById('error-table').innerHTML = html || 
+            '<tr><td colspan="5" class="text-center">No recent errors</td></tr>';
+            
+    } catch (error) {
+        console.error('Error fetching errors:', error);
+    }
+}
+
+async function refreshRetryQueue() {
+    try {
+        const response = await fetch('/monitoring/api/retry-queue');
+        const items = await response.json();
+        
+        const html = items.slice(0, 10).map(item => `
+            <tr>
+                <td><span class="badge bg-secondary">${item.queue}</span></td>
+                <td class="text-truncate" style="max-width: 200px;" 
+                    title="${item.activity_id}">
+                    ${item.activity_id}
+                </td>
+                <td>${item.activity_type}</td>
+                <td>${item.destination}</td>
+                <td>${formatRelativeTime(item.retry_at)}</td>
+                <td>${item.retry_count}</td>
+            </tr>
+        `).join('');
+        
+        document.getElementById('retry-table').innerHTML = html || 
+            '<tr><td colspan="6" class="text-center">No items in retry queue</td></tr>';
+            
+    } catch (error) {
+        console.error('Error fetching retry queue:', error);
+    }
+}
+
+function viewQueueDetails(queueName) {
+    // TODO: Implement queue details modal
+    alert('Queue details for ' + queueName + ' - Coming soon!');
+}
+
+async function refreshAll() {
+    await Promise.all([
+        refreshStats(),
+        refreshInstances(),
+        refreshErrors(),
+        refreshRetryQueue()
+    ]);
+}
+
+// Initial load
+refreshAll();
+
+// Set up auto-refresh
+refreshInterval = setInterval(refreshAll, 5000);
+
+// Clean up on page unload
+window.addEventListener('beforeunload', () => {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}
