@@ -151,17 +151,17 @@ def move_community_images_to_here(community_id):
                                    {'community_id': community_id})
                 db.session.commit()
                 server_name = current_app.config['SERVER_NAME']
-                db.session.execute(text(f"""
+                db.session.execute(text("""
                     UPDATE "post"
-                    SET ap_id = 'https://{server_name}/post/' || id
+                    SET ap_id = 'https://' || :server_name || '/post/' || id
                     WHERE community_id = :community_id
-                """), {'community_id': community_id})
+                """), {'server_name': server_name, 'community_id': community_id})
 
-                db.session.execute(text(f"""
+                db.session.execute(text("""
                     UPDATE "post_reply"
-                    SET ap_id = 'https://{server_name}/comment/' || id
+                    SET ap_id = 'https://' || :server_name || '/comment/' || id
                     WHERE community_id = :community_id
-                """), {'community_id': community_id})
+                """), {'server_name': server_name, 'community_id': community_id})
                 db.session.commit()
 
                 import shutil

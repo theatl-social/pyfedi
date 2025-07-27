@@ -45,8 +45,8 @@ def chat_home(conversation_id=None):
             else:
                 messages = []
 
-            sql = f"UPDATE notification SET read = true WHERE url LIKE '/chat/{conversation_id}%' AND user_id = {current_user.id}"
-            db.session.execute(text(sql))
+            db.session.execute(text("UPDATE notification SET read = true WHERE url LIKE '/chat/' || :conversation_id || '%' AND user_id = :user_id"),
+                             {'conversation_id': conversation_id, 'user_id': current_user.id})
             db.session.commit()
             current_user.unread_notifications = Notification.query.filter_by(user_id=current_user.id, read=False).count()
             db.session.commit()
