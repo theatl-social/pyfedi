@@ -74,14 +74,19 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
         public_actor = user.public_url()
 
         # Vote payload
+        # For remote posts, use their ActivityPub ID (ap_id), not our local URL
+        object_url = object.ap_id if object.ap_id else object.public_url()
         vote_public = {
           'id': vote_id,
           'type': type,
           'actor': public_actor,
-          'object': object.public_url(),
-          '@context': default_context(),
-          'audience': community.public_url()
+          'object': object_url,
+          '@context': default_context()
         }
+        
+        # Only add audience for local communities (where we'll wrap in Announce)
+        if community.is_local():
+            vote_public['audience'] = community.public_url()
 
         # Create undo
         if vote_to_undo:
@@ -95,9 +100,12 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
               'type': 'Undo',
               'actor': public_actor,
               'object': vote_public_copy,
-              '@context': default_context(),
-              'audience': community.public_url()
+              '@context': default_context()
             }
+            
+            # Only add audience for local communities
+            if community.is_local():
+                undo_public['audience'] = community.public_url()
 
         if community.is_local():
             # For local communities, we need to create announcements for each instance
