@@ -22,18 +22,18 @@ services:
     networks:
       - pf_network
 
-  celery:
+  worker:
     build:
       context: .
       target: builder
-    container_name: piefed_celery1
+    container_name: piefed_worker1
     restart: unless-stopped
     depends_on:
       - db
       - redis
     env_file:
      - ./.env.docker
-    entrypoint: ./entrypoint_celery.sh
+    command: python worker.py --name worker-1 --processes 2
     volumes:
      - ./media/:/app/app/static/media/
      - ./logs/:/app/logs/
@@ -41,7 +41,7 @@ services:
     networks:
       - pf_network
     healthcheck:
-      test: ["CMD", "celery", "-A", "celery_worker_docker.celery", "inspect", "ping"]
+      test: ["CMD", "pgrep", "-f", "worker.py"]
       interval: 30s
       timeout: 10s
       retries: 3
