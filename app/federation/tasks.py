@@ -84,6 +84,37 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
     This maintains compatibility with existing code while replacing
     the underlying implementation.
     """
+    # Handle email tasks specially since they're in app.email
+    if task_key == 'send_async_email':
+        from app.email import send_async_email
+        if not send_async:
+            return send_async_email(**kwargs)
+        # Queue for async
+        task_data = {
+            'task': task_key,
+            'kwargs': kwargs,
+            'timestamp': datetime.utcnow().isoformat()
+        }
+        # Get Redis client (synchronous for Flask compatibility)
+        if has_app_context():
+            redis_client = current_app.redis_client
+        else:
+            redis_client = redis.from_url(current_app.config.get('REDIS_URL', 'redis://localhost:6379/0'))
+        
+        msg_id = redis_client.xadd(
+            'federation:normal',
+            {
+                'type': f'task.{task_key}',
+                'data': json.dumps(task_data),
+                'priority': Priority.NORMAL.value,
+                'attempts': 0,
+                'timestamp': task_data['timestamp']
+            },
+            maxlen=100000,
+            approximate=True
+        )
+        return msg_id
+    
     # Import tasks here to avoid circular imports
     from app.federation.tasks.follows import join_community, leave_community
     from app.federation.tasks.likes import vote_for_post, vote_for_reply

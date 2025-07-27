@@ -40,7 +40,7 @@ from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery
+from app import db, cache, httpx_client
 from app.constants import *
 import re
 from PIL import Image, ImageOps

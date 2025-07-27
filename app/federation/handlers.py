@@ -60,6 +60,9 @@ class TaskHandler(BaseHandler[Dict[str, Any]]):
                 elif task_name == 'leave_community':
                     from app.federation.tasks.follows import leave_community
                     leave_community(**kwargs)
+                elif task_name == 'send_async_email':
+                    from app.email import send_async_email
+                    send_async_email(**kwargs)
                 # Add more tasks as they're migrated
                 else:
                     raise ValueError(f"Unknown task: {task_name}")
@@ -308,5 +311,5 @@ class OutboxHandler(BaseHandler[Dict[str, Any]]):
 
 
 # Register task handlers for all task types
-for task_type in ['task.vote_for_post', 'task.vote_for_reply', 'task.join_community', 'task.leave_community']:
+for task_type in ['task.vote_for_post', 'task.vote_for_reply', 'task.join_community', 'task.leave_community', 'task.send_async_email']:
     register_handler(task_type)(TaskHandler)
