@@ -89,8 +89,9 @@ def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str
                             method=method, timeout=timeout, retries=retries)
     else:
         current_app.logger.info(f'send_post_request: dispatching post_request.delay to Celery')
-        post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
-                           method=method, timeout=timeout, retries=retries)
+        task = post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
+                                  method=method, timeout=timeout, retries=retries)
+        current_app.logger.info(f'send_post_request: Celery task dispatched with id={task.id}')
         return True
 
 
@@ -116,10 +117,13 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
         if uri is None or uri == '':
             log.result = 'failure'
             log.exception_message = 'empty uri'
+            current_app.logger.error(f'post_request: empty uri provided')
         else:
             try:
+                current_app.logger.info(f'post_request: making HTTP {method} request to {uri}')
                 result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
                 http_status_code = result.status_code
+                current_app.logger.info(f'post_request: received response {http_status_code} from {uri}')
                 if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
                     log.result = 'failure'
                     log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
@@ -146,6 +150,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                 http_status_code = 404
         if log.result == 'processing':
             log.result = 'success'
+            current_app.logger.info(f'post_request: successfully sent {type} to {uri}')
         session.commit()
 
         if log.result != 'failure':
