@@ -110,10 +110,11 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
     
     # Validate URL for SSRF protection
     validator = URIValidator()
-    validation_result = validator.validate(uri)
-    if not validation_result.is_valid:
-        current_app.logger.warning(f'Blocked SSRF attempt in get_request: {uri} - {validation_result.error}')
-        raise httpx.HTTPError(f'SSRF Protection: {validation_result.error}')
+    try:
+        validator.validate(uri)
+    except ValueError as e:
+        current_app.logger.warning(f'Blocked SSRF attempt in get_request: {uri} - {str(e)}')
+        raise httpx.HTTPError(f'SSRF Protection: {str(e)}')
     
     timeout = 15 if 'washingtonpost.com' in uri else 10  # Washington Post is really slow on og:image for some reason
     if headers is None:
@@ -1663,9 +1664,10 @@ def url_to_thumbnail_file(filename) -> File:
     
     # Validate URL for SSRF protection
     validator = URIValidator()
-    validation_result = validator.validate(filename)
-    if not validation_result.is_valid:
-        current_app.logger.warning(f'Blocked SSRF attempt in url_to_thumbnail_file: {filename} - {validation_result.error}')
+    try:
+        validator.validate(filename)
+    except ValueError as e:
+        current_app.logger.warning(f'Blocked SSRF attempt in url_to_thumbnail_file: {filename} - {str(e)}')
         return None
     
     try:
