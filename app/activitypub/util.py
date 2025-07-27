@@ -847,23 +847,12 @@ def refresh_feed_profile_task(feed_id):
 
 
 def actor_json_to_model(activity_json, address, server):
-    # Import here to avoid circular import
-    from app.security.actor_limits import ActorCreationLimiter
-    
     if 'type' not in activity_json:  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
         return None
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
         user = User.query.filter(User.ap_profile_id == activity_json['id'].lower()).first()
         if user:
             return user
-            
-        # Check actor creation limits before creating new user
-        limiter = ActorCreationLimiter()
-        allowed, reason = limiter.can_create_actor(server, activity_json['id'])
-        if not allowed:
-            current_app.logger.warning(f'Actor creation limit exceeded for instance {server}: {reason}')
-            return None
-            
         try:
             user = User(user_name=activity_json['preferredUsername'].strip(),
                         title=activity_json['name'].strip() if 'name' in activity_json and activity_json['name'] else None,
