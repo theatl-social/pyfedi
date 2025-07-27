@@ -4,7 +4,7 @@ services:
   # PostgreSQL Database
   db:
     image: postgres:15-bookworm
-    container_name: pyfedi-db
+    container_name: peachpie-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-pyfedi}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pyfedi}
@@ -12,7 +12,7 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
-      - pyfedi-network
+      - peachpie-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pyfedi}"]
       interval: 5s
@@ -22,12 +22,12 @@ services:
   # Redis
   redis:
     image: redis:7-bookworm
-    container_name: pyfedi-redis
+    container_name: peachpie-redis
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
     networks:
-      - pyfedi-network
+      - peachpie-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -39,7 +39,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pyfedi-app
+    container_name: peachpie-app
     depends_on:
       db:
         condition: service_healthy
@@ -73,7 +73,7 @@ services:
     ports:
       - "${APP_PORT:-5000}:5000"
     networks:
-      - pyfedi-network
+      - peachpie-network
     restart: unless-stopped
 
   # Federation Worker (Redis Streams Processor)
@@ -81,7 +81,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pyfedi-federation
+    container_name: peachpie-federation
     command: ["/app/entrypoint_federation.sh"]
     depends_on:
       db:
@@ -107,7 +107,7 @@ services:
     volumes:
       - ./logs:/app/logs
     networks:
-      - pyfedi-network
+      - peachpie-network
     restart: unless-stopped
 
   # Task Scheduler Service
@@ -115,7 +115,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: pyfedi-scheduler
+    container_name: peachpie-scheduler
     command: ["python", "-m", "app.scheduler_service"]
     depends_on:
       db:
@@ -139,38 +139,38 @@ services:
     volumes:
       - ./logs:/app/logs
     networks:
-      - pyfedi-network
+      - peachpie-network
     restart: unless-stopped
 
   # Optional: Redis Commander for monitoring
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: pyfedi-redis-commander
+    container_name: peachpie-redis-commander
     environment:
       REDIS_HOSTS: local:redis:6379
     ports:
       - "${REDIS_COMMANDER_PORT:-8081}:8081"
     networks:
-      - pyfedi-network
+      - peachpie-network
     profiles:
       - monitoring
 
   # Optional: pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: pyfedi-pgadmin
+    container_name: peachpie-pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@example.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
     ports:
       - "${PGADMIN_PORT:-8082}:80"
     networks:
-      - pyfedi-network
+      - peachpie-network
     profiles:
       - monitoring
 
 networks:
-  pyfedi-network:
+  peachpie-network:
     driver: bridge
 
 volumes:

@@ -4,13 +4,13 @@
 * [Setup Database](#setup-database)
 * [Install Python Libraries](#install-python-libraries)
 * [Install additional requirements](#install-additional-requirements)      
-* [Setup pyfedi](#setup-pyfedi)
+* [Setup PeachPie](#setup-peachpie)
 * [Setup .env file](#setup-env-file)
 * [Initialise Database and Setup Admin account](#initialise-database-and-setup-admin-account)
 * [Run the app](#run-the-app)
 * [Database Management](#database-management)
 * [Keeping your local instance up to date](#keeping-your-local-instance-up-to=date)
-* [Running PieFed in production](#running-piefed-in-production)
+* [Running PeachPie in production](#running-peachpie-in-production)
 * [Accepting donations through Stripe](#stripe)
 * [Testing and debugging](#testing)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
@@ -32,7 +32,7 @@ configuration. While it is quicker and easier, it's not to everyone's taste.
 ### Hard way: bare metal
 
 Doing things this way will give you the ultimate customization that larger instances need. You will need to be more careful about
-whether your OS is compatible with what PieFed needs:
+whether your OS is compatible with what PeachPie needs:
 
 #### Software requirements
 

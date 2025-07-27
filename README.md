@@ -1,6 +1,6 @@
-# PieFed
+# PeachPie
 
-A Lemmy/Mbin alternative written in Python with Flask.
+A federated discussion and link aggregation platform written in Python with Flask. Fork of PieFed with enhanced performance and security features.
 
  - Clean, simple code that is easy to understand and contribute to. No fancy design patterns or algorithms.
  - Easy setup, easy to manage - few dependencies and extra software required.
