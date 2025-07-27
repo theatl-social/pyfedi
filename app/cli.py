@@ -97,6 +97,17 @@ def register(app):
                 print("Error: alembic_version table not found. Please run 'flask db upgrade' first.")
                 return
 
+            # Drop views first to avoid dependency issues
+            try:
+                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_combined CASCADE'))
+                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_summary CASCADE'))
+                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_status_incomplete CASCADE'))
+                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_status_last CASCADE'))
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                print(f"Warning: Could not drop views: {e}")
+            
             db.drop_all()
             db.configure_mappers()
             db.create_all()

@@ -1,5 +1,5 @@
 # Dockerfile for PyFedi Security Testing Environment
-FROM python:3.11-slim
+FROM python:3.11-bookworm
 
 # Build arguments
 ARG TESTING=1
@@ -21,32 +21,43 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy requirements files
+# Copy requirements files first (for better caching)
 COPY requirements.txt requirements-test.txt ./
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -U pip setuptools wheel && \
     pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir -r requirements-test.txt
+    pip install --no-cache-dir -r requirements-test.txt && \
+    pip install --no-cache-dir gunicorn celery
+
+# Copy application files
+COPY app ./app
+COPY tests ./tests
+COPY migrations ./migrations
+COPY pyfedi.py ./
+COPY config.py ./
+COPY celery_worker.default.py ./celery_worker.py
 
 # Copy test configuration
+COPY docker/test/test_env.py ./
 COPY docker/test/test_config.py ./config/test.py
+COPY docker/test/init_test_db_custom.py ./docker/test/
 
-# Copy entrypoint script
-COPY docker/test/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Copy and set up entrypoint script
+COPY docker/test/test-entrypoint.sh /test-entrypoint.sh
+RUN chmod +x /test-entrypoint.sh
+
+# Create required .env file (even if empty)
+RUN touch .env
 
 # Set environment variables
 ENV PYTHONPATH=/app
-ENV FLASK_APP=app
+ENV FLASK_APP=pyfedi.py
 ENV FLASK_ENV=testing
 ENV TESTING=1
 
 # Create directories for test outputs
-RUN mkdir -p /app/test-reports /app/coverage-reports
+RUN mkdir -p /app/test-reports /app/coverage-reports /app/logs
 
 # Set entrypoint
-ENTRYPOINT ["/entrypoint.sh"]
-
-# Default command runs all security tests
-CMD ["security"]
+ENTRYPOINT ["/test-entrypoint.sh"]

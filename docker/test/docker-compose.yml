@@ -1,12 +1,12 @@
 services:
   # Test database
   test-db:
-    image: postgres:15-alpine
+    image: postgres:15-bookworm
     container_name: pyfedi-test-db
     environment:
       POSTGRES_USER: pyfedi
-      POSTGRES_PASSWORD: testpass
-      POSTGRES_DB: pyfedi_test
+      POSTGRES_PASSWORD: pyfedi
+      POSTGRES_DB: pyfedi
     volumes:
       - test-db-data:/var/lib/postgresql/data
     networks:
@@ -19,7 +19,7 @@ services:
 
   # Test Redis
   test-redis:
-    image: redis:7-alpine
+    image: redis:7-bookworm
     container_name: pyfedi-test-redis
     command: redis-server --appendonly yes
     volumes:
@@ -47,9 +47,9 @@ services:
       # Database
       POSTGRES_HOST: test-db
       POSTGRES_USER: pyfedi
-      POSTGRES_PASSWORD: testpass
-      POSTGRES_DB: pyfedi_test
-      DATABASE_URL: postgresql://pyfedi:testpass@test-db:5432/pyfedi_test
+      POSTGRES_PASSWORD: pyfedi
+      POSTGRES_DB: pyfedi
+      DATABASE_URL: postgresql://pyfedi:pyfedi@test-db:5432/pyfedi
       
       # Redis
       REDIS_HOST: test-redis
@@ -57,26 +57,23 @@ services:
       
       # Flask
       FLASK_ENV: testing
-      FLASK_APP: app
+      FLASK_APP: pyfedi.py
       TESTING: 1
+      SERVER_NAME: test.local
       
       # Security settings
       SECRET_KEY: test-secret-key
       REQUIRE_SIGNATURES: "true"
       ALLOW_UNSIGNED_ACTIVITIES: "false"
-    volumes:
-      # Mount source code
-      - ../../app:/app/app:ro
-      - ../../tests:/app/tests:ro
-      - ../../scripts:/app/scripts:ro
-      - ../../migrations:/app/migrations:ro
       
-      # Mount test outputs
+      # Test execution
+      RUN_TESTS: "true"
+    volumes:
+      # Mount test outputs only (source code is copied in Dockerfile)
       - ./test-reports:/app/test-reports
       - ./coverage-reports:/app/coverage-reports
     networks:
       - test-network
-    command: security  # Default: run security tests
 
   # Standalone test commands
   test-all:

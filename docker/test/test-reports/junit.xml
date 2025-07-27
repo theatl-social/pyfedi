@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="3" failures="0" skipped="0" tests="3" time="0.629" timestamp="2025-07-27T00:06:32.144070+00:00" hostname="8894f70391a9"><testcase classname="" name="tests.test_security.test_activitypub_integration" time="0.000"><error message="collection failure">ImportError while importing test module '/app/tests/test_security/test_activitypub_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_security/test_activitypub_integration.py:9: in &lt;module&gt;
+    from app.models import User, Post, Community, Vote, VoteType
+E   ImportError: cannot import name 'Vote' from 'app.models' (/app/app/models.py)</error></testcase><testcase classname="" name="tests.test_security.test_secure_routes" time="0.000"><error message="collection failure">ImportError while importing test module '/app/tests/test_security/test_secure_routes.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_security/test_secure_routes.py:9: in &lt;module&gt;
+    from app.security.secure_routes import create_secure_activitypub_bp
+app/security/secure_routes.py:10: in &lt;module&gt;
+    from app.utils import rate_limiter
+E   ImportError: cannot import name 'rate_limiter' from 'app.utils' (/app/app/utils.py)</error></testcase><testcase classname="" name="tests.test_security.test_sql_injection" time="0.000"><error message="collection failure">ImportError while importing test module '/app/tests/test_security/test_sql_injection.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_security/test_sql_injection.py:10: in &lt;module&gt;
+    from scripts.audit_sql_injection import SQLInjectionAuditor
+E   ModuleNotFoundError: No module named 'scripts'</error></testcase></testsuite></testsuites>

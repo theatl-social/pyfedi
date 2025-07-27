@@ -8,6 +8,7 @@ import os
 TESTING = True
 DEBUG = False
 WTF_CSRF_ENABLED = False
+FLASK_APP = 'pyfedi.py'
 
 # Database
 SQLALCHEMY_DATABASE_URI = os.environ.get(
