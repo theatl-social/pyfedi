@@ -803,11 +803,7 @@ def shared_inbox():
             pass
 
     # Use SafeJSONParser to prevent DoS attacks
-    parser = SafeJSONParser(
-        max_size=current_app.config.get('AP_MAX_JSON_SIZE', 1_000_000),
-        max_depth=current_app.config.get('AP_MAX_JSON_DEPTH', 50),
-        max_keys=current_app.config.get('AP_MAX_JSON_KEYS', 1000)
-    )
+    parser = SafeJSONParser()
     
     try:
         request_json = parser.parse(raw_body)
