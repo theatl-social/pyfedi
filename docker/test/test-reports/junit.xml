@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="3" failures="0" skipped="0" tests="3" time="0.629" timestamp="2025-07-27T00:06:32.144070+00:00" hostname="8894f70391a9"><testcase classname="" name="tests.test_security.test_activitypub_integration" time="0.000"><error message="collection failure">ImportError while importing test module '/app/tests/test_security/test_activitypub_integration.py'.
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="3" failures="0" skipped="0" tests="3" time="0.690" timestamp="2025-07-27T01:42:25.645217+00:00" hostname="1e8f1694d6f6"><testcase classname="" name="tests.test_security.test_activitypub_integration" time="0.000"><error message="collection failure">ImportError while importing test module '/app/tests/test_security/test_activitypub_integration.py'.
 Hint: make sure your test modules/packages have valid Python names.
 Traceback:
 /usr/local/lib/python3.11/importlib/__init__.py:126: in import_module
