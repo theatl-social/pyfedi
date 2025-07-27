@@ -36,6 +36,8 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     
 from app.activitypub.util_extras import retry_activitypub_action
 from app.activitypub.request_logger import create_request_logger, log_request_completion
+from app.security.json_validator import SafeJSONParser
+from app.security.signature_validator import SignatureValidator
 
 import os
 import uuid
@@ -801,8 +803,27 @@ def shared_inbox():
         except:
             pass
 
+    # Use SafeJSONParser to prevent DoS attacks
+    parser = SafeJSONParser(
+        max_size=current_app.config.get('AP_MAX_JSON_SIZE', 1_000_000),
+        max_depth=current_app.config.get('AP_MAX_JSON_DEPTH', 50),
+        max_keys=current_app.config.get('AP_MAX_JSON_KEYS', 1000)
+    )
+    
     try:
-        request_json = request.get_json(force=True, cache=True)  # Use cached body
+        result = parser.parse(raw_body)
+        if not result.is_valid:
+            log_ap_status(request_id, "json_parsed", "fail", details=result.error)
+            store_request_body(request_id, request, None)
+            
+            if logger:
+                logger.log_error('json_parse', Exception(result.error), f'JSON validation failed: {result.error}')
+            if EXTRA_AP_LOGGING:
+                save_ap_debug_log('error', dict(request.headers), raw_body, error=result.error)
+            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, f'JSON validation failed: {result.error}')
+            return '', 400  # Bad request for invalid JSON
+        
+        request_json = result.data
         # Try to extract the original object URI if present
         post_object_uri = None
         if isinstance(request_json, dict):
@@ -978,33 +999,46 @@ def shared_inbox():
             logger.log_checkpoint('actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
         log_ap_status(request_id, 'actor_validation', 'ok', activity_id=id, post_object_uri=post_object_uri, details=f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
 
-        # Signature verification
+        # Signature verification using SignatureValidator
         bounced = False
-        try:
-            if logger:
-                logger.log_checkpoint('signature_verify_start', 'ok', 'Starting HTTP signature verification')
-            log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting HTTP signature verification')
-            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
+        signature_validator = SignatureValidator()
+        
+        # Verify HTTP signature
+        http_sig_result = signature_validator.verify_http_signature(
+            request=request,
+            public_key=actor.public_key,
+            skip_date=True
+        )
+        
+        if logger:
+            logger.log_checkpoint('signature_verify_start', 'ok', 'Starting signature verification')
+        log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting signature verification')
+        
+        if http_sig_result.is_valid:
             if logger:
                 logger.log_checkpoint('signature_verify', 'ok', 'HTTP signature verified successfully')
             log_ap_status(request_id, 'signature_verify', 'ok', activity_id=id, post_object_uri=post_object_uri, details='HTTP signature verified successfully')
-        except VerificationError as e:
+        else:
             bounced = True
             if logger:
-                logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
-            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {str(e)}')
-            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
+                logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {http_sig_result.error}')
+            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {http_sig_result.error}')
+            
+            # Try LD signature if HTTP sig failed
             if 'signature' in request_json:
-                try:
-                    if logger:
-                        logger.log_checkpoint('ld_signature_verify', 'ok', 'Trying LD signature verification')
-                    LDSignature.verify_signature(request_json, actor.public_key)
+                if logger:
+                    logger.log_checkpoint('ld_signature_verify', 'ok', 'Trying LD signature verification')
+                ld_sig_result = signature_validator.verify_ld_signature(
+                    activity=request_json,
+                    public_key=actor.public_key
+                )
+                if ld_sig_result.is_valid:
                     if logger:
                         logger.log_checkpoint('ld_signature_verify', 'ok', 'LD signature verified successfully')
-                except VerificationError as e:
+                else:
                     if logger:
-                        logger.log_error('ld_signature_verify', e, 'LD signature verification failed')
-                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
+                        logger.log_error('ld_signature_verify', Exception(ld_sig_result.error), 'LD signature verification failed')
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Could not verify LD signature: {ld_sig_result.error}')
                     return '', 400
             elif (
                     actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
@@ -1021,8 +1055,8 @@ def shared_inbox():
                 request_json['object'] = request_json['object']['id']
             else:
                 if logger:
-                    logger.log_error('signature_verify', e, 'No valid signature found')
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
+                    logger.log_error('signature_verify', Exception(http_sig_result.error), 'No valid signature found')
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Could not verify HTTP signature: {http_sig_result.error}')
                 return '', 400
 
         # Update instance information
