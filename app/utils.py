@@ -2203,7 +2203,14 @@ def get_redis_connection(connection_string=None) -> redis.Redis:
                 db=db,
                 password=password,
                 max_connections=20,  # Limit connections per pool
-                decode_responses=True
+                decode_responses=True,
+                socket_keepalive=True,  # Enable TCP keepalive
+                socket_keepalive_options=(
+                    1,  # TCP_KEEPIDLE
+                    3,  # TCP_KEEPINTVL  
+                    5,  # TCP_KEEPCNT
+                ),
+                health_check_interval=30  # Check connection health every 30s
             )
         else:
             host, port, db, password = parse_redis_socket_string(connection_string)
@@ -2213,7 +2220,15 @@ def get_redis_connection(connection_string=None) -> redis.Redis:
                 db=db,
                 password=password,
                 max_connections=20,  # Limit connections per pool
-                decode_responses=True
+                decode_responses=True,
+                socket_keepalive=True,  # Enable TCP keepalive
+                socket_keepalive_options=(
+                    1,  # TCP_KEEPIDLE
+                    3,  # TCP_KEEPINTVL
+                    5,  # TCP_KEEPCNT  
+                ),
+                socket_connect_timeout=5,  # 5 second connection timeout
+                health_check_interval=30  # Check connection health every 30s
             )
         _redis_pools[connection_string] = pool
     

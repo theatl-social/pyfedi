@@ -61,6 +61,16 @@ def task_selector(task_key, send_async=True, **kwargs):
         # Debug: Check Celery configuration
         from app import celery
         current_app.logger.info(f'task_selector: Celery broker URL is {celery.conf.broker_url}')
+        
+        # Log which queue this task will go to
+        task_routes = celery.conf.get('CELERY_ROUTES', {})
+        task_name = tasks[task_key].name
+        if task_name in task_routes:
+            queue_name = task_routes[task_name].get('queue', 'celery')
+        else:
+            queue_name = celery.conf.get('CELERY_TASK_DEFAULT_QUEUE', 'celery')
+        current_app.logger.info(f'task_selector: Task {task_key} ({task_name}) will be sent to queue: {queue_name}')
+        
         result = tasks[task_key].delay(send_async=send_async, **kwargs)
         current_app.logger.info(f'task_selector: Celery task {task_key} dispatched with id={result.id}')
     else:
