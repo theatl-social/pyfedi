@@ -2499,6 +2499,9 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 
 @retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
+    # Import here to avoid circular import
+    from app.security.relay_protection import RelayProtector
+    
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
@@ -2508,6 +2511,18 @@ def process_upvote(user, store_ap_json, request_json, announced):
     if liked is None:
         log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
+        
+    # Check relay protection for votes
+    protector = RelayProtector()
+    if announced and not protector.validate_relayed_activity(
+        activity=request_json,
+        announced_by=request_json.get('actor', ''),
+        original_actor=user.ap_profile_id if hasattr(user, 'ap_profile_id') else str(user)
+    ):
+        log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Relay protection: invalid relayed vote')
+        current_app.logger.warning(f'Blocked relayed vote from {user} via {request_json.get("actor", "unknown")}')
+        return
+        
     if can_upvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'upvote')
@@ -2520,6 +2535,9 @@ def process_upvote(user, store_ap_json, request_json, announced):
 
 @retry_activitypub_action()
 def process_downvote(user, store_ap_json, request_json, announced):
+    # Import here to avoid circular import
+    from app.security.relay_protection import RelayProtector
+    
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
@@ -2529,6 +2547,18 @@ def process_downvote(user, store_ap_json, request_json, announced):
     if liked is None:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
+        
+    # Check relay protection for votes
+    protector = RelayProtector()
+    if announced and not protector.validate_relayed_activity(
+        activity=request_json,
+        announced_by=request_json.get('actor', ''),
+        original_actor=user.ap_profile_id if hasattr(user, 'ap_profile_id') else str(user)
+    ):
+        log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Relay protection: invalid relayed vote')
+        current_app.logger.warning(f'Blocked relayed downvote from {user} via {request_json.get("actor", "unknown")}')
+        return
+        
     if can_downvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'downvote')
