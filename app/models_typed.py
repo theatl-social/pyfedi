@@ -2,9 +2,11 @@
 from __future__ import annotations
 from typing import Optional, List, TYPE_CHECKING, Literal, Union
 from datetime import datetime
-from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index
+from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index, SmallInteger
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.ext.hybrid import hybrid_property
+from sqlalchemy.ext.mutable import MutableList
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy_searchable import TSVectorType
 from flask import current_app
 from flask_login import UserMixin
@@ -14,7 +16,7 @@ from app.federation.types import ActorUrl, Domain
 from app.constants import POST_STATUS_PUBLISHED
 
 if TYPE_CHECKING:
-    from app.models import Community, Post, PostReply, Instance, File
+    from app.models import Community, Post, PostReply, File
 
 # Type aliases for clarity
 type UserId = int
@@ -45,6 +47,8 @@ class TypedUser(UserMixin, db.Model):
     ban_comments: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     deleted_by: Mapped[Optional[UserId]] = mapped_column(Integer, index=True)
+    verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    verification_token: Mapped[Optional[str]] = mapped_column(String(16), index=True)
     
     # Profile information
     about: Mapped[Optional[str]] = mapped_column(Text)  # markdown
@@ -58,6 +62,13 @@ class TypedUser(UserMixin, db.Model):
     newsletter: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     email_unread: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     email_unread_sent: Mapped[Optional[bool]] = mapped_column(Boolean)
+    receive_message_mode: Mapped[str] = mapped_column(String(20), default='Closed', nullable=False)
+    timezone: Mapped[Optional[str]] = mapped_column(String(30))
+    searchable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    indexable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    suppress_crossposts: Mapped[bool] = mapped_column(Boolean, default=False, index=True, nullable=False)
+    vote_privately: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ignore_bots: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
     # Timestamps
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
@@ -68,11 +79,13 @@ class TypedUser(UserMixin, db.Model):
     ap_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)  # ActorUrl
     ap_domain: Mapped[Optional[str]] = mapped_column(String(255), index=True)  # Domain
     ap_public_url: Mapped[Optional[str]] = mapped_column(String(255), index=True)
-    ap_profile_id: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    ap_profile_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, index=True)
     ap_inbox_url: Mapped[Optional[str]] = mapped_column(String(255))
+    ap_outbox_url: Mapped[Optional[str]] = mapped_column(String(255))
     ap_followers_url: Mapped[Optional[str]] = mapped_column(String(255))
     ap_preferred_username: Mapped[Optional[str]] = mapped_column(String(255))
     ap_manually_approves_followers: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ap_discoverable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ap_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     ap_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
@@ -88,17 +101,55 @@ class TypedUser(UserMixin, db.Model):
     instance_id: Mapped[Optional[InstanceId]] = mapped_column(Integer, ForeignKey('instance.id'), index=True)
     
     # Bot detection
-    bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    bot: Mapped[bool] = mapped_column(Boolean, default=False, index=True, nullable=False)
+    bot_override: Mapped[bool] = mapped_column(Boolean, default=False, index=True, nullable=False)
     
-    # Scoring
+    # Scoring and Statistics
     reputation: Mapped[float] = mapped_column(db.Float, default=0.0, nullable=False)
-    attitude: Mapped[float] = mapped_column(db.Float, default=0.5, nullable=False)  # 0 = negative, 1 = positive
+    attitude: Mapped[Optional[float]] = mapped_column(db.Float)  # (upvotes - downvotes) / (upvotes + downvotes)
+    post_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    post_reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    
+    # Payment/Subscription
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(50))
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(50))
+    
+    # Email bounces
+    bounces: Mapped[int] = mapped_column(db.SmallInteger, default=0, nullable=False)
+    
+    # IP tracking
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50))
+    ip_address_country: Mapped[Optional[str]] = mapped_column(String(50))
     
     # Notifications
     unread_notifications: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
-    # Search
-    searchable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    # Language preferences
+    language: Mapped[Optional[str]] = mapped_column(String(10))
+    interface_language: Mapped[Optional[str]] = mapped_column(String(10))
+    languages: Mapped[Optional[List[str]]] = mapped_column(MutableList.as_mutable(ARRAY(db.String(10))))
+    
+    # Profile settings
+    referrer: Mapped[Optional[str]] = mapped_column(String(256))
+    theme: Mapped[Optional[str]] = mapped_column(String(20))
+    email_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Content filters
+    filters: Mapped[Optional[str]] = mapped_column(Text)  # JSON
+    keyword_filter_phrase: Mapped[Optional[str]] = mapped_column(Text)
+    keyword_filter_replace: Mapped[Optional[str]] = mapped_column(Text)
+    keyword_filter_hide: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Other preferences
+    default_sort: Mapped[Optional[str]] = mapped_column(String(25))
+    default_filter: Mapped[Optional[str]] = mapped_column(String(25))
+    markdown_editor: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    max_post_length: Mapped[int] = mapped_column(Integer, default=10000, nullable=False)
+    max_post_reply_length: Mapped[int] = mapped_column(Integer, default=5000, nullable=False)
+    
+    # Additional security/privacy
+    last_active: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    password_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
     # Relationships with proper typing
     instance: Mapped[Optional['Instance']] = relationship('Instance', back_populates='users')
@@ -554,3 +605,85 @@ class TypedPostReply(db.Model):
     def can_delete(self, user: 'TypedUser') -> bool:
         """Check if user can delete this reply"""
         return self.can_edit(user)
+
+
+class TypedInstance(db.Model):
+    """Instance model with full typing support"""
+    __tablename__ = 'instance'
+    
+    # Primary columns
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    domain: Mapped[str] = mapped_column(String(256), index=True, unique=True, nullable=False)
+    
+    # ActivityPub endpoints
+    inbox: Mapped[Optional[str]] = mapped_column(String(256))
+    shared_inbox: Mapped[Optional[str]] = mapped_column(String(256))
+    outbox: Mapped[Optional[str]] = mapped_column(String(256))
+    
+    # Instance metadata
+    software: Mapped[Optional[str]] = mapped_column(String(50))
+    version: Mapped[Optional[str]] = mapped_column(String(50))
+    nodeinfo_href: Mapped[Optional[str]] = mapped_column(String(100))
+    
+    # Voting configuration
+    vote_weight: Mapped[float] = mapped_column(db.Float, default=1.0, nullable=False)
+    
+    # Health tracking
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    last_seen: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    last_successful_send: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    most_recent_attempt: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    dormant: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    start_trying_again: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    gone_forever: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Network info
+    ip_address: Mapped[Optional[str]] = mapped_column(String(50))
+    
+    # Trust and warnings
+    trusted: Mapped[bool] = mapped_column(Boolean, default=False, index=True, nullable=False)
+    posting_warning: Mapped[Optional[str]] = mapped_column(String(512))
+    
+    # Relationships
+    posts: Mapped[List['TypedPost']] = relationship('TypedPost', back_populates='instance', lazy='dynamic')
+    post_replies: Mapped[List['TypedPostReply']] = relationship('TypedPostReply', back_populates='instance', lazy='dynamic')
+    communities: Mapped[List['TypedCommunity']] = relationship('TypedCommunity', back_populates='instance', lazy='dynamic')
+    users: Mapped[List['TypedUser']] = relationship('TypedUser', back_populates='instance', lazy='dynamic')
+    
+    def online(self) -> bool:
+        """Check if instance is considered online"""
+        return not (self.dormant or self.gone_forever)
+    
+    def user_is_admin(self, user_id: UserId) -> bool:
+        """Check if user is admin of this instance"""
+        from app.models import InstanceRole
+        role = InstanceRole.query.filter_by(instance_id=self.id, user_id=user_id).first()
+        return role and role.role == 'admin'
+    
+    def votes_are_public(self) -> bool:
+        """Check if this instance makes votes public"""
+        if self.trusted is True:
+            return False
+        software_lower = self.software.lower() if self.software else ''
+        return software_lower in ['lemmy', 'mbin', 'kbin', 'guppe groups']
+    
+    def update_dormant_gone(self) -> None:
+        """Update dormant and gone_forever status based on failures"""
+        if self.failures > 7 and self.dormant:
+            self.gone_forever = True
+        elif self.failures > 2 and not self.dormant:
+            self.dormant = True
+    
+    @classmethod
+    def weight(cls, domain: str) -> float:
+        """Get vote weight for a domain"""
+        if domain:
+            instance = cls.query.filter_by(domain=domain).first()
+            if instance:
+                return instance.vote_weight
+        return 1.0
+    
+    def __repr__(self) -> str:
+        return f'<Instance {self.domain}>'
