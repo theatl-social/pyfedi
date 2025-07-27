@@ -1,4 +1,24 @@
-"""Stream processor for handling federation activities"""
+"""
+Stream processor for handling federation activities
+
+This module provides the main processing engine for Redis Streams-based
+federation. It handles message consumption, processing, retries, and
+lifecycle management.
+
+Features:
+    - Concurrent processing with configurable batch sizes
+    - Automatic retry with exponential backoff
+    - Dead Letter Queue for permanent failures
+    - Redis data lifecycle management
+    - Comprehensive metrics and monitoring
+
+Example:
+    >>> processor = FederationStreamProcessor(
+    ...     redis_url="redis://localhost",
+    ...     database_url="postgresql://...",
+    ... )
+    >>> await processor.start()
+"""
 from __future__ import annotations
 import asyncio
 import json
@@ -7,7 +27,7 @@ import signal
 import time
 from typing import Dict, List, Tuple, Optional, Any, Set
 from datetime import datetime
-import aioredis
+import redis.asyncio as redis
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
@@ -17,12 +37,30 @@ from app.federation.types import (
     MessageId, ProcessingStatus, StreamMessage, Priority, ValidationError
 )
 from app.federation.handlers import get_handler_registry
+from app.federation.retry_manager import RetryManager, RetryStatus
+from app.federation.lifecycle_manager import LifecycleManager, DataCategory
+from app.federation.archival_handler import DatabaseArchivalHandler
 
 logger = logging.getLogger(__name__)
 
 
 class FederationStreamProcessor:
-    """Main processor for Redis Streams"""
+    """
+    Main processor for Redis Streams federation activities.
+    
+    This class orchestrates the consumption and processing of ActivityPub
+    messages from Redis Streams, with integrated retry management and
+    data lifecycle handling.
+    
+    Attributes:
+        redis_url: Redis connection URL
+        database_url: Database connection URL
+        consumer_name: Unique name for this consumer instance
+        max_batch_size: Maximum messages to process in one batch
+        block_ms: Milliseconds to block waiting for messages
+        retry_manager: Handles retry logic with exponential backoff
+        lifecycle_manager: Manages Redis data expiration and archival
+    """
     
     def __init__(
         self,
@@ -30,8 +68,22 @@ class FederationStreamProcessor:
         database_url: str,
         consumer_name: str = 'worker-1',
         max_batch_size: int = 10,
-        block_ms: int = 1000
-    ):
+        block_ms: int = 1000,
+        max_retry_duration: int = 172800,  # 2 days
+        task_ttl: int = 86400  # 24 hours
+    ) -> None:
+        """
+        Initialize the stream processor.
+        
+        Args:
+            redis_url: Redis connection URL
+            database_url: Database connection URL
+            consumer_name: Unique consumer name
+            max_batch_size: Max messages per batch
+            block_ms: Block time waiting for messages
+            max_retry_duration: Max seconds to retry failed messages
+            task_ttl: TTL for completed tasks in Redis
+        """
         self.redis_url = redis_url
         self.database_url = database_url
         self.consumer_name = consumer_name
@@ -39,9 +91,18 @@ class FederationStreamProcessor:
         self.block_ms = block_ms
         
         # Will be initialized in start()
-        self.redis: Optional[aioredis.Redis] = None
+        self.redis: Optional[redis.Redis] = None
         self.http_client: Optional[httpx.AsyncClient] = None
         self.async_session_maker: Optional[sessionmaker] = None
+        
+        # Initialize managers (will connect in start())
+        self.retry_manager: Optional[RetryManager] = None
+        self.lifecycle_manager: Optional[LifecycleManager] = None
+        self.archival_handler = DatabaseArchivalHandler()
+        
+        # Configuration
+        self.max_retry_duration = max_retry_duration
+        self.task_ttl = task_ttl
         
         # Stream configurations
         self.stream_configs = {
@@ -80,15 +141,36 @@ class FederationStreamProcessor:
         self._tasks: Set[asyncio.Task] = set()
     
     async def start(self) -> None:
-        """Initialize connections and start processing"""
+        """
+        Initialize connections and start processing.
+        
+        This method sets up all required connections and starts the
+        background tasks for processing messages and managing data lifecycle.
+        """
         logger.info(f"Starting federation processor {self.consumer_name}")
         
         # Initialize Redis
-        self.redis = await aioredis.from_url(
+        self.redis = await redis.from_url(
             self.redis_url,
             decode_responses=False,  # We handle decoding ourselves
             health_check_interval=30
         )
+        
+        # Initialize retry and lifecycle managers
+        self.retry_manager = RetryManager(
+            redis_client=self.redis,
+            max_retry_duration=self.max_retry_duration,
+            task_ttl=self.task_ttl
+        )
+        
+        self.lifecycle_manager = LifecycleManager(
+            redis_client=self.redis,
+            cleanup_interval=3600,  # 1 hour
+            archive_handler=self.archival_handler
+        )
+        
+        # Start lifecycle background tasks
+        await self.lifecycle_manager.start_background_tasks()
         
         # Initialize HTTP client
         self.http_client = httpx.AsyncClient(
@@ -114,9 +196,23 @@ class FederationStreamProcessor:
         await self._run()
     
     async def stop(self) -> None:
-        """Gracefully stop processing"""
+        """
+        Gracefully stop processing and clean up resources.
+        
+        This method stops all background tasks, saves metrics,
+        and closes all connections.
+        """
         logger.info("Stopping federation processor")
         self._running = False
+        
+        # Stop lifecycle manager background tasks
+        if self.lifecycle_manager:
+            await self.lifecycle_manager.stop_background_tasks()
+        
+        # Get final stats before shutdown
+        if self.retry_manager:
+            stats = await self.retry_manager.get_retry_stats()
+            logger.info(f"Final retry stats: {stats}")
         
         # Cancel all tasks
         for task in self._tasks:
@@ -328,6 +424,20 @@ class FederationStreamProcessor:
                 )
                 context.metrics.record_success(response.processing_time or processing_time)
                 
+                # Mark as successful in retry manager
+                if self.retry_manager:
+                    await self.retry_manager.mark_success(
+                        message_id=response.message_id,
+                        processing_time_ms=response.processing_time
+                    )
+                
+                # Set TTL on any associated data
+                if self.lifecycle_manager:
+                    await self.lifecycle_manager.set_expiration(
+                        key=f"task:{response.message_id}",
+                        category=DataCategory.COMPLETED_TASK
+                    )
+                
             elif response.should_retry:
                 # Queue for retry
                 await self._queue_retry(context, response)
@@ -349,24 +459,99 @@ class FederationStreamProcessor:
                     response.message_id
                 )
     
-    async def _queue_retry(self, context: ProcessingContext, response: HandlerResponse) -> None:
-        """Queue a message for retry"""
-        # This would use the producer to queue to retry stream
-        logger.info(f"Queueing {response.message_id} for retry after {response.retry_after}s")
-        context.metrics.record_retry()
+    async def _queue_retry(
+        self,
+        context: ProcessingContext,
+        response: HandlerResponse
+    ) -> None:
+        """
+        Queue a message for retry with exponential backoff.
+        
+        Args:
+            context: Processing context with message details
+            response: Handler response with error information
+        """
+        if not self.retry_manager:
+            logger.error("Retry manager not initialized")
+            return
+        
+        try:
+            # Find the original message in context
+            message = None
+            for msg_id, msg in context.messages.items():
+                if msg_id == response.message_id:
+                    message = msg
+                    break
+            
+            if not message:
+                logger.error(f"Message {response.message_id} not found in context")
+                return
+            
+            # Create exception from response error
+            exception = Exception(response.error or "Processing failed")
+            
+            # Schedule retry
+            retry_status = await self.retry_manager.schedule_retry(
+                message=message,
+                exception=exception
+            )
+            
+            if retry_status == RetryStatus.DLQ:
+                logger.warning(
+                    f"Message {response.message_id} sent to DLQ after max retries"
+                )
+            elif retry_status == RetryStatus.SCHEDULED:
+                logger.info(
+                    f"Scheduled retry for message {response.message_id}"
+                )
+                
+            context.metrics.record_retry()
+            
+        except Exception as e:
+            logger.error(f"Failed to schedule retry: {e}")
+            # Fall back to dead letter queue
+            await self._move_to_dead_letter(context, response)
     
-    async def _move_to_dead_letter(self, context: ProcessingContext, response: HandlerResponse) -> None:
-        """Move failed message to dead letter queue"""
+    async def _move_to_dead_letter(
+        self,
+        context: ProcessingContext,
+        response: HandlerResponse
+    ) -> None:
+        """
+        Move failed message to dead letter queue.
+        
+        This is called when a message cannot be processed and should not
+        be retried (e.g., validation errors, permanent failures).
+        
+        Args:
+            context: Processing context with message details
+            response: Handler response with error information
+        """
+        # Find the original message
+        message = None
+        for msg_id, msg in context.messages.items():
+            if msg_id == response.message_id:
+                message = msg
+                break
+        
+        dlq_entry = {
+            'original_stream': context.stream_config.name,
+            'message_id': response.message_id,
+            'message': json.dumps(message.to_dict()) if message else '{}',
+            'error': response.error or 'Unknown error',
+            'timestamp': datetime.utcnow().isoformat(),
+            'consumer': self.consumer_name
+        }
+        
         await self.redis.xadd(
-            'federation:dead_letter',
-            {
-                'original_stream': context.stream_config.name,
-                'message_id': response.message_id,
-                'error': response.error or 'Unknown error',
-                'timestamp': datetime.utcnow().isoformat()
-            },
+            'federation:dlq',
+            dlq_entry,
             maxlen=10000,
             approximate=True
+        )
+        
+        logger.info(
+            f"Moved message {response.message_id} to DLQ: {response.error}"
         )
     
     async def _claim_pending_messages(self) -> None:
