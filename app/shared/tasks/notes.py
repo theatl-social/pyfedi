@@ -174,7 +174,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
       'content': reply.body_html,
       'mediaType': 'text/html',
       'source': source,
-      'inReplyTo': parent.public_url(),
+      'inReplyTo': parent.ap_id if parent.ap_id else parent.public_url(),
       'published': ap_datetime(reply.posted_at),
       'language': language,
       'contentMap': content_map,
