@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database (Development)
+  db:
+    image: postgres:15-bookworm
+    container_name: peachpie-dev-db
+    environment:
+      POSTGRES_USER: peachpie
+      POSTGRES_PASSWORD: peachpie
+      POSTGRES_DB: peachpie
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U peachpie"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis (Development)
+  redis:
+    image: redis:7-bookworm
+    container_name: peachpie-dev-redis
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - dev-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Optional: Redis Commander for monitoring
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: peachpie-dev-redis-commander
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    profiles:
+      - tools
+
+  # Optional: pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: peachpie-dev-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@peachpie.local
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8082:80"
+    depends_on:
+      - db
+    profiles:
+      - tools
+
+volumes:
+  dev-db-data:
+  dev-redis-data:

@@ -1,4 +1,8 @@
-# PyFedi/PieFed Development Memory
+# PyFedi/PeachPie Development Memory
+
+## Important Directives
+- **NEVER DELETE FILES** - Always move files to `/legacy` folder with annotation in README.md
+- **MAINTAIN PYFEDI COMPATIBILITY** - PeachPie must appear as PyFedi to external servers
 
 ## Current Status (2025-01-27)
 

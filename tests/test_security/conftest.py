@@ -174,7 +174,7 @@ def mock_requests():
 def security_headers():
     """Common security headers for testing"""
     return {
-        'User-Agent': 'PyFedi-Test/1.0',
+        'User-Agent': 'PeachPie-Test/1.0',
         'Accept': 'application/activity+json',
         'Content-Type': 'application/activity+json',
         'Host': 'test.instance',

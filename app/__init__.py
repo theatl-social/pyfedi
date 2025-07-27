@@ -54,7 +54,8 @@ babel = Babel(locale_selector=get_locale)
 cache = Cache()
 limiter = Limiter(get_ip_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
 # Redis Streams will be used instead of Celery
-httpx_client = httpx.Client(http2=True)
+# httpx_client will be initialized with proper User-Agent in create_app()
+httpx_client = None
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
 rest_api = Api()
@@ -99,6 +100,13 @@ def create_app(config_class=Config):
     global redis_client
     from app.utils import get_redis_connection
     redis_client = get_redis_connection(app.config['CACHE_REDIS_URL'])
+    
+    # Initialize httpx_client with proper User-Agent
+    global httpx_client
+    httpx_client = httpx.Client(
+        http2=True,
+        headers={'User-Agent': f'{app.config["SOFTWARE_NAME"]}/{app.config["VERSION"]}; +{app.config["SOFTWARE_REPO"]}'}
+    )
 
     oauth.init_app(app)
     if app.config['GOOGLE_OAUTH_CLIENT_ID']:

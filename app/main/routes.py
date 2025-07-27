@@ -761,7 +761,7 @@ And if you want to add your score to the database to help your fellow Bookworms 
             posts = posts.limit(20).all()
 
             # Send email!
-            send_email(_('[PieFed] You have unread notifications'),
+            send_email(_(f'[{current_app.config["SOFTWARE_NAME"]}] You have unread notifications'),
                        sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                        recipients=[user.email],
                        text_body=flask.render_template('email/unread_notifications.txt', user=user,
@@ -947,7 +947,7 @@ def activitypub_application():
         '@context': default_context(),
         'type': 'Application',
         'id': f"https://{current_app.config['SERVER_NAME']}/",
-        'name': 'PieFed',
+        'name': current_app.config['SOFTWARE_NAME'],
         'summary': g.site.name + ' - ' + g.site.description,
         'published': ap_datetime(g.site.created_at),
         'updated': ap_datetime(g.site.updated),
@@ -1026,7 +1026,7 @@ def static_manifest():
 
     # Modify manifest
     manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
-    manifest['name'] = g.site.name if g.site.name else 'PieFed'
+    manifest['name'] = g.site.name if g.site.name else current_app.config['SOFTWARE_NAME']
     manifest['description'] = g.site.description if g.site.description else ''
 
     # Build response with cache headers

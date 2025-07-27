@@ -137,6 +137,8 @@ class Config(object):
     LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
 
     VERSION = app.constants.VERSION
+    SOFTWARE_NAME = os.environ.get('SOFTWARE_NAME', 'PeachPie')
+    SOFTWARE_REPO = os.environ.get('SOFTWARE_REPO', 'https://github.com/theatl-social/peachpie')
 
     # How long to keep post voting data ( months )
     KEEP_LOCAL_VOTE_DATA_TIME = int(os.environ.get('KEEP_LOCAL_VOTE_DATA_TIME') or 6)

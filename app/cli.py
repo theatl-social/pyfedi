@@ -89,130 +89,34 @@ def register(app):
         print('Admin keys have been reset')
 
     @app.cli.command("init-db")
-    def init_db():
-        with app.app_context():
-            # Check if alembic_version table exists
-            inspector = db.inspect(db.engine)
-            if 'alembic_version' not in inspector.get_table_names():
-                print("Error: alembic_version table not found. Please run 'flask db upgrade' first.")
-                return
-
-            # Drop views first to avoid dependency issues
-            try:
-                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_combined CASCADE'))
-                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_summary CASCADE'))
-                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_status_incomplete CASCADE'))
-                db.session.execute(db.text('DROP VIEW IF EXISTS ap_request_status_last CASCADE'))
-                db.session.commit()
-            except Exception as e:
-                db.session.rollback()
-                print(f"Warning: Could not drop views: {e}")
-            
-            db.drop_all()
-            db.configure_mappers()
-            db.create_all()
-            private_key, public_key = RsaKeys.generate_keypair()
-            db.session.add(
-                Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key,
-                     private_key=private_key, language_id=2))
-            db.session.add(Instance(domain=app.config['SERVER_NAME'],
-                                    software='PieFed'))  # Instance 1 is always the local instance
-            db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
-            db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
-            db.session.add(Settings(name='allow_dislike', value=json.dumps(True)))
-            db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
-            db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
-            db.session.add(Settings(name='federation', value=json.dumps(True)))
-            banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
-                                'hexbear.net',
-                                'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
-                                'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
-                                'detroitriotcity.com',
-                                'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
-                                'yggdrasil.social', 'beefyboys.win', 'brighteon.social', 'cum.salon', 'wizard.casa']
-            for bi in banned_instances:
-                db.session.add(BannedInstances(domain=bi))
-                print("Added banned instance", bi)
-
-            # Load initial domain block list
-            block_list = retrieve_block_list()
-            if block_list:
-                for domain in block_list.split('\n'):
-                    db.session.add(Domain(name=domain.strip(), banned=True))
-                print("Added 'No-QAnon' blocklist, see https://github.com/rimu/no-qanon")
-
-            # Load peertube domain block list
-            block_list = retrieve_peertube_block_list()
-            if block_list:
-                for domain in block_list.split('\n'):
-                    db.session.add(Domain(name=domain.strip(), banned=True))
-                    db.session.add(BannedInstances(domain=domain.strip()))
-                print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
-
-            # Initial languages
-            db.session.add(Language(name='Undetermined', code='und'))
-            db.session.add(Language(code='en', name='English'))
-            db.session.add(Language(code='de', name='Deutsch'))
-            db.session.add(Language(code='es', name='Español'))
-            db.session.add(Language(code='fr', name='Français'))
-            db.session.add(Language(code='hi', name='हिन्दी'))
-            db.session.add(Language(code='ja', name='日本語'))
-            db.session.add(Language(code='zh', name='中文'))
-
-            # Initial roles
-            # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
-            # constants.py that will need to be updated if the role IDs ever change.
-            anon_role = Role(name='Anonymous user', weight=0)
-            db.session.add(anon_role)
-
-            auth_role = Role(name='Authenticated user', weight=1)
-            db.session.add(auth_role)
-
-            staff_role = Role(name='Staff', weight=2)
-            staff_role.permissions.append(RolePermission(permission='approve registrations'))
-            staff_role.permissions.append(RolePermission(permission='ban users'))
-            staff_role.permissions.append(RolePermission(permission='administer all communities'))
-            staff_role.permissions.append(RolePermission(permission='administer all users'))
-            db.session.add(staff_role)
-
-            admin_role = Role(name='Admin', weight=3)
-            admin_role.permissions.append(RolePermission(permission='approve registrations'))
-            admin_role.permissions.append(RolePermission(permission='change user roles'))
-            admin_role.permissions.append(RolePermission(permission='ban users'))
-            admin_role.permissions.append(RolePermission(permission='manage users'))
-            admin_role.permissions.append(RolePermission(permission='change instance settings'))
-            admin_role.permissions.append(RolePermission(permission='administer all communities'))
-            admin_role.permissions.append(RolePermission(permission='administer all users'))
-            admin_role.permissions.append(RolePermission(permission='edit cms pages'))
-            db.session.add(admin_role)
-
-            # Admin user
-            print(
-                'The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
-            user_name = input("Admin user name (ideally not 'admin'): ")
-            email = input("Admin email address: ")
-            password = input("Admin password: ")
-            while '@' in user_name or ' ' in user_name:
-                print('User name cannot be an email address or have spaces.')
-                user_name = input("Admin user name (ideally not 'admin'): ")
-            verification_token = random_token(16)
-            private_key, public_key = RsaKeys.generate_keypair()
-            admin_user = User(user_name=user_name, title=user_name,
-                              email=email, verification_token=verification_token,
-                              instance_id=1, email_unread_sent=False,
-                              private_key=private_key, public_key=public_key,
-                              alt_user_name=gibberish(randint(8, 20)))
-            admin_user.set_password(password)
-            admin_user.roles.append(admin_role)
-            admin_user.verified = True
-            admin_user.last_seen = utcnow()
-            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-            admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
-            db.session.add(admin_user)
-
-            db.session.commit()
-            print("Initial setup is finished.")
+    @click.option('--non-interactive', is_flag=True, help='Run in non-interactive mode')
+    @click.option('--skip-blocklists', is_flag=True, help='Skip loading blocklists')
+    def init_db(non_interactive, skip_blocklists):
+        """
+        Initialize PeachPie database - DEPRECATED.
+        Please use: python scripts/init_db.py
+        """
+        print("=" * 60)
+        print("DEPRECATED: This command is deprecated.")
+        print("Please use the new initialization script:")
+        print("")
+        print("  python scripts/init_db.py")
+        print("")
+        print("Or for non-interactive mode:")
+        print("  python scripts/init_db.py --non-interactive")
+        print("")
+        print("See docs/QUICK_START.md for details.")
+        print("=" * 60)
+        
+        # For backward compatibility, run the new script
+        import subprocess
+        cmd = ['python', 'scripts/init_db.py']
+        if non_interactive:
+            cmd.append('--non-interactive')
+        if skip_blocklists:
+            cmd.append('--skip-blocklists')
+        
+        subprocess.run(cmd)
 
     @app.cli.command('testing')
     def testing():
@@ -1100,7 +1004,7 @@ def register(app):
                             posts = posts.limit(20).all()
 
                             # Send email!
-                            send_email(_('[PieFed] You have unread notifications'),
+                            send_email(_(f'[{current_app.config["SOFTWARE_NAME"]}] You have unread notifications'),
                                        sender=f'{site.name} <{current_app.config["MAIL_FROM"]}>',
                                        recipients=[user.email],
                                        text_body=flask.render_template('email/unread_notifications.txt', user=user,
@@ -1453,7 +1357,7 @@ def register(app):
             session = get_task_session()
             try:
                 with patch_db_session(session):
-                    print("PieFed Configuration Check")
+                    print(f"{current_app.config['SOFTWARE_NAME']} Configuration Check")
                     print("=" * 40)
                     errors = []
                     warnings = []
@@ -1690,7 +1594,7 @@ def register(app):
                     print("=" * 40)
 
                     if not errors and not warnings:
-                        print("✅ All checks passed! Your PieFed configuration looks good.")
+                        print(f"✅ All checks passed! Your {current_app.config['SOFTWARE_NAME']} configuration looks good.")
                     else:
                         if errors:
                             print(f"❌ {len(errors)} error(s) found:")
