@@ -1,62 +1,89 @@
-# PyFedi/PeachPie Development Memory
+# PyFedi/PieFed Development Memory
 
-## Current Status (2025-01-26)
+## Current Status (2025-01-27)
 
-### Branch: 20250126-critical-security-fixes
-Working on critical security vulnerabilities identified in security analysis.
+### Branch: 20250127-integrate-security-fixes
+Completed integration of critical security fixes into main codebase.
 
-### Completed Analysis
-1. **Vote Processing Issues**
-   - Inbound votes fail due to rigid object parsing
-   - No suspense queue for out-of-order activities
-   - Outbound format includes non-standard 'audience' field
-   - Complex Announce wrapping confuses other implementations
+### Completed Security Work
+1. **Critical Vulnerabilities Fixed**
+   - ✅ RCE via unsafe JSON deserialization - SafeJSONParser integrated
+   - ✅ SQL injection in 3 locations - Fixed with parameterized queries
+   - ⚠️  Authentication bypass - Reverted to original (broke federation)
 
-2. **Security Vulnerabilities Identified**
-   - CRITICAL: RCE via unsafe JSON deserialization
-   - CRITICAL: Authentication bypass via signature fallback
-   - CRITICAL: SQL injection risks in raw queries
-   - HIGH: DoS via unlimited actor creation
-   - HIGH: Vote amplification attacks
-   - HIGH: Insufficient URI validation
-   - HIGH: Missing access control on Announces
-   - HIGH: Insecure object references
+2. **High Vulnerabilities Fixed**
+   - ✅ SSRF in media fetching - URIValidator integrated
+   - ✅ DoS via malformed JSON - SafeJSONParser limits
+   - ✅ Actor creation spam - ActorCreationLimiter integrated  
+   - ❌ Vote relay attacks - RelayProtection created but not integrated
 
-3. **Performance Issues**
-   - Synchronous HTTP calls block request processing
-   - No async actor resolution
-   - announce_activity_to_followers is synchronous
+### Key Lessons Learned
+1. **CRITICAL**: Always integrate security modules into main code - I initially created modules without integration
+2. **API Mismatches**: Check actual function signatures - many integration failures from wrong assumptions
+3. **Docker Testing**: Must rebuild containers after changes - wasted time debugging old code
+4. **Federation Balance**: Strict security can break federation - had to revert signature validation
 
-### Current Task Queue
-1. Implement safe JSON parser with depth/size limits
-2. Fix authentication bypass - remove unsafe fallbacks
-3. Audit and fix all SQL injection vulnerabilities
-4. Add rate limiting for actor creation
-5. Implement vote deduplication
-6. Add URI validation library
-7. Make announce distribution async
+### Important Implementation Details
 
-### Key Findings
-- Lemmy always signs activities (no exceptions)
-- Mastodon always signs activities
-- Some implementations (PeerTube, relays) may send unsigned
-- Current PyFedi code accepts unsigned activities unsafely
+#### Redis Configuration
+- PyFedi uses `CACHE_REDIS_URL` for main app
+- Security modules look for `REDIS_URL` (not set by default)
+- Need to add: `REDIS_URL=redis://redis:6379/2`
 
-### Implementation Strategy
-- Feature flags for gradual rollout
-- Comprehensive testing at each stage
-- Monitor federation compatibility
-- Keep changes modular for easy rollback
+#### API Patterns
+- `URIValidator.validate()` - Raises ValueError, doesn't return result object
+- `SafeJSONParser()` - No constructor params, reads from Flask config
+- `ActorCreationLimiter.can_create_actor()` - Returns (allowed, reason) tuple
+- Always use try/except for validators that raise exceptions
 
-### Files Created
-- PLATFORM_IMPROVEMENTS.md - Functional improvements plan
-- SECURITY_IMPROVEMENTS.md - Security fixes overview  
-- SECURITY_MITIGATION_DETAILS.md - Detailed implementation guide
-- UPSTREAM_SECURITY_ANALYSIS.md - (in progress via subagent)
+#### F-String Gotcha
+Cannot use backslashes in f-string expressions:
+```python
+# Bad
+f"%{search.replace('%', '\\%')}"
 
-### Next Steps
-1. Implement safe JSON parser
-2. Fix signature verification
-3. SQL injection audit and fixes
-4. Deploy to test instance
-5. Monitor metrics before wider rollout
+# Good  
+escaped = search.replace('%', '\\%')
+f"%{escaped}%"
+```
+
+### Current Vote Federation Issues
+1. **audience field** - PyFedi adds non-standard field to votes
+2. **Announce wrapping** - Votes wrapped in Announce confuse other implementations
+3. **No suspense queue** - Votes for unknown posts are dropped
+4. **Signature fallbacks** - Accepting unsigned activities for compatibility
+
+### Next Critical Tasks
+1. Fix authentication bypass while maintaining federation
+2. Remove 'audience' field from votes
+3. Stop Announce-wrapping votes
+4. Implement suspense queue for out-of-order activities
+5. Add REDIS_URL to production environment
+
+### Testing Commands
+```bash
+# Rebuild Docker after changes
+docker-compose build
+
+# Check Python syntax
+python -m py_compile app/**/*.py
+
+# Run security tests
+docker-compose up test-runner
+```
+
+### User Preferences
+- Wants autonomous implementation after analysis
+- Prefers date-prefixed branch names (YYYYMMDD-description)  
+- Expects detailed technical information with code references
+- Direct feedback style: "Do better and be more careful"
+- Wants to see plans before implementation
+- Aligned with Lemmy's strict security model
+
+### Files Created This Session
+- SECURITY_LEARNINGS.md - Mistakes and lessons from integration
+- ACTIVITYPUB_PROTOCOL_MISMATCHES.md - Detailed protocol compatibility issues
+- Multiple security modules in app/security/
+- Test files in tests/test_security/
+
+Remember: Security modules without integration provide ZERO protection!
