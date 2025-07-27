@@ -4,7 +4,7 @@ from flask_login import current_user
 from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 
-from app import db, cache, celery, limiter
+from app import db, cache, limiter
 from app.activitypub import bp
 from app.activitypub.signature import HttpSignature, VerificationError, default_context, LDSignature, \
     send_post_request
@@ -1100,20 +1100,24 @@ def shared_inbox():
         if account_deletion == True:
             if logger:
                 logger.log_checkpoint('account_deletion_dispatch', 'ok', 'Dispatching account deletion processing')
-            if current_app.debug:
-                process_delete_request(request_json, store_ap_json, logger.request_id if logger else None)
-            else:
-                process_delete_request.delay(request_json, store_ap_json, logger.request_id if logger else None)
+            from app.shared.tasks import task_selector
+            task_selector('process_delete_request', 
+                         send_async=not current_app.debug,
+                         request_json=request_json, 
+                         store_ap_json=store_ap_json, 
+                         request_id=logger.request_id if logger else None)
             return ''
 
         # Dispatch to main processing
         if logger:
             logger.log_checkpoint('main_processing_dispatch', 'ok', 'Dispatching to main inbox processing')
         
-        if current_app.debug:
-            process_inbox_request(request_json, store_ap_json, logger.request_id if logger else None)
-        else:
-            process_inbox_request.delay(request_json, store_ap_json, logger.request_id if logger else None)
+        from app.shared.tasks import task_selector
+        task_selector('process_inbox_request',
+                     send_async=not current_app.debug,
+                     request_json=request_json,
+                     store_ap_json=store_ap_json,
+                     request_id=logger.request_id if logger else None)
 
         return ''
     except Exception as e:
@@ -1201,7 +1205,6 @@ def replay_inbox_request(request_json):
     return
 
 
-@celery.task
 def process_inbox_request(request_json, store_ap_json, request_id=None):
     with current_app.app_context():
         session = get_task_session()
@@ -2145,7 +2148,6 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
             session.close()
 
 
-@celery.task
 def process_delete_request(request_json, store_ap_json, request_id=None):
     with current_app.app_context():
         session = get_task_session()

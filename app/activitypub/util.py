@@ -21,7 +21,7 @@ from flask_babel import _, force_locale, gettext
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 
-from app import db, cache, celery
+from app import db, cache
 from app.activitypub.signature import signed_get_request
 from app.constants import *
 from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, utcnow, \
@@ -388,7 +388,6 @@ def refresh_user_profile(user_id):
         refresh_user_profile_task.apply_async(args=(user_id,), countdown=randint(1, 10))
 
 
-@celery.task
 def refresh_user_profile_task(user_id):
     session = get_task_session()
     try:
@@ -504,7 +503,6 @@ def refresh_community_profile(community_id, activity_json=None):
         refresh_community_profile_task.apply_async(args=(community_id, activity_json), countdown=randint(1, 10))
 
 
-@celery.task
 def refresh_community_profile_task(community_id, activity_json):
     session = get_task_session()
     try:
@@ -698,7 +696,6 @@ def refresh_feed_profile(feed_id):
         refresh_feed_profile_task.apply_async(args=(feed_id,), countdown=randint(1, 10))
 
 
-@celery.task
 def refresh_feed_profile_task(feed_id):
     session = get_task_session()
     try:
@@ -1191,7 +1188,6 @@ def make_image_sizes(file_id, thumbnail_width=50, medium_width=120, directory='p
                                            countdown=randint(1, 10))  # Delay by up to 10 seconds so servers do not experience a stampede of requests all in the same second
 
 
-@celery.task
 def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, toxic_community):
     with current_app.app_context():
         original_directory = directory
@@ -1514,7 +1510,6 @@ def new_instance_profile(instance_id: int):
             new_instance_profile_task.apply_async(args=(instance_id,), countdown=randint(1, 10))
 
 
-@celery.task
 def new_instance_profile_task(instance_id: int):
     session = get_task_session()
     try:
@@ -2036,7 +2031,6 @@ def notify_about_post(post: Post):
         notify_about_post_task.delay(post.id)
 
 
-@celery.task
 def notify_about_post_task(post_id):
     session = get_task_session()
     try:
@@ -3122,7 +3116,6 @@ def create_resolved_object(uri, post_data, uri_domain, community, announce_id, s
     return None
 
 
-@celery.task
 def get_nodebb_replies_in_background(replies_uri_list, community_id):
     try:
         max = 10 if not current_app.debug else 2  # magic number alert
@@ -3149,7 +3142,6 @@ def populate_child_feed(feed_id, child_feed):
         populate_child_feed_worker.delay(feed_id, child_feed)
 
 
-@celery.task
 def populate_child_feed_worker(feed_id, child_feed):
     try:
         from app.feed.util import search_for_feed

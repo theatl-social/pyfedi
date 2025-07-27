@@ -12,7 +12,7 @@ from flask_login import current_user
 from pillow_heif import register_heif_opener
 from psycopg2 import IntegrityError
 
-from app import db, cache, celery
+from app import db, cache
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post, remote_object_to_json
@@ -81,7 +81,6 @@ def search_for_community(address: str) -> Community | None:
         return None
 
 
-@celery.task
 def retrieve_mods_and_backfill(community_id: int, server, name, community_json=None):
     with current_app.app_context():
         session = get_task_session()
@@ -372,7 +371,6 @@ def delete_post_from_community(post_id):
         delete_post_from_community_task.delay(post_id)
 
 
-@celery.task
 def delete_post_from_community_task(post_id):
     with current_app.app_context():
         session = get_task_session()
@@ -433,7 +431,6 @@ def delete_post_reply_from_community(post_reply_id):
         delete_post_reply_from_community_task.delay(post_reply_id)
 
 
-@celery.task
 def delete_post_reply_from_community_task(post_reply_id):
     with current_app.app_context():
         session = get_task_session()
@@ -747,7 +744,6 @@ def send_to_remote_instance(instance_id: int, community_id: int, payload):
         send_to_remote_instance_task.delay(instance_id, community_id, payload)
 
 
-@celery.task
 def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
     session = get_task_session()
     try:

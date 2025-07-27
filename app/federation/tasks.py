@@ -134,6 +134,9 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
         ban_from_community, unban_from_community, 
         ban_from_site, unban_from_site
     )
+    from app.federation.tasks.activitypub import (
+        process_inbox_request, process_delete_request
+    )
     
     tasks = {
         'join_community': join_community,
@@ -165,6 +168,8 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
         'unban_from_site': unban_from_site,
         'add_mod': add_mod,
         'remove_mod': remove_mod,
+        'process_inbox_request': process_inbox_request,
+        'process_delete_request': process_delete_request,
     }
     
     if task_key not in tasks:

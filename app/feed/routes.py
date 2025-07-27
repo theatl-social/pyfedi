@@ -10,7 +10,7 @@ from flask_login import current_user
 from slugify import slugify
 from sqlalchemy import desc
 
-from app import db, cache, celery
+from app import db, cache
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file
@@ -835,7 +835,6 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-@celery.task
 def do_feed_subscribe(actor, user_id):
     try:
         remote = False
@@ -999,7 +998,6 @@ def feed_unsubscribe(actor):
         abort(404)
 
 
-@celery.task
 def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community_id: int):
     # find the feed
     feed = Feed.query.get(feed_id)
@@ -1064,7 +1062,6 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         session.close()
 
 
-@celery.task
 def announce_feed_delete_to_subscribers(user_id, feed_id):
     # get the user
     user = User.query.get(user_id)

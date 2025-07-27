@@ -47,7 +47,7 @@ from furl import furl
 from pyld import jsonld
 from sqlalchemy import text
 
-from app import db, celery, httpx_client
+from app import db, httpx_client
 from app.constants import DATETIME_MS_FORMAT
 from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
 from app.utils import get_task_session
@@ -88,14 +88,30 @@ def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str
         return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                             method=method, timeout=timeout, retries=retries)
     else:
-        current_app.logger.info(f'send_post_request: dispatching post_request.delay to Celery')
-        task = post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
-                                  method=method, timeout=timeout, retries=retries)
-        current_app.logger.info(f'send_post_request: Celery task dispatched with id={task.id}')
-        return True
+        current_app.logger.info(f'send_post_request: queueing to Redis Streams')
+        # Queue outgoing activity to Redis Streams
+        from app.federation.producer import get_producer
+        import asyncio
+        
+        producer = get_producer()
+        # Run async code in sync context
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            msg_id = loop.run_until_complete(
+                producer.queue_activity(
+                    activity=body or {},
+                    destination=uri,
+                    private_key=private_key,
+                    key_id=key_id
+                )
+            )
+            current_app.logger.info(f'send_post_request: Activity queued with id={msg_id}')
+            return True
+        finally:
+            loop.close()
 
 
-@celery.task
 def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                  content_type: str = "application/activity+json",
                  method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):

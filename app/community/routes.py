@@ -13,7 +13,7 @@ from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
-from app import db, cache, celery, httpx_client, limiter, plugins
+from app import db, cache, httpx_client, limiter, plugins
 from app.activitypub.signature import RsaKeys, post_request, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
 from app.chat.util import send_message
@@ -646,7 +646,6 @@ def subscribe(actor):
 
 # this is separated out from the subscribe route so it can be used by the 
 # admin.admin_federation.preload_form and feed subscription process as well
-@celery.task
 def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
     with current_app.app_context():
         session = get_task_session()

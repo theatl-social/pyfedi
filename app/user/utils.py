@@ -4,7 +4,7 @@ from time import sleep
 
 from flask import current_app, json
 
-from app import celery, db
+from app import db
 from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
@@ -21,7 +21,6 @@ def purge_user_then_delete(user_id):
         purge_user_then_delete_task.delay(user_id)
 
 
-@celery.task
 def purge_user_then_delete_task(user_id):
     with current_app.app_context():
         user = User.query.get(user_id)

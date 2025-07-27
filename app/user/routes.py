@@ -12,7 +12,7 @@ from flask_login import logout_user, current_user
 from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 
-from app import db, cache, celery
+from app import db, cache
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token

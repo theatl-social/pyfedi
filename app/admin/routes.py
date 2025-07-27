@@ -15,7 +15,7 @@ from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
 
-from app import db, celery, cache
+from app import db, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context, RsaKeys
 from app.activitypub.util import instance_allowed, extract_domain_and_actor
@@ -848,7 +848,6 @@ def admin_federation():
                            remote_scan_form=remote_scan_form, current_app_debug=current_app.debug)
 
 
-@celery.task
 def import_bans_task(filename):
     with current_app.app_context():
         session = get_task_session()
@@ -1211,7 +1210,6 @@ def unsubscribe_everyone_then_delete(community_id):
         unsubscribe_everyone_then_delete_task.delay(community_id)
 
 
-@celery.task
 def unsubscribe_everyone_then_delete_task(community_id):
     with current_app.app_context():
         session = get_task_session()

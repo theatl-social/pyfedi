@@ -8,7 +8,7 @@ from flask_babel import _
 from flask_login import current_user
 from sqlalchemy import text, desc
 
-from app import db, celery
+from app import db
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_IMAGE
 from app.models import User, Community, Instance, CommunityMember, Post
@@ -22,7 +22,6 @@ def unsubscribe_from_everything_then_delete(user_id):
         unsubscribe_from_everything_then_delete_task.delay(user_id)
 
 
-@celery.task
 def unsubscribe_from_everything_then_delete_task(user_id):
     with current_app.app_context():
         session = get_task_session()
@@ -137,7 +136,6 @@ def topics_for_form_children(topics, current_topic: int, depth: int) -> List[Tup
     return result
 
 
-@celery.task
 def move_community_images_to_here(community_id):
     with current_app.app_context():
         session = get_task_session()
