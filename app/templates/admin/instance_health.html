@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="container">
+    <h1>Instance Health Monitor</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <h5 class="card-title">Healthy</h5>
+                    <h2 class="card-text">{{ healthy|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <h5 class="card-title">Degraded</h5>
+                    <h2 class="card-text">{{ degraded|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <h5 class="card-title">Unhealthy</h5>
+                    <h2 class="card-text">{{ unhealthy|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Dead</h5>
+                    <h2 class="card-text">{{ dead|length }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs" role="tablist">
+        <li class="nav-item">
+            <a class="nav-link active" data-bs-toggle="tab" href="#healthy-tab">
+                Healthy ({{ healthy|length }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#degraded-tab">
+                Degraded ({{ degraded|length }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#unhealthy-tab">
+                Unhealthy ({{ unhealthy|length }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" data-bs-toggle="tab" href="#dead-tab">
+                Dead ({{ dead|length }})
+            </a>
+        </li>
+    </ul>
+
+    <div class="tab-content mt-3">
+        <div id="healthy-tab" class="tab-pane fade show active">
+            {% if healthy %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Success Rate</th>
+                            <th>Avg Response Time</th>
+                            <th>Circuit State</th>
+                            <th>Last Success</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instance in healthy %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin_health.instance_health_detail', domain=instance.domain) }}">
+                                    {{ instance.domain }}
+                                </a>
+                            </td>
+                            <td>{{ "%.1f"|format(instance.success_rate * 100) }}%</td>
+                            <td>{{ "%.2f"|format(instance.avg_response_time) }}s</td>
+                            <td>
+                                <span class="badge bg-success">{{ instance.circuit_state }}</span>
+                            </td>
+                            <td>{{ instance.last_success or 'Never' }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_health.reset_instance_health', domain=instance.domain) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-secondary" onclick="return confirm('Reset health metrics for {{ instance.domain }}?')">
+                                        Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No healthy instances</p>
+            {% endif %}
+        </div>
+
+        <div id="degraded-tab" class="tab-pane fade">
+            {% if degraded %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Success Rate</th>
+                            <th>Consecutive Failures</th>
+                            <th>Circuit State</th>
+                            <th>Last Failure</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instance in degraded %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin_health.instance_health_detail', domain=instance.domain) }}">
+                                    {{ instance.domain }}
+                                </a>
+                            </td>
+                            <td>{{ "%.1f"|format(instance.success_rate * 100) }}%</td>
+                            <td>{{ instance.consecutive_failures }}</td>
+                            <td>
+                                <span class="badge bg-warning">{{ instance.circuit_state }}</span>
+                            </td>
+                            <td>{{ instance.last_failure or 'Never' }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_health.reset_instance_health', domain=instance.domain) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-secondary" onclick="return confirm('Reset health metrics for {{ instance.domain }}?')">
+                                        Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No degraded instances</p>
+            {% endif %}
+        </div>
+
+        <div id="unhealthy-tab" class="tab-pane fade">
+            {% if unhealthy %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Success Rate</th>
+                            <th>Consecutive Failures</th>
+                            <th>Circuit State</th>
+                            <th>Last Failure</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instance in unhealthy %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin_health.instance_health_detail', domain=instance.domain) }}">
+                                    {{ instance.domain }}
+                                </a>
+                            </td>
+                            <td>{{ "%.1f"|format(instance.success_rate * 100) }}%</td>
+                            <td>{{ instance.consecutive_failures }}</td>
+                            <td>
+                                {% if instance.circuit_state == 'open' %}
+                                    <span class="badge bg-danger">{{ instance.circuit_state }}</span>
+                                {% else %}
+                                    <span class="badge bg-warning">{{ instance.circuit_state }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ instance.last_failure or 'Never' }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_health.reset_instance_health', domain=instance.domain) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-secondary" onclick="return confirm('Reset health metrics for {{ instance.domain }}?')">
+                                        Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No unhealthy instances</p>
+            {% endif %}
+        </div>
+
+        <div id="dead-tab" class="tab-pane fade">
+            {% if dead %}
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Domain</th>
+                            <th>Success Rate</th>
+                            <th>Last Success</th>
+                            <th>Last Failure</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for instance in dead %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('admin_health.instance_health_detail', domain=instance.domain) }}">
+                                    {{ instance.domain }}
+                                </a>
+                            </td>
+                            <td>{{ "%.1f"|format(instance.success_rate * 100) }}%</td>
+                            <td>{{ instance.last_success or 'Never' }}</td>
+                            <td>{{ instance.last_failure or 'Never' }}</td>
+                            <td>
+                                <form method="POST" action="{{ url_for('admin_health.reset_instance_health', domain=instance.domain) }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-secondary" onclick="return confirm('Reset health metrics for {{ instance.domain }}?')">
+                                        Reset
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted">No dead instances</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h3>Auto-refresh</h3>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="autoRefresh">
+            <label class="form-check-label" for="autoRefresh">
+                Refresh every 30 seconds
+            </label>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh functionality
+let refreshInterval;
+document.getElementById('autoRefresh').addEventListener('change', function() {
+    if (this.checked) {
+        refreshInterval = setInterval(() => {
+            location.reload();
+        }, 30000);
+    } else {
+        clearInterval(refreshInterval);
+    }
+});
+</script>
+{% endblock %}

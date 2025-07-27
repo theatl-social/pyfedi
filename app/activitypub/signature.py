@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import base64
 import json
+import time
 from datetime import datetime, timedelta
 from email.utils import formatdate
 from typing import Literal, TypedDict, cast
@@ -441,10 +442,22 @@ class HttpSignature:
             }
         )
 
-        headers["User-Agent"] = f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+        headers["User-Agent"] = f'{current_app.config["SOFTWARE_NAME"]}/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
 
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]
+        
+        # Check instance health before sending
+        from urllib.parse import urlparse
+        parsed_uri = urlparse(uri)
+        instance_domain = parsed_uri.netloc
+        
+        from app.federation.health_monitor import check_instance_health
+        can_send, reason = check_instance_health(instance_domain)
+        if not can_send:
+            raise ValueError(f"Cannot send to {instance_domain}: {reason}")
+        
+        start_time = time.time()
         try:
             response = httpx_client.request(
                 method,
@@ -454,15 +467,38 @@ class HttpSignature:
                 timeout=timeout,
                 follow_redirects=method == "GET",
             )
+            
+            # Record success
+            response_time = time.time() - start_time
+            from app.federation.health_monitor import record_federation_success
+            record_federation_success(instance_domain, response_time)
+            
+        except httpx.TimeoutException as ex:
+            # Record timeout
+            from app.federation.health_monitor import record_federation_failure
+            record_federation_failure(instance_domain, 'timeout')
+            raise httpx.HTTPError(f"Timeout for {uri}") from ex
         except httpx.HTTPError as ex:
+            # Record failure
+            from app.federation.health_monitor import record_federation_failure
+            record_federation_failure(instance_domain, 'http_error')
             # Convert to a more generic error we handle
             raise httpx.HTTPError(f"HTTP Exception for {ex.request.url} - {ex}") from None
 
-        if (
+        # Handle response status
+        if response.status_code >= 500:
+            # Server error - record failure but allow retry
+            from app.federation.health_monitor import record_federation_failure
+            record_federation_failure(instance_domain, 'server_error')
+            raise httpx.HTTPError(f"Server error from {uri}: {response.status_code}")
+        elif (
                 method == "POST"
                 and 400 <= response.status_code < 500
                 and response.status_code != 404
         ):
+            # Client error - record failure but don't retry
+            from app.federation.health_monitor import record_federation_failure
+            record_federation_failure(instance_domain, 'client_error')
             raise ValueError(
                 f"POST error to {uri}: {response.status_code} {response.content!r}"
             )
