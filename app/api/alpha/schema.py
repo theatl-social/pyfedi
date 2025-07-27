@@ -405,7 +405,7 @@ class ListCommunitiesResponse(DefaultSchema):
 
 class FollowCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    follow = fields.Integer(required=True)
+    follow = fields.Boolean(required=True)
 
 
 class BlockCommunityRequest(DefaultSchema):
@@ -414,7 +414,7 @@ class BlockCommunityRequest(DefaultSchema):
 
 
 class BlockCommunityResponse(DefaultSchema):
-    community_view = fields.Nested(CommentView, required=True)
+    community_view = fields.Nested(CommunityView, required=True)
     blocked = fields.Boolean(required=True)
 
 
