@@ -34,6 +34,7 @@ Add these new environment variables to your `.env` file:
 # Software branding (maintains PyFedi compatibility)
 SOFTWARE_NAME=PeachPie
 SOFTWARE_REPO=https://github.com/theatl-social/peachpie
+SOFTWARE_VERSION=1.0.1  # Optional, defaults to version in constants.py
 
 # Consolidated Redis URL (replaces multiple Redis env vars)
 REDIS_URL=redis://localhost:6379/0
@@ -118,6 +119,7 @@ sudo systemctl start pyfedi-web pyfedi-worker
 ### Required Variables
 - `SOFTWARE_NAME` - Software name shown in UI and federation (default: PeachPie)
 - `SOFTWARE_REPO` - Repository URL for User-Agent (default: https://github.com/theatl-social/peachpie)
+- `SOFTWARE_VERSION` - Software version (optional, defaults to version in constants.py)
 - `REDIS_URL` - Single Redis connection URL (replaces CACHE_REDIS_URL, CELERY_BROKER_URL, etc)
 
 ### Optional Variables

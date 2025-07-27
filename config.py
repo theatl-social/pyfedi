@@ -136,7 +136,7 @@ class Config(object):
     LDAP_ATTR_EMAIL = os.environ.get('LDAP_ATTR_EMAIL') or 'mail'
     LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
 
-    VERSION = app.constants.VERSION
+    VERSION = os.environ.get('SOFTWARE_VERSION', app.constants.VERSION)
     SOFTWARE_NAME = os.environ.get('SOFTWARE_NAME', 'PeachPie')
     SOFTWARE_REPO = os.environ.get('SOFTWARE_REPO', 'https://github.com/theatl-social/peachpie')
 
