@@ -12,3 +12,4 @@ app.app_context().push()
 
 from app.shared.tasks import maintenance
 from app.shared.tasks import follows, likes, notes, deletes, flags, pages, locks, adds, removes, groups, users, blocks
+from app.activitypub import signature  # Import signature module which contains post_request task
