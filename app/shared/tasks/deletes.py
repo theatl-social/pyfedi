@@ -24,7 +24,7 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 
 @celery.task
-def delete_reply(user_id, reply_id, reason=None):
+def delete_reply(send_async, user_id, reply_id, reason=None):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -39,7 +39,7 @@ def delete_reply(user_id, reply_id, reason=None):
 
 
 @celery.task
-def restore_reply(user_id, reply_id, reason=None):
+def restore_reply(send_async, user_id, reply_id, reason=None):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -54,7 +54,7 @@ def restore_reply(user_id, reply_id, reason=None):
 
 
 @celery.task
-def delete_post(user_id, post_id, reason=None):
+def delete_post(send_async, user_id, post_id, reason=None):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -69,7 +69,7 @@ def delete_post(user_id, post_id, reason=None):
 
 
 @celery.task
-def restore_post(user_id, post_id, reason=None):
+def restore_post(send_async, user_id, post_id, reason=None):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -84,7 +84,7 @@ def restore_post(user_id, post_id, reason=None):
 
 
 @celery.task
-def delete_community(user_id, community_id):
+def delete_community(send_async, user_id, community_id):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -99,7 +99,7 @@ def delete_community(user_id, community_id):
 
 
 @celery.task
-def restore_community(user_id, community_id):
+def restore_community(send_async, user_id, community_id):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -217,7 +217,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
 
 
 @celery.task
-def delete_posts_with_blocked_images(post_ids, user_id):
+def delete_posts_with_blocked_images(post_ids, user_id, send_async):
     with current_app.app_context():
         session = get_task_session()
         try:

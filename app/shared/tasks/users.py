@@ -11,7 +11,7 @@ from app.utils import get_setting, get_task_session
 
 
 @celery.task
-def check_user_application(application_id):
+def check_user_application(application_id, send_async=True):
     session = get_task_session()
     try:
         application = session.query(UserRegistration).get(application_id)

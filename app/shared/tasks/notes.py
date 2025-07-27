@@ -51,7 +51,7 @@ import re
 
 
 @celery.task
-def make_reply(reply_id, parent_id):
+def make_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
         send_reply(reply_id, parent_id, session=session)
@@ -63,7 +63,7 @@ def make_reply(reply_id, parent_id):
 
 
 @celery.task
-def edit_reply(reply_id, parent_id):
+def edit_reply(send_async, reply_id, parent_id):
     session = get_task_session()
     try:
         send_reply(reply_id, parent_id, edit=True, session=session)

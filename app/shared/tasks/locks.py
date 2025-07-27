@@ -23,7 +23,7 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 
 @celery.task
-def lock_post(user_id, post_id):
+def lock_post(send_async, user_id, post_id):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -38,7 +38,7 @@ def lock_post(user_id, post_id):
 
 
 @celery.task
-def unlock_post(user_id, post_id):
+def unlock_post(send_async, user_id, post_id):
     with current_app.app_context():
         session = get_task_session()
         try:

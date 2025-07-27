@@ -24,7 +24,7 @@ For Announce, remove @context from inner object, and use same fields except audi
 
 
 @celery.task
-def unsticky_post(user_id, post_id):
+def unsticky_post(send_async, user_id, post_id):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -39,7 +39,7 @@ def unsticky_post(user_id, post_id):
 
 
 @celery.task
-def remove_mod(user_id, mod_id, community_id):
+def remove_mod(send_async, user_id, mod_id, community_id):
     with current_app.app_context():
         session = get_task_session()
         try:

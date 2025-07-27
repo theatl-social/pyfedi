@@ -38,7 +38,7 @@ remove @context from inner object
 """
 
 @celery.task
-def ban_from_site(user_id, mod_id, expiry, reason):
+def ban_from_site(send_async, user_id, mod_id, expiry, reason):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -52,7 +52,7 @@ def ban_from_site(user_id, mod_id, expiry, reason):
 
 
 @celery.task
-def unban_from_site(user_id, mod_id, expiry, reason):
+def unban_from_site(send_async, user_id, mod_id, expiry, reason):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -66,7 +66,7 @@ def unban_from_site(user_id, mod_id, expiry, reason):
 
 
 @celery.task
-def ban_from_community(user_id, mod_id, community_id, expiry, reason):
+def ban_from_community(send_async, user_id, mod_id, community_id, expiry, reason):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -80,7 +80,7 @@ def ban_from_community(user_id, mod_id, community_id, expiry, reason):
 
 
 @celery.task
-def unban_from_community(user_id, mod_id, community_id, expiry, reason):
+def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reason):
     with current_app.app_context():
         session = get_task_session()
         try:
