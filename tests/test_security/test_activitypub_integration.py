@@ -6,8 +6,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 import json
 from datetime import datetime, timedelta
-from app.models import User, Post, Community, Vote, VoteType
-from app.activitypub import activities
+from app.models import User, Post, Community, PostVote, PostReplyVote
+from app import activitypub
 
 
 class TestActivityPubCoreOperations:

@@ -7,7 +7,7 @@ from unittest.mock import Mock, patch, mock_open
 from pathlib import Path
 import tempfile
 import os
-from scripts.audit_sql_injection import SQLInjectionAuditor
+from .audit_sql_injection import SQLInjectionAuditor
 
 
 class TestSQLInjectionAuditor:
