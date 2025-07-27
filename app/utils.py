@@ -2186,15 +2186,39 @@ def patch_db_session(task_session):
         db.session = original_session
 
 
+# Global connection pools to reuse across the application
+_redis_pools = {}
+
 def get_redis_connection(connection_string=None) -> redis.Redis:
     if connection_string is None:
         connection_string = current_app.config['CACHE_REDIS_URL']
-    if connection_string.startswith('unix://'):
-        unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
-        return redis.Redis(unix_socket_path=unix_socket_path, db=db, password=password, decode_responses=True)
-    else:
-        host, port, db, password = parse_redis_socket_string(connection_string)
-        return redis.Redis(host=host, port=port, db=db, password=password, decode_responses=True)
+    
+    # Check if we already have a pool for this connection string
+    if connection_string not in _redis_pools:
+        if connection_string.startswith('unix://'):
+            unix_socket_path, db, password = parse_redis_pipe_string(connection_string)
+            pool = redis.ConnectionPool(
+                connection_class=redis.UnixDomainSocketConnection,
+                path=unix_socket_path,
+                db=db,
+                password=password,
+                max_connections=20,  # Limit connections per pool
+                decode_responses=True
+            )
+        else:
+            host, port, db, password = parse_redis_socket_string(connection_string)
+            pool = redis.ConnectionPool(
+                host=host,
+                port=port,
+                db=db,
+                password=password,
+                max_connections=20,  # Limit connections per pool
+                decode_responses=True
+            )
+        _redis_pools[connection_string] = pool
+    
+    # Return a Redis client using the connection pool
+    return redis.Redis(connection_pool=_redis_pools[connection_string])
 
 
 def parse_redis_pipe_string(connection_string: str):
