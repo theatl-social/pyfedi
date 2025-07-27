@@ -2500,7 +2500,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 @retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
     # Import here to avoid circular import
-    from app.security.relay_protection import RelayProtector
+    from app.security.relay_protection import RelayProtection
     
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -2513,7 +2513,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         return
         
     # Check relay protection for votes
-    protector = RelayProtector()
+    protector = RelayProtection()
     if announced and not protector.validate_relayed_activity(
         activity=request_json,
         announced_by=request_json.get('actor', ''),
@@ -2536,7 +2536,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
 @retry_activitypub_action()
 def process_downvote(user, store_ap_json, request_json, announced):
     # Import here to avoid circular import
-    from app.security.relay_protection import RelayProtector
+    from app.security.relay_protection import RelayProtection
     
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -2549,7 +2549,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
         return
         
     # Check relay protection for votes
-    protector = RelayProtector()
+    protector = RelayProtection()
     if announced and not protector.validate_relayed_activity(
         activity=request_json,
         announced_by=request_json.get('actor', ''),
