@@ -8,3 +8,4 @@ app.app_context().push()
 # Import all task modules to register them with Celery
 from app.shared.tasks import maintenance
 from app.shared.tasks import follows, likes, notes, deletes, flags, pages, locks, adds, removes, groups, users, blocks
+from app.activitypub import signature  # Import signature module which contains post_request task
