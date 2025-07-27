@@ -37,7 +37,6 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
 from app.activitypub.util_extras import retry_activitypub_action
 from app.activitypub.request_logger import create_request_logger, log_request_completion
 from app.security.json_validator import SafeJSONParser
-from app.security.signature_validator import SignatureValidator
 
 import os
 import uuid
@@ -811,19 +810,7 @@ def shared_inbox():
     )
     
     try:
-        result = parser.parse(raw_body)
-        if not result.is_valid:
-            log_ap_status(request_id, "json_parsed", "fail", details=result.error)
-            store_request_body(request_id, request, None)
-            
-            if logger:
-                logger.log_error('json_parse', Exception(result.error), f'JSON validation failed: {result.error}')
-            if EXTRA_AP_LOGGING:
-                save_ap_debug_log('error', dict(request.headers), raw_body, error=result.error)
-            log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, f'JSON validation failed: {result.error}')
-            return '', 400  # Bad request for invalid JSON
-        
-        request_json = result.data
+        request_json = parser.parse(raw_body)
         # Try to extract the original object URI if present
         post_object_uri = None
         if isinstance(request_json, dict):
@@ -839,6 +826,17 @@ def shared_inbox():
         if logger:
             logger.log_checkpoint('json_parse', 'ok', 'Successfully parsed JSON body')
             logger.store_request_body(request, request_json)
+    except ValueError as e:
+        # JSON validation failed (size, depth, etc.)
+        log_ap_status(request_id, "json_parsed", "fail", details=str(e))
+        store_request_body(request_id, request, None)
+        
+        if logger:
+            logger.log_error('json_parse', e, f'JSON validation failed: {str(e)}')
+        if EXTRA_AP_LOGGING:
+            save_ap_debug_log('error', dict(request.headers), raw_body, error=str(e))
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, f'JSON validation failed: {str(e)}')
+        return '', 400  # Bad request for invalid JSON
     except Exception as e:
         log_ap_status(request_id, "json_parsed", "fail", details=str(e))
         store_request_body(request_id, request, None)
@@ -999,46 +997,33 @@ def shared_inbox():
             logger.log_checkpoint('actor_validation', 'ok', f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
         log_ap_status(request_id, 'actor_validation', 'ok', activity_id=id, post_object_uri=post_object_uri, details=f'Actor validated: {actor.ap_profile_id if hasattr(actor, "ap_profile_id") else "N/A"}')
 
-        # Signature verification using SignatureValidator
+        # Signature verification
         bounced = False
-        signature_validator = SignatureValidator()
-        
-        # Verify HTTP signature
-        http_sig_result = signature_validator.verify_http_signature(
-            request=request,
-            public_key=actor.public_key,
-            skip_date=True
-        )
-        
-        if logger:
-            logger.log_checkpoint('signature_verify_start', 'ok', 'Starting signature verification')
-        log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting signature verification')
-        
-        if http_sig_result.is_valid:
+        try:
+            if logger:
+                logger.log_checkpoint('signature_verify_start', 'ok', 'Starting HTTP signature verification')
+            log_ap_status(request_id, 'signature_verify_start', 'ok', activity_id=id, post_object_uri=post_object_uri, details='Starting HTTP signature verification')
+            HttpSignature.verify_request(request, actor.public_key, skip_date=True)
             if logger:
                 logger.log_checkpoint('signature_verify', 'ok', 'HTTP signature verified successfully')
             log_ap_status(request_id, 'signature_verify', 'ok', activity_id=id, post_object_uri=post_object_uri, details='HTTP signature verified successfully')
-        else:
+        except VerificationError as e:
             bounced = True
             if logger:
-                logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {http_sig_result.error}')
-            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {http_sig_result.error}')
-            
-            # Try LD signature if HTTP sig failed
+                logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
+            log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {str(e)}')
+            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
             if 'signature' in request_json:
-                if logger:
-                    logger.log_checkpoint('ld_signature_verify', 'ok', 'Trying LD signature verification')
-                ld_sig_result = signature_validator.verify_ld_signature(
-                    activity=request_json,
-                    public_key=actor.public_key
-                )
-                if ld_sig_result.is_valid:
+                try:
+                    if logger:
+                        logger.log_checkpoint('ld_signature_verify', 'ok', 'Trying LD signature verification')
+                    LDSignature.verify_signature(request_json, actor.public_key)
                     if logger:
                         logger.log_checkpoint('ld_signature_verify', 'ok', 'LD signature verified successfully')
-                else:
+                except VerificationError as e:
                     if logger:
-                        logger.log_error('ld_signature_verify', Exception(ld_sig_result.error), 'LD signature verification failed')
-                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Could not verify LD signature: {ld_sig_result.error}')
+                        logger.log_error('ld_signature_verify', e, 'LD signature verification failed')
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
                     return '', 400
             elif (
                     actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
@@ -1055,8 +1040,8 @@ def shared_inbox():
                 request_json['object'] = request_json['object']['id']
             else:
                 if logger:
-                    logger.log_error('signature_verify', Exception(http_sig_result.error), 'No valid signature found')
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Could not verify HTTP signature: {http_sig_result.error}')
+                    logger.log_error('signature_verify', e, 'No valid signature found')
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
                 return '', 400
 
         # Update instance information
@@ -2499,9 +2484,6 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 
 @retry_activitypub_action()
 def process_upvote(user, store_ap_json, request_json, announced):
-    # Import here to avoid circular import
-    from app.security.relay_protection import RelayProtection
-    
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
@@ -2512,17 +2494,9 @@ def process_upvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
         
-    # Check relay protection for votes
-    protector = RelayProtection()
-    if announced and not protector.validate_relayed_activity(
-        activity=request_json,
-        announced_by=request_json.get('actor', ''),
-        original_actor=user.ap_profile_id if hasattr(user, 'ap_profile_id') else str(user)
-    ):
-        log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Relay protection: invalid relayed vote')
-        current_app.logger.warning(f'Blocked relayed vote from {user} via {request_json.get("actor", "unknown")}')
-        return
-        
+    # TODO: Add relay protection for votes when RelayProtection API is complete
+    # Currently RelayProtection has validate_announced_activity but we need validate_relayed_activity
+    
     if can_upvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'upvote')
@@ -2535,9 +2509,6 @@ def process_upvote(user, store_ap_json, request_json, announced):
 
 @retry_activitypub_action()
 def process_downvote(user, store_ap_json, request_json, announced):
-    # Import here to avoid circular import
-    from app.security.relay_protection import RelayProtection
-    
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
@@ -2548,17 +2519,9 @@ def process_downvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
         
-    # Check relay protection for votes
-    protector = RelayProtection()
-    if announced and not protector.validate_relayed_activity(
-        activity=request_json,
-        announced_by=request_json.get('actor', ''),
-        original_actor=user.ap_profile_id if hasattr(user, 'ap_profile_id') else str(user)
-    ):
-        log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Relay protection: invalid relayed vote')
-        current_app.logger.warning(f'Blocked relayed downvote from {user} via {request_json.get("actor", "unknown")}')
-        return
-        
+    # TODO: Add relay protection for votes when RelayProtection API is complete
+    # Currently RelayProtection has validate_announced_activity but we need validate_relayed_activity
+    
     if can_downvote(user, liked.community):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'downvote')

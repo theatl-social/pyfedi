@@ -859,8 +859,9 @@ def actor_json_to_model(activity_json, address, server):
             
         # Check actor creation limits before creating new user
         limiter = ActorCreationLimiter()
-        if not limiter.can_create_actor(server):
-            current_app.logger.warning(f'Actor creation limit exceeded for instance {server}')
+        allowed, reason = limiter.can_create_actor(server, activity_json['id'])
+        if not allowed:
+            current_app.logger.warning(f'Actor creation limit exceeded for instance {server}: {reason}')
             return None
             
         try:
@@ -945,8 +946,9 @@ def actor_json_to_model(activity_json, address, server):
             return community
             
         # Check actor creation limits before creating new community
-        if not limiter.can_create_actor(server):
-            current_app.logger.warning(f'Actor creation limit exceeded for instance {server} (community)')
+        allowed, reason = limiter.can_create_actor(server, activity_json['id'])
+        if not allowed:
+            current_app.logger.warning(f'Actor creation limit exceeded for instance {server} (community): {reason}')
             return None
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
             mods_url = activity_json['attributedTo']
