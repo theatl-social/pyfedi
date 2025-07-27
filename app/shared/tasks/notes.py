@@ -5,12 +5,11 @@ from app.constants import NOTIF_MENTION
 from app.models import Community, CommunityBan, CommunityJoinRequest, CommunityMember, Notification, Post, \
     PostReply, utcnow, User
 from app.user.utils import search_for_user
-from app.utils import community_membership, gibberish, joined_communities, instance_banned, ap_datetime, \
-                      recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
-                      recently_downvoted_post_replies, get_recipient_language, get_task_session
+from app.utils import community_membership, gibberish, instance_banned, ap_datetime, \
+                      get_recipient_language, get_task_session
 
 from flask import current_app
-from flask_babel import _, force_locale, gettext
+from flask_babel import force_locale, gettext
 
 import re
 
@@ -84,7 +83,9 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
     else:
         parent = reply.post
     community = reply.community
-    current_app.logger.info(f'send_reply: community={community.name}, is_local={community.is_local()}, local_only={community.local_only}')
+    current_app.logger.info(
+        f'send_reply: community={community.name}, is_local={community.is_local()}, '
+        f'local_only={community.local_only}')
 
     # Find any users Mentioned in reply with @user@instance syntax
     recipients = [parent.author]
@@ -119,19 +120,23 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
     for recipient in recipients:
         if recipient.is_local() and recipient.id != parent.author.id:
             if edit:
-                existing_notification = session.query(Notification).filter(Notification.user_id == recipient.id, Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                existing_notification = session.query(Notification).filter(
+                    Notification.user_id == recipient.id,
+                    Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
             else:
                 existing_notification = None
             if not existing_notification:
                 author = session.query(User).get(user.id)
-                targets_data = {'gen':'0',
-                                'post_id':reply.post_id,
+                targets_data = {'gen': '0',
+                                'post_id': reply.post_id,
                                 'author_user_name': author.ap_id if author.ap_id else author.user_name,
                                 'comment_id': reply.id,
                                 'comment_body': reply.body
                                 }
                 with force_locale(get_recipient_language(recipient.id)):
-                    notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
+                    notification = Notification(
+                        user_id=recipient.id,
+                        title=gettext(f"You have been mentioned in comment {reply.id}"),
                                                 url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
                                                 author_id=user.id, notif_type=NOTIF_MENTION,
                                                 subtype='comment_mention',
@@ -150,7 +155,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
         return
     if not community.is_local():
         if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
-            current_app.logger.info(f'send_reply: instance blocked or banned')
+            current_app.logger.info('send_reply: instance blocked or banned')
             return
 
     to = ["https://www.w3.org/ns/activitystreams#Public"]
