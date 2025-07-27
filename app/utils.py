@@ -105,6 +105,16 @@ def getmtime(filename):
 
 # do a GET request to a uri, return the result
 def get_request(uri, params=None, headers=None) -> httpx.Response:
+    # Import here to avoid circular import
+    from app.security.uri_validator import URIValidator
+    
+    # Validate URL for SSRF protection
+    validator = URIValidator()
+    validation_result = validator.validate(uri)
+    if not validation_result.is_valid:
+        current_app.logger.warning(f'Blocked SSRF attempt in get_request: {uri} - {validation_result.error}')
+        raise httpx.HTTPError(f'SSRF Protection: {validation_result.error}')
+    
     timeout = 15 if 'washingtonpost.com' in uri else 10  # Washington Post is really slow on og:image for some reason
     if headers is None:
         headers = {'User-Agent': f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'}
@@ -1648,6 +1658,16 @@ def opengraph_parse(url):
 
 
 def url_to_thumbnail_file(filename) -> File:
+    # Import here to avoid circular import
+    from app.security.uri_validator import URIValidator
+    
+    # Validate URL for SSRF protection
+    validator = URIValidator()
+    validation_result = validator.validate(filename)
+    if not validation_result.is_valid:
+        current_app.logger.warning(f'Blocked SSRF attempt in url_to_thumbnail_file: {filename} - {validation_result.error}')
+        return None
+    
     try:
         timeout = 15 if 'washingtonpost.com' in filename else 5  # Washington Post is really slow for some reason
         response = httpx_client.get(filename, timeout=timeout)
