@@ -1436,13 +1436,35 @@ def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
 
 
 def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
+    # First try to find by ActivityPub ID
     post = Post.get_by_ap_id(ap_id)
     if post:
         return post
-    else:
-        post_reply = PostReply.get_by_ap_id(ap_id)
-        if post_reply:
-            return post_reply
+    
+    post_reply = PostReply.get_by_ap_id(ap_id)
+    if post_reply:
+        return post_reply
+    
+    # Handle PyFedi local URLs - extract the ID and look up locally
+    # Pattern: https://domain/post/123 or https://domain/comment/456
+    import re
+    
+    # Check if this is a local PyFedi URL
+    local_patterns = [
+        (r'^https?://[^/]+/post/(\d+)/?$', Post),
+        (r'^https?://[^/]+/comment/(\d+)/?$', PostReply)
+    ]
+    
+    for pattern, model_class in local_patterns:
+        match = re.match(pattern, ap_id)
+        if match:
+            object_id = int(match.group(1))
+            obj = model_class.query.get(object_id)
+            if obj:
+                # For cross-PyFedi compatibility, also check if this object has an ap_id
+                # If it does, that's what should be used for federation
+                return obj
+    
     return None
 
 

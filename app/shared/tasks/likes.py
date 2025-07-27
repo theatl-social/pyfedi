@@ -74,8 +74,22 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
         public_actor = user.public_url()
 
         # Vote payload
-        # For remote posts, use their ActivityPub ID (ap_id), not our local URL
-        object_url = object.ap_id if object.ap_id else object.public_url()
+        # Determine object URL based on the target
+        # For local posts or when voting to local communities, use local URL
+        # For remote posts to remote communities, use their ActivityPub ID
+        if community.is_local():
+            # Local community - always use our local URL format
+            object_url = object.public_url()
+        else:
+            # Remote community - check if it's PyFedi/PieFed
+            if community.instance.software and community.instance.software.lower() in ['pyfedi', 'piefed']:
+                # For PyFedi/PieFed instances, use local URL if the post is local
+                # Otherwise use the remote AP ID
+                object_url = object.public_url() if not object.ap_id else object.ap_id
+            else:
+                # For other software (Lemmy, etc), always use AP ID for remote posts
+                object_url = object.ap_id if object.ap_id else object.public_url()
+        
         vote_public = {
           'id': vote_id,
           'type': type,
