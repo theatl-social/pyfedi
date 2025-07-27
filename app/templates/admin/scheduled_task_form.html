@@ -1,0 +1,270 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1>{{ title }}</h1>
+            
+            <form id="taskForm" class="mt-4">
+                <div class="mb-3">
+                    <label for="name" class="form-label">Task Name</label>
+                    <input type="text" class="form-control" id="name" name="name" required
+                           placeholder="e.g., Cleanup Old Activities">
+                    <div class="form-text">A descriptive name for this scheduled task</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="task_type" class="form-label">Task Type</label>
+                    <select class="form-select" id="task_type" name="task_type" required>
+                        <option value="">Select task type...</option>
+                        {% for type in task_types %}
+                        <option value="{{ type }}">{{ type|title }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Determines which processor will handle this task</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="schedule_type" class="form-label">Schedule Type</label>
+                    <select class="form-select" id="schedule_type" name="schedule_type" required>
+                        <option value="">Select schedule type...</option>
+                        <option value="cron">Cron Expression</option>
+                        <option value="interval">Interval</option>
+                        <option value="one_time">One Time</option>
+                    </select>
+                </div>
+                
+                <div class="mb-3" id="scheduleInput" style="display: none;">
+                    <label for="schedule" class="form-label">Schedule</label>
+                    <input type="text" class="form-control" id="schedule" name="schedule" required>
+                    <div class="form-text" id="scheduleHelp"></div>
+                </div>
+                
+                <div class="mb-3" id="timezoneInput" style="display: none;">
+                    <label for="timezone" class="form-label">Timezone</label>
+                    <select class="form-select" id="timezone" name="timezone">
+                        <option value="UTC">UTC</option>
+                        <option value="America/New_York">America/New_York</option>
+                        <option value="America/Chicago">America/Chicago</option>
+                        <option value="America/Denver">America/Denver</option>
+                        <option value="America/Los_Angeles">America/Los_Angeles</option>
+                        <option value="Europe/London">Europe/London</option>
+                        <option value="Europe/Paris">Europe/Paris</option>
+                        <option value="Europe/Berlin">Europe/Berlin</option>
+                        <option value="Asia/Tokyo">Asia/Tokyo</option>
+                        <option value="Asia/Shanghai">Asia/Shanghai</option>
+                        <option value="Australia/Sydney">Australia/Sydney</option>
+                    </select>
+                    <div class="form-text">Timezone for cron expressions</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="payload" class="form-label">Task Payload (JSON)</label>
+                    <textarea class="form-control" id="payload" name="payload" rows="4"
+                              placeholder='{"key": "value"}'>{}</textarea>
+                    <div class="form-text">Data to pass to the task processor (must be valid JSON)</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="max_retries" class="form-label">Max Retries</label>
+                    <input type="number" class="form-control" id="max_retries" name="max_retries" 
+                           value="3" min="0" max="10">
+                    <div class="form-text">Maximum number of retry attempts if task fails</div>
+                </div>
+                
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="enabled" name="enabled" checked>
+                    <label class="form-check-label" for="enabled">
+                        Enable task immediately
+                    </label>
+                </div>
+                
+                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                    <a href="{{ url_for('admin_scheduler.scheduled_tasks') }}" class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        {{ 'Update Task' if task_id else 'Create Task' }}
+                    </button>
+                </div>
+            </form>
+            
+            <!-- Schedule Examples -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Schedule Examples</h5>
+                </div>
+                <div class="card-body">
+                    <div id="cronExamples" style="display: none;">
+                        <h6>Cron Expression Examples:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>0 0 * * *</code> - Daily at midnight</li>
+                            <li><code>0 2 * * *</code> - Daily at 2:00 AM</li>
+                            <li><code>0 */4 * * *</code> - Every 4 hours</li>
+                            <li><code>0 0 * * 0</code> - Weekly on Sunday at midnight</li>
+                            <li><code>0 0 1 * *</code> - Monthly on the 1st at midnight</li>
+                            <li><code>*/15 * * * *</code> - Every 15 minutes</li>
+                        </ul>
+                    </div>
+                    <div id="intervalExamples" style="display: none;">
+                        <h6>Interval Examples:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>5m</code> - Every 5 minutes</li>
+                            <li><code>1h</code> - Every hour</li>
+                            <li><code>12h</code> - Every 12 hours</li>
+                            <li><code>1d</code> - Every day</li>
+                            <li><code>1w</code> - Every week</li>
+                        </ul>
+                    </div>
+                    <div id="oneTimeExamples" style="display: none;">
+                        <h6>One-Time Schedule:</h6>
+                        <p>Enter an ISO datetime, e.g., <code>2024-12-25T00:00:00Z</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const taskId = {{ 'null' if not task_id else '"' + task_id + '"' | safe }};
+let currentTask = null;
+
+// Handle schedule type change
+document.getElementById('schedule_type').addEventListener('change', function() {
+    const scheduleType = this.value;
+    const scheduleInput = document.getElementById('scheduleInput');
+    const timezoneInput = document.getElementById('timezoneInput');
+    const scheduleHelp = document.getElementById('scheduleHelp');
+    
+    // Hide all examples
+    document.getElementById('cronExamples').style.display = 'none';
+    document.getElementById('intervalExamples').style.display = 'none';
+    document.getElementById('oneTimeExamples').style.display = 'none';
+    
+    if (scheduleType) {
+        scheduleInput.style.display = 'block';
+        
+        if (scheduleType === 'cron') {
+            timezoneInput.style.display = 'block';
+            scheduleHelp.textContent = 'Enter a cron expression (e.g., "0 0 * * *" for daily at midnight)';
+            document.getElementById('cronExamples').style.display = 'block';
+        } else if (scheduleType === 'interval') {
+            timezoneInput.style.display = 'none';
+            scheduleHelp.textContent = 'Enter an interval (e.g., "5m", "1h", "1d")';
+            document.getElementById('intervalExamples').style.display = 'block';
+        } else if (scheduleType === 'one_time') {
+            timezoneInput.style.display = 'none';
+            scheduleHelp.textContent = 'Enter an ISO datetime (e.g., "2024-12-25T00:00:00Z")';
+            document.getElementById('oneTimeExamples').style.display = 'block';
+            
+            // Set default to tomorrow at current time
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            document.getElementById('schedule').value = tomorrow.toISOString().slice(0, 16);
+            document.getElementById('schedule').type = 'datetime-local';
+        }
+    } else {
+        scheduleInput.style.display = 'none';
+        timezoneInput.style.display = 'none';
+    }
+    
+    // Reset input type if not one_time
+    if (scheduleType !== 'one_time') {
+        document.getElementById('schedule').type = 'text';
+    }
+});
+
+// Load task if editing
+async function loadTask() {
+    if (!taskId) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}`);
+        if (!response.ok) throw new Error('Failed to load task');
+        
+        currentTask = await response.json();
+        
+        // Populate form
+        document.getElementById('name').value = currentTask.name;
+        document.getElementById('task_type').value = currentTask.task_type;
+        document.getElementById('schedule_type').value = currentTask.schedule_type;
+        document.getElementById('schedule').value = currentTask.schedule;
+        document.getElementById('timezone').value = currentTask.timezone || 'UTC';
+        document.getElementById('payload').value = JSON.stringify(currentTask.payload, null, 2);
+        document.getElementById('max_retries').value = currentTask.max_retries;
+        document.getElementById('enabled').checked = currentTask.enabled;
+        
+        // Trigger schedule type change to show appropriate fields
+        document.getElementById('schedule_type').dispatchEvent(new Event('change'));
+        
+    } catch (error) {
+        alert('Error loading task: ' + error.message);
+    }
+}
+
+// Handle form submission
+document.getElementById('taskForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    // Validate JSON payload
+    let payload = {};
+    const payloadStr = document.getElementById('payload').value.trim();
+    if (payloadStr) {
+        try {
+            payload = JSON.parse(payloadStr);
+        } catch (error) {
+            alert('Invalid JSON in payload field');
+            return;
+        }
+    }
+    
+    // Prepare data
+    const data = {
+        name: document.getElementById('name').value,
+        task_type: document.getElementById('task_type').value,
+        schedule_type: document.getElementById('schedule_type').value,
+        schedule: document.getElementById('schedule').value,
+        timezone: document.getElementById('timezone').value,
+        payload: payload,
+        max_retries: parseInt(document.getElementById('max_retries').value),
+        enabled: document.getElementById('enabled').checked
+    };
+    
+    // Convert datetime-local to ISO if one_time
+    if (data.schedule_type === 'one_time' && document.getElementById('schedule').type === 'datetime-local') {
+        data.schedule = new Date(data.schedule).toISOString();
+    }
+    
+    try {
+        const url = taskId ? 
+            `/admin/scheduler/api/scheduled-tasks/${taskId}` : 
+            '/admin/scheduler/api/scheduled-tasks';
+        const method = taskId ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to save task');
+        }
+        
+        // Redirect to tasks list
+        window.location.href = '{{ url_for("admin_scheduler.scheduled_tasks") }}';
+        
+    } catch (error) {
+        alert('Error saving task: ' + error.message);
+    }
+});
+
+// Initialize
+loadTask();
+</script>
+{% endblock %}

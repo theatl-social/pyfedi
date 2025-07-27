@@ -1,0 +1,173 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="container">
+    <h1>Rate Limit Monitor</h1>
+    
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title">Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Limit Type</th>
+                                <th>Max Requests</th>
+                                <th>Window (seconds)</th>
+                                <th>Requests/Minute</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for type, conf in config.items() %}
+                            <tr>
+                                <td><code>{{ type }}</code></td>
+                                <td>{{ conf.max_requests }}</td>
+                                <td>{{ conf.window_seconds }}s</td>
+                                <td>{{ "%.1f"|format(conf.requests_per_minute) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h2>Rate Limited Destinations</h2>
+    
+    {% if limited_destinations %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Destination</th>
+                        <th>Limit Type</th>
+                        <th>Current/Limit</th>
+                        <th>Usage</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dest in limited_destinations %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('admin_rate_limits.rate_limit_detail', destination=dest.destination) }}">
+                                {{ dest.destination }}
+                            </a>
+                        </td>
+                        <td><code>{{ dest.type }}</code></td>
+                        <td>{{ dest.current }} / {{ dest.limit }}</td>
+                        <td>
+                            <div class="progress" style="min-width: 100px;">
+                                <div class="progress-bar 
+                                    {% if dest.percentage >= 100 %}bg-danger
+                                    {% elif dest.percentage >= 80 %}bg-warning
+                                    {% else %}bg-success{% endif %}" 
+                                    role="progressbar" 
+                                    style="width: {{ dest.percentage }}%"
+                                    aria-valuenow="{{ dest.percentage }}" 
+                                    aria-valuemin="0" 
+                                    aria-valuemax="100">
+                                    {{ "%.0f"|format(dest.percentage) }}%
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('admin_rate_limits.reset_rate_limits', destination=dest.destination) }}" style="display: inline;">
+                                <button type="submit" class="btn btn-sm btn-secondary" 
+                                        onclick="return confirm('Reset rate limits for {{ dest.destination }}?')">
+                                    Reset
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No destinations are currently rate limited.
+        </div>
+    {% endif %}
+
+    <div class="mt-4">
+        <h3>Auto-refresh</h3>
+        <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="autoRefresh">
+            <label class="form-check-label" for="autoRefresh">
+                Refresh every 10 seconds
+            </label>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h3>Live Monitor</h3>
+        <div id="liveMonitor" class="border rounded p-3" style="height: 300px; overflow-y: auto;">
+            <div class="text-muted">Enable auto-refresh to see live updates...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+let refreshInterval;
+let monitorInterval;
+
+document.getElementById('autoRefresh').addEventListener('change', function() {
+    if (this.checked) {
+        // Page refresh
+        refreshInterval = setInterval(() => {
+            location.reload();
+        }, 10000);
+        
+        // Live monitor update
+        updateLiveMonitor();
+        monitorInterval = setInterval(updateLiveMonitor, 2000);
+    } else {
+        clearInterval(refreshInterval);
+        clearInterval(monitorInterval);
+    }
+});
+
+function updateLiveMonitor() {
+    fetch('/admin/api/admin/rate-limits')
+        .then(response => response.json())
+        .then(data => {
+            const monitor = document.getElementById('liveMonitor');
+            
+            if (data.limited_destinations.length === 0) {
+                monitor.innerHTML = '<div class="text-success">✓ No destinations currently rate limited</div>';
+                return;
+            }
+            
+            let html = '<div class="small">';
+            html += `<div class="mb-2"><strong>${data.total_limited} destinations rate limited:</strong></div>`;
+            
+            data.limited_destinations.forEach(dest => {
+                const color = dest.percentage >= 100 ? 'danger' : 
+                             dest.percentage >= 80 ? 'warning' : 'info';
+                             
+                html += `<div class="mb-1">
+                    <span class="badge bg-${color}">${dest.percentage.toFixed(0)}%</span>
+                    <strong>${dest.destination}</strong> - 
+                    ${dest.type}: ${dest.current}/${dest.limit}
+                </div>`;
+            });
+            
+            html += '</div>';
+            monitor.innerHTML = html;
+        })
+        .catch(error => {
+            console.error('Error fetching rate limit data:', error);
+        });
+}
+
+// Initial load
+if (document.getElementById('autoRefresh').checked) {
+    updateLiveMonitor();
+}
+</script>
+{% endblock %}

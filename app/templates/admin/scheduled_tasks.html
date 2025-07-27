@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Scheduled Tasks</h1>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{{ url_for('admin_scheduler.new_scheduled_task') }}" class="btn btn-primary">
+                <i class="bi bi-plus"></i> New Task
+            </a>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Total Tasks</h5>
+                    <h3 class="text-primary" id="stat-total">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Active</h5>
+                    <h3 class="text-success" id="stat-active">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Paused</h5>
+                    <h3 class="text-warning" id="stat-paused">-</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Failed</h5>
+                    <h3 class="text-danger" id="stat-failed">-</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body">
+                    <form id="filterForm" class="row g-3">
+                        <div class="col-md-4">
+                            <label for="statusFilter" class="form-label">Status</label>
+                            <select id="statusFilter" class="form-select">
+                                <option value="">All Statuses</option>
+                                <option value="active">Active</option>
+                                <option value="paused">Paused</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="typeFilter" class="form-label">Task Type</label>
+                            <select id="typeFilter" class="form-select">
+                                <option value="">All Types</option>
+                                <option value="maintenance">Maintenance</option>
+                                <option value="federation">Federation</option>
+                                <option value="cleanup">Cleanup</option>
+                                <option value="analytics">Analytics</option>
+                                <option value="notification">Notification</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">&nbsp;</label>
+                            <div>
+                                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                                <button type="button" id="resetFilters" class="btn btn-secondary">Reset</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Tasks Table -->
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Scheduled Tasks</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="tasksTable">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Schedule</th>
+                            <th>Status</th>
+                            <th>Last Run</th>
+                            <th>Next Run</th>
+                            <th>Run Count</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                        <tr>
+                            <td colspan="8" class="text-center">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Upcoming Tasks -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Upcoming Tasks</h5>
+                </div>
+                <div class="card-body">
+                    <div id="upcomingTasks">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Recent Executions -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Executions</h5>
+                </div>
+                <div class="card-body">
+                    <div id="recentExecutions">
+                        <div class="text-center">
+                            <div class="spinner-border" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentTasks = [];
+
+// Format datetime for display
+function formatDateTime(isoString) {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    return date.toLocaleString();
+}
+
+// Format schedule for display
+function formatSchedule(task) {
+    if (task.schedule_type === 'cron') {
+        return `<code>${task.schedule}</code> (${task.timezone})`;
+    } else if (task.schedule_type === 'interval') {
+        return `Every ${task.schedule}`;
+    } else {
+        return formatDateTime(task.schedule);
+    }
+}
+
+// Get status badge
+function getStatusBadge(status) {
+    const badges = {
+        'active': 'success',
+        'paused': 'warning',
+        'completed': 'secondary',
+        'failed': 'danger'
+    };
+    return `<span class="badge bg-${badges[status] || 'secondary'}">${status}</span>`;
+}
+
+// Load tasks
+async function loadTasks() {
+    const statusFilter = document.getElementById('statusFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    
+    let url = '/admin/scheduler/api/scheduled-tasks';
+    const params = new URLSearchParams();
+    if (statusFilter) params.append('status', statusFilter);
+    if (typeFilter) params.append('task_type', typeFilter);
+    if (params.toString()) url += '?' + params.toString();
+    
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        currentTasks = data.tasks;
+        updateTasksTable(data.tasks);
+        loadStats();
+        
+    } catch (error) {
+        console.error('Error loading tasks:', error);
+        document.getElementById('tasksTableBody').innerHTML = 
+            '<tr><td colspan="8" class="text-center text-danger">Error loading tasks</td></tr>';
+    }
+}
+
+// Update tasks table
+function updateTasksTable(tasks) {
+    const tbody = document.getElementById('tasksTableBody');
+    
+    if (tasks.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center">No tasks found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = tasks.map(task => `
+        <tr>
+            <td>
+                <a href="{{ url_for('admin_scheduler.scheduled_task_detail', task_id='') }}${task.id}">
+                    ${task.name}
+                </a>
+            </td>
+            <td><code>${task.task_type}</code></td>
+            <td>${formatSchedule(task)}</td>
+            <td>${getStatusBadge(task.status)}</td>
+            <td>${formatDateTime(task.last_run)}</td>
+            <td>${formatDateTime(task.next_run)}</td>
+            <td>
+                ${task.run_count}
+                ${task.error_count > 0 ? `<span class="text-danger">(${task.error_count} errors)</span>` : ''}
+            </td>
+            <td>
+                <div class="btn-group btn-group-sm" role="group">
+                    ${task.status === 'active' ? 
+                        `<button class="btn btn-warning" onclick="pauseTask('${task.id}')" title="Pause">
+                            <i class="bi bi-pause"></i>
+                        </button>` :
+                        task.status === 'paused' ?
+                        `<button class="btn btn-success" onclick="resumeTask('${task.id}')" title="Resume">
+                            <i class="bi bi-play"></i>
+                        </button>` : ''
+                    }
+                    <button class="btn btn-info" onclick="runTaskNow('${task.id}')" title="Run Now">
+                        <i class="bi bi-arrow-right-circle"></i>
+                    </button>
+                    <a href="{{ url_for('admin_scheduler.edit_scheduled_task', task_id='') }}${task.id}" 
+                       class="btn btn-primary" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <button class="btn btn-danger" onclick="deleteTask('${task.id}')" title="Delete">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+// Load statistics
+async function loadStats() {
+    try {
+        const response = await fetch('/admin/scheduler/api/scheduler/stats');
+        const stats = await response.json();
+        
+        // Update stat cards
+        document.getElementById('stat-total').textContent = stats.total_tasks;
+        document.getElementById('stat-active').textContent = stats.active_tasks;
+        document.getElementById('stat-paused').textContent = stats.paused_tasks;
+        document.getElementById('stat-failed').textContent = stats.failed_tasks;
+        
+        // Update upcoming tasks
+        const upcomingHtml = stats.upcoming_tasks.length > 0 ?
+            '<ul class="list-unstyled">' +
+            stats.upcoming_tasks.map(task => 
+                `<li class="mb-2">
+                    <strong>${task.name}</strong><br>
+                    <small class="text-muted">${formatDateTime(task.next_run)}</small>
+                </li>`
+            ).join('') +
+            '</ul>' :
+            '<p class="text-muted">No upcoming tasks</p>';
+        document.getElementById('upcomingTasks').innerHTML = upcomingHtml;
+        
+        // Update recent executions
+        const recentHtml = stats.recent_executions.length > 0 ?
+            '<ul class="list-unstyled">' +
+            stats.recent_executions.map(task => 
+                `<li class="mb-2">
+                    <strong>${task.name}</strong> ${getStatusBadge(task.status)}<br>
+                    <small class="text-muted">${formatDateTime(task.last_run)} (${task.run_count} runs)</small>
+                </li>`
+            ).join('') +
+            '</ul>' :
+            '<p class="text-muted">No recent executions</p>';
+        document.getElementById('recentExecutions').innerHTML = recentHtml;
+        
+    } catch (error) {
+        console.error('Error loading stats:', error);
+    }
+}
+
+// Task actions
+async function pauseTask(taskId) {
+    if (!confirm('Pause this task?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/pause`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            loadTasks();
+        } else {
+            alert('Error pausing task');
+        }
+    } catch (error) {
+        alert('Error pausing task');
+    }
+}
+
+async function resumeTask(taskId) {
+    if (!confirm('Resume this task?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/resume`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            loadTasks();
+        } else {
+            alert('Error resuming task');
+        }
+    } catch (error) {
+        alert('Error resuming task');
+    }
+}
+
+async function runTaskNow(taskId) {
+    if (!confirm('Run this task immediately?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/run`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('Task queued for execution');
+            loadTasks();
+        } else {
+            alert('Error running task');
+        }
+    } catch (error) {
+        alert('Error running task');
+    }
+}
+
+async function deleteTask(taskId) {
+    if (!confirm('Delete this task permanently?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            loadTasks();
+        } else {
+            alert('Error deleting task');
+        }
+    } catch (error) {
+        alert('Error deleting task');
+    }
+}
+
+// Filter form handling
+document.getElementById('filterForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    loadTasks();
+});
+
+document.getElementById('resetFilters').addEventListener('click', () => {
+    document.getElementById('statusFilter').value = '';
+    document.getElementById('typeFilter').value = '';
+    loadTasks();
+});
+
+// Initial load
+loadTasks();
+
+// Auto-refresh every 30 seconds
+setInterval(loadTasks, 30000);
+</script>
+{% endblock %}

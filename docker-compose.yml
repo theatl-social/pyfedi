@@ -110,6 +110,38 @@ services:
       - pyfedi-network
     restart: unless-stopped
 
+  # Task Scheduler Service
+  scheduler:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pyfedi-scheduler
+    command: ["python", "-m", "app.scheduler_service"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      # Same environment as app
+      POSTGRES_HOST: db
+      POSTGRES_USER: ${POSTGRES_USER:-pyfedi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pyfedi}
+      POSTGRES_DB: ${POSTGRES_DB:-pyfedi}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pyfedi}:${POSTGRES_PASSWORD:-pyfedi}@db:5432/${POSTGRES_DB:-pyfedi}
+      REDIS_HOST: redis
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      
+      # Scheduler specific
+      SCHEDULER_CHECK_INTERVAL: ${SCHEDULER_CHECK_INTERVAL:-60}
+      
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - pyfedi-network
+    restart: unless-stopped
+
   # Optional: Redis Commander for monitoring
   redis-commander:
     image: rediscommander/redis-commander:latest

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block app_content %}
+<div class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Task Details</h1>
+                <div>
+                    <a href="{{ url_for('admin_scheduler.scheduled_tasks') }}" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card" id="taskCard">
+                <div class="card-body">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions -->
+            <div class="card mt-3" id="actionsCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2 d-md-flex">
+                        <button class="btn btn-info" onclick="runTaskNow()">
+                            <i class="bi bi-arrow-right-circle"></i> Run Now
+                        </button>
+                        <button class="btn btn-warning" id="pauseBtn" onclick="pauseTask()" style="display: none;">
+                            <i class="bi bi-pause"></i> Pause Task
+                        </button>
+                        <button class="btn btn-success" id="resumeBtn" onclick="resumeTask()" style="display: none;">
+                            <i class="bi bi-play"></i> Resume Task
+                        </button>
+                        <a href="#" id="editBtn" class="btn btn-primary">
+                            <i class="bi bi-pencil"></i> Edit Task
+                        </a>
+                        <button class="btn btn-danger" onclick="deleteTask()">
+                            <i class="bi bi-trash"></i> Delete Task
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Execution History -->
+            <div class="card mt-3" id="historyCard" style="display: none;">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Execution History</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Execution history will be available in a future update.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const taskId = '{{ task_id }}';
+let currentTask = null;
+
+// Format datetime for display
+function formatDateTime(isoString) {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    return date.toLocaleString();
+}
+
+// Get status badge
+function getStatusBadge(status) {
+    const badges = {
+        'active': 'success',
+        'paused': 'warning',
+        'completed': 'secondary',
+        'failed': 'danger'
+    };
+    return `<span class="badge bg-${badges[status] || 'secondary'}">${status}</span>`;
+}
+
+// Load task details
+async function loadTask() {
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}`);
+        if (!response.ok) throw new Error('Failed to load task');
+        
+        currentTask = await response.json();
+        displayTask();
+        
+    } catch (error) {
+        document.getElementById('taskCard').innerHTML = `
+            <div class="card-body">
+                <div class="alert alert-danger">
+                    Error loading task: ${error.message}
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Display task details
+function displayTask() {
+    const task = currentTask;
+    
+    // Format schedule display
+    let scheduleDisplay = '';
+    if (task.schedule_type === 'cron') {
+        scheduleDisplay = `<code>${task.schedule}</code> (${task.timezone})`;
+    } else if (task.schedule_type === 'interval') {
+        scheduleDisplay = `Every ${task.schedule}`;
+    } else {
+        scheduleDisplay = formatDateTime(task.schedule);
+    }
+    
+    document.getElementById('taskCard').innerHTML = `
+        <div class="card-header">
+            <h3 class="card-title">${task.name} ${getStatusBadge(task.status)}</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6>Basic Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>ID:</th>
+                            <td><code>${task.id}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Type:</th>
+                            <td><code>${task.task_type}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Schedule Type:</th>
+                            <td>${task.schedule_type}</td>
+                        </tr>
+                        <tr>
+                            <th>Schedule:</th>
+                            <td>${scheduleDisplay}</td>
+                        </tr>
+                        <tr>
+                            <th>Max Retries:</th>
+                            <td>${task.max_retries}</td>
+                        </tr>
+                        <tr>
+                            <th>Enabled:</th>
+                            <td>${task.enabled ? '<span class="text-success">Yes</span>' : '<span class="text-danger">No</span>'}</td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6>Execution Information</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <th>Created:</th>
+                            <td>${formatDateTime(task.created_at)}</td>
+                        </tr>
+                        <tr>
+                            <th>Updated:</th>
+                            <td>${formatDateTime(task.updated_at)}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Run:</th>
+                            <td>${formatDateTime(task.last_run)}</td>
+                        </tr>
+                        <tr>
+                            <th>Next Run:</th>
+                            <td>${formatDateTime(task.next_run)}</td>
+                        </tr>
+                        <tr>
+                            <th>Run Count:</th>
+                            <td>${task.run_count}</td>
+                        </tr>
+                        <tr>
+                            <th>Error Count:</th>
+                            <td>${task.error_count > 0 ? 
+                                `<span class="text-danger">${task.error_count}</span>` : 
+                                '0'}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            
+            ${task.last_error ? `
+            <div class="alert alert-danger mt-3">
+                <h6>Last Error:</h6>
+                <code>${task.last_error}</code>
+            </div>
+            ` : ''}
+            
+            <h6 class="mt-3">Task Payload</h6>
+            <pre class="bg-light p-3">${JSON.stringify(task.payload, null, 2)}</pre>
+        </div>
+    `;
+    
+    // Show/hide action buttons
+    document.getElementById('actionsCard').style.display = 'block';
+    document.getElementById('historyCard').style.display = 'block';
+    
+    if (task.status === 'active') {
+        document.getElementById('pauseBtn').style.display = 'inline-block';
+        document.getElementById('resumeBtn').style.display = 'none';
+    } else if (task.status === 'paused') {
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('resumeBtn').style.display = 'inline-block';
+    } else {
+        document.getElementById('pauseBtn').style.display = 'none';
+        document.getElementById('resumeBtn').style.display = 'none';
+    }
+    
+    // Update edit button link
+    document.getElementById('editBtn').href = 
+        `{{ url_for('admin_scheduler.edit_scheduled_task', task_id='') }}${task.id}`;
+}
+
+// Task actions
+async function runTaskNow() {
+    if (!confirm('Run this task immediately?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/run`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            alert('Task queued for execution');
+            loadTask();
+        } else {
+            alert('Error running task');
+        }
+    } catch (error) {
+        alert('Error running task');
+    }
+}
+
+async function pauseTask() {
+    if (!confirm('Pause this task?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/pause`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            loadTask();
+        } else {
+            alert('Error pausing task');
+        }
+    } catch (error) {
+        alert('Error pausing task');
+    }
+}
+
+async function resumeTask() {
+    if (!confirm('Resume this task?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}/resume`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            loadTask();
+        } else {
+            alert('Error resuming task');
+        }
+    } catch (error) {
+        alert('Error resuming task');
+    }
+}
+
+async function deleteTask() {
+    if (!confirm('Delete this task permanently?')) return;
+    
+    try {
+        const response = await fetch(`/admin/scheduler/api/scheduled-tasks/${taskId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            window.location.href = '{{ url_for("admin_scheduler.scheduled_tasks") }}';
+        } else {
+            alert('Error deleting task');
+        }
+    } catch (error) {
+        alert('Error deleting task');
+    }
+}
+
+// Initial load
+loadTask();
+
+// Auto-refresh every 10 seconds
+setInterval(loadTask, 10000);
+</script>
+{% endblock %}

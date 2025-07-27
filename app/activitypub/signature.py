@@ -457,6 +457,23 @@ class HttpSignature:
         if not can_send:
             raise ValueError(f"Cannot send to {instance_domain}: {reason}")
         
+        # Check rate limits
+        if method == "POST":
+            # Try to determine activity type from body
+            activity_type = None
+            if body_bytes:
+                try:
+                    import json
+                    data = json.loads(body_bytes)
+                    activity_type = data.get('type')
+                except:
+                    pass
+            
+            from app.federation.rate_limiter import check_rate_limit
+            allowed, retry_after = check_rate_limit(instance_domain, activity_type)
+            if not allowed:
+                raise ValueError(f"Rate limit exceeded for {instance_domain}, retry after {retry_after}s")
+        
         start_time = time.time()
         try:
             response = httpx_client.request(
@@ -472,6 +489,10 @@ class HttpSignature:
             response_time = time.time() - start_time
             from app.federation.health_monitor import record_federation_success
             record_federation_success(instance_domain, response_time)
+            
+            # Record for adaptive rate limiting
+            from app.federation.rate_limiter import record_destination_response_time
+            record_destination_response_time(instance_domain, response_time)
             
         except httpx.TimeoutException as ex:
             # Record timeout

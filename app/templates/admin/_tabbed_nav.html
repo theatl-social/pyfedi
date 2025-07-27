@@ -26,6 +26,8 @@
                 <a class="nav-link{% if active_child == 'admin_federation' %} active{% endif %}" id="federation-tab" type="button" role="tab" href="/admin/federation" style="view-transition-name: federation">{{ _('Federation') }}</a>
                 <a class="nav-link{% if active_child == 'admin_instances' %} active{% endif %}" id="instances-tab" type="button" role="tab" href="/admin/instances" style="view-transition-name: instances">{{ _('Instances') }}</a>
                 <a class="nav-link{% if active_child == 'admin_health' %} active{% endif %}" id="health-tab" type="button" role="tab" href="/admin/health/instances" style="view-transition-name: health">{{ _('Health') }}</a>
+                <a class="nav-link{% if active_child == 'admin_rate_limits' %} active{% endif %}" id="rate-limits-tab" type="button" role="tab" href="/admin/rate-limits/rate-limits" style="view-transition-name: rate-limits">{{ _('Rate Limits') }}</a>
+                <a class="nav-link{% if active_child == 'admin_scheduler' %} active{% endif %}" id="scheduler-tab" type="button" role="tab" href="/admin/scheduler/scheduled-tasks" style="view-transition-name: scheduler">{{ _('Scheduler') }}</a>
                 <a class="nav-link{% if active_child == 'admin_newsletter' %} active{% endif %}" id="newsletter-tab" type="button" role="tab" href="/admin/newsletter" style="view-transition-name: newsletter">{{ _('Newsletter') }}</a>
                 <a class="nav-link{% if active_child == 'admin_activities' %} active{% endif %}" id="activities-tab" type="button" role="tab" href="/admin/activities" style="view-transition-name: activities">{{ _('Activities') }}</a>
             {% endif -%}
