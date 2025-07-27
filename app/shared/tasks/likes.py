@@ -23,6 +23,7 @@ from flask import current_app
 
 @celery.task
 def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, federate: bool=True):
+    print(f'CELERY: vote_for_post task STARTED in worker: user_id={user_id}, post_id={post_id}, federate={federate}')
     current_app.logger.info(f'vote_for_post task called: user_id={user_id}, post_id={post_id}, federate={federate}, send_async={send_async}')
     post = Post.query.filter_by(id=post_id).one()
     cache.delete_memoized(recently_upvoted_posts, user_id)

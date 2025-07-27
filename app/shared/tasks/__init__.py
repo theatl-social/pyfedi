@@ -54,7 +54,8 @@ def task_selector(task_key, send_async=True, **kwargs):
 
     if send_async:
         current_app.logger.info(f'task_selector: dispatching {task_key} async with kwargs: {kwargs}')
-        tasks[task_key].delay(send_async=send_async, **kwargs)
+        result = tasks[task_key].delay(send_async=send_async, **kwargs)
+        current_app.logger.info(f'task_selector: Celery task {task_key} dispatched with id={result.id}')
     else:
         current_app.logger.info(f'task_selector: executing {task_key} synchronously with kwargs: {kwargs}')
         return tasks[task_key](send_async=send_async, **kwargs)
