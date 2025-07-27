@@ -2,7 +2,7 @@
 
 # Stage 1: Builder
 # Use a Debian "Bookworm" based Python image
-FROM --platform=linux/x86_64 python:3.11-bookworm AS builder
+FROM --platform=linux/x86_64 python:3.13-bookworm AS builder
 
 # Set environment variables to prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -53,7 +53,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip3 install --no-cache-dir gunicorn
 
-FROM --platform=linux/x86_64 python:3.11-bookworm
+FROM --platform=linux/x86_64 python:3.13-bookworm
 
 # Add 'gosu' for privilege-dropping in the entrypoint
 RUN apt-get update && \

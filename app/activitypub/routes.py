@@ -48,6 +48,50 @@ from datetime import datetime
 # Debug flag for DB tracking
 EXTRA_AP_DB_DEBUG = os.environ.get('EXTRA_AP_DB_DEBUG', '0') == '1'
 
+
+def format_follow_response(follow_id, follow_actor, follow_object, response_type, response_id, actor, recipient_instance=None):
+    """
+    Format Accept/Reject responses for Follow activities with compatibility for different software.
+    
+    Args:
+        follow_id: The ID of the original Follow activity
+        follow_actor: The actor who sent the Follow
+        follow_object: The object being followed
+        response_type: Either "Accept" or "Reject"
+        response_id: The ID for the response activity
+        actor: The actor sending the response
+        recipient_instance: The Instance object of the recipient (optional)
+    
+    Returns:
+        dict: The formatted Accept/Reject activity
+    """
+    # For PyFedi/PieFed instances, use the full object format for better compatibility
+    if recipient_instance and recipient_instance.software and recipient_instance.software.lower() in ['pyfedi', 'piefed']:
+        return {
+            "@context": default_context(),
+            "actor": actor,
+            "to": [follow_actor],
+            "object": {
+                "actor": follow_actor,
+                "to": None,
+                "object": follow_object,
+                "type": "Follow",
+                "id": follow_id
+            },
+            "type": response_type,
+            "id": response_id
+        }
+    else:
+        # For Lemmy, Mastodon, and other software, use the simpler format
+        return {
+            "@context": default_context(),
+            "actor": actor,
+            "to": [follow_actor],
+            "object": follow_id,
+            "type": response_type,
+            "id": response_id
+        }
+
 # Helper to log status to DB, resilient to errors
 def log_ap_status(request_id, checkpoint, status, activity_id=None, post_object_uri=None, details=None):
     """
@@ -1325,12 +1369,16 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                                 reject_follow = True
                         if reject_follow:
                             # send reject message to deny the follow
-                            reject = {"@context": default_context(), "actor": community.public_url(),
-                                      "to": [user.public_url()],
-                                      "object": {"actor": user.public_url(), "to": None, "object": community.public_url(),
-                                                 "type": "Follow", "id": follow_id},
-                                      "type": "Reject",
-                                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                            reject_id = f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
+                            reject = format_follow_response(
+                                follow_id=follow_id,
+                                follow_actor=user.public_url(),
+                                follow_object=community.public_url(),
+                                response_type="Reject",
+                                response_id=reject_id,
+                                actor=community.public_url(),
+                                recipient_instance=user.instance if user.instance else None
+                            )
                             send_post_request(user.ap_inbox_url, reject, community.private_key, f"{community.public_url()}#main-key")
                         else:
                             existing_member = session.query(CommunityMember).filter_by(user_id=user.id, community_id=community.id).first()
@@ -1342,12 +1390,16 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                                 session.commit()
                                 cache.delete_memoized(community_membership, user, community)
                                 # send accept message to acknowledge the follow
-                                accept = {"@context": default_context(), "actor": community.public_url(),
-                                          "to": [user.public_url()],
-                                          "object": {"actor": user.public_url(), "to": None,
-                                                     "object": community.public_url(), "type": "Follow", "id": follow_id},
-                                          "type": "Accept",
-                                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                                accept_id = f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
+                                accept = format_follow_response(
+                                    follow_id=follow_id,
+                                    follow_actor=user.public_url(),
+                                    follow_object=community.public_url(),
+                                    response_type="Accept",
+                                    response_id=accept_id,
+                                    actor=community.public_url(),
+                                    recipient_instance=user.instance if user.instance else None
+                                )
                                 send_post_request(user.ap_inbox_url, accept, community.private_key, f"{community.public_url()}#main-key")
                                 log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
                         return
@@ -1362,11 +1414,16 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
 
                         if reject_follow:
                             # send reject message to deny the follow
-                            reject = {"@context": default_context(), "actor": feed.public_url(), "to": [user.public_url()],
-                                      "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(),
-                                                 "type": "Follow", "id": follow_id},
-                                      "type": "Reject",
-                                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)}
+                            reject_id = f"https://{current_app.config['SERVER_NAME']}/activities/reject/" + gibberish(32)
+                            reject = format_follow_response(
+                                follow_id=follow_id,
+                                follow_actor=user.public_url(),
+                                follow_object=feed.public_url(),
+                                response_type="Reject",
+                                response_id=reject_id,
+                                actor=feed.public_url(),
+                                recipient_instance=user.instance if user.instance else None
+                            )
                             send_post_request(user.ap_inbox_url, reject, feed.private_key, f"{feed.public_url()}#main-key")
                         else:
                             if feed_membership(user, feed) != SUBSCRIPTION_MEMBER:
@@ -1376,12 +1433,16 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                                 session.commit()
                                 cache.delete_memoized(feed_membership, user, feed)
                                 # send accept message to acknowledge the follow
-                                accept = {"@context": default_context(), "actor": feed.public_url(),
-                                          "to": [user.public_url()],
-                                          "object": {"actor": user.public_url(), "to": None, "object": feed.public_url(),
-                                                     "type": "Follow", "id": follow_id},
-                                          "type": "Accept",
-                                          "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                                accept_id = f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
+                                accept = format_follow_response(
+                                    follow_id=follow_id,
+                                    follow_actor=user.public_url(),
+                                    follow_object=feed.public_url(),
+                                    response_type="Accept",
+                                    response_id=accept_id,
+                                    actor=feed.public_url(),
+                                    recipient_instance=user.instance if user.instance else None
+                                )
                                 send_post_request(user.ap_inbox_url, accept, feed.private_key,
                                                   f"{feed.public_url()}#main-key")
                                 log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
@@ -1403,12 +1464,16 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
                                 local_user.ap_followers_url = local_user.public_url() + '/followers'
                             session.add(new_follower)
                             session.commit()
-                            accept = {"@context": default_context(), "actor": local_user.public_url(),
-                                      "to": [remote_user.public_url()],
-                                      "object": {"actor": remote_user.public_url(), "to": None,
-                                                 "object": local_user.public_url(), "type": "Follow", "id": follow_id},
-                                      "type": "Accept",
-                                      "id": f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)}
+                            accept_id = f"https://{current_app.config['SERVER_NAME']}/activities/accept/" + gibberish(32)
+                            accept = format_follow_response(
+                                follow_id=follow_id,
+                                follow_actor=remote_user.public_url(),
+                                follow_object=local_user.public_url(),
+                                response_type="Accept",
+                                response_id=accept_id,
+                                actor=local_user.public_url(),
+                                recipient_instance=remote_user.instance if remote_user.instance else None
+                            )
                             send_post_request(remote_user.ap_inbox_url, accept, local_user.private_key,
                                               f"{local_user.public_url()}#main-key")
                             log_incoming_ap(id, APLOG_FOLLOW, APLOG_SUCCESS, saved_json)
