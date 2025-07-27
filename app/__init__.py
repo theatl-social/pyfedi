@@ -225,6 +225,14 @@ def create_app(config_class=Config):
     file_handler.setLevel(logging.INFO)
     app.logger.addHandler(file_handler)
 
+    # Also log to console (stdout)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s '
+        '[in %(pathname)s:%(lineno)d]'))
+    console_handler.setLevel(logging.INFO)
+    app.logger.addHandler(console_handler)
+
     app.logger.setLevel(logging.INFO)
     app.logger.info('Started!') # let's go!
 
