@@ -4,7 +4,7 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp, misc_bp
+from app.api.alpha import bp, site_bp, misc_bp, comm_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -123,67 +123,88 @@ def get_alpha_federated_instances():
 
 
 # Community
-@bp.route('/api/alpha/community', methods=['GET'])
-def get_alpha_community():
+@comm_bp.route("/community", methods=["GET"])
+@comm_bp.doc(summary="Get / fetch a community.")
+@comm_bp.arguments(GetCommunityRequest, location="query")
+@comm_bp.response(200, GetCommunityResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+def get_alpha_community(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_community(auth, data))
+        resp = get_community(auth, data)
+        return GetCommunityResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/community/list', methods=['GET'])
-def get_alpha_community_list():
+@comm_bp.route("/community/list", methods=["GET"])
+@comm_bp.doc(summary="List communities, with various filters.")
+@comm_bp.arguments(ListCommunitiesRequest, location="query")
+@comm_bp.response(200, ListCommunitiesResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def get_alpha_community_list(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_community_list(auth, data))
+        resp = get_community_list(auth, data)
+        return ListCommunitiesResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/community/follow', methods=['POST'])
-def post_alpha_community_follow():
+@comm_bp.route("/community/follow", methods=["POST"])
+@comm_bp.doc(summary="Follow / subscribe to a community.")
+@comm_bp.arguments(FollowCommunityRequest)
+@comm_bp.response(200, CommunityResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_follow(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_community_follow(auth, data))
+        resp = post_community_follow(auth, data)
+        return CommunityResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/community/block', methods=['POST'])
-def post_alpha_community_block():
+@comm_bp.route("/community/block", methods=["POST"])
+@comm_bp.doc(summary="Block a community.")
+@comm_bp.arguments(BlockCommunityRequest)
+@comm_bp.response(200, BlockCommunityResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_block(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_community_block(auth, data))
+        resp = post_community_block(auth, data)
+        return BlockCommunityResponse().load(resp)
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/community', methods=['POST'])
-def post_alpha_community():
+@comm_bp.route("/community", methods=["POST"])
+@comm_bp.doc(summary="Create a new community.")
+@comm_bp.arguments(CreateCommunityRequest)
+@comm_bp.response(200, CommunityResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+@comm_bp.alt_response(429, schema=DefaultError)
+def post_alpha_community(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('10/day'):
             auth = request.headers.get('Authorization')
-            data = request.get_json(force=True) or {}
-            return jsonify(post_community(auth, data))
+            resp = post_community(auth, data)
+            return CommunityResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/community', methods=['PUT'])
@@ -285,9 +306,8 @@ def post_alpha_community_moderate_post_nsfw():
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
-    # Post
 
-
+# Post
 @bp.route('/api/alpha/post/list', methods=['GET'])
 def get_alpha_post_list():
     if not enable_api():
