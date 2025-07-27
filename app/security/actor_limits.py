@@ -125,7 +125,7 @@ class ActorCreationLimiter:
             # Rapid growth pattern
             recent_actors = User.query.filter(
                 User.instance_id == instance.id,
-                User.created_at >= datetime.utcnow() - timedelta(hours=24)
+                User.created >= datetime.utcnow() - timedelta(hours=24)
             ).count()
             
             if recent_actors > self.actors_per_instance_day * 0.8:
