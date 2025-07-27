@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import sys
 import time
 from datetime import datetime, timezone
@@ -1447,7 +1448,6 @@ def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
     
     # Handle PyFedi local URLs - extract the ID and look up locally
     # Pattern: https://domain/post/123 or https://domain/comment/456
-    import re
     
     # Check if this is a local PyFedi URL
     local_patterns = [
