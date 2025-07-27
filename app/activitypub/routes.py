@@ -760,7 +760,8 @@ def shared_inbox():
             f.write(_json.dumps(entry, ensure_ascii=False) + '\n')
         return fpath
 
-    from app import redis_client
+    from app.utils import get_redis_connection
+    redis_client = get_redis_connection()
     
     # Early content-length validation to prevent OOM
     content_length = request.content_length
@@ -1181,7 +1182,8 @@ def process_inbox_request(request_json, store_ap_json, request_id=None):
             # patch_db_session makes all db.session.whatever() use the session created with get_task_session, to guarantee proper connection clean-up at the end of the task.
             # although process_inbox_request uses session instead of db.session, many of the functions it calls, like find_actor_or_create, do not which makes this necessary.
             with patch_db_session(session):
-                from app import redis_client
+                from app.utils import get_redis_connection
+                redis_client = get_redis_connection()
                 # For an Announce, Accept, or Reject, we have the community/feed, and need to find the user
                 # For everything else, we have the user, and need to find the community/feed
                 # Benefits of always using request_json['actor']:
