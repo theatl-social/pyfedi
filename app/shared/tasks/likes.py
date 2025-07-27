@@ -23,11 +23,15 @@ from flask import current_app
 
 @celery.task
 def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, federate: bool=True):
+    current_app.logger.info(f'vote_for_post task called: user_id={user_id}, post_id={post_id}, federate={federate}, send_async={send_async}')
     post = Post.query.filter_by(id=post_id).one()
     cache.delete_memoized(recently_upvoted_posts, user_id)
     cache.delete_memoized(recently_downvoted_posts, user_id)
     if federate:
+        current_app.logger.info(f'vote_for_post: federate=True, calling send_vote')
         send_vote(user_id, post, vote_to_undo, vote_direction)
+    else:
+        current_app.logger.info(f'vote_for_post: federate=False, NOT calling send_vote')
 
 
 @celery.task
@@ -42,16 +46,21 @@ def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, 
 def send_vote(user_id, object, vote_to_undo, vote_direction):
     session = get_task_session()
     try:
+        current_app.logger.info(f'send_vote called: user_id={user_id}, object_id={object.id}, vote_direction={vote_direction}, vote_to_undo={vote_to_undo}')
         user = session.query(User).filter_by(id=user_id).one()
         community = object.community
+        current_app.logger.info(f'send_vote: community={community.name}, is_local={community.is_local()}, local_only={community.local_only}')
         if community.local_only or not community.instance.online():
+            current_app.logger.info(f'send_vote: returning early - local_only={community.local_only}, instance.online={community.instance.online() if community.instance else "N/A"}')
             return
 
         banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community.id).first()
         if banned:
+            current_app.logger.info(f'send_vote: user {user_id} is banned from community {community.id}')
             return
         if not community.is_local():
             if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
+                current_app.logger.info(f'send_vote: instance blocked or banned')
                 return
 
         if vote_to_undo:
@@ -129,11 +138,13 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
                     send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
         else:
             # For remote communities, select appropriate payload
+            current_app.logger.info(f'send_vote: sending to remote community {community.name} at {community.ap_inbox_url}')
             if vote_to_undo:
                 payload = undo_public
             else:
                 payload = vote_public
 
+            current_app.logger.info(f'send_vote: calling send_post_request with payload type={payload.get("type")}')
             send_post_request(community.ap_inbox_url, payload, user.private_key, public_actor + '#main-key')
     except:
         session.rollback()

@@ -82,10 +82,13 @@ def parse_ld_date(value: str | None) -> datetime | None:
 def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                       content_type: str = "application/activity+json",
                       method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
+    current_app.logger.info(f'send_post_request called: uri={uri}, body_type={body.get("type") if body else "None"}, debug={current_app.debug}')
     if current_app.debug:
+        current_app.logger.info(f'send_post_request: calling post_request synchronously (debug mode)')
         return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                             method=method, timeout=timeout, retries=retries)
     else:
+        current_app.logger.info(f'send_post_request: dispatching post_request.delay to Celery')
         post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                            method=method, timeout=timeout, retries=retries)
         return True
@@ -97,13 +100,16 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                  method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     session = get_task_session()
     try:
-        if '@context' not in body:  # add a default json-ld context if necessary
+        current_app.logger.info(f'post_request task started: uri={uri}, body_type={body.get("type") if body else "None"}')
+        if body and '@context' not in body:  # add a default json-ld context if necessary
             body['@context'] = default_context()
-        type = body['type'] if 'type' in body else ''
-        log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
-        log.activity_json = json.dumps(body)
+        type = body['type'] if body and 'type' in body else ''
+        activity_id = body.get('id', 'no-id') if body else 'no-body'
+        log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=activity_id, exception_message='')
+        log.activity_json = json.dumps(body) if body else '{}'
         session.add(log)
         session.commit()
+        current_app.logger.info(f'post_request: ActivityPubLog created with id={log.id}')
 
         http_status_code = None
 
