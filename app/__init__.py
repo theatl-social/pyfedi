@@ -52,7 +52,7 @@ mail = Mail()
 bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
-limiter = Limiter(get_ip_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
+limiter = Limiter(get_ip_address, storage_uri='redis+'+Config.REDIS_URL if Config.REDIS_URL.startswith("unix://") else Config.REDIS_URL)
 # Redis Streams will be used instead of Celery
 # httpx_client will be initialized with proper User-Agent in create_app()
 httpx_client = None
@@ -99,7 +99,7 @@ def create_app(config_class=Config):
     # Initialize redis_client
     global redis_client
     from app.utils import get_redis_connection
-    redis_client = get_redis_connection(app.config['CACHE_REDIS_URL'])
+    redis_client = get_redis_connection(app.config['REDIS_URL'])
     
     # Initialize httpx_client with proper User-Agent
     global httpx_client

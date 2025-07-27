@@ -34,7 +34,7 @@ class RelayProtection:
     
     def __init__(self):
         self.redis_client = redis.from_url(
-            current_app.config.get('REDIS_URL', 'redis://redis:6379')
+            current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
         )
         self.max_announces_per_object = current_app.config.get('MAX_ANNOUNCES_PER_OBJECT', 5)
         self.vote_rate_limit = current_app.config.get('VOTE_RATE_LIMIT_PER_ACTOR', 100)

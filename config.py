@@ -23,14 +23,18 @@ class Config(object):
     ERRORS_TO = os.environ.get('ERRORS_TO') or ''
     LANGUAGES = ['ca', 'de', 'en', 'es', 'fr', 'ja', 'zh']
     FULL_AP_CONTEXT = bool(int(os.environ.get('FULL_AP_CONTEXT', 0)))
+    # Consolidated Redis configuration
+    REDIS_URL = os.environ.get('REDIS_URL') or 'redis://localhost:6379/0'
+    
+    # Legacy Redis variables for backward compatibility
     CACHE_TYPE = os.environ.get('CACHE_TYPE') or 'FileSystemCache'
-    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or 'redis://localhost:6379/1'
+    CACHE_REDIS_URL = os.environ.get('CACHE_REDIS_URL') or REDIS_URL
     CACHE_DIR = os.environ.get('CACHE_DIR') or '/dev/shm/pyfedi'
     CACHE_DEFAULT_TIMEOUT = 300
     CACHE_THRESHOLD = 1000
     CACHE_KEY_PREFIX = 'pyfedi'
-    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or 'redis://localhost:6379/0'
-    RESULT_BACKEND = os.environ.get('RESULT_BACKEND') or 'redis://localhost:6379/0'
+    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or REDIS_URL
+    RESULT_BACKEND = os.environ.get('RESULT_BACKEND') or REDIS_URL
     SQLALCHEMY_ECHO = False     # set to true to see SQL in console
     WTF_CSRF_TIME_LIMIT = None  # a value of None ensures csrf token is valid for the lifetime of the session
     HTTP_PROTOCOL = os.environ.get('HTTP_PROTOCOL') or 'https'  # useful during development

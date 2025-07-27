@@ -36,7 +36,7 @@ SOFTWARE_NAME=PeachPie
 SOFTWARE_REPO=https://github.com/theatl-social/peachpie
 SOFTWARE_VERSION=1.0.1  # Optional, defaults to version in constants.py
 
-# Consolidated Redis URL (replaces multiple Redis env vars)
+# Consolidated Redis URL (replaces CACHE_REDIS_URL, CELERY_BROKER_URL, RESULT_BACKEND)
 REDIS_URL=redis://localhost:6379/0
 ```
 

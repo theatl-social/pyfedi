@@ -23,7 +23,7 @@ class ActorCreationLimiter:
     
     def __init__(self):
         self.redis_client = redis.from_url(
-            current_app.config.get('REDIS_URL', 'redis://redis:6379') # fix this at some point
+            current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
         )
         self.actors_per_instance_hour = current_app.config.get(
             'ACTORS_PER_INSTANCE_HOUR',

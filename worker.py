@@ -82,7 +82,7 @@ def main():
     args = parser.parse_args()
     
     # Get configuration
-    redis_url = args.redis_url or Config.CACHE_REDIS_URL
+    redis_url = args.redis_url or Config.REDIS_URL
     database_url = args.database_url or Config.SQLALCHEMY_DATABASE_URI
     
     # Validate configuration
