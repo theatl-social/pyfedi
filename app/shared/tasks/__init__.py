@@ -16,6 +16,10 @@ def task_selector(task_key, send_async=True, **kwargs):
     from app.shared.tasks.groups import edit_community
     from app.shared.tasks.users import check_user_application
     from app.shared.tasks.blocks import ban_from_community, unban_from_community, ban_from_site, unban_from_site
+    
+    # Debug: Print the actual task name
+    current_app.logger.info(f'task_selector: vote_for_post task name is {vote_for_post.name}')
+    
     tasks = {
         'join_community': join_community,
         'leave_community': leave_community,
@@ -54,6 +58,9 @@ def task_selector(task_key, send_async=True, **kwargs):
 
     if send_async:
         current_app.logger.info(f'task_selector: dispatching {task_key} async with kwargs: {kwargs}')
+        # Debug: Check Celery configuration
+        from app import celery
+        current_app.logger.info(f'task_selector: Celery broker URL is {celery.conf.broker_url}')
         result = tasks[task_key].delay(send_async=send_async, **kwargs)
         current_app.logger.info(f'task_selector: Celery task {task_key} dispatched with id={result.id}')
     else:
