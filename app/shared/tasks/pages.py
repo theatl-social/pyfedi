@@ -81,9 +81,11 @@ def edit_post(send_async, post_id):
 
 
 def send_post(post_id, edit=False, session=None):
+    current_app.logger.info(f'send_post called: post_id={post_id}, edit={edit}')
     post = session.query(Post).filter_by(id=post_id).one()
     user = post.author
     community = post.community
+    current_app.logger.info(f'send_post: community={community.name}, is_local={community.is_local()}, local_only={community.local_only}')
 
     post_body_html = post.body_html if post.body_html else ''
 
@@ -270,6 +272,7 @@ def send_post(post_id, edit=False, session=None):
                     if post.type < POST_TYPE_POLL:
                           domains_sent_to.append(instance.domain)
         else:
+            current_app.logger.info(f'send_post: sending to remote community {community.name} at {community.ap_inbox_url}')
             send_post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
             domains_sent_to.append(community.instance.domain)
 

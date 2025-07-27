@@ -76,6 +76,7 @@ def edit_reply(send_async, reply_id, parent_id):
 
 
 def send_reply(reply_id, parent_id, edit=False, session=None):
+    current_app.logger.info(f'send_reply called: reply_id={reply_id}, parent_id={parent_id}, edit={edit}')
     reply = session.query(PostReply).filter_by(id=reply_id).one()
     user = reply.author
     if parent_id:
@@ -83,6 +84,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
     else:
         parent = reply.post
     community = reply.community
+    current_app.logger.info(f'send_reply: community={community.name}, is_local={community.is_local()}, local_only={community.local_only}')
 
     # Find any users Mentioned in reply with @user@instance syntax
     recipients = [parent.author]
@@ -139,13 +141,16 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
                     session.commit()
 
     if community.local_only or not community.instance.online():
+        current_app.logger.info(f'send_reply: returning early - local_only={community.local_only}, instance.online={community.instance.online() if community.instance else "N/A"}')
         return
 
     banned = session.query(CommunityBan).filter_by(user_id=user.id, community_id=community.id).first()
     if banned:
+        current_app.logger.info(f'send_reply: user {user.id} is banned from community {community.id}')
         return
     if not community.is_local():
         if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
+            current_app.logger.info(f'send_reply: instance blocked or banned')
             return
 
     to = ["https://www.w3.org/ns/activitystreams#Public"]
@@ -215,6 +220,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
                 send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
                 domains_sent_to.append(instance.domain)
     else:
+        current_app.logger.info(f'send_reply: sending to remote community {community.name} at {community.ap_inbox_url}')
         send_post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
         domains_sent_to.append(community.instance.domain)
 
