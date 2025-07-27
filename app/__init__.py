@@ -15,7 +15,7 @@ from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_smorest import Api
 from werkzeug.middleware.proxy_fix import ProxyFix
-from celery import Celery
+# Celery removed - using Redis Streams instead
 from sqlalchemy_searchable import make_searchable
 import httpx
 from authlib.integrations.flask_client import OAuth
@@ -53,7 +53,7 @@ bootstrap = Bootstrap5()
 babel = Babel(locale_selector=get_locale)
 cache = Cache()
 limiter = Limiter(get_ip_address, storage_uri='redis+'+Config.CACHE_REDIS_URL if Config.CACHE_REDIS_URL.startswith("unix://") else Config.CACHE_REDIS_URL)
-celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
+# Redis Streams will be used instead of Celery
 httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
@@ -93,21 +93,7 @@ def create_app(config_class=Config):
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
     limiter.init_app(app)
-    celery.conf.update(app.config)
-
-    celery.conf.update(
-        CELERY_TASK_DEFAULT_QUEUE='celery',
-        CELERY_TASK_DEFAULT_EXCHANGE='celery',
-        CELERY_TASK_DEFAULT_ROUTING_KEY='celery',
-        CELERY_ROUTES={
-            'app.shared.tasks.users.check_user_application': {'queue': 'background'},
-            'app.user.utils.purge_user_then_delete_task': {'queue': 'background'},
-            'app.community.util.retrieve_mods_and_backfill': {'queue': 'background'},
-            'app.activitypub.signature.post_request': {'queue': 'send'},
-            # Maintenance tasks - all go to background queue
-            'app.shared.tasks.maintenance.*': {'queue': 'background'},
-        }
-    )
+    # Redis Streams configuration will be initialized here
 
     # Initialize redis_client
     global redis_client
