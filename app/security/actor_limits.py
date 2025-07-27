@@ -16,14 +16,14 @@ class ActorCreationLimiter:
     """Limit and validate actor creation to prevent DoS"""
     
     # Default limits
-    DEFAULT_ACTORS_PER_INSTANCE_HOUR = 10
-    DEFAULT_ACTORS_PER_INSTANCE_DAY = 50
-    DEFAULT_TOTAL_ACTORS_PER_HOUR = 100
-    DEFAULT_SUSPICIOUS_INSTANCE_THRESHOLD = 100
+    DEFAULT_ACTORS_PER_INSTANCE_HOUR = 1000
+    DEFAULT_ACTORS_PER_INSTANCE_DAY = 5000
+    DEFAULT_TOTAL_ACTORS_PER_HOUR = 2500
+    DEFAULT_SUSPICIOUS_INSTANCE_THRESHOLD = 1000
     
     def __init__(self):
         self.redis_client = redis.from_url(
-            current_app.config.get('REDIS_URL', 'redis://localhost:6379')
+            current_app.config.get('REDIS_URL', 'redis://redis:6379') # fix this at some point
         )
         self.actors_per_instance_hour = current_app.config.get(
             'ACTORS_PER_INSTANCE_HOUR',
