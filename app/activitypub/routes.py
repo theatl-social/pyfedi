@@ -1012,7 +1012,7 @@ def shared_inbox():
             if logger:
                 logger.log_checkpoint('signature_verify', 'warning', f'HTTP signature failed: {str(e)}')
             log_ap_status(request_id, 'signature_verify', 'warning', activity_id=id, post_object_uri=post_object_uri, details=f'HTTP signature failed: {str(e)}')
-            # Try LD signature as fallback
+            # HTTP sig will fail if a.gup.pe or PeerTube have bounced a request, so check LD sig instead
             if 'signature' in request_json:
                 try:
                     if logger:
@@ -1020,17 +1020,28 @@ def shared_inbox():
                     LDSignature.verify_signature(request_json, actor.public_key)
                     if logger:
                         logger.log_checkpoint('ld_signature_verify', 'ok', 'LD signature verified successfully')
-                    # LD signature is valid, continue processing
                 except VerificationError as e:
                     if logger:
                         logger.log_error('ld_signature_verify', e, 'LD signature verification failed')
-                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Both HTTP and LD signature verification failed: ' + str(e))
+                    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify LD signature: ' + str(e))
                     return '', 400
-            else:
-                # No LD signature present, and HTTP signature failed - reject like Lemmy does
+            elif (
+                    actor.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer' and  # accept unsigned chat message from fediseer for API key
+                    request_json['type'] == 'Create' and isinstance(request_json['object'], dict) and
+                    'type' in request_json['object'] and request_json['object']['type'] == 'ChatMessage'):
                 if logger:
-                    logger.log_error('signature_verify', e, 'No valid signature found - rejecting activity')
-                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'No valid signature (HTTP or LD) found: ' + str(e))
+                    logger.log_checkpoint('fediseer_exception', 'ok', 'Fediseer unsigned message accepted')
+            # no HTTP sig, and no LD sig, so reduce the inner object to just its remote ID, and then fetch it and check it in process_inbox_request()
+            elif ((request_json['type'] == 'Create' or request_json['type'] == 'Update') and
+                  isinstance(request_json['object'], dict) and 'id' in request_json['object'] and isinstance(
+                        request_json['object']['id'], str)):
+                if logger:
+                    logger.log_checkpoint('object_reduction', 'ok', 'Reducing object to remote ID for later verification')
+                request_json['object'] = request_json['object']['id']
+            else:
+                if logger:
+                    logger.log_error('signature_verify', e, 'No valid signature found')
+                log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'Could not verify HTTP signature: ' + str(e))
                 return '', 400
 
         # Update instance information
