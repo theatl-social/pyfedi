@@ -35,7 +35,7 @@ sync:
 
 
 @celery.task
-def join_community(send_async, user_id, community_id, src):
+def join_community(user_id, community_id, src):
     session = get_task_session()
     try:
         user = session.query(User).filter_by(id=user_id).one()
@@ -44,29 +44,18 @@ def join_community(send_async, user_id, community_id, src):
         pre_load_message = {}
         banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community_id).first()
         if banned:
-            if not send_async:
-                if src == SRC_WEB:
-                    flash(_('You cannot join this community'))
-                    return
-                elif src == SRC_PLD:
-                    pre_load_message['user_banned'] = True
-                    return pre_load_message
-                elif src == SRC_API:
-                    raise Exception('banned_from_community')
+            # In Celery context, we can't provide immediate feedback
+            # The calling code should handle error states
+            if src == SRC_API:
+                raise Exception('banned_from_community')
             return
 
         if (not community.is_local() and
             (user.has_blocked_instance(community.instance.id) or
              instance_banned(community.instance.domain))):
-            if not send_async:
-                if src == SRC_WEB:
-                    flash(_('Community is on banned or blocked instance'))
-                    return
-                elif src == SRC_PLD:
-                    pre_load_message['community_on_banned_or_blocked_instance'] = True
-                    return pre_load_message
-                elif src == SRC_API:
-                    raise Exception('community_on_banned_or_blocked_instance')
+            # In Celery context, we can't provide immediate feedback
+            if src == SRC_API:
+                raise Exception('community_on_banned_or_blocked_instance')
             return
 
         if not community.is_local() and community.instance.online():
@@ -107,7 +96,7 @@ def join_community(send_async, user_id, community_id, src):
 
 
 @celery.task
-def leave_community(send_async, user_id, community_id):
+def leave_community(user_id, community_id):
     session = get_task_session()
     try:
         user = session.query(User).filter_by(id=user_id).one()

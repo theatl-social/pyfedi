@@ -71,9 +71,9 @@ def task_selector(task_key, send_async=True, **kwargs):
             queue_name = celery.conf.get('CELERY_TASK_DEFAULT_QUEUE', 'celery')
         current_app.logger.info(f'task_selector: Task {task_key} ({task_name}) will be sent to queue: {queue_name}')
         
-        result = tasks[task_key].delay(send_async=send_async, **kwargs)
+        result = tasks[task_key].delay(**kwargs)
         current_app.logger.info(f'task_selector: Celery task {task_key} dispatched with id={result.id}')
     else:
         current_app.logger.info(f'task_selector: executing {task_key} synchronously with kwargs: {kwargs}')
-        return tasks[task_key](send_async=send_async, **kwargs)
+        return tasks[task_key](**kwargs)
 

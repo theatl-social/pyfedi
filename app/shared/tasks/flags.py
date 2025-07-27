@@ -22,7 +22,7 @@ Flag:
 
 
 @celery.task
-def report_reply(send_async, user_id, reply_id, summary):
+def report_reply(user_id, reply_id, summary):
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -37,7 +37,7 @@ def report_reply(send_async, user_id, reply_id, summary):
 
 
 @celery.task
-def report_post(send_async, user_id, post_id, summary):
+def report_post(user_id, post_id, summary):
     with current_app.app_context():
         session = get_task_session()
         try:

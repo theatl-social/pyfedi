@@ -57,7 +57,7 @@ import re
 
 
 @celery.task
-def make_post(send_async, post_id):
+def make_post(post_id):
     session = get_task_session()
     try:
         send_post(post_id, session=session)
@@ -69,7 +69,7 @@ def make_post(send_async, post_id):
 
 
 @celery.task
-def edit_post(send_async, post_id):
+def edit_post(post_id):
     session = get_task_session()
     try:
         send_post(post_id, edit=True, session=session)
