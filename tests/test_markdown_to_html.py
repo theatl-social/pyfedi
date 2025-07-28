@@ -133,6 +133,27 @@ And if you want to add your score to the database to help your fellow Bookworms 
             '<strong>part of</strong> a link</a></p>\n')
         self.assertEqual(result, correct_html)
 
+    def test_strikethrough_in_inline_code(self):
+        """Don't strikethrough text in inline code."""
+        markdown = "`don't ~~strikethrough~~`"
+        correct_html = "<p><code>don't ~~strikethrough~~</code></p>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+    
+    def test_strikethrough_in_fenced_code(self):
+        """Don't strikethrough text in fenced code block."""
+        markdown = "```\ndon't ~~strikethrough~~\n```"
+        correct_html = "<pre><code>don't ~~strikethrough~~\n</code></pre>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+    
+    def test_spoiler_in_fenced_code(self):
+        """Don't format spoiler block in fenced code block."""
+        markdown = "```\n::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n```"
+        correct_html = "<pre><code>::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n</code></pre>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+
 
 if __name__ == '__main__':
     unittest.main()

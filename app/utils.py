@@ -379,6 +379,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
 
     clean_html = str(soup)
 
+    # substitute out the <code> snippets so that they don't inadvertently get formatted
+    code_snippets, clean_html = stash_code_html(clean_html)
+
     # avoid returning empty anchors
     re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
     clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
@@ -424,6 +427,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # replace ruby markdown like {漢字|かんじ}
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
     clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
+
+    # bring back the <code> snippets
+    clean_html = pop_code(code_snippets, clean_html)
 
     return clean_html
 
