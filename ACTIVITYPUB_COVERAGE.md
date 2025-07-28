@@ -64,20 +64,42 @@
 ### Not Yet Implemented ❌
 
 15. **Move** - Move actors between instances
-    - No handler found
+    - No handler found in inbox.py handlers dictionary
     - No test found
+    - Rarely used in practice (mainly for account migration between instances)
 
 ## Object Types Supported
 
-- **Note** - Short text posts
-- **Article** - Long-form articles
-- **Page** - Static pages
-- **Question** - Polls
-- **Comment** - Reply to posts
+### Content Objects ✅
+- **Note** - Short text posts (Mastodon toots, etc.)
+- **Article** - Long-form articles (blog posts)
+- **Page** - Static pages (wiki pages, etc.)
+- **Question** - Polls and surveys
+- **Comment** - Replies to posts (less common, usually Note with inReplyTo)
+
+### Actor Types ✅
 - **Person** - Individual users
-- **Group** - Communities
-- **Collection** - Lists of objects
-- **OrderedCollection** - Ordered lists
+- **Group** - Communities/groups
+- **Service** - Automated accounts/bots (supported in actor validation)
+- **Application** - Software applications (supported in actor validation)
+- **Organization** - Organizations (supported in actor validation)
+
+### Collection Types ✅
+- **Collection** - Unordered lists of objects
+- **OrderedCollection** - Ordered lists (followers, following, outbox)
+- **CollectionPage** - Paginated collections
+- **OrderedCollectionPage** - Paginated ordered collections
+
+### Media Types ✅
+- **Image** - Image attachments
+- **Video** - Video attachments
+- **Document** - Other file attachments
+- **Audio** - Audio files (basic support)
+
+### Not Implemented ❌
+- **Event** - Calendar events (not common in federated social)
+- **Place** - Location objects
+- **Tombstone** - Placeholder for deleted objects (partial support)
 
 ## Federation Features
 
@@ -107,9 +129,34 @@
 - ✅ Nested activities
 - ✅ Activity priorities
 
-## Notes
+## Implementation Notes
 
-1. The "Move" activity is not implemented but is rarely used in practice
-2. All core ActivityPub verbs for social networking are fully implemented
-3. Type annotations have been added to improve code safety
-4. Redis Streams replaced Celery for better performance
+### Why "Move" Activity is Not Implemented
+
+The Move activity is used for account migration between instances. It's not implemented because:
+
+1. **Rare Usage** - Very few implementations support it (mainly Mastodon)
+2. **Complex Requirements** - Requires:
+   - Bidirectional verification between old and new accounts
+   - Follower migration logic
+   - Content ownership transfer
+   - Redirect mechanisms
+3. **Not Essential** - Users can manually follow new accounts
+4. **Security Concerns** - Potential for account hijacking if not implemented carefully
+
+### Object Type Coverage
+
+All common ActivityPub object types used in federated social networking are supported:
+- Content objects (Note, Article, Page, Question)
+- All actor types (Person, Group, Service, Application, Organization)
+- Collection types for pagination
+- Media attachments
+
+Unsupported object types (Event, Place, Tombstone) are rarely used in federated social media contexts.
+
+### Type Safety Improvements
+
+1. All core ActivityPub verbs for social networking are fully implemented
+2. Type annotations have been added to improve code safety
+3. Redis Streams replaced Celery for better performance
+4. TypedDict definitions for ActivityPub objects ensure type safety

@@ -431,7 +431,7 @@ class HttpSignature:
             content_type: str = "application/activity+json",
             method: Literal["get", "post"] = "post",
             timeout: int = 5,
-    ):
+    ) -> httpx.Response:
         """
         Performs a request to the given path, with a document, signed
         as an identity.
