@@ -36,12 +36,12 @@ class TestActivityPubVerbs:
             db.session.add(self.instance)
             
             # Create test community
+            private_key, public_key = generate_rsa_keypair()
             self.community = Community(
                 name='testcommunity',
                 title='Test Community',
                 description='A test community',
-                nsfw=False,
-                private_key, public_key = generate_rsa_keypair()
+                nsfw=False
             )
             self.community.private_key = private_key
             self.community.public_key = public_key
@@ -50,13 +50,13 @@ class TestActivityPubVerbs:
             db.session.add(self.community)
             
             # Create test user
+            user_private_key, user_public_key = generate_rsa_keypair()
             self.user = User(
                 user_name='testuser',
-                email='test@example.com',
-                private_key, public_key = generate_rsa_keypair()
+                email='test@example.com'
             )
-            self.user.private_key = private_key
-            self.user.public_key = public_key
+            self.user.private_key = user_private_key
+            self.user.public_key = user_public_key
             self.user.ap_profile_id = f'https://{app.config["SERVER_NAME"]}/u/testuser'
             self.user.ap_inbox_url = f'https://{app.config["SERVER_NAME"]}/u/testuser/inbox'
             db.session.add(self.user)

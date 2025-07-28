@@ -19,6 +19,7 @@ type InstanceId = int
 class TypedActivityPubLog(db.Model):
     """ActivityPub logging model with full typing"""
     __tablename__ = 'activity_pub_log'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -49,6 +50,7 @@ class TypedActivityPubLog(db.Model):
 class TypedActivityPubRequestLog(db.Model):
     """ActivityPub request logging with full typing"""
     __tablename__ = 'activity_pub_request_log'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -77,6 +79,7 @@ class TypedActivityPubRequestLog(db.Model):
 class TypedCommunityJoinRequest(db.Model):
     """Pending community join request with full typing"""
     __tablename__ = 'community_join_request'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -99,6 +102,7 @@ class TypedCommunityJoinRequest(db.Model):
 class TypedInstanceRole(db.Model):
     """Instance role assignment with full typing"""
     __tablename__ = 'instance_role'
+    __table_args__ = {'extend_existing': True}
     
     # Primary keys
     instance_id: Mapped[InstanceId] = mapped_column(Integer, ForeignKey('instance.id'), primary_key=True)
@@ -118,6 +122,7 @@ class TypedInstanceRole(db.Model):
 class TypedBannedInstances(db.Model):
     """Banned instances with full typing"""
     __tablename__ = 'banned_instances'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -145,6 +150,7 @@ class TypedBannedInstances(db.Model):
 class TypedAllowedInstances(db.Model):
     """Allowed instances (allowlist mode) with full typing"""
     __tablename__ = 'allowed_instances'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -167,6 +173,7 @@ class TypedAllowedInstances(db.Model):
 class TypedActivityBatch(db.Model):
     """Batched activities for efficient sending with full typing"""
     __tablename__ = 'activity_batch'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -192,6 +199,7 @@ class TypedActivityBatch(db.Model):
 class TypedSendQueue(db.Model):
     """Queue for outgoing activities with full typing"""
     __tablename__ = 'send_queue'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)

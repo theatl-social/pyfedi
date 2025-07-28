@@ -27,6 +27,7 @@ type InstanceId = int
 class TypedUser(UserMixin, db.Model):
     """User model with full typing support"""
     __tablename__ = 'user'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -305,6 +306,7 @@ class TypedUser(UserMixin, db.Model):
 class TypedCommunity(db.Model):
     """Community model with full typing support"""
     __tablename__ = 'community'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -410,6 +412,7 @@ class TypedCommunity(db.Model):
 class TypedPost(db.Model):
     """Post model with full typing support"""
     __tablename__ = 'post'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -515,6 +518,7 @@ class TypedPost(db.Model):
 class TypedPostReply(db.Model):
     """Post reply model with full typing support"""
     __tablename__ = 'post_reply'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -610,6 +614,7 @@ class TypedPostReply(db.Model):
 class TypedInstance(db.Model):
     """Instance model with full typing support"""
     __tablename__ = 'instance'
+    __table_args__ = {'extend_existing': True}
     
     # Primary columns
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
