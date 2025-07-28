@@ -124,7 +124,7 @@ def after_request(response):
     else:
         if 'auth/register' not in request.path:
             if hasattr(g, 'nonce') and "/swagger" not in request.path:
-                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
+                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'; object-src 'none'; base-uri 'none';"
             response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
