@@ -2,6 +2,7 @@ import smtplib
 import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate
 from typing import List
 
 import boto3
@@ -202,6 +203,7 @@ class SMTPEmailService:
         self.msg["CC"] = None
         self.msg["BCC"] = None
         self.msg["Message-ID"] = f"<{uuid.uuid4()}@{self.server_name}>"
+        self.msg['Date'] = formatdate(localtime=True)
 
     def clear_message(self):
         """
