@@ -418,10 +418,12 @@ def flush_cdn_cache(url: Union[str, List[str]]):
         if current_app.debug:
             flush_cdn_cache_task(url)
         else:
-            flush_cdn_cache_task.delay(url)
+            # Queue CDN cache flush via Redis Streams
+            from app.federation.producer import queue_cdn_flush
+            queue_cdn_flush(url)
 
 
-@celery.task
+# Converted from Celery task to regular function
 def flush_cdn_cache_task(to_purge: Union[str, List[str]]):
     with current_app.app_context():
         zone_id = current_app.config['CLOUDFLARE_ZONE_ID']

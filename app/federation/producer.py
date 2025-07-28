@@ -2,9 +2,9 @@
 from __future__ import annotations
 import json
 import logging
-from typing import Dict, Optional, Any, Union
+from typing import Dict, Optional, Any, Union, List
 from datetime import datetime
-import aioredis
+import redis
 from flask import current_app, has_app_context
 
 from app.federation.types import (
@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class FederationProducer:
     """Producer for queueing federation activities"""
     
-    def __init__(self, redis_client: Optional[aioredis.Redis] = None):
+    def __init__(self, redis_client: Optional[redis.Redis] = None):
         self.redis = redis_client
         self._stream_names = {
             Priority.URGENT: 'federation:urgent',
@@ -27,18 +27,19 @@ class FederationProducer:
             Priority.RETRY: 'federation:retry'
         }
     
-    async def get_redis(self) -> aioredis.Redis:
+    def get_redis(self) -> redis.Redis:
         """Get Redis client, using app context if available"""
         if self.redis:
             return self.redis
         
         if has_app_context():
-            # Use async Redis from app context
-            return current_app.redis_async
+            # Get Redis URL from config
+            redis_url = current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+            return redis.from_url(redis_url, decode_responses=True)
         
         raise RuntimeError("No Redis client available")
     
-    async def queue_activity(
+    def queue_activity(
         self,
         activity: Union[Dict[str, Any], ActivityObject],
         priority: Optional[Priority] = None,
@@ -103,15 +104,14 @@ class FederationProducer:
                 stream_message['request_id'] = request_id
             
             # Add to appropriate stream
-            redis = await self.get_redis()
+            redis_client = self.get_redis()
             stream_name = self._stream_names[priority]
             
             # Add with automatic ID and max length
-            msg_id = await redis.xadd(
+            msg_id = redis_client.xadd(
                 stream_name,
                 stream_message,
-                maxlen=100000,  # Keep last 100k messages
-                approximate=True  # Allow Redis to optimize
+                maxlen=100000  # Keep last 100k messages
             )
             
             logger.info(
@@ -133,7 +133,7 @@ class FederationProducer:
             logger.error(f"Failed to queue activity: {e}", exc_info=True)
             raise
     
-    async def queue_batch(
+    def queue_batch(
         self,
         activities: List[Union[Dict[str, Any], ActivityObject]],
         priority: Optional[Priority] = None,
@@ -150,25 +150,56 @@ class FederationProducer:
         message_ids = []
         
         # Use pipeline for efficiency
-        redis = await self.get_redis()
+        redis_client = self.get_redis()
         
-        for activity in activities:
-            try:
-                msg_id = await self.queue_activity(
-                    activity=activity,
-                    priority=priority,
-                    destination=destination,
-                    private_key=private_key,
-                    key_id=key_id
-                )
-                message_ids.append(msg_id)
-            except Exception as e:
-                logger.error(f"Failed to queue activity in batch: {e}")
-                # Continue with other activities
+        with redis_client.pipeline() as pipe:
+            for activity in activities:
+                try:
+                    # Validate activity
+                    validated_activity = validate_activity(activity)
+                    
+                    # Determine priority if not specified
+                    if priority is None:
+                        act_priority = get_activity_priority(validated_activity['type'])
+                    else:
+                        act_priority = priority
+                    
+                    # Build message
+                    message_data = {
+                        'activity': validated_activity,
+                        'timestamp': datetime.utcnow().isoformat(),
+                        'attempts': 0
+                    }
+                    
+                    if destination:
+                        message_data.update({
+                            'destination': destination,
+                            'private_key': private_key,
+                            'key_id': key_id
+                        })
+                    
+                    stream_message = {
+                        'type': 'outbox.send' if destination else f"inbox.{validated_activity['type']}",
+                        'data': json.dumps(message_data),
+                        'priority': act_priority.value,
+                        'attempts': 0,
+                        'timestamp': message_data['timestamp']
+                    }
+                    
+                    stream_name = self._stream_names[act_priority]
+                    pipe.xadd(stream_name, stream_message, maxlen=100000)
+                    
+                except Exception as e:
+                    logger.error(f"Failed to queue activity in batch: {e}")
+                    # Continue with other activities
+            
+            # Execute pipeline
+            results = pipe.execute()
+            message_ids = [msg_id for msg_id in results if msg_id]
         
         return message_ids
     
-    async def queue_retry(
+    def queue_retry(
         self,
         original_message: Dict[str, Any],
         error: str,
@@ -201,12 +232,11 @@ class FederationProducer:
             'timestamp': datetime.utcnow().isoformat()
         }
         
-        redis = await self.get_redis()
-        msg_id = await redis.xadd(
+        redis_client = self.get_redis()
+        msg_id = redis_client.xadd(
             self._stream_names[Priority.RETRY],
             stream_message,
-            maxlen=10000,  # Smaller limit for retry queue
-            approximate=True
+            maxlen=10000  # Smaller limit for retry queue
         )
         
         logger.info(
@@ -216,21 +246,21 @@ class FederationProducer:
         
         return msg_id
     
-    async def get_stream_info(self) -> Dict[str, Dict[str, Any]]:
+    def get_stream_info(self) -> Dict[str, Dict[str, Any]]:
         """Get information about all streams"""
-        redis = await self.get_redis()
+        redis_client = self.get_redis()
         info = {}
         
         for priority, stream_name in self._stream_names.items():
             try:
-                stream_info = await redis.xinfo_stream(stream_name)
+                stream_info = redis_client.xinfo_stream(stream_name)
                 info[priority.value] = {
                     'length': stream_info.get('length', 0),
                     'first_entry': stream_info.get('first-entry'),
                     'last_entry': stream_info.get('last-entry'),
-                    'consumer_groups': stream_info.get('groups', 0)
+                    'consumer_groups': len(stream_info.get('groups', []))
                 }
-            except aioredis.ResponseError:
+            except redis.ResponseError:
                 # Stream doesn't exist yet
                 info[priority.value] = {
                     'length': 0,
@@ -250,10 +280,40 @@ def get_producer() -> FederationProducer:
         _producer = FederationProducer()
     return _producer
 
-async def queue_activity(
+def queue_activity(
     activity: Union[Dict[str, Any], ActivityObject],
     **kwargs
 ) -> str:
     """Convenience function to queue an activity"""
     producer = get_producer()
-    return await producer.queue_activity(activity, **kwargs)
+    return producer.queue_activity(activity, **kwargs)
+
+
+def queue_cdn_flush(url: Union[str, List[str]]) -> bool:
+    """Queue CDN cache flush task (synchronous wrapper)."""
+    import asyncio
+    from typing import List
+    
+    task = {
+        'type': 'flush_cdn_cache',
+        'url': url
+    }
+    
+    # Run async function in sync context
+    try:
+        loop = asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    
+    # Queue as low priority task
+    try:
+        producer = get_producer()
+        producer.queue_activity(
+            activity={'type': 'Service', 'name': 'cdn_flush', 'object': task},
+            priority=Priority.BULK
+        )
+        return True
+    except Exception as e:
+        logger.error(f"Failed to queue CDN flush: {e}")
+        return False

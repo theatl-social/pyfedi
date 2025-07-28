@@ -74,7 +74,7 @@ class ActivityObject(TypedDict, total=False):
     attributedTo: NotRequired[str]
     tag: NotRequired[List[Dict[str, Any]]]
     attachment: NotRequired[List[Dict[str, Any]]]
-    '@context': NotRequired[Union[str, List[str], Dict[str, Any]]]
+    # '@context' key handled separately due to special character
 
 class StreamMessage(TypedDict):
     """Redis Stream message structure"""

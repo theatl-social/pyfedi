@@ -33,8 +33,8 @@ class Config(object):
     CACHE_DEFAULT_TIMEOUT = 300
     CACHE_THRESHOLD = 1000
     CACHE_KEY_PREFIX = 'pyfedi'
-    CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL') or REDIS_URL
-    RESULT_BACKEND = os.environ.get('RESULT_BACKEND') or REDIS_URL
+    # Legacy Celery configuration removed - using Redis Streams instead
+    # CELERY_BROKER_URL and RESULT_BACKEND are no longer used
     SQLALCHEMY_ECHO = False     # set to true to see SQL in console
     WTF_CSRF_TIME_LIMIT = None  # a value of None ensures csrf token is valid for the lifetime of the session
     HTTP_PROTOCOL = os.environ.get('HTTP_PROTOCOL') or 'https'  # useful during development

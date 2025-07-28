@@ -1442,7 +1442,7 @@ def register(app):
                     print("\n   Checking URL format variables...")
                     url_vars = {
                         'CACHE_REDIS_URL': current_app.config.get('CACHE_REDIS_URL'),
-                        'CELERY_BROKER_URL': current_app.config.get('CELERY_BROKER_URL'),
+                        'REDIS_URL': current_app.config.get('REDIS_URL'),
                         'SENTRY_DSN': current_app.config.get('SENTRY_DSN'),
                         'S3_ENDPOINT': current_app.config.get('S3_ENDPOINT'),
                         'S3_PUBLIC_URL': current_app.config.get('S3_PUBLIC_URL'),
@@ -1451,7 +1451,7 @@ def register(app):
                     for var, value in url_vars.items():
                         if value:
                             format_issues = []
-                            if var in ['CACHE_REDIS_URL', 'CELERY_BROKER_URL'] and not (value.startswith('redis://') or value.startswith('unix://')):
+                            if var in ['CACHE_REDIS_URL', 'REDIS_URL'] and not (value.startswith('redis://') or value.startswith('unix://')):
                                 format_issues.append("should start with redis:// or unix://")
                             if var == 'SENTRY_DSN' and not (value.startswith('https://') or value.startswith('http://')):
                                 format_issues.append("should start with https:// or http://")

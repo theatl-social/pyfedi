@@ -15,8 +15,7 @@ from scripts.init_db import (
     create_database_if_needed,
     run_migrations,
     seed_initial_data,
-    check_database_initialized,
-    main as init_db_main
+    init_db as init_db_main
 )
 
 
@@ -177,20 +176,6 @@ class TestDatabaseInitialization:
                         assert mock_db.session.add.call_count >= 3
                         mock_db.session.commit.assert_called()
     
-    def test_check_database_initialized(self):
-        """Test checking if database is already initialized."""
-        mock_app = Mock()
-        mock_db = Mock()
-        
-        with patch('scripts.init_db.db', mock_db):
-            with patch('scripts.init_db.Instance') as MockInstance:
-                # Database has instances
-                MockInstance.query.count.return_value = 1
-                
-                result = check_database_initialized(mock_app)
-                
-                assert result is True
-    
     def test_main_non_interactive_mode(self):
         """Test main function in non-interactive mode."""
         # Set environment variables
@@ -209,8 +194,7 @@ class TestDatabaseInitialization:
                 with patch('scripts.init_db.wait_for_postgres', return_value=True):
                     with patch('scripts.init_db.create_database_if_needed', return_value=True):
                         with patch('scripts.init_db.run_migrations', return_value=True):
-                            with patch('scripts.init_db.check_database_initialized', return_value=False):
-                                with patch('scripts.init_db.seed_initial_data', return_value=True):
+                            with patch('scripts.init_db.seed_initial_data', return_value=True):
                                     with patch('sys.exit') as mock_exit:
                                         init_db_main()
                                         

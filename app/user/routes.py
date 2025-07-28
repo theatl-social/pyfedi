@@ -1057,7 +1057,9 @@ def delete_account():
         if current_app.debug:
             send_deletion_requests(current_user.id)
         else:
-            send_deletion_requests.delay(current_user.id)
+            # Queue via Redis Streams
+            from app.federation.tasks import queue_task
+            queue_task('send_deletion_requests', user_id=current_user.id)
 
         logout_user()
         flash(_('Account deletion in progress. Give it a few minutes.'), 'success')
@@ -1070,7 +1072,7 @@ def delete_account():
     return render_template('user/delete_account.html', title=_('Delete my account'), form=form, user=current_user)
 
 
-@celery.task
+# Converted from Celery task to regular function
 def send_deletion_requests(user_id):
     user = User.query.get(user_id)
     if user:
@@ -1267,10 +1269,12 @@ def import_settings(filename):
     if current_app.debug:
         import_settings_task(current_user.id, filename)
     else:
-        import_settings_task.delay(current_user.id, filename)
+        # Queue via Redis Streams
+        from app.federation.tasks import queue_task
+        queue_task('import_settings_task', user_id=current_user.id, filename=filename)
 
 
-@celery.task
+# Converted from Celery task to regular function
 def import_settings_task(user_id, filename):
     with current_app.app_context():
         user = User.query.get(user_id)

@@ -2265,10 +2265,24 @@ def download_defeds(defederation_subscription_id: int, domain: str):
     if current_app.debug:
         download_defeds_worker(defederation_subscription_id, domain)
     else:
-        download_defeds_worker.delay(defederation_subscription_id, domain)
+        # Queue via Redis Streams
+        from app.federation.producer import get_producer
+        from app.federation.types import Priority
+        
+        task = {
+            'type': 'download_defeds',
+            'subscription_id': defederation_subscription_id,
+            'domain': domain
+        }
+        
+        producer = get_producer()
+        producer.queue_activity(
+            activity={'type': 'Service', 'name': 'download_defeds', 'object': task},
+            priority=Priority.BULK
+        )
 
 
-@celery.task
+# Converted from Celery task to regular function
 def download_defeds_worker(defederation_subscription_id: int, domain: str):
     session = get_task_session()
     for defederation_url in retrieve_defederation_list(domain):

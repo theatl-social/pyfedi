@@ -15,19 +15,22 @@ services:
       - pf_network
 
   redis:
-    image: redis:6.2
+    image: redis:7-bookworm
     restart: unless-stopped
     platform: linux/amd64
+    command: redis-server --appendonly yes
     env_file:
      - ./.env.docker
+    volumes:
+     - ./redis-data:/data
     networks:
       - pf_network
 
-  celery:
+  federation-worker:
     build:
       context: .
       target: builder
-    container_name: piefed_celery1
+    container_name: peachpie_federation
     restart: unless-stopped
     platform: linux/amd64
     depends_on:
@@ -35,7 +38,7 @@ services:
       - redis
     env_file:
      - ./.env.docker
-    entrypoint: ./entrypoint_celery.sh
+    command: ["python", "worker.py", "--processes", "2"]
     volumes:
      - ./media/:/app/app/static/media/
      - ./logs/:/app/logs/

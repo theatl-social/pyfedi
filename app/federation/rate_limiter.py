@@ -12,6 +12,8 @@ from flask import current_app
 from dataclasses import dataclass
 from enum import Enum
 
+from app.federation.redis_functions import get_redis7_functions
+
 
 logger = logging.getLogger(__name__)
 
@@ -67,8 +69,12 @@ class DestinationRateLimiter:
     
     def __init__(self):
         self.redis_client = redis.from_url(
-            current_app.config.get('REDIS_URL', 'redis://localhost:6379/0')
+            current_app.config.get('REDIS_URL', 'redis://localhost:6379/0'),
+            decode_responses=True
         )
+        
+        # Try to use Redis 7 functions for better performance
+        self.redis7 = get_redis7_functions(self.redis_client)
         
         # Load configuration with defaults
         self.limits = {}
@@ -110,21 +116,51 @@ class DestinationRateLimiter:
         
         # Use sliding window with Redis sorted sets
         key = f"rate_limit:{limit_type.value}:{destination}"
-        window_start = now - config.window_seconds
-        
-        # Remove old entries
-        self.redis_client.zremrangebyscore(key, 0, window_start)
-        
-        # Count requests in window
-        request_count = self.redis_client.zcard(key)
-        
-        # Check global limit as well
         global_key = f"rate_limit:{RateLimitType.GLOBAL.value}:{destination}"
         global_config = self.limits[RateLimitType.GLOBAL]
-        global_window_start = now - global_config.window_seconds
         
-        self.redis_client.zremrangebyscore(global_key, 0, global_window_start)
-        global_count = self.redis_client.zcard(global_key)
+        # Try Redis 7 function first for atomic operation
+        if self.redis7:
+            try:
+                allowed, retry_after, request_count, global_count, burst_used = self.redis7.check_rate_limit(
+                    key=key,
+                    global_key=global_key,
+                    now=now,
+                    window=config.window_seconds,
+                    limit=config.max_requests,
+                    burst_limit=config.burst_limit,
+                    global_window=global_config.window_seconds,
+                    global_limit=global_config.max_requests
+                )
+                
+                info = {
+                    'type': limit_type.value,
+                    'current_requests': request_count,
+                    'limit': config.max_requests,
+                    'window_seconds': config.window_seconds,
+                    'global_requests': global_count,
+                    'global_limit': global_config.max_requests,
+                    'burst_allowed': burst_used,
+                    'using_redis7': True
+                }
+                
+                return (allowed, retry_after if not allowed else None, info)
+            except Exception as e:
+                logger.warning(f"Redis 7 function failed, falling back: {e}")
+        
+        # Fallback to traditional implementation
+        window_start = now - config.window_seconds
+        
+        # Use pipeline for better performance
+        pipe = self.redis_client.pipeline()
+        pipe.zremrangebyscore(key, 0, window_start)
+        pipe.zcard(key)
+        pipe.zremrangebyscore(global_key, 0, now - global_config.window_seconds)
+        pipe.zcard(global_key)
+        results = pipe.execute()
+        
+        request_count = results[1]
+        global_count = results[3]
         
         # Check if under limits
         under_specific_limit = request_count < config.max_requests
@@ -144,11 +180,12 @@ class DestinationRateLimiter:
         
         if allowed:
             # Add request to windows
-            self.redis_client.zadd(key, {str(now): now})
-            self.redis_client.expire(key, config.window_seconds * 2)
-            
-            self.redis_client.zadd(global_key, {str(now): now})
-            self.redis_client.expire(global_key, global_config.window_seconds * 2)
+            pipe = self.redis_client.pipeline()
+            pipe.zadd(key, {str(now): now})
+            pipe.expire(key, config.window_seconds * 2)
+            pipe.zadd(global_key, {str(now): now})
+            pipe.expire(global_key, global_config.window_seconds * 2)
+            pipe.execute()
             
             retry_after = None
         else:
@@ -174,7 +211,8 @@ class DestinationRateLimiter:
             'window_seconds': config.window_seconds,
             'global_requests': global_count,
             'global_limit': global_config.max_requests,
-            'burst_allowed': allow_burst
+            'burst_allowed': allow_burst,
+            'using_redis7': False
         }
         
         return allowed, retry_after, info
