@@ -38,7 +38,7 @@ def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, 
     with current_app.app_context():
         session = get_task_session()
         with patch_db_session(session):
-            reply = session.query(PostReply).query.filter_by(id=reply_id).one()
+            reply = session.query(PostReply).filter_by(id=reply_id).one()
             cache.delete_memoized(recently_upvoted_post_replies, user_id)
             cache.delete_memoized(recently_downvoted_post_replies, user_id)
             if federate:
