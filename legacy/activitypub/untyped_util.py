@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from io import BytesIO
 from json import JSONDecodeError
 from random import randint
-from typing import Union, Tuple, List, Dict, Any, Optional, Literal, TypedDict
+from typing import Union, Tuple, List
 from urllib.parse import urlparse, parse_qs
 
 import arrow
@@ -38,70 +38,6 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     patch_db_session
 
 
-# ActivityPub object type definitions
-class ActorObject(TypedDict, total=False):
-    """ActivityPub Actor object"""
-    id: str
-    type: Literal["Person", "Group", "Service", "Application", "Organization"]
-    inbox: str
-    outbox: str
-    followers: str
-    following: str
-    liked: str
-    publicKey: Dict[str, str]
-    preferredUsername: str
-    name: Optional[str]
-    summary: Optional[str]
-    icon: Optional[Dict[str, str]]
-    image: Optional[Dict[str, str]]
-    url: Optional[str]
-    manuallyApprovesFollowers: bool
-    discoverable: bool
-    published: Optional[str]
-    updated: Optional[str]
-
-
-class NoteObject(TypedDict, total=False):
-    """ActivityPub Note/Article object"""
-    id: str
-    type: Literal["Note", "Article", "Page", "Question"]
-    attributedTo: str
-    to: List[str]
-    cc: List[str]
-    inReplyTo: Optional[str]
-    content: str
-    contentMap: Optional[Dict[str, str]]
-    summary: Optional[str]
-    sensitive: bool
-    attachment: Optional[List[Dict[str, Any]]]
-    tag: Optional[List[Dict[str, Any]]]
-    published: str
-    updated: Optional[str]
-    url: Optional[str]
-
-
-class CreateActivity(TypedDict):
-    """Create activity"""
-    id: str
-    type: Literal["Create"]
-    actor: str
-    object: Union[NoteObject, str]
-    to: List[str]
-    cc: List[str]
-    published: str
-
-
-class AnnounceActivity(TypedDict):
-    """Announce (boost/share) activity"""
-    id: str
-    type: Literal["Announce"]
-    actor: str
-    object: Union[str, Dict[str, Any]]
-    to: List[str]
-    cc: List[str]
-    published: str
-
-
 def public_key() -> str:
     """Get or generate public key for ActivityPub signing"""
     from pathlib import Path
@@ -119,62 +55,53 @@ def public_key() -> str:
     return public_key_content.replace('\n', '\\n')
 
 
-def community_members(community_id: int) -> int:
-    """Get count of active members in a community"""
-    sql = '''SELECT COUNT(id) as c FROM "user" as u 
-    INNER JOIN community_member cm ON u.id = cm.user_id 
-    WHERE u.banned is false AND u.deleted is false AND cm.is_banned is false AND cm.community_id = :community_id'''
-    return db.session.execute(text(sql), {'community_id': community_id}).scalar() or 0
+def community_members(community_id):
+    sql = 'SELECT COUNT(id) as c FROM "user" as u '
+    sql += 'INNER JOIN community_member cm on u.id = cm.user_id '
+    sql += 'WHERE u.banned is false AND u.deleted is false AND cm.is_banned is false and cm.community_id = :community_id'
+    return db.session.execute(text(sql), {'community_id': community_id}).scalar()
 
 
-def users_total() -> int:
-    """Get total count of local verified users"""
+def users_total():
     return db.session.execute(text(
-        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar() or 0
+        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
-def active_half_year() -> int:
-    """Get count of users active in last 6 months"""
+def active_half_year():
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar()
 
 
-def active_month() -> int:
-    """Get count of users active in last month"""
+def active_month():
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar()
 
 
-def active_week() -> int:
-    """Get count of users active in last week"""
+def active_week():
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar()
 
 
-def active_day() -> int:
-    """Get count of users active in last day"""
+def active_day():
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar()
 
 
-def local_posts() -> int:
-    """Get count of local posts"""
+def local_posts():
     return db.session.execute(
-        text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = 1 AND deleted is false')).scalar() or 0
+        text('SELECT COUNT(id) as c FROM "post" WHERE instance_id = 1 AND deleted is false')).scalar()
 
 
-def local_comments() -> int:
-    """Get count of local comments"""
+def local_comments():
     return db.session.execute(
-        text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1 and deleted is false')).scalar() or 0
+        text('SELECT COUNT(id) as c FROM "post_reply" WHERE instance_id = 1 and deleted is false')).scalar()
 
 
-def local_communities() -> int:
-    """Get count of local communities"""
-    return db.session.execute(text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')).scalar() or 0
+def local_communities():
+    return db.session.execute(text('SELECT COUNT(id) as c FROM "community" WHERE instance_id = 1')).scalar()
 
 
-def post_to_activity(post: Post, community: Community) -> Dict[str, Any]:
+def post_to_activity(post: Post, community: Community):
     # local PieFed posts do not have a create or announce id
     create_id = post.ap_create_id if post.ap_create_id else f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
     announce_id = post.ap_announce_id if post.ap_announce_id else f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
@@ -425,7 +352,7 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
         return new_flair
 
 
-def extract_domain_and_actor(url_string: str) -> Tuple[str, str]:
+def extract_domain_and_actor(url_string: str):
     # Parse the URL
     if url_string.endswith('/'):  # WordPress
         url_string = url_string[:-1]

@@ -1,6 +1,6 @@
 import random
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Dict, Optional, Union, Tuple
 from unicodedata import normalize
 from urllib.parse import urlsplit
 
@@ -25,11 +25,11 @@ def random_token(length=6) -> str:
     return "".join([random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for x in range(length)])
 
 
-def normalize_utf(username):
+def normalize_utf(username: str) -> str:
     return normalize('NFKC', username)
 
 
-def ip2location(ip: str):
+def ip2location(ip: str) -> Dict[str, Any]:
     """ city, region and country for the requester, using the ipinfo.io service """
     if ip is None or ip == '':
         return {}
@@ -66,7 +66,7 @@ def get_country(ip: str, fallback: Any = '') -> str:
     return ip2location(ip).get('country', fallback)
 
 
-def no_admins_logged_in_recently():
+def no_admins_logged_in_recently() -> bool:
     a_week_ago = utcnow() - timedelta(days=7)
     for user in Site.admins():
         if user.last_seen > a_week_ago:
@@ -79,7 +79,7 @@ def no_admins_logged_in_recently():
     return True
 
 
-def create_user_application(user: User, registration_answer: str):
+def create_user_application(user: User, registration_answer: str) -> UserRegistration:
     application = UserRegistration(user_id=user.id, answer='Signed in with Google')
     db.session.add(application)
     targets_data = {'application_id': application.id, 'user_id': user.id}
@@ -95,7 +95,7 @@ def create_user_application(user: User, registration_answer: str):
     db.session.commit()
 
 
-def notify_admins_of_registration(application):
+def notify_admins_of_registration(application: UserRegistration) -> None:
     """Notify admins when a registration application is ready for review"""
     targets_data = {'gen': '0', 'application_id': application.id, 'user_id': application.user_id}
     for admin in Site.admins():
@@ -108,7 +108,7 @@ def notify_admins_of_registration(application):
         db.session.add(notify)
 
 
-def create_registration_application(user, answer):
+def create_registration_application(user: User, answer: str) -> None:
     """Create a UserRegistration application with proper status based on email verification"""
     # Set status to -1 if email verification needed, 0 if not
     status = -1 if get_setting('email_verification', True) and not user.verified else 0
@@ -121,12 +121,12 @@ def create_registration_application(user, answer):
 
     return application
 
-def handle_abandoned_open_instance():
+def handle_abandoned_open_instance() -> bool:
     if g.site.registration_mode == "Open" and no_admins_logged_in_recently():
         g.site.registration_mode = "Closed"
 
 
-def process_registration_form(form):
+def process_registration_form(form: Any) -> Optional[Union[str, User]]:
     disallowed_usernames = ["admin"]
     ip = ip_address()
     country = get_country(ip)
@@ -147,7 +147,7 @@ def process_registration_form(form):
     return register_new_user(form, ip, country)
 
 
-def is_invalid_email_or_username(form, disallowed_usernames):
+def is_invalid_email_or_username(form: Any, disallowed_usernames: str) -> bool:
     if form.email.data.strip():
         return False
 
@@ -162,20 +162,20 @@ def is_invalid_email_or_username(form, disallowed_usernames):
     return False
 
 
-def contains_banned_username_patterns(username):
+def contains_banned_username_patterns(username: str) -> bool:
     if "88" in username:
         flash(_("Sorry, this username pattern is not allowed."), "error")
         return True
     return False
 
 
-def redirect_with_session_cookie(route):
+def redirect_with_session_cookie(route: str) -> Any:
     response = make_response(redirect(url_for(route)))
     response.set_cookie("sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30))
     return response
 
 
-def is_restricted_by_referrer():
+def is_restricted_by_referrer() -> bool:
     for referrer in blocked_referrers():
         if referrer in session.get("Referer", ""):
             flash(_("Registration not allowed based on your referrer."), "error")
@@ -183,7 +183,7 @@ def is_restricted_by_referrer():
     return False
 
 
-def is_country_blocked(country):
+def is_country_blocked(country: str) -> bool:
     if not country:
         return False
 
@@ -194,7 +194,7 @@ def is_country_blocked(country):
     )
 
 
-def register_new_user(form, ip, country):
+def register_new_user(form: Any, ip: str, country: str) -> Union[str, User]:
     verification_token = random_token(16)
     form.user_name.data = form.user_name.data.strip()
     normalize_username(form)
@@ -216,7 +216,7 @@ def register_new_user(form, ip, country):
     return redirect(url_for("auth.trump_musk"))
 
 
-def normalize_username(form):
+def normalize_username(form: Any) -> None:
     before_normalize = form.user_name.data
     form.user_name.data = normalize_utf(form.user_name.data)
     if before_normalize != form.user_name.data:
@@ -229,7 +229,7 @@ def normalize_username(form):
         )
 
 
-def create_new_user(form, ip, country, verification_token):
+def create_new_user(form: Any, ip: str, country: str, verification_token: str) -> User:
     user = User(
         user_name=form.user_name.data,
         title=form.user_name.data,
@@ -254,28 +254,28 @@ def create_new_user(form, ip, country, verification_token):
     return user
 
 
-def get_font_preference():
+def get_font_preference() -> Optional[str]:
     if "Windows" in request.user_agent.string:
         return "inter"  # Default to "Inter" font for better Windows rendering
     return ""
 
 
-def requires_email_verification(user):
+def requires_email_verification(user: User) -> bool:
     return get_setting("email_verification", True) and not user.verified
 
 
-def send_email_verification(user):
+def send_email_verification(user: User) -> None:
     send_verification_email(user)
     if current_app.debug:
         current_app.logger.info("Verify account:" +
                                 url_for("auth.verify_email", token=user.verification_token, _external=True))
 
 
-def requires_approval(user):
+def requires_approval(user: User) -> bool:
     return g.site.registration_mode == "RequireApplication" and g.site.application_question
 
 
-def handle_user_application(user, form):
+def handle_user_application(user: User, form: Any) -> None:
     application = create_registration_application(user, form.question.data)
     db.session.commit()
 
@@ -291,7 +291,7 @@ def handle_user_application(user, form):
     )
 
 
-def finalize_user_registration(user, form):
+def finalize_user_registration(user: User, form: Any) -> None:
     if user.verified and not user.waiting_for_approval():
         finalize_user_setup(user)
         try:
@@ -301,7 +301,7 @@ def finalize_user_registration(user, form):
         login_user(user, remember=True)
 
 
-def render_registration_form(form):
+def render_registration_form(form: Any) -> str:
     if g.site.registration_mode == "RequireApplication" and g.site.application_question:
         form.question.label = Label("question", markdown_to_html(g.site.application_question))
     if g.site.tos_url is None or not g.site.tos_url.strip():
@@ -310,14 +310,14 @@ def render_registration_form(form):
     return render_template("auth/register.html", title=_("Register"), form=form, site=g.site, google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"], mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"], discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
-def redirect_next_page():
+def redirect_next_page() -> Any:
     next_page = request.args.get("next")
     if not next_page or urlsplit(next_page).netloc != "":
         next_page = url_for("main.index")
     return redirect(next_page)
 
 
-def process_login(form):
+def process_login(form: Any) -> Optional[str]:
     ip = ip_address()
     country = get_country(ip)
     user = find_user(form)
@@ -332,7 +332,7 @@ def process_login(form):
     return log_user_in(user, form, ip, country)
 
 
-def find_user(form):
+def find_user(form: Any) -> Optional[User]:
     username = form.user_name.data.strip()
     user = (
         User.query.filter(func.lower(User.user_name) == func.lower(username))
@@ -349,7 +349,7 @@ def find_user(form):
     return user
 
 
-def validate_user_login(user, password, ip):
+def validate_user_login(user: User, password: str, ip: str) -> bool:
     if user.deleted:
         flash(_("No account exists with that user name."), "error")
         return False
@@ -372,7 +372,7 @@ def validate_user_login(user, password, ip):
     return True
 
 
-def handle_invalid_password(user):
+def handle_invalid_password(user: User) -> None:
     if user.password_hash is None:
         message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
         flash(message, "error")
@@ -380,7 +380,7 @@ def handle_invalid_password(user):
         flash(_("Invalid password"), "error")
 
 
-def handle_banned_user(user, ip):
+def handle_banned_user(user: User, ip: str) -> None:
     flash(_("You have been banned."), "error")
     response = make_response(redirect(url_for("auth.login")))
 
@@ -394,7 +394,7 @@ def handle_banned_user(user, ip):
     return response
 
 
-def log_user_in(user, form, ip, country):
+def log_user_in(user: User, form: Any, ip: str, country: str) -> None:
     login_user(user, remember=True)
     update_user_session(user, form, ip, country)
     sync_user_with_ldap(user, form.password.data)
@@ -405,7 +405,7 @@ def log_user_in(user, form, ip, country):
     return response
 
 
-def update_user_session(user, form, ip, country):
+def update_user_session(user: User, form: Any, ip: str, country: str) -> None:
     user.last_seen = utcnow()
     user.ip_address = ip
     if user.timezone is None:
@@ -414,14 +414,14 @@ def update_user_session(user, form, ip, country):
     db.session.commit()
 
 
-def sync_user_with_ldap(user, password):
+def sync_user_with_ldap(user: User, password: str) -> None:
     try:
         sync_user_to_ldap(user.user_name, user.email, password.strip())
     except Exception as e:
         current_app.logger.error(f"LDAP sync failed for user {user.user_name}: {e}")
 
 
-def determine_next_page():
+def determine_next_page() -> str:
     next_page = request.args.get("next")
     if not next_page or urlsplit(next_page).netloc != "":
         next_page = url_for(
@@ -430,12 +430,12 @@ def determine_next_page():
     return next_page
 
 
-def configure_bandwidth_cookies(response, low_bandwidth_mode):
+def configure_bandwidth_cookies(response: Any, low_bandwidth_mode: bool) -> Any:
     mode = "1" if low_bandwidth_mode else "0"
     response.set_cookie("low_bandwidth", mode, expires=datetime(year=2099, month=12, day=30))
 
 
-def render_login_form(form):
+def render_login_form(form: Any) -> str:
     return render_template("auth/login.html", title=_("Login"), form=form,
                            google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
                            mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],

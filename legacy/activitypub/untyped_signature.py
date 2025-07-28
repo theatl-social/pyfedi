@@ -34,7 +34,7 @@ import json
 import time
 from datetime import datetime, timedelta
 from email.utils import formatdate
-from typing import Literal, TypedDict, cast, Optional, Dict, Any, NamedTuple, Union, Tuple
+from typing import Literal, TypedDict, cast
 from urllib.parse import urlparse
 
 import arrow
@@ -54,44 +54,7 @@ from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMem
 from app.utils import get_task_session
 
 
-def generate_rsa_keypair() -> KeyPair:
-    """Generate an RSA keypair (wrapper for RsaKeys.generate_keypair)"""
-    return RsaKeys.generate_keypair()
-
-# Type aliases
-KeyId = str
-Algorithm = Literal["rsa-sha256", "hs2019"]
-HttpMethod = Literal["get", "post", "GET", "POST"]
-SignatureBytes = bytes
-Base64String = str
-PrivateKey = str
-PublicKey = str
-
-# Named tuple for keypair
-class KeyPair(NamedTuple):
-    """RSA key pair"""
-    private_key: PrivateKey
-    public_key: PublicKey
-
-# TypedDict definitions
-class HttpSignatureDetails(TypedDict):
-    """Details of an HTTP signature"""
-    algorithm: Algorithm
-    headers: list[str]
-    signature: SignatureBytes
-    keyid: KeyId
-
-class LDSignatureOptions(TypedDict):
-    """JSON-LD signature options"""
-    context: Union[str, list[str], Dict[str, Any]]
-    creator: str
-    created: str
-    signatureValue: Optional[str]
-    type: Optional[str]
-
-
-def http_date(epoch_seconds: Optional[float] = None) -> str:
-    """Format a timestamp as an HTTP date string"""
+def http_date(epoch_seconds=None):
     if epoch_seconds is None:
         epoch_seconds = arrow.utcnow().timestamp()
     return formatdate(epoch_seconds, usegmt=True)  # takahe uses formatdate so let's try that
@@ -106,8 +69,7 @@ def format_ld_date(value: datetime) -> str:
     return f"{value.strftime(DATETIME_MS_FORMAT)[:-4]}Z"
 
 
-def parse_http_date(http_date_str: str) -> datetime:
-    """Parse an HTTP date string to a datetime object"""
+def parse_http_date(http_date_str):
     parsed_date = arrow.get(http_date_str, 'ddd, DD MMM YYYY HH:mm:ss Z')
     return parsed_date.datetime
 
@@ -118,7 +80,7 @@ def parse_ld_date(value: str | None) -> datetime | None:
     return parser.isoparse(value).replace(microsecond=0)
 
 
-def send_post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str, key_id: str,
+def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                       content_type: str = "application/activity+json",
                       method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     current_app.logger.info(f'send_post_request called: uri={uri}, body_type={body.get("type") if body else "None"}, debug={current_app.debug}')
@@ -151,9 +113,9 @@ def send_post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str
             loop.close()
 
 
-def post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str, key_id: str,
+def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                  content_type: str = "application/activity+json",
-                 method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0) -> None:
+                 method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     session = get_task_session()
     try:
         current_app.logger.info(f'post_request task started: uri={uri}, body_type={body.get("type") if body else "None"}')
@@ -231,7 +193,7 @@ def post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str, key
 
 
 def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",
-                       method: Literal["get", "post"] = "get", timeout: int = 10) -> httpx.Response:
+                       method: Literal["get", "post"] = "get", timeout: int = 10, ):
     result = HttpSignature.signed_request(uri, None, private_key, key_id, content_type, method, timeout)
     return result
 
@@ -254,12 +216,9 @@ class VerificationFormatError(VerificationError):
 
 class RsaKeys:
     @classmethod
-    def generate_keypair(cls) -> KeyPair:
+    def generate_keypair(cls) -> tuple[str, str]:
         """
         Generates a new RSA keypair
-        
-        Returns:
-            KeyPair: Named tuple with private_key and public_key
         """
         private_key = rsa.generate_private_key(
             public_exponent=65537,
@@ -278,11 +237,11 @@ class RsaKeys:
             )
             .decode("ascii")
         )
-        return KeyPair(private_key_serialized, public_key_serialized)
+        return private_key_serialized, public_key_serialized
 
 
 # Get a piece of the signature string. Similar to parse_signature except unencumbered by needing to return a HttpSignatureDetails
-def signature_part(signature: str, key: str) -> str:
+def signature_part(signature, key):
     parts = signature.split(',')
     for part in parts:
         part_parts = part.split('=')
@@ -298,7 +257,7 @@ class HttpSignature:
     """
 
     @classmethod
-    def calculate_digest(cls, data: bytes, algorithm: str = "sha-256") -> str:
+    def calculate_digest(cls, data, algorithm="sha-256") -> str:
         """
         Calculates the digest header value for a given HTTP body
         """
@@ -353,7 +312,7 @@ class HttpSignature:
         return signature_details
 
     @classmethod
-    def compile_signature(cls, details: HttpSignatureDetails) -> str:
+    def compile_signature(cls, details: "HttpSignatureDetails") -> str:
         value = f'keyId="{details["keyid"]}",headers="'
         value += " ".join(h.lower() for h in details["headers"])
         value += '",signature="'
@@ -367,7 +326,7 @@ class HttpSignature:
             signature: bytes,
             cleartext: str,
             public_key: str,
-    ) -> None:
+    ):
         public_key_instance: rsa.RSAPublicKey = cast(
             rsa.RSAPublicKey,
             serialization.load_pem_public_key(public_key.encode("ascii")),
@@ -383,7 +342,7 @@ class HttpSignature:
             raise VerificationError("Signature mismatch")
 
     @classmethod
-    def verify_request(cls, request: Request, public_key: str, skip_date: bool = False) -> None:
+    def verify_request(cls, request: Request, public_key, skip_date=False):
         """
         Verifies that the request has a valid signature for its body
         """
@@ -667,7 +626,7 @@ class LDSignature:
         return digest.finalize().hex().encode("ascii")
 
 
-def default_context() -> Union[list[str], list[Union[str, Dict[str, Any]]]]:
+def default_context():
     context = [
         "https://www.w3.org/ns/activitystreams",
         "https://w3id.org/security/v1",

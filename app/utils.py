@@ -14,11 +14,30 @@ from datetime import datetime, timedelta, date
 from functools import wraps, lru_cache
 from json import JSONDecodeError
 from time import sleep
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, NamedTuple, Dict, Any, Union, TypedDict
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import available_timezones
 
 import flask
+
+
+# NamedTuple definitions for function returns
+class StashedContent(NamedTuple):
+    """Result of stashing code/links from text"""
+    stashed_items: List[str]
+    processed_text: str
+
+
+class LanguageChoice(NamedTuple):
+    """Language choice for forms"""
+    code: str
+    name: str
+
+
+class FeedTreeNode(TypedDict):
+    """Node in a feed tree structure"""
+    feed: 'Feed'  # Forward reference to Feed model
+    children: List['FeedTreeNode']
 import httpx
 import jwt
 import markdown2
@@ -700,7 +719,7 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     return link
 
 
-def stash_code_html(text: str) -> tuple[list, str]:
+def stash_code_html(text: str) -> StashedContent:
     code_snippets = []
 
     def store_code(match):
@@ -709,10 +728,10 @@ def stash_code_html(text: str) -> tuple[list, str]:
     
     text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
 
-    return (code_snippets, text)
+    return StashedContent(code_snippets, text)
 
 
-def stash_code_md(text: str) -> tuple[list, str]:
+def stash_code_md(text: str) -> StashedContent:
     code_snippets = []
 
     def store_code(match):
@@ -724,7 +743,7 @@ def stash_code_md(text: str) -> tuple[list, str]:
     # Inline code (`...`)
     text = re.sub(r'`[^`\n]+`', store_code, text)
 
-    return (code_snippets, text)
+    return StashedContent(code_snippets, text)
 
 
 def pop_code(code_snippets: list, text: str) -> str:
@@ -734,7 +753,7 @@ def pop_code(code_snippets: list, text: str) -> str:
     return text
 
 
-def stash_link_html(text: str) -> tuple[list, str]:
+def stash_link_html(text: str) -> StashedContent:
     link_snippets = []
 
     def store_link(match):
@@ -1620,7 +1639,7 @@ def topic_tree() -> List:
 
 
 # feeds, in a tree
-def feed_tree(user_id) -> List[dict]:
+def feed_tree(user_id: int) -> List[FeedTreeNode]:
     feeds = Feed.query.filter(Feed.user_id == user_id).order_by(Feed.name)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
@@ -1634,7 +1653,7 @@ def feed_tree(user_id) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-def feed_tree_public() -> List[dict]:
+def feed_tree_public() -> List[FeedTreeNode]:
     feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
@@ -2071,7 +2090,8 @@ def site_language_id(site=None):
         return english.id if english else None
 
 
-def read_language_choices() -> List[tuple]:
+def read_language_choices() -> List[Tuple[int, str]]:
+    """Get language choices for forms as list of (id, name) tuples"""
     result = []
     for language in Language.query.order_by(Language.name).all():
         result.append((language.id, language.name))

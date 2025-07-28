@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 from time import sleep
 from random import randint
-from typing import List
+from typing import List, Optional, Dict, Any, Union, Tuple
 
 import httpx
 from PIL import Image, ImageOps
@@ -81,7 +81,7 @@ def search_for_community(address: str) -> Community | None:
         return None
 
 
-def retrieve_mods_and_backfill(community_id: int, server, name, community_json=None):
+def retrieve_mods_and_backfill(community_id: int, server: str, name: str, community_json: Optional[Dict[str, Any]] = None) -> None:
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -300,7 +300,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
             session.close()
 
 
-def actor_to_community(actor) -> Community:
+def actor_to_community(actor: Dict[str, Any]) -> Community:
     actor = actor.strip()
     if '@' in actor:
         community = Community.query.filter_by(banned=False, ap_id=actor).first()
@@ -309,7 +309,7 @@ def actor_to_community(actor) -> Community:
     return community
 
 
-def end_poll_date(end_choice):
+def end_poll_date(end_choice: int) -> datetime:
     delta_mapping = {
         '30m': timedelta(minutes=30),
         '1h': timedelta(hours=1),
@@ -364,14 +364,14 @@ def flair_from_form(tag_ids) -> List[CommunityFlair]:
     return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
 
 
-def delete_post_from_community(post_id):
+def delete_post_from_community(post_id: int) -> bool:
     if current_app.debug:
         delete_post_from_community_task(post_id)
     else:
         delete_post_from_community_task.delay(post_id)
 
 
-def delete_post_from_community_task(post_id):
+def delete_post_from_community_task(post_id: int) -> None:
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -424,14 +424,14 @@ def delete_post_from_community_task(post_id):
             session.close()
 
 
-def delete_post_reply_from_community(post_reply_id):
+def delete_post_reply_from_community(post_reply_id: int) -> bool:
     if current_app.debug:
         delete_post_reply_from_community_task(post_reply_id)
     else:
         delete_post_reply_from_community_task.delay(post_reply_id)
 
 
-def delete_post_reply_from_community_task(post_reply_id):
+def delete_post_reply_from_community_task(post_reply_id: int) -> None:
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -487,7 +487,7 @@ def delete_post_reply_from_community_task(post_reply_id):
             session.close()
 
 
-def remove_old_file(file_id):
+def remove_old_file(file_id: int) -> None:
     remove_file = File.query.get(file_id)
     remove_file.delete_from_disk()
 
@@ -737,14 +737,14 @@ def save_banner_file(banner_file, directory='communities') -> File:
 
 
 # NB this always signs POSTs as the community so is only suitable for Announce activities
-def send_to_remote_instance(instance_id: int, community_id: int, payload):
+def send_to_remote_instance(instance_id: int, community_id: int, payload: Dict[str, Any]) -> None:
     if current_app.debug:
         send_to_remote_instance_task(instance_id, community_id, payload)
     else:
         send_to_remote_instance_task.delay(instance_id, community_id, payload)
 
 
-def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
+def send_to_remote_instance_task(instance_id: int, community_id: int, payload: Dict[str, Any]) -> None:
     session = get_task_session()
     try:
         community: Community = session.query(Community).get(community_id)
@@ -759,7 +759,7 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
         session.close()
 
 
-def community_in_list(community_id, community_list):
+def community_in_list(community_id: int, community_list: List[Community]) -> bool:
     for tup in community_list:
         if community_id == tup[0]:
             return True
@@ -782,7 +782,7 @@ def find_potential_moderators(search: str) -> List[User]:
           order_by(desc(User.reputation)).all()
 
 
-def hashtags_used_in_community(community_id: int, content_filters):
+def hashtags_used_in_community(community_id: int, content_filters: Optional[str]) -> List[Tuple[str, int]]:
     tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
     FROM "tag" AS t
     INNER JOIN post_tag pt ON t.id = pt.tag_id
@@ -803,7 +803,7 @@ def hashtags_used_in_community(community_id: int, content_filters):
     return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
-def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
+def normalize_font_size(tags: List[dict], min_size: int = 12, max_size: int = 24) -> List[dict]:
     # Add a font size to each dict, based on the number of times each tag is used (the post count aka 'pc')
     if len(tags) == 0:
         return []
