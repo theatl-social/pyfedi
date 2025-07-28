@@ -82,6 +82,8 @@ def get_comment_branch(community: Community, post_id: int, comment_id: int, sort
         comments = comments.order_by(desc(PostReply.score))
     elif sort_by == 'new':
         comments = comments.order_by(desc(PostReply.posted_at))
+    elif sort_by == 'old':
+        comments = comments.order_by(asc(PostReply.posted_at))
 
     comments_dict = {comment.id: {'comment': comment, 'replies': []} for comment in comments.all()}
 

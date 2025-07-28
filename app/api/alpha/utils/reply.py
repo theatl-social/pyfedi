@@ -174,8 +174,6 @@ def get_post_reply_list(auth, data, user_id=None):
             post_id = parent.post_id
         post = Post.query.get(post_id)
         replies = get_comment_branch(post.community, post_id, parent.id, sort.lower(), g.user if hasattr(g, 'user') else None)
-        if len(replies) > 0:
-            replies = replies[0]['replies']
     else:
         post = Post.query.get(post_id)
         replies = post_replies(post.community, post_id, sort.lower(), g.user if hasattr(g, 'user') else None)
