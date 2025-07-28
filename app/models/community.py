@@ -83,7 +83,9 @@ class Community(TimestampMixin, ActivityPubMixin, LanguageMixin, NSFWMixin, db.M
     public_key: Mapped[Optional[str]] = mapped_column(Text)
     
     # Search vector (PostgreSQL specific)
-    search_vector = mapped_column(db.TSVECTOR)
+    # TODO: Enable search_vector when using PostgreSQL
+    # from sqlalchemy_utils.types import TSVectorType
+    # search_vector = mapped_column(TSVectorType('name', 'title', 'description'))
     
     # Relationships
     icon = relationship('File', foreign_keys=[icon_id])

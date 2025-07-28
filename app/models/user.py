@@ -12,7 +12,7 @@ from email_validator import validate_email, EmailNotValidError
 
 from app import db, cache
 from app.models.base import TimestampMixin, ActivityPubMixin, LanguageMixin, UserId, CommunityId, InstanceId
-from app.utils import LanguageTool, markdown_to_html, html_to_text, remove_tracking_from_link
+from app.utils import markdown_to_html, html_to_text, remove_tracking_from_link
 
 if TYPE_CHECKING:
     from app.models.community import Community, CommunityMember, CommunityBan

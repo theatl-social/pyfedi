@@ -24,13 +24,13 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache
 from app.activitypub.signature import signed_get_request
 from app.constants import *
-from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, utcnow, \
+from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
     Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
-    shorten_string, fixup_url, \
+    shorten_string, fixup_url, utcnow, \
     microblog_content_to_title, is_video_url, \
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \

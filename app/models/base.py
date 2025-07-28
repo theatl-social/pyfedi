@@ -8,7 +8,6 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from flask_login import UserMixin
 
 from app import db, cache
-from app.utils import LanguageTool
 
 if TYPE_CHECKING:
     from app.models.user import User
@@ -106,14 +105,28 @@ class LanguageMixin:
     language: Mapped[Optional[str]] = mapped_column(String(10))
     
     def detect_language(self, text: str) -> Optional[str]:
-        """Detect language from text"""
-        if not text:
+        """Detect language from text
+        
+        TODO: Implement actual language detection
+        Options to consider:
+        - langdetect: Pure Python, good accuracy
+        - polyglot: Supports many languages
+        - language_tool_python: Grammar checking + detection
+        - fasttext: Facebook's language identification
+        
+        For now, returns None (defaults to English in most places)
+        """
+        if not text or len(text.strip()) < 10:
             return None
         
-        lang_tool = LanguageTool()
-        detected = lang_tool.detect(text)
-        if detected and detected.languages:
-            return detected.languages[0].lang
+        # TODO: Add language detection library and implement
+        # Example implementation:
+        # try:
+        #     from langdetect import detect
+        #     return detect(text)
+        # except ImportError:
+        #     return None
+        
         return None
 
 

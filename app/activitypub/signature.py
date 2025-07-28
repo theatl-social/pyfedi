@@ -50,7 +50,8 @@ from sqlalchemy import text
 
 from app import db, httpx_client
 from app.constants import DATETIME_MS_FORMAT
-from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
+from app.models import ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
+from app.utils import utcnow
 from app.utils import get_task_session
 
 

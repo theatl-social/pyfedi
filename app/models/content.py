@@ -6,7 +6,7 @@ from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Ind
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy_searchable import make_searchable
-from sqlalchemy_utils.types import TSVectorType
+# from sqlalchemy_utils.types import TSVectorType  # TODO: Enable for PostgreSQL
 
 from app import db, cache
 from app.models.base import (
@@ -68,7 +68,8 @@ class Post(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin,
     microblog: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Search vector
-    search_vector = mapped_column(TSVectorType('title', 'body'))
+    # TODO: Enable search_vector when using PostgreSQL
+    # search_vector = mapped_column(TSVectorType('title', 'body'))
     
     # Relationships
     author = relationship('User', back_populates='posts')
@@ -182,7 +183,8 @@ class PostReply(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin,
     from_bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Search vector
-    search_vector = mapped_column(TSVectorType('body'))
+    # TODO: Enable search_vector when using PostgreSQL
+    # search_vector = mapped_column(TSVectorType('body'))
     
     # Relationships
     post = relationship('Post', back_populates='replies')

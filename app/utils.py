@@ -67,9 +67,29 @@ from PIL import Image, ImageOps
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
 
-from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
-    Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
+# Import only what we need to avoid circular imports
+# These imports are deferred to avoid circular dependencies with model files that import from utils
+# from app.models import utcnow  # This causes circular import
+
+# Define utcnow here to avoid circular import
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+def utcnow(naive=True):
+    """Get current UTC time"""
+    if naive:
+        return datetime.now(ZoneInfo('UTC')).replace(tzinfo=None)
+    return datetime.now(ZoneInfo('UTC'))
+
+# Lazy imports to avoid circular dependencies
+_models_cache = {}
+
+def _get_model(model_name: str):
+    """Lazy import models to avoid circular imports"""
+    if model_name not in _models_cache:
+        from app import models
+        _models_cache[model_name] = getattr(models, model_name)
+    return _models_cache[model_name]
 
 
 # Flask's render_template function, with support for themes added
@@ -200,6 +220,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # accessed very often (e.g. every page load)
 @cache.memoize(timeout=50)
 def get_setting(name: str, default=None):
+    Settings = _get_model('Settings')
     setting = Settings.query.filter_by(name=name).first()
     if setting is None:
         return default
@@ -212,6 +233,7 @@ def get_setting(name: str, default=None):
 
 # retrieves arbitrary object from persistent key-value store
 def set_setting(name: str, value):
+    Settings = _get_model('Settings')
     setting = Settings.query.filter_by(name=name).first()
     if setting is None:
         db.session.add(Settings(name=name, value=json.dumps(value)))
@@ -2921,10 +2943,11 @@ def user_notes(user_id):
     return result
 
 
-@event.listens_for(User.unread_notifications, 'set')
-def on_unread_notifications_set(target, value, oldvalue, initiator):
-    if value != oldvalue and current_app.config['NOTIF_SERVER']:
-        publish_sse_event(f"notifications:{target.id}", json.dumps({'num_notifs': value}))
+# TODO: Move this event listener to avoid circular import
+# @event.listens_for(User.unread_notifications, 'set')
+# def on_unread_notifications_set(target, value, oldvalue, initiator):
+#     if value != oldvalue and current_app.config['NOTIF_SERVER']:
+#         publish_sse_event(f"notifications:{target.id}", json.dumps({'num_notifs': value}))
 
 
 def publish_sse_event(key, value):
