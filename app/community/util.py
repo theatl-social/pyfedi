@@ -473,8 +473,8 @@ def delete_post_reply_from_community_task(post_reply_id, user_id):
                         }
 
                         for instance in post.community.following_instances():
-                            if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(
-                                    instance.domain):
+                            if instance.inbox and not post_reply.author.has_blocked_instance(instance.id) \
+                                    and not instance_banned(instance.domain):
                                 send_to_remote_instance(instance.id, post.community.id, announce)
         except Exception:
             session.rollback()

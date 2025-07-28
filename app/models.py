@@ -1429,6 +1429,7 @@ class Post(db.Model):
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
     timezone = db.Column(db.String(30))
+    archived = db.Column(db.String(100))
     flair = db.relationship('CommunityFlair', lazy='joined', secondary=post_flair,
                             backref=db.backref('posts', lazy='dynamic'))
 

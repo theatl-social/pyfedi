@@ -33,7 +33,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities
+    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
@@ -679,7 +679,7 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    retrieve_mods_and_backfill(32, 'piefed.rimu.geek.nz', 'test2')
+    #archive_post(369)
     return 'Done'
     import json
     user_id = 1

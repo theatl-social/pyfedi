@@ -12,7 +12,7 @@ from app.utils import blocked_instances, blocked_users, is_video_hosting_site
 
 # replies to a post, in a tree, sorted by a variety of methods
 def post_replies(community: Community, post_id: int, sort_by: str, viewer: User) -> List[PostReply]:
-    comments = PostReply.query.filter_by(post_id=post_id)
+    comments = db.session.query(PostReply).filter_by(post_id=post_id)
     if viewer:
         instance_ids = blocked_instances(viewer.id)
         if instance_ids:
