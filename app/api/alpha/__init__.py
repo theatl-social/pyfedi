@@ -11,8 +11,16 @@ site_bp = ApiBlueprint(
     url_prefix="/api/alpha",
     description="",
 )
+
 misc_bp = ApiBlueprint(
     "Misc",
+    __name__,
+    url_prefix="/api/alpha",
+    description="",
+)
+
+comm_bp = ApiBlueprint(
+    "Community",
     __name__,
     url_prefix="/api/alpha",
     description="",
