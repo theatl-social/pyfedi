@@ -723,9 +723,10 @@ class Community(db.Model):
             return str(int(subscribers / 100) / 10) + "k"
     
     def notify_new_posts(self, user_id: int) -> bool:
-        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
-                                                                      NotificationSubscription.user_id == user_id,
-                                                                      NotificationSubscription.type == NOTIF_COMMUNITY).first()
+        existing_notification = db.session.query(NotificationSubscription).\
+            filter(NotificationSubscription.entity_id == self.id,
+                   NotificationSubscription.user_id == user_id,
+                   NotificationSubscription.type == NOTIF_COMMUNITY).first()
         return existing_notification is not None
 
     # ids of all the users who want to be notified when there is a post in this community
@@ -736,8 +737,8 @@ class Community(db.Model):
 
     # instances that have users which are members of this community. (excluding the current instance)
     def following_instances(self, include_dormant=False) -> List[Instance]:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember,
-                                                                                    CommunityMember.user_id == User.id)
+        instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,
+                                                                                                CommunityMember.user_id == User.id)
         instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
         if not include_dormant:
             instances = instances.filter(Instance.dormant == False)
@@ -745,7 +746,7 @@ class Community(db.Model):
         return instances.all()
 
     def has_followers_from_domain(self, domain: str) -> bool:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember,
+        instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,
                                                                                     CommunityMember.user_id == User.id)
         instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
         for instance in instances:
@@ -1260,11 +1261,11 @@ class User(UserMixin, db.Model):
         return self.created and self.created > utcnow() - timedelta(days=1)
 
     def has_blocked_instance(self, instance_id: int):
-        instance_block = InstanceBlock.query.filter_by(user_id=self.id, instance_id=instance_id).first()
+        instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id, instance_id=instance_id).first()
         return instance_block is not None
 
     def has_blocked_user(self, user_id: int):
-        existing_block = UserBlock.query.filter_by(blocker_id=self.id, blocked_id=user_id).first()
+        existing_block = db.session.query(UserBlock).filter_by(blocker_id=self.id, blocked_id=user_id).first()
         return existing_block is not None
 
     @staticmethod

@@ -29,7 +29,7 @@ def delete_reply(send_async, user_id, reply_id, reason=None):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                reply = PostReply.query.filter_by(id=reply_id).one()
+                reply = session.query(PostReply).filter_by(id=reply_id).one()
                 delete_object(user_id, reply, reason=reason, session=session)
         except Exception:
             session.rollback()
@@ -44,7 +44,7 @@ def restore_reply(send_async, user_id, reply_id, reason=None):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                reply = PostReply.query.filter_by(id=reply_id).one()
+                reply = session.query(PostReply).filter_by(id=reply_id).one()
                 delete_object(user_id, reply, is_restore=True, reason=reason, session=session)
         except Exception:
             session.rollback()
@@ -74,7 +74,7 @@ def restore_post(send_async, user_id, post_id, reason=None):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.filter_by(id=post_id).one()
+                post = session.query(Post).filter_by(id=post_id).one()
                 delete_object(user_id, post, is_post=True, is_restore=True, reason=reason, session=session)
         except Exception:
             session.rollback()
@@ -89,7 +89,7 @@ def delete_community(send_async, user_id, community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                community = Community.query.filter_by(id=community_id).one()
+                community = session.query(Community).filter_by(id=community_id).one()
                 delete_object(user_id, community, session=session)
         except Exception:
             session.rollback()
@@ -104,7 +104,7 @@ def restore_community(send_async, user_id, community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                community = Community.query.filter_by(id=community_id).one()
+                community = session.query(Community).filter_by(id=community_id).one()
                 delete_object(user_id, community, is_restore=True, session=session)
         except Exception:
             session.rollback()

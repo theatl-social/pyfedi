@@ -29,8 +29,8 @@ def sticky_post(send_async, user_id, post_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.filter_by(id=post_id).one()
-                add_object(user_id, post)
+                post = session.query(Post).filter_by(id=post_id).one()
+                add_object(session, user_id, post)
         except Exception:
             session.rollback()
             raise
@@ -44,8 +44,8 @@ def add_mod(send_async, user_id, mod_id, community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                mod = User.query.filter_by(id=mod_id).one()
-                add_object(user_id, mod, community_id)
+                mod = session.query(User).filter_by(id=mod_id).one()
+                add_object(session, user_id, mod, community_id)
         except Exception:
             session.rollback()
             raise
@@ -53,12 +53,12 @@ def add_mod(send_async, user_id, mod_id, community_id):
             session.close()
 
 
-def add_object(user_id, object, community_id=None):
-    user = User.query.filter_by(id=user_id).one()
+def add_object(session, user_id, object, community_id=None):
+    user = session.query(User).filter_by(id=user_id).one()
     if not community_id:
         community = object.community
     else:
-        community = Community.query.filter_by(id=community_id).one()
+        community = session.query(Community).filter_by(id=community_id).one()
 
     if community.local_only or not community.instance.online():
         return

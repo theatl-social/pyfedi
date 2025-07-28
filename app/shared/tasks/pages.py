@@ -300,10 +300,10 @@ def send_post(post_id, edit=False, session=None):
 
     # send the amended copy of the Create to anyone who is following the User, but hasn't already received something
     for follower in followers:
-        user_details = User.query.get(follower.remote_user_id)
+        user_details = session.query(User).get(follower.remote_user_id)
         if user_details:
             create['cc'].append(user_details.public_url())
-    instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
+    instances = session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
     instances = instances.filter(UserFollower.local_user_id == post.user_id).filter(Instance.gone_forever == False)
     for instance in instances:
         if instance.domain not in domains_sent_to:

@@ -27,8 +27,8 @@ def report_reply(send_async, user_id, reply_id, summary):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                reply = PostReply.query.filter_by(id=reply_id).one()
-                report_object(user_id, reply, summary)
+                reply = session.query(PostReply).filter_by(id=reply_id).one()
+                report_object(session, user_id, reply, summary)
         except Exception:
             session.rollback()
             raise
@@ -42,8 +42,8 @@ def report_post(send_async, user_id, post_id, summary):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.filter_by(id=post_id).one()
-                report_object(user_id, post, summary)
+                post = session.query(Post).filter_by(id=post_id).one()
+                report_object(session, user_id, post, summary)
         except Exception:
             session.rollback()
             raise
@@ -51,13 +51,13 @@ def report_post(send_async, user_id, post_id, summary):
             session.close()
 
 
-def report_object(user_id, object, summary):
-    user = User.query.filter_by(id=user_id).one()
+def report_object(session, user_id, object, summary):
+    user = session.query(User).filter_by(id=user_id).one()
     community = object.community
     if community.local_only or not community.instance.online():
         return
 
-    banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community.id).first()
     if banned:
         return
     if not community.is_local():

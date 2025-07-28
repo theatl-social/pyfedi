@@ -53,8 +53,8 @@ def edit_community(send_async, user_id, community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                user = User.query.filter_by(id=user_id).one()
-                community = Community.query.filter_by(id=community_id).one()
+                user = session.query(User).filter_by(id=user_id).one()
+                community = session.query(Community).filter_by(id=community_id).one()
                 if community.local_only:
                     return
 

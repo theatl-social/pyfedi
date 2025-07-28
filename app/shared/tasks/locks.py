@@ -28,8 +28,8 @@ def lock_post(send_async, user_id, post_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.filter_by(id=post_id).one()
-                lock_object(user_id, post)
+                post = session.query(Post).filter_by(id=post_id).one()
+                lock_object(session, user_id, post)
         except Exception:
             session.rollback()
             raise
@@ -43,8 +43,8 @@ def unlock_post(send_async, user_id, post_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.filter_by(id=post_id).one()
-                lock_object(user_id, post, is_undo=True)
+                post = session.query(Post).filter_by(id=post_id).one()
+                lock_object(session, user_id, post, is_undo=True)
         except Exception:
             session.rollback()
             raise
@@ -58,8 +58,8 @@ def lock_post_reply(send_async, user_id, post_reply_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = PostReply.query.filter_by(id=post_reply_id).one()
-                lock_object(user_id, post)
+                post = session.query(PostReply).filter_by(id=post_reply_id).one()
+                lock_object(session, user_id, post)
         except Exception:
             session.rollback()
             raise
@@ -73,8 +73,8 @@ def unlock_post_reply(send_async, user_id, post_reply_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = PostReply.query.filter_by(id=post_reply_id).one()
-                lock_object(user_id, post, is_undo=True)
+                post = session.query(PostReply).filter_by(id=post_reply_id).one()
+                lock_object(session, user_id, post, is_undo=True)
         except Exception:
             session.rollback()
             raise
@@ -82,8 +82,8 @@ def unlock_post_reply(send_async, user_id, post_reply_id):
             session.close()
 
 
-def lock_object(user_id, object, is_undo=False):
-    user = User.query.filter_by(id=user_id).one()
+def lock_object(session, user_id, object, is_undo=False):
+    user = session.query(User).filter_by(id=user_id).one()
     community = object.community
 
     if community.local_only or not community.instance.online():

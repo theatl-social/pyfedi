@@ -1,6 +1,6 @@
 import datetime
 
-from app import celery
+from app import celery, db
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, CommunityMember, User, Instance
 from app.utils import gibberish, ap_datetime, get_task_session, patch_db_session
@@ -43,7 +43,7 @@ def ban_from_site(send_async, user_id, mod_id, expiry, reason):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(user_id, mod_id, None, expiry, reason)
+                ban_person(session, user_id, mod_id, None, expiry, reason)
         except Exception:
             session.rollback()
             raise
@@ -57,7 +57,7 @@ def unban_from_site(send_async, user_id, mod_id, expiry, reason):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(user_id, mod_id, None, expiry, reason, is_undo=True)
+                ban_person(session, user_id, mod_id, None, expiry, reason, is_undo=True)
         except Exception:
             session.rollback()
             raise
@@ -71,7 +71,7 @@ def ban_from_community(send_async, user_id, mod_id, community_id, expiry, reason
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(user_id, mod_id, community_id, expiry, reason)
+                ban_person(session, user_id, mod_id, community_id, expiry, reason)
         except Exception:
             session.rollback()
             raise
@@ -85,7 +85,7 @@ def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reas
         session = get_task_session()
         try:
             with patch_db_session(session):
-                ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=True)
+                ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=True)
         except Exception:
             session.rollback()
             raise
@@ -93,13 +93,13 @@ def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reas
             session.close()
 
 
-def ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=False):
+def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=False):
     if expiry is None:
         expiry = datetime.datetime(year=2100, month=1, day=1)
-    user = User.query.filter_by(id=user_id).one()
-    mod = User.query.filter_by(id=mod_id).one()
+    user = session.query(User).filter_by(id=user_id).one()
+    mod = session.query(User).filter_by(id=mod_id).one()
     if community_id:
-        community = Community.query.filter_by(id=community_id).one()
+        community = session.query(Community).filter_by(id=community_id).one()
         communities = [community] if community.is_local() else []
         if community.local_only:
             return
@@ -110,7 +110,7 @@ def ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=False):
         if user.is_local():
             communities = []
         else:
-            communities = Community.query.filter_by(ap_id=None).\
+            communities = session.query(Community).filter_by(ap_id=None).\
               join(CommunityMember, Community.id == CommunityMember.community_id).\
               filter_by(banned=False).\
               filter_by(user_id=user.id)
@@ -160,7 +160,7 @@ def ban_person(user_id, mod_id, community_id, expiry, reason, is_undo=False):
 
     # site ban - local user
     if not community and user.is_local():
-        instances = Instance.query.all()
+        instances = session.query(Instance).all()
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1:
                 send_post_request(instance.inbox, object, mod.private_key, mod.public_url() + '#main-key')
