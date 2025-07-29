@@ -162,7 +162,7 @@ def home_page(sort, view_filter):
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
-                           announcement=allowlist_html(get_setting('announcement_html', get_setting('announcement'))),
+                           announcement=get_setting('announcement_html', get_setting('announcement')),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()),
                            joined_communities=joined_or_modding_communities(current_user.get_id()),

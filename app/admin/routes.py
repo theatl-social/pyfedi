@@ -169,7 +169,7 @@ def admin_site():
 
         db.session.commit()
         set_setting('announcement', form.announcement.data)
-        set_setting('announcement_html', markdown_to_html(form.announcement.data))
+        set_setting('announcement_html', markdown_to_html(form.announcement.data, anchors_new_tab=False))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.name.data = site.name
