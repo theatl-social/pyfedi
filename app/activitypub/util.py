@@ -2661,24 +2661,21 @@ def undo_vote(comment, post, target_ap_id, user):
     return None
 
 
-def process_report(user, reported, request_json):
+def process_report(user, reported, request_json, session):
     if 'summary' not in request_json:  # reports from peertube have no summary
         reasons = ''
         description = ''
         if 'content' in request_json:
             reasons = request_json['content']
     else:
-        if len(request_json['summary']) < 15:
-            reasons = request_json['summary']
-            description = ''
-        else:
-            reasons = request_json['summary'][:15]
-            description = request_json['summary'][15:]
+        reasons = request_json['summary']
+        description = ''
+
     if isinstance(reported, User):
         if reported.reports == -1:
             return
         type = 0
-        source_instance = Instance.query.get(user.instance_id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_user_id': reported.id,
                         'suspect_user_user_name': reported.ap_id if reported.ap_id else reported.user_name,
@@ -2692,7 +2689,7 @@ def process_report(user, reported, request_json):
         report = Report(reasons=reasons, description=description,
                         type=type, reporter_id=user.id, suspect_user_id=reported.id,
                         source_instance_id=user.instance_id, targets=targets_data)
-        db.session.add(report)
+        session.add(report)
 
         # Notify site admin
         already_notified = set()
@@ -2702,16 +2699,16 @@ def process_report(user, reported, request_json):
                                       author_id=user.id, notif_type=NOTIF_REPORT,
                                       subtype='user_reported',
                                       targets=targets_data)
-                db.session.add(notify)
+                session.add(notify)
                 admin.unread_notifications += 1
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, Post):
         if reported.reports == -1:
             return
         type = 1
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
+        suspect_author = session.query(User).get(reported.author.id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_post_id': reported.id,
                         'suspect_user_id': reported.author.id,
@@ -2727,7 +2724,7 @@ def process_report(user, reported, request_json):
                         suspect_user_id=reported.author.id, suspect_post_id=reported.id,
                         suspect_community_id=reported.community.id, in_community_id=reported.community.id,
                         source_instance_id=user.instance_id, targets=targets_data)
-        db.session.add(report)
+        session.add(report)
 
         already_notified = set()
         for mod in reported.community.moderators():
@@ -2736,17 +2733,17 @@ def process_report(user, reported, request_json):
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='post_reported',
                                         targets=targets_data)
-            db.session.add(notification)
+            session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, PostReply):
         if reported.reports == -1:
             return
         type = 2
-        post = Post.query.get(reported.post_id)
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
+        post = session.query(Post).get(reported.post_id)
+        suspect_author = session.query(User).get(reported.author.id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': reported.id,
                         'suspect_user_id': reported.author.id,
@@ -2762,8 +2759,9 @@ def process_report(user, reported, request_json):
                         suspect_community_id=post.community.id,
                         suspect_user_id=reported.author.id, suspect_post_reply_id=reported.id,
                         in_community_id=post.community.id,
-                        source_instance_id=user.instance_id)
-        db.session.add(report)
+                        source_instance_id=user.instance_id,
+                        targets=targets_data)
+        session.add(report)
         # Notify moderators
         already_notified = set()
         for mod in post.community.moderators():
@@ -2772,10 +2770,10 @@ def process_report(user, reported, request_json):
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='comment_reported',
                                         targets=targets_data)
-            db.session.add(notification)
+            session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, Community):
         ...
     elif isinstance(reported, Conversation):

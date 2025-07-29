@@ -1153,7 +1153,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Flag':  # Reported content
                     reported = find_reported_object(core_activity['object'])
                     if reported:
-                        process_report(user, reported, core_activity)
+                        process_report(user, reported, core_activity, session)
                         log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, saved_json)
                         announce_activity_to_followers(reported.community, user, request_json)
                     else:
