@@ -110,12 +110,9 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     if not 'id' in ap_json:
         raise Exception('No object found.')
     if query != ap_json['id']:
-        query = ap_json['id']
-        ap_json = remote_object_to_json(query)
-        if not ap_json:
-            raise Exception('No object found.')
-        parsed_url = urlparse(query)
-        server = parsed_url.netloc.lower()
+        # query URL doesn't match original author's URL, so call this function with that URL instead
+        # 'recursive' is (incorrectly) set to False to get the view, not the object
+        return get_resolve_object(None, {"q": ap_json['id']}, user_id, False)
 
     # a user or a community
     if not 'type' in ap_json:
