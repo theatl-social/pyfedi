@@ -256,7 +256,7 @@ def get_community_moderate_bans(auth, data):
     limit = int(data['limit']) if data and 'limit' in data else 10
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
@@ -300,7 +300,7 @@ def put_community_moderate_unban(auth, data):
     user = authorise_api_user(auth, return_type='model')
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
@@ -370,7 +370,7 @@ def post_community_moderate_ban(auth, data):
     blocker = authorise_api_user(auth, return_type='model')
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(blocker) or community.is_moderator(blocker) or community.is_instance_admin(blocker)):
+    if not (community.is_owner(blocker) or community.is_moderator(blocker) or blocker.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
@@ -449,7 +449,7 @@ def post_community_moderate_post_nsfw(auth, data):
     community = Community.query.get(post.community_id)
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(mod_user) or community.is_moderator(mod_user) or community.is_instance_admin(mod_user)):
+    if not (community.is_owner(mod_user) or community.is_moderator(mod_user) or mod_user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
