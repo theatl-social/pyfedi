@@ -728,8 +728,8 @@ def instance_view(instance: Instance | int, variant) -> dict:
         return v1
 
 
-def feed_view(feed: Feed | int, variant: int, user_id, subscribed, communities_moderating, banned_from,
-              communities_joined, blocked_community_ids, blocked_instance_ids, ) -> dict:
+def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_communities, communities_moderating,
+              banned_from, communities_joined, blocked_community_ids, blocked_instance_ids, ) -> dict:
     if isinstance(feed, int):
         feed = Feed.query.get(feed)
 
@@ -747,12 +747,13 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, communities_m
         v1['subscribed'] = feed.id in subscribed
         v1['owner'] = user_id == feed.user_id
         v1['communities'] = []
-        for community in Community.query.filter(Community.banned == False).\
-            join(FeedItem, FeedItem.community_id == Community.id).filter(FeedItem.feed_id == feed.id):
-            if community.id not in blocked_community_ids and \
-                    community.instance_id not in blocked_instance_ids and \
-                    community.id not in banned_from:
-                v1['communities'].append(community_view(community, variant=1, stub=True))
+        if include_communities:
+            for community in Community.query.filter(Community.banned == False).\
+                join(FeedItem, FeedItem.community_id == Community.id).filter(FeedItem.feed_id == feed.id):
+                if community.id not in blocked_community_ids and \
+                        community.instance_id not in blocked_instance_ids and \
+                        community.id not in banned_from:
+                    v1['communities'].append(community_view(community, variant=1, stub=True))
 
         v1.update(
             {'published': feed.created_at.isoformat(timespec="microseconds") + 'Z',

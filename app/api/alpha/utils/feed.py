@@ -18,6 +18,8 @@ def get_feed_list(auth, data, user_id=None) -> dict:
 
     mine_only = data['mine_only'] if data and 'mine_only' in data else 'false'
     mine_only = True if mine_only == 'true' else False
+    include_communities = data['include_communities'] if data and 'include_communities' in data else 'true'
+    include_communities = True if include_communities == 'true' else False
 
     if auth:
         user_id = authorise_api_user(auth)
@@ -55,7 +57,7 @@ def get_feed_list(auth, data, user_id=None) -> dict:
         
         for item in feed_tree:
             view = feed_view(feed=item['feed'], variant=1, user_id=user_id, subscribed=subscribed,
-                             communities_moderating=communities_moderating,
+                             include_communities=include_communities, communities_moderating=communities_moderating,
                              banned_from=banned_from, communities_joined=communities_joined,
                              blocked_community_ids=blocked_community_ids,
                              blocked_instance_ids=blocked_instance_ids)
