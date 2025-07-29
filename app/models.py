@@ -2402,7 +2402,7 @@ class PostReply(db.Model):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
         with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
-            existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+            existing_vote = db.session.query(PostReplyVote).filter_by(user_id=user.id, post_reply_id=self.id).first()
             if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
                 if existing_vote.effect == 1:
                     vote_direction = 'upvote'
