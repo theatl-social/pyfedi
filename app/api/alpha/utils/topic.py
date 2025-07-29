@@ -65,7 +65,7 @@ def get_topic_list(auth, data, user_id=None) -> dict:
     feedlist = process_nested_topics(topics)
 
     list_json = {
-        "feeds": feedlist
+        "topics": feedlist
     }
 
     return list_json
