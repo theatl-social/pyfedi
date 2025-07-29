@@ -9,6 +9,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
     post_community_moderate_post_nsfw, post_community_mod
+from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
@@ -19,6 +20,7 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
     get_post_reply_list
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances
+from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
@@ -303,6 +305,19 @@ def post_alpha_community_moderate_post_nsfw():
         auth = request.headers.get('Authorization')
         data = request.get_json(force=True) or {}
         return jsonify(post_community_moderate_post_nsfw(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+# Feed
+@bp.route('/api/alpha/feed/list', methods=['GET'])
+def get_alpha_feed_list():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return orjson_response(get_feed_list(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
@@ -679,6 +694,19 @@ def post_alpha_private_message_mark_as_read():
         return jsonify(post_private_message_mark_as_read(auth, data))
     except NoResultFound:
         return jsonify({"error": "Message not found"}), 400
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+# Topic
+@bp.route('/api/alpha/topic/list', methods=['GET'])
+def get_alpha_topic_list():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return orjson_response(get_topic_list(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 

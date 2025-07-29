@@ -6,7 +6,7 @@ from sqlalchemy import text, func
 from app import cache, db
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
-    AllowedInstances, BannedInstances, utcnow, Site
+    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
 
 
@@ -728,6 +728,39 @@ def instance_view(instance: Instance | int, variant) -> dict:
         return v1
 
 
+def feed_view(feed: Feed | int, variant: int, user_id, subscribed, communities_moderating, banned_from,
+              communities_joined, blocked_community_ids, blocked_instance_ids, ) -> dict:
+    if isinstance(feed, int):
+        feed = Feed.query.get(feed)
+
+    if variant == 1:
+        include = ['id', 'user_id', 'title', 'name', 'machine_name', 'description', 'description_html', 'nsfw', 'nsfl',
+                   'subscriptions_count', 'num_communities', 'public', 'parent_feed_id',
+                   'is_instance_feed', 'ap_id', 'ap_profile_id', 'show_posts_in_children']
+        v1 = {column.name: getattr(feed, column.name) for column in feed.__table__.columns if
+              column.name in include}
+        v1.update({'version': '0.0.1'})
+        if feed.icon_id:
+            v1['icon'] = feed.icon.medium_url()
+        if feed.image_id:
+            v1['banner'] = feed.image.medium_url()
+        v1['subscribed'] = feed.id in subscribed
+        v1['owner'] = user_id == feed.user_id
+        v1['communities'] = []
+        for community in Community.query.filter(Community.banned == False).\
+            join(FeedItem, FeedItem.community_id == Community.id).filter(FeedItem.feed_id == feed.id):
+            if community.id not in blocked_community_ids and \
+                    community.instance_id not in blocked_instance_ids and \
+                    community.id not in banned_from:
+                v1['communities'].append(community_view(community, variant=1, stub=True))
+
+        v1.update(
+            {'published': feed.created_at.isoformat(timespec="microseconds") + 'Z',
+             'updated': feed.last_edit.isoformat(timespec="microseconds") + 'Z'})
+
+        return v1
+
+
 def private_message_view(cm: ChatMessage, variant) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
@@ -758,6 +791,27 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
 
     if variant == 2:
         return v2
+
+
+def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_from,
+               communities_joined, blocked_community_ids, blocked_instance_ids, ) -> dict:
+    if isinstance(topic, int):
+        topic = Topic.query.get(topic)
+
+    if variant == 1:
+        include = ['id', 'machine_name', 'name', 'num_communities', 'parent_id', 'show_posts_in_children']
+        v1 = {column.name: getattr(topic, column.name) for column in topic.__table__.columns if
+              column.name in include}
+        v1.update({'version': '0.0.1'})
+
+        v1['communities'] = []
+        for community in Community.query.filter(Community.banned == False, Community.topic_id == topic.id):
+            if community.id not in blocked_community_ids and \
+                    community.instance_id not in blocked_instance_ids and \
+                    community.id not in banned_from:
+                v1['communities'].append(community_view(community, variant=1, stub=True))
+
+        return v1
 
 
 def site_view(user) -> dict:
