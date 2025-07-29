@@ -285,7 +285,8 @@ def register(app):
                 remove_old_community_content, update_hashtag_counts, delete_old_soft_deleted_content,
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
-                recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs
+                recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
+                archive_old_posts
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
@@ -307,6 +308,7 @@ def register(app):
                 recalculate_user_attitudes()
                 calculate_community_activity_stats()
                 cleanup_old_activitypub_logs()
+                archive_old_posts()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
                 cleanup_old_notifications.delay()
@@ -324,6 +326,7 @@ def register(app):
                 recalculate_user_attitudes.delay()
                 calculate_community_activity_stats.delay()
                 cleanup_old_activitypub_logs.delay()
+                archive_old_posts.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
     @app.cli.command('daily-maintenance')

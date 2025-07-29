@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import bisect
+import gzip
 import hashlib
 import mimetypes
 import math
@@ -51,7 +52,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply
+    PostReply, PostReplyBookmark
 
 
 # Flask's render_template function, with support for themes added
@@ -3044,111 +3045,139 @@ def is_valid_xml_utf8(pystring):
     return True
 
 
+@celery.task
 def archive_post(post_id: int):
     from app import redis_client
     import os
     session = get_task_session()
-    with patch_db_session(session):
-        filename = f'post_{post_id}.json'
-        with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
-            post = session.query(Post).get(post_id)
-            save_this = {}
+    try:
+        with patch_db_session(session):
+            filename = f'post_{post_id}.json'
+            with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
+                post = session.query(Post).get(post_id)
+                save_this = {}
 
-            save_this['id'] = post.id
-            save_this['version'] = 1
-            save_this['body'] = post.body
-            save_this['body_html'] = post.body_html
-            save_this['replies'] = []
-            post.body = None
-            post.body_html = None
-            if post.reply_count:
-                from app.activitypub.util import post_replies_for_ap
-                save_this['replies'] = post_replies_for_ap(post_id)
+                save_this['id'] = post.id
+                save_this['version'] = 1
+                save_this['body'] = post.body
+                save_this['body_html'] = post.body_html
+                save_this['replies'] = []
+                post.body = None
+                post.body_html = None
+                if post.reply_count:
+                    from app.activitypub.util import post_replies_for_ap
+                    save_this['replies'] = post_replies_for_ap(post_id)
 
-            if store_files_in_s3():
-                # upload to s3
-                boto3_session = boto3.session.Session()
-                s3 = boto3_session.client(
-                    service_name='s3',
-                    region_name=current_app.config['S3_REGION'],
-                    endpoint_url=current_app.config['S3_ENDPOINT'],
-                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                if store_files_in_s3():
+                    # upload to s3
+                    boto3_session = boto3.session.Session()
+                    s3 = boto3_session.client(
+                        service_name='s3',
+                        region_name=current_app.config['S3_REGION'],
+                        endpoint_url=current_app.config['S3_ENDPOINT'],
+                        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                    )
+
+                    # upload orjson(save_this) to a file in S3 named f'archived/{filename}'
+                    # save url to  new file into s3_url variable
+                    s3_key = f'archived/{filename}.gz'
+                    json_data = orjson.dumps(save_this)
+                    compressed_data = gzip.compress(json_data)
+
+                    s3.put_object(
+                        Bucket=current_app.config['S3_BUCKET'],
+                        Key=s3_key,
+                        Body=compressed_data,
+                        ContentType='application/gzip',
+                        ContentEncoding='gzip'
+                    )
+
+                    s3_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_key}"
+
+                    s3.close()
+                    post.archived = s3_url
+                else:
+                    ensure_directory_exists('app/static/media/archived')
+                    file_path = f'app/static/media/archived/{filename}'
+                    with gzip.open(file_path + '.gz', 'wb') as f:
+                        f.write(orjson.dumps(save_this))
+                    post.archived = file_path + '.gz'
+
+                session.commit()
+
+                # Delete all post_replies associated with the post
+                # First, get all reply IDs that have bookmarks by users other than the reply author
+                bookmarked_reply_ids = set(
+                    session.execute(text('''
+                        SELECT DISTINCT prb.post_reply_id 
+                        FROM post_reply_bookmark prb 
+                        JOIN post_reply pr ON prb.post_reply_id = pr.id 
+                        WHERE pr.post_id = :post_id
+                    '''), {'post_id': post.id}).scalars()
                 )
 
-                # upload orjson(save_this) to a file in S3 named f'archived/{filename}'
-                # save url to  new file into s3_url variable
-                s3_key = f'archived/{filename}'
-                json_data = orjson.dumps(save_this)
-                
-                s3.put_object(
-                    Bucket=current_app.config['S3_BUCKET'],
-                    Key=s3_key,
-                    Body=json_data,
-                    ContentType='application/json'
-                )
-                
-                s3_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_key}"
+                for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
+                    if reply.id not in bookmarked_reply_ids:
+                        reply.delete_dependencies()
+                        session.delete(reply)
+                        session.commit()
 
-                s3.close()
-                post.archived = s3_url
-            else:
-                ensure_directory_exists('app/static/media/archived')
-                file_path = f'app/static/media/archived/{filename}'
-                with open(file_path, 'wb') as f:
-                    f.write(orjson.dumps(save_this))
-                post.archived = file_path
-            
-            # Delete thumbnail and medium sized versions if post has an image
-            if post.image_id is not None:
+                # Delete thumbnail and medium sized versions if post has an image
+                if post.image_id is not None:
 
-                image_file = session.query(File).get(post.image_id)
-                if image_file:
-                    if store_files_in_s3():
-                        boto3_session = boto3.session.Session()
-                        s3 = boto3_session.client(
-                            service_name='s3',
-                            region_name=current_app.config['S3_REGION'],
-                            endpoint_url=current_app.config['S3_ENDPOINT'],
-                            aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                            aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                        )
+                    image_file = session.query(File).get(post.image_id)
+                    if image_file:
+                        if store_files_in_s3():
+                            boto3_session = boto3.session.Session()
+                            s3 = boto3_session.client(
+                                service_name='s3',
+                                region_name=current_app.config['S3_REGION'],
+                                endpoint_url=current_app.config['S3_ENDPOINT'],
+                                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                            )
 
-                    # Delete thumbnail
-                    if image_file.thumbnail_path:
-                        if image_file.thumbnail_path.startswith('app/'):
-                            # Local file deletion
-                            try:
-                                os.unlink(image_file.thumbnail_path)
-                            except (OSError, FileNotFoundError):
-                                pass
-                        elif store_files_in_s3():
-                            # S3 file deletion
-                            try:
-                                s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
-                                s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
-                            except Exception:
-                                pass
-                        image_file.thumbnail_path = None
-                    
-                    # Delete medium sized version (file_path)
-                    if image_file.file_path:
-                        if image_file.file_path.startswith('app/'):
-                            # Local file deletion
-                            try:
-                                os.unlink(image_file.file_path)
-                            except (OSError, FileNotFoundError):
-                                pass
-                        elif store_files_in_s3():
-                            # S3 file deletion
-                            try:
-                                s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
-                                s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
-                            except Exception:
-                                pass
-                        image_file.file_path = None
+                        # Delete thumbnail
+                        if image_file.thumbnail_path:
+                            if image_file.thumbnail_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.thumbnail_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3():
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.thumbnail_path = None
 
-                    if store_files_in_s3():
-                        s3.close()
+                        # Delete medium sized version (file_path)
+                        if image_file.file_path:
+                            if image_file.file_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.file_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3():
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.file_path = None
 
-            session.commit()
+                        if store_files_in_s3():
+                            s3.close()
+
+                    session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

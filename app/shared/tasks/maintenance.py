@@ -10,7 +10,7 @@ from app.models import Notification, SendQueue, CommunityBan, CommunityMember, U
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session
+    shorten_string, patch_db_session, archive_post
 
 
 @celery.task
@@ -648,3 +648,37 @@ def cleanup_old_activitypub_logs():
         raise
     finally:
         session.close()
+
+
+@celery.task
+def archive_old_posts():
+    """Archive old posts to reduce DB size"""
+    if current_app.config['ARCHIVE_POSTS'] > 0:
+        session = get_task_session()
+        try:
+            cutoff = utcnow() - timedelta(days=current_app.config['ARCHIVE_POSTS'] * 28)
+            sql = '''
+                SELECT p.id 
+                FROM "post" p
+                WHERE p.archived IS NULL 
+                  AND p.created_at < :cutoff
+                  AND p.id NOT IN (
+                      SELECT p2.id 
+                      FROM "post" p2 
+                      WHERE p2.community_id = p.community_id 
+                      ORDER BY p2.created_at DESC 
+                      LIMIT 100
+                  )
+            '''
+            post_ids = session.execute(text(sql), {'cutoff': cutoff}).scalars()
+            for post_id in post_ids:
+                if current_app.debug:
+                    archive_post(post_id)
+                else:
+                    archive_post.delay(post_id)
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
