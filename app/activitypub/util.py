@@ -850,7 +850,7 @@ def actor_json_to_model(activity_json, address, server):
     if 'type' not in activity_json:  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
         return None
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
-        user = User.query.filter(User.ap_profile_id == activity_json['id'].lower()).first()
+        user = db.session.query(User).filter(User.ap_profile_id == activity_json['id'].lower()).first()
         if user:
             return user
         try:
@@ -923,14 +923,14 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return User.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(User).filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if user.avatar_id:
             make_image_sizes(user.avatar_id, 40, 250, 'users')
         if user.cover_id:
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
-        community = Community.query.filter(Community.ap_profile_id == activity_json['id'].lower()).first()
+        community = db.session.query(Community).filter(Community.ap_profile_id == activity_json['id'].lower()).first()
         if community:
             return community
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
@@ -941,7 +941,7 @@ def actor_json_to_model(activity_json, address, server):
             mods_url = None
 
         # only allow nsfw communities if enabled for this instance
-        site = Site.query.get(1)  # can't use g.site because actor_json_to_model can be called from celery
+        site = db.session.query(Site).get(1)  # can't use g.site because actor_json_to_model can be called from celery
         if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
@@ -1022,7 +1022,7 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Community.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(Community).filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
             for flair in activity_json['lemmy:tagsForPosts']:
                 flair_dict = {'display_name': flair['display_name']}
@@ -1040,7 +1040,7 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(community.image_id, 700, 1600, 'communities')
         return community
     elif activity_json['type'] == 'Feed':
-        feed = Feed.query.filter(Feed.ap_profile_id == activity_json['id'].lower()).first()
+        feed = db.session.query(Feed).filter(Feed.ap_profile_id == activity_json['id'].lower()).first()
         if feed:
             return feed
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
@@ -1051,7 +1051,7 @@ def actor_json_to_model(activity_json, address, server):
             owners_url = None
 
         # only allow nsfw communities if enabled for this instance
-        site = Site.query.get(1)  # can't use g.site because actor_json_to_model can be called from celery
+        site = db.session.query(Site).get(1)  # can't use g.site because actor_json_to_model can be called from celery
         if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
@@ -1149,7 +1149,7 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Feed.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(Feed).filter_by(ap_profile_id=activity_json['id'].lower()).one()
 
         # add the owners as feedmembers
         for ou in owner_users:
@@ -1457,7 +1457,7 @@ def find_reported_object(ap_id) -> Union[User, Post, PostReply, None]:
 
 def find_instance_id(server):
     server = server.strip().lower()
-    instance = Instance.query.filter_by(domain=server).first()
+    instance = db.session.query(Instance).filter_by(domain=server).first()
     if instance:
         return instance.id
     else:
@@ -1470,7 +1470,7 @@ def find_instance_id(server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Instance.query.filter_by(domain=server).one()
+            return db.session.query(Instance).filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
         new_instance_profile(new_instance.id)
@@ -1583,7 +1583,7 @@ def new_instance_profile_task(instance_id: int):
 @cache.memoize(timeout=50)
 def instance_weight(domain):
     if domain:
-        instance = Instance.query.filter_by(domain=domain).first()
+        instance = db.session.query(Instance).filter_by(domain=domain).first()
         if instance:
             return instance.vote_weight
     return 1.0
@@ -1679,7 +1679,7 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
 
 
 def site_ban_remove_data(blocker_id, blocked):
-    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False)
+    replies = db.session.query(PostReply).filter_by(user_id=blocked.id, deleted=False)
     for reply in replies:
         reply.deleted = True
         reply.deleted_by = blocker_id
@@ -1692,7 +1692,7 @@ def site_ban_remove_data(blocker_id, blocked):
     blocked.reply_count = 0
     db.session.commit()
 
-    posts = Post.query.filter_by(user_id=blocked.id, deleted=False)
+    posts = db.session.query(Post).filter_by(user_id=blocked.id, deleted=False)
     for post in posts:
         post.deleted = True
         post.deleted_by = blocker_id
@@ -1704,7 +1704,7 @@ def site_ban_remove_data(blocker_id, blocked):
 
     # Delete all their images to save moderators from having to see disgusting stuff.
     # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
-    files = File.query.join(Post).filter(Post.user_id == blocked.id).all()
+    files = db.session.query(File).join(Post).filter(Post.user_id == blocked.id).all()
     for file in files:
         file.delete_from_disk()
         file.source_url = ''

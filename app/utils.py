@@ -171,7 +171,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # accessed very often (e.g. every page load)
 @cache.memoize(timeout=50)
 def get_setting(name: str, default=None):
-    setting = Settings.query.filter_by(name=name).first()
+    setting = db.session.query(Settings).filter_by(name=name).first()
     if setting is None:
         return default
     else:
