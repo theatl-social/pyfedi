@@ -1343,10 +1343,10 @@ def import_settings_task(user_id, filename):
             ...
 
         db.session.commit()
-        cache.delete_memoized(blocked_communities, current_user.id)
-        cache.delete_memoized(blocked_instances, current_user.id)
-        cache.delete_memoized(blocked_users, current_user.id)
-        cache.delete_memoized(blocked_domains, current_user.id)
+        cache.delete_memoized(blocked_communities, user.id)
+        cache.delete_memoized(blocked_instances, user.id)
+        cache.delete_memoized(blocked_users, user.id)
+        cache.delete_memoized(blocked_domains, user.id)
 
 
 @bp.route('/user/settings/filters', methods=['GET', 'POST'])
