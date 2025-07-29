@@ -359,39 +359,40 @@ def flair_from_form(tag_ids) -> List[CommunityFlair]:
 
 def delete_post_from_community(post_id):
     if current_app.debug:
-        delete_post_from_community_task(post_id)
+        delete_post_from_community_task(post_id, current_user.id)
     else:
-        delete_post_from_community_task.delay(post_id)
+        delete_post_from_community_task.delay(post_id, current_user.id)
 
 
 @celery.task
-def delete_post_from_community_task(post_id):
+def delete_post_from_community_task(post_id, user_id):
     with current_app.app_context():
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = Post.query.get(post_id)
+                user = session.query(User).get(user_id)
+                post = session.query(Post).get(post_id)
                 community = post.community
                 post.deleted = True
-                post.deleted_by = current_user.id
-                db.session.commit()
+                post.deleted_by = user.id
+                session.commit()
 
                 if not community.local_only:
                     delete_json = {
                         'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                         'type': 'Delete',
-                        'actor': current_user.public_url(),
+                        'actor': user.public_url(),
                         'audience': post.community.public_url(),
                         'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
                         'published': ap_datetime(utcnow()),
                         'cc': [
-                            current_user.followers_url()
+                            user.followers_url()
                         ],
                         'object': post.ap_id,
                     }
 
                     if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                        send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key, current_user.public_url() + '#main-key')
+                        send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
                     else:  # local community - send it to followers on remote instances
                         announce = {
                             "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
