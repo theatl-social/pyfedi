@@ -515,6 +515,7 @@ class Community(db.Model):
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
+    can_be_archived = db.Column(db.Boolean, default=True, index=True)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)

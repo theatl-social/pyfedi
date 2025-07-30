@@ -660,8 +660,10 @@ def archive_old_posts():
             sql = '''
                 SELECT p.id 
                 FROM "post" p
+                JOIN "community" c ON c.id = p.community_id
                 WHERE p.archived IS NULL 
                   AND p.created_at < :cutoff
+                  AND c.can_be_archived = true
                   AND p.id NOT IN (
                       SELECT p2.id 
                       FROM "post" p2 

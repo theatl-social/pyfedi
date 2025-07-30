@@ -135,6 +135,7 @@ class EditCommunityForm(FlaskForm):
     posting_warning = StringField(_l('Posting warning'), validators=[Optional(), Length(min=3, max=512)])
     languages = SelectMultipleField(_l('Languages'), coerce=int, validators=[Optional()], render_kw={'class': 'form-select'})
     ignore_remote_language = BooleanField(_l('Override remote language setting'))
+    can_be_archived = BooleanField(_l('Old posts can be archived'))
     submit = SubmitField(_l('Save'))
 
     def validate(self, extra_validators=None):
