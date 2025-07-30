@@ -576,8 +576,8 @@ def restore_post(post_id, src, auth):
 
     post.deleted = False
     post.deleted_by = None
-    post.author.post_count -= 1
-    post.community.post_count -= 1
+    post.author.post_count += 1
+    post.community.post_count += 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Post restored.'))
@@ -783,8 +783,8 @@ def mod_restore_post(post_id, reason, src, auth):
 
     post.deleted = False
     post.deleted_by = None
-    post.author.post_count -= 1
-    post.community.post_count -= 1
+    post.author.post_count += 1
+    post.community.post_count += 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Post restored.'))
