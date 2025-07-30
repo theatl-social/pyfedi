@@ -887,10 +887,6 @@ form > .mb-3.required > label:after {
   margin-bottom: 0.25rem;
 }
 
-.post_reply_form {
-  margin-bottom: 25px;
-}
-
 .dropdown-menu.show {
   z-index: 1022;
 }

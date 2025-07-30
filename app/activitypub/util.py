@@ -1432,6 +1432,8 @@ def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
 def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
     post = Post.get_by_ap_id(ap_id)
     if post:
+        if post.archived:
+            return None
         return post
     else:
         post_reply = PostReply.get_by_ap_id(ap_id)
@@ -1870,6 +1872,10 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
+
+        if post.archived:
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Post is archived')
+            return None
 
         if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Post author blocked replier')

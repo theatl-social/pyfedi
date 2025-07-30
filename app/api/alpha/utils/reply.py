@@ -173,10 +173,10 @@ def get_post_reply_list(auth, data, user_id=None):
         if post_id is None:
             post_id = parent.post_id
         post = Post.query.get(post_id)
-        replies = get_comment_branch(post.community, post_id, parent.id, sort.lower(), g.user if hasattr(g, 'user') else None)
+        replies = get_comment_branch(post, parent.id, sort.lower(), g.user if hasattr(g, 'user') else None)
     else:
         post = Post.query.get(post_id)
-        replies = post_replies(post.community, post_id, sort.lower(), g.user if hasattr(g, 'user') else None)
+        replies = post_replies(post, sort.lower(), g.user if hasattr(g, 'user') else None)
 
     # Apply max_depth filter to the nested reply tree
     def filter_max_depth(reply_tree, current_depth=0, parent_depth=0):

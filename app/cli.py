@@ -333,6 +333,14 @@ def register(app):
     def daily_maintenance():
         daily_maintenance_celery()
 
+    @app.cli.command('archive-old-posts')
+    def archive_old_p():
+        with app.app_context():
+            from app.shared.tasks.maintenance import archive_old_posts
+
+            archive_old_posts()
+            print('Done')
+
     @app.cli.command('send-queue')
     def send_queue():
         with app.app_context():

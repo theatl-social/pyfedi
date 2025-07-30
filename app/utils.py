@@ -3052,7 +3052,10 @@ def archive_post(post_id: int):
     session = get_task_session()
     try:
         with patch_db_session(session):
-            filename = f'post_{post_id}.json'
+            if current_app.debug:
+                filename = f'post_{post_id}{gibberish(5)}.json'
+            else:
+                filename = f'post_{post_id}.json'
             with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
                 post = session.query(Post).get(post_id)
                 save_this = {}
@@ -3065,8 +3068,49 @@ def archive_post(post_id: int):
                 post.body = None
                 post.body_html = None
                 if post.reply_count:
-                    from app.activitypub.util import post_replies_for_ap
-                    save_this['replies'] = post_replies_for_ap(post_id)
+                    from app.post.util import post_replies
+                    # Get replies sorted by 'hot' with scores preserved - keep hierarchical structure
+                    hot_replies = post_replies(post, 'hot', None, db_only=True)  # No viewer to get all replies
+                    
+                    # Serialization of hierarchical tree
+                    def serialize_tree(reply_tree):
+                        result = []
+                        for reply_dict in reply_tree:
+                            comment = reply_dict['comment']
+                            serialized = {
+                                'id': int(comment.id) if comment.id else None,
+                                'body': str(comment.body) if comment.body else '',
+                                'body_html': str(comment.body_html) if comment.body_html else '',
+                                'posted_at': comment.posted_at.isoformat() if comment.posted_at else None,
+                                'edited_at': comment.edited_at.isoformat() if comment.edited_at else None,
+                                'score': int(comment.score) if comment.score else 0,
+                                'ranking': float(comment.ranking) if comment.ranking else 0.0,
+                                'parent_id': int(comment.parent_id) if comment.parent_id else None,
+                                'distinguished': bool(comment.distinguished),
+                                'deleted': bool(comment.deleted),
+                                'deleted_by': int(comment.deleted_by) if comment.deleted_by else None,
+                                'user_id': int(comment.user_id) if comment.user_id else None,
+                                'depth': int(comment.depth) if comment.depth else 0,
+                                'language_id': int(comment.language_id) if comment.language_id else None,
+                                'replies_enabled': bool(comment.replies_enabled),
+                                'community_id': int(comment.community_id) if comment.community_id else None,
+                                'up_votes': int(comment.up_votes) if comment.up_votes else 0,
+                                'down_votes': int(comment.down_votes) if comment.down_votes else 0,
+                                'child_count': int(comment.child_count) if comment.child_count else 0,
+                                'path': list(comment.path) if comment.path else [],
+                                'author_name': str(comment.author.display_name()) if comment.author and comment.author.display_name() else 'Unknown',
+                                'author_id': int(comment.author.id) if comment.author and comment.author.id else None,
+                                'author_indexable': bool(comment.author.indexable) if comment.author else True,
+                                'author_deleted': bool(comment.author.deleted) if comment.author else False,
+                                'author_user_name': comment.author.user_name if comment.author else False,
+                                'author_ap_id': comment.author.ap_id if comment.author else False,
+                                'author_ap_profile_id': comment.author.ap_profile_id if comment.author else False,
+                                'replies': serialize_tree(reply_dict['replies'])
+                            }
+                            result.append(serialized)
+                        return result
+                    
+                    save_this['replies'] = serialize_tree(hot_replies)
 
                 if store_files_in_s3():
                     # upload to s3
@@ -3117,11 +3161,11 @@ def archive_post(post_id: int):
                     '''), {'post_id': post.id}).scalars()
                 )
 
-                for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
-                    if reply.id not in bookmarked_reply_ids:
-                        reply.delete_dependencies()
-                        session.delete(reply)
-                        session.commit()
+                #for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
+                #    if reply.id not in bookmarked_reply_ids:
+                #        reply.delete_dependencies()
+                #        session.delete(reply)
+                #        session.commit()
 
                 # Delete thumbnail and medium sized versions if post has an image
                 if post.image_id is not None:

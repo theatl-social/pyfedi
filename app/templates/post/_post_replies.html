@@ -2,20 +2,22 @@
 <h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
 <div class="row">
     <div class="col">
-        <div class="btn-group mt-1 mb-2">
-            <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Hot') }}
-            </a>
-            <a href="?sort=top#post_replies" title="{{ _('Comments with the most upvotes') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Top') }}
-            </a>
-            <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('New') }}
-            </a>
-            <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Old') }}
-            </a>
-        </div>
+        {% if not post.archived -%}
+            <div class="btn-group mt-1 mb-2">
+                <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Hot') }}
+                </a>
+                <a href="?sort=top#post_replies" title="{{ _('Comments with the most upvotes') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Top') }}
+                </a>
+                <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('New') }}
+                </a>
+                <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Old') }}
+                </a>
+            </div>
+        {% endif -%}
 
         <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
             {% for reply in replies -%}

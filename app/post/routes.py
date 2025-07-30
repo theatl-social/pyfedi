@@ -29,7 +29,7 @@ from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
-    generate_archive_link, body_has_no_archive_link
+    generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post
@@ -67,6 +67,10 @@ def show_post(post_id: int):
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
+        if post.archived:
+            sort = 'hot'
+            archived_post = retrieve_archived_post(post.archived)
+            post.body_html = archived_post['body_html']
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
@@ -119,7 +123,7 @@ def show_post(post_id: int):
         else:
             if total_comments_on_post_and_cross_posts(post.id) < 100:   # if there are not many comments then we might as well load them with the post
                 lazy_load_replies = False
-                replies = post_replies(community, post.id, sort, current_user if current_user.is_authenticated else None)
+                replies = post_replies(post, sort, current_user if current_user.is_authenticated else None)
                 more_replies = defaultdict(list)
                 if post.cross_posts:
                     cbf = communities_banned_from(current_user.get_id())
@@ -129,7 +133,7 @@ def show_post(post_id: int):
                         if cross_posted_post.community_id not in cbf \
                                 and cross_posted_post.community_id not in bc \
                                 and cross_posted_post.community.instance_id not in bi:
-                            cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort,
+                            cross_posted_replies = post_replies(cross_posted_post, sort,
                                                                 current_user if current_user.is_authenticated else None)
                             if len(cross_posted_replies):
                                 more_replies[cross_posted_post.community].extend(cross_posted_replies)
@@ -270,8 +274,9 @@ def show_post(post_id: int):
                                    reply_collapse_threshold=reply_collapse_threshold,
                                    etag=f"{post.id}{sort}_{hash(post.last_active)}",
                                    markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
-                                   can_upvote_here=can_upvote(user, community),
-                                   can_downvote_here=can_downvote(user, community),
+                                   can_upvote_here=can_upvote(user, community) and post.archived is None,
+                                   can_downvote_here=can_downvote(user, community) and post.archived is None,
+                                   disable_voting=post.archived is not None,
                                    user_notes=user_notes(current_user.get_id()),
                                    banned_from_community=banned_from_community,
                                    low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
@@ -293,7 +298,7 @@ def post_lazy_replies(post_id, nonce):
     if request.method == 'OPTIONS':
         return ''
     post = Post.query.get_or_404(post_id)
-    sort = request.args.get('sort', 'hot')
+    sort = request.args.get('sort', 'hot') if post.archived is None else 'hot'  # archived posts can only show comments sorted by 'hot'
     community = post.community
     user = current_user if current_user.is_authenticated else None
 
@@ -315,7 +320,7 @@ def post_lazy_replies(post_id, nonce):
     # Get necessary data for comment rendering
     communities_banned_from_list = communities_banned_from(current_user.get_id()) if current_user.is_authenticated else []
     
-    replies = post_replies(post.community, post.id, sort, current_user if current_user.is_authenticated else None)
+    replies = post_replies(post, sort, current_user if current_user.is_authenticated else None)
     more_replies = defaultdict(list)
     if post.cross_posts:
         cbf = communities_banned_from_list
@@ -325,7 +330,7 @@ def post_lazy_replies(post_id, nonce):
             if cross_posted_post.community_id not in cbf \
                     and cross_posted_post.community_id not in bc \
                     and cross_posted_post.community.instance_id not in bi:
-                cross_posted_replies = post_replies(cross_posted_post.community, cross_posted_post.id, sort,
+                cross_posted_replies = post_replies(cross_posted_post, sort,
                                                     current_user if current_user.is_authenticated else None)
                 if len(cross_posted_replies):
                     more_replies[cross_posted_post.community].extend(cross_posted_replies)
@@ -552,7 +557,7 @@ def continue_discussion(post_id, comment_id):
     else:
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-    replies = get_comment_branch(post.community, post.id, comment.id, 'top', current_user if current_user.is_authenticated else None)
+    replies = get_comment_branch(post, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # Voting history
     if current_user.is_authenticated:
@@ -587,7 +592,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
     else:
         mod_user_ids = [mod.user_id for mod in mods]
         mod_list = User.query.filter(User.id.in_(mod_user_ids)).all()
-    replies = get_comment_branch(post.community, post.id, comment.id, 'top', current_user if current_user.is_authenticated else None)
+    replies = get_comment_branch(post, comment.id, 'top', current_user if current_user.is_authenticated else None)
 
     # user flair
     user_flair = {}
