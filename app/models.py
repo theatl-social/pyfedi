@@ -1884,6 +1884,31 @@ class Post(db.Model):
                     db.session.delete(file)
             self.image_id = None
 
+        if self.archived:
+            if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete = []
+                s3_files_to_delete.append(s3_path)
+                delete_payload = {
+                    'Objects': [{'Key': key} for key in s3_files_to_delete],
+                    'Quiet': True  # Optional: if True, successful deletions are not returned
+                }
+                boto3_session = boto3.session.Session()
+                s3 = boto3_session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                s3.close()
+            elif os.path.isfile(self.archived):
+                try:
+                    os.unlink(self.archived)
+                except FileNotFoundError:
+                    ...
+
     def has_been_reported(self):
         return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
 
