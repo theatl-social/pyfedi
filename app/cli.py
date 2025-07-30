@@ -377,7 +377,6 @@ def register(app):
                     filter(Post.posted_at < cut_off).all()
                 for post in old_posts:
                     post_delete_post(community, post, post.user_id, reason=None, federate_deletion=False)
-                    community.post_count -= 1
             db.session.commit()
 
             # Ensure accurate count of posts associated with each hashtag
