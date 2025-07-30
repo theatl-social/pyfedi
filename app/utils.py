@@ -3164,11 +3164,11 @@ def archive_post(post_id: int):
                     '''), {'post_id': post.id}).scalars()
                 )
 
-                #for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
-                #    if reply.id not in bookmarked_reply_ids:
-                #        reply.delete_dependencies()
-                #        session.delete(reply)
-                #        session.commit()
+                for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
+                    if reply.id not in bookmarked_reply_ids:
+                        reply.delete_dependencies()
+                        session.delete(reply)
+                        session.commit()
 
                 # Delete thumbnail and medium sized versions if post has an image
                 if post.image_id is not None:
