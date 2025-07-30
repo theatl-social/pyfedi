@@ -679,7 +679,7 @@ def replay_inbox():
 @bp.route('/test')
 #@debug_mode_only
 def test():
-    archive_post(76677)
+    archive_post(70976)
     return 'Done'
     import json
     user_id = 1
