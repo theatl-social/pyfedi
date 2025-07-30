@@ -99,6 +99,7 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
         author.user_name = reply_data.get('author_user_name')
         author.deleted = reply_data.get('author_deleted')
         author.created = utcnow()
+        author.reputation = reply_data.get('author_reputation', 1)
         post_reply.author = author
         
         # Language
