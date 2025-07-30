@@ -132,7 +132,7 @@ class Instance(db.Model):
     @classmethod
     def weight(cls, domain: str):
         if domain:
-            instance = Instance.query.filter_by(domain=domain).first()
+            instance = db.session.query(cls).filter_by(domain=domain).first()
             if instance:
                 return instance.vote_weight
         return 1.0
@@ -1801,8 +1801,8 @@ class Post(db.Model):
             return
 
         if self.cross_posts and (url_changed or delete_only):
-            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts),
-                                                Post.status == POST_STATUS_PUBLISHED).all()
+            old_cross_posts = db.session.query(Post).filter(Post.id.in_(self.cross_posts),
+                                                            Post.status == POST_STATUS_PUBLISHED).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
                 if ocp.cross_posts and self.id in ocp.cross_posts:
@@ -1821,8 +1821,8 @@ class Post(db.Model):
             return
 
         limit = 9
-        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.id)).limit(limit)
+        new_cross_posts = db.session.query(Post).filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                                        Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.id)).limit(limit)
 
         # other posts: update their cross_posts field with this post.id if they have less than the limit
         for ncp in new_cross_posts:
@@ -1988,9 +1988,10 @@ class Post(db.Model):
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
 
     def notify_new_replies(self, user_id: int) -> bool:
-        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
-                                                                      NotificationSubscription.user_id == user_id,
-                                                                      NotificationSubscription.type == NOTIF_POST).first()
+        existing_notification = db.session.query(NotificationSubscription).\
+            filter(NotificationSubscription.entity_id == self.id,
+                   NotificationSubscription.user_id == user_id,
+                   NotificationSubscription.type == NOTIF_POST).first()
         return existing_notification is not None
 
     def language_code(self):
@@ -3007,13 +3008,13 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(
-            or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
+        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                      or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(
-            user_role.c.role_id == ROLE_STAFF).order_by(User.id).all()
+        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                      user_role.c.role_id == ROLE_STAFF).order_by(User.id).all()
 
 
 # class IngressQueue(db.Model):
@@ -3027,7 +3028,7 @@ class Site(db.Model):
 #
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return db.session.query(User).get(int(id))
 
 
 # --- Feeds Models ---

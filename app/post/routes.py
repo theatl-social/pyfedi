@@ -948,7 +948,7 @@ def post_delete(post_id: int):
 
 
 def post_delete_post(community: Community, post: Post, user_id: int, reason: str | None, federate_deletion=True):
-    user: User = User.query.get(user_id)
+    user: User = db.session.query(User).get(user_id)
     from app import redis_client
     with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
         if post.url:
