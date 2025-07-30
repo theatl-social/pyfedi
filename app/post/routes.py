@@ -65,6 +65,10 @@ def show_post(post_id: int):
                           'warning')
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
+        
+        if current_user.is_anonymous and (post.nsfw or post.nsfl):
+            flash(_('This post is only visible to logged in users.'))
+            return redirect(url_for("auth.login", next=f"/post/{post_id}"))
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
         if post.archived:

@@ -213,6 +213,11 @@ def _make_community_results_datalist_html(community_name):
 def show_community(community: Community):
     if community.banned:
         abort(404)
+    
+    if current_user.is_anonymous and (community.nsfw or community.nsfl):
+        flash(_('This community is only visible to logged in users.'))
+        next_url = "/c/" + (community.ap_id if community.ap_id else community.name)
+        return redirect(url_for("auth.login", next=next_url))
 
     # If current user is logged in check if they have any feeds
     # if they have feeds, find the first feed that contains
