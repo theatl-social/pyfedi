@@ -677,7 +677,7 @@ def replay_inbox():
 
 
 @bp.route('/test')
-@debug_mode_only
+#@debug_mode_only
 def test():
     archive_post(76677)
     return 'Done'

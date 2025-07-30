@@ -3106,6 +3106,8 @@ def archive_post(post_id: int):
                                 'author_ap_id': comment.author.ap_id if comment.author else False,
                                 'author_ap_profile_id': comment.author.ap_profile_id if comment.author else False,
                                 'author_reputation': comment.author.reputation if comment.author else 0,
+                                'author_created': comment.author.created.isoformat() if comment.author else None,
+                                'author_instance': comment.author.instance_id if comment.author else 1,
                                 'replies': serialize_tree(reply_dict['replies'])
                             }
                             result.append(serialized)
