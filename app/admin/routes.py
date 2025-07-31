@@ -22,7 +22,8 @@ from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
+    CmsPageForm, CreateOfflineInstanceForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
@@ -1797,6 +1798,28 @@ def admin_instance_edit(instance_id):
         form.inbox.data = instance.inbox
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
+
+
+@bp.route('/instance/create_offline', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_instance_create_offline():
+    form = CreateOfflineInstanceForm()
+    if form.validate_on_submit():
+        new_instance = Instance(domain=form.domain.data,
+                                inbox=f"https://{form.domain.data}/inbox",
+                                created_at=utcnow(),
+                                gone_forever=True)
+        try:
+            db.session.add(new_instance)
+            db.session.commit()
+            flash(_("Saved"))
+        except:
+            flash(_("Problem adding instance to database"))
+            
+        return redirect(url_for("admin.admin_instances"))
+    
+    return render_template("admin/create_offline_instance.html", form=form)
 
 
 @bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])
