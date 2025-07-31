@@ -2949,6 +2949,13 @@ class ModLog(db.Model):
         else:
             return self.action
 
+    def get_correct_link(self):
+        user_action_list = ["add_mod", "remove_mod", "delete_user", "undelete_user", "ban_user", "unban_user"]
+        
+        if self.action in user_action_list:
+            return "u/" + self.link
+        else:
+            return self.link
 
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
