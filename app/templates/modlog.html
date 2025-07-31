@@ -37,7 +37,7 @@
                         </td>
                         <td>{{ modlog_entry.action_to_str() }}
                             {% if modlog_entry.link and modlog_entry.link_text -%}
-                                <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text}}</a>
+                                <a href="/{{ modlog_entry.get_correct_link() }}">{{ modlog_entry.link_text}}</a>
                             {% elif modlog_entry.link_text -%}
                                 {{ modlog_entry.link_text }}
                             {% endif -%}
