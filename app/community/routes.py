@@ -1302,6 +1302,23 @@ def community_block(community_id: int):
         db.session.commit()
         cache.delete_memoized(blocked_communities, current_user.id)
     flash(_('Posts in %(name)s will be hidden.', name=community.display_name()))
+
+    if request.headers.get('HX-Request'):
+        resp = make_response()
+        curr_url = request.headers.get('HX-Current-Url')
+
+        if "/post/" in curr_url:
+            post_id = request.args.get('post_id', None)
+            if post_id:
+                post = Post.query.get_or_404(post_id)
+                if post:
+                    if post.community.id != community_id:
+                        resp.headers['HX-Redirect'] = curr_url
+        else:
+            resp.headers['HX-Redirect'] = url_for("main.index")
+
+        return resp
+
     return redirect(referrer())
 
 
