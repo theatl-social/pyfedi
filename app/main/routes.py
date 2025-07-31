@@ -256,7 +256,7 @@ def list_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
