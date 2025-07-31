@@ -170,6 +170,11 @@ class EditInstanceForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class CreateOfflineInstanceForm(FlaskForm):
+    domain = StringField(_l('Domain (not including https://)'))
+    submit = SubmitField(_l('Save'))
+
+
 class EditBlockedImageForm(FlaskForm):
     hash = TextAreaField(_l('Hash'), validators=[DataRequired(), Length(min=256, max=256)])
     file_name = StringField(_l('Filename'), validators=[Optional(), Length(max=256)])
