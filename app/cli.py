@@ -453,7 +453,11 @@ def register(app):
                         # Small hack to make image urls unique and avoid creating
                         # a crosspost when scheduling an image post
                         if post.type == POST_TYPE_IMAGE:
-                            post.image.source_url += f"?uid={uuid.uuid4().hex}"
+                            uid = uuid.uuid4().hex
+                            if "?uid=" in post.image.source_url:
+                                post.image.source_url = re.sub(r"\?uid=.*$", f"?uid={uid}", post.image.source_url)
+                            else:
+                                post.image.source_url += f"?uid={uid}"
 
                         vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id,
                                         effect=1)

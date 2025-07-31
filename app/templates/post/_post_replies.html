@@ -55,8 +55,15 @@
                                     {% endif -%}
                                     <li><a href="/community/get_sidebar/{{ community.id }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
                                         <span class="fe fe-rules"></span> {{ _('Community description') }}</a></li>
-                                    <li><a href="{{ url_for('community.community_block', community_id=community.id) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
-                                        <span class="fe fe-delete"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}</a></li>
+                                    <li>
+                                        <a class="dropdown-item no-underline"
+                                                role="button" style="white-space: normal"
+                                                aria-label="{{ _('Block community %(community_name)s', community_name=community.display_name()) }}"
+                                                hx-post="{{ url_for('community.community_block', community_id=community.id, post_id=post.id) }}"
+                                                hx-trigger="click throttle:1s"tabindex="0">
+                                            <span class="fe fe-block"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
 
