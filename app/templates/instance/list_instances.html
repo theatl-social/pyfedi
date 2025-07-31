@@ -18,7 +18,11 @@
             </h1>
         {% endif %}
         <form method="get">
-            <input type="search" name="search" value="{{ search }}"> <input type="submit" name="submit" value="{{ _('Search') }}">
+            <input type="search" name="search" value="{{ search }}">
+            <input class="btn btn-primary btn-sm" type="submit" name="submit" value="{{ _('Search') }}">
+            <a class="btn btn-sm btn-warning" href="{{ url_for('instance.list_instances') }}" aria-label="{{ _('Clear filters') }}" rel="nofollow noindex">
+                {{ _("Clear filters") }}
+            </a>
         </form>
         <div class="d-flex d-md-none flex-row justify-content-between my-2">
             <div class="dropdown">
