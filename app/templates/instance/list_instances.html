@@ -67,11 +67,13 @@
                             {{ _('Federated') }}
                         </a>
                     </li>
-                    <li>
-                        <a class="dropdown-item{{ " active" if filter == "trusted" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" aria-label="{{ _('Trusted instances') }}" rel="nofollow noindex">
-                            {{ _('Trusted') }}
-                        </a>
-                    </li>
+                    {% if trusted -%}
+                        <li>
+                            <a class="dropdown-item{{ " active" if filter == "trusted" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" aria-label="{{ _('Trusted instances') }}" rel="nofollow noindex">
+                                {{ _('Trusted') }}
+                            </a>
+                        </li>
+                    {% endif -%}
                 </ul>
             </div>
         </div>
@@ -101,9 +103,11 @@
                 <a class="btn btn-outline-primary{{ " active" if filter == "federated" else "" }}" href="{{ url_for('instance.list_instances', filter='federated') }}" rel="nofollow noindex">
                     {{ _('Federated') }}
                 </a>
-                <a class="btn btn-outline-primary{{ " active" if filter == "trusted" else "" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" rel="nofollow noindex">
-                    {{ _('Trusted') }}
-                </a>
+                {% if trusted -%}
+                    <a class="btn btn-outline-primary{{ " active" if filter == "trusted" else "" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" rel="nofollow noindex">
+                        {{ _('Trusted') }}
+                    </a>
+                {% endif -%}
             </div>
         </div>
         {% if instances -%}

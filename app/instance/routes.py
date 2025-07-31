@@ -58,11 +58,11 @@ def list_instances():
 
     allowed = db.session.execute(text('SELECT COUNT(id) FROM "allowed_instances"')).scalar() > 0
     blocked = db.session.execute(text('SELECT COUNT(id) FROM "banned_instances"')).scalar() > 0
+    trusted = db.session.execute(text('SELECT COUNT(id) FROM "instance" WHERE trusted IS TRUE')).scalar() > 0
 
-    return render_template('instance/list_instances.html', instances=instances,
-                           title=title, search=search, filter=filter,
-                           next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth, allowed=allowed, blocked=blocked)
+    return render_template('instance/list_instances.html', instances=instances, title=title, search=search,
+                           filter=filter, next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                           allowed=allowed, blocked=blocked, trusted=trusted)
 
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
