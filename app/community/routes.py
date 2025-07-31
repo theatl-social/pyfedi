@@ -1292,7 +1292,7 @@ def community_remove_moderator(community_id: int, user_id: int):
     return redirect(url_for('community.community_mod_list', community_id=community_id))
 
 
-@bp.route('/community/<int:community_id>/block', methods=['GET', 'POST'])
+@bp.route('/community/<int:community_id>/block', methods=['POST'])
 @login_required
 def community_block(community_id: int):
     community = Community.query.get_or_404(community_id)
