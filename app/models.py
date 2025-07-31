@@ -2952,7 +2952,7 @@ class ModLog(db.Model):
     def get_correct_link(self):
         user_action_list = ["add_mod", "remove_mod", "delete_user", "undelete_user", "ban_user", "unban_user"]
         
-        if self.action in user_action_list:
+        if self.action in user_action_list and not self.link.startswith("u/"):
             return "u/" + self.link
         else:
             return self.link
