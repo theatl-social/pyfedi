@@ -1,19 +1,151 @@
 from typing import List
 from urllib.parse import urlparse
+from datetime import datetime
+import gzip
+import orjson
 
+from flask import current_app
 from flask_login import current_user
 from sqlalchemy import desc, asc, text, or_
 
-from app import db
+from app import db, cache
 from app.constants import POST_TYPE_LINK, POST_TYPE_IMAGE, POST_TYPE_VIDEO, POST_TYPE_POLL
-from app.models import PostReply, Post, Community, User
-from app.utils import blocked_instances, blocked_users, is_video_hosting_site
+from app.models import PostReply, Post, Community, User, Language, utcnow
+from app.utils import blocked_instances, blocked_users, is_video_hosting_site, get_request
+
+
+@cache.memoize(timeout=600)
+def retrieve_archived_post(archived_url: str) -> dict:
+    """Load archived post data from S3 or local disk"""
+    if not archived_url:
+        return None
+        
+    try:
+        if archived_url.startswith('http'):
+            # Load from S3 via HTTP
+            response = get_request(archived_url)
+            if response.status_code == 200:
+                # Try to decompress, but if it fails (i.e., Cloudflare already decompressed it during transit),
+                # use the content directly
+                try:
+                    data = gzip.decompress(response.content)
+                except gzip.BadGzipFile:
+                    # Content was already decompressed by CDN/proxy
+                    data = response.content
+                return orjson.loads(data)
+        else:
+            # Load from local disk
+            with gzip.open(archived_url, 'rb') as f:
+                data = f.read()
+                return orjson.loads(data)
+    except Exception as e:
+        current_app.logger.error(f"Failed to load archived data from {archived_url}: {e}")
+        return None
+    
+    return None
+
+
+def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List[dict]:
+    """Convert archived reply data back to the expected tree format using PostReply models"""
+    if not archived_replies:
+        return []
+    
+    def create_real_reply(reply_data):
+        # Create a PostReply instance (not persisted to DB)
+        post_reply = PostReply()
+        post_reply.id = reply_data.get('id')
+        post_reply.body = reply_data.get('body', '')
+        post_reply.body_html = reply_data.get('body_html', '')
+        # Parse datetime strings back to datetime objects
+        if reply_data.get('posted_at'):
+            post_reply.posted_at = datetime.fromisoformat(reply_data['posted_at'])
+        if reply_data.get('edited_at'):
+            post_reply.edited_at = datetime.fromisoformat(reply_data['edited_at'])
+        post_reply.score = reply_data.get('score', 0)
+        post_reply.ranking = reply_data.get('ranking', 0)
+        post_reply.parent_id = reply_data.get('parent_id')
+        post_reply.distinguished = reply_data.get('distinguished', False)
+        post_reply.deleted = reply_data.get('deleted', False)
+        post_reply.deleted_by = reply_data.get('deleted_by')
+        post_reply.user_id = reply_data.get('user_id')
+        post_reply.post_id = post.id
+        post_reply.depth = reply_data.get('depth', 0)
+        post_reply.language_id = reply_data.get('language_id')
+        post_reply.replies_enabled = False
+        post_reply.community_id = reply_data.get('community_id')
+        post_reply.up_votes = reply_data.get('up_votes', 0)
+        post_reply.down_votes = reply_data.get('down_votes', 0)
+        post_reply.child_count = reply_data.get('child_count', 0)
+        post_reply.path = reply_data.get('path', [])
+        post_reply.reports = 0
+        
+        # Post relationship
+        post_reply.post = post
+        
+        # Community relationship
+        post_reply.community = post.community
+        
+        # Author from archived data (or fetch if we have user_id)
+        #if reply_data.get('user_id'):
+        #    post_reply.author = User.query.get(reply_data['user_id'])
+
+        # Create a minimal User instance for display
+        author = User()
+        author.id = reply_data.get('author_id')
+        author.title = reply_data.get('author_name', 'Unknown')
+        author.indexable = reply_data.get('author_indexable', True)
+        author.ap_id = reply_data.get('author_ap_id')
+        author.ap_profile_id = reply_data.get('author_ap_profile_id')
+        author.user_name = reply_data.get('author_user_name')
+        author.deleted = reply_data.get('author_deleted')
+        if reply_data.get('author_created'):
+            author.created = datetime.fromisoformat(reply_data['author_created'])
+        else:
+            author.created = utcnow()
+        author.instance_id = 1
+        author.ap_domain = reply_data.get('author_ap_domain', '')
+        author.reputation = reply_data.get('author_reputation', 1)
+
+        post_reply.author = author
+        
+        # Language
+        if reply_data.get('language_id'):
+            post_reply.language = Language.query.get(reply_data['language_id'])
+        
+        return {
+            'comment': post_reply,
+            'replies': [create_real_reply(child) for child in reply_data.get('replies', [])]
+        }
+    
+    return [create_real_reply(reply) for reply in archived_replies]
+
+
+def find_comment_branch_in_archived(archived_replies: list, comment_id: int) -> list:
+    """Find a specific comment branch in archived data"""
+    def search_tree(replies, target_id):
+        for reply_data in replies:
+            if reply_data.get('id') == target_id:
+                return [reply_data]  # Found the target comment
+            # Search in child replies
+            found = search_tree(reply_data.get('replies', []), target_id)
+            if found:
+                return found
+        return []
+    
+    return search_tree(archived_replies, comment_id)
 
 
 # replies to a post, in a tree, sorted by a variety of methods
-def post_replies(community: Community, post_id: int, sort_by: str, viewer: User) -> List[PostReply]:
-    comments = PostReply.query.filter_by(post_id=post_id)
-    if viewer.is_authenticated:
+def post_replies(post: Post, sort_by: str, viewer: User, db_only=False) -> List[PostReply]:
+    # If post is archived, load from archived data
+    if post.archived and db_only is False:
+        archived_data = retrieve_archived_post(post.archived)
+        if archived_data and 'replies' in archived_data:
+            archived_replies = convert_archived_replies_to_tree(archived_data['replies'], post)
+            return archived_replies
+    
+    comments = db.session.query(PostReply).filter_by(post_id=post.id)
+    if viewer:
         instance_ids = blocked_instances(viewer.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
@@ -22,7 +154,7 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
         blocked_accounts = blocked_users(viewer.id)
         if blocked_accounts:
             comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
-        if viewer.reply_hide_threshold and not (viewer.is_admin() or community.is_owner() or community.is_moderator()):
+        if viewer.reply_hide_threshold and not (viewer.is_admin_or_staff() or post.community.is_moderator()):
             comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
         if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
             comments = comments.filter(
@@ -52,23 +184,48 @@ def post_replies(community: Community, post_id: int, sort_by: str, viewer: User)
     return [comment for comment in comments_dict.values() if comment['comment'].parent_id is None]
 
 
-def get_comment_branch(post_id: int, comment_id: int, sort_by: str) -> List[PostReply]:
+def get_comment_branch(post: Post, comment_id: int, sort_by: str, viewer: User) -> List[PostReply]:
+    # If post is archived, load from archived data
+    if post.archived:
+        archived_data = retrieve_archived_post(post.archived)
+        if archived_data and 'replies' in archived_data:
+            branch_data = find_comment_branch_in_archived(archived_data['replies'], comment_id)
+            if branch_data:
+                return convert_archived_replies_to_tree(branch_data, post)
+            else:
+                return []
+    
     # Fetch the specified parent comment and its replies
     parent_comment = PostReply.query.get(comment_id)
     if parent_comment is None:
         return []
 
-    comments = PostReply.query.filter(PostReply.post_id == post_id)
-    if current_user.is_authenticated:
-        instance_ids = blocked_instances(current_user.id)
+    comments = PostReply.query.filter(PostReply.post_id == post.id)
+    if viewer:
+        instance_ids = blocked_instances(viewer.id)
         if instance_ids:
             comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
+        if viewer.ignore_bots == 1:
+            comments = comments.filter(PostReply.from_bot == False)
+        blocked_accounts = blocked_users(viewer.id)
+        if blocked_accounts:
+            comments = comments.filter(PostReply.user_id.not_in(blocked_accounts))
+        if viewer.reply_hide_threshold and not (viewer.is_admin_or_staff() or post.community.is_moderator()):
+            comments = comments.filter(PostReply.score > viewer.reply_hide_threshold)
+        if viewer.read_language_ids and len(viewer.read_language_ids) > 0:
+            comments = comments.filter(
+                or_(PostReply.language_id.in_(tuple(viewer.read_language_ids)), PostReply.language_id == None))
+    else:
+        comments.filter(PostReply.score > -20)
+
     if sort_by == 'hot':
         comments = comments.order_by(desc(PostReply.ranking))
     elif sort_by == 'top':
         comments = comments.order_by(desc(PostReply.score))
     elif sort_by == 'new':
         comments = comments.order_by(desc(PostReply.posted_at))
+    elif sort_by == 'old':
+        comments = comments.order_by(asc(PostReply.posted_at))
 
     comments_dict = {comment.id: {'comment': comment, 'replies': []} for comment in comments.all()}
 

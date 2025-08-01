@@ -10,7 +10,7 @@ from app.models import Notification, SendQueue, CommunityBan, CommunityMember, U
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session
+    shorten_string, patch_db_session, archive_post
 
 
 @celery.task
@@ -144,47 +144,51 @@ def update_hashtag_counts():
 @celery.task
 def delete_old_soft_deleted_content():
     """Delete soft-deleted content after 7 days"""
-    session = get_task_session()
-    try:
-        with patch_db_session(session):
-            cutoff = utcnow() - timedelta(days=7)
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                from app import redis_client
+                cutoff = utcnow() - timedelta(days=7)
 
-            # Delete old post replies
-            post_reply_ids = list(
-                session.execute(
-                    text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
-                    {'cutoff': cutoff}
-                ).scalars()
-            )
+                # Delete old posts
+                post_ids = list(
+                    session.execute(
+                        text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
+                        {'cutoff': cutoff}
+                    ).scalars()
+                )
 
-            for post_reply_id in post_reply_ids:
-                post_reply = session.query(PostReply).get(post_reply_id)
-                if post_reply:  # Check if still exists
-                    post_reply.delete_dependencies()
-                    if not post_reply.has_replies(include_deleted=True):
-                        session.delete(post_reply)
-                        session.commit()
+                for post_id in post_ids:
+                    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+                        post = session.query(Post).get(post_id)
+                        if post:  # Check if still exists
+                            post.delete_dependencies()
+                            session.delete(post)
+                            session.commit()
 
-            # Delete old posts
-            post_ids = list(
-                session.execute(
-                    text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
-                    {'cutoff': cutoff}
-                ).scalars()
-            )
+                # Delete old post replies
+                post_reply_ids = list(
+                    session.execute(
+                        text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
+                        {'cutoff': cutoff}
+                    ).scalars()
+                )
 
-            for post_id in post_ids:
-                post = session.query(Post).get(post_id)
-                if post:  # Check if still exists
-                    post.delete_dependencies()
-                    session.delete(post)
-                    session.commit()
+                for post_reply_id in post_reply_ids:
+                    with redis_client.lock(f"lock:post_reply:{post_reply_id}", timeout=10, blocking_timeout=6):
+                        post_reply = session.query(PostReply).get(post_reply_id)
+                        if post_reply:  # Check if still exists
+                            post_reply.delete_dependencies()
+                            if not post_reply.has_replies(include_deleted=True):
+                                session.delete(post_reply)
+                                session.commit()
 
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 @celery.task
@@ -644,3 +648,40 @@ def cleanup_old_activitypub_logs():
         raise
     finally:
         session.close()
+
+
+@celery.task
+def archive_old_posts():
+    """Archive old posts to reduce DB size"""
+    if current_app.config['ARCHIVE_POSTS'] > 0:
+        session = get_task_session()
+        try:
+            cutoff = utcnow() - timedelta(days=current_app.config['ARCHIVE_POSTS'] * 28)
+            sql = '''
+                SELECT p.id 
+                FROM "post" p
+                JOIN "community" c ON c.id = p.community_id
+                WHERE p.archived IS NULL 
+                  AND p.created_at < :cutoff
+                  AND p.sticky = false
+                  AND c.can_be_archived = true
+                  AND p.id NOT IN (
+                      SELECT p2.id 
+                      FROM "post" p2 
+                      WHERE p2.community_id = p.community_id 
+                      ORDER BY p2.created_at DESC 
+                      LIMIT 100
+                  )
+            '''
+            post_ids = session.execute(text(sql), {'cutoff': cutoff}).scalars()
+            for post_id in post_ids:
+                if current_app.debug:
+                    archive_post(post_id)
+                else:
+                    archive_post.delay(post_id)
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()

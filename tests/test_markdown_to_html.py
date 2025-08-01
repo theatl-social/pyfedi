@@ -24,6 +24,13 @@ class TestMarkdownToHtml(unittest.TestCase):
         self.assertEqual(result,
                          '<p><a href="https://example.com" rel="nofollow ugc" target="_blank">Link text</a></p>\n')
 
+    def test_links_w_periods(self):
+        """Test links formatting with a period on the end"""
+        markdown = "This is a test link https://pizza.com. Will it work?"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result,
+                         '<p>This is a test link <a href="https://pizza.com" rel="nofollow ugc" target="_blank">https://pizza.com</a>. Will it work?</p>\n')
+
     def test_code_blocks(self):
         """Test code blocks formatting"""
         markdown = "```\ncode block\n```"
@@ -125,6 +132,34 @@ And if you want to add your score to the database to help your fellow Bookworms 
             '<p><a href="https://en.wikipedia.org/wiki/Rick_Astley" rel="nofollow ugc" target="_blank">Bold in '
             '<strong>part of</strong> a link</a></p>\n')
         self.assertEqual(result, correct_html)
+
+    def test_strikethrough_in_inline_code(self):
+        """Don't strikethrough text in inline code."""
+        markdown = "`don't ~~strikethrough~~`"
+        correct_html = "<p><code>don't ~~strikethrough~~</code></p>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+    
+    def test_strikethrough_in_fenced_code(self):
+        """Don't strikethrough text in fenced code block."""
+        markdown = "```\ndon't ~~strikethrough~~\n```"
+        correct_html = "<pre><code>don't ~~strikethrough~~\n</code></pre>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+    
+    def test_spoiler_in_fenced_code(self):
+        """Don't format spoiler block in fenced code block."""
+        markdown = "```\n::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n```"
+        correct_html = "<pre><code>::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n</code></pre>\n"
+        result = markdown_to_html(markdown)
+        self.assertEqual(result, correct_html)
+
+    def test_code_block_link(self):
+        """Test code blocks formatting containing a link"""
+
+        markdown = "```\ncode block with link: https://example.com/ \n```"
+        result = markdown_to_html(markdown)
+        self.assertEqual("<pre><code>code block with link: https://example.com/ \n</code></pre>\n", result)
 
 
 if __name__ == '__main__':

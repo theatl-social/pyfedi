@@ -33,7 +33,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities
+    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
@@ -162,7 +162,7 @@ def home_page(sort, view_filter):
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
-                           announcement=allowlist_html(get_setting('announcement', '')),
+                           announcement=get_setting('announcement_html', get_setting('announcement')),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            user_notes=user_notes(current_user.get_id()),
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
@@ -256,7 +256,7 @@ def list_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -679,7 +679,7 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    retrieve_mods_and_backfill(32, 'piefed.rimu.geek.nz', 'test2')
+    archive_post(70976)
     return 'Done'
     import json
     user_id = 1

@@ -8,7 +8,7 @@ import httpx
 from flask import current_app
 from sqlalchemy import or_
 
-from app import cache
+from app import cache, db
 from app.activitypub.util import get_request, signed_get_request, actor_json_to_model, refresh_user_profile, \
     refresh_community_profile, refresh_feed_profile, extract_domain_and_actor, instance_allowed, normalise_actor_string
 from app.models import User, Community, Feed, Site
@@ -18,18 +18,18 @@ from app.utils import utcnow, get_setting, actor_contains_blocked_words, actor_p
 
 def find_local_community(actor_url: str) -> Community:
     """Find a local community by URL."""
-    return Community.query.filter(Community.ap_profile_id == actor_url).first()
+    return db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
 
 
 def find_local_feed(actor_url: str) -> Feed:
     """Find a local feed by URL."""
-    return Feed.query.filter(Feed.ap_profile_id == actor_url).first()
+    return db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
 
 
 def find_local_user(actor_url: str) -> User:
     """Find a local user by URL or alt name."""
     alt_user_name = actor_url.rsplit('/', 1)[-1]
-    return User.query.filter(or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)).filter_by(
+    return db.session.query(User).filter(or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)).filter_by(
         ap_id=None, banned=False).first()
 
 
@@ -65,16 +65,16 @@ def find_remote_actor(actor_url):
     # Check URL patterns to optimize database queries
     if '/u/' in actor_url:
         # URL contains /u/ - likely a user
-        actor = User.query.filter(User.ap_profile_id == actor_url).first()
+        actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
         if actor:
             return actor
     elif '/c/' in actor_url:
         # URL contains /c/ - likely a community
-        actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
+        actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
         if actor and actor.banned:
             # Try to find a non-banned copy of the community
-            unbanned_actor = Community.query.filter(Community.ap_profile_id == actor_url,
-                                                    Community.banned == False).first()
+            unbanned_actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url,
+                                                                Community.banned == False).first()
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
@@ -82,27 +82,27 @@ def find_remote_actor(actor_url):
             return actor
     elif '/f/' in actor_url:
         # URL contains /f/ - likely a feed
-        actor = Feed.query.filter(Feed.ap_profile_id == actor_url).first()
+        actor = db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
         if actor:
             return actor
     
     # Fallback to trying everything
-    actor = User.query.filter(User.ap_profile_id == actor_url).first()
+    actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
 
     # Look for a remote community if not found as user
     if actor is None:
-        actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
+        actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
         if actor and actor.banned:
             # Try to find a non-banned copy of the community
-            unbanned_actor = Community.query.filter(Community.ap_profile_id == actor_url,
-                                                    Community.banned == False).first()
+            unbanned_actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url,
+                                                                Community.banned == False).first()
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
 
     # Look for a remote feed if not found as user or community
     if actor is None:
-        actor = Feed.query.filter(Feed.ap_profile_id == actor_url).first()
+        actor = db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
 
     return actor
 
@@ -138,7 +138,7 @@ def fetch_remote_actor_data(url: str, retry_count=1):
             elif response.status_code == 401:
                 # Try with a signed request
                 try:
-                    site = Site.query.get(1)
+                    site = db.session.query(Site).get(1)
                     response = signed_get_request(url, site.private_key,
                                                   f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
                     try:

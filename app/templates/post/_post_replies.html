@@ -2,20 +2,22 @@
 <h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
 <div class="row">
     <div class="col">
-        <div class="btn-group mt-1 mb-2">
-            <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Hot') }}
-            </a>
-            <a href="?sort=top#post_replies" title="{{ _('Comments with the most upvotes') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Top') }}
-            </a>
-            <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('New') }}
-            </a>
-            <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Old') }}
-            </a>
-        </div>
+        {% if not post.archived -%}
+            <div class="btn-group mt-1 mb-2">
+                <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Hot') }}
+                </a>
+                <a href="?sort=top#post_replies" title="{{ _('Comments with the most upvotes') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Top') }}
+                </a>
+                <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('New') }}
+                </a>
+                <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Old') }}
+                </a>
+            </div>
+        {% endif -%}
 
         <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
             {% for reply in replies -%}
@@ -53,8 +55,15 @@
                                     {% endif -%}
                                     <li><a href="/community/get_sidebar/{{ community.id }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
                                         <span class="fe fe-rules"></span> {{ _('Community description') }}</a></li>
-                                    <li><a href="{{ url_for('community.community_block', community_id=community.id) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
-                                        <span class="fe fe-delete"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}</a></li>
+                                    <li>
+                                        <a class="dropdown-item no-underline"
+                                                role="button" style="white-space: normal"
+                                                aria-label="{{ _('Block community %(community_name)s', community_name=community.display_name()) }}"
+                                                hx-post="{{ url_for('community.community_block', community_id=community.id, post_id=post.id) }}"
+                                                hx-trigger="click throttle:1s"tabindex="0">
+                                            <span class="fe fe-block"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
 

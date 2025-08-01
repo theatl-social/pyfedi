@@ -245,6 +245,7 @@ def create_new_user(form, ip, country, verification_token):
         font=get_font_preference(),
         ip_address_country=country,
         timezone=form.timezone.data,
+        language_id=g.site.language_id
     )
     user.set_password(form.password.data)
 
@@ -333,11 +334,7 @@ def process_login(form):
 
 def find_user(form):
     username = form.user_name.data.strip()
-    user = (
-        User.query.filter(func.lower(User.user_name) == func.lower(username))
-        .filter_by(ap_id=None, deleted=False)
-        .first()
-    )
+    user = User.query.filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
 
     if not user:
         user = User.query.filter_by(email=username, ap_id=None, deleted=False).first()

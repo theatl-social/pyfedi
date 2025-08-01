@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import bisect
+import gzip
 import hashlib
 import mimetypes
 import math
@@ -50,7 +51,8 @@ from captcha.image import ImageCaptcha
 
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
-    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote
+    File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
+    PostReply, PostReplyBookmark
 
 
 # Flask's render_template function, with support for themes added
@@ -170,7 +172,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # accessed very often (e.g. every page load)
 @cache.memoize(timeout=50)
 def get_setting(name: str, default=None):
-    setting = Settings.query.filter_by(name=name).first()
+    setting = db.session.query(Settings).filter_by(name=name).first()
     if setting is None:
         return default
     else:
@@ -329,30 +331,6 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
-    # Find all plain text links, convert to <a> tags
-    re_url = re.compile(r'(http[s]?://[!-~]+)')  # http(s):// followed by chars in ASCII range 33 to 126
-    for tag in soup.find_all(text=True):
-        tags = []
-        url = False
-        for t in re_url.split(tag.string):
-            if re_url.match(t):
-                # Avoid picking up trailing punctuation for raw URLs in text
-                href = t[:-1] if t[-1] in ['.', ',', '!', ':', ';', '?'] else t
-                if not '(' in t:
-                    href = t[:-1] if t[-1] == ')' else t
-                a = soup.new_tag("a", href=href)
-                a.string = href
-                tags.append(a)
-                if href != t:
-                    tags.append(t[-1])
-                url = True
-            else:
-                tags.append(t)
-        if url:
-            for t in tags:
-                tag.insert_before(t)
-            tag.extract()
-
     # Filter tags, leaving only safe ones
     for tag in soup.find_all():
         # If the tag is not in the allowed_tags list, remove it and its contents
@@ -377,6 +355,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
                 tag.attrs['class'] = 'table'
 
     clean_html = str(soup)
+
+    # substitute out the <code> snippets so that they don't inadvertently get formatted
+    code_snippets, clean_html = stash_code_html(clean_html)
 
     # avoid returning empty anchors
     re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
@@ -423,6 +404,9 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # replace ruby markdown like {漢字|かんじ}
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
     clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
+
+    # bring back the <code> snippets
+    clean_html = pop_code(code_snippets, clean_html)
 
     return clean_html
 
@@ -492,10 +476,25 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
+        # turn links into anchors
+        link_pattern = re.compile(
+            r"""
+                \b
+                (
+                    (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
+                    \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
+                    [^<>\s"']*                    # rest of url
+                    (?<![?!.,:*_~);])             # exclude trailing punctuation
+                    (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
+                )
+            """,
+            re.X
+        )
+
         try:
             raw_html = markdown2.markdown(markdown_text,
                                           extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                                                  'tg-spoiler': True,
+                                                  'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True})
         except TypeError:
@@ -504,10 +503,10 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                      'tg-spoiler': True,
+                                                      'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True})
-            except TypeError:
+            except:
                 raw_html = ''
         
         if not allow_img:
@@ -845,7 +844,7 @@ def feed_membership(user: User, feed: Feed) -> int:
 def communities_banned_from(user_id: int) -> List[int]:
     if user_id == 0:
         return []
-    community_bans = CommunityBan.query.filter(CommunityBan.user_id == user_id).all()
+    community_bans = db.session.query(CommunityBan).filter(CommunityBan.user_id == user_id).all()
     return [cb.community_id for cb in community_bans]
 
 
@@ -853,7 +852,7 @@ def communities_banned_from(user_id: int) -> List[int]:
 def blocked_domains(user_id) -> List[int]:
     if user_id == 0:
         return []
-    blocks = DomainBlock.query.filter_by(user_id=user_id)
+    blocks = db.session.query(DomainBlock).filter_by(user_id=user_id)
     return [block.domain_id for block in blocks]
 
 
@@ -861,7 +860,7 @@ def blocked_domains(user_id) -> List[int]:
 def blocked_communities(user_id) -> List[int]:
     if user_id == 0:
         return []
-    blocks = CommunityBlock.query.filter_by(user_id=user_id)
+    blocks = db.session.query(CommunityBlock).filter_by(user_id=user_id)
     return [block.community_id for block in blocks]
 
 
@@ -869,7 +868,7 @@ def blocked_communities(user_id) -> List[int]:
 def blocked_instances(user_id) -> List[int]:
     if user_id == 0:
         return []
-    blocks = InstanceBlock.query.filter_by(user_id=user_id)
+    blocks = db.session.query(InstanceBlock).filter_by(user_id=user_id)
     return [block.instance_id for block in blocks]
 
 
@@ -877,13 +876,13 @@ def blocked_instances(user_id) -> List[int]:
 def blocked_users(user_id) -> List[int]:
     if user_id == 0:
         return []
-    blocks = UserBlock.query.filter_by(blocker_id=user_id)
+    blocks = db.session.query(UserBlock).filter_by(blocker_id=user_id)
     return [block.blocked_id for block in blocks]
 
 
 @cache.memoize(timeout=86400)
 def blocked_phrases() -> List[str]:
-    site = Site.query.get(1)
+    site = db.session.query(Site).get(1)
     if site.blocked_phrases:
         blocked_phrases = []
         for phrase in site.blocked_phrases.split('\n'):
@@ -899,7 +898,7 @@ def blocked_phrases() -> List[str]:
 
 @cache.memoize(timeout=86400)
 def blocked_referrers() -> List[str]:
-    site = Site.query.get(1)
+    site = db.session.query(Site).get(1)
     if site.auto_decline_referrers:
         return [referrer for referrer in site.auto_decline_referrers.split('\n') if referrer != '']
     else:
@@ -2105,12 +2104,6 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
 
-    if current_app.debug and request.host == 'piefed.ngrok.app':
-        if return_type and return_type == 'model':
-            return User.query.get(1)
-        else:
-            return 1
-
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
@@ -3041,3 +3034,188 @@ def is_valid_xml_utf8(pystring):
         i += 1
 
     return True
+
+
+@celery.task
+def archive_post(post_id: int):
+    from app import redis_client
+    import os
+    session = get_task_session()
+    try:
+        with patch_db_session(session):
+            if current_app.debug:
+                filename = f'post_{post_id}{gibberish(5)}.json'
+            else:
+                filename = f'post_{post_id}.json'
+            with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
+                post = session.query(Post).get(post_id)
+                save_this = {}
+
+                save_this['id'] = post.id
+                save_this['version'] = 1
+                save_this['body'] = post.body
+                save_this['body_html'] = post.body_html
+                save_this['replies'] = []
+                post.body = None
+                post.body_html = None
+                if post.reply_count:
+                    from app.post.util import post_replies
+                    # Get replies sorted by 'hot' with scores preserved - keep hierarchical structure
+                    hot_replies = post_replies(post, 'hot', None, db_only=True)  # No viewer to get all replies
+                    
+                    # Serialization of hierarchical tree
+                    def serialize_tree(reply_tree):
+                        result = []
+                        for reply_dict in reply_tree:
+                            comment = reply_dict['comment']
+                            serialized = {
+                                'id': int(comment.id) if comment.id else None,
+                                'body': str(comment.body) if comment.body else '',
+                                'body_html': str(comment.body_html) if comment.body_html else '',
+                                'posted_at': comment.posted_at.isoformat() if comment.posted_at else None,
+                                'edited_at': comment.edited_at.isoformat() if comment.edited_at else None,
+                                'score': int(comment.score) if comment.score else 0,
+                                'ranking': float(comment.ranking) if comment.ranking else 0.0,
+                                'parent_id': int(comment.parent_id) if comment.parent_id else None,
+                                'distinguished': bool(comment.distinguished),
+                                'deleted': bool(comment.deleted),
+                                'deleted_by': int(comment.deleted_by) if comment.deleted_by else None,
+                                'user_id': int(comment.user_id) if comment.user_id else None,
+                                'depth': int(comment.depth) if comment.depth else 0,
+                                'language_id': int(comment.language_id) if comment.language_id else None,
+                                'replies_enabled': bool(comment.replies_enabled),
+                                'community_id': int(comment.community_id) if comment.community_id else None,
+                                'up_votes': int(comment.up_votes) if comment.up_votes else 0,
+                                'down_votes': int(comment.down_votes) if comment.down_votes else 0,
+                                'child_count': int(comment.child_count) if comment.child_count else 0,
+                                'path': list(comment.path) if comment.path else [],
+                                'author_name': str(comment.author.display_name()) if comment.author and comment.author.display_name() else 'Unknown',
+                                'author_id': int(comment.author.id) if comment.author and comment.author.id else None,
+                                'author_indexable': bool(comment.author.indexable) if comment.author else True,
+                                'author_deleted': bool(comment.author.deleted) if comment.author else False,
+                                'author_user_name': comment.author.user_name if comment.author else False,
+                                'author_ap_id': comment.author.ap_id if comment.author else False,
+                                'author_ap_profile_id': comment.author.ap_profile_id if comment.author else False,
+                                'author_reputation': comment.author.reputation if comment.author else 0,
+                                'author_created': comment.author.created.isoformat() if comment.author else None,
+                                'author_ap_domain': comment.author.ap_domain if comment.author else '',
+                                'replies': serialize_tree(reply_dict['replies'])
+                            }
+                            result.append(serialized)
+                        return result
+                    
+                    save_this['replies'] = serialize_tree(hot_replies)
+
+                if store_files_in_s3():
+                    # upload to s3
+                    boto3_session = boto3.session.Session()
+                    s3 = boto3_session.client(
+                        service_name='s3',
+                        region_name=current_app.config['S3_REGION'],
+                        endpoint_url=current_app.config['S3_ENDPOINT'],
+                        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                    )
+
+                    # upload orjson(save_this) to a file in S3 named f'archived/{filename}'
+                    # save url to  new file into s3_url variable
+                    s3_key = f'archived/{filename}.gz'
+                    json_data = orjson.dumps(save_this)
+                    compressed_data = gzip.compress(json_data)
+
+                    s3.put_object(
+                        Bucket=current_app.config['S3_BUCKET'],
+                        Key=s3_key,
+                        Body=compressed_data,
+                        ContentType='application/gzip',
+                        ContentEncoding='gzip'
+                    )
+
+                    s3_url = f"https://{current_app.config['S3_PUBLIC_URL']}/{s3_key}"
+
+                    s3.close()
+                    post.archived = s3_url
+                else:
+                    ensure_directory_exists('app/static/media/archived')
+                    file_path = f'app/static/media/archived/{filename}'
+                    with gzip.open(file_path + '.gz', 'wb') as f:
+                        f.write(orjson.dumps(save_this))
+                    post.archived = file_path + '.gz'
+
+                session.commit()
+
+                # Delete all post_replies associated with the post
+                # First, get all reply IDs that have bookmarks by users other than the reply author
+                bookmarked_reply_ids = set(
+                    session.execute(text('''
+                        SELECT DISTINCT prb.post_reply_id 
+                        FROM post_reply_bookmark prb 
+                        JOIN post_reply pr ON prb.post_reply_id = pr.id 
+                        WHERE pr.post_id = :post_id
+                    '''), {'post_id': post.id}).scalars()
+                )
+
+                for reply in session.query(PostReply).filter(PostReply.post_id == post.id).order_by(desc(PostReply.created_at)):
+                    if reply.id not in bookmarked_reply_ids:
+                        reply.delete_dependencies()
+                        session.delete(reply)
+                        session.commit()
+
+                # Delete thumbnail and medium sized versions if post has an image
+                if post.image_id is not None:
+
+                    image_file = session.query(File).get(post.image_id)
+                    if image_file:
+                        if store_files_in_s3():
+                            boto3_session = boto3.session.Session()
+                            s3 = boto3_session.client(
+                                service_name='s3',
+                                region_name=current_app.config['S3_REGION'],
+                                endpoint_url=current_app.config['S3_ENDPOINT'],
+                                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                            )
+
+                        # Delete thumbnail
+                        if image_file.thumbnail_path:
+                            if image_file.thumbnail_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.thumbnail_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3() and image_file.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.thumbnail_path = None
+
+                        # Delete medium sized version (file_path)
+                        if image_file.file_path:
+                            if image_file.file_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.file_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3() and image_file.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.file_path = None
+
+                        if store_files_in_s3():
+                            s3.close()
+
+                    session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

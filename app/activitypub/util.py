@@ -850,7 +850,7 @@ def actor_json_to_model(activity_json, address, server):
     if 'type' not in activity_json:  # some Akkoma instances return an empty actor?! e.g. https://donotsta.re/users/april
         return None
     if activity_json['type'] == 'Person' or activity_json['type'] == 'Service':
-        user = User.query.filter(User.ap_profile_id == activity_json['id'].lower()).first()
+        user = db.session.query(User).filter(User.ap_profile_id == activity_json['id'].lower()).first()
         if user:
             return user
         try:
@@ -923,14 +923,14 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return User.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(User).filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if user.avatar_id:
             make_image_sizes(user.avatar_id, 40, 250, 'users')
         if user.cover_id:
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
-        community = Community.query.filter(Community.ap_profile_id == activity_json['id'].lower()).first()
+        community = db.session.query(Community).filter(Community.ap_profile_id == activity_json['id'].lower()).first()
         if community:
             return community
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy and mbin
@@ -941,7 +941,7 @@ def actor_json_to_model(activity_json, address, server):
             mods_url = None
 
         # only allow nsfw communities if enabled for this instance
-        site = Site.query.get(1)  # can't use g.site because actor_json_to_model can be called from celery
+        site = db.session.query(Site).get(1)  # can't use g.site because actor_json_to_model can be called from celery
         if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
@@ -1022,7 +1022,7 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Community.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(Community).filter_by(ap_profile_id=activity_json['id'].lower()).one()
         if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
             for flair in activity_json['lemmy:tagsForPosts']:
                 flair_dict = {'display_name': flair['display_name']}
@@ -1040,7 +1040,7 @@ def actor_json_to_model(activity_json, address, server):
             make_image_sizes(community.image_id, 700, 1600, 'communities')
         return community
     elif activity_json['type'] == 'Feed':
-        feed = Feed.query.filter(Feed.ap_profile_id == activity_json['id'].lower()).first()
+        feed = db.session.query(Feed).filter(Feed.ap_profile_id == activity_json['id'].lower()).first()
         if feed:
             return feed
         if 'attributedTo' in activity_json and isinstance(activity_json['attributedTo'], str):  # lemmy, mbin, and our feeds
@@ -1051,7 +1051,7 @@ def actor_json_to_model(activity_json, address, server):
             owners_url = None
 
         # only allow nsfw communities if enabled for this instance
-        site = Site.query.get(1)  # can't use g.site because actor_json_to_model can be called from celery
+        site = db.session.query(Site).get(1)  # can't use g.site because actor_json_to_model can be called from celery
         if 'sensitive' in activity_json and activity_json['sensitive'] and not site.enable_nsfw:
             return None
         if 'nsfl' in activity_json and activity_json['nsfl'] and not site.enable_nsfl:
@@ -1149,7 +1149,7 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Feed.query.filter_by(ap_profile_id=activity_json['id'].lower()).one()
+            return db.session.query(Feed).filter_by(ap_profile_id=activity_json['id'].lower()).one()
 
         # add the owners as feedmembers
         for ou in owner_users:
@@ -1432,6 +1432,8 @@ def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
 def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
     post = Post.get_by_ap_id(ap_id)
     if post:
+        if post.archived:
+            return None
         return post
     else:
         post_reply = PostReply.get_by_ap_id(ap_id)
@@ -1457,7 +1459,7 @@ def find_reported_object(ap_id) -> Union[User, Post, PostReply, None]:
 
 def find_instance_id(server):
     server = server.strip().lower()
-    instance = Instance.query.filter_by(domain=server).first()
+    instance = db.session.query(Instance).filter_by(domain=server).first()
     if instance:
         return instance.id
     else:
@@ -1470,7 +1472,7 @@ def find_instance_id(server):
             db.session.commit()
         except IntegrityError:
             db.session.rollback()
-            return Instance.query.filter_by(domain=server).one()
+            return db.session.query(Instance).filter_by(domain=server).one()
 
         # Spawn background task to fill in more details
         new_instance_profile(new_instance.id)
@@ -1583,7 +1585,7 @@ def new_instance_profile_task(instance_id: int):
 @cache.memoize(timeout=50)
 def instance_weight(domain):
     if domain:
-        instance = Instance.query.filter_by(domain=domain).first()
+        instance = db.session.query(Instance).filter_by(domain=domain).first()
         if instance:
             return instance.vote_weight
     return 1.0
@@ -1594,6 +1596,7 @@ def is_activitypub_request():
 
 
 def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reason):
+    from app import redis_client
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     community = to_delete.community
@@ -1602,28 +1605,30 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
             community.is_moderator(deletor) or
             community.is_instance_admin(deletor)):
         if isinstance(to_delete, Post):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            community.post_count -= 1
-            to_delete.author.post_count -= 1
-            if to_delete.url and to_delete.cross_posts is not None:
-                to_delete.calculate_cross_posts(delete_only=True)
-            db.session.commit()
+            with redis_client.lock(f"lock:post:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                community.post_count -= 1
+                to_delete.author.post_count -= 1
+                if to_delete.url and to_delete.cross_posts is not None:
+                    to_delete.calculate_cross_posts(delete_only=True)
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete,
                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
         elif isinstance(to_delete, PostReply):
-            to_delete.deleted = True
-            to_delete.deleted_by = deletor.id
-            to_delete.author.post_reply_count -= 1
-            community.post_reply_count -= 1
-            if not to_delete.author.bot:
-                to_delete.post.reply_count -= 1
-            if to_delete.path:
-                db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
-                                   {'parents': tuple(to_delete.path[:-1])})
-            db.session.commit()
+            with redis_client.lock(f"lock:post_reply:{to_delete.id}", timeout=10, blocking_timeout=6):
+                to_delete.deleted = True
+                to_delete.deleted_by = deletor.id
+                to_delete.author.post_reply_count -= 1
+                community.post_reply_count -= 1
+                if not to_delete.author.bot:
+                    to_delete.post.reply_count -= 1
+                if to_delete.path:
+                    db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
+                                       {'parents': tuple(to_delete.path[:-1])})
+                db.session.commit()
             if to_delete.author.id != deletor.id:
                 add_to_modlog('delete_post_reply', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete.post, reply=to_delete,
@@ -1676,7 +1681,7 @@ def restore_post_or_comment(restorer, to_restore, store_ap_json, request_json, r
 
 
 def site_ban_remove_data(blocker_id, blocked):
-    replies = PostReply.query.filter_by(user_id=blocked.id, deleted=False)
+    replies = db.session.query(PostReply).filter_by(user_id=blocked.id, deleted=False)
     for reply in replies:
         reply.deleted = True
         reply.deleted_by = blocker_id
@@ -1689,7 +1694,7 @@ def site_ban_remove_data(blocker_id, blocked):
     blocked.reply_count = 0
     db.session.commit()
 
-    posts = Post.query.filter_by(user_id=blocked.id, deleted=False)
+    posts = db.session.query(Post).filter_by(user_id=blocked.id, deleted=False)
     for post in posts:
         post.deleted = True
         post.deleted_by = blocker_id
@@ -1701,7 +1706,7 @@ def site_ban_remove_data(blocker_id, blocked):
 
     # Delete all their images to save moderators from having to see disgusting stuff.
     # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
-    files = File.query.join(Post).filter(Post.user_id == blocked.id).all()
+    files = db.session.query(File).join(Post).filter(Post.user_id == blocked.id).all()
     for file in files:
         file.delete_from_disk()
         file.source_url = ''
@@ -1867,6 +1872,10 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Could not find parent post')
             return None
         post = Post.query.get(post_id)
+
+        if post.archived:
+            log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Post is archived')
+            return None
 
         if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Post author blocked replier')
@@ -2658,24 +2667,21 @@ def undo_vote(comment, post, target_ap_id, user):
     return None
 
 
-def process_report(user, reported, request_json):
+def process_report(user, reported, request_json, session):
     if 'summary' not in request_json:  # reports from peertube have no summary
         reasons = ''
         description = ''
         if 'content' in request_json:
             reasons = request_json['content']
     else:
-        if len(request_json['summary']) < 15:
-            reasons = request_json['summary']
-            description = ''
-        else:
-            reasons = request_json['summary'][:15]
-            description = request_json['summary'][15:]
+        reasons = request_json['summary']
+        description = ''
+
     if isinstance(reported, User):
         if reported.reports == -1:
             return
         type = 0
-        source_instance = Instance.query.get(user.instance_id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_user_id': reported.id,
                         'suspect_user_user_name': reported.ap_id if reported.ap_id else reported.user_name,
@@ -2689,7 +2695,7 @@ def process_report(user, reported, request_json):
         report = Report(reasons=reasons, description=description,
                         type=type, reporter_id=user.id, suspect_user_id=reported.id,
                         source_instance_id=user.instance_id, targets=targets_data)
-        db.session.add(report)
+        session.add(report)
 
         # Notify site admin
         already_notified = set()
@@ -2699,16 +2705,16 @@ def process_report(user, reported, request_json):
                                       author_id=user.id, notif_type=NOTIF_REPORT,
                                       subtype='user_reported',
                                       targets=targets_data)
-                db.session.add(notify)
+                session.add(notify)
                 admin.unread_notifications += 1
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, Post):
         if reported.reports == -1:
             return
         type = 1
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
+        suspect_author = session.query(User).get(reported.author.id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_post_id': reported.id,
                         'suspect_user_id': reported.author.id,
@@ -2724,7 +2730,7 @@ def process_report(user, reported, request_json):
                         suspect_user_id=reported.author.id, suspect_post_id=reported.id,
                         suspect_community_id=reported.community.id, in_community_id=reported.community.id,
                         source_instance_id=user.instance_id, targets=targets_data)
-        db.session.add(report)
+        session.add(report)
 
         already_notified = set()
         for mod in reported.community.moderators():
@@ -2733,17 +2739,17 @@ def process_report(user, reported, request_json):
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='post_reported',
                                         targets=targets_data)
-            db.session.add(notification)
+            session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, PostReply):
         if reported.reports == -1:
             return
         type = 2
-        post = Post.query.get(reported.post_id)
-        suspect_author = User.query.get(reported.author.id)
-        source_instance = Instance.query.get(user.instance_id)
+        post = session.query(Post).get(reported.post_id)
+        suspect_author = session.query(User).get(reported.author.id)
+        source_instance = session.query(Instance).get(user.instance_id)
         targets_data = {'gen': '0',
                         'suspect_comment_id': reported.id,
                         'suspect_user_id': reported.author.id,
@@ -2759,8 +2765,9 @@ def process_report(user, reported, request_json):
                         suspect_community_id=post.community.id,
                         suspect_user_id=reported.author.id, suspect_post_reply_id=reported.id,
                         in_community_id=post.community.id,
-                        source_instance_id=user.instance_id)
-        db.session.add(report)
+                        source_instance_id=user.instance_id,
+                        targets=targets_data)
+        session.add(report)
         # Notify moderators
         already_notified = set()
         for mod in post.community.moderators():
@@ -2769,10 +2776,10 @@ def process_report(user, reported, request_json):
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='comment_reported',
                                         targets=targets_data)
-            db.session.add(notification)
+            session.add(notification)
             already_notified.add(mod.user_id)
         reported.reports += 1
-        db.session.commit()
+        session.commit()
     elif isinstance(reported, Community):
         ...
     elif isinstance(reported, Conversation):

@@ -25,10 +25,10 @@
                 {{ _('Sticky') }}</a></li>
         {% endif -%}
         {% if post.comments_enabled -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
                 {{ _('Lock') }}</a></li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
+            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
     {% endif -%}
@@ -78,7 +78,7 @@
         {{ _('Report to moderators') }}</a></li>
 <li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-embed"></span>
         {{ _('Get embed code') }}</a></li>
-{% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff()) -%}
+{% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post.community.is_moderator()) -%}
     <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-left"></span>
                 {{ _('View Voting Activity') }}</a></li>
     <li><a href="#" data-url="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post" rel="nofollow noindex"><span class="fe fe-sticky-right"></span>

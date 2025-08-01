@@ -13,6 +13,7 @@
         <meta name="mobile-web-app-capable" content="yes">
         <meta name="HandheldFriendly" content="True">
         <meta name="MobileOptimized" content="320">
+        <meta name="color-scheme" content="light dark">
         <meta name="csrf-token" content="{{ cs }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
@@ -235,14 +236,18 @@
         </div>
         <footer class="footer mt-auto" role="contentinfo">
             <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PieFed app') }}</button></p>
-            <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
-            <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
-            <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
+            <div class="text-center">
+                <p>
+                    <a href="/about">{{ _("About") }}</a> | <a href="/donate">{{ _("Donate") }}</a> | <a href="/instances">{{ _("Instances") }}</a>
+                </p>
+                <p>
+                    {% if g.site.tos_url -%}
+                        <a href="{{ g.site.tos_url }}">{{ _('Terms of service') }}</a> | 
+                    {% endif -%}
+                    <a href="/privacy">{{ _('Privacy policy') }}</a> | <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a>
+                </p>
+            </div>
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
-            {% if g.site.tos_url %}
-                <p class="text-center"><a href="{{ g.site.tos_url }}">{{ _('Terms of service') }}</a></p>
-            {% endif -%}
-            <p class="text-center"><a href="/privacy">{{ _('Privacy policy') }}</a></p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
         <dialog id="voting_dialog">

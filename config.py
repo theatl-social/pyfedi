@@ -95,6 +95,7 @@ class Config(object):
     # enable the aplha api
     ENABLE_ALPHA_API = os.environ.get('ENABLE_ALPHA_API') or False
     SKIP_RATE_LIMIT_IPS = os.environ.get('SKIP_RATE_LIMIT_IPS') or ['127.0.0.1']
+    SERVE_API_DOCS = os.environ.get('SERVE_API_DOCS') or False
 
     IMAGE_HASHING_ENDPOINT = os.environ.get('IMAGE_HASHING_ENDPOINT') or ''
 
@@ -142,3 +143,6 @@ class Config(object):
     COUNTRY_SOURCE_HEADER = os.environ.get('COUNTRY_SOURCE_HEADER') or ''
 
     FEP_AWESOME = os.environ.get('FEP_AWESOME') or False
+
+    # render a post+replies to json and delete from DB after this many months
+    ARCHIVE_POSTS = int(os.environ.get('ARCHIVE_POSTS') or 0)
