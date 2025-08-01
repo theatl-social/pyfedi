@@ -31,7 +31,7 @@ class Site(TimestampMixin, db.Model):
     application_question: Mapped[Optional[str]] = mapped_column(Text)
     
     # Registration
-    registration_open: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    registration_mode: Mapped[str] = mapped_column(String(20), default='open', nullable=False)
     require_application: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Federation

@@ -60,10 +60,11 @@ Tests using old model signatures:
 
 ## Next Steps Priority
 
-1. **Remove duplicate app fixtures** - Will fix ~166 errors
+1. ~~**Remove duplicate app fixtures**~~ ✅ - Fixed 166 ScopeMismatch errors
 2. **Fix model constructor calls** - Update tests to use correct field names
 3. **Fix security test imports** - Resolve missing modules
 4. **Address remaining functional test failures**
+5. **Set up database for local test runs** - Tests need PostgreSQL connection
 
 ## Estimated Impact
 

@@ -32,9 +32,9 @@ class TestConfig:
     
     # Redis configuration
     REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-    CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://test-redis:6379/1')
-    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://test-redis:6379/0')
-    RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://test-redis:6379/0')
+    CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/1')
+    CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+    RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
     
     # Override server name for tests
     SERVER_NAME = os.environ.get('SERVER_NAME', 'test.instance')
