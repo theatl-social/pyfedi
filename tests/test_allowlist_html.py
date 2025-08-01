@@ -1,6 +1,6 @@
 import unittest
 
-from app.utils import allowlist_html, community_link_to_href, feed_link_to_href, person_link_to_href
+from app.utils import allowlist_html, community_link_to_href, feed_link_to_href, person_link_to_href, markdown_to_html
 
 
 class TestAllowlistHtml(unittest.TestCase):
@@ -36,10 +36,10 @@ class TestAllowlistHtml(unittest.TestCase):
 
     def test_plain_text_urls(self):
         """Test that plain text URLs are converted to links"""
-        html = "<p>Visit https://example.com for more info.</p>"
-        result = allowlist_html(html)
+        markdown = "Visit https://example.com for more info."
+        result = allowlist_html(markdown_to_html(markdown))
         self.assertEqual(result,
-                         '<p>Visit <a href="https://example.com" rel="nofollow ugc" target="_blank">https://example.com</a> for more info.</p>')
+                         '<p>Visit <a href="https://example.com" rel="nofollow ugc" target="_blank">https://example.com</a> for more info.</p>\n')
 
     def test_angle_brackets_in_text(self):
         """Test that angle brackets in plain text are escaped"""

@@ -154,6 +154,13 @@ And if you want to add your score to the database to help your fellow Bookworms 
         result = markdown_to_html(markdown)
         self.assertEqual(result, correct_html)
 
+    def test_code_block_link(self):
+        """Test code blocks formatting containing a link"""
+
+        markdown = "```\ncode block with link: https://example.com/ \n```"
+        result = markdown_to_html(markdown)
+        self.assertEqual("<pre><code>code block with link: https://example.com/ \n</code></pre>\n", result)
+
 
 if __name__ == '__main__':
     unittest.main()

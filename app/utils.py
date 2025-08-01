@@ -331,30 +331,6 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
-    # Find all plain text links, convert to <a> tags
-    re_url = re.compile(r'(http[s]?://[!-~]+)')  # http(s):// followed by chars in ASCII range 33 to 126
-    for tag in soup.find_all(text=True):
-        tags = []
-        url = False
-        for t in re_url.split(tag.string):
-            if re_url.match(t):
-                # Avoid picking up trailing punctuation for raw URLs in text
-                href = t[:-1] if t[-1] in ['.', ',', '!', ':', ';', '?'] else t
-                if not '(' in t:
-                    href = href[:-1] if href[-1] == ')' else href
-                a = soup.new_tag("a", href=href)
-                a.string = href
-                tags.append(a)
-                if href != t:
-                    tags.append(t[-1])
-                url = True
-            else:
-                tags.append(t)
-        if url:
-            for t in tags:
-                tag.insert_before(t)
-            tag.extract()
-
     # Filter tags, leaving only safe ones
     for tag in soup.find_all():
         # If the tag is not in the allowed_tags list, remove it and its contents
@@ -500,22 +476,38 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
+        # turn links into anchors
+        link_pattern = re.compile(
+            r"""
+                \b
+                (
+                    (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
+                    \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
+                    [^<>\s"']*                    # rest of url
+                    (?<![?!.,:*_~);])             # exclude trailing punctuation
+                    (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
+                )
+            """,
+            re.X
+        )
+
         try:
             raw_html = markdown2.markdown(markdown_text,
                                           extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                                                  'tg-spoiler': True,
+                                                  'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True})
-        except TypeError:
+        except TypeError as e:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
+            raise e
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
                                                       'tg-spoiler': True,
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True})
-            except TypeError:
+            except TypeError as e:
                 raw_html = ''
         
         if not allow_img:
