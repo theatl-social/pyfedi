@@ -178,6 +178,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         raise Exception('You are not permitted to make posts in this community')
 
     if url:
+        url = url.strip()
         domain = domain_from_url(url)
         if domain:
             if domain.banned or domain.name.endswith('.pages.dev'):
@@ -575,8 +576,8 @@ def restore_post(post_id, src, auth):
 
     post.deleted = False
     post.deleted_by = None
-    post.author.post_count -= 1
-    post.community.post_count -= 1
+    post.author.post_count += 1
+    post.community.post_count += 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Post restored.'))
@@ -712,7 +713,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     post = Post.query.filter_by(id=post_id).one()
     community = post.community
 
-    if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin():
+    if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin_or_staff():
         post.sticky = featured
         if featured:
             modlog_type = 'featured_post'
@@ -782,8 +783,8 @@ def mod_restore_post(post_id, reason, src, auth):
 
     post.deleted = False
     post.deleted_by = None
-    post.author.post_count -= 1
-    post.community.post_count -= 1
+    post.author.post_count += 1
+    post.community.post_count += 1
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Post restored.'))

@@ -15,7 +15,7 @@ from flask import current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
-from flask_sqlalchemy import BaseQuery
+from flask_sqlalchemy.query import Query
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
@@ -44,7 +44,7 @@ class PostReplyValidationError(Exception):
     pass
 
 
-class FullTextSearchQuery(BaseQuery, SearchQueryMixin):
+class FullTextSearchQuery(Query, SearchQueryMixin):
     pass
 
 
@@ -132,7 +132,7 @@ class Instance(db.Model):
     @classmethod
     def weight(cls, domain: str):
         if domain:
-            instance = Instance.query.filter_by(domain=domain).first()
+            instance = db.session.query(cls).filter_by(domain=domain).first()
             if instance:
                 return instance.vote_weight
         return 1.0
@@ -517,6 +517,7 @@ class Community(db.Model):
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
+    can_be_archived = db.Column(db.Boolean, default=True, index=True)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -705,13 +706,16 @@ class Community(db.Model):
         else:
             return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
-    def humanize_subscribers(self, total=True):
+    def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
 
-        if total:
-            subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
+        if "value" in kwargs:
+            subscribers = kwargs.get("value")
         else:
-            subscribers = self.subscriptions_count
+            if total:
+                subscribers = self.total_subscriptions_count if self.total_subscriptions_count else self.subscriptions_count
+            else:
+                subscribers = self.subscriptions_count
         
         if not subscribers:
             return "0"
@@ -722,9 +726,10 @@ class Community(db.Model):
             return str(int(subscribers / 100) / 10) + "k"
     
     def notify_new_posts(self, user_id: int) -> bool:
-        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
-                                                                      NotificationSubscription.user_id == user_id,
-                                                                      NotificationSubscription.type == NOTIF_COMMUNITY).first()
+        existing_notification = db.session.query(NotificationSubscription).\
+            filter(NotificationSubscription.entity_id == self.id,
+                   NotificationSubscription.user_id == user_id,
+                   NotificationSubscription.type == NOTIF_COMMUNITY).first()
         return existing_notification is not None
 
     # ids of all the users who want to be notified when there is a post in this community
@@ -735,8 +740,8 @@ class Community(db.Model):
 
     # instances that have users which are members of this community. (excluding the current instance)
     def following_instances(self, include_dormant=False) -> List[Instance]:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember,
-                                                                                    CommunityMember.user_id == User.id)
+        instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,
+                                                                                                CommunityMember.user_id == User.id)
         instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
         if not include_dormant:
             instances = instances.filter(Instance.dormant == False)
@@ -744,7 +749,7 @@ class Community(db.Model):
         return instances.all()
 
     def has_followers_from_domain(self, domain: str) -> bool:
-        instances = Instance.query.join(User, User.instance_id == Instance.id).join(CommunityMember,
+        instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,
                                                                                     CommunityMember.user_id == User.id)
         instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
         for instance in instances:
@@ -786,9 +791,12 @@ class Community(db.Model):
         return result
 
     def delete_dependencies(self):
-        for post in self.posts:
-            post.delete_dependencies()
-            db.session.delete(post)
+        from app import redis_client
+        for post in db.session.query(Post).filter_by(community_id=self.id):
+            with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+                post.delete_dependencies()
+                db.session.delete(post)
+                db.session.commit()
         db.session.query(FeedItem).filter(FeedItem.community_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.community_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.community_id == self.id).delete()
@@ -798,6 +806,7 @@ class Community(db.Model):
         db.session.query(UserFlair).filter(UserFlair.community_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.community_id == self.id).update({ModLog.community_id: None})
         db.session.query(ActivityBatch).filter(ActivityBatch.community_id == self.id).delete()
+        db.session.commit()
 
 
 user_role = db.Table('user_role',
@@ -836,7 +845,7 @@ class User(UserMixin, db.Model):
     alt_user_name = db.Column(db.String(255), index=True)
     title = db.Column(db.String(256))
     email = db.Column(db.String(255), index=True)
-    password_hash = db.Column(db.String(128))
+    password_hash = db.Column(db.String(165))
     verified = db.Column(db.Boolean, default=False)
     verification_token = db.Column(db.String(16), index=True)
     banned = db.Column(db.Boolean, default=False, index=True)
@@ -1255,11 +1264,11 @@ class User(UserMixin, db.Model):
         return self.created and self.created > utcnow() - timedelta(days=1)
 
     def has_blocked_instance(self, instance_id: int):
-        instance_block = InstanceBlock.query.filter_by(user_id=self.id, instance_id=instance_id).first()
+        instance_block = db.session.query(InstanceBlock).filter_by(user_id=self.id, instance_id=instance_id).first()
         return instance_block is not None
 
     def has_blocked_user(self, user_id: int):
-        existing_block = UserBlock.query.filter_by(blocker_id=self.id, blocked_id=user_id).first()
+        existing_block = db.session.query(UserBlock).filter_by(blocker_id=self.id, blocked_id=user_id).first()
         return existing_block is not None
 
     @staticmethod
@@ -1423,6 +1432,7 @@ class Post(db.Model):
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
     timezone = db.Column(db.String(30))
+    archived = db.Column(db.String(100))
     flair = db.relationship('CommunityFlair', lazy='joined', secondary=post_flair,
                             backref=db.backref('posts', lazy='dynamic'))
 
@@ -1480,7 +1490,7 @@ class Post(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return db.session.query(cls).filter_by(ap_id=ap_id).first()
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
@@ -1793,8 +1803,8 @@ class Post(db.Model):
             return
 
         if self.cross_posts and (url_changed or delete_only):
-            old_cross_posts = Post.query.filter(Post.id.in_(self.cross_posts),
-                                                Post.status == POST_STATUS_PUBLISHED).all()
+            old_cross_posts = db.session.query(Post).filter(Post.id.in_(self.cross_posts),
+                                                            Post.status == POST_STATUS_PUBLISHED).all()
             self.cross_posts.clear()
             for ocp in old_cross_posts:
                 if ocp.cross_posts and self.id in ocp.cross_posts:
@@ -1813,8 +1823,8 @@ class Post(db.Model):
             return
 
         limit = 9
-        new_cross_posts = Post.query.filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
-                                            Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.id)).limit(limit)
+        new_cross_posts = db.session.query(Post).filter(Post.id != self.id, Post.url == self.url, Post.deleted == False,
+                                                        Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.id)).limit(limit)
 
         # other posts: update their cross_posts field with this post.id if they have less than the limit
         for ncp in new_cross_posts:
@@ -1875,6 +1885,31 @@ class Post(db.Model):
                     file.delete_from_disk()
                     db.session.delete(file)
             self.image_id = None
+
+        if self.archived:
+            if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_files_to_delete = []
+                s3_files_to_delete.append(s3_path)
+                delete_payload = {
+                    'Objects': [{'Key': key} for key in s3_files_to_delete],
+                    'Quiet': True  # Optional: if True, successful deletions are not returned
+                }
+                boto3_session = boto3.session.Session()
+                s3 = boto3_session.client(
+                    service_name='s3',
+                    region_name=current_app.config['S3_REGION'],
+                    endpoint_url=current_app.config['S3_ENDPOINT'],
+                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                )
+                s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                s3.close()
+            elif os.path.isfile(self.archived):
+                try:
+                    os.unlink(self.archived)
+                except FileNotFoundError:
+                    ...
 
     def has_been_reported(self):
         return self.reports > 0 and current_user.is_authenticated and self.community.is_moderator()
@@ -1955,9 +1990,10 @@ class Post(db.Model):
             return arrow.get(self.last_active if sort == 'active' else self.posted_at).humanize(locale='en')
 
     def notify_new_replies(self, user_id: int) -> bool:
-        existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
-                                                                      NotificationSubscription.user_id == user_id,
-                                                                      NotificationSubscription.type == NOTIF_POST).first()
+        existing_notification = db.session.query(NotificationSubscription).\
+            filter(NotificationSubscription.entity_id == self.id,
+                   NotificationSubscription.user_id == user_id,
+                   NotificationSubscription.type == NOTIF_POST).first()
         return existing_notification is not None
 
     def language_code(self):
@@ -2308,7 +2344,7 @@ class PostReply(db.Model):
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
-        return cls.query.filter_by(ap_id=ap_id).first()
+        return db.session.query(cls).filter_by(ap_id=ap_id).first()
 
     def profile_id(self):
         if self.ap_id:
@@ -2395,7 +2431,7 @@ class PostReply(db.Model):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
         with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
-            existing_vote = PostReplyVote.query.filter_by(user_id=user.id, post_reply_id=self.id).first()
+            existing_vote = db.session.query(PostReplyVote).filter_by(user_id=user.id, post_reply_id=self.id).first()
             if existing_vote and vote_direction == 'reversal':  # api sends '1' for upvote, '-1' for downvote, and '0' for reversal
                 if existing_vote.effect == 1:
                     vote_direction = 'upvote'
@@ -2905,6 +2941,8 @@ class ModLog(db.Model):
         'unban_user': _l('Un-banned account'),
         'lock_post': _l('Lock post'),
         'unlock_post': _l('Un-lock post'),
+        'lock_post_reply': _l('Lock comment'),
+        'unlock_post_reply': _l('Un-lock comment'),
     }
 
     def action_to_str(self):
@@ -2913,6 +2951,13 @@ class ModLog(db.Model):
         else:
             return self.action
 
+    def get_correct_link(self):
+        user_action_list = ["add_mod", "remove_mod", "delete_user", "undelete_user", "ban_user", "unban_user"]
+        
+        if self.action in user_action_list and not self.link.startswith("u/"):
+            return "u/" + self.link
+        else:
+            return self.link
 
 class IpBan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -2927,7 +2972,9 @@ class Site(db.Model):
     description = db.Column(db.String(256))
     icon_id = db.Column(db.Integer, db.ForeignKey('file.id'))
     sidebar = db.Column(db.Text, default='')
+    sidebar_html = db.Column(db.Text, default='')
     legal_information = db.Column(db.Text, default='')
+    legal_information_html = db.Column(db.Text, default='')
     tos_url = db.Column(db.String(256))
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
@@ -2956,6 +3003,7 @@ class Site(db.Model):
     default_filter = db.Column(db.String(20), default='')
     contact_email = db.Column(db.String(255), default='')
     about = db.Column(db.Text, default='')
+    about_html = db.Column(db.Text, default='')
     logo = db.Column(db.String(40), default='')
     logo_180 = db.Column(db.String(40), default='')
     logo_152 = db.Column(db.String(40), default='')
@@ -2969,13 +3017,13 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(
-            or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
+        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                      or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
-        return User.query.filter_by(deleted=False, banned=False).join(user_role).filter(
-            user_role.c.role_id == ROLE_STAFF).order_by(User.id).all()
+        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                      user_role.c.role_id == ROLE_STAFF).order_by(User.id).all()
 
 
 # class IngressQueue(db.Model):
@@ -2989,7 +3037,7 @@ class Site(db.Model):
 #
 @login.user_loader
 def load_user(id):
-    return User.query.get(int(id))
+    return db.session.query(User).get(int(id))
 
 
 # --- Feeds Models ---

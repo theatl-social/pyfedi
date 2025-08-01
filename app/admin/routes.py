@@ -22,7 +22,8 @@ from app.activitypub.util import instance_allowed, extract_domain_and_actor
 from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
-    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, CmsPageForm
+    EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
+    CmsPageForm, CreateOfflineInstanceForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
@@ -86,9 +87,19 @@ def admin_site():
     if form.validate_on_submit():
         site.name = form.name.data
         site.description = form.description.data  # tagline
+
         site.about = form.about.data
+        if form.about.data:
+            site.about_html = markdown_to_html(form.about.data)
+
         site.sidebar = form.sidebar.data
+        if form.sidebar.data:
+            site.sidebar_html = markdown_to_html(form.sidebar.data)
+
         site.legal_information = form.legal_information.data
+        if form.legal_information.data:
+            site.legal_information_html = markdown_to_html(form.legal_information.data)
+
         site.tos_url = form.tos_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
@@ -159,13 +170,14 @@ def admin_site():
 
         db.session.commit()
         set_setting('announcement', form.announcement.data)
+        set_setting('announcement_html', markdown_to_html(form.announcement.data, anchors_new_tab=False))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.name.data = site.name
         form.description.data = site.description
-        form.about.data = site.about
-        form.sidebar.data = site.sidebar
-        form.legal_information.data = site.legal_information
+        form.about.data = site.about if site.about is not None else ''
+        form.sidebar.data = site.sidebar if site.sidebar is not None else ''
+        form.legal_information.data = site.legal_information if site.legal_information is not None else ''
         form.tos_url.data = site.tos_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
@@ -1125,6 +1137,7 @@ def admin_community_edit(community_id):
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
+        community.can_be_archived = form.can_be_archived.data
 
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
@@ -1182,6 +1195,7 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
+        form.can_be_archived.data = community.can_be_archived
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 
@@ -1196,9 +1210,6 @@ def admin_community_delete(community_id):
     db.session.commit()
 
     unsubscribe_everyone_then_delete(community.id)
-
-    reason = f"Community {community.name} deleted by {current_user.user_name}"
-    add_to_modlog('delete_community', actor=current_user, reason=reason, community=community)
 
     flash(_('Community deleted'))
     return redirect(url_for('admin.admin_communities'))
@@ -1217,17 +1228,17 @@ def unsubscribe_everyone_then_delete_task(community_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                community = Community.query.get_or_404(community_id)
+                community = session.query(Community).get(community_id)
                 if not community.is_local():
-                    members = CommunityMember.query.filter_by(community_id=community_id).all()
+                    members = session.query(CommunityMember).filter_by(community_id=community_id).all()
                     for member in members:
-                        user = User.query.get(member.user_id)
+                        user = session.query(User).get(member.user_id)
                         unsubscribe_from_community(community, user)
+                    sleep(5)
                 else:
                     # todo: federate delete of local community out to all following instances
                     ...
 
-                sleep(5)
                 community.delete_dependencies()
                 session.delete(community)  # todo: when a remote community is deleted it will be able to be re-created by using the 'Add remote' function. Not ideal. Consider soft-delete.
                 session.commit()
@@ -1787,6 +1798,28 @@ def admin_instance_edit(instance_id):
         form.inbox.data = instance.inbox
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
+
+
+@bp.route('/instance/create_offline', methods=['GET', 'POST'])
+@permission_required('administer all communities')
+@login_required
+def admin_instance_create_offline():
+    form = CreateOfflineInstanceForm()
+    if form.validate_on_submit():
+        new_instance = Instance(domain=form.domain.data,
+                                inbox=f"https://{form.domain.data}/inbox",
+                                created_at=utcnow(),
+                                gone_forever=True)
+        try:
+            db.session.add(new_instance)
+            db.session.commit()
+            flash(_("Saved"))
+        except:
+            flash(_("Problem adding instance to database"))
+            
+        return redirect(url_for("admin.admin_instances"))
+    
+    return render_template("admin/create_offline_instance.html", form=form)
 
 
 @bp.route('/community/<int:community_id>/move/<int:new_owner>', methods=['GET', 'POST'])

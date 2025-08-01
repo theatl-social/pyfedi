@@ -8,9 +8,11 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
     array_of_integers_expected
 from app.api.alpha.views import post_view, post_report_view
 from app.constants import *
-from app.models import Post, Community, CommunityMember, utcnow, User
+from app.feed.routes import get_all_child_feed_ids
+from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
+from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
     moderating_communities_ids, user_filters_home, user_filters_posts
@@ -45,6 +47,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     # person_id: the author of the posts being requested
 
     community_id = int(data['community_id']) if data and 'community_id' in data else None
+    feed_id = int(data['feed_id']) if data and 'feed_id' in data else None
+    topic_id = int(data['topic_id']) if data and 'topic_id' in data else None
     community_name = data['community_name'] if data and 'community_name' in data else None
     person_id = int(data['person_id']) if data and 'person_id' in data else None
 
@@ -115,8 +119,53 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                       Post.user_id.not_in(blocked_person_ids),
                                       Post.community_id.not_in(blocked_community_ids),
                                       Post.instance_id.not_in(blocked_instance_ids)). \
-                join(Community, Community.id == Post.community_id).filter(Community.show_all == True,
-                                                                          Community.id == community_id,
+                join(Community, Community.id == Post.community_id).filter(Community.id == community_id,
+                                                                          Community.instance_id.not_in(
+                                                                              blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
+        elif feed_id:
+            feed = Feed.query.get(feed_id)
+            if feed.show_posts_in_children:  # include posts from child feeds
+                feed_ids = get_all_child_feed_ids(feed)
+            else:
+                feed_ids = [feed.id]
+
+            # for each feed get the community ids (FeedItem) in the feed
+            # used for the posts searching
+            feed_community_ids = []
+            for fid in feed_ids:
+                feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
+                for item in feed_items:
+                    feed_community_ids.append(item.community_id)
+
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.user_id.not_in(blocked_person_ids),
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids)). \
+                join(Community, Community.id == Post.community_id).filter(Community.id.in_(feed_community_ids),
+                                                                          Community.instance_id.not_in(
+                                                                              blocked_instance_ids))
+            content_filters = user_filters_posts(user_id) if user_id else {}
+        elif topic_id:
+            topic = Topic.query.get(topic_id)
+            if topic.show_posts_in_children:  # include posts from child feeds
+                topic_ids = get_all_child_topic_ids(topic)
+            else:
+                topic_ids = [topic.id]
+
+            # for each feed get the community ids (FeedItem) in the feed
+            # used for the posts searching
+            topic_community_ids = []
+            for tid in topic_ids:
+                communities = Community.query.filter(Community.topic_id == tid).all()
+                for item in communities:
+                    topic_community_ids.append(item.id)
+
+            posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
+                                      Post.user_id.not_in(blocked_person_ids),
+                                      Post.community_id.not_in(blocked_community_ids),
+                                      Post.instance_id.not_in(blocked_instance_ids)). \
+                join(Community, Community.id == Post.community_id).filter(Community.id.in_(topic_community_ids),
                                                                           Community.instance_id.not_in(
                                                                               blocked_instance_ids))
             content_filters = user_filters_posts(user_id) if user_id else {}

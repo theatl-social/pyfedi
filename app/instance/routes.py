@@ -3,11 +3,12 @@ from collections import namedtuple
 from flask import request, url_for, g, abort, flash, redirect, make_response
 from flask_babel import _
 from flask_login import current_user
-from sqlalchemy import or_, desc
+from sqlalchemy import or_, desc, text
 
+from app import db
 from app.constants import *
 from app.instance import bp
-from app.models import Instance, User, Post, read_posts
+from app.models import Instance, User, Post, read_posts, AllowedInstances, BannedInstances
 from app.shared.site import block_remote_instance, unblock_remote_instance
 from app.utils import render_template, blocked_domains, \
     blocked_instances, blocked_communities, blocked_users, user_filters_home, recently_upvoted_posts, \
@@ -22,6 +23,8 @@ def list_instances():
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     instances = Instance.query.order_by(Instance.domain)
+    allowed = AllowedInstances.query.order_by(AllowedInstances.domain)
+    blocked = BannedInstances.query.order_by(BannedInstances.domain)
     if search:
         instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
     title = _('Instances')
@@ -38,16 +41,28 @@ def list_instances():
         elif filter == 'gone_forever':
             instances = instances.filter(Instance.gone_forever == True)
             title = _('Gone forever instances')
+        elif filter == "allowed":
+            instances = allowed
+            title = _('Allowed instances')
+        elif filter == "blocked":
+            instances = blocked
+            title = _('Defederated instances')
+        elif filter == "federated":
+            instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
+            title = _('Federated instances')
 
     # Pagination
     instances = instances.paginate(page=page, per_page=50, error_out=False)
-    next_url = url_for('instance.list_instances', page=instances.next_num) if instances.has_next else None
-    prev_url = url_for('instance.list_instances', page=instances.prev_num) if instances.has_prev and page != 1 else None
+    next_url = url_for('instance.list_instances', page=instances.next_num, filter=filter, search=search) if instances.has_next else None
+    prev_url = url_for('instance.list_instances', page=instances.prev_num, filter=filter, search=search) if instances.has_prev and page != 1 else None
 
-    return render_template('instance/list_instances.html', instances=instances,
-                           title=title, search=search, filter=filter,
-                           next_url=next_url, prev_url=prev_url,
-                           low_bandwidth=low_bandwidth)
+    allowed = db.session.execute(text('SELECT COUNT(id) FROM "allowed_instances"')).scalar() > 0
+    blocked = db.session.execute(text('SELECT COUNT(id) FROM "banned_instances"')).scalar() > 0
+    trusted = db.session.execute(text('SELECT COUNT(id) FROM "instance" WHERE trusted IS TRUE')).scalar() > 0
+
+    return render_template('instance/list_instances.html', instances=instances, title=title, search=search,
+                           filter=filter, next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                           allowed=allowed, blocked=blocked, trusted=trusted)
 
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])

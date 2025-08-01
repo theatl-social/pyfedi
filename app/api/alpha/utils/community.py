@@ -256,7 +256,7 @@ def get_community_moderate_bans(auth, data):
     limit = int(data['limit']) if data and 'limit' in data else 10
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
@@ -269,10 +269,10 @@ def get_community_moderate_bans(auth, data):
     for cb in community_bans:
         ban_json = {}
         ban_json['reason'] = cb.reason
-        ban_json['expiredAt'] = cb.ban_until
+        ban_json['expired_at'] = cb.ban_until
         ban_json['community'] = community_view(community, variant=1)
-        ban_json['bannedUser'] = user_view(user=cb.user_id, variant=1)
-        ban_json['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+        ban_json['banned_user'] = user_view(user=cb.user_id, variant=1)
+        ban_json['banned_by'] = user_view(user=cb.banned_by, variant=1)
         ban_json['expired'] = True if cb.ban_until < datetime.now() else False
         items.append(ban_json)
 
@@ -300,7 +300,7 @@ def put_community_moderate_unban(auth, data):
     user = authorise_api_user(auth, return_type='model')
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
@@ -311,10 +311,10 @@ def put_community_moderate_unban(auth, data):
     # build the response before deleting the record in the db
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until
+    res['expired_at'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
-    res['bannedUser'] = user_view(user=cb.user_id, variant=1)
-    res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+    res['banned_user'] = user_view(user=cb.user_id, variant=1)
+    res['banned_by'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = True
 
     # unban in the db
@@ -327,7 +327,7 @@ def put_community_moderate_unban(auth, data):
 
     # federate the unban
     task_selector('unban_from_community', user_id=user_id, mod_id=user.id, community_id=community.id,
-                  expiry=res['expiredAt'], reason=res['reason'])
+                  expiry=res['expired_at'], reason=res['reason'])
 
     # notify the unbanned user if they are local to this instance
     if blocked.is_local():
@@ -353,11 +353,11 @@ def put_community_moderate_unban(auth, data):
 
 
 def post_community_moderate_ban(auth, data):
-    required(['community_id', 'user_id', 'reason', 'expiredAt'], data)
+    required(['community_id', 'user_id', 'reason', 'expired_at'], data)
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
     string_expected(['reason'], data)
-    string_expected(['expiredAt'], data)
+    string_expected(['expired_at'], data)
 
     # get the user to ban
     user_id = data['user_id']
@@ -370,21 +370,23 @@ def post_community_moderate_ban(auth, data):
     blocker = authorise_api_user(auth, return_type='model')
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(blocker) or community.is_moderator(blocker) or community.is_instance_admin(blocker)):
+    if not (community.is_owner(blocker) or community.is_moderator(blocker) or blocker.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')
 
     # get the ban_until time if it exists, if not default to one year
-    if isinstance(data['expiredAt'], str):
-        ban_until = datetime.strptime(data['expiredAt'], '%Y-%m-%dT%H:%M:%S')
+    if isinstance(data['expired_at'], str):
+        ban_until = datetime.strptime(data['expired_at'], '%Y-%m-%dT%H:%M:%S')
     else:
         ban_until = datetime.now() + relativedelta(years=1)
 
     # create the community ban
-    cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
-                      reason=data['reason'], ban_until=ban_until)
-    db.session.add(cb)
+    cb = CommunityBan.query.filter(CommunityBan.user_id == blocked.id, CommunityBan.community_id == community.id).first()
+    if not cb:
+        cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
+                          reason=data['reason'], ban_until=ban_until)
+        db.session.add(cb)
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
         community_membership_record.is_banned = True
@@ -414,17 +416,17 @@ def post_community_moderate_ban(auth, data):
                                                           NotificationSubscription.type == NOTIF_COMMUNITY).delete()
         db.session.commit()
 
-        cache.delete_memoized(communities_banned_from, blocked.id)
-        cache.delete_memoized(joined_communities, blocked.id)
-        cache.delete_memoized(moderating_communities, blocked.id)
+    cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(joined_communities, blocked.id)
+    cache.delete_memoized(moderating_communities, blocked.id)
 
     # build the response
     res = {}
     res['reason'] = cb.reason
-    res['expiredAt'] = cb.ban_until
+    res['expired_at'] = cb.ban_until
     res['community'] = community_view(community, variant=1)
-    res['bannedUser'] = user_view(user=cb.user_id, variant=1)
-    res['bannedBy'] = user_view(user=cb.banned_by, variant=1)
+    res['banned_user'] = user_view(user=cb.user_id, variant=1)
+    res['banned_by'] = user_view(user=cb.banned_by, variant=1)
     res['expired'] = False
 
     # return the res{} json
@@ -447,7 +449,7 @@ def post_community_moderate_post_nsfw(auth, data):
     community = Community.query.get(post.community_id)
 
     # validate that the user is a mod or owner of the community, or an instance admin
-    if not (community.is_owner(mod_user) or community.is_moderator(mod_user) or community.is_instance_admin(mod_user)):
+    if not (community.is_owner(mod_user) or community.is_moderator(mod_user) or mod_user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
         raise Exception('Community not local to this instance.')

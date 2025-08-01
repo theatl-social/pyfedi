@@ -33,7 +33,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
-    blocked_phrases, orjson_response
+    blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids
 
 
 @bp.route('/testredis')
@@ -1153,7 +1153,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity['type'] == 'Flag':  # Reported content
                     reported = find_reported_object(core_activity['object'])
                     if reported:
-                        process_report(user, reported, core_activity)
+                        process_report(user, reported, core_activity, session)
                         log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, saved_json)
                         announce_activity_to_followers(reported.community, user, request_json)
                     else:
@@ -1161,9 +1161,18 @@ def process_inbox_request(request_json, store_ap_json):
                                         'Report ignored due to missing content')
                     return
 
-                if core_activity['type'] == 'Lock':  # Post lock
+                if core_activity['type'] == 'Lock':  # Post or comment lock
                     mod = user
-                    post = Post.get_by_ap_id(core_activity['object'])
+                    post = None
+                    post_reply = None
+                    if '/post/' in core_activity['object']:
+                        post = Post.get_by_ap_id(core_activity['object'])
+                    elif '/comment/' in core_activity['object']:
+                        post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                    else:
+                        post = Post.get_by_ap_id(core_activity['object'])
+                        if post is None:
+                            post_reply = PostReply.get_by_ap_id(core_activity['object'])
                     reason = core_activity['summary'] if 'summary' in core_activity else ''
                     if post:
                         if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -1172,6 +1181,19 @@ def process_inbox_request(request_json, store_ap_json):
                             add_to_modlog('lock_post', actor=mod, target_user=post.author, reason=reason,
                                           community=post.community, post=post,
                                           link_text=shorten_string(post.title), link=f'post/{post.id}')
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
+                        else:
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: Does not have permission')
+                    elif post_reply:
+                        if post_reply.community.is_moderator(mod) or post.community.is_instance_admin(mod):
+                            post_reply.replies_enabled = False
+                            session.execute(text(
+                                'update post_reply set replies_enabled = :replies_enabled where path @> ARRAY[:parent_id]'),
+                                               {'parent_id': post_reply.id, 'replies_enabled': False})
+                            session.commit()
+                            add_to_modlog('lock_post_reply', actor=mod, target_user=post.author, reason=reason,
+                                          community=post.community, reply=post_reply,
+                                          link_text=shorten_string(post_reply.body), link=f'post/{post_reply.post_id}#comment_{post_reply.id}')
                             log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                         else:
                             log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: Does not have permission')
@@ -1236,6 +1258,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 add_to_modlog('add_mod', actor=mod, target_user=new_mod, community=community,
                                               link_text=new_mod.display_name(), link=new_mod.link())
                                 session.commit()
+                                cache.delete_memoized(moderating_communities, new_mod.id)
+                                cache.delete_memoized(joined_communities, new_mod.id)
+                                cache.delete_memoized(community_moderators, community.id)
+                                cache.delete_memoized(moderating_communities_ids, new_mod.id)
+                                cache.delete_memoized(Community.moderators, community)
                                 log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, saved_json)
                             else:
                                 log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json,
@@ -1330,6 +1357,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 if existing_membership:
                                     existing_membership.is_moderator = False
                                     session.commit()
+                                    cache.delete_memoized(moderating_communities, old_mod.id)
+                                    cache.delete_memoized(joined_communities, old_mod.id)
+                                    cache.delete_memoized(community_moderators, community.id)
+                                    cache.delete_memoized(moderating_communities_ids, old_mod.id)
+                                    cache.delete_memoized(Community.moderators, community)
                                     log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json)
                                 add_to_modlog('remove_mod', actor=mod, target_user=old_mod, community=community,
                                               link_text=old_mod.display_name(), link=old_mod.link())
@@ -1509,7 +1541,16 @@ def process_inbox_request(request_json, store_ap_json):
 
                     if core_activity['object']['type'] == 'Lock':  # Undo of post lock
                         mod = user
-                        post = Post.get_by_ap_id(core_activity['object']['object'])
+                        post = None
+                        post_reply = None
+                        if '/post/' in core_activity['object']:
+                            post = Post.get_by_ap_id(core_activity['object'])
+                        elif '/comment/' in core_activity['object']:
+                            post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                        else:
+                            post = Post.get_by_ap_id(core_activity['object'])
+                            if post is None:
+                                post_reply = PostReply.get_by_ap_id(core_activity['object'])
                         reason = core_activity['summary'] if 'summary' in core_activity else ''
                         if post:
                             if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -1520,9 +1561,22 @@ def process_inbox_request(request_json, store_ap_json):
                                               link_text=shorten_string(post.title), link=f'post/{post.id}')
                                 log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                             else:
-                                log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: Does not have permission')
+                                log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Unlock: Does not have permission')
+                        if post_reply:
+                            if post_reply.community.is_moderator(mod) or post_reply.community.is_instance_admin(mod):
+                                post_reply.replies_enabled = True
+                                db.session.execute(text(
+                                    'update post_reply set replies_enabled = :replies_enabled where path @> ARRAY[:parent_id]'),
+                                                   {'parent_id': post_reply.id, 'replies_enabled': True})
+                                session.commit()
+                                add_to_modlog('unlock_post_reply', actor=mod, target_user=post.author, reason=reason,
+                                              community=post.community, reply=post_reply,
+                                              link_text=shorten_string(post_reply.body), link=f'post/{post_reply.post_id}#comment_{post_reply.id}')
+                                log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
+                            else:
+                                log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Unlock: Does not have permission')
                         else:
-                            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Lock: post not found')
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_FAILURE, saved_json, 'Unlock: post not found')
                         return
 
                     if core_activity['object']['type'] == 'Block':  # Undo of user ban
@@ -1886,7 +1940,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
             if activity_json['type'] == 'Create':
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Create processed after Update')
                 return
-            if user.id == post.user_id:
+            if user.id == post.user_id or post.community.is_moderator(user) or post.community.is_instance_admin(user):
                 update_post_from_activity(post, activity_json)
                 log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                 if not announced:

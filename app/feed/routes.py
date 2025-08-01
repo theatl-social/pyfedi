@@ -3,7 +3,8 @@ from collections import namedtuple
 from random import randint
 from typing import List
 
-from flask import g, current_app, request, redirect, url_for, flash, abort, Markup
+from flask import g, current_app, request, redirect, url_for, flash, abort
+from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
 from slugify import slugify
@@ -674,6 +675,11 @@ def show_feed(feed):
         else:
             flash(_('Could not find that feed or it is not public. Try one of these instead...'))
             return redirect(url_for('main.list_feeds'))
+    
+    if current_user.is_anonymous and (feed.nsfw or feed.nsfl):
+        flash(_("This feed is only visible to logged in users."))
+        next_url = "/f/" + (feed.ap_id if feed.ap_id else feed.machine_name)
+        return redirect(url_for("auth.login", next=next_url))
 
     page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)

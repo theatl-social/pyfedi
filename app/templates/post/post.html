@@ -29,29 +29,35 @@
                         <hr class="mt-1" />
                         <div class="col">
                             <div class="reply_form_inner position-relative">
-                                {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id -%}
-                                    <p>{{ _('This post is hosted on beehaw.org which has <a href="https://docs.beehaw.org/docs/core-principles/what-is-beehaw/" target="_blank" rel="nofollow">higher standards of behaviour than most places. Be nice</a>.') }}</p>
-                                {% endif -%}
-                                {% if post.community.posting_warning -%}
-                                    <p align="center">{{ post.community.posting_warning|safe }}</p>
-                                {% endif -%}
-                                {% if recipient_language_name -%}
-                                    <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
-                                        <i class="fas fa-language"></i>
-                                        {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
+                                {% if post.archived -%}
+                                    <div id="post_archived_notice" class="alert alert-message mb-0">
+                                        {{ _('This post is old so votes and comments are disabled.') }}
                                     </div>
+                                {% else -%}
+                                    {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id -%}
+                                        <p>{{ _('This post is hosted on beehaw.org which has <a href="https://docs.beehaw.org/docs/core-principles/what-is-beehaw/" target="_blank" rel="nofollow">higher standards of behaviour than most places. Be nice</a>.') }}</p>
+                                    {% endif -%}
+                                    {% if post.community.posting_warning -%}
+                                        <p align="center">{{ post.community.posting_warning|safe }}</p>
+                                    {% endif -%}
+                                    {% if recipient_language_name -%}
+                                        <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
+                                            <i class="fas fa-language"></i>
+                                            {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
+                                        </div>
+                                    {% endif -%}
+                                    <form method="post" role="form">
+                                        {{ form.csrf_token() }}
+                                        {{ render_field(form.body) }}
+                                        <fieldset id="post_reply_more_options" class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
+                                            <legend>{{ _('More options') }}</legend>
+                                            {{ render_field(form.notify_author) }}
+                                            {{ render_field(form.distinguished) }}
+                                            {{ render_field(form.language_id) }}
+                                        </fieldset>
+                                        {{ render_field(form.submit) }}
+                                    </form>
                                 {% endif -%}
-                                <form method="post" role="form">
-                                    {{ form.csrf_token() }}
-                                    {{ render_field(form.body) }}
-                                    <fieldset id="post_reply_more_options" class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
-                                        <legend>{{ _('More options') }}</legend>
-                                        {{ render_field(form.notify_author) }}
-                                        {{ render_field(form.distinguished) }}
-                                        {{ render_field(form.language_id) }}
-                                    </fieldset>
-                                    {{ render_field(form.submit) }}
-                                </form>
                                 {% if not low_bandwidth -%}
                                     <script nonce="{{ nonce }}">
                                         window.addEventListener("DOMContentLoaded", function () {

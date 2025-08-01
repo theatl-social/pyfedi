@@ -86,6 +86,8 @@
                 {% else -%}
                     <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span>
                 {% endif -%}
+            {% else -%}
+                <span class="fe fe-lock"></span><span class="hide_skinny_mobile">&nbsp;{{ _('locked') }}</span>
             {% endif -%}
         </div>
         <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">

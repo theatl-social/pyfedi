@@ -59,6 +59,7 @@
                         </li>
                     {% endfor %}
                 </ul>
+                <p class="mb-0 mt-2"><a href="/communities?sort_by=created_at desc" class="btn btn-outline-secondary">{{ _('More new communities') }}</a></p>
             </div>
         </div>
         {% endif -%}
@@ -86,8 +87,12 @@
                  <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
             </div>
             <div class="card-body">
-                <p><strong>{{ g.site.description|safe }}</strong></p>
-                <p>{{ g.site.sidebar|safe }}</p>
+                {% if g.site.description -%}
+                    <p><strong>{{ g.site.description|safe }}</strong></p>
+                {% endif -%}
+                {% if g.site.sidebar_html -%}
+                    <p>{{ g.site.sidebar_html|safe }}</p>
+                {% endif -%}
                 {% if rss_feed %}
                 <p class="mt-4">
                     <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>

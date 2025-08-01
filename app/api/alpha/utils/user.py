@@ -573,15 +573,15 @@ def post_user_verify_credentials(data):
     required(["username", "password"], data)
     string_expected(["username", "password"], data)
 
-    username = data['username']
+    username = data['username'].lower()
     password = data['password']
 
     if '@' in username:
-        user = User.query.filter_by(email=username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.email) == username, ap_id=None, deleted=False).one()
     else:
-        user = User.query.filter_by(user_name=username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.user_name) == username, ap_id=None, deleted=False).one()
 
-    if not user.check_password(password):
+    if user is None or not user.check_password(password):
         raise NoResultFound
 
     return {}

@@ -2,6 +2,7 @@ import smtplib
 import uuid
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.utils import formatdate
 from typing import List
 
 import boto3
@@ -33,8 +34,8 @@ def send_verification_email(user):
     send_email(_('[PieFed] Please verify your email address'),
                sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
                recipients=[user.email],
-               text_body=render_template('email/verification.txt', user=user),
-               html_body=render_template('email/verification.html', user=user))
+               text_body=render_template('email/verification.txt', user=user, domain=current_app.config['SERVER_NAME']),
+               html_body=render_template('email/verification.html', user=user, domain=current_app.config['SERVER_NAME']))
 
 
 def send_registration_approved_email(user):
@@ -202,6 +203,7 @@ class SMTPEmailService:
         self.msg["CC"] = None
         self.msg["BCC"] = None
         self.msg["Message-ID"] = f"<{uuid.uuid4()}@{self.server_name}>"
+        self.msg['Date'] = formatdate(localtime=True)
 
     def clear_message(self):
         """

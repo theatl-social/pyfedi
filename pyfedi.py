@@ -1,4 +1,4 @@
-# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 from datetime import datetime
 import os
@@ -123,8 +123,8 @@ def after_request(response):
             response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
     else:
         if 'auth/register' not in request.path:
-            if hasattr(g, 'nonce'):
-                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'"
+            if hasattr(g, 'nonce') and "/swagger" not in request.path:
+                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'; object-src 'none'; base-uri 'none';"
             response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
