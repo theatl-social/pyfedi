@@ -14,14 +14,20 @@ class ProfileForm(FlaskForm):
     password = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=8, max=129)],
                              render_kw={'autocomplete': 'new-password', 'title': _l('Minimum length 8, maximum 128')})
     about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5, 'class': 'autoresize'})
-    extra_label_1 = StringField(_l('Extra field 1 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
-    extra_text_1 = StringField(_l('Extra field 1 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
-    extra_label_2 = StringField(_l('Extra field 2 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
-    extra_text_2 = StringField(_l('Extra field 2 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
-    extra_label_3 = StringField(_l('Extra field 3 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
-    extra_text_3 = StringField(_l('Extra field 3 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
-    extra_label_4 = StringField(_l('Extra field 4 - label'), validators=[Optional(), Length(max=50)], render_kw={"placeholder": _l('Label')})
-    extra_text_4 = StringField(_l('Extra field 4 - text'), validators=[Optional(), Length(max=256)], render_kw={"placeholder": _l('Content')})
+    extra_label_1 = StringField(_l('Extra field 1 - label'), validators=[Optional(), Length(max=50)],
+                                render_kw={"placeholder": _l('e.g. Pronouns')})
+    extra_text_1 = StringField(_l('Extra field 1 - text'), validators=[Optional(), Length(max=256)],
+                               render_kw={"placeholder": _l("he/him, she/her, they/them, etc")})
+    extra_label_2 = StringField(_l('Extra field 2 - label'), validators=[Optional(), Length(max=50)],
+                                render_kw={"placeholder": _l('What I care about')})
+    extra_text_2 = StringField(_l('Extra field 2 - text'), validators=[Optional(), Length(max=256)],
+                               render_kw={"placeholder": _l('Cats, Peace, Family')})
+    extra_label_3 = StringField(_l('Extra field 3 - label'), validators=[Optional(), Length(max=50)],
+                                render_kw={"placeholder": _l('People who influence me')})
+    extra_text_3 = StringField(_l('Extra field 3 - text'), validators=[Optional(), Length(max=256)])
+    extra_label_4 = StringField(_l('Extra field 4 - label'), validators=[Optional(), Length(max=50)],
+                                render_kw={"placeholder": _l("Things I've changed my mind about")})
+    extra_text_4 = StringField(_l('Extra field 4 - text'), validators=[Optional(), Length(max=256)])
     matrixuserid = StringField(_l('Matrix User ID'), validators=[Optional(), Length(max=255)],
                                render_kw={'autocomplete': 'off'})
     profile_file = FileField(_l('Avatar image'), render_kw={'accept': 'image/*'})
