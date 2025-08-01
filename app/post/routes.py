@@ -8,7 +8,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, constants, cache, limiter
@@ -1017,6 +1017,13 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
     if post.user_id != user.id and reason is not None:
         add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
                       link_text=shorten_string(post.title), link=f'post/{post.id}')
+        
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        db.session.delete(notif)
+    db.session.commit()
+
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
