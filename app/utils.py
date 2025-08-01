@@ -3184,7 +3184,7 @@ def archive_post(post_id: int):
                                     os.unlink(image_file.thumbnail_path)
                                 except (OSError, FileNotFoundError):
                                     pass
-                            elif store_files_in_s3():
+                            elif store_files_in_s3() and image_file.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
                                 # S3 file deletion
                                 try:
                                     s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
@@ -3201,7 +3201,7 @@ def archive_post(post_id: int):
                                     os.unlink(image_file.file_path)
                                 except (OSError, FileNotFoundError):
                                     pass
-                            elif store_files_in_s3():
+                            elif store_files_in_s3() and image_file.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
                                 # S3 file deletion
                                 try:
                                     s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
