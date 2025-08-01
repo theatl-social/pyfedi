@@ -35,12 +35,9 @@ class Instance(TimestampMixin, db.Model):
     version: Mapped[Optional[str]] = mapped_column(String(50))
     
     # Status
-    online: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     gone_forever: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     dormant: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    
-    # Trust and reputation
-    trust_level: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    start_trying_again: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
     # Nodeinfo
     nodeinfo_href: Mapped[Optional[str]] = mapped_column(String(256))
@@ -51,8 +48,7 @@ class Instance(TimestampMixin, db.Model):
     
     # Last contact
     last_seen: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    last_successful_contact: Mapped[Optional[datetime]] = mapped_column(DateTime)
-    last_failed_contact: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    last_successful_send: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
     # Failure tracking
     failures: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
@@ -70,32 +66,44 @@ class Instance(TimestampMixin, db.Model):
     federation_errors = relationship('FederationError', back_populates='instance', lazy='dynamic',
                                    cascade='all, delete-orphan')
     
+    def online(self) -> bool:
+        """Check if instance is currently online"""
+        # Instance is online if it's not dormant, not gone forever, and has had recent successful contact
+        if self.gone_forever or self.dormant:
+            return False
+        # If we have a recent successful send (within 7 days), consider it online
+        if self.last_successful_send:
+            from datetime import timedelta
+            return (datetime.now(timezone.utc) - self.last_successful_send) < timedelta(days=7)
+        # Default to True for new instances
+        return True
+    
     @hybrid_property
     def is_online(self) -> bool:
-        """Check if instance is currently online"""
-        return self.online and not self.gone_forever
+        """Check if instance is currently online (property version)"""
+        return self.online()
     
     @hybrid_property
     def is_trusted(self) -> bool:
         """Check if instance is trusted"""
-        return self.trust_level > 0.5
+        # Since we don't have trust_level, use failure count
+        return self.failures < 5
     
     def record_success(self) -> None:
         """Record successful contact"""
         self.last_seen = datetime.now(timezone.utc)
-        self.last_successful_contact = datetime.now(timezone.utc)
+        self.last_successful_send = datetime.now(timezone.utc)
         self.failures = 0
-        self.online = True
+        self.dormant = False
     
     def record_failure(self) -> None:
         """Record failed contact"""
-        self.last_failed_contact = datetime.now(timezone.utc)
         self.failures += 1
         self.most_recent_attempt = datetime.now(timezone.utc)
         
-        # Mark offline after too many failures
+        # Mark dormant after too many failures
         if self.failures > 10:
-            self.online = False
+            self.dormant = True
         
         # Mark gone forever after extended failures
         if self.failures > 100:
