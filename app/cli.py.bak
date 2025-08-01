@@ -1114,7 +1114,7 @@ def register(app):
     def detect_vote_manipulation():
         with app.app_context():
             print('Getting user ids...')
-            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime.now(timezone.utc) - timedelta(days=7))]
+            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime., timezone() - timedelta(days=7))]
             print('Checking...')
             for i, first_user_id in enumerate(all_user_ids):
                 current_user_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(first_user_id)]

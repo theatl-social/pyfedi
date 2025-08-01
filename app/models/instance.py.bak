@@ -91,7 +91,7 @@ class Instance(TimestampMixin, db.Model):
         """Record failed contact"""
         self.last_failed_contact = datetime.now(timezone.utc)
         self.failures += 1
-        self.most_recent_attempt = datetime.now(timezone.utc)
+        self.most_recent_attempt = datetime., timezone()
         
         # Mark offline after too many failures
         if self.failures > 10:

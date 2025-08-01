@@ -397,7 +397,7 @@ class HttpSignature:
         # Verify date header
         if "date" in request.headers and not skip_date:
             header_date = parse_http_date(request.headers["date"])
-            if abs((arrow., timezone() - header_date).total_seconds()) > 3600:
+            if abs((arrow.utcnow() - header_date).total_seconds()) > 3600:
                 raise VerificationFormatError("Date is too far away")
 
         # Get the signature details

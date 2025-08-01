@@ -194,7 +194,7 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
     task_data = {
         'task': task_key,
         'kwargs': {'send_async': send_async, **kwargs},
-        'timestamp': datetime.now(timezone.utc).isoformat()
+        'timestamp': datetime., timezone().isoformat()
     }
     
     # Determine priority based on task type

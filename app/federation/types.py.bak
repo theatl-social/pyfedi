@@ -164,7 +164,7 @@ class ProcessingMetrics:
         """Record processing failure"""
         self.messages_failed += 1
         self.last_error = error
-        self.last_error_time = datetime.now(timezone.utc)
+        self.last_error_time = datetime., timezone()
     
     def record_retry(self) -> None:
         """Record retry attempt"""

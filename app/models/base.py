@@ -1,7 +1,7 @@
 """Base classes and mixins for PeachPie models"""
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, Boolean, Text, DateTime, Float, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -54,7 +54,7 @@ class SoftDeleteMixin:
     def soft_delete(self) -> None:
         """Mark record as deleted"""
         self.deleted = True
-        self.deleted_at = datetime., timezone()
+        self.deleted_at = datetime.now(timezone.utc)
     
     def restore(self) -> None:
         """Restore soft-deleted record"""

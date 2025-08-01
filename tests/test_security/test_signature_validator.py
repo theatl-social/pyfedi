@@ -4,7 +4,7 @@ Tests protection against authentication bypass vulnerabilities
 """
 import pytest
 from unittest.mock import Mock, patch
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.security.signature_validator import SignatureValidator, SecurityError
 from app.activitypub.signature import VerificationError
 
@@ -135,7 +135,7 @@ class TestSignatureValidator:
     def test_future_date_header_rejected(self):
         """Test requests with future date headers are rejected"""
         # Set date header to 1 hour in future
-        future_date = (datetime., timezone() + timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        future_date = (datetime.now(timezone.utc) + timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
         self.mock_request.headers = {
             'Signature': 'keyId="...",headers="date",...',
             'Date': future_date

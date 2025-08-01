@@ -332,7 +332,7 @@ class InstanceHealthMonitor:
     def _set_circuit_open_time(self, instance_domain: str):
         """Set when circuit was opened"""
         key = f'instance_health:circuit_open_time:{instance_domain}'
-        self.redis_client.setex(key, 86400, datetime.now(timezone.utc).isoformat())
+        self.redis_client.setex(key, 86400, datetime., timezone().isoformat())
     
     def _get_recent_success_count(self, instance_domain: str) -> int:
         """Get count of recent successes (for half-open state)"""

@@ -689,5 +689,5 @@ class LifecycleManager:
         return {
             'cleanup_stats': cleanup_stats,
             'memory_status': memory_status,
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            'timestamp': datetime., timezone().isoformat()
         }

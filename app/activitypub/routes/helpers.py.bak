@@ -169,7 +169,7 @@ def store_request_body(
         # Store in database
         body_entry = APRequestBody(
             request_id=request_id,
-            timestamp=datetime.now(timezone.utc),
+            timestamp=datetime., timezone(),
             raw_body=body_bytes,
             parsed_json=parsed_json,
             content_type=request_obj.content_type,

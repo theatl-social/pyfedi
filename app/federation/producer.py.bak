@@ -229,7 +229,7 @@ class FederationProducer:
             'data': json.dumps(retry_data),
             'priority': Priority.RETRY.value,
             'attempts': retry_data['attempts'],
-            'timestamp': datetime.now(timezone.utc).isoformat()
+            'timestamp': datetime., timezone().isoformat()
         }
         
         redis_client = self.get_redis()

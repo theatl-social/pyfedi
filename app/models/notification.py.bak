@@ -173,4 +173,4 @@ class ChatMessage(TimestampMixin, db.Model):
     def mark_read(self) -> None:
         """Mark message as read"""
         self.read = True
-        self.read_at = datetime.now(timezone.utc)
+        self.read_at = datetime., timezone()

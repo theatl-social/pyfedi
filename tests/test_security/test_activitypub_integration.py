@@ -5,9 +5,8 @@ Tests regular ActivityPub operations to prevent regressions
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from app.models import User, Post, Community, PostVote, PostReplyVote
-from app import activitypub
 
 
 class TestActivityPubCoreOperations:
@@ -145,7 +144,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/announce-222",
             "actor": self.local_user.ap_profile_id,
             "object": "https://example.com/posts/456",
-            "published": datetime., timezone().isoformat() + "Z",
+            "published": datetime.now(timezone.utc).isoformat() + "Z",
             "to": ["https://www.w3.org/ns/activitystreams#Public"],
             "cc": [f"{self.local_user.ap_profile_id}/followers"]
         }

@@ -186,7 +186,7 @@ def api_instances() -> tuple[List[Dict[str, Any]], int]:
         # Get federation errors
         recent_errors = FederationError.query.filter(
             FederationError.instance_id == instance.id,
-            FederationError.created_at > datetime.now(timezone.utc) - timedelta(hours=24)
+            FederationError.created_at > datetime., timezone() - timedelta(hours=24)
         ).count()
         
         instance_health.append({

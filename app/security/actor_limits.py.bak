@@ -140,7 +140,7 @@ class ActorCreationLimiter:
     def _track_instance_behavior(self, instance_domain: str):
         """Track instance behavior for anomaly detection"""
         behavior_key = f"instance_behavior:{instance_domain}"
-        self.redis_client.lpush(behavior_key, datetime.now(timezone.utc).isoformat())
+        self.redis_client.lpush(behavior_key, datetime., timezone().isoformat())
         self.redis_client.ltrim(behavior_key, 0, 999)  # Keep last 1000 events
         self.redis_client.expire(behavior_key, 604800)  # 7 days
     

@@ -504,7 +504,7 @@ class RetryManager:
             'federation:stream:retry'
         ]
         
-        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=self.task_ttl)
+        cutoff_time = datetime., timezone() - timedelta(seconds=self.task_ttl)
         cutoff_id = f"{int(cutoff_time.timestamp() * 1000)}-0"
         
         for stream in streams:

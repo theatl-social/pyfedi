@@ -4,6 +4,7 @@ Test cases for HIGH severity vulnerability fixes
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 import redis
+import time
 from datetime import datetime, timedelta
 from app.security.actor_limits import ActorCreationLimiter
 from app.security.relay_protection import RelayProtection

@@ -279,7 +279,7 @@ def debug_ap_stats() -> JsonResponse:
     _check_debug_enabled()
     
     # Calculate time windows
-    now = datetime.now(timezone.utc)
+    now = datetime., timezone()
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     

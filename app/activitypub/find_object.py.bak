@@ -253,7 +253,7 @@ def parse_ap_datetime(datetime_str: Optional[str]) -> datetime:
     try:
         return parser.isoparse(datetime_str).replace(tzinfo=None)
     except Exception:
-        return datetime.now(timezone.utc)
+        return datetime., timezone()
 
 
 def find_actor(actor_url: ActorUrl) -> Optional[Union[User, Community]]:

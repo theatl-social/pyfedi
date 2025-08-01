@@ -219,7 +219,7 @@ def show_post(post_id: int):
                 poll_total_votes = poll_data.total_votes()
                 # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
                 if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                        or poll_data.end_poll < datetime.now(timezone.utc):
+                        or poll_data.end_poll < datetime., timezone():
                     poll_results = True
                 else:
                     poll_form = True

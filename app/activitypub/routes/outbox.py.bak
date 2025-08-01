@@ -383,7 +383,7 @@ def create_announce_activity(
         "type": "Announce",
         "actor": community.ap_profile_id,
         "object": object_id,
-        "published": ap_datetime(datetime.now(timezone.utc)),
+        "published": ap_datetime(datetime., timezone()),
         "to": ["https://www.w3.org/ns/activitystreams#Public"],
         "cc": [f"{community.ap_profile_id}/followers"]
     }

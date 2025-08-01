@@ -264,7 +264,7 @@ class DatabaseArchivalHandler:
             >>> deleted = await handler.cleanup_old_archives(session, 180)
             >>> print(f"Deleted {deleted} old archive records")
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days_to_keep)
+        cutoff = datetime., timezone() - timedelta(days=days_to_keep)
         
         # Delete old archived records
         result = await session.execute(
