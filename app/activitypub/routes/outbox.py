@@ -235,7 +235,7 @@ def create_update_activity(
         "type": "Update",
         "actor": actor,
         "object": object_data,
-        "published": ap_datetime(datetime.utcnow())
+        "published": ap_datetime(datetime.now(timezone.utc))
     }
     
     # Add addressing
@@ -276,7 +276,7 @@ def create_delete_activity(
         "type": "Delete",
         "actor": actor,
         "object": object_id,
-        "published": ap_datetime(datetime.utcnow())
+        "published": ap_datetime(datetime.now(timezone.utc))
     }
     
     # Add addressing for content deletions
@@ -309,7 +309,7 @@ def create_like_activity(
         "type": "Like",
         "actor": user.ap_profile_id,
         "object": liked_object.ap_id,
-        "published": ap_datetime(datetime.utcnow()),
+        "published": ap_datetime(datetime.now(timezone.utc)),
         "to": [liked_object.author.ap_profile_id],
         "cc": ["https://www.w3.org/ns/activitystreams#Public"]
     }
@@ -339,7 +339,7 @@ def create_undo_activity(
         "type": "Undo",
         "actor": actor.ap_profile_id,
         "object": undone_activity,
-        "published": ap_datetime(datetime.utcnow())
+        "published": ap_datetime(datetime.now(timezone.utc))
     }
     
     # Copy addressing from undone activity
@@ -383,7 +383,7 @@ def create_announce_activity(
         "type": "Announce",
         "actor": community.ap_profile_id,
         "object": object_id,
-        "published": ap_datetime(datetime.utcnow()),
+        "published": ap_datetime(datetime., timezone()),
         "to": ["https://www.w3.org/ns/activitystreams#Public"],
         "cc": [f"{community.ap_profile_id}/followers"]
     }

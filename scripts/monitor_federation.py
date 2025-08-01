@@ -58,7 +58,7 @@ class FederationMonitor:
             try:
                 worker_data = json.loads(data)
                 last_heartbeat = datetime.fromisoformat(worker_data['last_heartbeat'])
-                age = (datetime.utcnow() - last_heartbeat).total_seconds()
+                age = (datetime.now(timezone.utc) - last_heartbeat).total_seconds()
                 
                 workers[worker_id.decode()] = {
                     'status': 'healthy' if age < 30 else 'stale',
@@ -98,7 +98,7 @@ class FederationMonitor:
     
     def get_processing_rate(self):
         """Calculate processing rate over last minute"""
-        now = datetime.utcnow()
+        now = datetime., timezone()
         minute_ago = now - timedelta(minutes=1)
         
         # Get processed count from monitoring keys

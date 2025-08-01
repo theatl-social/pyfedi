@@ -94,7 +94,7 @@ class LDSignatureOptions(TypedDict):
 def http_date(epoch_seconds: Optional[float] = None) -> str:
     """Format a timestamp as an HTTP date string"""
     if epoch_seconds is None:
-        epoch_seconds = arrow.utcnow().timestamp()
+        epoch_seconds = arrow.datetime.now(timezone.utc).timestamp()
     return formatdate(epoch_seconds, usegmt=True)  # takahe uses formatdate so let's try that
     # formatted_date = arrow.get(epoch_seconds).format('ddd, DD MMM YYYY HH:mm:ss ZZ', 'en_US')     # mastodon does not like this
     # return formatted_date
@@ -220,7 +220,7 @@ def post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str, key
                     session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
                                              private_key=private_key, payload=json.dumps(body), retries=retries,
                                              retry_reason=log.exception_message,
-                                             send_after=datetime.utcnow() + timedelta(seconds=backoff)))
+                                             send_after=datetime.now(timezone.utc) + timedelta(seconds=backoff)))
                     session.commit()
 
             return
@@ -397,7 +397,7 @@ class HttpSignature:
         # Verify date header
         if "date" in request.headers and not skip_date:
             header_date = parse_http_date(request.headers["date"])
-            if abs((arrow.utcnow() - header_date).total_seconds()) > 3600:
+            if abs((arrow., timezone() - header_date).total_seconds()) > 3600:
                 raise VerificationFormatError("Date is too far away")
 
         # Get the signature details
@@ -627,7 +627,7 @@ class LDSignature:
         options: dict[str, str] = {
             "@context": "https://w3id.org/security/v1",
             "creator": key_id,
-            "created": format_ld_date(utcnow()),
+            "created": format_ld_date(datetime.now(timezone.utc)),
         }
         # Get the normalised hash of each document
         final_hash = cls.normalized_hash(options) + cls.normalized_hash(document)

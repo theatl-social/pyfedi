@@ -361,7 +361,7 @@ def seed_initial_data(app, admin_username: str, admin_email: str, admin_password
         )
         admin_user.set_password(admin_password)
         admin_user.roles.append(roles['Admin'])
-        admin_user.last_seen = datetime.utcnow()
+        admin_user.last_seen = datetime.now(timezone.utc)
         
         db.session.add(admin_user)
         
@@ -493,6 +493,6 @@ def init_db(non_interactive, skip_blocklists, force):
 if __name__ == '__main__':
     # Add missing imports when run as script
     import json
-    from datetime import datetime
+    from datetime import datetime, timezone
     
     init_db()

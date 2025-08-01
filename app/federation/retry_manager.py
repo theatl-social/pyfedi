@@ -263,13 +263,13 @@ class RetryManager:
             metadata = RetryMetadata.from_dict(json.loads(metadata_json))
         else:
             metadata = RetryMetadata(
-                first_attempt_at=datetime.utcnow(),
+                first_attempt_at=datetime.now(timezone.utc),
                 attempt_count=0
             )
         
         # Update metadata for this attempt
         metadata.attempt_count += 1
-        metadata.last_attempt_at = datetime.utcnow()
+        metadata.last_attempt_at = datetime.now(timezone.utc)
         metadata.exception_history.append(str(exception)[-200:])  # Limit exception string length
         
         # Check if we've exceeded retry limits
@@ -282,7 +282,7 @@ class RetryManager:
         
         # Check if we've exceeded max retry duration
         if metadata.first_attempt_at:
-            elapsed = (datetime.utcnow() - metadata.first_attempt_at).total_seconds()
+            elapsed = (datetime.now(timezone.utc) - metadata.first_attempt_at).total_seconds()
             if elapsed > self.max_retry_duration:
                 self.logger.warning(
                     f"Message {message.id} exceeded max retry duration ({self.max_retry_duration}s)"
@@ -293,7 +293,7 @@ class RetryManager:
         # Calculate next retry time
         backoff_seconds = self._calculate_backoff(metadata.attempt_count, policy)
         metadata.backoff_seconds = backoff_seconds
-        metadata.next_attempt_at = datetime.utcnow() + timedelta(seconds=backoff_seconds)
+        metadata.next_attempt_at = datetime.now(timezone.utc) + timedelta(seconds=backoff_seconds)
         
         # Save updated metadata
         await self.redis.setex(
@@ -350,7 +350,7 @@ class RetryManager:
             'message': message.to_dict(),
             'metadata': metadata.to_dict(),
             'reason': reason,
-            'dlq_timestamp': datetime.utcnow().isoformat()
+            'dlq_timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         await self.redis.xadd(
@@ -379,7 +379,7 @@ class RetryManager:
         # Record success metrics
         success_key = f"success:{message_id}"
         success_data = {
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime.now(timezone.utc).isoformat(),
             'processing_time_ms': processing_time_ms or 0
         }
         
@@ -491,7 +491,7 @@ class RetryManager:
             if metadata_json:
                 metadata = RetryMetadata.from_dict(json.loads(metadata_json))
                 if metadata.first_attempt_at:
-                    age = (datetime.utcnow() - metadata.first_attempt_at).total_seconds()
+                    age = (datetime.now(timezone.utc) - metadata.first_attempt_at).total_seconds()
                     if age > self.max_retry_duration:
                         await self.redis.delete(key)
                         cleaned_count += 1
@@ -504,7 +504,7 @@ class RetryManager:
             'federation:stream:retry'
         ]
         
-        cutoff_time = datetime.utcnow() - timedelta(seconds=self.task_ttl)
+        cutoff_time = datetime., timezone() - timedelta(seconds=self.task_ttl)
         cutoff_id = f"{int(cutoff_time.timestamp() * 1000)}-0"
         
         for stream in streams:

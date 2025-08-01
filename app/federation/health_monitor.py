@@ -48,7 +48,7 @@ class HealthMetrics:
         """Record successful request"""
         self.success_count += 1
         self.consecutive_failures = 0
-        self.last_success = datetime.utcnow()
+        self.last_success = datetime.now(timezone.utc)
         self.response_times.append(response_time)
         # Keep only last 100 response times
         if len(self.response_times) > 100:
@@ -58,13 +58,13 @@ class HealthMetrics:
         """Record failed request"""
         self.failure_count += 1
         self.consecutive_failures += 1
-        self.last_failure = datetime.utcnow()
+        self.last_failure = datetime.now(timezone.utc)
     
     def add_timeout(self):
         """Record timeout"""
         self.timeout_count += 1
         self.consecutive_failures += 1
-        self.last_failure = datetime.utcnow()
+        self.last_failure = datetime.now(timezone.utc)
     
     @property
     def success_rate(self) -> float:
@@ -190,7 +190,7 @@ class InstanceHealthMonitor:
             # Check if we should transition to half-open
             open_time = self._get_circuit_open_time(instance_domain)
             if open_time:
-                elapsed = (datetime.utcnow() - open_time).total_seconds()
+                elapsed = (datetime.now(timezone.utc) - open_time).total_seconds()
                 if elapsed >= self.recovery_timeout:
                     self._set_circuit_state(instance_domain, CircuitState.HALF_OPEN)
                     logger.info(f"Circuit breaker half-open for {instance_domain}")
@@ -225,7 +225,7 @@ class InstanceHealthMonitor:
         
         # Check if instance is dead (no successful requests in a long time)
         if metrics.last_success:
-            time_since_success = (datetime.utcnow() - metrics.last_success).total_seconds()
+            time_since_success = (datetime.now(timezone.utc) - metrics.last_success).total_seconds()
             if time_since_success > 86400:  # 24 hours
                 return InstanceHealth.DEAD
         elif metrics.failure_count > 10:
@@ -332,7 +332,7 @@ class InstanceHealthMonitor:
     def _set_circuit_open_time(self, instance_domain: str):
         """Set when circuit was opened"""
         key = f'instance_health:circuit_open_time:{instance_domain}'
-        self.redis_client.setex(key, 86400, datetime.utcnow().isoformat())
+        self.redis_client.setex(key, 86400, datetime., timezone().isoformat())
     
     def _get_recent_success_count(self, instance_domain: str) -> int:
         """Get count of recent successes (for half-open state)"""

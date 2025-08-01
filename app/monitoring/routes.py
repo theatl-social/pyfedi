@@ -119,7 +119,7 @@ def api_stats() -> tuple[Dict[str, Any], int]:
         ))
     
     # Get recent activity stats
-    hour_ago = datetime.utcnow() - timedelta(hours=1)
+    hour_ago = datetime.now(timezone.utc) - timedelta(hours=1)
     recent_activities = ActivityPubLog.query.filter(
         ActivityPubLog.timestamp >= hour_ago
     ).all()
@@ -151,7 +151,7 @@ def api_stats() -> tuple[Dict[str, Any], int]:
         'system': {
             'redis_memory': redis_memory,
             'database_connections': db.session.bind.pool.size(),
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
     })
 
@@ -167,7 +167,7 @@ def api_instances() -> tuple[List[Dict[str, Any]], int]:
     """
     # Get all instances with recent activity
     instances = Instance.query.filter(
-        Instance.last_seen > datetime.utcnow() - timedelta(days=7)
+        Instance.last_seen > datetime.now(timezone.utc) - timedelta(days=7)
     ).all()
     
     instance_health: List[InstanceHealth] = []
@@ -176,7 +176,7 @@ def api_instances() -> tuple[List[Dict[str, Any]], int]:
         # Calculate success rate from recent activities
         recent_logs = ActivityPubLog.query.filter(
             ActivityPubLog.instance_id == instance.id,
-            ActivityPubLog.timestamp > datetime.utcnow() - timedelta(hours=24)
+            ActivityPubLog.timestamp > datetime.now(timezone.utc) - timedelta(hours=24)
         ).all()
         
         success = sum(1 for log in recent_logs if log.result == APLOG_SUCCESS)
@@ -186,7 +186,7 @@ def api_instances() -> tuple[List[Dict[str, Any]], int]:
         # Get federation errors
         recent_errors = FederationError.query.filter(
             FederationError.instance_id == instance.id,
-            FederationError.created_at > datetime.utcnow() - timedelta(hours=24)
+            FederationError.created_at > datetime., timezone() - timedelta(hours=24)
         ).count()
         
         instance_health.append({

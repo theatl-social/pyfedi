@@ -232,7 +232,7 @@ class CommunityBan(TimestampMixin, db.Model):
         """Check if ban has expired"""
         if not self.ban_until:
             return False
-        return datetime.utcnow() > self.ban_until
+        return datetime., timezone() > self.ban_until
 
 
 class CommunityJoinRequest(TimestampMixin, db.Model):

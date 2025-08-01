@@ -127,10 +127,10 @@ def register(app):
             print("Calculating community stats...")
 
             # timing settings
-            day = utcnow() - timedelta(hours=24)
-            week = utcnow() - timedelta(days=7)
-            month = utcnow() - timedelta(weeks=4)
-            half_year = utcnow() - timedelta(weeks=26)  # 52 weeks/year divided by 2
+            day = datetime.now(timezone.utc) - timedelta(hours=24)
+            week = datetime.now(timezone.utc) - timedelta(days=7)
+            month = datetime.now(timezone.utc) - timedelta(weeks=4)
+            half_year = datetime.now(timezone.utc) - timedelta(weeks=26)  # 52 weeks/year divided by 2
 
             # get a list of the ids for communities
             comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
@@ -246,15 +246,15 @@ def register(app):
     def daily_maintenance():
         with app.app_context():
             # Remove notifications older than 90 days
-            db.session.query(Notification).filter(Notification.created_at < utcnow() - timedelta(days=90)).delete()
+            db.session.query(Notification).filter(Notification.created_at < datetime.now(timezone.utc) - timedelta(days=90)).delete()
             db.session.commit()
 
             # Remove SendQueue older than 7 days
-            db.session.query(SendQueue).filter(SendQueue.created < utcnow() - timedelta(days=7)).delete()
+            db.session.query(SendQueue).filter(SendQueue.created < datetime.now(timezone.utc) - timedelta(days=7)).delete()
             db.session.commit()
 
             # Expired bans
-            community_bans = CommunityBan.query.filter(CommunityBan.ban_until < utcnow()).all()
+            community_bans = CommunityBan.query.filter(CommunityBan.ban_until < datetime.now(timezone.utc)).all()
             for expired_ban in community_bans:
                 community_membership_record = CommunityMember.query.filter_by(community_id=expired_ban.community_id,
                                                                               user_id=expired_ban.user_id).first()
@@ -285,7 +285,7 @@ def register(app):
             print(f'Start removing old content from communities {datetime.now()}')
             communities = Community.query.filter(Community.content_retention > 0).all()
             for community in communities:
-                cut_off = utcnow() - timedelta(days=community.content_retention)
+                cut_off = datetime.now(timezone.utc) - timedelta(days=community.content_retention)
                 old_posts = Post.query.filter_by(deleted=False, sticky=False, community_id=community.id).\
                     filter(Post.posted_at < cut_off).all()
                 for post in old_posts:
@@ -310,7 +310,7 @@ def register(app):
             # Get PostReply IDs using raw SQL to reduce memory usage
             post_reply_ids = list(
                 db.session.execute(text('SELECT id FROM post_reply WHERE deleted = true AND posted_at < :cutoff'),
-                                   {'cutoff': utcnow() - timedelta(days=7)}).scalars())
+                                   {'cutoff': datetime.now(timezone.utc) - timedelta(days=7)}).scalars())
             for post_reply_id in post_reply_ids:
                 post_reply = PostReply.query.get(post_reply_id)
                 if post_reply:  # Check if still exists
@@ -321,7 +321,7 @@ def register(app):
 
             # Get Post IDs using raw SQL to reduce memory usage
             post_ids = list(db.session.execute(text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
-                                               {'cutoff': utcnow() - timedelta(days=7)}).scalars())
+                                               {'cutoff': datetime.now(timezone.utc) - timedelta(days=7)}).scalars())
             for post_id in post_ids:
                 post = Post.query.get(post_id)
                 if post:  # Check if still exists
@@ -332,7 +332,7 @@ def register(app):
             # Ensure accurate community stats
             print(f'Ensure accurate community stats {datetime.now()}')
             for community in Community.query.filter(Community.banned == False,
-                                                    Community.last_active > utcnow() - timedelta(days=3)).all():
+                                                    Community.last_active > datetime.now(timezone.utc) - timedelta(days=3)).all():
                 community.subscriptions_count = db.session.execute(text(
                     'SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
                                                                    {'community_id': community.id}).scalar()
@@ -352,7 +352,7 @@ def register(app):
             remote_months = current_app.config['KEEP_REMOTE_VOTE_DATA_TIME']
 
             if local_months != -1:
-                cutoff_local = utcnow() - timedelta(days=28 * local_months)
+                cutoff_local = datetime.now(timezone.utc) - timedelta(days=28 * local_months)
 
                 # delete all the rows from post_vote where the user who did the vote is a local user
                 db.session.execute(text('''
@@ -375,7 +375,7 @@ def register(app):
                 '''), {'cutoff': cutoff_local, 'instance_id': 1})
 
             if remote_months != -1:
-                cutoff_remote = utcnow() - timedelta(days=28 * remote_months)
+                cutoff_remote = datetime.now(timezone.utc) - timedelta(days=28 * remote_months)
                 # delete all the rows from post_vote where the user who did the vote is a remote user
                 db.session.execute(text('''
                     DELETE FROM "post_vote" pv
@@ -402,7 +402,7 @@ def register(app):
             print(f'Un-ban after ban expires {datetime.now()}')
             db.session.execute(text(
                 'UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
-                               {'cutoff': utcnow()})
+                               {'cutoff': datetime.now(timezone.utc)})
             db.session.commit()
 
             # update and sync defederation subscriptions
@@ -417,7 +417,7 @@ def register(app):
             HEADERS = {'Accept': 'application/activity+json'}
             try:
                 # Check for instances that have been dormant for 5+ days and mark them as gone_forever
-                five_days_ago = utcnow() - timedelta(days=5)
+                five_days_ago = datetime.now(timezone.utc) - timedelta(days=5)
                 dormant_instances = Instance.query.filter(Instance.dormant == True,
                                                           Instance.start_trying_again < five_days_ago).all()
 
@@ -529,17 +529,17 @@ def register(app):
                             elif node.status_code >= 300:
                                 instance.nodeinfo_href = None
                                 instance.failures += 1
-                                instance.most_recent_attempt = utcnow()
+                                instance.most_recent_attempt = datetime.now(timezone.utc)
                                 if instance.failures > 5:
                                     instance.dormant = True
-                                    instance.start_trying_again = utcnow() + timedelta(days=5)
+                                    instance.start_trying_again = datetime.now(timezone.utc) + timedelta(days=5)
                         except Exception:
                             db.session.rollback()
                             instance.failures += 1
-                            instance.most_recent_attempt = utcnow()
+                            instance.most_recent_attempt = datetime.now(timezone.utc)
                             if instance.failures > 5:
                                 instance.dormant = True
-                                instance.start_trying_again = utcnow() + timedelta(days=5)
+                                instance.start_trying_again = datetime.now(timezone.utc) + timedelta(days=5)
                             if instance.failures > 12:
                                 instance.gone_forever = True
                         finally:
@@ -548,10 +548,10 @@ def register(app):
                         db.session.commit()
                     else:
                         instance.failures += 1
-                        instance.most_recent_attempt = utcnow()
+                        instance.most_recent_attempt = datetime.now(timezone.utc)
                         if instance.failures > 5:
                             instance.dormant = True
-                            instance.start_trying_again = utcnow() + timedelta(days=5)
+                            instance.start_trying_again = datetime.now(timezone.utc) + timedelta(days=5)
                         if instance.failures > 12:
                             instance.gone_forever = True
                         db.session.commit()
@@ -593,7 +593,7 @@ def register(app):
 
             # recalculate recent active user's attitude
             print(f'recalcuating attitudes {datetime.now()}')
-            for user in User.query.filter(User.last_seen > utcnow() - timedelta(days=1)):
+            for user in User.query.filter(User.last_seen > datetime.now(timezone.utc) - timedelta(days=1)):
                 user.recalculate_attitude()
 
             # calculate active users for day/week/month/half year
@@ -601,10 +601,10 @@ def register(app):
             print("Calculating community stats...")
 
             # timing settings
-            day = utcnow() - timedelta(hours=24)
-            week = utcnow() - timedelta(days=7)
-            month = utcnow() - timedelta(weeks=4)
-            half_year = utcnow() - timedelta(weeks=26) # 52 weeks/year divided by 2
+            day = datetime.now(timezone.utc) - timedelta(hours=24)
+            week = datetime.now(timezone.utc) - timedelta(days=7)
+            month = datetime.now(timezone.utc) - timedelta(weeks=4)
+            half_year = datetime.now(timezone.utc) - timedelta(weeks=26) # 52 weeks/year divided by 2
 
             # get a list of the ids for communities
             comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
@@ -687,7 +687,7 @@ def register(app):
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
-                            for to_send in session.query(SendQueue).filter(SendQueue.send_after < utcnow()):
+                            for to_send in session.query(SendQueue).filter(SendQueue.send_after < datetime.now(timezone.utc)):
                                 if instance_online(to_send.destination_domain):
                                     if to_send.retries <= to_send.max_retries:
                                         send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key,
@@ -742,7 +742,7 @@ def register(app):
                     if not next_occurrence:
                         post.status = POST_STATUS_PUBLISHED
                         post.scheduled_for = None
-                        post.posted_at = utcnow()
+                        post.posted_at = datetime.now(timezone.utc)
                         post.edited_at = None
                         post.title = render_from_tpl(post.title)
                         if post.type == POST_TYPE_POLL:
@@ -766,7 +766,7 @@ def register(app):
                         scheduled_post.id = None
                         scheduled_post.ap_id = None
                         scheduled_post.scheduled_for = None
-                        scheduled_post.posted_at = utcnow()
+                        scheduled_post.posted_at = datetime.now(timezone.utc)
                         scheduled_post.edited_at = None
                         scheduled_post.status = POST_STATUS_PUBLISHED
                         scheduled_post.title = render_from_tpl(scheduled_post.title)
@@ -855,7 +855,7 @@ def register(app):
                     print(f'Moved image for community {community.link()}')
 
             for user in User.query.filter(User.deleted == False, User.banned == False,
-                                          User.last_seen > utcnow() - timedelta(days=180)):
+                                          User.last_seen > datetime.now(timezone.utc) - timedelta(days=180)):
                 did_something = False
                 if user.avatar_id:
                     did_something = True
@@ -1102,7 +1102,7 @@ def register(app):
             session = get_task_session()
             try:
                 with patch_db_session(session):
-                    db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
+                    db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < datetime.now(timezone.utc) - timedelta(days=3)).delete()
                     db.session.commit()
             except Exception:
                 session.rollback()
@@ -1114,7 +1114,7 @@ def register(app):
     def detect_vote_manipulation():
         with app.app_context():
             print('Getting user ids...')
-            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime.utcnow() - timedelta(days=7))]
+            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime., timezone() - timedelta(days=7))]
             print('Checking...')
             for i, first_user_id in enumerate(all_user_ids):
                 current_user_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(first_user_id)]

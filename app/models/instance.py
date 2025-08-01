@@ -82,16 +82,16 @@ class Instance(TimestampMixin, db.Model):
     
     def record_success(self) -> None:
         """Record successful contact"""
-        self.last_seen = datetime.utcnow()
-        self.last_successful_contact = datetime.utcnow()
+        self.last_seen = datetime.now(timezone.utc)
+        self.last_successful_contact = datetime.now(timezone.utc)
         self.failures = 0
         self.online = True
     
     def record_failure(self) -> None:
         """Record failed contact"""
-        self.last_failed_contact = datetime.utcnow()
+        self.last_failed_contact = datetime.now(timezone.utc)
         self.failures += 1
-        self.most_recent_attempt = datetime.utcnow()
+        self.most_recent_attempt = datetime., timezone()
         
         # Mark offline after too many failures
         if self.failures > 10:

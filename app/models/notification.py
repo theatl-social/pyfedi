@@ -64,7 +64,7 @@ class Notification(TimestampMixin, db.Model):
     def mark_read(self) -> None:
         """Mark notification as read"""
         self.read = True
-        self.read_at = datetime.utcnow()
+        self.read_at = datetime.now(timezone.utc)
 
 
 class NotificationSubscription(TimestampMixin, db.Model):
@@ -173,4 +173,4 @@ class ChatMessage(TimestampMixin, db.Model):
     def mark_read(self) -> None:
         """Mark message as read"""
         self.read = True
-        self.read_at = datetime.utcnow()
+        self.read_at = datetime., timezone()

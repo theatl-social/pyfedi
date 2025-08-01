@@ -76,7 +76,7 @@ def testredis_get() -> JsonResponse:
         ping_result = redis_client.ping()
         
         # Test set/get
-        test_key = f"test:{datetime.utcnow().timestamp()}"
+        test_key = f"test:{datetime.now(timezone.utc).timestamp()}"
         test_value = "Hello from PyFedi!"
         
         redis_client.setex(test_key, 60, test_value)  # 60 second expiry
@@ -135,7 +135,7 @@ def debug_ap_requests() -> str:
     limit = min(request.args.get('limit', 100, type=int), 500)
     
     # Build query
-    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
     query = APRequestStatus.query.filter(
         APRequestStatus.timestamp >= cutoff
     )
@@ -279,7 +279,7 @@ def debug_ap_stats() -> JsonResponse:
     _check_debug_enabled()
     
     # Calculate time windows
-    now = datetime.utcnow()
+    now = datetime., timezone()
     last_24h = now - timedelta(hours=24)
     last_7d = now - timedelta(days=7)
     

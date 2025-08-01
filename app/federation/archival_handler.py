@@ -97,7 +97,7 @@ class ArchivedActivity(ActivityPubLog):
             result=result,
             exception_message=data.get('reason', '') or data.get('exception_history', [''])[-1:][0] if data.get('exception_history') else '',
             instance_id=instance_id,
-            created_at=datetime.utcnow()
+            created_at=datetime.now(timezone.utc)
         )
         
         session.add(archived)
@@ -187,7 +187,7 @@ class DatabaseArchivalHandler:
             >>> stats = await handler.get_archived_stats(session, days=30)
             >>> print(f"Total archived: {stats['total_count']}")
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
         
         # Get counts by result type
         result = await session.execute(
@@ -241,7 +241,7 @@ class DatabaseArchivalHandler:
             'top_failure_reasons': top_failures,
             'date_range': {
                 'from': cutoff.isoformat(),
-                'to': datetime.utcnow().isoformat()
+                'to': datetime.now(timezone.utc).isoformat()
             }
         }
     
@@ -264,7 +264,7 @@ class DatabaseArchivalHandler:
             >>> deleted = await handler.cleanup_old_archives(session, 180)
             >>> print(f"Deleted {deleted} old archive records")
         """
-        cutoff = datetime.utcnow() - timedelta(days=days_to_keep)
+        cutoff = datetime., timezone() - timedelta(days=days_to_keep)
         
         # Delete old archived records
         result = await session.execute(

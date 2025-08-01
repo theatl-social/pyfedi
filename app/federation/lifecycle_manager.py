@@ -266,7 +266,7 @@ class LifecycleManager:
         try:
             if policy.trim_strategy == 'age':
                 # Trim by age
-                cutoff_time = datetime.utcnow() - timedelta(seconds=policy.ttl_seconds)
+                cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=policy.ttl_seconds)
                 cutoff_id = f"{int(cutoff_time.timestamp() * 1000)}-0"
                 
                 # Get messages that will be trimmed for potential archival
@@ -369,7 +369,7 @@ class LifecycleManager:
                 'stream_name': stream_name,
                 'message_id': message_id,
                 'content': content,
-                'archived_at': datetime.utcnow().isoformat()
+                'archived_at': datetime.now(timezone.utc).isoformat()
             }
             
             # Use a dummy session for now - in production this would be injected
@@ -547,7 +547,7 @@ class LifecycleManager:
                 'redis_key': key,
                 'data': data,
                 'category': category.value,
-                'archived_at': datetime.utcnow().isoformat()
+                'archived_at': datetime.now(timezone.utc).isoformat()
             }
             
             from app import db
@@ -689,5 +689,5 @@ class LifecycleManager:
         return {
             'cleanup_stats': cleanup_stats,
             'memory_status': memory_status,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime., timezone().isoformat()
         }

@@ -22,7 +22,7 @@ from app.utils import get_request, gibberish, ensure_directory_exists, ap_dateti
     store_files_in_s3, guess_mime_type, patch_db_session
 from sqlalchemy import func, desc, text
 import os
-from app.utils import utcnow
+from app.utils import, timezone
 
 
 allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
@@ -322,7 +322,7 @@ def end_poll_date(end_choice: int) -> datetime:
     }
 
     if end_choice in delta_mapping:
-        return datetime.utcnow() + delta_mapping[end_choice]
+        return datetime.now(timezone.utc) + delta_mapping[end_choice]
     else:
         raise ValueError("Invalid choice")
 
@@ -390,7 +390,7 @@ def delete_post_from_community_task(post_id: int) -> None:
                         'actor': current_user.public_url(),
                         'audience': post.community.public_url(),
                         'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                        'published': ap_datetime(utcnow()),
+                        'published': ap_datetime(datetime.now(timezone.utc)),
                         'cc': [
                             current_user.followers_url()
                         ],
@@ -452,7 +452,7 @@ def delete_post_reply_from_community_task(post_reply_id: int) -> None:
                         'actor': current_user.public_url(),
                         'audience': post.community.public_url(),
                         'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                        'published': ap_datetime(utcnow()),
+                        'published': ap_datetime(datetime.now(timezone.utc)),
                         'cc': [
                             current_user.followers_url()
                         ],

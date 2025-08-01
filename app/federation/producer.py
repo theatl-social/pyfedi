@@ -79,7 +79,7 @@ class FederationProducer:
             # Build message
             message_data = {
                 'activity': validated_activity,
-                'timestamp': datetime.utcnow().isoformat(),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
                 'attempts': 0
             }
             
@@ -167,7 +167,7 @@ class FederationProducer:
                     # Build message
                     message_data = {
                         'activity': validated_activity,
-                        'timestamp': datetime.utcnow().isoformat(),
+                        'timestamp': datetime.now(timezone.utc).isoformat(),
                         'attempts': 0
                     }
                     
@@ -221,7 +221,7 @@ class FederationProducer:
         retry_data['last_error'] = error
         retry_data['retry_after'] = retry_after
         retry_data['retry_at'] = (
-            datetime.utcnow().timestamp() + retry_after
+            datetime.now(timezone.utc).timestamp() + retry_after
         )
         
         stream_message: StreamMessage = {
@@ -229,7 +229,7 @@ class FederationProducer:
             'data': json.dumps(retry_data),
             'priority': Priority.RETRY.value,
             'attempts': retry_data['attempts'],
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime., timezone().isoformat()
         }
         
         redis_client = self.get_redis()

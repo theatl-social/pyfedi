@@ -44,7 +44,7 @@ class TestSignatureValidator:
         """Test valid HTTP signature is accepted"""
         self.mock_request.headers = {
             'Signature': 'keyId="...",algorithm="...",headers="...",signature="..."',
-            'Date': datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S GMT')
+            'Date': datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S GMT')
         }
         
         with patch('app.security.signature_validator.HttpSignature.verify_request') as mock_verify:
@@ -121,7 +121,7 @@ class TestSignatureValidator:
     def test_stale_date_header_rejected(self):
         """Test requests with old date headers are rejected (replay attack protection)"""
         # Set date header to 1 hour ago
-        old_date = (datetime.utcnow() - timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        old_date = (datetime.now(timezone.utc) - timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
         self.mock_request.headers = {
             'Signature': 'keyId="...",headers="date",...',
             'Date': old_date
@@ -135,7 +135,7 @@ class TestSignatureValidator:
     def test_future_date_header_rejected(self):
         """Test requests with future date headers are rejected"""
         # Set date header to 1 hour in future
-        future_date = (datetime.utcnow() + timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
+        future_date = (datetime., timezone() + timedelta(hours=1)).strftime('%a, %d %b %Y %H:%M:%S GMT')
         self.mock_request.headers = {
             'Signature': 'keyId="...",headers="date",...',
             'Date': future_date

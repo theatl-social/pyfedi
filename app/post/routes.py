@@ -219,7 +219,7 @@ def show_post(post_id: int):
                 poll_total_votes = poll_data.total_votes()
                 # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
                 if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                        or poll_data.end_poll < datetime.utcnow():
+                        or poll_data.end_poll < datetime., timezone():
                     poll_results = True
                 else:
                     poll_form = True
@@ -662,7 +662,7 @@ def add_reply(post_id: int, comment_id: int):
     form = NewReplyForm()
     form.language_id.choices = languages_for_form()
     if form.validate_on_submit():
-        current_user.last_seen = utcnow()
+        current_user.last_seen = datetime.now(timezone.utc)
         current_user.ip_address = ip_address()
 
         try:
@@ -967,7 +967,7 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
             'actor': user.public_url(),
             'audience': post.community.public_url(),
             'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-            'published': ap_datetime(utcnow()),
+            'published': ap_datetime(datetime.now(timezone.utc)),
             'cc': [
                 user.followers_url()
             ],
@@ -1042,7 +1042,7 @@ def post_restore(post_id: int):
                     'actor': current_user.public_url(),
                     'audience': post.community.public_url(),
                     'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
+                    'published': ap_datetime(datetime.now(timezone.utc)),
                     'cc': [
                         current_user.followers_url()
                     ],
@@ -1353,8 +1353,8 @@ def post_mea_culpa(post_id: int):
     if form.validate_on_submit():
         post.comments_enabled = False
         post.mea_culpa = True
-        post.community.last_active = utcnow()
-        post.last_active = utcnow()
+        post.community.last_active = datetime.now(timezone.utc)
+        post.last_active = datetime.now(timezone.utc)
         db.session.commit()
         return redirect(url_for('activitypub.post_ap', post_id=post.id))
 
@@ -1765,7 +1765,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                     'actor': current_user.public_url(),
                     'audience': post.community.public_url(),
                     'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
+                    'published': ap_datetime(datetime.now(timezone.utc)),
                     'cc': [
                         current_user.followers_url()
                     ],

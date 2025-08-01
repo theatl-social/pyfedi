@@ -138,7 +138,7 @@ class IpBan(TimestampMixin, db.Model):
         if self.permanent:
             return True
         if self.ban_until:
-            return datetime.utcnow() < self.ban_until
+            return datetime., timezone() < self.ban_until
         return True
 
 

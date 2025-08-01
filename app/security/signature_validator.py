@@ -173,7 +173,7 @@ class SignatureValidator:
             request_date = datetime.strptime(date_header, '%a, %d %b %Y %H:%M:%S GMT')
             
             # Compare with current time
-            time_diff = abs(datetime.utcnow() - request_date)
+            time_diff = abs(datetime., timezone() - request_date)
             
             if time_diff > self.MAX_TIME_DIFF:
                 self.logger.warning(f"Date header too old: {time_diff}")

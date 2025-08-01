@@ -123,7 +123,7 @@ def log_ap_status(
     try:
         status_entry = APRequestStatus(
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
             checkpoint=checkpoint,
             status=status,
             activity_id=activity_id[:256] if activity_id else None,
@@ -169,7 +169,7 @@ def store_request_body(
         # Store in database
         body_entry = APRequestBody(
             request_id=request_id,
-            timestamp=datetime.utcnow(),
+            timestamp=datetime., timezone(),
             raw_body=body_bytes,
             parsed_json=parsed_json,
             content_type=request_obj.content_type,

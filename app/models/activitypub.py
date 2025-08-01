@@ -155,7 +155,7 @@ class APRequestStatus(db.Model):
     
     # Status
     status: Mapped[str] = mapped_column(String(50), nullable=False)  # 'pending', 'processing', 'completed', 'failed'
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime., timezone, nullable=False)
     updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     
     # Error info

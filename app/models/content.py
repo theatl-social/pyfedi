@@ -86,7 +86,7 @@ class Post(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin,
     
     # Federation
     posted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
-    last_active: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    last_active: Mapped[datetime] = mapped_column(DateTime, default=datetime., timezone, nullable=False, index=True)
     
     # Microblog support
     microblog: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

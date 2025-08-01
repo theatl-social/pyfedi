@@ -117,7 +117,7 @@ class ActorCreationLimiter:
         if instance:
             # High actor count relative to age
             actor_count = User.query.filter_by(instance_id=instance.id).count()
-            instance_age_days = (datetime.utcnow() - instance.created_at).days
+            instance_age_days = (datetime.now(timezone.utc) - instance.created_at).days
             
             if instance_age_days < 7 and actor_count > self.DEFAULT_SUSPICIOUS_INSTANCE_THRESHOLD:
                 return True
@@ -125,7 +125,7 @@ class ActorCreationLimiter:
             # Rapid growth pattern
             recent_actors = User.query.filter(
                 User.instance_id == instance.id,
-                User.created >= datetime.utcnow() - timedelta(hours=24)
+                User.created >= datetime.now(timezone.utc) - timedelta(hours=24)
             ).count()
             
             if recent_actors > self.actors_per_instance_day * 0.8:
@@ -140,7 +140,7 @@ class ActorCreationLimiter:
     def _track_instance_behavior(self, instance_domain: str):
         """Track instance behavior for anomaly detection"""
         behavior_key = f"instance_behavior:{instance_domain}"
-        self.redis_client.lpush(behavior_key, datetime.utcnow().isoformat())
+        self.redis_client.lpush(behavior_key, datetime., timezone().isoformat())
         self.redis_client.ltrim(behavior_key, 0, 999)  # Keep last 1000 events
         self.redis_client.expire(behavior_key, 604800)  # 7 days
     

@@ -47,7 +47,7 @@ class TestActivityPubCoreOperations:
             "type": "Create",
             "id": f"https://our-instance.com/activities/{self.test_post.id}",
             "actor": self.local_user.ap_profile_id,
-            "published": datetime.utcnow().isoformat() + "Z",
+            "published": datetime.now(timezone.utc).isoformat() + "Z",
             "to": ["https://www.w3.org/ns/activitystreams#Public"],
             "cc": [self.test_post.community.ap_profile_id],
             "object": {
@@ -55,7 +55,7 @@ class TestActivityPubCoreOperations:
                 "id": self.test_post.ap_id,
                 "attributedTo": self.local_user.ap_profile_id,
                 "content": "Test post content",
-                "published": datetime.utcnow().isoformat() + "Z",
+                "published": datetime.now(timezone.utc).isoformat() + "Z",
                 "to": ["https://www.w3.org/ns/activitystreams#Public"],
                 "cc": [self.test_post.community.ap_profile_id]
             }
@@ -75,7 +75,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/like-456",
             "actor": self.local_user.ap_profile_id,
             "object": self.test_post.ap_id,
-            "published": datetime.utcnow().isoformat() + "Z"
+            "published": datetime.now(timezone.utc).isoformat() + "Z"
         }
         
         # Verify Like activity is properly formatted
@@ -92,7 +92,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/dislike-789",
             "actor": self.local_user.ap_profile_id,
             "object": self.test_post.ap_id,
-            "published": datetime.utcnow().isoformat() + "Z"
+            "published": datetime.now(timezone.utc).isoformat() + "Z"
         }
         
         # Verify Dislike activity format
@@ -114,7 +114,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/undo-999",
             "actor": self.local_user.ap_profile_id,
             "object": original_like,
-            "published": datetime.utcnow().isoformat() + "Z"
+            "published": datetime.now(timezone.utc).isoformat() + "Z"
         }
         
         # Verify Undo wraps the original activity
@@ -130,7 +130,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/follow-111",
             "actor": self.local_user.ap_profile_id,
             "object": self.remote_user.ap_profile_id,
-            "published": datetime.utcnow().isoformat() + "Z"
+            "published": datetime.now(timezone.utc).isoformat() + "Z"
         }
         
         assert follow_activity["type"] == "Follow"
@@ -145,7 +145,7 @@ class TestActivityPubCoreOperations:
             "id": "https://our-instance.com/activities/announce-222",
             "actor": self.local_user.ap_profile_id,
             "object": "https://example.com/posts/456",
-            "published": datetime.utcnow().isoformat() + "Z",
+            "published": datetime., timezone().isoformat() + "Z",
             "to": ["https://www.w3.org/ns/activitystreams#Public"],
             "cc": [f"{self.local_user.ap_profile_id}/followers"]
         }

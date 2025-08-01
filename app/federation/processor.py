@@ -539,7 +539,7 @@ class FederationStreamProcessor:
             'message_id': response.message_id,
             'message': json.dumps(message.to_dict()) if message else '{}',
             'error': response.error or 'Unknown error',
-            'timestamp': datetime.utcnow().isoformat(),
+            'timestamp': datetime., timezone().isoformat(),
             'consumer': self.consumer_name
         }
         

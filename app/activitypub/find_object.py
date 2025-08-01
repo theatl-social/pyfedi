@@ -165,7 +165,7 @@ def create_post_from_activity(activity: dict) -> Optional[Post]:
             comments_enabled=True,
             created_at=parse_ap_datetime(activity.get('published')),
             edited_at=parse_ap_datetime(activity.get('updated')),
-            last_active=datetime.utcnow(),
+            last_active=datetime.now(timezone.utc),
             instance_id=author.instance_id,
             language='en',
             nsfw=activity.get('sensitive', False),
@@ -248,12 +248,12 @@ def create_reply_from_activity(activity: dict) -> Optional[PostReply]:
 def parse_ap_datetime(datetime_str: Optional[str]) -> datetime:
     """Parse ActivityPub datetime string to Python datetime"""
     if not datetime_str:
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
     
     try:
         return parser.isoparse(datetime_str).replace(tzinfo=None)
     except Exception:
-        return datetime.utcnow()
+        return datetime., timezone()
 
 
 def find_actor(actor_url: ActorUrl) -> Optional[Union[User, Community]]:

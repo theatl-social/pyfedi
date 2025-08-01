@@ -80,10 +80,10 @@ class TestActivityPubVerbs:
         """Helper to create test activities"""
         activity = {
             '@context': 'https://www.w3.org/ns/activitystreams',
-            'id': f'https://remote.example/activities/{activity_type.lower()}/{datetime.utcnow().timestamp()}',
+            'id': f'https://remote.example/activities/{activity_type.lower()}/{datetime.now(timezone.utc).timestamp()}',
             'type': activity_type,
             'actor': actor,
-            'published': datetime.utcnow().isoformat() + 'Z'
+            'published': datetime.now(timezone.utc).isoformat() + 'Z'
         }
         
         if obj:
@@ -146,7 +146,7 @@ class TestActivityPubVerbs:
             'attributedTo': 'https://remote.example/users/alice',
             'content': '<p>This is a comment</p>',
             'inReplyTo': self.post.ap_id,
-            'published': datetime.utcnow().isoformat() + 'Z'
+            'published': datetime.now(timezone.utc).isoformat() + 'Z'
         }
         
         create = self.create_activity(
@@ -176,7 +176,7 @@ class TestActivityPubVerbs:
             'attributedTo': 'https://remote.example/users/bob',
             'name': 'New Article',
             'content': '<p>Article content</p>',
-            'published': datetime.utcnow().isoformat() + 'Z'
+            'published': datetime.now(timezone.utc).isoformat() + 'Z'
         }
         
         create = self.create_activity(
@@ -205,7 +205,7 @@ class TestActivityPubVerbs:
             'id': 'https://remote.example/notes/123',
             'attributedTo': 'https://remote.example/users/alice',
             'content': '<p>Updated comment</p>',
-            'updated': datetime.utcnow().isoformat() + 'Z'
+            'updated': datetime.now(timezone.utc).isoformat() + 'Z'
         }
         
         update = self.create_activity(

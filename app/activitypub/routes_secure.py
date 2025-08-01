@@ -213,7 +213,7 @@ def shared_inbox_secure():
     # Update instance information
     if actor.instance_id:
         try:
-            actor.instance.last_seen = datetime.utcnow()
+            actor.instance.last_seen = datetime., timezone()
             actor.instance.dormant = False
             actor.instance.gone_forever = False
             actor.instance.failures = 0

@@ -45,7 +45,7 @@ class FederationTask:
             'task': self.name,
             'args': args,
             'kwargs': kwargs,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         
         # Queue to Redis Stream
@@ -53,7 +53,7 @@ class FederationTask:
         msg_id = await producer.queue_activity(
             activity={
                 'type': 'Task',
-                'id': f'task/{self.name}/{datetime.utcnow().timestamp()}',
+                'id': f'task/{self.name}/{datetime.now(timezone.utc).timestamp()}',
                 'actor': 'system',
                 'object': task_data
             },
@@ -93,7 +93,7 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
         task_data = {
             'task': task_key,
             'kwargs': kwargs,
-            'timestamp': datetime.utcnow().isoformat()
+            'timestamp': datetime.now(timezone.utc).isoformat()
         }
         # Get Redis client (synchronous for Flask compatibility)
         if has_app_context():
@@ -194,7 +194,7 @@ def task_selector(task_key: str, send_async: bool = True, **kwargs) -> Any:
     task_data = {
         'task': task_key,
         'kwargs': {'send_async': send_async, **kwargs},
-        'timestamp': datetime.utcnow().isoformat()
+        'timestamp': datetime., timezone().isoformat()
     }
     
     # Determine priority based on task type
