@@ -154,6 +154,66 @@ def test_site(session):
 
 
 @pytest.fixture
+def test_data(session, test_site):
+    """Create basic test data that many tests expect"""
+    from app.models import User, Instance, Community
+    from app.activitypub.signature import generate_rsa_keypair
+    
+    # Create local instance (id=1)
+    local_instance = Instance.query.get(1)
+    if not local_instance:
+        local_instance = Instance(
+            id=1,
+            domain='test.local',
+            software='pyfedi',
+            version='1.0.0'
+        )
+        session.add(local_instance)
+    
+    # Create test user with id=1 (many tests expect this)
+    user1 = User.query.get(1)
+    if not user1:
+        user1 = User(
+            id=1,
+            user_name='testuser1',
+            email='test1@example.com',
+            ap_profile_id='https://test.local/u/testuser1',
+            instance_id=1,
+            verified=True
+        )
+        private_key, public_key = generate_rsa_keypair()
+        user1.private_key = private_key
+        user1.public_key = public_key
+        user1.set_password('password123')
+        session.add(user1)
+    
+    # Create a test community
+    community = Community.query.filter_by(name='testcommunity').first()
+    if not community:
+        community = Community(
+            name='testcommunity',
+            title='Test Community',
+            description='A test community',
+            ap_profile_id='https://test.local/c/testcommunity',
+            instance_id=1,
+            banned=False
+        )
+        private_key, public_key = generate_rsa_keypair()
+        community.private_key = private_key
+        community.public_key = public_key
+        session.add(community)
+    
+    session.commit()
+    
+    return {
+        'site': test_site,
+        'instance': local_instance,
+        'user1': user1,
+        'community': community
+    }
+
+
+@pytest.fixture
 def test_instance(session):
     """Create a test instance"""
     instance = Instance(

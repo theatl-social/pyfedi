@@ -4,7 +4,7 @@ from sqlalchemy import text
 from app.models import User, Community
 
 
-def test_api_community_subscriptions(app, session):
+def test_api_community_subscriptions(app, session, test_data):
     with app.app_context():
         from app.api.alpha.utils.community import put_community_subscribe
 

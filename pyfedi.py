@@ -99,7 +99,7 @@ def before_request():
             set_setting('admin_ids', g.admin_ids)
 
     if current_user.is_authenticated:
-        current_user.last_seen = datetime., timezone()
+        current_user.last_seen = datetime.now(timezone.utc)
         current_user.email_unread_sent = False
     else:
         if 'Windows' in request.user_agent.string:

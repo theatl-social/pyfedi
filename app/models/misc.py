@@ -13,7 +13,7 @@ if TYPE_CHECKING:
     from app.models.community import Community
 
 
-class Site(TimestampMixin, db.Model):
+class Site(db.Model):
     """Site configuration and settings"""
     __tablename__ = 'site'
     __table_args__ = {'extend_existing': True}
@@ -25,27 +25,68 @@ class Site(TimestampMixin, db.Model):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text)
     icon_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('file.id'))
+    sidebar: Mapped[Optional[str]] = mapped_column(Text)
+    legal_information: Mapped[Optional[str]] = mapped_column(Text)
     
     # Features
     enable_downvotes: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    application_question: Mapped[Optional[str]] = mapped_column(Text)
+    enable_gif_reply_rep_decrease: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    enable_chan_image_filter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    enable_this_comment_filter: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    allow_local_image_posts: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    remote_image_cache_days: Mapped[Optional[int]] = mapped_column(Integer, default=30)
+    enable_nsfw: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    enable_nsfl: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    community_creation_admin_only: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    reports_email_admins: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    application_question: Mapped[Optional[str]] = mapped_column(Text, default='')
     
     # Registration
-    registration_mode: Mapped[str] = mapped_column(String(20), default='open', nullable=False)
-    require_application: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    
-    # Federation
-    enable_federation: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    registration_mode: Mapped[str] = mapped_column(String(20), default='Closed', nullable=False)  # possible values: Open, RequireApplication, Closed
     
     # Default settings
-    default_theme: Mapped[str] = mapped_column(String(20), default='light', nullable=False)
+    default_theme: Mapped[Optional[str]] = mapped_column(String(20), default='')
+    default_filter: Mapped[Optional[str]] = mapped_column(String(20), default='')
     
-    # Legal
-    terms: Mapped[Optional[str]] = mapped_column(Text)
-    privacy_policy: Mapped[Optional[str]] = mapped_column(Text)
+    # Cryptographic keys
+    public_key: Mapped[Optional[str]] = mapped_column(Text)
+    private_key: Mapped[Optional[str]] = mapped_column(Text)
     
-    # Contact
-    contact_email: Mapped[Optional[str]] = mapped_column(String(256))
+    # Block/allow lists
+    allow_or_block_list: Mapped[Optional[int]] = mapped_column(Integer)  # 0=none, 1=allowlist, 2=blocklist
+    allowlist: Mapped[Optional[str]] = mapped_column(Text)
+    blocklist: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # URLs and Contact
+    tos_url: Mapped[Optional[str]] = mapped_column(String(256))
+    contact_email: Mapped[Optional[str]] = mapped_column(String(255), default='')
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    updated: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
+    last_active: Mapped[Optional[datetime]] = mapped_column(DateTime, default=datetime.utcnow)
+    
+    # Blocked content
+    blocked_phrases: Mapped[Optional[str]] = mapped_column(Text, default='')  # discard incoming content with these phrases
+    auto_decline_referrers: Mapped[Optional[str]] = mapped_column(Text, default='rdrama.net\nahrefs.com\nkiwifarms.sh')  # automatically decline registration requests if the referrer is one of these
+    
+    # Logging
+    log_activitypub_json: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # About and appearance
+    about: Mapped[Optional[str]] = mapped_column(Text, default='')
+    logo: Mapped[Optional[str]] = mapped_column(String(40), default='')
+    logo_180: Mapped[Optional[str]] = mapped_column(String(40), default='')
+    logo_152: Mapped[Optional[str]] = mapped_column(String(40), default='')
+    logo_32: Mapped[Optional[str]] = mapped_column(String(40), default='')
+    logo_16: Mapped[Optional[str]] = mapped_column(String(40), default='')
+    show_inoculation_block: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    additional_css: Mapped[Optional[str]] = mapped_column(Text)
+    additional_js: Mapped[Optional[str]] = mapped_column(Text)
+    
+    # Instance settings
+    private_instance: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    language_id: Mapped[Optional[int]] = mapped_column(Integer)
     
     # Relationships
     icon = relationship('File')
