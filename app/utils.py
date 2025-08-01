@@ -497,17 +497,16 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
                                                   'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True})
-        except TypeError as e:
+        except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
-            raise e
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
                                                       'tg-spoiler': True,
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True})
-            except TypeError as e:
+            except:
                 raw_html = ''
         
         if not allow_img:
