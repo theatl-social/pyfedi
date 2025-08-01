@@ -58,32 +58,25 @@ class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model)
     default_sort: Mapped[str] = mapped_column(String(25), default='hot', nullable=False)
     default_filter: Mapped[str] = mapped_column(String(25), default='all', nullable=False)
     theme: Mapped[str] = mapped_column(String(20), default='system', nullable=False)
-    avatar_nsfw: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    cover_nsfw: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     indexable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     searchable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Privacy settings
     hide_nsfw: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hide_nsfl: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    hide_read_content: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    hide_read_posts: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     receive_message_mode: Mapped[str] = mapped_column(String(20), default='Closed', nullable=False)
-    reply_notifications: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     
     # Scoring
     post_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    post_rating: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    post_reply_rating: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    post_reply_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     reputation: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     attitude: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     
     # Security
     password_hash: Mapped[Optional[str]] = mapped_column(String(256))
     last_seen: Mapped[Optional[datetime]] = mapped_column(DateTime, index=True)
-    registered_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-    email_visible: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    birthday: Mapped[Optional[date]] = mapped_column(Date)
+    created: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     
     # TOTP
     totp_secret: Mapped[Optional[str]] = mapped_column(String(64))
