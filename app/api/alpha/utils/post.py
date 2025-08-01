@@ -8,12 +8,12 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
     array_of_integers_expected
 from app.api.alpha.views import post_view, post_report_view
 from app.constants import *
-from app.models import Post, Community, CommunityMember, utcnow, User
+from app.models import Post, Community, CommunityMember, User
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
+from app.utils import authorise_api_user, utcnow, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
-    moderating_communities_ids, user_filters_home, user_filters_posts
+    moderating_communities_ids, user_filters_home, user_filters_posts, utcnow
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:

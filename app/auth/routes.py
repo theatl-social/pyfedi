@@ -26,7 +26,7 @@ from app.auth.util import (
 )
 from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import (
     finalize_user_setup,
     render_template,

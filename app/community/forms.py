@@ -17,8 +17,9 @@ from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Op
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
     DOWNVOTE_ACCEPT_TRUSTED
-from app.models import Community, Site, utcnow, User, Feed
+from app.models import Community, Site, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField, get_timezones
+from app.utils import utcnow
 
 
 class AddCommunityForm(FlaskForm):

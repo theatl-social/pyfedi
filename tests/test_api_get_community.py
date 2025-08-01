@@ -1,26 +1,9 @@
 import pytest
 
-from app import create_app
 from app.models import User, Community, CommunityMember
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_api_get_community(app):
+def test_api_get_community(app, session):
     with app.app_context():
         from app.api.alpha.utils.community import get_community
         community = Community.query.filter_by(banned=False).first()

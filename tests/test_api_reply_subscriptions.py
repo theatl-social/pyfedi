@@ -1,27 +1,10 @@
 import pytest
 from sqlalchemy import text
 
-from app import create_app, db
 from app.models import User, Post, PostReply
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_api_reply_subscriptions(app):
+def test_api_reply_subscriptions(app, session):
     with app.app_context():
         from app.api.alpha.utils.reply import put_reply_subscribe
 
@@ -33,7 +16,7 @@ def test_api_reply_subscriptions(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove subscription
-        existing_subs = db.session.execute(
+        existing_subs = session.execute(
             text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.not_in(existing_subs), PostReply.deleted == False).first()
@@ -53,7 +36,7 @@ def test_api_reply_subscriptions(app):
         assert str(ex.value) == 'A subscription for this comment did not exist.'
 
         # add to existing
-        existing_subs = db.session.execute(
+        existing_subs = session.execute(
             text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == False).first()
@@ -77,7 +60,7 @@ def test_api_reply_subscriptions(app):
                 result = put_reply_subscribe(auth, data)
 
         # remove from deleted (reply or post)
-        existing_subs = db.session.execute(
+        existing_subs = session.execute(
             text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == True).first()
@@ -85,7 +68,7 @@ def test_api_reply_subscriptions(app):
             data = {"comment_id": reply.id, "subscribe": False}
             with pytest.raises(Exception):
                 result = put_reply_subscribe(auth, data)
-        existing_subs = db.session.execute(
+        existing_subs = session.execute(
             text('SELECT entity_id FROM "notification_subscription" WHERE user_id = :user_id AND type = 4'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_subs), PostReply.deleted == True).join(Post,

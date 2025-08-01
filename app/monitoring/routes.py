@@ -14,7 +14,7 @@ import json
 
 from app import db, cache
 from app.monitoring import bp
-from app.utils import is_admin, get_redis_connection
+from app.utils import get_redis_connection, utcnow
 from app.models import ActivityPubLog, User, Instance, FederationError
 from app.federation.processor import FederationStreamProcessor
 from app.federation.retry_manager import RetryManager
@@ -53,7 +53,7 @@ class SystemMetrics(TypedDict):
 @bp.before_request
 def require_admin() -> None:
     """Require admin access for all monitoring routes."""
-    if not current_user.is_authenticated or not is_admin(current_user.id):
+    if not current_user.is_authenticated or not current_user.is_admin():
         abort(403)
 
 
@@ -87,7 +87,7 @@ def api_stats() -> tuple[Dict[str, Any], int]:
     for queue in queues:
         stream_key = f"federation:stream:{queue}"
         retry_key = f"federation:retry:{queue}"
-        dlq_key = f"federation:dlq"
+        dlq_key = "federation:dlq"
         
         # Get pending messages
         try:
@@ -480,7 +480,7 @@ def api_submit_task() -> tuple[Dict[str, Any], int]:
     Returns:
         JSON with task submission status
     """
-    if not current_user.is_authenticated or not is_admin(current_user.id):
+    if not current_user.is_authenticated or not current_user.is_admin():
         abort(403)
     
     data = request.get_json()

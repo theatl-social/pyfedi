@@ -30,10 +30,10 @@ from app.community.util import save_icon_file, save_banner_file, search_for_comm
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
 from app.email import send_registration_approved_email
-from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
+from app.models import AllowedInstances, BannedInstances, ActivityPubLog, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
@@ -41,6 +41,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
     safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids
 from app.admin import bp
+from app.utils import utcnow
 
 
 @bp.route('/', methods=['GET', 'POST'])

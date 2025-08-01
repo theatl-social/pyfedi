@@ -72,7 +72,6 @@ from captcha.image import ImageCaptcha
 # from app.models import utcnow  # This causes circular import
 
 # Define utcnow here to avoid circular import
-from datetime import datetime
 from zoneinfo import ZoneInfo
 
 def utcnow(naive=True):
@@ -80,6 +79,23 @@ def utcnow(naive=True):
     if naive:
         return datetime.now(ZoneInfo('UTC')).replace(tzinfo=None)
     return datetime.now(ZoneInfo('UTC'))
+
+
+def blocked_emails() -> List[str]:
+    """Get list of blocked email patterns
+    
+    Returns:
+        List of blocked email domain patterns
+    """
+    # TODO: This should come from database or config
+    # For now, return common disposable email domains
+    return [
+        'guerrillamail.com',
+        'mailinator.com',
+        '10minutemail.com',
+        'temp-mail.org',
+        'throwaway.email'
+    ]
 
 # Lazy imports to avoid circular dependencies
 _models_cache = {}

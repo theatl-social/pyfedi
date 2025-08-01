@@ -14,8 +14,9 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow, Instance
-from app.shared.tasks import task_selector
+    Report, Site, User, Instance
+from app.utils import utcnow
+from app.federation import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \

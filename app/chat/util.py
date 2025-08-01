@@ -5,8 +5,9 @@ from flask_login import current_user
 from app import db
 from app.activitypub.signature import send_post_request
 from app.constants import NOTIF_MESSAGE
-from app.models import User, ChatMessage, Notification, utcnow, Conversation
+from app.models import User, ChatMessage, Notification, Conversation
 from app.utils import shorten_string, gibberish, markdown_to_html
+from app.utils import utcnow
 
 
 def send_message(message: str, conversation_id: int, user: User = current_user) -> ChatMessage:

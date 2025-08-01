@@ -25,17 +25,18 @@ from app import db, cache
 from app.activitypub.routes import bp
 from app.activitypub.signature import HttpSignature, VerificationError
 from app.activitypub.util import public_key, community_members
-from app.models import User, Community, CommunityMember, Post, utcnow
+from app.models import User, Community, CommunityMember, Post, PostReply
 from app.utils import (
     is_activitypub_request, get_setting, community_membership,
     ap_datetime, awaken_dormant_instance
 )
 from app.activitypub.routes.helpers import make_activitypub_response
+from app.utils import utcnow
 
 # Type definitions
 type ActorName = str
 type ActorUrl = str
-type CollectionPage = int
+type PageNumber = int
 
 
 class ActorObject(TypedDict):

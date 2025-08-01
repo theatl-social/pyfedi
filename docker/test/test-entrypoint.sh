@@ -26,15 +26,7 @@ until python -c "import redis; r = redis.Redis(host='${REDIS_HOST:-test-redis}',
 done
 echo -e "${GREEN}Redis is ready!${NC}"
 
-# Configure celery_worker.py
-echo -e "${YELLOW}Configuring celery_worker.py...${NC}"
-if [ -f /app/celery_worker.py ]; then
-  sed -i "s|DATABASE_URL = .*|DATABASE_URL = '${DATABASE_URL:-postgresql://pyfedi:pyfedi@test-db:5432/pyfedi}'|" /app/celery_worker.py
-  sed -i "s|SERVER_NAME = .*|SERVER_NAME = '${SERVER_NAME:-test.local}'|" /app/celery_worker.py
-  echo -e "${GREEN}celery_worker.py configured${NC}"
-else
-  echo -e "${YELLOW}Warning: celery_worker.py not found${NC}"
-fi
+# Celery no longer used - removed configuration step
 
 # Set up Flask environment
 cd /app
@@ -46,32 +38,46 @@ echo -e "${YELLOW}Running database migrations...${NC}"
 flask db upgrade
 echo -e "${GREEN}Migrations complete!${NC}"
 
-# Skip database initialization - tests should work with empty database
-echo -e "${YELLOW}Skipping database initialization for testing...${NC}"
+# Initialize database with test data
+echo -e "${YELLOW}Initializing database with test data...${NC}"
+flask init-db
+echo -e "${GREEN}Database initialized!${NC}"
 
 # Verify configuration
 echo -e "${YELLOW}Verifying configuration...${NC}"
 flask config_check || true  # Don't fail if config_check has warnings
 
-# Handle test execution based on RUN_TESTS
-if [ "${RUN_TESTS:-true}" = "true" ]; then
-  echo -e "${GREEN}Running security tests...${NC}"
+# Handle test execution based on command or RUN_TESTS
+if [ "$1" = "pytest" ]; then
+  # If pytest command provided, run it with remaining args
+  shift
+  exec pytest "$@"
+elif [ "${RUN_TESTS:-true}" = "true" ]; then
+  # Default: run all tests or specific test if provided
+  echo -e "${GREEN}Running tests...${NC}"
   cd /app
-  pytest tests/test_security/ \
-    -v \
-    --tb=short \
-    --cov=app/security \
-    --cov-report=html:coverage-reports/security \
-    --cov-report=term \
-    --cov-report=xml:test-reports/coverage.xml \
-    --junit-xml=test-reports/junit.xml
   
-  # Exit with pytest's exit code
-  exit $?
+  if [ $# -gt 0 ]; then
+    # Run specific test(s) passed as arguments
+    exec pytest "$@"
+  else
+    # Run all tests
+    pytest tests/ \
+      -v \
+      --tb=short \
+      --cov=app \
+      --cov-report=html:coverage-reports \
+      --cov-report=term \
+      --cov-report=xml:test-reports/coverage.xml \
+      --junit-xml=test-reports/junit.xml
+    
+    # Exit with pytest's exit code
+    exit $?
+  fi
 else
   echo -e "${GREEN}Test environment ready!${NC}"
   echo -e "${YELLOW}Container will stay running. You can exec into it to run tests manually.${NC}"
-  echo -e "${YELLOW}To run tests: pytest tests/test_security/ -v${NC}"
+  echo -e "${YELLOW}To run tests: pytest tests/ -v${NC}"
   
   # Keep container running
   tail -f /dev/null

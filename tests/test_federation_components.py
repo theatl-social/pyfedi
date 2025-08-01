@@ -13,7 +13,7 @@ import json
 from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock, AsyncMock, patch, call
 
-from app.federation.health_monitor import InstanceHealthMonitor, HealthStatus
+from app.federation.health_monitor import InstanceHealthMonitor, InstanceHealth
 from app.federation.rate_limiter import DestinationRateLimiter, RateLimitType
 from app.federation.scheduler import TaskScheduler, ScheduleType, TaskStatus, ScheduledTask
 from app.federation.maintenance_processor import MaintenanceProcessor

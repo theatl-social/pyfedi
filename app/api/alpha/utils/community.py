@@ -15,7 +15,7 @@ from app.models import Community, CommunityMember, User, CommunityBan, Notificat
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import authorise_api_user
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities

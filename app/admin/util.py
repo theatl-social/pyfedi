@@ -1,9 +1,10 @@
 import os
 from typing import List, Tuple
+from functools import wraps
 
 import boto3
 import httpx
-from flask import g, current_app, flash, render_template
+from flask import g, current_app, flash, render_template, redirect, url_for
 from flask_babel import _
 from flask_login import current_user
 from sqlalchemy import text, desc
@@ -13,6 +14,19 @@ from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_IMAGE
 from app.models import User, Community, Instance, CommunityMember, Post
 from app.utils import gibberish, topic_tree, get_request, store_files_in_s3, ensure_directory_exists, guess_mime_type, get_task_session, patch_db_session
+
+
+def admin_required(func):
+    """Decorator to require admin access for a route"""
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return current_app.login_manager.unauthorized()
+        if not current_user.is_admin():
+            flash(_('You must be an administrator to access this page.'), 'error')
+            return redirect(url_for('main.index'))
+        return func(*args, **kwargs)
+    return decorated_view
 
 
 def unsubscribe_from_everything_then_delete(user_id):

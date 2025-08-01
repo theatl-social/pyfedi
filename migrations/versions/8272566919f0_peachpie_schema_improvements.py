@@ -78,7 +78,7 @@ def upgrade():
                     postgresql_where=sa.text('deleted = false'))
     
     # Activity log performance
-    op.create_index('idx_activitypublog_result_timestamp', 'activitypub_log', 
+    op.create_index('idx_activitypublog_result_timestamp', 'activity_pub_log', 
                     ['result', 'created_at'])
     
     # Post reply queries

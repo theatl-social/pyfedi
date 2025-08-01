@@ -15,9 +15,9 @@ from app import cache, db
 from app.constants import NOTIF_REGISTRATION
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap
-from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow
-from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
-    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
+from app.models import IpBan, Notification, Site, User, UserRegistration
+from app.utils import banned_ip_addresses, utcnow, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
+    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned, utcnow
 
 
 # Return a random string of 6 letter/digits.
@@ -280,7 +280,7 @@ def handle_user_application(user: User, form: Any) -> None:
     db.session.commit()
 
     if get_setting("ban_check_servers", ""):
-        from app.shared.tasks import task_selector
+        from app.federation import task_selector
 
         task_selector("check_application", application_id=application.id)
 

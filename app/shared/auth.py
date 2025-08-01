@@ -12,8 +12,9 @@ from app.api.alpha.utils.validators import required, string_expected
 from app.auth.util import get_country
 from app.constants import *
 from app.ldap_utils import sync_user_to_ldap
-from app.models import IpBan, User, utcnow
+from app.models import IpBan, User
 from app.utils import ip_address, user_ip_banned, user_cookie_banned, banned_ip_addresses
+from app.utils import utcnow
 
 
 # function can be shared between WEB and API (only API calls it for now)

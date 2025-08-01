@@ -63,10 +63,11 @@ class TestActivityPubVerbs:
             
             # Create test post
             self.post = Post(
-                community=self.community,
-                user=self.user,
+                community_id=self.community.id,
+                user_id=self.user.id,
                 title='Test Post',
                 body='Test post body',
+                body_html='<p>Test post body</p>',
                 comments_enabled=True,
                 nsfw=False
             )

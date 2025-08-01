@@ -1,27 +1,10 @@
 import pytest
 from sqlalchemy import text
 
-from app import create_app, db
 from app.models import User, Post, PostReply
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_api_reply_bookmarks(app):
+def test_api_reply_bookmarks(app, session):
     with app.app_context():
         from app.api.alpha.utils.reply import put_reply_save
 
@@ -33,7 +16,7 @@ def test_api_reply_bookmarks(app):
         auth = f'Bearer {jwt}'
 
         # normal add / remove bookmark
-        existing_bookmarks = db.session.execute(
+        existing_bookmarks = session.execute(
             text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.not_in(existing_bookmarks), PostReply.deleted == False).first()
@@ -53,7 +36,7 @@ def test_api_reply_bookmarks(app):
         assert str(ex.value) == 'This comment was not bookmarked.'
 
         # add to existing
-        existing_bookmarks = db.session.execute(
+        existing_bookmarks = session.execute(
             text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_bookmarks), PostReply.deleted == False).first()
@@ -77,7 +60,7 @@ def test_api_reply_bookmarks(app):
                 result = put_reply_save(auth, data)
 
         # remove from deleted (reply or post)
-        existing_bookmarks = db.session.execute(
+        existing_bookmarks = session.execute(
             text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_bookmarks), PostReply.deleted == True).first()
@@ -85,7 +68,7 @@ def test_api_reply_bookmarks(app):
             data = {"comment_id": reply.id, "save": False}
             with pytest.raises(Exception):
                 result = put_reply_save(auth, data)
-        existing_bookmarks = db.session.execute(
+        existing_bookmarks = session.execute(
             text('SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
             {"user_id": user_id}).scalars()
         reply = PostReply.query.filter(PostReply.id.in_(existing_bookmarks), PostReply.deleted == True).join(Post,

@@ -8,10 +8,11 @@ from app import db
 from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance
-from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
+from app.models import User, CommunityMember, Community, Instance, Site, ActivityPubLog, BannedInstances
 from app.utils import gibberish, ap_datetime, instance_banned, get_request
 
 import httpx
+from app.utils import utcnow
 
 
 def purge_user_then_delete(user_id):

@@ -33,10 +33,11 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
-    File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
+    File, PostVote, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
     NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
     post_tag, Tag
+from app.utils import utcnow
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
@@ -53,7 +54,7 @@ from app.utils import get_setting, render_template, allowlist_html, markdown_to_
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
     approval_required
 from app.shared.post import make_post, sticky_post
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import get_recipient_language
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta

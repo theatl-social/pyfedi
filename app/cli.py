@@ -28,11 +28,12 @@ from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_
     NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
-    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
+    Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
+    InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, PostVote, Poll, \
     ActivityBatch
+from app.utils import utcnow, store_files_in_s3 as _store_files_in_s3
 from app.post.routes import post_delete_post
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \

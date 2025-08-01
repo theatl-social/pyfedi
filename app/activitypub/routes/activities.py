@@ -224,7 +224,6 @@ def feed_outbox(actor: FeedName) -> tuple[Dict[str, Any], int]:
         abort(404)
     
     # Get recent posts from feed
-    from app.models import FeedItem
     feed_items = FeedItem.query.filter_by(
         feed_id=feed.id
     ).order_by(FeedItem.created_at.desc()).limit(50).all()

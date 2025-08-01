@@ -16,12 +16,13 @@ from app import db, cache
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
     find_hashtag_or_create, create_post, remote_object_to_json
-from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
+from app.models import Community, File, BannedInstances, PostReply, Post, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
     store_files_in_s3, guess_mime_type, patch_db_session
 from sqlalchemy import func, desc, text
 import os
+from app.utils import utcnow
 
 
 allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']

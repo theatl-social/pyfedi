@@ -21,15 +21,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, and_, func
 
 from app.federation.lifecycle_manager import DataCategory
-from app.models_typed import TypedInstance
-from app.models_typed_activitypub import TypedActivityPubLog
+from app.models import Instance, ActivityPubLog
 
 # Type aliases
 type ArchiveId = int
 type JsonData = Dict[str, Any]
 
 
-class ArchivedActivity(TypedActivityPubLog):
+class ArchivedActivity(ActivityPubLog):
     """
     Extended model for archived activities with additional metadata.
     
@@ -83,7 +82,7 @@ class ArchivedActivity(TypedActivityPubLog):
             domain = urlparse(destination).netloc
             if domain:
                 instance = await session.execute(
-                    select(TypedInstance).where(TypedInstance.domain == domain)
+                    select(Instance).where(Instance.domain == domain)
                 )
                 instance_obj = instance.scalar_one_or_none()
                 if instance_obj:

@@ -9,7 +9,8 @@ from webauthn.helpers.structs import UserVerificationRequirement, PublicKeyCrede
 
 from app import db, cache
 from app.auth import bp
-from app.models import User, utcnow
+from app.models import User
+from app.utils import utcnow
 
 
 # ----------------------------------------------------------------------

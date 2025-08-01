@@ -1,27 +1,10 @@
 import pytest
 from sqlalchemy import desc
 
-from app import create_app
 from app.models import User, Community
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_api_instance_blocks(app):
+def test_api_instance_blocks(app, session):
     with app.app_context():
         from app.api.alpha.utils.site import post_site_block
         from app.api.alpha.utils.post import get_post_list

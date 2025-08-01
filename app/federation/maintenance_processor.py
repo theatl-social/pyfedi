@@ -16,7 +16,7 @@ import redis.asyncio as redis
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import ActivityPubLog, Instance, User, Post, Comment
+from app.models import ActivityPubLog, Instance, User, Post, PostReply
 from app.utils import utcnow
 
 logger = logging.getLogger(__name__)

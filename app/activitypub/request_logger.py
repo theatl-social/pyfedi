@@ -14,7 +14,7 @@ from typing import Optional, Dict, Any
 from flask import current_app, request, g
 from sqlalchemy import text
 from app import db
-from app.models import utcnow
+from app.utils import utcnow
 
 
 def is_logging_enabled() -> bool:

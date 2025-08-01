@@ -34,9 +34,9 @@ from app.activitypub.routes.helpers import (
 )
 from app.models import (
     User, Community, CommunityMember, CommunityJoinRequest,
-    Instance, Post, PostReply, utcnow
+    Instance, Post, PostReply
 )
-from app.utils import gibberish, get_setting, instance_banned
+from app.utils import gibberish, get_setting, instance_banned, utcnow
 from app.security.json_validator import SafeJSONParser
 
 # Type aliases
@@ -607,6 +607,45 @@ def _handle_flag(activity: Dict[str, Any], request_id: str) -> bool:
     """Handle Flag activity (reports)."""
     from app.activitypub.util import process_report
     return process_report(activity)
+
+
+def process_inbox_request(request_json: Dict[str, Any], store_ap_json: bool = True, request_id: Optional[str] = None) -> bool:
+    """
+    Process an incoming ActivityPub request.
+    
+    This is a legacy wrapper for compatibility with admin routes.
+    
+    Args:
+        request_json: The activity JSON to process
+        store_ap_json: Whether to store the JSON (unused)
+        request_id: Optional request ID
+        
+    Returns:
+        True if processed successfully
+    """
+    if not request_id:
+        request_id = generate_request_id()
+    g.request_id = request_id
+    
+    return _handle_activity(request_json, request_id)
+
+
+def process_delete_request(request_json: Dict[str, Any], store_ap_json: bool = True, request_id: Optional[str] = None) -> bool:
+    """
+    Process an ActivityPub delete request (for account deletions).
+    
+    This is a legacy wrapper for compatibility with admin routes.
+    
+    Args:
+        request_json: The delete activity JSON
+        store_ap_json: Whether to store the JSON (unused)
+        request_id: Optional request ID
+        
+    Returns:
+        True if processed successfully
+    """
+    # For now, just process as a regular activity
+    return process_inbox_request(request_json, store_ap_json, request_id)
 
 
 def replay_inbox_request(request_json: Dict[str, Any]) -> bool:

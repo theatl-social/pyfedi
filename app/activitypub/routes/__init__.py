@@ -45,3 +45,9 @@ def register_routes(app) -> None:
         app: Flask application instance
     """
     app.register_blueprint(bp)
+
+
+# Export legacy functions for backwards compatibility
+from app.activitypub.routes.inbox import process_inbox_request, process_delete_request, replay_inbox_request
+
+__all__ = ['bp', 'register_routes', 'process_inbox_request', 'process_delete_request', 'replay_inbox_request']

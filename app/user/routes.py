@@ -20,7 +20,7 @@ from app.community.util import save_icon_file, save_banner_file, retrieve_mods_a
 from app.constants import *
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap
-from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
+from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
     UserExtraField, Feed, FeedMember, IpBan
@@ -30,12 +30,13 @@ from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
-from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
+from app.utils import render_template, utcnow, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
     user_filters_posts, user_filters_replies, theme_list, \
     blocked_users, add_to_modlog, \
     blocked_communities, piefed_markdown_to_lemmy_markdown, \
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
+    utcnow, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8

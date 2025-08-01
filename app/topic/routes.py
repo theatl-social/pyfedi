@@ -14,14 +14,14 @@ from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.email import send_topic_suggestion
 from app.inoculation import inoculation
-from app.models import Topic, Community, NotificationSubscription, PostReply, utcnow
+from app.models import Topic, Community, NotificationSubscription, PostReply
 from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
-from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
+from app.utils import render_template, utcnow, user_filters_posts, validation_required, mimetype_from_url, login_required, \
     gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
-    approval_required
+    approval_required, utcnow
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])

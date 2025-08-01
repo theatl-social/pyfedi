@@ -16,6 +16,9 @@ class TestConfig:
     # Basic required settings
     SERVER_NAME = os.environ.get('SERVER_NAME', 'test.local')
     SECRET_KEY = os.environ.get('SECRET_KEY', 'test-secret-key-not-for-production')
+    SOFTWARE_NAME = 'PeachPie'
+    VERSION = '0.1.0-test'
+    SOFTWARE_REPO = 'https://github.com/pyfedi/pyfedi'
     
     # Database settings
     DB_POOL_SIZE = 5
@@ -28,6 +31,7 @@ class TestConfig:
     )
     
     # Redis configuration
+    REDIS_URL = os.environ.get('REDIS_URL', 'redis://test-redis:6379/0')
     CACHE_REDIS_URL = os.environ.get('REDIS_URL', 'redis://test-redis:6379/1')
     CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://test-redis:6379/0')
     RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://test-redis:6379/0')

@@ -112,9 +112,12 @@ def shared_inbox_secure():
     # Validate required fields
     if not all([activity_id, activity_type, actor_id]):
         missing = []
-        if not activity_id: missing.append('id')
-        if not activity_type: missing.append('type')
-        if not actor_id: missing.append('actor')
+        if not activity_id:
+            missing.append('id')
+        if not activity_type:
+            missing.append('type')
+        if not actor_id:
+            missing.append('actor')
         
         log_ap_status(request_id, "field_validation", "fail", details=f"Missing fields: {missing}")
         if logger:

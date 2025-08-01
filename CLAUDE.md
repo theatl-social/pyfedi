@@ -119,12 +119,20 @@ f"%{escaped}%"
 3. **No suspense queue** - Votes for unknown posts are dropped
 4. **Signature fallbacks** - Accepting unsigned activities for compatibility
 
-### Next Critical Tasks
-1. Fix authentication bypass while maintaining federation
-2. Remove 'audience' field from votes
-3. Stop Announce-wrapping votes
-4. Implement suspense queue for out-of-order activities
-5. Fix test import issues from model refactoring
+### Next Steps
+See **TESTING_PLAN.md** for comprehensive testing and fixes plan.
+
+#### Immediate Priorities
+1. Fix utcnow imports across ~17 files (blocking all tests)
+2. Resolve remaining circular imports
+3. Run iterative tests to identify and fix failures
+4. Complete type annotations for core modules (utils.py, activitypub/util.py)
+
+#### Related Documentation
+- **TESTING_PLAN.md** - Current testing status and detailed next steps
+- **ACTIVITYPUB_COVERAGE.md** - ActivityPub implementation status (14/15 verbs)
+- **FEDERATION_IMPLEMENTATION.md** - Design decisions and rationale
+- **TYPING_MIGRATION_PLAN.md** - Type annotation progress
 
 ### Testing Commands
 ```bash

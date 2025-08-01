@@ -124,11 +124,11 @@ def send_post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str
                       method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
     current_app.logger.info(f'send_post_request called: uri={uri}, body_type={body.get("type") if body else "None"}, debug={current_app.debug}')
     if current_app.debug:
-        current_app.logger.info(f'send_post_request: calling post_request synchronously (debug mode)')
+        current_app.logger.info('send_post_request: calling post_request synchronously (debug mode)')
         return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                             method=method, timeout=timeout, retries=retries)
     else:
-        current_app.logger.info(f'send_post_request: queueing to Redis Streams')
+        current_app.logger.info('send_post_request: queueing to Redis Streams')
         # Queue outgoing activity to Redis Streams
         from app.federation.producer import get_producer
         import asyncio
@@ -173,7 +173,7 @@ def post_request(uri: str, body: Optional[Dict[str, Any]], private_key: str, key
         if uri is None or uri == '':
             log.result = 'failure'
             log.exception_message = 'empty uri'
-            current_app.logger.error(f'post_request: empty uri provided')
+            current_app.logger.error('post_request: empty uri provided')
         else:
             try:
                 current_app.logger.info(f'post_request: making HTTP {method} request to {uri}')

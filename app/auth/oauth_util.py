@@ -7,9 +7,10 @@ from sqlalchemy import func
 
 from app import db, oauth
 from app.auth.util import create_registration_application, get_country, handle_banned_user
-from app.models import User, utcnow
-from app.shared.tasks import task_selector
+from app.models import User
+from app.federation import task_selector
 from app.utils import finalize_user_setup, get_setting, gibberish, ip_address, user_cookie_banned, user_ip_banned
+from app.utils import utcnow
 
 
 def is_country_blocked(country: str) -> bool:

@@ -1,5 +1,5 @@
 # Dockerfile for PyFedi Security Testing Environment
-FROM python:3.11-bookworm
+FROM python:3.13-bookworm
 
 # Build arguments
 ARG TESTING=1
@@ -34,9 +34,10 @@ RUN pip install --no-cache-dir -U pip setuptools wheel && \
 COPY app ./app
 COPY tests ./tests
 COPY migrations ./migrations
+COPY scripts ./scripts
 COPY pyfedi.py ./
 COPY config.py ./
-COPY celery_worker.default.py ./celery_worker.py
+# Celery no longer used - replaced with Redis Streams
 
 # Copy test configuration
 COPY docker/test/test_env.py ./

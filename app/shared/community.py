@@ -13,7 +13,7 @@ from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
     Community, Language, File
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \

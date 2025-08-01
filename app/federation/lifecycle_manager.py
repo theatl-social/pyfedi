@@ -31,7 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert
 
 from app.federation.types import StreamMessage, ProcessingStatus
-from app.models_typed_activitypub import TypedActivityPubLog
+from app.models import ActivityPubLog
 
 # Type aliases
 type ByteSize = int

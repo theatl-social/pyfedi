@@ -7,8 +7,8 @@ from sqlalchemy import text, func
 from app import cache, db
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
-    AllowedInstances, BannedInstances, utcnow, Site
-from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
+    AllowedInstances, BannedInstances, Site
+from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, utcnow
 
 
 # 'stub' param: set to True to exclude optional fields

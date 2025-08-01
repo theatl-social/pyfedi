@@ -6,8 +6,9 @@ from sqlalchemy import text
 from app import db
 from app.constants import *
 from app.models import Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, \
-    utcnow, Instance
-from app.shared.tasks import task_selector
+    Instance
+from app.utils import utcnow
+from app.federation import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
     can_upvote, can_downvote, get_recipient_language

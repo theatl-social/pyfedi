@@ -1,26 +1,9 @@
 import pytest
 
-from app import create_app
 from app.activitypub.util import find_actor_or_create
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_find_actor_or_create(app):
+def test_find_actor_or_create(app, session):
     with app.app_context():
         server_name = app.config['SERVER_NAME']
         user_name = 'rimu'  # Note to others: change this to your login before running this test

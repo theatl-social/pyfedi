@@ -34,9 +34,10 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities
-from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
+from app.models import Community, CommunityMember, Post, Site, User, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
+from app.utils import utcnow
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])

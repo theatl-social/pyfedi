@@ -18,8 +18,9 @@ from flask import jsonify, request, current_app
 from app import db, cache
 from app.activitypub.routes import bp
 from app.activitypub.util import lemmy_site_data
-from app.models import BannedInstances, AllowedInstances, Instance, Site, IpBan, utcnow
+from app.models import BannedInstances, AllowedInstances, Instance, Site, IpBan
 from app.utils import get_setting, blocked_emails
+from app.utils import utcnow
 
 # Type definitions
 class MastodonInstanceInfo(TypedDict):

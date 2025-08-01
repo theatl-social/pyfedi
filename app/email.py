@@ -9,7 +9,7 @@ from botocore.exceptions import ClientError
 from flask import current_app, render_template, g, url_for, flash
 from flask_babel import _  # todo: set the locale based on account_id so that _() works
 
-from app.federation.tasks import task
+# from app.federation.tasks import task  # Removed Celery, using Redis Streams instead
 from app.utils import get_setting, markdown_to_html, markdown_to_text
 
 CHARSET = "UTF-8"
@@ -66,7 +66,7 @@ def send_topic_suggestion(communities_for_topic, user, recipients, subject, topi
                                          domain=current_app.config['SERVER_NAME']))
 
 
-@task(name='send_async_email')
+# Removed @task decorator - now using Redis Streams for async processing
 def send_async_email(subject, sender, recipients, text_body, html_body, reply_to):
     if 'ngrok.app' in sender:  # for local development
         sender = 'PieFed <noreply@piefed.social>'
@@ -139,7 +139,7 @@ def send_email(subject, sender, recipients: List[str], text_body, html_body, rep
         send_async_email(subject, sender, recipients, text_body, html_body, reply_to)
     else:
         # Use task_selector for compatibility
-        from app.federation.tasks import task_selector
+        # from app.federation.tasks import task  # Removed Celery, using Redis Streams instead_selector
         task_selector('send_async_email', send_async=True, 
                      subject=subject, sender=sender, recipients=recipients,
                      text_body=text_body, html_body=html_body, reply_to=reply_to)

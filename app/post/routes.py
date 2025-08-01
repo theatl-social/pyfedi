@@ -22,9 +22,10 @@ from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
 from app.inoculation import inoculation
 from app.models import Post, PostReply, PostReplyValidationError, \
-    PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
+    PostReplyVote, PostVote, Notification, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language
+from app.utils import utcnow
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
@@ -36,7 +37,7 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply
 from app.shared.site import block_remote_instance
-from app.shared.tasks import task_selector
+from app.federation import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, instance_banned, \

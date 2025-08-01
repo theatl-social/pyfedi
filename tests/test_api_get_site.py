@@ -1,27 +1,10 @@
 import pytest
 from flask import g
 
-from app import create_app
 from app.models import Site, User
-from config import Config
 
 
-class TestConfig(Config):
-    """Test configuration that inherits from the main Config"""
-    TESTING = True
-    WTF_CSRF_ENABLED = False
-    # Disable real email sending during tests
-    MAIL_SUPPRESS_SEND = True
-
-
-@pytest.fixture
-def app():
-    """Create and configure a Flask app for testing using the app factory"""
-    app = create_app(TestConfig)
-    return app
-
-
-def test_api_get_site(app):
+def test_api_get_site(app, session):
     with app.app_context():
         from app.api.alpha.utils.site import get_site
         g.site = Site.query.get(1)

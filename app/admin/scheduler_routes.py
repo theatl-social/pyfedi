@@ -11,7 +11,7 @@ from typing import Dict, Any
 import json
 from datetime import datetime
 
-from app.utils import user_access_required
+from app.utils import permission_required
 from app.federation.scheduler import TaskScheduler, ScheduleType, TaskStatus
 
 bp = Blueprint('admin_scheduler', __name__)
@@ -19,7 +19,7 @@ bp = Blueprint('admin_scheduler', __name__)
 
 @bp.route('/scheduled-tasks')
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 def scheduled_tasks():
     """Display scheduled tasks dashboard"""
     return render_template(
@@ -31,7 +31,7 @@ def scheduled_tasks():
 
 @bp.route('/scheduled-tasks/new')
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 def new_scheduled_task():
     """Display form to create new scheduled task"""
     return render_template(
@@ -51,7 +51,7 @@ def new_scheduled_task():
 
 @bp.route('/scheduled-tasks/<task_id>')
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 def scheduled_task_detail(task_id: str):
     """Display scheduled task details"""
     return render_template(
@@ -63,7 +63,7 @@ def scheduled_task_detail(task_id: str):
 
 @bp.route('/scheduled-tasks/<task_id>/edit')
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 def edit_scheduled_task(task_id: str):
     """Display form to edit scheduled task"""
     return render_template(
@@ -84,7 +84,7 @@ def edit_scheduled_task(task_id: str):
 # API endpoints
 @bp.route('/api/scheduled-tasks', methods=['GET'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_list_scheduled_tasks():
     """API endpoint to list scheduled tasks"""
     from app import current_app
@@ -128,7 +128,7 @@ async def api_list_scheduled_tasks():
 
 @bp.route('/api/scheduled-tasks/<task_id>', methods=['GET'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_get_scheduled_task(task_id: str):
     """API endpoint to get a specific scheduled task"""
     from app import current_app
@@ -156,7 +156,7 @@ async def api_get_scheduled_task(task_id: str):
 
 @bp.route('/api/scheduled-tasks', methods=['POST'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_create_scheduled_task():
     """API endpoint to create a new scheduled task"""
     from app import current_app
@@ -210,7 +210,7 @@ async def api_create_scheduled_task():
 
 @bp.route('/api/scheduled-tasks/<task_id>', methods=['PUT'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_update_scheduled_task(task_id: str):
     """API endpoint to update a scheduled task"""
     from app import current_app
@@ -257,7 +257,7 @@ async def api_update_scheduled_task(task_id: str):
 
 @bp.route('/api/scheduled-tasks/<task_id>', methods=['DELETE'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_delete_scheduled_task(task_id: str):
     """API endpoint to delete a scheduled task"""
     from app import current_app
@@ -281,7 +281,7 @@ async def api_delete_scheduled_task(task_id: str):
 
 @bp.route('/api/scheduled-tasks/<task_id>/pause', methods=['POST'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_pause_scheduled_task(task_id: str):
     """API endpoint to pause a scheduled task"""
     from app import current_app
@@ -305,7 +305,7 @@ async def api_pause_scheduled_task(task_id: str):
 
 @bp.route('/api/scheduled-tasks/<task_id>/resume', methods=['POST'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_resume_scheduled_task(task_id: str):
     """API endpoint to resume a scheduled task"""
     from app import current_app
@@ -329,7 +329,7 @@ async def api_resume_scheduled_task(task_id: str):
 
 @bp.route('/api/scheduled-tasks/<task_id>/run', methods=['POST'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_run_scheduled_task_now(task_id: str):
     """API endpoint to run a scheduled task immediately"""
     from app import current_app
@@ -359,7 +359,7 @@ async def api_run_scheduled_task_now(task_id: str):
 
 @bp.route('/api/scheduler/stats', methods=['GET'])
 @login_required
-@user_access_required('change instance settings')
+@permission_required('change instance settings')
 async def api_scheduler_stats():
     """API endpoint to get scheduler statistics"""
     from app import current_app
