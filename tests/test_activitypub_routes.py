@@ -84,8 +84,8 @@ class TestInboxRoutes:
                 }
             }
             
-            with patch('app.activitypub.routes.inbox.verify_request', return_value=True):
-                with patch('app.activitypub.routes.inbox.process_inbox_request') as mock_process:
+            with patch('app.activitypub.routes.inbox._verify_signature', return_value=True):
+                with patch('app.activitypub.routes.inbox._handle_activity') as mock_process:
                     mock_process.return_value = True
                     
                     response = client.post(
@@ -94,7 +94,7 @@ class TestInboxRoutes:
                         content_type='application/activity+json'
                     )
                     
-                    assert response.status_code == 200
+                    assert response.status_code == 204
                     mock_process.assert_called_once()
     
     def test_user_inbox(self, client, test_user, app):
@@ -107,8 +107,8 @@ class TestInboxRoutes:
                 'object': test_user.ap_profile_id
             }
             
-            with patch('app.activitypub.routes.inbox.verify_request', return_value=True):
-                with patch('app.activitypub.routes.inbox.process_inbox_request') as mock_process:
+            with patch('app.activitypub.routes.inbox._verify_signature', return_value=True):
+                with patch('app.activitypub.routes.inbox._handle_activity') as mock_process:
                     mock_process.return_value = True
                     
                     response = client.post(
@@ -117,7 +117,7 @@ class TestInboxRoutes:
                         content_type='application/activity+json'
                     )
                     
-                    assert response.status_code == 200
+                    assert response.status_code == 204
     
     def test_community_inbox(self, client, test_community, app):
         """Test community inbox endpoint."""
@@ -133,8 +133,8 @@ class TestInboxRoutes:
                 'to': [test_community.ap_profile_id]
             }
             
-            with patch('app.activitypub.routes.inbox.verify_request', return_value=True):
-                with patch('app.activitypub.routes.inbox.process_inbox_request') as mock_process:
+            with patch('app.activitypub.routes.inbox._verify_signature', return_value=True):
+                with patch('app.activitypub.routes.inbox._handle_activity') as mock_process:
                     mock_process.return_value = True
                     
                     response = client.post(
@@ -143,7 +143,7 @@ class TestInboxRoutes:
                         content_type='application/activity+json'
                     )
                     
-                    assert response.status_code == 200
+                    assert response.status_code == 204
 
 
 class TestOutboxRoutes:
@@ -484,7 +484,7 @@ class TestErrorHandling:
                 'object': {'type': 'Note', 'content': 'Test'}
             }
             
-            with patch('app.activitypub.routes.inbox.verify_request', return_value=False):
+            with patch('app.activitypub.routes.inbox._verify_signature', return_value=False):
                 response = client.post(
                     '/site_inbox',
                     data=json.dumps(activity),
@@ -506,7 +506,7 @@ class TestErrorHandling:
                 # Missing actor and object
             }
             
-            with patch('app.activitypub.routes.inbox.verify_request', return_value=True):
+            with patch('app.activitypub.routes.inbox._verify_signature', return_value=True):
                 response = client.post(
                     '/site_inbox',
                     data=json.dumps(activity),

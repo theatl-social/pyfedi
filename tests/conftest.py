@@ -34,6 +34,39 @@ def app():
     app = create_app(TestConfig)
     
     with app.app_context():
+        # Set up g.site globally for tests
+        from flask import g
+        from app.models import Site
+        
+        @app.before_request
+        def setup_g_site():
+            """Set up g.site for all requests in tests"""
+            if not hasattr(g, 'site'):
+                # Create or get the default site
+                site = Site.query.get(1)
+                if not site:
+                    site = Site(
+                        id=1,
+                        name='Test Site',
+                        description='Test site for PyFedi',
+                        registration_mode='open',
+                        enable_downvotes=True,
+                        enable_federation=True,
+                        default_theme='light'
+                    )
+                    # Generate keys for the site
+                    from app.activitypub.signature import generate_rsa_keypair
+                    private_key, public_key = generate_rsa_keypair()
+                    site.private_key = private_key
+                    site.public_key = public_key
+                    db.session.add(site)
+                    try:
+                        db.session.commit()
+                    except:
+                        db.session.rollback()
+                        site = Site.query.get(1)
+                g.site = site
+        
         yield app
 
 
@@ -93,6 +126,31 @@ def db_session(session):
 def client(app):
     """Create a test client"""
     return app.test_client()
+
+
+@pytest.fixture
+def test_site(session):
+    """Create or get the test site"""
+    from app.models import Site
+    site = Site.query.get(1)
+    if not site:
+        site = Site(
+            id=1,
+            name='Test Site',
+            description='Test site for PyFedi',
+            registration_mode='open',
+            enable_downvotes=True,
+            enable_federation=True,
+            default_theme='light'
+        )
+        # Generate keys for the site
+        from app.activitypub.signature import generate_rsa_keypair
+        private_key, public_key = generate_rsa_keypair()
+        site.private_key = private_key
+        site.public_key = public_key
+        session.add(site)
+        session.commit()
+    return site
 
 
 @pytest.fixture
