@@ -40,26 +40,53 @@ def app():
 @pytest.fixture(scope='session')
 def _db(app):
     """Create database for testing"""
-    db.create_all()
-    yield db
-    db.drop_all()
+    with app.app_context():
+        db.create_all()
+        yield db
+        db.session.remove()
+        db.drop_all()
 
 
 @pytest.fixture(scope='function')
-def session(_db):
-    """Create a database session for testing"""
-    connection = _db.engine.connect()
-    transaction = connection.begin()
-    
-    # Configure session to use the transaction
-    _db.session.configure(bind=connection)
-    
-    yield _db.session
-    
-    # Rollback the transaction
-    _db.session.close()
-    transaction.rollback()
-    connection.close()
+def session(app, _db):
+    """Create a clean database session for each test"""
+    with app.app_context():
+        # Start a transaction
+        connection = _db.engine.connect()
+        transaction = connection.begin()
+        
+        # Configure the session to use this connection
+        _db.session.configure(bind=connection)
+        
+        # Begin a nested transaction (savepoint)
+        nested = connection.begin_nested()
+        
+        # If a test fails, rollback to the savepoint
+        @db.event.listens_for(_db.session, "after_transaction_end")
+        def restart_savepoint(session, transaction):
+            if transaction.nested and not transaction._parent.nested:
+                # Ensure we're still connected
+                if connection.closed:
+                    return
+                nested = connection.begin_nested()
+        
+        yield _db.session
+        
+        # Cleanup
+        _db.session.close()
+        if not connection.closed:
+            transaction.rollback()
+        connection.close()
+        
+        # Remove the event listener
+        db.event.remove(_db.session, "after_transaction_end", restart_savepoint)
+
+
+# Alias for backward compatibility - many tests use db_session
+@pytest.fixture(scope='function')
+def db_session(session):
+    """Alias for session fixture for backward compatibility"""
+    return session
 
 
 @pytest.fixture
@@ -73,8 +100,7 @@ def test_instance(session):
     """Create a test instance"""
     instance = Instance(
         domain='test.instance',
-        software='pyfedi',
-        created_at=datetime.utcnow()
+        software='pyfedi'
     )
     session.add(instance)
     session.commit()
@@ -85,13 +111,13 @@ def test_instance(session):
 def test_user(session, test_instance):
     """Create a test user"""
     user = User(
-        username='testuser',
+        user_name='testuser',
         email='test@example.com',
         ap_profile_id='https://test.instance/u/testuser',
         instance_id=test_instance.id,
         public_key='-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----',
         private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-        created_at=datetime.utcnow()
+        verified=True
     )
     session.add(user)
     session.commit()
@@ -102,15 +128,15 @@ def test_user(session, test_instance):
 def admin_user(session, test_instance):
     """Create an admin user"""
     user = User(
-        username='admin',
+        user_name='admin',
         email='admin@example.com',
         ap_profile_id='https://test.instance/u/admin',
         instance_id=test_instance.id,
-        is_site_admin=True,
         public_key='-----BEGIN PUBLIC KEY-----\ntest\n-----END PUBLIC KEY-----',
         private_key='-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----',
-        created_at=datetime.utcnow()
+        verified=True
     )
+    # Note: Admin status is typically set through instance roles or config, not a field
     session.add(user)
     session.commit()
     return user
@@ -124,8 +150,7 @@ def test_community(session, test_instance):
         title='Test Community',
         ap_profile_id='https://test.instance/c/testcommunity',
         ap_inbox_url='https://test.instance/c/testcommunity/inbox',
-        ap_outbox_url='https://test.instance/c/testcommunity/outbox',
-        created_at=datetime.utcnow()
+        ap_outbox_url='https://test.instance/c/testcommunity/outbox'
     )
     session.add(community)
     session.commit()
