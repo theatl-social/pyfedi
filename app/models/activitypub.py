@@ -70,25 +70,7 @@ class ActivityPubRequestLog(TimestampMixin, db.Model):
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer)
 
 
-class CommunityJoinRequest(TimestampMixin, db.Model):
-    """Pending community join requests (federation)"""
-    __tablename__ = 'community_join_request'
-    __table_args__ = {'extend_existing': True}
-    
-    # Primary columns
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    
-    # Request details
-    community_id: Mapped[CommunityId] = mapped_column(
-        Integer, ForeignKey('community.id'), nullable=False, index=True
-    )
-    user_id: Mapped[UserId] = mapped_column(
-        Integer, ForeignKey('user.id'), nullable=False, index=True
-    )
-    
-    # Relationships
-    community = relationship('Community')
-    user = relationship('User')
+# CommunityJoinRequest moved to community.py to avoid duplicate definition
 
 
 class ActivityBatch(TimestampMixin, db.Model):

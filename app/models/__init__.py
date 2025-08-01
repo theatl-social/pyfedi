@@ -22,7 +22,7 @@ from app.models.base import (
 
 from app.models.user import (
     User, UserFollower, UserFollowRequest, UserBlock, UserNote,
-    UserRegistration, UserExtraField, Passkey, UserFlair
+    UserRegistration, UserExtraField, Passkey, UserFlair, read_posts
 )
 
 from app.models.community import (
@@ -34,7 +34,7 @@ from app.models.community import (
 from app.models.content import (
     Post, PostReply, PostVote, PostReplyVote, PostBookmark,
     PostReplyBookmark, ScheduledPost, Topic, Tag, Poll,
-    PollChoice, PollChoiceVote
+    PollChoice, PollChoiceVote, post_tag, post_flair, community_language
 )
 
 from app.models.instance import (
@@ -44,7 +44,7 @@ from app.models.instance import (
 )
 
 from app.models.activitypub import (
-    ActivityPubLog, ActivityPubRequestLog, CommunityJoinRequest as APCommunityJoinRequest,
+    ActivityPubLog, ActivityPubRequestLog,
     ActivityBatch, SendQueue, APRequestBody, APRequestStatus
 )
 
@@ -57,7 +57,7 @@ from app.models.media import (
 )
 
 from app.models.notification import (
-    Notification, NotificationSubscription, Conversation, ChatMessage
+    Notification, NotificationSubscription, Conversation, ChatMessage, conversation_member
 )
 
 from app.models.misc import (
@@ -74,7 +74,7 @@ __all__ = [
     
     # User
     'User', 'UserFollower', 'UserFollowRequest', 'UserBlock', 'UserNote',
-    'UserRegistration', 'UserExtraField', 'Passkey', 'UserFlair',
+    'UserRegistration', 'UserExtraField', 'Passkey', 'UserFlair', 'read_posts',
     
     # Community
     'Community', 'CommunityMember', 'CommunityBan', 'CommunityJoinRequest',
@@ -84,7 +84,7 @@ __all__ = [
     # Content
     'Post', 'PostReply', 'PostVote', 'PostReplyVote', 'PostBookmark',
     'PostReplyBookmark', 'ScheduledPost', 'Topic', 'Tag', 'Poll',
-    'PollChoice', 'PollChoiceVote',
+    'PollChoice', 'PollChoiceVote', 'post_tag', 'post_flair', 'community_language',
     
     # Instance
     'Instance', 'InstanceRole', 'BannedInstances', 'AllowedInstances',
@@ -102,7 +102,7 @@ __all__ = [
     'File', 'Language', 'Licence',
     
     # Notification
-    'Notification', 'NotificationSubscription', 'Conversation', 'ChatMessage',
+    'Notification', 'NotificationSubscription', 'Conversation', 'ChatMessage', 'conversation_member',
     
     # Misc
     'Site', 'Settings', 'ActivityLog', 'Feed', 'FeedItem', 'FeedMember',

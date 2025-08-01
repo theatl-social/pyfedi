@@ -12,13 +12,22 @@ from email_validator import validate_email, EmailNotValidError
 
 from app import db, cache
 from app.models.base import TimestampMixin, ActivityPubMixin, LanguageMixin, UserId, CommunityId, InstanceId
-from app.utils import markdown_to_html, html_to_text, remove_tracking_from_link
+from app.utils import markdown_to_html, html_to_text, remove_tracking_from_link, utcnow
 
 if TYPE_CHECKING:
     from app.models.community import Community, CommunityMember, CommunityBan
     from app.models.content import Post, PostReply, PostVote, PostReplyVote
     from app.models.instance import Instance, InstanceRole
     from app.models.moderation import Report, ModLog
+
+
+# Association table for read posts
+read_posts = db.Table('read_posts',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
+    db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
+    db.Column('interacted_at', db.DateTime, index=True, default=utcnow),
+    extend_existing=True
+)
 
 
 class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model):
@@ -109,9 +118,11 @@ class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model)
     # Communities
     community_memberships = relationship('CommunityMember', back_populates='user', lazy='dynamic',
                                        cascade='all, delete-orphan')
-    community_bans = relationship('CommunityBan', back_populates='user', lazy='dynamic',
+    community_bans = relationship('CommunityBan', foreign_keys='CommunityBan.user_id',
+                                 back_populates='user', lazy='dynamic',
                                  cascade='all, delete-orphan')
-    created_communities = relationship('Community', back_populates='creator', lazy='dynamic')
+    created_communities = relationship('Community', foreign_keys='Community.user_id',
+                                      back_populates='creator', lazy='dynamic')
     
     # Social
     followers = relationship('UserFollower', foreign_keys='UserFollower.followed_id',
@@ -126,12 +137,12 @@ class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model)
     # Moderation
     reports_made = relationship('Report', foreign_keys='Report.reporter_id',
                               back_populates='reporter', lazy='dynamic')
-    mod_actions = relationship('ModLog', back_populates='user', lazy='dynamic')
+    mod_actions = relationship('ModLog', foreign_keys='ModLog.user_id', back_populates='user', lazy='dynamic')
     instance_roles = relationship('InstanceRole', back_populates='user', lazy='dynamic')
     
     # Notifications
     notifications = relationship('Notification', back_populates='user', lazy='dynamic',
-                               cascade='all, delete-orphan')
+                               cascade='all, delete-orphan', foreign_keys='Notification.user_id')
     notification_subscriptions = relationship('NotificationSubscription', back_populates='user',
                                             lazy='dynamic', cascade='all, delete-orphan')
     

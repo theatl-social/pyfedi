@@ -23,6 +23,30 @@ if TYPE_CHECKING:
     from app.models.media import File
 
 
+# Association tables
+post_tag = db.Table('post_tag',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+    db.Column('tag_id', db.Integer, db.ForeignKey('tag.id')),
+    db.PrimaryKeyConstraint('post_id', 'tag_id'),
+    extend_existing=True
+)
+
+post_flair = db.Table('post_flair',
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+    db.Column('flair_id', db.Integer, db.ForeignKey('community_flair.id')),
+    db.PrimaryKeyConstraint('post_id', 'flair_id'),
+    extend_existing=True
+)
+
+# Community language association table
+community_language = db.Table('community_language',
+    db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
+    db.Column('language_id', db.Integer, db.ForeignKey('language.id')),
+    db.PrimaryKeyConstraint('community_id', 'language_id'),
+    extend_existing=True
+)
+
+
 class Post(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin, 
            LanguageMixin, NSFWMixin, db.Model):
     """Post model with full typing support"""
@@ -83,7 +107,7 @@ class Post(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin,
                         cascade='all, delete-orphan')
     bookmarks = relationship('PostBookmark', back_populates='post', lazy='dynamic',
                            cascade='all, delete-orphan')
-    reports = relationship('Report', back_populates='post', lazy='dynamic',
+    reports = relationship('Report', back_populates='suspect_post', lazy='dynamic',
                          cascade='all, delete-orphan')
     
     # Indexes
@@ -189,15 +213,20 @@ class PostReply(TimestampMixin, SoftDeleteMixin, ScoreMixin, ActivityPubMixin,
     # Relationships
     post = relationship('Post', back_populates='replies')
     author = relationship('User', back_populates='post_replies')
-    parent = relationship('PostReply', remote_side=[id], backref='children')
-    root = relationship('PostReply', remote_side=[id])
+    parent = relationship('PostReply', foreign_keys=[parent_id], remote_side=[id], backref='children')
+    root = relationship('PostReply', foreign_keys=[root_id], remote_side=[id])
     
     votes = relationship('PostReplyVote', back_populates='post_reply', lazy='dynamic',
                         cascade='all, delete-orphan')
     bookmarks = relationship('PostReplyBookmark', back_populates='post_reply', lazy='dynamic',
                            cascade='all, delete-orphan')
-    reports = relationship('Report', back_populates='post_reply', lazy='dynamic',
+    reports = relationship('Report', back_populates='suspect_post_reply', lazy='dynamic',
                          cascade='all, delete-orphan')
+    
+    @property
+    def community(self):
+        """Get community through post relationship"""
+        return self.post.community if self.post else None
     
     @validates('parent_id')
     def validate_parent(self, key: str, value: Optional[int]) -> Optional[int]:

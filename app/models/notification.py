@@ -13,6 +13,16 @@ if TYPE_CHECKING:
     from app.models.content import Post, PostReply
 
 
+# Association table for many-to-many conversation members
+# This is for backward compatibility with existing code
+conversation_member = db.Table('conversation_member',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('conversation_id', db.Integer, db.ForeignKey('conversation.id')),
+    db.PrimaryKeyConstraint('user_id', 'conversation_id'),
+    extend_existing=True
+)
+
+
 class Notification(TimestampMixin, db.Model):
     """User notifications"""
     __tablename__ = 'notification'
