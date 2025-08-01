@@ -216,7 +216,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
             if instance.domain not in domains_sent_to:
                 send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
-    # remove any notifications about the post
+    # remove any notifications about deleted posts
     if is_post:
         notifs = session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == object.id)
         for notif in notifs:
