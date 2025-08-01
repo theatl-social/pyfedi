@@ -22,7 +22,7 @@ from app.utils import get_request, gibberish, ensure_directory_exists, ap_dateti
     store_files_in_s3, guess_mime_type, patch_db_session
 from sqlalchemy import func, desc, text
 import os
-from app.utils import, timezone
+from datetime import timezone
 
 
 allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
