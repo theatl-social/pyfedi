@@ -7,7 +7,7 @@ from app import celery, cache
 from app.activitypub.util import find_actor_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
-    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow
+    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, read_posts
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post
@@ -20,6 +20,21 @@ def cleanup_old_notifications():
     try:
         cutoff = utcnow() - timedelta(days=90)
         session.query(Notification).filter(Notification.created_at < cutoff).delete()
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@celery.task
+def cleanup_old_read_posts():
+    """Remove read_posts entries older than 90 days"""
+    session = get_task_session()
+    try:
+        cutoff = utcnow() - timedelta(days=90)
+        session.execute(text("DELETE FROM read_posts WHERE interacted_at < :cutoff"), {"cutoff": cutoff})
         session.commit()
     except Exception:
         session.rollback()

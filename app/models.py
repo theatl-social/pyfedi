@@ -817,10 +817,10 @@ user_role = db.Table('user_role',
 
 # table to hold users' 'read' post ids
 read_posts = db.Table('read_posts',
-                      db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
-                      db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
-                      db.Column('interacted_at', db.DateTime, index=True, default=utcnow)
-                      # this is when the content is interacted with
+                      db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True, nullable=False),
+                      db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True, nullable=False),
+                      db.Column('interacted_at', db.DateTime, index=True, default=utcnow),
+                      db.Index('ix_read_posts_user_post', 'user_id', 'read_post_id')
                       )
 
 

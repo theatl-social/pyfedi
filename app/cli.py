@@ -33,6 +33,7 @@ from app.models import Settings, BannedInstances, Role, User, RolePermission, Do
     ActivityBatch
 from app.post.routes import post_delete_post
 from app.shared.tasks import task_selector
+from app.shared.tasks.maintenance import cleanup_old_read_posts
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
@@ -294,6 +295,7 @@ def register(app):
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
                 cleanup_old_notifications()
+                cleanup_old_read_posts()
                 cleanup_send_queue()
                 process_expired_bans()
                 remove_old_community_content()
@@ -312,6 +314,7 @@ def register(app):
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
                 cleanup_old_notifications.delay()
+                cleanup_old_read_posts.delay()
                 cleanup_send_queue.delay()
                 process_expired_bans.delay()
                 remove_old_community_content.delay()

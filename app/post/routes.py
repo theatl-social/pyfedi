@@ -32,7 +32,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
-    vote_for_post
+    vote_for_post, mark_post_read
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
@@ -71,10 +71,6 @@ def show_post(post_id: int):
             return redirect(url_for("auth.login", next=f"/post/{post_id}"))
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
-        if post.archived:
-            sort = 'hot'
-            archived_post = retrieve_archived_post(post.archived)
-            post.body_html = archived_post['body_html']
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
@@ -238,8 +234,7 @@ def show_post(post_id: int):
         if current_user.is_authenticated:
             user = current_user
             if current_user.hide_read_posts:
-                current_user.mark_post_as_read(post)
-                db.session.commit()
+                mark_post_read([post.id], True, current_user.id)
         else:
             user = None
 
@@ -257,6 +252,11 @@ def show_post(post_id: int):
                 recipient_language_name = lang.name
 
         content_filters = user_filters_posts(current_user.id) if current_user.is_authenticated else {}
+
+        if post.archived:
+            sort = 'hot'
+            archived_post = retrieve_archived_post(post.archived)
+            post.body_html = archived_post['body_html']     # do this last to avoid the db.session.commit() in mark_post_read(). We don't want to save data in .body_html to the DB, just have it there for display in the jinja template
 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
                                    is_owner=community.is_owner(),
