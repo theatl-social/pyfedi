@@ -149,6 +149,31 @@ def upgrade():
         op.add_column('instance', sa.Column('nodeinfo_href', sa.String(256), nullable=True))
     if 'start_trying_again' not in instance_columns:
         op.add_column('instance', sa.Column('start_trying_again', sa.DateTime(), nullable=True))
+    # TimestampMixin fields
+    if 'created_at' not in instance_columns:
+        op.add_column('instance', sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()))
+        op.create_index('ix_instance_created_at', 'instance', ['created_at'])
+    if 'updated_at' not in instance_columns:
+        op.add_column('instance', sa.Column('updated_at', sa.DateTime(), nullable=True))
+    # Additional Instance fields
+    if 'inbox' not in instance_columns:
+        op.add_column('instance', sa.Column('inbox', sa.String(256), nullable=True))
+    if 'shared_inbox' not in instance_columns:
+        op.add_column('instance', sa.Column('shared_inbox', sa.String(256), nullable=True))
+    if 'outbox' not in instance_columns:
+        op.add_column('instance', sa.Column('outbox', sa.String(256), nullable=True))
+    if 'gone_forever' not in instance_columns:
+        op.add_column('instance', sa.Column('gone_forever', sa.Boolean(), nullable=False, server_default='false'))
+    if 'dormant' not in instance_columns:
+        op.add_column('instance', sa.Column('dormant', sa.Boolean(), nullable=False, server_default='false'))
+    if 'last_seen' not in instance_columns:
+        op.add_column('instance', sa.Column('last_seen', sa.DateTime(), nullable=True))
+    if 'last_successful_send' not in instance_columns:
+        op.add_column('instance', sa.Column('last_successful_send', sa.DateTime(), nullable=True))
+    if 'failures' not in instance_columns:
+        op.add_column('instance', sa.Column('failures', sa.Integer(), nullable=False, server_default='0'))
+    if 'most_recent_attempt' not in instance_columns:
+        op.add_column('instance', sa.Column('most_recent_attempt', sa.DateTime(), nullable=True))
     
     # Add missing community columns
     community_columns = [c['name'] for c in inspector.get_columns('community')]
@@ -208,6 +233,78 @@ def upgrade():
     # From TimestampMixin
     if 'updated_at' not in community_columns:
         op.add_column('community', sa.Column('updated_at', sa.DateTime(), nullable=True))
+    
+    # Add missing post columns (from mixins)
+    post_columns = [c['name'] for c in inspector.get_columns('post')]
+    # TimestampMixin
+    if 'created_at' not in post_columns:
+        op.add_column('post', sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()))
+        op.create_index('ix_post_created_at', 'post', ['created_at'])
+    if 'updated_at' not in post_columns:
+        op.add_column('post', sa.Column('updated_at', sa.DateTime(), nullable=True))
+    # SoftDeleteMixin
+    if 'deleted' not in post_columns:
+        op.add_column('post', sa.Column('deleted', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_deleted', 'post', ['deleted'])
+    if 'deleted_at' not in post_columns:
+        op.add_column('post', sa.Column('deleted_at', sa.DateTime(), nullable=True))
+    # ScoreMixin
+    if 'score' not in post_columns:
+        op.add_column('post', sa.Column('score', sa.Integer(), nullable=False, server_default='0'))
+        op.create_index('ix_post_score', 'post', ['score'])
+    if 'up_votes' not in post_columns:
+        op.add_column('post', sa.Column('up_votes', sa.Integer(), nullable=False, server_default='0'))
+    if 'down_votes' not in post_columns:
+        op.add_column('post', sa.Column('down_votes', sa.Integer(), nullable=False, server_default='0'))
+    if 'ranking' not in post_columns:
+        op.add_column('post', sa.Column('ranking', sa.Float(), nullable=False, server_default='0.0'))
+        op.create_index('ix_post_ranking', 'post', ['ranking'])
+    # ActivityPubMixin
+    if 'ap_id' not in post_columns:
+        op.add_column('post', sa.Column('ap_id', sa.String(255), nullable=True, unique=True))
+        op.create_index('ix_post_ap_id', 'post', ['ap_id'])
+    if 'ap_profile_id' not in post_columns:
+        op.add_column('post', sa.Column('ap_profile_id', sa.String(255), nullable=True, unique=True))
+        op.create_index('ix_post_ap_profile_id', 'post', ['ap_profile_id'])
+    if 'ap_public_url' not in post_columns:
+        op.add_column('post', sa.Column('ap_public_url', sa.String(255), nullable=True))
+    if 'ap_fetched_at' not in post_columns:
+        op.add_column('post', sa.Column('ap_fetched_at', sa.DateTime(), nullable=True))
+    if 'ap_followers_url' not in post_columns:
+        op.add_column('post', sa.Column('ap_followers_url', sa.String(255), nullable=True))
+    if 'ap_inbox_url' not in post_columns:
+        op.add_column('post', sa.Column('ap_inbox_url', sa.String(255), nullable=True))
+    if 'ap_outbox_url' not in post_columns:
+        op.add_column('post', sa.Column('ap_outbox_url', sa.String(255), nullable=True))
+    # LanguageMixin
+    if 'language' not in post_columns:
+        op.add_column('post', sa.Column('language', sa.String(10), nullable=True))
+    # NSFWMixin
+    if 'nsfw' not in post_columns:
+        op.add_column('post', sa.Column('nsfw', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_nsfw', 'post', ['nsfw'])
+    if 'nsfl' not in post_columns:
+        op.add_column('post', sa.Column('nsfl', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_nsfl', 'post', ['nsfl'])
+    # Additional Post columns from model
+    if 'nsfw_mask' not in post_columns:
+        op.add_column('post', sa.Column('nsfw_mask', sa.Integer(), nullable=False, server_default='0'))
+    if 'from_bot' not in post_columns:
+        op.add_column('post', sa.Column('from_bot', sa.Boolean(), nullable=False, server_default='false'))
+    if 'reply_count' not in post_columns:
+        op.add_column('post', sa.Column('reply_count', sa.Integer(), nullable=False, server_default='0'))
+    if 'edited_at' not in post_columns:
+        op.add_column('post', sa.Column('edited_at', sa.DateTime(), nullable=True))
+    if 'edit_reason' not in post_columns:
+        op.add_column('post', sa.Column('edit_reason', sa.String(255), nullable=True))
+    if 'posted_at' not in post_columns:
+        op.add_column('post', sa.Column('posted_at', sa.DateTime(), nullable=False, server_default=sa.func.now()))
+        op.create_index('ix_post_posted_at', 'post', ['posted_at'])
+    if 'last_active' not in post_columns:
+        op.add_column('post', sa.Column('last_active', sa.DateTime(), nullable=False, server_default=sa.func.now()))
+        op.create_index('ix_post_last_active', 'post', ['last_active'])
+    if 'microblog' not in post_columns:
+        op.add_column('post', sa.Column('microblog', sa.Boolean(), nullable=False, server_default='false'))
     
     # Note: Circular dependency between conversation and chat_message tables
     # is handled by use_alter=True in the model definition
@@ -287,6 +384,18 @@ def downgrade():
     op.drop_column('instance', 'user_count')
     op.drop_column('instance', 'nodeinfo_href')
     op.drop_column('instance', 'start_trying_again')
+    op.drop_index('ix_instance_created_at', 'instance')
+    op.drop_column('instance', 'created_at')
+    op.drop_column('instance', 'updated_at')
+    op.drop_column('instance', 'inbox')
+    op.drop_column('instance', 'shared_inbox')
+    op.drop_column('instance', 'outbox')
+    op.drop_column('instance', 'gone_forever')
+    op.drop_column('instance', 'dormant')
+    op.drop_column('instance', 'last_seen')
+    op.drop_column('instance', 'last_successful_send')
+    op.drop_column('instance', 'failures')
+    op.drop_column('instance', 'most_recent_attempt')
     
     # Remove community columns
     op.drop_column('community', 'rules_html')
@@ -315,5 +424,43 @@ def downgrade():
     op.drop_column('community', 'ap_fetched_at')
     op.drop_column('community', 'language')
     op.drop_column('community', 'updated_at')
+    
+    # Remove post columns
+    op.drop_index('ix_post_created_at', 'post')
+    op.drop_column('post', 'created_at')
+    op.drop_column('post', 'updated_at')
+    op.drop_index('ix_post_deleted', 'post')
+    op.drop_column('post', 'deleted')
+    op.drop_column('post', 'deleted_at')
+    op.drop_index('ix_post_score', 'post')
+    op.drop_column('post', 'score')
+    op.drop_column('post', 'up_votes')
+    op.drop_column('post', 'down_votes')
+    op.drop_index('ix_post_ranking', 'post')
+    op.drop_column('post', 'ranking')
+    op.drop_index('ix_post_ap_id', 'post')
+    op.drop_column('post', 'ap_id')
+    op.drop_index('ix_post_ap_profile_id', 'post')
+    op.drop_column('post', 'ap_profile_id')
+    op.drop_column('post', 'ap_public_url')
+    op.drop_column('post', 'ap_fetched_at')
+    op.drop_column('post', 'ap_followers_url')
+    op.drop_column('post', 'ap_inbox_url')
+    op.drop_column('post', 'ap_outbox_url')
+    op.drop_column('post', 'language')
+    op.drop_index('ix_post_nsfw', 'post')
+    op.drop_column('post', 'nsfw')
+    op.drop_index('ix_post_nsfl', 'post')
+    op.drop_column('post', 'nsfl')
+    op.drop_column('post', 'nsfw_mask')
+    op.drop_column('post', 'from_bot')
+    op.drop_column('post', 'reply_count')
+    op.drop_column('post', 'edited_at')
+    op.drop_column('post', 'edit_reason')
+    op.drop_index('ix_post_posted_at', 'post')
+    op.drop_column('post', 'posted_at')
+    op.drop_index('ix_post_last_active', 'post')
+    op.drop_column('post', 'last_active')
+    op.drop_column('post', 'microblog')
     
     # Note: Not reverting FK constraints to avoid issues
