@@ -33,41 +33,7 @@ def app():
     """Create application for testing"""
     app = create_app(TestConfig)
     
-    with app.app_context():
-        # Set up g.site globally for tests
-        from flask import g
-        from app.models import Site
-        
-        @app.before_request
-        def setup_g_site():
-            """Set up g.site for all requests in tests"""
-            if not hasattr(g, 'site'):
-                # Create or get the default site
-                site = Site.query.get(1)
-                if not site:
-                    site = Site(
-                        id=1,
-                        name='Test Site',
-                        description='Test site for PyFedi',
-                        registration_mode='open',
-                        enable_downvotes=True,
-                        enable_federation=True,
-                        default_theme='light'
-                    )
-                    # Generate keys for the site
-                    from app.activitypub.signature import generate_rsa_keypair
-                    private_key, public_key = generate_rsa_keypair()
-                    site.private_key = private_key
-                    site.public_key = public_key
-                    db.session.add(site)
-                    try:
-                        db.session.commit()
-                    except:
-                        db.session.rollback()
-                        site = Site.query.get(1)
-                g.site = site
-        
-        yield app
+    yield app
 
 
 @pytest.fixture(scope='session')
@@ -75,6 +41,51 @@ def _db(app):
     """Create database for testing"""
     with app.app_context():
         db.create_all()
+        
+        # Create Site(id=1) immediately after database creation
+        from app.models import Site
+        from app.activitypub.signature import generate_rsa_keypair
+        
+        site = Site.query.get(1)
+        if not site:
+            site = Site(
+                id=1,
+                name='Test Site',
+                description='Test site for PyFedi',
+                registration_mode='Open',
+                enable_downvotes=True,
+                enable_nsfw=False,
+                enable_nsfl=False,
+                community_creation_admin_only=False,
+                reports_email_admins=True,
+                application_question='',
+                default_theme='',
+                default_filter='',
+                allow_or_block_list=0,
+                log_activitypub_json=False,
+                # Additional fields with defaults
+                enable_gif_reply_rep_decrease=False,
+                enable_chan_image_filter=False,
+                enable_this_comment_filter=False,
+                allow_local_image_posts=True,
+                remote_image_cache_days=30,
+                # Logo fields - empty strings as defaults
+                logo='',
+                logo_180='',
+                logo_152='',
+                logo_32='',
+                logo_16='',
+                # Other fields
+                contact_email='',
+                show_inoculation_block=True,
+                private_instance=False
+            )
+            private_key, public_key = generate_rsa_keypair()
+            site.private_key = private_key
+            site.public_key = public_key
+            db.session.add(site)
+            db.session.commit()
+        
         yield db
         db.session.remove()
         db.drop_all()
@@ -130,26 +141,48 @@ def client(app):
 
 @pytest.fixture
 def test_site(session):
-    """Create or get the test site"""
+    """Create or get the test site and set g.site"""
+    from flask import g
     from app.models import Site
+    
+    # Site should already exist from _db fixture
     site = Site.query.get(1)
     if not site:
+        # Fallback creation if needed
+        from app.activitypub.signature import generate_rsa_keypair
         site = Site(
             id=1,
             name='Test Site',
             description='Test site for PyFedi',
-            registration_mode='open',
+            registration_mode='Open',
             enable_downvotes=True,
-            enable_federation=True,
-            default_theme='light'
+            enable_nsfw=False,
+            enable_nsfl=False,
+            community_creation_admin_only=False,
+            reports_email_admins=True,
+            application_question='',
+            default_theme='',
+            default_filter='',
+            allow_or_block_list=0,
+            log_activitypub_json=False,
+            enable_gif_reply_rep_decrease=False,
+            enable_chan_image_filter=False,
+            enable_this_comment_filter=False,
+            allow_local_image_posts=True,
+            remote_image_cache_days=30,
+            logo='',
+            contact_email='',
+            show_inoculation_block=True,
+            private_instance=False
         )
-        # Generate keys for the site
-        from app.activitypub.signature import generate_rsa_keypair
         private_key, public_key = generate_rsa_keypair()
         site.private_key = private_key
         site.public_key = public_key
         session.add(site)
         session.commit()
+    
+    # Set g.site for this test
+    g.site = site
     return site
 
 
@@ -290,6 +323,26 @@ def cleanup(session):
     """Clean up after each test"""
     yield
     # The session fixture will handle rollback
+
+
+# Set up g.site automatically for all tests
+@pytest.fixture(autouse=True)
+def setup_g_site(app, _db):
+    """Automatically set g.site for all tests"""
+    with app.app_context():
+        from flask import g
+        from app.models import Site
+        
+        # Get the site created in _db fixture
+        site = Site.query.get(1)
+        if site:
+            g.site = site
+        
+        yield
+        
+        # Clean up g.site after test
+        if hasattr(g, 'site'):
+            delattr(g, 'site')
 
 
 # Add async fixtures for Redis and other async components

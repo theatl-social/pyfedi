@@ -776,6 +776,13 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
 
 
 def site_view(user) -> dict:
+    # Handle case where g.site is not set (e.g., in tests)
+    if not hasattr(g, 'site') or g.site is None:
+        from app.models import Site
+        g.site = Site.query.get(1)
+        if not g.site:
+            raise RuntimeError("Site configuration not found. Please run 'flask init-db' to initialize the site.")
+    
     logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
     reg_mode_enum = Enum("RegistrationEnum",
                          [("Closed", "Closed"), ("RequireApplication", "RequireApplication"), ("Open", "Open")])
