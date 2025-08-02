@@ -2189,7 +2189,7 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> 'User | int':
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, is_banned=False, deleted=False).one()
         if user.password_updated_at:
             issued_at_time = decoded['iat']
             password_updated_time = int(user.password_updated_at.timestamp())

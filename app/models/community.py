@@ -48,9 +48,12 @@ class Community(TimestampMixin, ActivityPubMixin, LanguageMixin, NSFWMixin, db.M
     subscriptions_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False, index=True)
     
     # Settings
+    banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     private_mods: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     new_mods_wanted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     show_popular: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    show_all: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    searchable: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     low_quality: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     content_retention: Mapped[int] = mapped_column(Integer, default=-1, nullable=False)
     

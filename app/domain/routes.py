@@ -29,7 +29,7 @@ def show_domain(domain_id):
             domain = Domain.query.filter_by(name=domain_id, banned=False).first()
         else:
             domain = Domain.query.get_or_404(domain_id)
-            if domain.is_banned:
+            if domain.banned:
                 domain = None
         if domain:
             if current_user.is_authenticated and (current_user.is_staff() or current_user.is_admin()):
@@ -104,7 +104,7 @@ def show_domain_rss(domain_id):
             domain = Domain.query.filter_by(name=domain_id, banned=False).first()
         else:
             domain = Domain.query.get_or_404(domain_id)
-            if domain.is_banned:
+            if domain.banned:
                 domain = None
         if domain:
             # If nothing has changed since their last visit, return HTTP 304
@@ -251,7 +251,7 @@ def domain_unblock(domain_id):
 def domain_ban(domain_id):
     domain = Domain.query.get_or_404(domain_id)
     if domain:
-        domain.is_banned = True
+        domain.banned = True
         db.session.commit()
         domain.purge_content()
         flash(_('%(name)s banned for all users and all content deleted.', name=domain.name))
@@ -264,7 +264,7 @@ def domain_ban(domain_id):
 def domain_unban(domain_id):
     domain = Domain.query.get_or_404(domain_id)
     if domain:
-        domain.is_banned = False
+        domain.banned = False
         db.session.commit()
         flash(_('%(name)s un-banned for all users.', name=domain.name))
         return redirect(url_for('domain.show_domain', domain_id=domain.id))

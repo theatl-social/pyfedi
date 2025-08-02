@@ -401,7 +401,7 @@ def register(app):
             # Un-ban after ban expires
             print(f'Un-ban after ban expires {datetime.now()}')
             db.session.execute(text(
-                'UPDATE "user" SET banned = false WHERE banned is true AND banned_until < :cutoff AND banned_until is not null'),
+                'UPDATE "user" SET is_banned = false WHERE is_banned is true AND banned_until < :cutoff AND banned_until is not null'),
                                {'cutoff': datetime.now(timezone.utc)})
             db.session.commit()
 

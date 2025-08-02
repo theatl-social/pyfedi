@@ -392,6 +392,10 @@ class Tag(db.Model):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     
     name: Mapped[str] = mapped_column(String(256), index=True, nullable=False)
+    display_as: Mapped[Optional[str]] = mapped_column(String(256))
+    post_count: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    
     post_id: Mapped[Optional[PostId]] = mapped_column(Integer, ForeignKey('post.id'), index=True)
     community_id: Mapped[Optional[CommunityId]] = mapped_column(Integer, ForeignKey('community.id'), index=True)
     

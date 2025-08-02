@@ -130,31 +130,31 @@ def community_members(community_id: int) -> int:
 def users_total() -> int:
     """Get total count of local verified users"""
     return db.session.execute(text(
-        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar() or 0
+        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND is_banned is false AND deleted is false')).scalar() or 0
 
 
 def active_half_year() -> int:
     """Get count of users active in last 6 months"""
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '6 months' AND ap_id is null AND verified is true AND is_banned is false AND deleted is false")).scalar() or 0
 
 
 def active_month() -> int:
     """Get count of users active in last month"""
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 month' AND ap_id is null AND verified is true AND is_banned is false AND deleted is false")).scalar() or 0
 
 
 def active_week() -> int:
     """Get count of users active in last week"""
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 week' AND ap_id is null AND verified is true AND is_banned is false AND deleted is false")).scalar() or 0
 
 
 def active_day() -> int:
     """Get count of users active in last day"""
     return db.session.execute(text(
-        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND banned is false AND deleted is false")).scalar() or 0
+        "SELECT COUNT(id) as c FROM \"user\" WHERE last_seen >= CURRENT_DATE - INTERVAL '1 day' AND ap_id is null AND verified is true AND is_banned is false AND deleted is false")).scalar() or 0
 
 
 def local_posts() -> int:
@@ -2643,7 +2643,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         new_url = request_json['object']['attachment']['url']
     if new_url:
         new_domain = domain_from_url(new_url)
-        if new_domain.is_banned:
+        if new_domain.banned:
             db.session.commit()
             return  # reject change to url if new domain is banned
     old_db_entry_to_delete = None

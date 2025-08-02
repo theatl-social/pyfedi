@@ -202,6 +202,12 @@ def upgrade():
         op.add_column('community', sa.Column('low_quality', sa.Boolean(), nullable=False, server_default='false'))
     if 'restricted_to_mods' not in community_columns:
         op.add_column('community', sa.Column('restricted_to_mods', sa.Boolean(), nullable=False, server_default='false'))
+    if 'banned' not in community_columns:
+        op.add_column('community', sa.Column('banned', sa.Boolean(), nullable=False, server_default='false'))
+    if 'show_all' not in community_columns:
+        op.add_column('community', sa.Column('show_all', sa.Boolean(), nullable=False, server_default='true'))
+    if 'searchable' not in community_columns:
+        op.add_column('community', sa.Column('searchable', sa.Boolean(), nullable=False, server_default='true'))
     if 'local_only' not in community_columns:
         op.add_column('community', sa.Column('local_only', sa.Boolean(), nullable=False, server_default='false'))
     if 'approval_required' not in community_columns:

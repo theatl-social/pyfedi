@@ -224,7 +224,7 @@ class CreateLinkForm(CreatePostForm):
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
             return False
         domain = domain_from_url(field.data, create=False)
-        if domain and domain.is_banned:
+        if domain and domain.banned:
             self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
             return False
         return True
@@ -238,7 +238,7 @@ class CreateVideoForm(CreatePostForm):
         super().validate(extra_validators)
 
         domain = domain_from_url(self.video_url.data, create=False)
-        if domain and domain.is_banned:
+        if domain and domain.banned:
             self.video_url.errors.append(_l("Videos from %(domain)s are not allowed.", domain=domain.name))
             return False
         return True

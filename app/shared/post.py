@@ -182,7 +182,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         url = url.strip()
         domain = domain_from_url(url)
         if domain:
-            if domain.is_banned or domain.name.endswith('.pages.dev'):
+            if domain.banned or domain.name.endswith('.pages.dev'):
                 raise Exception(domain.name + ' is blocked by admin')
 
     if uploaded_file and uploaded_file.filename != '':
@@ -419,7 +419,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
     if url and (from_scratch or url_changed):
         domain = domain_from_url(url)
         if domain:
-            if domain.is_banned or domain.name.endswith('.pages.dev'):
+            if domain.banned or domain.name.endswith('.pages.dev'):
                 raise Exception(domain.name + ' is blocked by admin')
             post.domain = domain
             domain.post_count += 1
