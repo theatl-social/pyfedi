@@ -110,9 +110,12 @@ __all__ = [
 ]
 
 # Import search functionality if using PostgreSQL
-try:
-    from sqlalchemy_searchable import make_searchable
-    from app import db
-    make_searchable(db.metadata)
-except ImportError:
-    pass
+# Skip if we're using SQLite for testing
+import os
+if os.environ.get('DATABASE_URL', '').startswith('postgresql') or os.environ.get('SQLALCHEMY_DATABASE_URI', '').startswith('postgresql'):
+    try:
+        from sqlalchemy_searchable import make_searchable
+        from app import db
+        make_searchable(db.metadata)
+    except ImportError:
+        pass

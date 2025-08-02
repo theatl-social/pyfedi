@@ -99,7 +99,10 @@ def create_app(config_class=Config):
     # Initialize redis_client
     global redis_client
     from app.utils import get_redis_connection
-    redis_client = get_redis_connection(app.config['REDIS_URL'])
+    if app.config.get('REDIS_URL'):
+        redis_client = get_redis_connection(app.config['REDIS_URL'])
+    else:
+        redis_client = None
     
     # Initialize httpx_client with proper User-Agent
     global httpx_client
