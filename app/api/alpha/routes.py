@@ -15,7 +15,8 @@ from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, pu
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
     post_post_mark_as_read
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
-    post_private_message_mark_as_read, get_private_message_conversation
+    post_private_message_mark_as_read, get_private_message_conversation, edit_private_message, delete_private_message, \
+    report_private_message
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
     get_post_reply_list
@@ -994,9 +995,42 @@ def alpha_reply():
 
 
 # Chat - not yet implemented
-@bp.route('/api/alpha/private_message', methods=['PUT'])  # Not available in app
-@bp.route('/api/alpha/private_message/delete', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/private_message/report', methods=['POST'])  # Not available in app
+@bp.route('/api/alpha/private_message', methods=['PUT'])
+def alpha_private_message_edit():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(edit_private_message(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/private_message/delete', methods=['POST'])
+def alpha_delete_private_message():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(delete_private_message(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
+@bp.route('/api/alpha/private_message/report', methods=['POST'])
+def alpha_report_private_message():
+    if not enable_api():
+        return jsonify({'error': 'alpha api is not enabled'}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.get_json(force=True) or {}
+        return jsonify(report_private_message(auth, data))
+    except Exception as ex:
+        return jsonify({"error": str(ex)}), 400
+
+
 @bp.route('/api/alpha/private_message/report/resolve', methods=['PUT'])  # Stage 2
 @bp.route('/api/alpha/private_message/report/list', methods=['GET'])  # Stage 2
 def alpha_chat():

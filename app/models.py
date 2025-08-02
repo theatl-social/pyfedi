@@ -252,6 +252,8 @@ class ChatMessage(db.Model):
     read = db.Column(db.Boolean, default=False)
     encrypted = db.Column(db.String(15))
     created_at = db.Column(db.DateTime, default=utcnow)
+    edited_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+    deleted = db.Column(db.Boolean, default=False)
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
 

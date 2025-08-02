@@ -6,7 +6,7 @@ from app.api.alpha.views import private_message_view
 from app.constants import NOTIF_MESSAGE
 from app.chat.util import send_message
 from app.models import ChatMessage, Conversation, User, Notification
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, markdown_to_html
 
 
 def get_private_message_list(auth, data):
@@ -118,4 +118,84 @@ def post_private_message_mark_as_read(auth, data):
 
     return private_message_view(private_message, variant=2)
 
+
+def edit_private_message(auth, data):
+    string_expected(['content'], data)
+    integer_expected(['message_id'], data)
+
+    chat_message_id = int(data['message_id'])
+    content = data["content"]
+
+    user_id = authorise_api_user(auth)
+    # User may only edit own messages
+    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id)[0]
+    if private_message.deleted:
+       raise Exception("You can't edit deleted message.") 
+
+    private_message.body = content
+    private_message.body_html = markdown_to_html(content)
+
+    db.session.add(private_message)
+    db.session.commit()
+
+    return private_message_view(private_message, variant=2)
+
+
+def delete_private_message(auth, data):
+    boolean_expected(['deleted'], data)
+    integer_expected(['message_id'], data)
+    
+    chat_message_id = int(data['message_id'])
+    deleted = data["deleted"]
+    if not deleted:
+        return private_message_view(private_message, variant=2)
+
+    user_id = authorise_api_user(auth)
+    # user may only delete 
+    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id)[0]
+    private_message.deleted = deleted
+    private_message.body = "Message Deleted"
+    private_message.body_html = markdown_to_html("Message Deleted")
+    db.session.add(private_message)
+    db.session.commit()
+
+    return private_message_view(private_message, variant=2)
+
+
+def report_private_message(auth, data):
+    integer_expected(['message_id'], data)
+    string_expected(['reason'], data)
+    
+    chat_message_id = int(data['message_id']) if data and 'message_id' in data else None
+    reason = data["reason"]
+
+    user_id = authorise_api_user(auth)
+    # user may only report received messages 
+    private_message = ChatMessage.query.filter_by(recipient_id=user_id, id=chat_message_id)[0]
+    private_message.reported = True
+    db.session.add(private_message)
+    conversation = Conversation.query.get(private_message.conversation_id)
+    targets_data = {
+            "gen": '0', 
+            "suspect_conversation_id": conversation.id, 
+            "reporter_id": current_user.id,
+            "suspect_message_id":chat_message_id 
+    }
+    report = Report(reasons=reason, description=form.description.data,
+                    type=4, reporter_id=user_id, suspect_conversation_id=conversation.id,
+                    source_instance_id=1,targets=targets_data)
+    db.session.add(report)
+    already_notified = set()
+    for admin in Site.admins():
+        if admin.id not in already_notified:
+            notify = Notification(title='Reported conversation with user', url='/admin/reports',
+                                  user_id=admin.id,
+                                  author_id=current_user.id, notif_type=NOTIF_REPORT,
+                                  subtype='chat_conversation_reported',
+                                  targets=targets_data)
+            db.session.add(notify)
+            admin.unread_notifications += 1
+    db.session.commit()
+
+    return private_message_view(private_message, variant=2)
 
