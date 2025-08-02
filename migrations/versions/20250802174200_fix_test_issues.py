@@ -32,23 +32,35 @@ def upgrade():
     
     # Handle conversation.last_message_id constraint
     if bind.dialect.name == 'postgresql':
-        # Get existing constraint names
-        result = bind.execute(sa.text("""
-            SELECT conname 
-            FROM pg_constraint 
-            WHERE conrelid = 'conversation'::regclass 
-            AND confrelid = 'chat_message'::regclass
-            AND contype = 'f'
-        """))
-        old_constraint = result.scalar()
-        
-        if old_constraint and old_constraint != 'fk_conversation_last_message_id':
-            op.drop_constraint(old_constraint, 'conversation', type_='foreignkey')
-            op.create_foreign_key(
-                'fk_conversation_last_message_id',
-                'conversation', 'chat_message',
-                ['last_message_id'], ['id']
+        # Check if tables exist before trying to modify constraints
+        tables_exist = bind.execute(sa.text("""
+            SELECT EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'conversation'
+            ) AND EXISTS (
+                SELECT FROM information_schema.tables 
+                WHERE table_name = 'chat_message'
             )
+        """)).scalar()
+        
+        if tables_exist:
+            # Get existing constraint names
+            result = bind.execute(sa.text("""
+                SELECT conname 
+                FROM pg_constraint 
+                WHERE conrelid = 'conversation'::regclass 
+                AND confrelid = 'chat_message'::regclass
+                AND contype = 'f'
+            """))
+            old_constraint = result.scalar()
+            
+            if old_constraint and old_constraint != 'fk_conversation_last_message_id':
+                op.drop_constraint(old_constraint, 'conversation', type_='foreignkey')
+                op.create_foreign_key(
+                    'fk_conversation_last_message_id',
+                    'conversation', 'chat_message',
+                    ['last_message_id'], ['id']
+                )
         
         # Handle chat_message.conversation_id constraint
         result = bind.execute(sa.text("""

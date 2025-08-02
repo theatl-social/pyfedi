@@ -95,7 +95,7 @@ class Site(db.Model):
     def admins(cls) -> List['User']:
         """Get all admin users"""
         from app.models.user import User
-        from app.models.user import Role
+        # Role is in the same file (misc.py)
         admin_role = Role.query.filter_by(name='Admin').first()
         if admin_role:
             return User.query.filter_by(role_id=admin_role.id, deleted=False, ban_state=0).all()

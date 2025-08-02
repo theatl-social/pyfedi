@@ -43,8 +43,40 @@ def _db(app):
         db.create_all()
         
         # Create Site(id=1) immediately after database creation
-        from app.models import Site
+        from app.models import Site, Role, RolePermission
         from app.activitypub.signature import generate_rsa_keypair
+        
+        # Create roles first
+        roles_data = [
+            ('Anonymous user', 0, []),
+            ('Authenticated user', 1, []),
+            ('Staff', 2, [
+                'approve registrations',
+                'ban users',
+                'administer all communities',
+                'administer all users'
+            ]),
+            ('Admin', 3, [
+                'approve registrations',
+                'change user roles',
+                'ban users',
+                'manage users',
+                'change instance settings',
+                'administer all communities',
+                'administer all users',
+                'edit cms pages'
+            ])
+        ]
+        
+        for name, weight, permissions in roles_data:
+            role = Role.query.filter_by(name=name).first()
+            if not role:
+                role = Role(name=name, weight=weight)
+                for perm in permissions:
+                    role.permissions.append(RolePermission(permission=perm))
+                db.session.add(role)
+        
+        db.session.commit()
         
         site = Site.query.get(1)
         if not site:

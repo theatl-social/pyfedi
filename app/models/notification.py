@@ -164,7 +164,7 @@ class ChatMessage(TimestampMixin, db.Model):
     )
     sender_id: Mapped[UserId] = mapped_column(
         Integer, 
-        ForeignKey('user.id', name='fk_chat_message_sender_id'), 
+        ForeignKey('user.id'), 
         nullable=False
     )
     
