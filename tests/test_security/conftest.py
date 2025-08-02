@@ -8,15 +8,15 @@ import tempfile
 import os
 
 
+# Simple mock app fixture for security tests that don't need database
 @pytest.fixture
-def app():
-    """Create test Flask application"""
+def mock_app():
+    """Create mock Flask application for security unit tests"""
     mock_app = Mock()
     mock_app.config = {
         'SECRET_KEY': 'test-secret-key',
         'TESTING': True,
         'WTF_CSRF_ENABLED': False,
-        'SQLALCHEMY_DATABASE_URI': 'sqlite:///:memory:',
         
         # Security settings
         'MAX_JSON_SIZE': 1000000,

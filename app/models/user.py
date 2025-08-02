@@ -1,7 +1,7 @@
 """User-related models for PeachPie"""
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index, Date, Float, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 from sqlalchemy.ext.hybrid import hybrid_property
@@ -30,7 +30,7 @@ read_posts = db.Table('read_posts',
 )
 
 
-class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model):
+class User(UserMixin, LanguageMixin, db.Model):
     """User model with full typing support"""
     __tablename__ = 'user'
     __table_args__ = {'extend_existing': True}
@@ -83,12 +83,21 @@ class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model)
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     totp_recovery_codes: Mapped[Optional[str]] = mapped_column(Text)
     
-    # ActivityPub
+    # ActivityPub columns (User doesn't have ap_outbox_url unlike other models)
+    ap_id: Mapped[Optional[str]] = mapped_column(String(255), index=True)
+    ap_profile_id: Mapped[Optional[str]] = mapped_column(String(255), index=True, unique=True)
+    ap_public_url: Mapped[Optional[str]] = mapped_column(String(255))
+    ap_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
+    ap_followers_url: Mapped[Optional[str]] = mapped_column(String(255))
+    ap_inbox_url: Mapped[Optional[str]] = mapped_column(String(255))
     ap_domain: Mapped[Optional[str]] = mapped_column(String(255), index=True)
     ap_preferred_username: Mapped[Optional[str]] = mapped_column(String(255))
+    ap_manually_approves_followers: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ap_deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     private_key: Mapped[Optional[str]] = mapped_column(Text)
     public_key: Mapped[Optional[str]] = mapped_column(Text)
     instance_id: Mapped[Optional[InstanceId]] = mapped_column(Integer, ForeignKey('instance.id'), index=True)
+    
     
     # Bot flags
     bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
@@ -289,6 +298,16 @@ class User(UserMixin, TimestampMixin, ActivityPubMixin, LanguageMixin, db.Model)
     def update_last_seen(self) -> None:
         """Update last seen timestamp"""
         self.last_seen = datetime.now(timezone.utc)
+    
+    @property
+    def is_local(self) -> bool:
+        """Check if this is a local user"""
+        return self.ap_id is None or self.ap_profile_id is None
+    
+    @property
+    def is_remote(self) -> bool:
+        """Check if this is a remote user"""
+        return not self.is_local
     
     def __repr__(self) -> str:
         return f'<User {self.user_name}>'
