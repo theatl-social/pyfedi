@@ -306,6 +306,64 @@ def upgrade():
     if 'microblog' not in post_columns:
         op.add_column('post', sa.Column('microblog', sa.Boolean(), nullable=False, server_default='false'))
     
+    # Add missing post_reply columns (from mixins)
+    post_reply_columns = [c['name'] for c in inspector.get_columns('post_reply')]
+    # TimestampMixin
+    if 'created_at' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('created_at', sa.DateTime(), nullable=False, server_default=sa.func.now()))
+        op.create_index('ix_post_reply_created_at', 'post_reply', ['created_at'])
+    if 'updated_at' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('updated_at', sa.DateTime(), nullable=True))
+    # SoftDeleteMixin
+    if 'deleted' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('deleted', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_reply_deleted', 'post_reply', ['deleted'])
+    if 'deleted_at' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('deleted_at', sa.DateTime(), nullable=True))
+    # ScoreMixin
+    if 'score' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('score', sa.Integer(), nullable=False, server_default='0'))
+        op.create_index('ix_post_reply_score', 'post_reply', ['score'])
+    if 'up_votes' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('up_votes', sa.Integer(), nullable=False, server_default='0'))
+    if 'down_votes' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('down_votes', sa.Integer(), nullable=False, server_default='0'))
+    if 'ranking' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ranking', sa.Float(), nullable=False, server_default='0.0'))
+        op.create_index('ix_post_reply_ranking', 'post_reply', ['ranking'])
+    # ActivityPubMixin
+    if 'ap_id' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_id', sa.String(255), nullable=True, unique=True))
+        op.create_index('ix_post_reply_ap_id', 'post_reply', ['ap_id'])
+    if 'ap_profile_id' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_profile_id', sa.String(255), nullable=True, unique=True))
+        op.create_index('ix_post_reply_ap_profile_id', 'post_reply', ['ap_profile_id'])
+    if 'ap_public_url' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_public_url', sa.String(255), nullable=True))
+    if 'ap_fetched_at' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_fetched_at', sa.DateTime(), nullable=True))
+    if 'ap_followers_url' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_followers_url', sa.String(255), nullable=True))
+    if 'ap_inbox_url' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_inbox_url', sa.String(255), nullable=True))
+    if 'ap_outbox_url' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('ap_outbox_url', sa.String(255), nullable=True))
+    # LanguageMixin
+    if 'language' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('language', sa.String(10), nullable=True))
+    # NSFWMixin
+    if 'nsfw' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('nsfw', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_reply_nsfw', 'post_reply', ['nsfw'])
+    if 'nsfl' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('nsfl', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_post_reply_nsfl', 'post_reply', ['nsfl'])
+    # Additional PostReply columns from model
+    if 'from_bot' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('from_bot', sa.Boolean(), nullable=False, server_default='false'))
+    if 'edited_at' not in post_reply_columns:
+        op.add_column('post_reply', sa.Column('edited_at', sa.DateTime(), nullable=True))
+    
     # Note: Circular dependency between conversation and chat_message tables
     # is handled by use_alter=True in the model definition
 
@@ -462,5 +520,35 @@ def downgrade():
     op.drop_index('ix_post_last_active', 'post')
     op.drop_column('post', 'last_active')
     op.drop_column('post', 'microblog')
+    
+    # Remove post_reply columns
+    op.drop_index('ix_post_reply_created_at', 'post_reply')
+    op.drop_column('post_reply', 'created_at')
+    op.drop_column('post_reply', 'updated_at')
+    op.drop_index('ix_post_reply_deleted', 'post_reply')
+    op.drop_column('post_reply', 'deleted')
+    op.drop_column('post_reply', 'deleted_at')
+    op.drop_index('ix_post_reply_score', 'post_reply')
+    op.drop_column('post_reply', 'score')
+    op.drop_column('post_reply', 'up_votes')
+    op.drop_column('post_reply', 'down_votes')
+    op.drop_index('ix_post_reply_ranking', 'post_reply')
+    op.drop_column('post_reply', 'ranking')
+    op.drop_index('ix_post_reply_ap_id', 'post_reply')
+    op.drop_column('post_reply', 'ap_id')
+    op.drop_index('ix_post_reply_ap_profile_id', 'post_reply')
+    op.drop_column('post_reply', 'ap_profile_id')
+    op.drop_column('post_reply', 'ap_public_url')
+    op.drop_column('post_reply', 'ap_fetched_at')
+    op.drop_column('post_reply', 'ap_followers_url')
+    op.drop_column('post_reply', 'ap_inbox_url')
+    op.drop_column('post_reply', 'ap_outbox_url')
+    op.drop_column('post_reply', 'language')
+    op.drop_index('ix_post_reply_nsfw', 'post_reply')
+    op.drop_column('post_reply', 'nsfw')
+    op.drop_index('ix_post_reply_nsfl', 'post_reply')
+    op.drop_column('post_reply', 'nsfl')
+    op.drop_column('post_reply', 'from_bot')
+    op.drop_column('post_reply', 'edited_at')
     
     # Note: Not reverting FK constraints to avoid issues
