@@ -52,12 +52,12 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         return post_view(post=object, variant=5, user_id=user_id) if not recursive else object
     object = Community.query.filter_by(ap_profile_id=query.lower()).first()
     if object:
-        if object.banned:
+        if object.is_banned:
             raise Exception('No object found.')
         return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
     object = User.query.filter_by(ap_profile_id=query.lower()).first()
     if object:
-        if object.deleted or object.banned:
+        if object.deleted or object.is_banned:
             raise Exception('No object found.')
         return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
 

@@ -135,7 +135,7 @@ def verify_email(token):
     if token != '':
         user = User.query.filter_by(verification_token=token).first()
         if user is not None:
-            if user.banned:
+            if user.is_banned:
                 flash(_('You have been banned.'), 'error')
                 return redirect(url_for('main.index'))
             if user.verified:  # guard against users double-clicking the link in the email
@@ -255,7 +255,7 @@ def mastodon_authorize():
             ip = ip_address()
             country = get_country(ip)
             if user:
-                if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+                if user.id != 1 and (user.is_banned or user_ip_banned() or user_cookie_banned()):
                     return handle_banned_user(user, ip)
                 elif user.deleted:
                     flash(_('This account has been deleted.'), 'error')

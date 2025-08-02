@@ -340,7 +340,7 @@
                 <div class="card-body">
                     <div class="row">
                         {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
-                            {% if user.banned %}
+                            {% if user.is_banned %}
                                 <div class="col-4">
                                     <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
                                 </div>

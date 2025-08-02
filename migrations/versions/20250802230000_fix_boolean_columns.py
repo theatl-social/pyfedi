@@ -46,14 +46,19 @@ def upgrade():
                     server_default='false')
     
     # ban_state: int -> boolean (renamed to is_banned for clarity)
+    # First drop the default
+    op.alter_column('user', 'ban_state', server_default=None)
+    # Update values
     op.execute("UPDATE \"user\" SET ban_state = CASE WHEN ban_state = 0 THEN 0 ELSE 1 END")
+    # Change type and rename
     op.alter_column('user', 'ban_state',
                     new_column_name='is_banned',
                     type_=sa.Boolean(),
                     existing_type=sa.Integer(),
                     postgresql_using='ban_state::boolean',
-                    nullable=False,
-                    server_default='false')
+                    nullable=False)
+    # Add new default
+    op.alter_column('user', 'is_banned', server_default='false')
 
 
 def downgrade():

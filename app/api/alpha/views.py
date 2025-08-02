@@ -281,7 +281,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 "person": {
                     "id": user.id,
                     "user_name": user.user_name,
-                    "banned": user.banned,
+                    "banned": user.is_banned,
                     "published": user.created.isoformat() + 'Z',
                     "actor_id": user.public_url(),
                     "local": True,
@@ -330,7 +330,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
               column.name in include}
         v1.update({'published': community.created_at.isoformat() + 'Z',
                    'updated': community.created_at.isoformat() + 'Z',
-                   'deleted': community.banned,
+                   'deleted': community.is_banned,
                    'removed': False,
                    'actor_id': community.public_url(),
                    'local': community.is_local(),

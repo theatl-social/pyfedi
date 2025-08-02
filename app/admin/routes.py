@@ -1113,7 +1113,7 @@ def admin_community_edit(community_id):
         community.description_html = markdown_to_html(form.description.data)
         community.rules = form.rules.data
         community.nsfw = form.nsfw.data
-        community.banned = form.banned.data
+        community.is_banned = form.is_banned.data
         community.local_only = form.local_only.data
         community.restricted_to_mods = form.restricted_to_mods.data
         community.new_mods_wanted = form.new_mods_wanted.data
@@ -1169,7 +1169,7 @@ def admin_community_edit(community_id):
         form.description.data = community.description
         form.rules.data = community.rules
         form.nsfw.data = community.nsfw
-        form.banned.data = community.banned
+        form.is_banned.data = community.is_banned
         form.local_only.data = community.local_only
         form.new_mods_wanted.data = community.new_mods_wanted
         form.restricted_to_mods.data = community.restricted_to_mods
@@ -1191,7 +1191,7 @@ def admin_community_edit(community_id):
 def admin_community_delete(community_id):
     community = Community.query.get_or_404(community_id)
 
-    community.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
+    community.is_banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this community from the UI by banning it.
     community.last_active = utcnow()
     db.session.commit()
 
@@ -1505,7 +1505,7 @@ def admin_user_edit(user_id):
         user.bot = form.bot.data
         user.bot_override = form.bot_override.data
         user.suppress_crossposts = form.suppress_crossposts.data
-        user.banned = form.banned.data
+        user.is_banned = form.is_banned.data
         user.ban_posts = form.ban_posts.data
         user.ban_comments = form.ban_comments.data
         user.hide_nsfw = form.hide_nsfw.data
@@ -1543,7 +1543,7 @@ def admin_user_edit(user_id):
         form.bot_override.data = user.bot_override
         form.suppress_crossposts.data = user.suppress_crossposts
         form.verified.data = user.verified
-        form.banned.data = user.banned
+        form.is_banned.data = user.is_banned
         form.ban_posts.data = user.ban_posts
         form.ban_comments.data = user.ban_comments
         form.hide_nsfw.data = user.hide_nsfw
@@ -1621,7 +1621,7 @@ def admin_user_delete(user_id):
         return redirect(referrer())
     user = User.query.get_or_404(user_id)
 
-    user.banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.
+    user.is_banned = True  # Unsubscribing everyone could take a long time so until that is completed hide this user from the UI by banning it.
     user.last_active = utcnow()
     user.deleted_by = current_user.id
     db.session.commit()

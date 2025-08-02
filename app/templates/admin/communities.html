@@ -94,7 +94,7 @@
                 </tr>
                 {% for community in communities.items %}
                     <tr>
-                        <td>{{ render_communityname(community, add_domain=False) }}{% if community.banned %} (banned){% endif %}<br />
+                        <td>{{ render_communityname(community, add_domain=False) }}{% if community.is_banned %} (banned){% endif %}<br />
                         !<a href="/c/{{ community.link() }}">{{ community.name }}</a><wbr />@<a href="{{ community.ap_profile_id }}">{{ community.ap_domain }}</a></td>
                         <td><span title="{{ _('Topic') }}">{{ community.topic.name  }}</span></td>
                         <td><span title="{{ _('Number of posts') }}">{{ community.post_count  }}</span></td>

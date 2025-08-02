@@ -19,7 +19,7 @@ from app.utils import utcnow
 def passkey_options():
     request_json = request.get_json(force=True)
     user = User.query.filter(User.user_name == request_json['username'], User.ap_id == None,
-                             User.banned == False).first()
+                             User.is_banned == False).first()
     if user:
         options = generate_authentication_options(
             rp_id=request.host,
@@ -55,7 +55,7 @@ def passkey_verification():
 
     auth_credential = parse_authentication_credential_json(request_json['response'])
     user = User.query.filter(User.user_name == request_json['username'], User.ap_id == None,
-                             User.banned == False).first()
+                             User.is_banned == False).first()
     if user:
         if not user.passkeys:
             error_message = f'No passkeys found for {username}'

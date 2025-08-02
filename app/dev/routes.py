@@ -137,7 +137,7 @@ def tools():
         # - commit to db
         # - call the unsubscribe and delete from admin.routes
         for c in dev_communities:
-            c.banned = True
+            c.is_banned = True
             c.last_active = utcnow()
             db.session.commit()
             unsubscribe_everyone_then_delete(c.id)

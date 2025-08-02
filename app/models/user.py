@@ -46,7 +46,6 @@ class User(UserMixin, db.Model):
     # Authentication
     email: Mapped[str] = mapped_column(String(255), index=True, nullable=False)
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     ignore_bots: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
@@ -211,7 +210,7 @@ class User(UserMixin, db.Model):
     @property
     def is_active(self) -> bool:
         """Check if user account is active"""
-        return not self.banned and not self.suspended
+        return not self.is_banned and not self.suspended
     
     @property
     def is_anonymous(self) -> bool:
@@ -220,13 +219,13 @@ class User(UserMixin, db.Model):
     
     def can_vote(self, min_reputation: float = 0.0) -> bool:
         """Check if user can vote"""
-        if self.banned or self.suspended:
+        if self.is_banned or self.suspended:
             return False
         return self.reputation >= min_reputation
     
     def can_create_post(self, community: 'Community') -> bool:
         """Check if user can create posts in community"""
-        if self.banned or self.suspended:
+        if self.is_banned or self.suspended:
             return False
         if community.restricted_to_mods:
             return self.is_moderator(community)
@@ -236,7 +235,7 @@ class User(UserMixin, db.Model):
     
     def can_create_reply(self, post: 'Post') -> bool:
         """Check if user can reply to post"""
-        if self.banned or self.suspended:
+        if self.is_banned or self.suspended:
             return False
         if not post.comments_enabled:
             return False
@@ -285,7 +284,7 @@ class User(UserMixin, db.Model):
     
     def can_message(self, recipient: 'User') -> bool:
         """Check if user can send message to recipient"""
-        if self.banned or self.suspended:
+        if self.is_banned or self.suspended:
             return False
         if recipient.receive_message_mode == 'Closed':
             return False

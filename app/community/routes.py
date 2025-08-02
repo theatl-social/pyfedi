@@ -65,7 +65,7 @@ from datetime import timezone, timedelta
 @validation_required
 @approval_required
 def add_local():
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
 
     try:
@@ -135,7 +135,7 @@ def add_local():
 @validation_required
 @approval_required
 def add_remote():
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     form = SearchRemoteCommunity()
     new_community = None
@@ -165,7 +165,7 @@ def add_remote():
                 flash(_('Community not found. If you are searching for a nsfw community it is blocked by this instance.'),
                       'warning')
         else:
-            if new_community.banned:
+            if new_community.is_banned:
                 flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
     return render_template('community/add_remote.html',
@@ -212,7 +212,7 @@ def _make_community_results_datalist_html(community_name):
 # @bp.route('/c/<actor>', methods=['GET']) - defined in activitypub/routes.py, which calls this function for user requests. A bit weird.
 @login_required_if_private_instance
 def show_community(community: Community):
-    if community.banned:
+    if community.is_banned:
         abort(404)
 
     # If current user is logged in check if they have any feeds
@@ -460,7 +460,7 @@ def show_community(community: Community):
 
     if community.topic_id:
         related_communities = Community.query.filter_by(topic_id=community.topic_id). \
-            filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
+            filter(Community.id != community.id, Community.is_banned == False).order_by(Community.name)
         topics = []
         previous_topic = Topic.query.get(community.topic_id)
         topics.append(previous_topic)
@@ -660,7 +660,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                     community = Community.query.filter_by(ap_id=actor).first()
                     if community is None:
                         community = search_for_community(f'!{actor}' if '!' not in actor else actor)
-                    if community.banned:
+                    if community.is_banned:
                         community = None
                     remote = True
                 else:
@@ -840,7 +840,7 @@ def join_then_add(actor):
 @validation_required
 @approval_required
 def add_post(actor, type):
-    if current_user.banned or current_user.ban_posts:
+    if current_user.is_banned or current_user.ban_posts:
         return show_ban_message()
     if request.method == 'GET':
         community = actor_to_community(actor)
@@ -1007,7 +1007,7 @@ def community_report(community_id: int):
 @login_required
 def community_edit(community_id: int):
     from app.admin.util import topics_for_form
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
     old_topic_id = community.topic_id if community.topic_id else None
@@ -1125,14 +1125,14 @@ def remove_header(community_id):
 @bp.route('/community/<int:community_id>/delete', methods=['GET', 'POST'])
 @login_required
 def community_delete(community_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
     if community.is_owner() or current_user.is_admin():
         form = DeleteCommunityForm()
         if form.validate_on_submit():
             if community.is_local():
-                community.banned = True
+                community.is_banned = True
                 # todo: federate deletion out to all instances. At end of federation process, delete_dependencies() and delete community
 
             # record for modlog
@@ -1156,13 +1156,13 @@ def community_delete(community_id: int):
 @bp.route('/community/<int:community_id>/moderators', methods=['GET', 'POST'])
 @login_required
 def community_mod_list(community_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
     is_owner = community.is_owner()
     if is_owner or current_user.is_admin() or community.is_moderator(current_user):
 
-        moderators = User.query.filter(User.banned == False).join(CommunityMember, CommunityMember.user_id == User.id). \
+        moderators = User.query.filter(User.is_banned == False).join(CommunityMember, CommunityMember.user_id == User.id). \
             filter(CommunityMember.community_id == community_id,
                    or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)).all()
 
@@ -1246,7 +1246,7 @@ def community_remove_owner(community_id: int, user_id: int):
 @bp.route('/community/<int:community_id>/moderators/add/<int:user_id>', methods=['GET', 'POST'])
 @login_required
 def community_add_moderator(community_id: int, user_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
 
     add_mod_to_community(community_id, user_id, SRC_WEB)
@@ -1257,7 +1257,7 @@ def community_add_moderator(community_id: int, user_id: int):
 @bp.route('/community/<int:community_id>/moderators/find', methods=['GET', 'POST'])
 @login_required
 def community_find_moderator(community_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = Community.query.get_or_404(community_id)
     if community.is_owner() or current_user.is_admin():
@@ -1276,7 +1276,7 @@ def community_find_moderator(community_id: int):
 @bp.route('/community/<int:community_id>/moderators/remove/<int:user_id>', methods=['POST'])
 @login_required
 def community_remove_moderator(community_id: int, user_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
 
     try:
@@ -1436,7 +1436,7 @@ def community_notification(community_id: int):
 @bp.route('/<actor>/move', methods=['GET', 'POST'])
 @login_required
 def community_move(actor):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = actor_to_community(actor)
 
@@ -1479,7 +1479,7 @@ def community_move(actor):
 @bp.route('/<actor>/moderate', methods=['GET'])
 @login_required
 def community_moderate(actor):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = actor_to_community(actor)
 
@@ -1598,7 +1598,7 @@ def community_moderate_subscribers(actor):
 @bp.route('/<actor>/moderate/comments', methods=['GET'])
 @login_required
 def community_moderate_comments(actor):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     community = actor_to_community(actor)
 
@@ -2214,7 +2214,7 @@ def community_leave_all():
 @limiter.limit("5 per 1 minutes", methods=['POST'])
 @login_required
 def community_invite(actor):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     form = InviteCommunityForm()
 
@@ -2284,7 +2284,7 @@ def lookup(community, domain):
                         _('Community not found. If you are searching for a nsfw community it is blocked by this instance.'),
                         'warning')
             else:
-                if new_community.banned:
+                if new_community.is_banned:
                     flash(_('That community is banned from %(site)s.', site=g.site.name), 'warning')
 
             return render_template('community/lookup_remote.html',

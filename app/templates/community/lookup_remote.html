@@ -7,7 +7,7 @@
 {% from "_macros.html" import render_communityname %}
 
 {% block app_content %}
-        {% if new_community and not new_community.banned %}
+        {% if new_community and not new_community.is_banned %}
             <div class="row">
                 <div class="col mx-auto">
                     <div class="card mt-5">

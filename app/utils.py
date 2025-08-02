@@ -1280,7 +1280,7 @@ def guess_mime_type(file_path: str) -> str:
 
 
 def can_downvote(user, community: Community, communities_banned_from_list=None) -> bool:
-    if user is None or community is None or user.banned or user.bot:
+    if user is None or community is None or user.is_banned or user.bot:
         return False
 
     try:
@@ -1322,7 +1322,7 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
 
 
 def can_upvote(user, community: Community, communities_banned_from_list=None) -> bool:
-    if user is None or community is None or user.banned or user.bot:
+    if user is None or community is None or user.is_banned or user.bot:
         return False
 
     if communities_banned_from_list is not None:
@@ -1339,7 +1339,7 @@ def can_create_post(user, content: Community) -> bool:
     if content is None:
         return False
 
-    if user is None or content is None or user.banned:
+    if user is None or content is None or user.is_banned:
         return False
 
     if user.ban_posts:
@@ -1365,7 +1365,7 @@ def can_create_post(user, content: Community) -> bool:
 
 
 def can_create_post_reply(user, content: Community) -> bool:
-    if user is None or content is None or user.banned:
+    if user is None or content is None or user.is_banned:
         return False
 
     if user.ban_comments:
@@ -1508,7 +1508,7 @@ def moderating_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
     communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
-        filter(Community.banned == False). \
+        filter(Community.is_banned == False). \
         filter(or_(CommunityMember.is_moderator == True, CommunityMember.is_owner == True)). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
@@ -1538,7 +1538,7 @@ def moderating_communities_ids(user_id) -> List[int]:
         SELECT c.id
         FROM community c
         JOIN community_member cm ON c.id = cm.community_id
-        WHERE c.banned = false
+        WHERE c.is_banned = false
           AND (cm.is_moderator = true OR cm.is_owner = true)
           AND cm.is_banned = false
           AND cm.user_id = :user_id
@@ -1553,7 +1553,7 @@ def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
     communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
-        filter(Community.banned == False). \
+        filter(Community.is_banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
         filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
@@ -1575,7 +1575,7 @@ def joined_or_modding_communities(user_id):
     if user_id is None or user_id == 0:
         return []
     return db.session.execute(text(
-        'SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.banned = false AND cm.user_id = :user_id'),
+        'SELECT c.id FROM "community" as c INNER JOIN "community_member" as cm on c.id = cm.community_id WHERE c.is_banned = false AND cm.user_id = :user_id'),
                               {'user_id': user_id}).scalars().all()
 
 
@@ -2545,13 +2545,13 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
 
     if community_ids[0] == -1:  # A special value meaning to get posts from all communities
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ['c.banned is false AND c.show_all is true']
+        post_id_where = ['c.is_banned is false AND c.show_all is true']
         if current_user.is_authenticated and current_user.hide_low_quality:
             post_id_where.append('c.low_quality is false')
         params = {}
     else:
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
-        post_id_where = ['c.id IN :community_ids AND c.banned is false ']
+        post_id_where = ['c.id IN :community_ids AND c.is_banned is false ']
         params = {'community_ids': tuple(community_ids)}
 
     # filter out posts in communities where the community name is objectionable to them
@@ -2938,7 +2938,7 @@ def possible_communities():
         which_community['Joined communities'] = comms
     comms = []
     for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
-            Community.banned == False).order_by(Community.title).all():
+            Community.is_banned == False).order_by(Community.title).all():
         if c.id not in already_added:
             if c.ap_id is None:
                 display_name = c.title

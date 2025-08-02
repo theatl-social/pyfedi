@@ -29,7 +29,7 @@ def show_domain(domain_id):
             domain = Domain.query.filter_by(name=domain_id, banned=False).first()
         else:
             domain = Domain.query.get_or_404(domain_id)
-            if domain.banned:
+            if domain.is_banned:
                 domain = None
         if domain:
             if current_user.is_authenticated and (current_user.is_staff() or current_user.is_admin()):
@@ -43,11 +43,11 @@ def show_domain(domain_id):
                 form = None
             if current_user.is_anonymous or current_user.ignore_bots:
                 posts = Post.query.join(Community, Community.id == Post.community_id). \
-                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
+                    filter(Post.from_bot == False, Post.domain_id == domain.id, Community.is_banned == False,
                            Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
                     order_by(desc(Post.posted_at))
             else:
-                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.banned == False,
+                posts = Post.query.join(Community).filter(Post.domain_id == domain.id, Community.is_banned == False,
                                                           Post.deleted == False,
                                                           Post.status > POST_STATUS_REVIEWING).order_by(
                     desc(Post.posted_at))
@@ -104,7 +104,7 @@ def show_domain_rss(domain_id):
             domain = Domain.query.filter_by(name=domain_id, banned=False).first()
         else:
             domain = Domain.query.get_or_404(domain_id)
-            if domain.banned:
+            if domain.is_banned:
                 domain = None
         if domain:
             # If nothing has changed since their last visit, return HTTP 304
@@ -113,7 +113,7 @@ def show_domain_rss(domain_id):
                 return return_304(current_etag, 'application/rss+xml')
 
             posts = Post.query.join(Community, Community.id == Post.community_id). \
-                filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
+                filter(Post.from_bot == False, Post.domain_id == domain.id, Community.is_banned == False,
                        Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
                 order_by(desc(Post.posted_at)).limit(20)
 
@@ -251,7 +251,7 @@ def domain_unblock(domain_id):
 def domain_ban(domain_id):
     domain = Domain.query.get_or_404(domain_id)
     if domain:
-        domain.banned = True
+        domain.is_banned = True
         db.session.commit()
         domain.purge_content()
         flash(_('%(name)s banned for all users and all content deleted.', name=domain.name))
@@ -264,7 +264,7 @@ def domain_ban(domain_id):
 def domain_unban(domain_id):
     domain = Domain.query.get_or_404(domain_id)
     if domain:
-        domain.banned = False
+        domain.is_banned = False
         db.session.commit()
         flash(_('%(name)s un-banned for all users.', name=domain.name))
         return redirect(url_for('domain.show_domain', domain_id=domain.id))

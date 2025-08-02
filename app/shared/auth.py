@@ -57,9 +57,9 @@ def log_user_in(input, src):
         elif src == SRC_API:
             raise Exception('incorrect_login')
 
-    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+    if user.id != 1 and (user.is_banned or user_ip_banned() or user_cookie_banned()):
         # Detect if a banned user tried to log in from a new IP address
-        if user.banned and not user_ip_banned():
+        if user.is_banned and not user_ip_banned():
             # If so, ban their new IP address as well
             new_ip_ban = IpBan(ip_address=ip_address(), notes=user.user_name + ' used new IP address')
             db.session.add(new_ip_ban)

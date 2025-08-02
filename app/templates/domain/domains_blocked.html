@@ -42,7 +42,7 @@
                         <td><a href="{{ url_for('domain.show_domain', domain_id=domain.id) }}">{{ domain.name }}</a></td>
                         <td>
                             {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
-                                {% if domain.banned %}
+                                {% if domain.is_banned %}
                                         <a class="btn btn-primary confirm_first send_post" title="{{ _('Unbanning this domain allows future posts linking to that domain.') }}" href="#" data-url="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
                                 {% endif %}
                             {% endif %}

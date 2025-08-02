@@ -119,9 +119,9 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
         user = current_user
 
     recipient = search_for_user(handle)
-    if recipient and not recipient.banned and not instance_banned(recipient.instance.domain):
+    if recipient and not recipient.is_banned and not instance_banned(recipient.instance.domain):
         community = Community.query.get(community_id)
-        if community.banned:
+        if community.is_banned:
             return 0
 
         conversation = Conversation(user_id=user.id)
@@ -156,7 +156,7 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
         user = current_user
 
     community = Community.query.get(community_id)
-    if community.banned:
+    if community.is_banned:
         return 0
 
     message = render_template('email/invite_to_community.txt', user=user, community=community,
@@ -408,7 +408,7 @@ def delete_community(community_id: int, src, auth=None):
     After 7 days, the community can be hard-deleted (and it's dependencies with it). This suggests there needs to be a 'deleted' column and a 'deleted_at' column (and maybe a 'deleted_by' column, so a mod can't restore a community deleted by an admin)
     """
 
-    community.banned = True
+    community.is_banned = True
     db.session.commit()
     task_selector('delete_community', user_id=user.id, community_id=community.id)
 
@@ -432,7 +432,7 @@ def restore_community(community_id: int, src, auth=None):
     same comments as in delete_community
     """
 
-    community.banned = False
+    community.is_banned = False
     db.session.commit()
     task_selector('restore_community', user_id=user.id, community_id=community.id)
 

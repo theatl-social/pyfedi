@@ -26,7 +26,7 @@ def show_tag(tag):
 
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+            filter(Community.is_banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots:
             posts = posts.filter(Post.from_bot == False)
@@ -76,7 +76,7 @@ def show_tag_rss(tag):
     if tag:
         posts = Post.query.join(Community, Community.id == Post.community_id). \
             join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag.id). \
-            filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+            filter(Community.is_banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
         if current_user.is_anonymous or current_user.ignore_bots:
             posts = posts.filter(Post.from_bot == False)
@@ -171,7 +171,7 @@ def tags_blocked_list():
 def tag_ban(tag):
     tag = Tag.query.filter(Tag.name == tag.lower()).first()
     if tag:
-        tag.banned = True
+        tag.is_banned = True
         db.session.commit()
         # tag.purge_content()
         flash(_('%(name)s banned for all users and all content deleted.', name=tag.name))
@@ -184,7 +184,7 @@ def tag_ban(tag):
 def tag_unban(tag):
     tag = Tag.query.filter(Tag.name == tag.lower()).first()
     if tag:
-        tag.banned = False
+        tag.is_banned = False
         db.session.commit()
         flash(_('%(name)s un-banned for all users.', name=tag.name))
         return redirect(url_for('tag.show_tag', tag=tag.name))

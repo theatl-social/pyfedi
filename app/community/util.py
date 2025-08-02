@@ -769,17 +769,17 @@ def community_in_list(community_id: int, community_list: List[Community]) -> boo
 
 def find_local_users(search: str) -> List[User]:
     escaped_search = search.replace('%', '\\%').replace('_', '\\_')
-    return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == None, User.user_name.ilike(f"%{escaped_search}%")).\
+    return User.query.filter(User.is_banned == False, User.deleted == False, User.ap_id == None, User.user_name.ilike(f"%{escaped_search}%")).\
         order_by(desc(User.reputation)).all()
 
 
 def find_potential_moderators(search: str) -> List[User]:
     if not '@' in search:
         escaped_search = search.replace('%', '\\%').replace('_', '\\_')
-        return User.query.filter(User.banned == False, User.deleted == False, User.user_name.ilike(f"%{escaped_search}%")).\
+        return User.query.filter(User.is_banned == False, User.deleted == False, User.user_name.ilike(f"%{escaped_search}%")).\
           order_by(desc(User.reputation)).all()
     else:
-        return User.query.filter(User.banned == False, User.deleted == False, User.ap_id == search.lower()).\
+        return User.query.filter(User.is_banned == False, User.deleted == False, User.ap_id == search.lower()).\
           order_by(desc(User.reputation)).all()
 
 
@@ -789,7 +789,7 @@ def hashtags_used_in_community(community_id: int, content_filters: Optional[str]
     INNER JOIN post_tag pt ON t.id = pt.tag_id
     INNER JOIN "post" ON pt.post_id = post.id
     WHERE post.community_id = :community_id
-      AND t.banned IS FALSE AND post.deleted IS FALSE
+      AND t.is_banned IS FALSE AND post.deleted IS FALSE
     GROUP BY t.id
     ORDER BY pc DESC
     LIMIT 30;"""), {'community_id': community_id}).mappings().all()

@@ -51,7 +51,7 @@ def validate_remote_actor(actor_url, actor=None):
 
     # If we have the actor object, check more conditions
     if actor:
-        if actor.banned:
+        if actor.is_banned:
             return False
         if isinstance(actor, User):
             if actor.deleted or actor_profile_contains_blocked_words(actor):
@@ -71,10 +71,10 @@ def find_remote_actor(actor_url):
     elif '/c/' in actor_url:
         # URL contains /c/ - likely a community
         actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
-        if actor and actor.banned:
+        if actor and actor.is_banned:
             # Try to find a non-banned copy of the community
             unbanned_actor = Community.query.filter(Community.ap_profile_id == actor_url,
-                                                    Community.banned == False).first()
+                                                    Community.is_banned == False).first()
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
@@ -92,10 +92,10 @@ def find_remote_actor(actor_url):
     # Look for a remote community if not found as user
     if actor is None:
         actor = Community.query.filter(Community.ap_profile_id == actor_url).first()
-        if actor and actor.banned:
+        if actor and actor.is_banned:
             # Try to find a non-banned copy of the community
             unbanned_actor = Community.query.filter(Community.ap_profile_id == actor_url,
-                                                    Community.banned == False).first()
+                                                    Community.is_banned == False).first()
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor

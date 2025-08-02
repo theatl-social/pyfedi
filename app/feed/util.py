@@ -93,7 +93,7 @@ def actor_to_feed(actor) -> Feed:
 
 def feed_communities_for_edit(feed_id: int) -> str:
     return_value = []
-    for community in Community.query.filter(Community.banned == False).join(FeedItem, FeedItem.community_id == Community.id).\
+    for community in Community.query.filter(Community.is_banned == False).join(FeedItem, FeedItem.community_id == Community.id).\
             filter(FeedItem.feed_id == feed_id).all():
         ap_id = community.link()
         if '@' not in ap_id:

@@ -358,7 +358,7 @@ def validate_user_login(user: User, password: str, ip: str) -> bool:
         handle_invalid_password(user)
         return False
 
-    if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+    if user.id != 1 and (user.is_banned or user_ip_banned() or user_cookie_banned()):
         handle_banned_user(user, ip)
         return False
 
@@ -384,7 +384,7 @@ def handle_banned_user(user: User, ip: str) -> None:
     flash(_("You have been banned."), "error")
     response = make_response(redirect(url_for("auth.login")))
 
-    if user.banned and not user_ip_banned():
+    if user.is_banned and not user_ip_banned():
         new_ip_ban = IpBan(ip_address=ip, notes=f"{user.user_name} used new IP address")
         db.session.add(new_ip_ban)
         db.session.commit()

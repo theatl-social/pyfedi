@@ -68,7 +68,7 @@ def show_topic(topic_path):
             {'topic_ids': tuple(topic_ids)}).scalars()
 
         topic_communities = Community.query.filter(
-            Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
+            Community.topic_id == current_topic.id, Community.is_banned == False, Community.total_subscriptions_count > 0).\
             order_by(desc(Community.total_subscriptions_count))
 
         posts = None

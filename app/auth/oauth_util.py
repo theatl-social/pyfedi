@@ -105,7 +105,7 @@ def current_user_is_banned():
     """
     if not current_user.is_authenticated:
         return False
-    return current_user.banned or user_ip_banned() or user_cookie_banned()
+    return current_user.is_banned or user_ip_banned() or user_cookie_banned()
 
 
 def current_user_is_deleted():
@@ -153,7 +153,7 @@ def handle_oauth_authorize(provider, user_info_endpoint, oauth_id_key, form_clas
     country = get_country(ip)
     user = User.query.filter(getattr(User, oauth_id_key) == user_info['id']).first()
     if user:
-        if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
+        if user.id != 1 and (user.is_banned or user_ip_banned() or user_cookie_banned()):
             return handle_banned_user(user, ip)
         elif user.deleted:
             flash(_('This account has been deleted.'), 'error')

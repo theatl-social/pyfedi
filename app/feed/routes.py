@@ -34,7 +34,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
 @bp.route('/feed/new', methods=['GET', 'POST'])
 @login_required
 def feed_new():
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
 
     form = AddCopyFeedForm()
@@ -114,7 +114,7 @@ def feed_new():
 @bp.route('/feed/add_remote', methods=['GET', 'POST'])
 @login_required
 def feed_add_remote():
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     form = SearchRemoteFeed()
     new_feed = None
@@ -157,7 +157,7 @@ def feed_add_remote():
 def feed_edit(feed_id: int):
     url_changed = False
     old_url = None
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     # load the feed
     feed_to_edit: Feed = Feed.query.get_or_404(feed_id)
@@ -317,7 +317,7 @@ def feed_delete(feed_id: int):
 @bp.route('/feed/<int:feed_id>/copy', methods=['GET', 'POST'])
 @login_required
 def feed_copy(feed_id: int):
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     # load the feed
     feed_to_copy = Feed.query.get_or_404(feed_id)
@@ -735,7 +735,7 @@ def show_feed(feed):
         posts = post_ids_to_models(post_ids, sort)
 
         feed_communities = Community.query.filter(
-            Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
+            Community.id.in_(feed_community_ids), Community.is_banned == False, Community.total_subscriptions_count > 0).\
             order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
@@ -1133,7 +1133,7 @@ def lookup(feedname, domain):
                     flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'),
                           'warning')
             else:
-                if new_feed.banned:
+                if new_feed.is_banned:
                     flash(_('That feed is banned from %(site)s.', site=g.site.name), 'warning')
 
             return render_template('feed/lookup_remote.html',

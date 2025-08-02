@@ -133,7 +133,7 @@ def register(app):
             half_year = datetime.now(timezone.utc) - timedelta(weeks=26)  # 52 weeks/year divided by 2
 
             # get a list of the ids for communities
-            comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
+            comm_ids = db.session.query(Community.id).filter(Community.is_banned == False).all()
             comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
             for community_id in comm_ids:
@@ -331,7 +331,7 @@ def register(app):
 
             # Ensure accurate community stats
             print(f'Ensure accurate community stats {datetime.now()}')
-            for community in Community.query.filter(Community.banned == False,
+            for community in Community.query.filter(Community.is_banned == False,
                                                     Community.last_active > datetime.now(timezone.utc) - timedelta(days=3)).all():
                 community.subscriptions_count = db.session.execute(text(
                     'SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'),
@@ -607,7 +607,7 @@ def register(app):
             half_year = datetime.now(timezone.utc) - timedelta(weeks=26) # 52 weeks/year divided by 2
 
             # get a list of the ids for communities
-            comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
+            comm_ids = db.session.query(Community.id).filter(Community.is_banned == False).all()
             comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
             for community_id in comm_ids:
@@ -843,7 +843,7 @@ def register(app):
                 aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
                 aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
             )
-            for community in Community.query.filter(Community.banned == False):
+            for community in Community.query.filter(Community.is_banned == False):
                 did_something = False
                 if community.icon_id:
                     did_something = True
@@ -854,7 +854,7 @@ def register(app):
                 if did_something:
                     print(f'Moved image for community {community.link()}')
 
-            for user in User.query.filter(User.deleted == False, User.banned == False,
+            for user in User.query.filter(User.deleted == False, User.is_banned == False,
                                           User.last_seen > datetime.now(timezone.utc) - timedelta(days=180)):
                 did_something = False
                 if user.avatar_id:

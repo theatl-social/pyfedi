@@ -160,10 +160,10 @@ def _get_user_subscribed_communities(user):
 
 @login_required_if_private_instance
 def show_profile(user):
-    if (user.deleted or user.banned) and current_user.is_anonymous:
+    if (user.deleted or user.is_banned) and current_user.is_anonymous:
         abort(404)
 
-    if user.banned:
+    if user.is_banned:
         flash(_('This user has been banned.'), 'warning')
     if user.deleted:
         flash(_('This user has been deleted.'), 'warning')
@@ -243,7 +243,7 @@ def edit_profile(actor):
     delete_form = DeleteAccountForm()
     form = ProfileForm()
     old_email = user.email
-    if form.validate_on_submit() and not current_user.banned:
+    if form.validate_on_submit() and not current_user.is_banned:
         current_user.title = form.title.data.strip()
         current_user.email = form.email.data.strip()
         # Email address has changed - request verification of new address
@@ -707,7 +707,7 @@ def ban_profile(actor):
             return redirect(goto)
         else:
             if form.validate_on_submit():
-                user.banned = True
+                user.is_banned = True
                 db.session.commit()
 
                 # Purge content
@@ -783,7 +783,7 @@ def unban_profile(actor):
         if user.id == current_user.id:
             flash(_('You cannot unban yourself.'), 'error')
         else:
-            user.banned = False
+            user.is_banned = False
             db.session.commit()
 
             add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
@@ -924,7 +924,7 @@ def report_profile(actor):
         flash(_('Moderators have already assessed reports regarding this person, no further reports are necessary.'),
               'warning')
 
-    if user and not user.banned:
+    if user and not user.is_banned:
         if form.validate_on_submit():
 
             if user.reports == -1:
@@ -988,7 +988,7 @@ def delete_profile(actor):
             if user.id == 1:
                 flash('This user cannot be deleted.')
                 return redirect(request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}')
-            user.banned = True
+            user.is_banned = True
             user.deleted = True
             user.deleted_by = current_user.id
             user.delete_dependencies()
@@ -1050,7 +1050,7 @@ def delete_account():
             current_user.cover.delete_from_disk()
             current_user.cover.source_url = ''
 
-        current_user.banned = True
+        current_user.is_banned = True
         current_user.email = f'deleted_{current_user.id}@deleted.com'
         current_user.deleted_by = current_user.id
         db.session.commit()
@@ -1099,7 +1099,7 @@ def send_deletion_requests(user_id):
             if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
                 send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
-        user.banned = True
+        user.is_banned = True
         user.deleted = True
 
         db.session.commit()
@@ -1119,7 +1119,7 @@ def ban_purge_profile(actor):
         if user.id == current_user.id:
             flash(_('You cannot purge yourself.'), 'error')
         else:
-            user.banned = True
+            user.is_banned = True
             db.session.commit()
 
             # todo: empty relevant caches
@@ -1741,7 +1741,7 @@ def edit_user_note(actor):
     if user is None:
         abort(404)
     form = UserNoteForm()
-    if form.validate_on_submit() and not current_user.banned:
+    if form.validate_on_submit() and not current_user.is_banned:
         text = form.note.data.strip()
         usernote = UserNote.query.filter(UserNote.target_id == user.id, UserNote.user_id == current_user.id).first()
         if usernote:
@@ -1767,7 +1767,7 @@ def edit_user_note(actor):
 def user_preview(user_id):
     user = User.query.get_or_404(user_id)
     return_to = request.args.get('return_to')
-    if (user.deleted or user.banned) and current_user.is_anonymous:
+    if (user.deleted or user.is_banned) and current_user.is_anonymous:
         abort(404)
     return render_template('user/user_preview.html', user=user, return_to=return_to)
 
@@ -1790,7 +1790,7 @@ def lookup(person, domain):
             except Exception as e:
                 if 'is blocked.' in str(e):
                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
-            if not new_person or new_person.banned:
+            if not new_person or new_person.is_banned:
                 flash(_('That person could not be retreived or is banned from %(site)s.', site=g.site.name), 'warning')
                 referrer = request.headers.get('Referer', None)
                 if referrer is not None:

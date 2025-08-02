@@ -57,7 +57,7 @@ def show_post(post_id: int):
         post = Post.query.get_or_404(post_id)
         community: Community = post.community
 
-        if community.banned or post.deleted:
+        if community.is_banned or post.deleted:
             if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
                 abort(404)
             else:
@@ -159,7 +159,7 @@ def show_post(post_id: int):
 
         if community.topic_id:
             related_communities = Community.query.filter_by(topic_id=community.topic_id). \
-                filter(Community.id != community.id, Community.banned == False).order_by(Community.name)
+                filter(Community.id != community.id, Community.is_banned == False).order_by(Community.name)
             topics = []
             previous_topic = Topic.query.get(community.topic_id)
             if previous_topic:
@@ -362,7 +362,7 @@ def post_embed(post_id):
         post = Post.query.get_or_404(post_id)
         community: Community = post.community
 
-        if community.banned or post.deleted:
+        if community.is_banned or post.deleted:
             if current_user.is_anonymous or not (
                     current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
                 abort(404)
@@ -541,7 +541,7 @@ def continue_discussion(post_id, comment_id):
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)
 
-    if post.community.banned or post.deleted or comment.deleted:
+    if post.community.is_banned or post.deleted or comment.deleted:
         if current_user.is_anonymous or not (current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff())):
             abort(404)
         else:
@@ -638,7 +638,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
 @login_required
 def add_reply(post_id: int, comment_id: int):
     # this route is used when JS is disabled
-    if current_user.banned or current_user.ban_comments:
+    if current_user.is_banned or current_user.ban_comments:
         return show_ban_message()
     post = Post.query.get_or_404(post_id)
 
@@ -698,7 +698,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
     # this route is called by htmx and returns a html fragment representing a form that can be submitted to make a new reply
     # it also accepts the POST from that form and makes the reply. All the JS in the response needs a nonce from the parent page
     # to keep CSP happy and that nonce needs to be used by any replies to this reply so it's nonces all the way down.
-    if current_user.banned or current_user.ban_comments:
+    if current_user.is_banned or current_user.ban_comments:
         return _('You have been banned.')
     post = Post.query.get_or_404(post_id)
     if not can_create_post_reply(current_user, post.community):

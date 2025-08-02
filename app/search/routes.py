@@ -169,7 +169,7 @@ def run_search():
 
     else:
         languages = Language.query.order_by(Language.name).all()
-        communities = Community.query.filter(Community.banned == False).order_by(Community.name)
+        communities = Community.query.filter(Community.is_banned == False).order_by(Community.name)
         instance_software = Instance.unique_software_names()
         if current_user.is_authenticated:
             communities = communities.filter(Community.id.not_in(banned_from))
@@ -183,7 +183,7 @@ def run_search():
 @bp.route('/retrieve_remote_post', methods=['GET', 'POST'])
 @login_required
 def retrieve_remote_post():
-    if current_user.banned:
+    if current_user.is_banned:
         return show_ban_message()
     form = RetrieveRemotePost()
     new_post = None

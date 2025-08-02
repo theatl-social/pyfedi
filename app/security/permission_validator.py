@@ -153,7 +153,7 @@ class PermissionValidator:
     
     def _is_globally_banned(self, actor: User) -> bool:
         """Check if actor is banned at instance level"""
-        return actor.banned or (actor.instance and actor.instance.blocked)
+        return actor.is_banned or (actor.instance and actor.instance.blocked)
     
     def _check_community_permission(self, actor: User, permission: Permission, 
                                   community: Community) -> bool:

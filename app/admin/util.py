@@ -66,7 +66,7 @@ def unsubscribe_from_everything_then_delete_task(user_id):
                             if instance.inbox and instance.online() and instance.id != 1:  # instance id 1 is always the current instance
                                 send_post_request(instance.inbox, payload, user.private_key, f"{user.public_url()}#main-key")
 
-                user.banned = True
+                user.is_banned = True
                 user.deleted = True
                 user.delete_dependencies()
                 session.commit()
@@ -100,7 +100,7 @@ def unsubscribe_from_community(community, user):
 
 
 def send_newsletter(form):
-    recipients = User.query.filter(User.newsletter == True, User.banned == False, User.ap_id == None).\
+    recipients = User.query.filter(User.newsletter == True, User.is_banned == False, User.ap_id == None).\
         order_by(desc(User.id)).limit(40000)
 
     from app.email import send_email

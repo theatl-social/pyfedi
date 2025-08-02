@@ -123,7 +123,7 @@ def community_members(community_id: int) -> int:
     """Get count of active members in a community"""
     sql = '''SELECT COUNT(id) as c FROM "user" as u 
     INNER JOIN community_member cm ON u.id = cm.user_id 
-    WHERE u.banned is false AND u.deleted is false AND cm.is_banned is false AND cm.community_id = :community_id'''
+    WHERE u.is_banned is false AND u.deleted is false AND cm.is_banned is false AND cm.community_id = :community_id'''
     return db.session.execute(text(sql), {'community_id': community_id}).scalar() or 0
 
 
@@ -2643,7 +2643,7 @@ def update_post_from_activity(post: Post, request_json: dict):
         new_url = request_json['object']['attachment']['url']
     if new_url:
         new_domain = domain_from_url(new_url)
-        if new_domain.banned:
+        if new_domain.is_banned:
             db.session.commit()
             return  # reject change to url if new domain is banned
     old_db_entry_to_delete = None
@@ -2999,7 +2999,7 @@ def lemmy_site_data():
             "name": admin.user_name,
             "display_name": admin.display_name(),
             "avatar": 'https://' + current_app.config['SERVER_NAME'] + admin.avatar_image(),
-            "banned": admin.banned,
+            "banned": admin.is_banned,
             "published": admin.created.isoformat() + 'Z',
             "updated": admin.created.isoformat() + 'Z',
             "actor_id": admin.public_url(),

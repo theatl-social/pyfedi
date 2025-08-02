@@ -52,7 +52,7 @@
                             {% if similar_user.reputation < -3 -%}
                                 <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
                             {% endif -%}
-                            {% if similar_user.banned %}
+                            {% if similar_user.is_banned %}
                                 <span class="fe fe-warning red" title="{{ _('Banned') }}"> </span>
                             {% endif %}<br />
                         {% endfor -%}

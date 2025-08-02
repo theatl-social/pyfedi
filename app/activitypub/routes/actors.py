@@ -426,7 +426,7 @@ def community_moderators(actor: ActorName) -> tuple[Dict[str, Any], int]:
     # Build moderator list
     mod_list = []
     for mod in moderators:
-        if mod.user and not mod.user.deleted and not mod.user.banned:
+        if mod.user and not mod.user.deleted and not mod.user.is_banned:
             mod_list.append(mod.user.public_url())
     
     collection = {

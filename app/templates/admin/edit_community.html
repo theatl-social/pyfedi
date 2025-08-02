@@ -46,7 +46,7 @@
             <fieldset class="border pl-2 pt-2 mb-4">
                 <legend>{{ _('Will not be overwritten by remote server') }}</legend>
             {% endif %}
-                {{ render_field(form.banned) }}
+                {{ render_field(form.is_banned) }}
                 {{ render_field(form.local_only) }}
                 {{ render_field(form.new_mods_wanted) }}
                 {{ render_field(form.show_popular) }}
