@@ -98,7 +98,7 @@ class Site(db.Model):
         # Role is in the same file (misc.py)
         admin_role = Role.query.filter_by(name='Admin').first()
         if admin_role:
-            return User.query.filter_by(role_id=admin_role.id, deleted=False, ban_state=0).all()
+            return User.query.filter_by(role_id=admin_role.id, deleted=False, is_banned=False).all()
         return []
 
 

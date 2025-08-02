@@ -41,7 +41,7 @@ def show_domain(domain_id):
                 form.post_warning.data = domain.post_warning
             else:
                 form = None
-            if current_user.is_anonymous or current_user.ignore_bots == 1:
+            if current_user.is_anonymous or current_user.ignore_bots:
                 posts = Post.query.join(Community, Community.id == Post.community_id). \
                     filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
                            Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \

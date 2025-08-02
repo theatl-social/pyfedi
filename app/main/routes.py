@@ -243,9 +243,9 @@ def list_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
-        if current_user.hide_nsfw == 1:
+        if current_user.hide_nsfw:
             communities = communities.filter(Community.nsfw == False)
-        if current_user.hide_nsfl == 1:
+        if current_user.hide_nsfl:
             communities = communities.filter(Community.nsfl == False)
         instance_ids = blocked_instances(current_user.id)
         if instance_ids:
@@ -337,9 +337,9 @@ def list_local_communities():
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
-        if current_user.hide_nsfw == 1:
+        if current_user.hide_nsfw:
             communities = communities.filter(Community.nsfw == False)
-        if current_user.hide_nsfl == 1:
+        if current_user.hide_nsfl:
             communities = communities.filter(Community.nsfl == False)
         filtered_out_community_ids = filtered_out_communities(current_user)
         if len(filtered_out_community_ids):
@@ -531,9 +531,9 @@ def list_not_subscribed_communities():
     banned_from = communities_banned_from(current_user.id)
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
-    if current_user.hide_nsfw == 1:
+    if current_user.hide_nsfw:
         communities = communities.filter(Community.nsfw == False)
-    if current_user.hide_nsfl == 1:
+    if current_user.hide_nsfl:
         communities = communities.filter(Community.nsfl == False)
 
     communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
@@ -749,11 +749,11 @@ And if you want to add your score to the database to help your fellow Bookworms 
             posts = Post.query.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(
                 CommunityMember.is_banned == False)
             posts = posts.filter(CommunityMember.user_id == user.id)
-            if user.ignore_bots == 1:
+            if user.ignore_bots:
                 posts = posts.filter(Post.from_bot == False)
-            if user.hide_nsfl == 1:
+            if user.hide_nsfl:
                 posts = posts.filter(Post.nsfl == False)
-            if user.hide_nsfw == 1:
+            if user.hide_nsfw:
                 posts = posts.filter(Post.nsfw == False)
             domains_ids = blocked_domains(user.id)
             if domains_ids:

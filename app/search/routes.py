@@ -41,11 +41,11 @@ def run_search():
         if search_for == 'posts':
             posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
             if current_user.is_authenticated:
-                if current_user.ignore_bots == 1:
+                if current_user.ignore_bots:
                     posts = posts.filter(Post.from_bot == False)
-                if current_user.hide_nsfl == 1:
+                if current_user.hide_nsfl:
                     posts = posts.filter(Post.nsfl == False)
-                if current_user.hide_nsfw == 1:
+                if current_user.hide_nsfw:
                     posts = posts.filter(Post.nsfw == False)
                 domains_ids = blocked_domains(current_user.id)
                 if domains_ids:
@@ -94,9 +94,9 @@ def run_search():
         if search_for == 'comments':
             replies = PostReply.query.filter(PostReply.deleted == False)
             if current_user.is_authenticated:
-                if current_user.ignore_bots == 1:
+                if current_user.ignore_bots:
                     replies = replies.filter(PostReply.from_bot == False)
-                if current_user.hide_nsfw == 1:
+                if current_user.hide_nsfw:
                     replies = replies.filter(PostReply.nsfw == False)
                 instance_ids = blocked_instances(current_user.id)
                 if instance_ids:

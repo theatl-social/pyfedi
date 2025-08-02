@@ -307,11 +307,11 @@ def show_community(community: Community):
             user = None
         else:
             user = current_user
-            if current_user.ignore_bots == 1:
+            if current_user.ignore_bots:
                 posts = posts.filter(Post.from_bot == False)
-            if current_user.hide_nsfl == 1:
+            if current_user.hide_nsfl:
                 posts = posts.filter(Post.nsfl == False)
-            if current_user.hide_nsfw == 1:
+            if current_user.hide_nsfw:
                 posts = posts.filter(Post.nsfw == False)
             if current_user.hide_read_posts and not tag:
                 posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (
@@ -403,9 +403,9 @@ def show_community(community: Community):
             user = None
         else:
             user = current_user
-            if current_user.ignore_bots == 1:
+            if current_user.ignore_bots:
                 comments = comments.filter(PostReply.from_bot == False)
-            if current_user.hide_nsfw == 1:
+            if current_user.hide_nsfw:
                 comments = comments.filter(PostReply.nsfw == False)
 
             comments = comments.filter(PostReply.deleted == False)

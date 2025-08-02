@@ -989,11 +989,11 @@ def register(app):
                             posts = Post.query.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(
                                 CommunityMember.is_banned == False)
                             posts = posts.filter(CommunityMember.user_id == user.id)
-                            if user.ignore_bots == 1:
+                            if user.ignore_bots:
                                 posts = posts.filter(Post.from_bot == False)
-                            if user.hide_nsfl == 1:
+                            if user.hide_nsfl:
                                 posts = posts.filter(Post.nsfl == False)
-                            if user.hide_nsfw == 1:
+                            if user.hide_nsfw:
                                 posts = posts.filter(Post.nsfw == False)
                             domains_ids = blocked_domains(user.id)
                             if domains_ids:

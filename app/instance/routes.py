@@ -108,11 +108,11 @@ def instance_posts(instance_domain):
         posts = Post.query.filter(Post.instance_id == instance.id, Post.deleted == False,
                                   Post.status > POST_STATUS_REVIEWING)
 
-        if current_user.ignore_bots == 1:
+        if current_user.ignore_bots:
             posts = posts.filter(Post.from_bot == False)
-        if current_user.hide_nsfl == 1:
+        if current_user.hide_nsfl:
             posts = posts.filter(Post.nsfl == False)
-        if current_user.hide_nsfw == 1:
+        if current_user.hide_nsfw:
             posts = posts.filter(Post.nsfw == False)
         if current_user.hide_read_posts:
             posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (read_posts.c.user_id == current_user.id))

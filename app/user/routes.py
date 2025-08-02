@@ -383,11 +383,11 @@ def export_user_settings(user):
         user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
     user_dict['matrix_id'] = user.matrix_user_id
     user_dict['bot_account'] = user.bot
-    if user.hide_nsfw == 1:
+    if user.hide_nsfw:
         lemmy_show_nsfw = False
     else:
         lemmy_show_nsfw = True
-    if user.ignore_bots == 1:
+    if user.ignore_bots:
         lemmy_show_bot_accounts = False
     else:
         lemmy_show_bot_accounts = True
@@ -1684,11 +1684,11 @@ def user_read_posts(sort=None):
 
     posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 
-    if current_user.ignore_bots == 1:
+    if current_user.ignore_bots:
         posts = posts.filter(Post.from_bot == False)
-    if current_user.hide_nsfl == 1:
+    if current_user.hide_nsfl:
         posts = posts.filter(Post.nsfl == False)
-    if current_user.hide_nsfw == 1:
+    if current_user.hide_nsfw:
         posts = posts.filter(Post.nsfw == False)
 
     # get the list of post.ids that the 

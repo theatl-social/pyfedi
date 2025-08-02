@@ -2565,11 +2565,11 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     if current_user.is_anonymous:
         post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
-        if current_user.ignore_bots == 1:
+        if current_user.ignore_bots:
             post_id_where.append('p.from_bot is false ')
-        if current_user.hide_nsfl == 1:
+        if current_user.hide_nsfl:
             post_id_where.append('p.nsfl is false ')
-        if current_user.hide_nsfw == 1:
+        if current_user.hide_nsfw:
             post_id_where.append('p.nsfw is false')
         if current_user.hide_read_posts:
             post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id) ')

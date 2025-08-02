@@ -91,9 +91,9 @@ def show_topic(topic_path):
                 comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
                                            PostReply.deleted == False)
             else:
-                if current_user.ignore_bots == 1:
+                if current_user.ignore_bots:
                     comments = comments.filter(PostReply.from_bot == False)
-                if current_user.hide_nsfw == 1:
+                if current_user.hide_nsfw:
                     comments = comments.filter(PostReply.nsfw == False)
 
                 comments = comments.filter(PostReply.deleted == False)

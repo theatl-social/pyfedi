@@ -269,13 +269,13 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
         v6 = {
             "local_user_view": {
                 "local_user": {
-                    "show_nsfw": not user.hide_nsfw == 1,
-                    "show_nsfl": not user.hide_nsfl == 1,
+                    "show_nsfw": not user.hide_nsfw,
+                    "show_nsfl": not user.hide_nsfl,
                     "default_sort_type": post_sort_type_enum[user.default_sort.capitalize()],
                     "default_comment_sort_type": comment_sort_type_enum[user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot'],
                     "default_listing_type": listing_type_enum[user.default_filter.capitalize()],
                     "show_scores": True,
-                    "show_bot_accounts": not user.ignore_bots == 1,
+                    "show_bot_accounts": not user.ignore_bots,
                     "show_read_posts": not user.hide_read_posts == True
                 },
                 "person": {

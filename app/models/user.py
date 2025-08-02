@@ -48,7 +48,7 @@ class User(UserMixin, db.Model):
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    ignore_bots: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    ignore_bots: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # Profile
     title: Mapped[Optional[str]] = mapped_column(String(255))
@@ -66,7 +66,7 @@ class User(UserMixin, db.Model):
     
     # Privacy settings
     hide_nsfw: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    hide_nsfl: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    hide_nsfl: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     hide_read_posts: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     receive_message_mode: Mapped[str] = mapped_column(String(20), default='Closed', nullable=False)
     
@@ -84,7 +84,7 @@ class User(UserMixin, db.Model):
     
     # Status fields
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
-    ban_state: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0=not banned, 1=banned
+    is_banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     
     # TOTP
     totp_secret: Mapped[Optional[str]] = mapped_column(String(64))
