@@ -1,7 +1,7 @@
 """Notification and messaging models for PeachPie"""
 from __future__ import annotations
 from typing import Optional, List, Dict, Any, TYPE_CHECKING
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Integer, Boolean, Text, DateTime, ForeignKey, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 

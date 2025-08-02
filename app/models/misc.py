@@ -90,6 +90,16 @@ class Site(db.Model):
     
     # Relationships
     icon = relationship('File')
+    
+    @classmethod
+    def admins(cls) -> List['User']:
+        """Get all admin users"""
+        from app.models.user import User
+        from app.models.user import Role
+        admin_role = Role.query.filter_by(name='Admin').first()
+        if admin_role:
+            return User.query.filter_by(role_id=admin_role.id, deleted=False, ban_state=0).all()
+        return []
 
 
 class Settings(db.Model):
