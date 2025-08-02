@@ -333,6 +333,7 @@ class Role(db.Model):
     
     # Role details
     name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
+    weight: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
     # Relationships
     permissions = relationship('RolePermission', back_populates='role', lazy='dynamic',

@@ -106,10 +106,14 @@ class User(UserMixin, db.Model):
     interface_language: Mapped[Optional[str]] = mapped_column(String(10))
     language_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('language.id'))
     
+    # Role
+    role_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('role.id'))
+    
     # Relationships
     avatar = relationship('File', foreign_keys=[avatar_id], back_populates='avatar_users')
     cover = relationship('File', foreign_keys=[cover_id], back_populates='cover_users')
     instance = relationship('Instance', back_populates='users')
+    role = relationship('Role')
     
     # Activities
     posts = relationship('Post', back_populates='author', lazy='dynamic',

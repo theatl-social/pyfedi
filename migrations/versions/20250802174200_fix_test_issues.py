@@ -23,6 +23,18 @@ def upgrade():
     # Add active column to language table
     op.add_column('language', sa.Column('active', sa.Boolean(), nullable=False, server_default='true'))
     
+    # Add weight column to role table if it doesn't exist
+    bind = op.get_bind()
+    inspector = sa.inspect(bind)
+    columns = [c['name'] for c in inspector.get_columns('role')]
+    if 'weight' not in columns:
+        op.add_column('role', sa.Column('weight', sa.Integer(), nullable=False, server_default='0'))
+    
+    # Add role_id column to user table if it doesn't exist
+    user_columns = [c['name'] for c in inspector.get_columns('user')]
+    if 'role_id' not in user_columns:
+        op.add_column('user', sa.Column('role_id', sa.Integer(), sa.ForeignKey('role.id'), nullable=True))
+    
     # Fix circular dependency between conversation and chat_message tables
     # by adding named constraints
     
@@ -86,6 +98,12 @@ def downgrade():
     # Remove columns from language table
     op.drop_column('language', 'active')
     op.drop_column('language', 'native_name')
+    
+    # Remove weight column from role table
+    op.drop_column('role', 'weight')
+    
+    # Remove role_id column from user table
+    op.drop_column('user', 'role_id')
     
     # Revert to unnamed constraints
     op.drop_constraint('fk_conversation_last_message_id', 'conversation', type_='foreignkey')
