@@ -3106,7 +3106,7 @@ def archive_post(post_id: int):
 
                     session.commit()
 
-                if post.reply_count == 0 and len(post.body) < 200:  # don't save to json when the url of the json will be longer than the savings from removing the body
+                if post.reply_count == 0 and (post.body is None or len(post.body) < 200):  # don't save to json when the url of the json will be longer than the savings from removing the body
                     return
 
                 save_this = {}
