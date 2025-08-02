@@ -78,6 +78,42 @@ def _db(app):
         
         db.session.commit()
         
+        # Create test users
+        from app.models import User
+        test_users = [
+            {
+                'id': 1,
+                'user_name': 'testuser',
+                'email': 'test@example.com',
+                'display_name': 'Test User',
+                'role_id': Role.query.filter_by(name='Authenticated user').first().id,
+                'verified': True,
+                'is_active': True,
+                'deleted': False,
+                'ban_state': 0
+            },
+            {
+                'id': 2,
+                'user_name': 'admin',
+                'email': 'admin@example.com',
+                'display_name': 'Admin User',
+                'role_id': Role.query.filter_by(name='Admin').first().id,
+                'verified': True,
+                'is_active': True,
+                'deleted': False,
+                'ban_state': 0
+            }
+        ]
+        
+        for user_data in test_users:
+            user = User.query.get(user_data['id'])
+            if not user:
+                user = User(**user_data)
+                user.set_password('password123')  # Set a test password
+                db.session.add(user)
+        
+        db.session.commit()
+        
         site = Site.query.get(1)
         if not site:
             site = Site(

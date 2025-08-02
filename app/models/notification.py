@@ -106,13 +106,13 @@ class Conversation(TimestampMixin, db.Model):
     # Participants
     user1_id: Mapped[UserId] = mapped_column(
         Integer, 
-        ForeignKey('user.id', name='fk_conversation_user1_id'), 
+        ForeignKey('user.id'), 
         nullable=False, 
         index=True
     )
     user2_id: Mapped[UserId] = mapped_column(
         Integer, 
-        ForeignKey('user.id', name='fk_conversation_user2_id'), 
+        ForeignKey('user.id'), 
         nullable=False, 
         index=True
     )
@@ -124,7 +124,7 @@ class Conversation(TimestampMixin, db.Model):
     # Last activity
     last_message_id: Mapped[Optional[int]] = mapped_column(
         Integer, 
-        ForeignKey('chat_message.id', name='fk_conversation_last_message_id')
+        ForeignKey('chat_message.id')
     )
     
     # Relationships
@@ -158,7 +158,7 @@ class ChatMessage(TimestampMixin, db.Model):
     # Message details
     conversation_id: Mapped[int] = mapped_column(
         Integer, 
-        ForeignKey('conversation.id', name='fk_chat_message_conversation_id'), 
+        ForeignKey('conversation.id'), 
         nullable=False, 
         index=True
     )
