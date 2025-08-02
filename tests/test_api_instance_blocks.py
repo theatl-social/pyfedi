@@ -4,7 +4,7 @@ from sqlalchemy import desc
 from app.models import User, Community
 
 
-def test_api_instance_blocks(app, session):
+def test_api_instance_blocks(app, session, test_data):
     with app.app_context():
         from app.api.alpha.utils.site import post_site_block
         from app.api.alpha.utils.post import get_post_list

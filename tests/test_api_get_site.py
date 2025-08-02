@@ -4,7 +4,7 @@ from flask import g
 from app.models import Site, User
 
 
-def test_api_get_site(app, session, test_site):
+def test_api_get_site(app, session, test_site, test_data):
     with app.app_context():
         with app.test_request_context():
             from app.api.alpha.utils.site import get_site

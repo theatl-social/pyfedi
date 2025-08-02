@@ -2180,7 +2180,8 @@ def add_to_modlog(action: str, actor: User, target_user: User = None, reason: st
     db.session.commit()
 
 
-def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
+def authorise_api_user(auth, return_type=None, id_match=None) -> 'User | int':
+    from app.models import User  # Import here to avoid circular import
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '

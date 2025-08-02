@@ -4,7 +4,7 @@ from sqlalchemy import text
 from app.models import User
 
 
-def test_api_user_subscriptions(app, session):
+def test_api_user_subscriptions(app, session, test_data):
     with app.app_context():
         from app.api.alpha.utils.user import put_user_subscribe
 

@@ -8,7 +8,10 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from flask import current_app, g
 from flask_login import UserMixin, current_user
 import pyotp
+import jwt
+from time import time
 from email_validator import validate_email, EmailNotValidError
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db, cache
 from app.models.base import TimestampMixin, ActivityPubMixin, LanguageMixin, UserId, CommunityId, InstanceId
@@ -45,7 +48,7 @@ class User(UserMixin, db.Model):
     verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     banned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     suspended: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    ignore_bots: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    ignore_bots: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     
     # Profile
     title: Mapped[Optional[str]] = mapped_column(String(255))
@@ -75,8 +78,9 @@ class User(UserMixin, db.Model):
     
     # Security
     password_hash: Mapped[Optional[str]] = mapped_column(String(256))
+    password_updated_at: Mapped[Optional[datetime]] = mapped_column(DateTime)
     last_seen: Mapped[Optional[datetime]] = mapped_column(DateTime, index=True)
-    created: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    created: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc), nullable=False)
     
     # Status fields
     deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
@@ -307,9 +311,32 @@ class User(UserMixin, db.Model):
         totp = pyotp.TOTP(self.totp_secret)
         return totp.verify(token, valid_window=1)
     
+    def set_password(self, password: str) -> None:
+        """Hash and set the user's password"""
+        self.password_hash = generate_password_hash(password)
+        self.password_updated_at = datetime.now(timezone.utc)
+    
+    def check_password(self, password: str) -> bool:
+        """Check if the provided password matches the hash"""
+        if not self.password_hash:
+            return False
+        try:
+            return check_password_hash(self.password_hash, password)
+        except Exception:
+            return False
+    
     def update_last_seen(self) -> None:
         """Update last seen timestamp"""
         self.last_seen = datetime.now(timezone.utc)
+    
+    def encode_jwt_token(self) -> str:
+        """Generate JWT token for API authentication"""
+        payload = {
+            'sub': str(self.id),
+            'iss': current_app.config['SERVER_NAME'],
+            'iat': int(time())
+        }
+        return jwt.encode(payload, current_app.config['SECRET_KEY'], algorithm='HS256')
     
     @property
     def is_local(self) -> bool:

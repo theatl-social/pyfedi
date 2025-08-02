@@ -3,7 +3,7 @@ import pytest
 from app.models import User, Community, CommunityMember
 
 
-def test_api_get_community(app, session):
+def test_api_get_community(app, session, test_data):
     with app.app_context():
         from app.api.alpha.utils.community import get_community
         community = Community.query.filter_by(banned=False).first()

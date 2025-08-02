@@ -5,7 +5,7 @@ from app.constants import POST_STATUS_REVIEWING
 from app.models import User, Post
 
 
-def test_api_post_subscriptions(app, session):
+def test_api_post_subscriptions(app, session, test_data):
     with app.app_context():
         from app.api.alpha.utils.post import put_post_subscribe
 

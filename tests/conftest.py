@@ -78,42 +78,6 @@ def _db(app):
         
         db.session.commit()
         
-        # Create test users
-        from app.models import User
-        test_users = [
-            {
-                'id': 1,
-                'user_name': 'testuser',
-                'email': 'test@example.com',
-                'display_name': 'Test User',
-                'role_id': Role.query.filter_by(name='Authenticated user').first().id,
-                'verified': True,
-                'is_active': True,
-                'deleted': False,
-                'ban_state': 0
-            },
-            {
-                'id': 2,
-                'user_name': 'admin',
-                'email': 'admin@example.com',
-                'display_name': 'Admin User',
-                'role_id': Role.query.filter_by(name='Admin').first().id,
-                'verified': True,
-                'is_active': True,
-                'deleted': False,
-                'ban_state': 0
-            }
-        ]
-        
-        for user_data in test_users:
-            user = User.query.get(user_data['id'])
-            if not user:
-                user = User(**user_data)
-                user.set_password('password123')  # Set a test password
-                db.session.add(user)
-        
-        db.session.commit()
-        
         site = Site.query.get(1)
         if not site:
             site = Site(
@@ -156,7 +120,14 @@ def _db(app):
         
         yield db
         db.session.remove()
-        db.drop_all()
+        # Drop all tables with CASCADE to handle all dependencies
+        with db.engine.begin() as conn:
+            # Get all table names
+            inspector = db.inspect(conn)
+            tables = inspector.get_table_names()
+            # Drop each table with CASCADE, quote table names to handle reserved words
+            for table in tables:
+                conn.execute(db.text(f'DROP TABLE IF EXISTS "{table}" CASCADE'))
 
 
 @pytest.fixture(scope='function')
@@ -297,7 +268,7 @@ def test_data(session, test_site):
             description='A test community',
             ap_profile_id='https://test.local/c/testcommunity',
             instance_id=1,
-            banned=False
+            user_id=1  # creator
         )
         private_key, public_key = generate_rsa_keypair()
         community.private_key = private_key

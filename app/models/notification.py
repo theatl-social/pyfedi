@@ -124,7 +124,7 @@ class Conversation(TimestampMixin, db.Model):
     # Last activity
     last_message_id: Mapped[Optional[int]] = mapped_column(
         Integer, 
-        ForeignKey('chat_message.id')
+        ForeignKey('chat_message.id', use_alter=True, name='fk_conversation_last_message')
     )
     
     # Relationships
