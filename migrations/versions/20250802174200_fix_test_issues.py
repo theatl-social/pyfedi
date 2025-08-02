@@ -35,6 +35,13 @@ def upgrade():
     if 'role_id' not in user_columns:
         op.add_column('user', sa.Column('role_id', sa.Integer(), sa.ForeignKey('role.id'), nullable=True))
     
+    # Add deleted and ban_state columns to user table if they don't exist
+    if 'deleted' not in user_columns:
+        op.add_column('user', sa.Column('deleted', sa.Boolean(), nullable=False, server_default='false'))
+        op.create_index('ix_user_deleted', 'user', ['deleted'])
+    if 'ban_state' not in user_columns:
+        op.add_column('user', sa.Column('ban_state', sa.Integer(), nullable=False, server_default='0'))
+    
     # Fix circular dependency between conversation and chat_message tables
     # by adding named constraints
     
@@ -104,6 +111,11 @@ def downgrade():
     
     # Remove role_id column from user table
     op.drop_column('user', 'role_id')
+    
+    # Remove deleted and ban_state columns from user table
+    op.drop_index('ix_user_deleted', 'user')
+    op.drop_column('user', 'deleted')
+    op.drop_column('user', 'ban_state')
     
     # Revert to unnamed constraints
     op.drop_constraint('fk_conversation_last_message_id', 'conversation', type_='foreignkey')

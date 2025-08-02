@@ -78,6 +78,10 @@ class User(UserMixin, db.Model):
     last_seen: Mapped[Optional[datetime]] = mapped_column(DateTime, index=True)
     created: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
     
+    # Status fields
+    deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    ban_state: Mapped[int] = mapped_column(Integer, default=0, nullable=False)  # 0=not banned, 1=banned
+    
     # TOTP
     totp_secret: Mapped[Optional[str]] = mapped_column(String(64))
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
