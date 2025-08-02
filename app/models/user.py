@@ -30,7 +30,7 @@ read_posts = db.Table('read_posts',
 )
 
 
-class User(UserMixin, LanguageMixin, db.Model):
+class User(UserMixin, db.Model):
     """User model with full typing support"""
     __tablename__ = 'user'
     __table_args__ = {'extend_existing': True}
@@ -101,6 +101,10 @@ class User(UserMixin, LanguageMixin, db.Model):
     
     # Bot flags
     bot: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    
+    # Language preferences
+    interface_language: Mapped[Optional[str]] = mapped_column(String(10))
+    language_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('language.id'))
     
     # Relationships
     avatar = relationship('File', foreign_keys=[avatar_id], back_populates='avatar_users')
