@@ -1,5 +1,6 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION
 from app.models import Community, Instance, Post, PostReply, User, UserFollower, File, Notification
 from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
@@ -220,6 +221,9 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
     if is_post:
         notifs = session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == object.id)
         for notif in notifs:
+            # dont delete report notifs
+            if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+                continue
             session.delete(notif)
         session.commit()
 
