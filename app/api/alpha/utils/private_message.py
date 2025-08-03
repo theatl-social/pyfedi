@@ -4,7 +4,7 @@ from app import db
 from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
 from app.api.alpha.views import private_message_view
 from app.constants import NOTIF_MESSAGE, NOTIF_REPORT
-from app.chat.util import send_message
+from app.chat.util import send_message, update_message
 from app.models import ChatMessage, Conversation, User, Notification, Report, Site
 from app.utils import authorise_api_user, markdown_to_html
 
@@ -133,6 +133,8 @@ def put_private_message(auth, data):
     private_message.body = content
     private_message.body_html = markdown_to_html(content)
     db.session.commit()
+
+    update_message(private_message)
 
     return private_message_view(private_message, variant=2)
 
