@@ -97,7 +97,9 @@ def add_local():
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
                               ap_moderators_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/moderators',
                               ap_domain=current_app.config['SERVER_NAME'],
-                              subscriptions_count=1, instance_id=1, low_quality='memes' in form.url.data)
+                              subscriptions_count=1, instance_id=1,
+                              low_quality=('memes' in form.url.data or 'shitpost' in form.url.data) and
+                                           get_setting('meme_comms_low_quality', False))
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
             file = save_icon_file(icon_file)
