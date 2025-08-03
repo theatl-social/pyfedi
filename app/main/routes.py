@@ -346,7 +346,7 @@ def list_local_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -440,7 +440,7 @@ def list_subscribed_communities():
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -535,7 +535,7 @@ def list_not_subscribed_communities():
     if current_user.hide_nsfl == 1:
         communities = communities.filter(Community.nsfl == False)
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
