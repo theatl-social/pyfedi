@@ -38,6 +38,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if auth:
         user_id = authorise_api_user(auth)
 
+    user_id = 1
+
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
         user = User.query.get(user_id)
@@ -62,6 +64,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         blocked_instance_ids = []
 
     content_filters = {}
+    u_rp_ids = []
 
     # Post.user_id.not_in(blocked_person_ids)               # exclude posts by blocked users
     # Post.community_id.not_in(blocked_community_ids)       # exclude posts in blocked communities
@@ -199,13 +202,13 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             upvoted_post_ids = recently_upvoted_posts(user_id)
             posts = posts.filter(Post.id.in_(upvoted_post_ids), Post.user_id != user_id)
         elif saved_only:
-            bookmarked_post_ids = db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
-                                                     {"user_id": user_id}).scalars()
+            bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
+                                                     {"user_id": user_id}).scalars())
             posts = posts.filter(Post.id.in_(bookmarked_post_ids))
         elif user.hide_read_posts:
-            u_rp_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
-                                          {"user_id": user_id}).scalars()
-            posts = posts.filter(Post.id.not_in(u_rp_ids))
+            u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                                          {"user_id": user_id}).scalars())
+            posts = posts.filter(Post.id.not_in(u_rp_ids))              # do not pass set() into not_in(), only tuples or lists
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
@@ -271,9 +274,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if post_subscriptions is None:
             post_subscriptions = []
 
-        read_posts = list(db.session.execute(
-            text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
-            {'user_id': user_id}).scalars())
+        read_posts = set(u_rp_ids)  # lookups ("in") on a set is O(1), tuples/lists are O(n). read_posts can be very large so this makes a difference.
 
         communities_moderating = moderating_communities_ids(user.id)
         communities_joined = joined_or_modding_communities(user.id)
@@ -281,7 +282,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         bookmarked_posts = []
         banned_from = []
         post_subscriptions = []
-        read_posts = []
+        read_posts = set()
         communities_moderating = []
         communities_joined = []
 
