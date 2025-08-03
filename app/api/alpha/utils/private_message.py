@@ -4,7 +4,7 @@ from app import db
 from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
 from app.api.alpha.views import private_message_view
 from app.constants import NOTIF_MESSAGE, NOTIF_REPORT
-from app.chat.util import send_message
+from app.chat.util import send_message, update_message
 from app.models import ChatMessage, Conversation, User, Notification, Report, Site
 from app.utils import authorise_api_user, markdown_to_html
 
@@ -119,24 +119,22 @@ def post_private_message_mark_as_read(auth, data):
     return private_message_view(private_message, variant=2)
 
 
-def edit_private_message(auth, data):
+def put_private_message(auth, data):
+    required(['private_message_id', 'content'], data)
     string_expected(['content'], data)
-    integer_expected(['message_id'], data)
+    integer_expected(['private_message_id'], data)
 
-    chat_message_id = int(data['message_id'])
-    content = data["content"]
+    chat_message_id = int(data['private_message_id'])
+    content = data['content']
 
     user_id = authorise_api_user(auth)
     # User may only edit own messages
-    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id)[0]
-    if private_message.deleted:
-       raise Exception("You can't edit deleted message.") 
-
+    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id, deleted=False).one()
     private_message.body = content
     private_message.body_html = markdown_to_html(content)
-
-    db.session.add(private_message)
     db.session.commit()
+
+    update_message(private_message)
 
     return private_message_view(private_message, variant=2)
 
