@@ -2085,20 +2085,34 @@ def process_chat(user, store_ap_json, core_activity, session):
                 session.commit()
             # Save ChatMessage to DB
             encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
-            new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id,
-                                      conversation_id=existing_conversation.id,
-                                      body_html=core_activity['object']['content'],
-                                      body=html_to_text(core_activity['object']['content']),
-                                      encrypted=encrypted,
-                                      ap_id=core_activity['object']['id'])
-            session.add(new_message)
-            existing_conversation.updated_at = utcnow()
-            session.commit()
+            updated_message = ChatMessage.query.filter_by(ap_id=core_activity['object']['id']).first()
+            if not updated_message:
+                new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id,
+                                          conversation_id=existing_conversation.id,
+                                          body_html=core_activity['object']['content'],
+                                          body=html_to_text(core_activity['object']['content']),
+                                          encrypted=encrypted,
+                                          ap_id=core_activity['object']['id'])
+                session.add(new_message)
+                existing_conversation.updated_at = utcnow()
+                session.commit()
+
+                notification_text = 'New message from '
+                message_id = new_message.id
+            else:
+                updated_message.body_html = core_activity['object']['content']
+                updated_message.body=html_to_text(core_activity['object']['content'])
+                updated_message.read = False
+                existing_conversation.updated_at = utcnow()
+                session.commit()
+
+                notification_text = 'Updated message from '
+                message_id = updated_message.id
 
             # Notify recipient
-            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': new_message.id}
-            notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                  url=f'/chat/{existing_conversation.id}#message_{new_message.id}',
+            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
+            notify = Notification(title=shorten_string(notification_text + sender.display_name()),
+                                  url=f'/chat/{existing_conversation.id}#message_{message_id}',
                                   user_id=recipient.id,
                                   author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
                                   targets=targets_data)
