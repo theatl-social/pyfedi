@@ -1140,6 +1140,17 @@ def process_inbox_request(request_json, store_ap_json):
                             delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
                             if not announced:
                                 announce_activity_to_followers(to_delete.community, user, request_json)
+                    else:
+                        # no content found. check if it was a PM
+                        updated_message = ChatMessage.query.filter_by(ap_id=ap_id).first()
+                        if updated_message:
+                            updated_message.body_html = '<p>Deleted by sender</p>'
+                            updated_message.body = 'Deleted by sender'
+                            updated_message.read = True
+                            updated_message.deleted = True
+                            session.commit()
+                            log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json,
+                                            f"Delete: PM {ap_id} deleted")
                     return
 
                 if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
@@ -2101,7 +2112,7 @@ def process_chat(user, store_ap_json, core_activity, session):
                 message_id = new_message.id
             else:
                 updated_message.body_html = core_activity['object']['content']
-                updated_message.body=html_to_text(core_activity['object']['content'])
+                updated_message.body = html_to_text(core_activity['object']['content'])
                 updated_message.read = False
                 existing_conversation.updated_at = utcnow()
                 session.commit()
