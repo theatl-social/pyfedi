@@ -1005,9 +1005,9 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
                         send_to_remote_instance(instance.id, post.community.id, announce)
 
         # Federate to microblog followers
-        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+        followers = db.session.query(UserFollower).filter_by(local_user_id=post.user_id)
         if followers:
-            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
+            instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower,
                                                                                         UserFollower.remote_user_id == User.id)
             instances = instances.filter(UserFollower.local_user_id == post.user_id)
             for instance in instances:
