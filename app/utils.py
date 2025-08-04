@@ -1656,20 +1656,24 @@ def url_to_thumbnail_file(filename) -> File:
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
-            # Generate file extension from mime type
-            if ';' in content_type:
-                content_type_parts = content_type.split(';')
-                content_type = content_type_parts[0]
-            content_type_parts = content_type.split('/')
-            if content_type_parts:
-                file_extension = '.' + content_type_parts[-1]
-                if file_extension == '.jpeg':
-                    file_extension = '.jpg'
+            # Don't need to generate thumbnail for svg image
+            if "svg" in content_type:
+                file_extension = final_ext = ".svg"
             else:
-                file_extension = os.path.splitext(filename)[1]
-                file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
-                if '?' in file_extension:
-                    file_extension = file_extension.split('?')[0]
+                # Generate file extension from mime type
+                if ';' in content_type:
+                    content_type_parts = content_type.split(';')
+                    content_type = content_type_parts[0]
+                content_type_parts = content_type.split('/')
+                if content_type_parts:
+                    file_extension = '.' + content_type_parts[-1]
+                    if file_extension == '.jpeg':
+                        file_extension = '.jpg'
+                else:
+                    file_extension = os.path.splitext(filename)[1]
+                    file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
+                    if '?' in file_extension:
+                        file_extension = file_extension.split('?')[0]
 
             new_filename = gibberish(15)
             if store_files_in_s3():
@@ -1683,46 +1687,50 @@ def url_to_thumbnail_file(filename) -> File:
                 f.write(response.content)
             response.close()
 
-            # Use environment variables to determine URL thumbnail
+            if file_extension != ".svg":
+                # Use environment variables to determine URL thumbnail
 
-            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
-            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
+                medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
 
-            final_ext = file_extension
+                final_ext = file_extension
 
-            if medium_image_format == 'AVIF':
-                import pillow_avif  # NOQA
+                if medium_image_format == 'AVIF':
+                    import pillow_avif  # NOQA
 
-            Image.MAX_IMAGE_PIXELS = 89478485
-            with Image.open(temp_file_path) as img:
-                img = ImageOps.exif_transpose(img)
-                img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                Image.MAX_IMAGE_PIXELS = 89478485
+                with Image.open(temp_file_path) as img:
+                    img = ImageOps.exif_transpose(img)
+                    img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
 
-                # Create 170px thumbnail
-                img_170 = img.copy()
-                img_170.thumbnail((170, 170), resample=Image.LANCZOS)
+                    # Create 170px thumbnail
+                    img_170 = img.copy()
+                    img_170.thumbnail((170, 170), resample=Image.LANCZOS)
 
-                kwargs = {}
-                if medium_image_format:
-                    kwargs['format'] = medium_image_format.upper()
-                    final_ext = '.' + medium_image_format.lower()
-                    temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
-                if medium_image_quality:
-                    kwargs['quality'] = int(medium_image_quality)
+                    kwargs = {}
+                    if medium_image_format:
+                        kwargs['format'] = medium_image_format.upper()
+                        final_ext = '.' + medium_image_format.lower()
+                        temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
+                    if medium_image_quality:
+                        kwargs['quality'] = int(medium_image_quality)
 
-                img_170.save(temp_file_path, optimize=True, **kwargs)
-                thumbnail_width = img_170.width
-                thumbnail_height = img_170.height
+                    img_170.save(temp_file_path, optimize=True, **kwargs)
+                    thumbnail_width = img_170.width
+                    thumbnail_height = img_170.height
 
-                # Create 512px thumbnail
-                img_512 = img.copy()
-                img_512.thumbnail((512, 512), resample=Image.LANCZOS)
+                    # Create 512px thumbnail
+                    img_512 = img.copy()
+                    img_512.thumbnail((512, 512), resample=Image.LANCZOS)
 
-                # Create filename for 512px thumbnail
-                temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
-                img_512.save(temp_file_path_512, optimize=True, **kwargs)
-                thumbnail_512_width = img_512.width
-                thumbnail_512_height = img_512.height
+                    # Create filename for 512px thumbnail
+                    temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
+                    img_512.save(temp_file_path_512, optimize=True, **kwargs)
+                    thumbnail_512_width = img_512.width
+                    thumbnail_512_height = img_512.height
+            else:
+                thumbnail_width = thumbnail_height = None
+                thumbnail_512_width = thumbnail_512_height = None
 
             if store_files_in_s3():
                 content_type = guess_mime_type(temp_file_path)
@@ -1738,20 +1746,24 @@ def url_to_thumbnail_file(filename) -> File:
                 s3.upload_file(temp_file_path, current_app.config['S3_BUCKET'], 'posts/' +
                                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                ExtraArgs={'ContentType': content_type})
-                # Upload 512px thumbnail
-                s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
-                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
-                               ExtraArgs={'ContentType': content_type})
                 os.unlink(temp_file_path)
-                os.unlink(temp_file_path_512)
                 thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                     '/' + new_filename + final_ext
-                thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                    '/' + new_filename + '_512' + final_ext
+                
+                if final_ext != ".svg":
+                    # Upload 512px thumbnail
+                    s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
+                                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
+                                ExtraArgs={'ContentType': content_type})
+                    os.unlink(temp_file_path_512)
+                    thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                        '/' + new_filename + '_512' + final_ext
+                else:
+                    thumbnail_512_url = thumbnail_170_url
             else:
                 # For local storage, use the temp file paths as final URLs
                 thumbnail_170_url = temp_file_path
-                thumbnail_512_url = temp_file_path_512
+                thumbnail_512_url = temp_file_path_512 if not file_extension == ".svg" else temp_file_path
             return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width,
                         height=thumbnail_512_height,
                         thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
