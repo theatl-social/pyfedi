@@ -1,9 +1,11 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
-from app.models import Community, Instance, Post, PostReply, User, UserFollower, File
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION
+from app.models import Community, Instance, Post, PostReply, User, UserFollower, File, Notification
 from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
+from sqlalchemy import Integer
 
 
 """ JSON format
@@ -214,6 +216,17 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
         for instance in instances:
             if instance.domain not in domains_sent_to:
                 send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
+
+    # remove any notifications about deleted posts
+    if is_post:
+        notifs = session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == object.id)
+        for notif in notifs:
+            # dont delete report notifs
+            if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+                continue
+            session.delete(notif)
+        session.commit()
+
 
 
 @celery.task

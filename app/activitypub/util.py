@@ -17,7 +17,7 @@ import pytesseract
 from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
-from sqlalchemy import text
+from sqlalchemy import text, Integer
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
@@ -1617,6 +1617,14 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                 add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete,
                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
+            # remove any notifications about the post
+            notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == to_delete.id)
+            for notif in notifs:
+                # dont delete report notifs
+                if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+                    continue
+                db.session.delete(notif)
+            db.session.commit()
         elif isinstance(to_delete, PostReply):
             with redis_client.lock(f"lock:post_reply:{to_delete.id}", timeout=10, blocking_timeout=6):
                 to_delete.deleted = True

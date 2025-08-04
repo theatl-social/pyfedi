@@ -8,7 +8,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, constants, cache, limiter
@@ -16,7 +16,7 @@ from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
-from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -1017,6 +1017,16 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
     if post.user_id != user.id and reason is not None:
         add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
                       link_text=shorten_string(post.title), link=f'post/{post.id}')
+        
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
