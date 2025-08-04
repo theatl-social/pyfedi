@@ -3050,6 +3050,9 @@ def archive_post(post_id: int):
             with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
                 post = session.query(Post).get(post_id)
 
+                if post is None:
+                    return
+
                 # Delete thumbnail and medium sized versions if post has an image
                 if post.image_id is not None:
 
