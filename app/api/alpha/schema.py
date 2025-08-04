@@ -401,6 +401,7 @@ class ListCommunitiesRequest(DefaultSchema):
 
 class ListCommunitiesResponse(DefaultSchema):
     communities = fields.List(fields.Nested(CommunityView), required=True)
+    next_page = fields.String()
 
 
 class FollowCommunityRequest(DefaultSchema):
