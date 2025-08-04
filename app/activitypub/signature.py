@@ -122,7 +122,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                         log.exception_message = f'{result.status_code}: HTML instead of JSON response'
                         # log.activity_json += result.text[]
                     elif 'community_has_no_followers' in result.text:
-                        fix_local_community_membership(uri, private_key)
+                        fix_local_community_membership(uri, private_key, session)
                     else:
                         if current_app.debug:
                             current_app.logger.error(f'Response code for post attempt to {uri} was ' +
@@ -572,17 +572,17 @@ def default_context():
     return context
 
 
-def fix_local_community_membership(uri: str, private_key: str):
-    community = Community.query.filter_by(private_key=private_key).first()
+def fix_local_community_membership(uri: str, private_key: str, session):
+    community = session.query(Community).filter_by(private_key=private_key).first()
     parsed_url = urlparse(uri)
     instance_domain = parsed_url.netloc
-    instance = Instance.query.filter_by(domain=instance_domain).first()
+    instance = session.query(Instance).filter_by(domain=instance_domain).first()
 
     if community and instance:
-        followers = CommunityMember.query.filter_by(community_id=community.id). \
+        followers = session.query(CommunityMember).filter_by(community_id=community.id). \
             join(User, User.id == CommunityMember.user_id). \
             filter(User.instance_id == instance.id)
         for f in followers:
-            db.session.execute(
+            session.execute(
                 text('DELETE FROM "community_member" WHERE user_id = :user_id AND community_id = :community_id'),
                 {'user_id': f.user_id, 'community_id': community.id})
