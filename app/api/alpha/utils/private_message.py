@@ -139,23 +139,17 @@ def put_private_message(auth, data):
     return private_message_view(private_message, variant=2)
 
 
-def delete_private_message(auth, data):
+def post_private_message_delete(auth, data):
+    required(['private_message_id', 'deleted'], data)
     boolean_expected(['deleted'], data)
-    integer_expected(['message_id'], data)
-    
-    chat_message_id = int(data['message_id'])
-    deleted = data["deleted"]
+    integer_expected(['private_message_id'], data)
+
+    chat_message_id = int(data['private_message_id'])
+    deleted = data['deleted']
 
     user_id = authorise_api_user(auth)
-    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id)[0]
-
-    if not deleted:
-        return private_message_view(private_message, variant=2)
-
+    private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id).one()
     private_message.deleted = deleted
-    private_message.body = "Message Deleted"
-    private_message.body_html = markdown_to_html("Message Deleted")
-    db.session.add(private_message)
     db.session.commit()
 
     return private_message_view(private_message, variant=2)
@@ -164,7 +158,7 @@ def delete_private_message(auth, data):
 def report_private_message(auth, data):
     integer_expected(['message_id'], data)
     string_expected(['reason'], data)
-    
+
     chat_message_id = int(data['message_id']) if data and 'message_id' in data else None
     reason = data["reason"]
 
