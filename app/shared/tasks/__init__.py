@@ -7,7 +7,7 @@ def task_selector(task_key, send_async=True, **kwargs):
     from app.shared.tasks.likes import vote_for_post, vote_for_reply
     from app.shared.tasks.notes import make_reply, edit_reply
     from app.shared.tasks.deletes import delete_reply, restore_reply, delete_post, restore_post, delete_community, \
-        restore_community, delete_posts_with_blocked_images
+        restore_community, delete_posts_with_blocked_images, delete_pm, restore_pm
     from app.shared.tasks.flags import report_reply, report_post
     from app.shared.tasks.pages import make_post, edit_post
     from app.shared.tasks.locks import lock_post, unlock_post, lock_post_reply, unlock_post_reply
@@ -48,6 +48,8 @@ def task_selector(task_key, send_async=True, **kwargs):
         'unban_from_site': unban_from_site,
         'add_mod': add_mod,
         'remove_mod': remove_mod,
+        'delete_pm': delete_pm,
+        'restore_pm': restore_pm,
     }
 
     if current_app.debug:
