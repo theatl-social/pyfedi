@@ -1142,10 +1142,8 @@ def process_inbox_request(request_json, store_ap_json):
                                 announce_activity_to_followers(to_delete.community, user, request_json)
                     else:
                         # no content found. check if it was a PM
-                        updated_message = session.query(ChatMessage).filter_by(ap_id=ap_id).first()
+                        updated_message = session.query(ChatMessage).filter_by(ap_id=ap_id, sender_id=user.id).first()
                         if updated_message:
-                            updated_message.body_html = '<p>Deleted by sender</p>'
-                            updated_message.body = 'Deleted by sender'
                             updated_message.read = True
                             updated_message.deleted = True
                             session.commit()
@@ -1533,8 +1531,13 @@ def process_inbox_request(request_json, store_ap_json):
                                 if not announced:
                                     announce_activity_to_followers(to_restore.community, user, request_json)
                         else:
-                            log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, saved_json,
-                                            'Undo delete: cannot find ' + ap_id)
+                            # no content found. check if it was a PM
+                            updated_message = session.query(ChatMessage).filter_by(ap_id=ap_id, sender_id=restorer.id).first()
+                            if updated_message:
+                                updated_message.deleted = False
+                                session.commit()
+                                log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, saved_json,
+                                            f"Delete: PM {ap_id} restored")
                         return
 
                     if core_activity['object']['type'] == 'Like' or core_activity['object']['type'] == 'Dislike':  # Undoing an upvote or downvote
