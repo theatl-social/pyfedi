@@ -7,9 +7,10 @@
 import imaplib
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timedelta
-from random import randint
+from random import randint, uniform
 from time import sleep
 from zoneinfo import ZoneInfo
 
@@ -361,6 +362,8 @@ def register(app):
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
 
+                            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
                             for to_send in session.query(SendQueue).filter(SendQueue.send_after < utcnow()):
@@ -380,8 +383,7 @@ def register(app):
 
                             publish_scheduled_posts()
 
-                            if current_app.config['FEP_AWESOME']:
-                                send_batched_activities()
+                            send_batched_activities()
 
                     except redis.exceptions.LockError:
                         print('Send queue is still running - stopping this process to avoid duplication.')

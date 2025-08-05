@@ -142,7 +142,5 @@ class Config(object):
     # Country Header sourcing
     COUNTRY_SOURCE_HEADER = os.environ.get('COUNTRY_SOURCE_HEADER') or ''
 
-    FEP_AWESOME = os.environ.get('FEP_AWESOME') or False
-
     # render a post+replies to json and delete from DB after this many months
     ARCHIVE_POSTS = int(os.environ.get('ARCHIVE_POSTS') or 0)

@@ -112,7 +112,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
                 # Remove context for inner object
                 del payload_copy['@context']
 
-                if current_app.config['FEP_AWESOME'] and instance.software == 'piefed':  # Send in a batch later
+                if instance.software == 'piefed':  # Send in a batch later
                     session.add(ActivityBatch(instance_id=instance.id, community_id=community.id, payload=payload_copy))
                     session.commit()
                 else:
