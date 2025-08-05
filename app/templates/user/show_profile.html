@@ -303,6 +303,44 @@
                 </div>
             </div>
         {% endif %}
+        {% if current_user.is_authenticated and current_user.is_admin_or_staff() %}
+            {% if same_ip_address and len(same_ip_address) -%}
+                <div class="card mb-3">
+                    <div class="card-header"><h2>{{ _("Same IP address") }}</h2></div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for alt in same_ip_address -%}
+                                <li class="list-group-item">
+                                    {{ render_username(alt) }}
+                                </li>
+                            {% endfor -%}
+                        </ul>
+                    </div>
+                </div>
+            {% endif %}
+        {% endif -%}
+        {% if current_user.is_authenticated and (user_access('ban users', current_user.id) or user_access('manage users', current_user.id)) and user.id != current_user.id %}
+            <div class="card mb-3">
+                <div class="card-header">
+                     <h2>{{ _('Moderate user') }}</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
+                            {% if user.banned %}
+                                <div class="col-4">
+                                    <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
+                                </div>
+                            {% else %}
+                                <div class="col-4">
+                                    <a class="w-100 btn btn-primary" href="/u/{{ user.link() }}/ban">{{ _('Ban') }}</a>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endif %}
         {% if len(subscribed) > 0 or len(moderates) > 0 %}
             <div class="card mb-3">
                 <div class="card-header">
@@ -329,28 +367,6 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
-                </div>
-            </div>
-        {% endif %}
-        {% if current_user.is_authenticated and (user_access('ban users', current_user.id) or user_access('manage users', current_user.id)) and user.id != current_user.id %}
-            <div class="card mb-3">
-                <div class="card-header">
-                     <h2>{{ _('Moderate user') }}</h2>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
-                            {% if user.banned %}
-                                <div class="col-4">
-                                    <a class="w-100 btn btn-primary confirm_first send_post" href='#' data-url="/u/{{ user.link() }}/unban">{{ _('Unban') }}</a>
-                                </div>
-                            {% else %}
-                                <div class="col-4">
-                                    <a class="w-100 btn btn-primary" href="/u/{{ user.link() }}/ban">{{ _('Ban') }}</a>
-                                </div>
-                            {% endif %}
-                        {% endif %}
-                    </div>
                 </div>
             </div>
         {% endif %}

@@ -141,6 +141,15 @@ def _get_user_moderates(user):
     return moderates.all()
 
 
+def _get_user_same_ip(user):
+    """Get users that have the same IP address as this user"""
+
+    if current_user.is_anonymous or user.ip_address is None or user.ip_address == '':
+        return []
+
+    return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None).all()
+
+
 def _get_user_upvoted_posts(user):
     """Get posts upvoted by user (only for user themselves or admins)."""
     if current_user.is_authenticated and (user.id == current_user.get_id() or current_user.is_admin()):
@@ -179,6 +188,7 @@ def show_profile(user):
     posts = _get_user_posts(user, post_page)
     post_replies = _get_user_post_replies(user, replies_page)
     overview_items, overview_has_next_page = _get_user_posts_and_replies(user, overview_page)
+    same_ip_address = _get_user_same_ip(user)
 
     # profile info
     canonical = user.ap_public_url if user.ap_public_url else None
@@ -228,7 +238,7 @@ def show_profile(user):
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
                            overview_items=overview_items, overview_next_url=overview_next_url,
-                           overview_prev_url=overview_prev_url)
+                           overview_prev_url=overview_prev_url, same_ip_address=same_ip_address)
 
 
 @bp.route('/u/<actor>/profile', methods=['GET', 'POST'])
