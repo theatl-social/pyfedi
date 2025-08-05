@@ -147,7 +147,7 @@ def _get_user_same_ip(user):
     if current_user.is_anonymous or user.ip_address is None or user.ip_address == '':
         return []
 
-    return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None, User.id != current_user.id).all()
+    return User.query.filter_by(ip_address=user.ip_address).filter(User.ap_id == None, User.id != user.id).all()
 
 
 def _get_user_upvoted_posts(user):
