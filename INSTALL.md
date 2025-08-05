@@ -380,16 +380,13 @@ Description=Celery Service
 After=network.target
 
 [Service]
-Type=forking
+Type=simple
 User=rimu
 Group=rimu
-EnvironmentFile=/etc/default/celeryd
 WorkingDirectory=/home/rimu/pyfedi
-ExecStart=/bin/sh -c '${CELERY_BIN} multi start -A ${CELERY_APP} ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE} \
-  --logfile=${CELERYD_LOG_FILE} ${CELERYD_OPTS}'
-ExecStop=/bin/sh -c '${CELERY_BIN} multi stopwait ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE}'
-ExecReload=/bin/sh -c '${CELERY_BIN} multi restart -A ${CELERY_APP} ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE} \
-  --logfile=${CELERYD_LOG_FILE} ${CELERYD_OPTS}'
+ExecStart=/bin/bash -c '. /etc/default/celeryd && exec "$CELERY_BIN" -A "$CELERY_APP" worker --loglevel="$CELERYD_LOG_LEVEL" $CELERYD_OPTS'
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
