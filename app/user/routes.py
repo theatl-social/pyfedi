@@ -1312,6 +1312,8 @@ def import_settings_task(user_id, filename):
                                 if not existing_member:
                                     member = CommunityMember(user_id=user.id, community_id=community.id)
                                     session.add(member)
+                                    community.subscriptions_count += 1
+                                    community.total_subscriptions_count += 1
                                     session.commit()
                                 if not community.instance.gone_forever:
                                     follow = {
@@ -1331,6 +1333,8 @@ def import_settings_task(user_id, filename):
                                     if not existing_member:
                                         member = CommunityMember(user_id=user.id, community_id=community.id)
                                         session.add(member)
+                                        community.subscriptions_count += 1
+                                        community.total_subscriptions_count += 1
                                         session.commit()
                             cache.delete_memoized(community_membership, user, community)
 
