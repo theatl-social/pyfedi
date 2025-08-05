@@ -345,7 +345,7 @@ class File(db.Model):
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
-    def delete_from_disk(self):
+    def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
         s3_files_to_delete = []
         if self.file_path:
@@ -401,7 +401,7 @@ class File(db.Model):
             s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
             s3.close()
 
-        if purge_from_cache:
+        if purge_cdn and purge_from_cache:
             flush_cdn_cache(purge_from_cache)
 
     def filesize(self):
