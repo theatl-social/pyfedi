@@ -80,7 +80,7 @@ def add_local():
     if g.site.enable_nsfw is False:
         form.nsfw.render_kw = {'disabled': True}
 
-    form.languages.choices = languages_for_form(all=True)
+    form.languages.choices = languages_for_form(all_languages=True)
 
     if form.validate_on_submit():
         if form.url.data.strip().lower().startswith('/c/'):
@@ -1021,7 +1021,7 @@ def community_edit(community_id: int):
     if community.is_owner() or current_user.is_admin() or community.is_moderator():
         form = EditCommunityForm()
         form.topic.choices = topics_for_form(0)
-        form.languages.choices = languages_for_form(all=True)
+        form.languages.choices = languages_for_form(all_languages=True)
         if g.site.enable_nsfw is False:
             form.nsfw.render_kw = {'disabled': True}
         if form.validate_on_submit():

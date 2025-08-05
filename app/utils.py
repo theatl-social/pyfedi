@@ -1985,12 +1985,13 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
     return sorted(reply_ids)
 
 
-def languages_for_form(all=False):
+def languages_for_form(all_languages=False):
     used_languages = []
-    other_languages = []
     if current_user.is_authenticated:
+        if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
+            all_languages=True
         # if they've defined which languages they read, only present those as options for writing.
-        # otherwise, present their most recently used languages
+        # otherwise, present their most recently used languages and then all other languages
         if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
             recently_used_language_ids = db.session.execute(text("""SELECT language_id
                                                                     FROM (
@@ -2028,7 +2029,7 @@ def languages_for_form(all=False):
             i = used_languages.index((language.id, ""))
             used_languages[i] = (language.id, language.name)
         except:
-            if all and language.code != "und":
+            if all_languages and language.code != "und":
                 other_languages.append((language.id, language.name))
 
     return used_languages + other_languages

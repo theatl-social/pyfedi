@@ -193,7 +193,7 @@ def admin_misc():
     if site is None:
         site = Site()
     form.default_theme.choices = theme_list()
-    form.language_id.choices = languages_for_form(all=True)
+    form.language_id.choices = languages_for_form(all_languages=True)
     if form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
         site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
@@ -1117,7 +1117,7 @@ def admin_community_edit(community_id):
     community = Community.query.get_or_404(community_id)
     old_topic_id = community.topic_id if community.topic_id else None
     form.topic.choices = topics_for_form(0)
-    form.languages.choices = languages_for_form(all=True)
+    form.languages.choices = languages_for_form(all_languages=True)
     if form.validate_on_submit():
         community.name = form.url.data
         community.title = form.title.data
