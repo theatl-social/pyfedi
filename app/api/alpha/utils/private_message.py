@@ -7,6 +7,7 @@ from app.constants import NOTIF_MESSAGE, NOTIF_REPORT
 from app.chat.util import send_message, update_message
 from app.models import ChatMessage, Conversation, User, Notification, Report, Site
 from app.utils import authorise_api_user, markdown_to_html
+from app.shared.tasks import task_selector
 
 
 def get_private_message_list(auth, data):
@@ -151,6 +152,11 @@ def post_private_message_delete(auth, data):
     private_message = ChatMessage.query.filter_by(sender_id=user_id, id=chat_message_id).one()
     private_message.deleted = deleted
     db.session.commit()
+
+    if deleted:
+        task_selector('delete_pm', message_id=private_message.id)
+    else:
+        task_selector('restore_pm', message_id=private_message.id)
 
     return private_message_view(private_message, variant=2)
 
