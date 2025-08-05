@@ -82,6 +82,9 @@ sudo docker compose up -d
 - During startup, you might see "Running configuration check..." followed by validation messages. Checkmarks (✅)
 indicate successful configuration, warnings (⚠️) are usually fine to ignore, but X marks (❌) indicate critical issues that need fixing.
 
+At this point you have PieFed listening on port 8030. You will need Nginx, etc as a reverse proxy to forward connections
+on port 443 to 8030, or a Cloudflare tunnel going to 8030, or wireguard, etc.
+
 #### SETUP CRON (AUTOMATED) JOBS
 ```bash
 sudo nano /etc/cron.d/piefed
