@@ -376,7 +376,6 @@ def put_alpha_community_moderate_unban(data):
     try:
         auth = request.headers.get("Authorization")
         resp = put_community_moderate_unban(auth, data)
-        print(resp)
         return CommunityModerationBanItem().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
