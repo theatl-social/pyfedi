@@ -784,10 +784,9 @@ def process_inbox_request(request_json, store_ap_json):
                     elif isinstance(request_json['object'], list):  # PieFed can Announce an unlimited amount of objects at once, as long as they are all from the same community.
                         for obj in request_json['object']:
                             # Convert each object into the list into an identical Announce activity containing just that object
-                            if obj['audience'] == request_json['actor']:    # Check if same community. This ensures the HTTP Sig on the original announce is valid for all objects.
-                                fake_activity = request_json.copy()
-                                fake_activity['object'] = obj
-                                process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
+                            fake_activity = request_json.copy()
+                            fake_activity['object'] = obj
+                            process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
                         return
 
                     if not feed:
