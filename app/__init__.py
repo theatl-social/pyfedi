@@ -98,6 +98,10 @@ def create_app(config_class=Config):
                     "description": "This instance"
                 },
                 {
+                    "url": "https://crust.piefed.social",
+                    "description": "Development instance",
+                },
+                {
                     "url": "https://piefed.social",
                 },
                 {
