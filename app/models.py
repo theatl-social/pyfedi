@@ -1888,7 +1888,7 @@ class Post(db.Model):
 
         if self.archived:
             if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
-                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_path = self.archived.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete = []
                 s3_files_to_delete.append(s3_path)
                 delete_payload = {
