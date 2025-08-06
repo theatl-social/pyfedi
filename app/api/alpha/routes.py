@@ -57,6 +57,7 @@ def get_alpha_site():
         resp = get_site(auth)
         return GetSiteResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -73,6 +74,7 @@ def get_alpha_site_block(data):
         resp = post_site_block(auth, data)
         return BlockInstanceResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -90,6 +92,7 @@ def get_alpha_search(data):
         resp = get_search(auth, data)
         return SearchResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -106,6 +109,7 @@ def get_alpha_resolve_object(data):
         resp = get_resolve_object(auth, data)
         return ResolveObjectResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -122,6 +126,7 @@ def get_alpha_federated_instances():
         resp = get_federated_instances(data)
         return GetFederatedInstancesResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -139,6 +144,7 @@ def get_alpha_community(data):
         resp = get_community(auth, data)
         return GetCommunityResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -155,6 +161,7 @@ def get_alpha_community_list(data):
         resp = get_community_list(auth, data)
         return ListCommunitiesResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -171,6 +178,7 @@ def post_alpha_community_follow(data):
         resp = post_community_follow(auth, data)
         return CommunityResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -187,6 +195,7 @@ def post_alpha_community_block(data):
         resp = post_community_block(auth, data)
         return BlockCommunityResponse().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -207,6 +216,7 @@ def post_alpha_community(data):
     except RateLimitExceeded as ex:
         return abort(429, message=str(ex))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -219,6 +229,7 @@ def put_alpha_community():
         data = request.get_json(force=True) or {}
         return jsonify(put_community(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -233,6 +244,7 @@ def put_alpha_community_subscribe():
     except NoResultFound:
         return jsonify({"error": "Community not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -245,6 +257,7 @@ def post_alpha_community_delete():
         data = request.get_json(force=True) or {}
         return jsonify(post_community_delete(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -257,6 +270,7 @@ def post_alpha_community_mod():
         data = request.get_json(force=True) or {}
         return jsonify(post_community_mod(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -271,6 +285,7 @@ def get_alpha_community_moderate_bans():
         data['page'] = request.args.get('page', '1')
         return jsonify(get_community_moderate_bans(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -283,6 +298,7 @@ def put_alpha_community_moderate_unban():
         data = request.get_json(force=True) or {}
         return jsonify(put_community_moderate_unban(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -295,6 +311,7 @@ def post_alpha_community_moderate_ban():
         data = request.get_json(force=True) or {}
         return jsonify(post_community_moderate_ban(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -307,6 +324,7 @@ def post_alpha_community_moderate_post_nsfw():
         data = request.get_json(force=True) or {}
         return jsonify(post_community_moderate_post_nsfw(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -320,6 +338,7 @@ def get_alpha_feed_list():
         data = request.args.to_dict() or None
         return orjson_response(get_feed_list(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -333,6 +352,7 @@ def get_alpha_post_list():
         data = request.args.to_dict() or None
         return orjson_response(get_post_list(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -345,6 +365,7 @@ def get_alpha_post():
         data = request.args.to_dict() or None
         return jsonify(get_post(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -352,12 +373,13 @@ def get_alpha_post():
 def get_alpha_post_replies():
     if not enable_api():
         return jsonify({'error': 'api is not enabled'}), 400
-    #try:
-    auth = request.headers.get('Authorization')
-    data = request.args.to_dict() or None
-    return orjson_response(get_post_reply_list(auth, data))
-    #except Exception as ex:
-    #    return jsonify({"error": str(ex)}), 400
+    try:
+        auth = request.headers.get('Authorization')
+        data = request.args.to_dict() or None
+        return orjson_response(get_post_reply_list(auth, data))
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return jsonify({"error": str(ex)}), 400
 
 
 @bp.route('/api/alpha/post/like', methods=['POST'])
@@ -369,6 +391,7 @@ def post_alpha_post_like():
         data = request.get_json(force=True) or {}
         return jsonify(post_post_like(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -383,6 +406,7 @@ def put_alpha_post_save():
     except NoResultFound:
         return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -397,6 +421,7 @@ def put_alpha_post_subscribe():
     except NoResultFound:
         return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -412,6 +437,7 @@ def post_alpha_post():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -424,6 +450,7 @@ def put_alpha_post():
         data = request.get_json(force=True) or {}
         return jsonify(put_post(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -448,6 +475,7 @@ def post_alpha_post_report():
         data = request.get_json(force=True) or {}
         return jsonify(post_post_report(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -460,6 +488,7 @@ def post_alpha_post_lock():
         data = request.get_json(force=True) or {}
         return jsonify(post_post_lock(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -472,6 +501,7 @@ def post_alpha_post_feature():
         data = request.get_json(force=True) or {}
         return jsonify(post_post_feature(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -484,6 +514,7 @@ def post_alpha_post_remove():
         data = request.get_json(force=True) or {}
         return jsonify(post_post_remove(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -498,6 +529,7 @@ def post_alpha_post_mark_as_read():
     except NoResultFound:
         return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -511,6 +543,7 @@ def get_alpha_comment_list():
         data = request.args.to_dict() or None
         return orjson_response(get_reply_list(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -523,6 +556,7 @@ def post_alpha_comment_like():
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_like(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -537,6 +571,7 @@ def put_alpha_comment_save():
     except NoResultFound:
         return jsonify({"error": "Comment not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -551,6 +586,7 @@ def put_alpha_comment_subscribe():
     except NoResultFound:
         return jsonify({"error": "Comment not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -566,6 +602,7 @@ def post_alpha_comment():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -578,6 +615,7 @@ def put_alpha_comment():
         data = request.get_json(force=True) or {}
         return jsonify(put_reply(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -590,6 +628,7 @@ def post_alpha_comment_delete():
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_delete(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -602,6 +641,7 @@ def post_alpha_comment_report():
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_report(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -614,6 +654,7 @@ def post_alpha_comment_remove():
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_remove(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -626,6 +667,7 @@ def post_alpha_comment_mark_as_read():
         data = request.get_json(force=True) or {}
         return jsonify(post_reply_mark_as_read(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -638,6 +680,7 @@ def get_alpha_comment():
         data = request.args.to_dict() or None
         return jsonify(get_reply(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -651,6 +694,7 @@ def get_alpha_private_message_list():
         data = request.args.to_dict() or None
         return jsonify(get_private_message_list(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -665,6 +709,7 @@ def get_alpha_private_message_conversation():
     except NoResultFound:
         return jsonify({"error": "Person not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -682,6 +727,7 @@ def post_alpha_private_message():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -696,6 +742,7 @@ def put_alpha_private_message():
     except NoResultFound:
         return jsonify({"error": "Message not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -710,6 +757,7 @@ def post_alpha_private_message_mark_as_read():
     except NoResultFound:
         return jsonify({"error": "Message not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -724,6 +772,7 @@ def post_alpha_private_message_delete():
     except NoResultFound:
         return jsonify({"error": "Message not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -738,6 +787,7 @@ def post_alpha_private_message_report():
     except NoResultFound:
         return jsonify({"error": "Message not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -751,6 +801,7 @@ def get_alpha_topic_list():
         data = request.args.to_dict() or None
         return orjson_response(get_topic_list(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -766,6 +817,7 @@ def get_alpha_user():
     except NoResultFound:
         return jsonify({"error": "User not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -781,6 +833,7 @@ def post_alpha_user_login():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -792,6 +845,7 @@ def get_alpha_user_unread_count():
         auth = request.headers.get('Authorization')
         return jsonify(get_user_unread_count(auth))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -804,6 +858,7 @@ def get_alpha_user_replies():
         data = request.args.to_dict() or None
         return jsonify(get_user_replies(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -816,6 +871,7 @@ def get_alpha_user_mentions():
         data = request.args.to_dict() or None
         return jsonify(get_user_replies(auth, data, mentions=True))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -828,6 +884,7 @@ def post_alpha_user_block():
         data = request.get_json(force=True) or {}
         return jsonify(post_user_block(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -839,6 +896,7 @@ def post_alpha_user_mark_all_as_read():
         auth = request.headers.get('Authorization')
         return jsonify(post_user_mark_all_as_read(auth))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -853,6 +911,7 @@ def put_alpha_user_subscribe():
     except NoResultFound:
         return jsonify({"error": "User not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -866,6 +925,7 @@ def put_alpha_user_save_user_settings():
         data = request.get_json(force=True) or {}
         return jsonify(put_user_save_user_settings(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -880,6 +940,7 @@ def get_alpha_user_notifications():
         data['page'] = request.args.get('page', '1')
         return jsonify(get_user_notifications(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -894,6 +955,7 @@ def put_alpha_user_notification_state():
     except NoResultFound:
         return jsonify({"error": "Notification not found"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -905,6 +967,7 @@ def get_alpha_user_notifications_count():
         auth = request.headers.get('Authorization')
         return jsonify(get_user_notifications_count(auth))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -916,6 +979,7 @@ def put_alpha_user_notifications_read():
         auth = request.headers.get('Authorization')
         return jsonify(put_user_mark_all_notifications_read(auth))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -932,6 +996,7 @@ def post_alpha_user_verify_credentials():
     except NoResultFound:
         return jsonify({"error": "Bad credentials"}), 400
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -944,6 +1009,7 @@ def post_alpha_user_set_flair():
         data = request.get_json(force=True) or {}
         return jsonify(post_user_set_flair(auth, data))
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -960,6 +1026,7 @@ def post_alpha_upload_image():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -975,6 +1042,7 @@ def post_alpha_upload_community_image():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -990,6 +1058,7 @@ def post_alpha_upload_user_image():
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
     except Exception as ex:
+        current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
 
 
@@ -1036,7 +1105,7 @@ def alpha_reply():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
-# Chat - not yet implemented
+# Chat
 @bp.route('/api/alpha/private_message/report/resolve', methods=['PUT'])  # Stage 2
 @bp.route('/api/alpha/private_message/report/list', methods=['GET'])  # Stage 2
 def alpha_chat():
