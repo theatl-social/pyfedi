@@ -42,7 +42,7 @@ webauthn~=2.5.0
 ldap3~=2.9.0
 sqlalchemy~=2.0.0
 orjson~=3.10.0
-marshmallow  # 3.26.1 is automatically resolved
-flask-smorest  # 0.42.3 is automatically resolved
+marshmallow~=4.0.0
+flask-smorest~=0.46.1
 uvicorn[standard]==0.35.0  # ASGI server for async Flask apps
 asgiref==3.9.1  # WSGI to ASGI adapter
