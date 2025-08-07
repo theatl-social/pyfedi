@@ -2150,41 +2150,23 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
         for notify_id in send_notifs_to:
             if new_reply.user_id != notify_id:
                 author = User.query.get(new_reply.user_id)
-                if new_reply.depth <= THREAD_CUTOFF_DEPTH:
-                    targets_data = {'gen': '0',
-                                    'post_id': parent_reply.post.id,
-                                    'parent_reply_body': parent_reply.body,
-                                    'comment_id': new_reply.id,
-                                    'comment_body': new_reply.body,
-                                    'author_id': new_reply.user_id,
-                                    'author_user_name': author.ap_id if author.ap_id else author.user_name, }
-                    with force_locale(get_recipient_language(notify_id)):
-                        new_notification = Notification(
-                            title=shorten_string(gettext('Reply to comment on %(post_title)s',
-                                                         post_title=parent_reply.post.title), 150),
-                            url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
-                            user_id=notify_id, author_id=new_reply.user_id,
-                            notif_type=NOTIF_REPLY,
-                            subtype='new_reply_on_followed_comment',
-                            targets=targets_data)
-                else:
-                    targets_data = {'gen': '0',
-                                    'post_id': parent_reply.post.id,
-                                    'parent_comment_id': parent_reply.id,
-                                    'parent_reply_body': parent_reply.body,
-                                    'comment_id': new_reply.id,
-                                    'comment_body': new_reply.body,
-                                    'author_id': new_reply.user_id,
-                                    'author_user_name': author.ap_id if author.ap_id else author.user_name, }
-                    with force_locale(get_recipient_language(notify_id)):
-                        new_notification = Notification(
-                            title=shorten_string(gettext('Reply to comment on %(post_title)s',
-                                                         post_title=parent_reply.post.title), 150),
-                            url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
-                            user_id=notify_id, author_id=new_reply.user_id,
-                            notif_type=NOTIF_REPLY,
-                            subtype='new_reply_on_followed_comment',
-                            targets=targets_data)
+                targets_data = {'gen': '0',
+                                'post_id': parent_reply.post.id,
+                                'parent_comment_id': new_reply.parent_id,
+                                'parent_reply_body': parent_reply.body,
+                                'comment_id': new_reply.id,
+                                'comment_body': new_reply.body,
+                                'author_id': new_reply.user_id,
+                                'author_user_name': author.ap_id if author.ap_id else author.user_name, }
+                with force_locale(get_recipient_language(notify_id)):
+                    new_notification = Notification(
+                        title=shorten_string(gettext('Reply to comment on %(post_title)s',
+                                                     post_title=parent_reply.post.title), 150),
+                        url=f"/post/{parent_reply.post.id}/comment/{new_reply.parent_id}#comment_{new_reply.id}",
+                        user_id=notify_id, author_id=new_reply.user_id,
+                        notif_type=NOTIF_REPLY,
+                        subtype='new_reply_on_followed_comment',
+                        targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
