@@ -147,3 +147,5 @@ class Config(object):
 
     # How long to keep content in remote communities before automatically deleting posts. See 'class EditCommunityForm()' for allowed values
     DEFAULT_CONTENT_RETENTION = int(os.environ.get('DEFAULT_CONTENT_RETENTION') or -1)  # -1 = forever, no deletion
+
+    CONTENT_WARNING = int(os.environ.get('CONTENT_WARNING') or 0)
