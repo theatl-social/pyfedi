@@ -10,10 +10,10 @@ from sqlalchemy import or_
 
 from app import cache, db
 from app.activitypub.util import get_request, signed_get_request, actor_json_to_model, refresh_user_profile, \
-    refresh_community_profile, refresh_feed_profile, extract_domain_and_actor, instance_allowed, normalise_actor_string
+    refresh_community_profile, refresh_feed_profile, extract_domain_and_actor, normalise_actor_string
 from app.models import User, Community, Feed, Site
 from app.utils import utcnow, get_setting, actor_contains_blocked_words, actor_profile_contains_blocked_words, \
-    instance_banned, low_value_reposters
+    instance_banned, low_value_reposters, instance_allowed
 
 
 def find_local_community(actor_url: str) -> Community:

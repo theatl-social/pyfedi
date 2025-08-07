@@ -17,7 +17,7 @@ import pytesseract
 from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
-from sqlalchemy import text
+from sqlalchemy import text, Integer
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
@@ -235,17 +235,6 @@ def comment_model_to_json(reply: PostReply) -> dict:
 
 def banned_user_agents():
     return []  # todo: finish this function
-
-
-@cache.memoize(150)
-def instance_allowed(host: str) -> bool:
-    if host is None or host == '':
-        return True
-    host = host.lower()
-    if 'https://' in host or 'http://' in host:
-        host = urlparse(host).hostname
-    instance = AllowedInstances.query.filter_by(domain=host.strip()).first()
-    return instance is not None
 
 
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
@@ -968,7 +957,8 @@ def actor_json_to_model(activity_json, address, server):
                               ap_domain=server.lower(),
                               public_key=activity_json['publicKey']['publicKeyPem'],
                               # language=community_json['language'][0]['identifier'] # todo: language
-                              instance_id=find_instance_id(server)
+                              instance_id=find_instance_id(server),
+                              content_retention=current_app.config['DEFAULT_CONTENT_RETENTION']
                               )
         if get_setting('meme_comms_low_quality', False):
             community.low_quality = 'memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']
@@ -1617,6 +1607,14 @@ def delete_post_or_comment(deletor, to_delete, store_ap_json, request_json, reas
                 add_to_modlog('delete_post', actor=deletor, target_user=to_delete.author, reason=reason,
                               community=community, post=to_delete,
                               link_text=shorten_string(to_delete.title), link=f'post/{to_delete.id}')
+            # remove any notifications about the post
+            notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == to_delete.id)
+            for notif in notifs:
+                # dont delete report notifs
+                if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+                    continue
+                db.session.delete(notif)
+            db.session.commit()
         elif isinstance(to_delete, PostReply):
             with redis_client.lock(f"lock:post_reply:{to_delete.id}", timeout=10, blocking_timeout=6):
                 to_delete.deleted = True

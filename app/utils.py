@@ -52,7 +52,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark
+    PostReply, PostReplyBookmark, AllowedInstances
 
 
 # Flask's render_template function, with support for themes added
@@ -990,10 +990,12 @@ def trustworthy_account_required(func):
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
+        if current_app.config['CONTENT_WARNING'] and request.cookies.get('warned') is None:
+            return redirect(url_for('main.content_warning', next=request.path))
         if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
             return func(*args, **kwargs)
         else:
-            return redirect(url_for('auth.login'))
+            return redirect(url_for('auth.login', next=referrer()))
 
     return decorated_view
 
@@ -1111,6 +1113,17 @@ def user_ip_banned() -> bool:
     current_ip_address = ip_address()
     if current_ip_address:
         return current_ip_address in banned_ip_addresses()
+
+
+@cache.memoize(150)
+def instance_allowed(host: str) -> bool:
+    if host is None or host == '':
+        return True
+    host = host.lower()
+    if 'https://' in host or 'http://' in host:
+        host = urlparse(host).hostname
+    instance = db.session.query(AllowedInstances).filter_by(domain=host.strip()).first()
+    return instance is not None
 
 
 @cache.memoize(timeout=150)
@@ -1592,6 +1605,11 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
         {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
+#@cache.memoize(timeout=30)
+def num_topics() -> int:
+    return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
+
+
 # topics, in a tree
 def topic_tree() -> List:
     topics = Topic.query.order_by(Topic.name)
@@ -1656,20 +1674,24 @@ def url_to_thumbnail_file(filename) -> File:
     if response.status_code == 200:
         content_type = response.headers.get('content-type')
         if content_type and content_type.startswith('image'):
-            # Generate file extension from mime type
-            if ';' in content_type:
-                content_type_parts = content_type.split(';')
-                content_type = content_type_parts[0]
-            content_type_parts = content_type.split('/')
-            if content_type_parts:
-                file_extension = '.' + content_type_parts[-1]
-                if file_extension == '.jpeg':
-                    file_extension = '.jpg'
+            # Don't need to generate thumbnail for svg image
+            if "svg" in content_type:
+                file_extension = final_ext = ".svg"
             else:
-                file_extension = os.path.splitext(filename)[1]
-                file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
-                if '?' in file_extension:
-                    file_extension = file_extension.split('?')[0]
+                # Generate file extension from mime type
+                if ';' in content_type:
+                    content_type_parts = content_type.split(';')
+                    content_type = content_type_parts[0]
+                content_type_parts = content_type.split('/')
+                if content_type_parts:
+                    file_extension = '.' + content_type_parts[-1]
+                    if file_extension == '.jpeg':
+                        file_extension = '.jpg'
+                else:
+                    file_extension = os.path.splitext(filename)[1]
+                    file_extension = file_extension.replace('%3f', '?')  # sometimes urls are not decoded properly
+                    if '?' in file_extension:
+                        file_extension = file_extension.split('?')[0]
 
             new_filename = gibberish(15)
             if store_files_in_s3():
@@ -1683,46 +1705,50 @@ def url_to_thumbnail_file(filename) -> File:
                 f.write(response.content)
             response.close()
 
-            # Use environment variables to determine URL thumbnail
+            if file_extension != ".svg":
+                # Use environment variables to determine URL thumbnail
 
-            medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
-            medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
+                medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
 
-            final_ext = file_extension
+                final_ext = file_extension
 
-            if medium_image_format == 'AVIF':
-                import pillow_avif  # NOQA
+                if medium_image_format == 'AVIF':
+                    import pillow_avif  # NOQA
 
-            Image.MAX_IMAGE_PIXELS = 89478485
-            with Image.open(temp_file_path) as img:
-                img = ImageOps.exif_transpose(img)
-                img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                Image.MAX_IMAGE_PIXELS = 89478485
+                with Image.open(temp_file_path) as img:
+                    img = ImageOps.exif_transpose(img)
+                    img = img.convert('RGB' if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
 
-                # Create 170px thumbnail
-                img_170 = img.copy()
-                img_170.thumbnail((170, 170), resample=Image.LANCZOS)
+                    # Create 170px thumbnail
+                    img_170 = img.copy()
+                    img_170.thumbnail((170, 170), resample=Image.LANCZOS)
 
-                kwargs = {}
-                if medium_image_format:
-                    kwargs['format'] = medium_image_format.upper()
-                    final_ext = '.' + medium_image_format.lower()
-                    temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
-                if medium_image_quality:
-                    kwargs['quality'] = int(medium_image_quality)
+                    kwargs = {}
+                    if medium_image_format:
+                        kwargs['format'] = medium_image_format.upper()
+                        final_ext = '.' + medium_image_format.lower()
+                        temp_file_path = os.path.splitext(temp_file_path)[0] + final_ext
+                    if medium_image_quality:
+                        kwargs['quality'] = int(medium_image_quality)
 
-                img_170.save(temp_file_path, optimize=True, **kwargs)
-                thumbnail_width = img_170.width
-                thumbnail_height = img_170.height
+                    img_170.save(temp_file_path, optimize=True, **kwargs)
+                    thumbnail_width = img_170.width
+                    thumbnail_height = img_170.height
 
-                # Create 512px thumbnail
-                img_512 = img.copy()
-                img_512.thumbnail((512, 512), resample=Image.LANCZOS)
+                    # Create 512px thumbnail
+                    img_512 = img.copy()
+                    img_512.thumbnail((512, 512), resample=Image.LANCZOS)
 
-                # Create filename for 512px thumbnail
-                temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
-                img_512.save(temp_file_path_512, optimize=True, **kwargs)
-                thumbnail_512_width = img_512.width
-                thumbnail_512_height = img_512.height
+                    # Create filename for 512px thumbnail
+                    temp_file_path_512 = os.path.splitext(temp_file_path)[0] + '_512' + final_ext
+                    img_512.save(temp_file_path_512, optimize=True, **kwargs)
+                    thumbnail_512_width = img_512.width
+                    thumbnail_512_height = img_512.height
+            else:
+                thumbnail_width = thumbnail_height = None
+                thumbnail_512_width = thumbnail_512_height = None
 
             if store_files_in_s3():
                 content_type = guess_mime_type(temp_file_path)
@@ -1738,20 +1764,24 @@ def url_to_thumbnail_file(filename) -> File:
                 s3.upload_file(temp_file_path, current_app.config['S3_BUCKET'], 'posts/' +
                                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext,
                                ExtraArgs={'ContentType': content_type})
-                # Upload 512px thumbnail
-                s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
-                               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
-                               ExtraArgs={'ContentType': content_type})
                 os.unlink(temp_file_path)
-                os.unlink(temp_file_path_512)
                 thumbnail_170_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
                                     '/' + new_filename + final_ext
-                thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
-                                    '/' + new_filename + '_512' + final_ext
+                
+                if final_ext != ".svg":
+                    # Upload 512px thumbnail
+                    s3.upload_file(temp_file_path_512, current_app.config['S3_BUCKET'], 'posts/' +
+                                new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + '_512' + final_ext,
+                                ExtraArgs={'ContentType': content_type})
+                    os.unlink(temp_file_path_512)
+                    thumbnail_512_url = f"https://{current_app.config['S3_PUBLIC_URL']}/posts/{new_filename[0:2]}/{new_filename[2:4]}" + \
+                                        '/' + new_filename + '_512' + final_ext
+                else:
+                    thumbnail_512_url = thumbnail_170_url
             else:
                 # For local storage, use the temp file paths as final URLs
                 thumbnail_170_url = temp_file_path
-                thumbnail_512_url = temp_file_path_512
+                thumbnail_512_url = temp_file_path_512 if not file_extension == ".svg" else temp_file_path
             return File(file_path=thumbnail_512_url, thumbnail_width=thumbnail_width, width=thumbnail_512_width,
                         height=thumbnail_512_height,
                         thumbnail_height=thumbnail_height, thumbnail_path=thumbnail_170_url,
@@ -1973,12 +2003,13 @@ def recently_downvoted_post_replies(user_id) -> List[int]:
     return sorted(reply_ids)
 
 
-def languages_for_form(all=False):
+def languages_for_form(all_languages=False):
     used_languages = []
-    other_languages = []
     if current_user.is_authenticated:
+        if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
+            all_languages=True
         # if they've defined which languages they read, only present those as options for writing.
-        # otherwise, present their most recently used languages
+        # otherwise, present their most recently used languages and then all other languages
         if current_user.read_language_ids is None or len(current_user.read_language_ids) == 0:
             recently_used_language_ids = db.session.execute(text("""SELECT language_id
                                                                     FROM (
@@ -2016,7 +2047,7 @@ def languages_for_form(all=False):
             i = used_languages.index((language.id, ""))
             used_languages[i] = (language.id, language.name)
         except:
-            if all and language.code != "und":
+            if all_languages and language.code != "und":
                 other_languages.append((language.id, language.name))
 
     return used_languages + other_languages
@@ -2685,16 +2716,18 @@ def notif_id_to_string(notif_id) -> str:
 @cache.memoize(timeout=6000)
 def filtered_out_communities(user: User) -> List[int]:
     if user.community_keyword_filter:
-        communities = Community.query
+        keyword_filters = []
         for community_filter in user.community_keyword_filter.split(','):
-            if community_filter.strip():
-                communities = communities.filter(or_(Community.name.ilike(f"%{community_filter}%"),
-                                                     Community.title.ilike(f"%{community_filter}%"))
-                                                 )
-
-        return [community.id for community in communities.all()]
-    else:
-        return []
+            keyword = community_filter.strip()
+            if keyword:
+                keyword_filters.append(or_(Community.name.ilike(f"%{keyword}%"),
+                                           Community.title.ilike(f"%{keyword}%")))
+        
+        if keyword_filters:
+            communities = Community.query.filter(or_(*keyword_filters))
+            return [community.id for community in communities.all()]
+    
+    return []
 
 
 @cache.memoize(timeout=300)
@@ -3049,6 +3082,69 @@ def archive_post(post_id: int):
                 filename = f'post_{post_id}.json'
             with redis_client.lock(f"lock:post:{post_id}", timeout=300, blocking_timeout=6):
                 post = session.query(Post).get(post_id)
+
+                if post is None:
+                    return
+
+                # Delete thumbnail and medium sized versions if post has an image
+                if post.image_id is not None:
+
+                    image_file = session.query(File).get(post.image_id)
+                    if image_file:
+                        if store_files_in_s3():
+                            boto3_session = boto3.session.Session()
+                            s3 = boto3_session.client(
+                                service_name='s3',
+                                region_name=current_app.config['S3_REGION'],
+                                endpoint_url=current_app.config['S3_ENDPOINT'],
+                                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+                                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                            )
+
+                        # Delete thumbnail
+                        if image_file.thumbnail_path:
+                            if image_file.thumbnail_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.thumbnail_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3() and image_file.thumbnail_path.startswith(
+                                    f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.thumbnail_path = None
+
+                        # Delete medium sized version (file_path)
+                        if image_file.file_path:
+                            if image_file.file_path.startswith('app/'):
+                                # Local file deletion
+                                try:
+                                    os.unlink(image_file.file_path)
+                                except (OSError, FileNotFoundError):
+                                    pass
+                            elif store_files_in_s3() and image_file.file_path.startswith(
+                                    f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                                # S3 file deletion
+                                try:
+                                    s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
+                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
+                                except Exception:
+                                    pass
+                            image_file.file_path = None
+
+                        if store_files_in_s3():
+                            s3.close()
+
+                    session.commit()
+
+                if post.reply_count == 0 and (post.body is None or len(post.body) < 200):  # don't save to json when the url of the json will be longer than the savings from removing the body
+                    return
+
                 save_this = {}
 
                 save_this['id'] = post.id
@@ -3161,59 +3257,6 @@ def archive_post(post_id: int):
                         session.delete(reply)
                         session.commit()
 
-                # Delete thumbnail and medium sized versions if post has an image
-                if post.image_id is not None:
-
-                    image_file = session.query(File).get(post.image_id)
-                    if image_file:
-                        if store_files_in_s3():
-                            boto3_session = boto3.session.Session()
-                            s3 = boto3_session.client(
-                                service_name='s3',
-                                region_name=current_app.config['S3_REGION'],
-                                endpoint_url=current_app.config['S3_ENDPOINT'],
-                                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                            )
-
-                        # Delete thumbnail
-                        if image_file.thumbnail_path:
-                            if image_file.thumbnail_path.startswith('app/'):
-                                # Local file deletion
-                                try:
-                                    os.unlink(image_file.thumbnail_path)
-                                except (OSError, FileNotFoundError):
-                                    pass
-                            elif store_files_in_s3() and image_file.thumbnail_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
-                                # S3 file deletion
-                                try:
-                                    s3_key = image_file.thumbnail_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
-                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
-                                except Exception:
-                                    pass
-                            image_file.thumbnail_path = None
-
-                        # Delete medium sized version (file_path)
-                        if image_file.file_path:
-                            if image_file.file_path.startswith('app/'):
-                                # Local file deletion
-                                try:
-                                    os.unlink(image_file.file_path)
-                                except (OSError, FileNotFoundError):
-                                    pass
-                            elif store_files_in_s3() and image_file.file_path.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
-                                # S3 file deletion
-                                try:
-                                    s3_key = image_file.file_path.split(current_app.config['S3_PUBLIC_URL'])[-1].lstrip('/')
-                                    s3.delete_object(Bucket=current_app.config['S3_BUCKET'], Key=s3_key)
-                                except Exception:
-                                    pass
-                            image_file.file_path = None
-
-                        if store_files_in_s3():
-                            s3.close()
-
-                    session.commit()
     except Exception:
         session.rollback()
         raise

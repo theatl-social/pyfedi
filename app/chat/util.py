@@ -73,3 +73,60 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
 
     flash(_('Message sent.'))
     return reply
+
+
+def update_message(reply: ChatMessage):
+    user = reply.sender
+    recipient = User.query.filter_by(id=reply.recipient_id).one()
+    conversation_id = reply.conversation_id
+
+    if recipient.is_local():
+        # Notify local recipient
+        targets_data = {'gen': '0', 'conversation_id': conversation_id, 'message_id': reply.id}
+        notify = Notification(title=shorten_string('Updated message from ' + user.display_name()),
+                              url=f'/chat/{conversation_id}#message_{reply.id}',
+                              user_id=recipient.id,
+                              author_id=user.id,
+                              notif_type=NOTIF_MESSAGE,
+                              subtype='chat_message',
+                              targets=targets_data)
+        db.session.add(notify)
+        recipient.unread_notifications += 1
+        db.session.commit()
+    else:
+        if recipient.instance.software == "lemmy" or recipient.instance.software == "mbin":
+            ap_type = "ChatMessage"
+        else:
+            ap_type = "Note"
+        # Federate reply
+        reply_json = {
+            "actor": user.public_url(),
+            "id": f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
+            "object": {
+                "attributedTo": user.public_url(),
+                "content": reply.body_html,
+                "id": reply.ap_id,
+                "mediaType": "text/html",
+                "published": reply.created_at.isoformat() + 'Z',
+                "updated": reply.edited_at.isoformat() + 'Z',
+                "to": [recipient.public_url()],
+                "type": ap_type
+            },
+            "to": [recipient.public_url()],
+            "type": "Create"
+        }
+        if recipient.instance.software != "lemmy" and recipient.instance.software != "piefed":
+            reply_json['object']['tag'] = [
+                {
+                    "href": recipient.public_url(),
+                    "name": recipient.mention_tag(),
+                    "type": "Mention"
+                }
+            ]
+        send_post_request(recipient.ap_inbox_url, reply_json, user.private_key,
+                                  user.public_url() + '#main-key')
+
+
+
+
+

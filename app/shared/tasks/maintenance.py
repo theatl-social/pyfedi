@@ -1,5 +1,6 @@
 from datetime import timedelta
 
+import boto3
 from flask import current_app
 from sqlalchemy import text
 
@@ -7,10 +8,10 @@ from app import celery, cache
 from app.activitypub.util import find_actor_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
-    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow
+    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, read_posts, File
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session, archive_post
+    shorten_string, patch_db_session, archive_post, store_files_in_s3
 
 
 @celery.task
@@ -20,6 +21,21 @@ def cleanup_old_notifications():
     try:
         cutoff = utcnow() - timedelta(days=90)
         session.query(Notification).filter(Notification.created_at < cutoff).delete()
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@celery.task
+def cleanup_old_read_posts():
+    """Remove read_posts entries older than 90 days"""
+    session = get_task_session()
+    try:
+        cutoff = utcnow() - timedelta(days=90)
+        session.execute(text("DELETE FROM read_posts WHERE interacted_at < :cutoff"), {"cutoff": cutoff})
         session.commit()
     except Exception:
         session.rollback()
@@ -685,3 +701,44 @@ def archive_old_posts():
             raise
         finally:
             session.close()
+
+
+@celery.task
+def archive_old_users():
+    """Remove images from old remote users to reduce image storage"""
+    if current_app.config['ARCHIVE_POSTS'] > 0:
+        session = get_task_session()
+        try:
+            cutoff = utcnow() - timedelta(days=current_app.config['ARCHIVE_POSTS'] * 28)
+            sql = '''
+                    SELECT u.id
+                    FROM "user" u
+                    WHERE u.avatar_id IS NOT NULL AND u.cover_id IS NOT NULL AND u.ap_id IS NOT NULL
+                      AND u.last_seen < :cutoff
+                      
+                '''
+            user_ids = session.execute(text(sql), {'cutoff': cutoff}).scalars()
+            for user_id in user_ids:
+                archive_user(user_id, session)
+
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+def archive_user(user_id, session):
+    user = session.query(User).get(user_id)
+    if user.avatar_id:
+        avatar_file = user.avatar
+        user.avatar_id = None
+        avatar_file.delete_from_disk(purge_cdn=False)
+        session.delete(avatar_file)
+    if user.cover_id:
+        cover_file = user.cover
+        user.cover_id = None
+        cover_file.delete_from_disk(purge_cdn=False)
+        session.delete(cover_file)
+
+    session.commit()

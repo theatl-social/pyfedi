@@ -7,9 +7,10 @@
 import imaplib
 import os
 import re
+import time
 import uuid
 from datetime import datetime, timedelta
-from random import randint
+from random import randint, uniform
 from time import sleep
 from zoneinfo import ZoneInfo
 
@@ -31,7 +32,6 @@ from app.models import Settings, BannedInstances, Role, User, RolePermission, Do
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
     ActivityBatch
-from app.post.routes import post_delete_post
 from app.shared.tasks import task_selector
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
@@ -286,7 +286,7 @@ def register(app):
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
                 recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts
+                archive_old_posts, archive_old_users, cleanup_old_read_posts
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
@@ -294,6 +294,7 @@ def register(app):
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
                 cleanup_old_notifications()
+                cleanup_old_read_posts()
                 cleanup_send_queue()
                 process_expired_bans()
                 remove_old_community_content()
@@ -309,9 +310,11 @@ def register(app):
                 calculate_community_activity_stats()
                 cleanup_old_activitypub_logs()
                 archive_old_posts()
+                archive_old_users()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
                 cleanup_old_notifications.delay()
+                cleanup_old_read_posts.delay()
                 cleanup_send_queue.delay()
                 process_expired_bans.delay()
                 remove_old_community_content.delay()
@@ -327,6 +330,7 @@ def register(app):
                 calculate_community_activity_stats.delay()
                 cleanup_old_activitypub_logs.delay()
                 archive_old_posts.delay()
+                archive_old_users.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
     @app.cli.command('daily-maintenance')
@@ -358,6 +362,8 @@ def register(app):
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
 
+                            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
                             for to_send in session.query(SendQueue).filter(SendQueue.send_after < utcnow()):
@@ -377,8 +383,7 @@ def register(app):
 
                             publish_scheduled_posts()
 
-                            if current_app.config['FEP_AWESOME']:
-                                send_batched_activities()
+                            send_batched_activities()
 
                     except redis.exceptions.LockError:
                         print('Send queue is still running - stopping this process to avoid duplication.')

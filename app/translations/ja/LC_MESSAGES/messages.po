@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-07-26 22:04+1200\n"
-"PO-Revision-Date: 2025-07-01 02:47+0000\n"
+"PO-Revision-Date: 2025-07-27 10:47+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
+"Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ja/>\n"
 "Language: ja\n"
-"Language-Team: Japanese <http://translate.piefed.social/projects/piefed"
-"/main-web-app/ja/>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:50
@@ -50,9 +50,8 @@ msgid "Your application has been approved - welcome to PieFed"
 msgstr "申請が承認されました - PieFedにようこそ"
 
 #: app/models.py:2202
-#, fuzzy
 msgid "Comments are disabled on this post"
-msgstr "コメントは無効です。"
+msgstr "この投稿のコメントは無効になっています"
 
 #: app/models.py:2205
 #, fuzzy
@@ -8163,4 +8162,3 @@ msgstr "寄付がキャンセルされました。"
 
 #~ msgid "Vote privately"
 #~ msgstr "匿名投票"
-

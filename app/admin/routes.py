@@ -18,7 +18,7 @@ from furl import furl
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
 from app.activitypub.signature import post_request, default_context, RsaKeys
-from app.activitypub.util import instance_allowed, extract_domain_and_actor
+from app.activitypub.util import extract_domain_and_actor
 from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
@@ -40,7 +40,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, instance_allowed
 from app.admin import bp
 
 
@@ -193,14 +193,13 @@ def admin_misc():
     if site is None:
         site = Site()
     form.default_theme.choices = theme_list()
-    form.language_id.choices = languages_for_form(all=True)
+    form.language_id.choices = languages_for_form(all_languages=True)
     if form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
         site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
         site.enable_chan_image_filter = form.enable_chan_image_filter.data
         site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
-        site.remote_image_cache_days = form.remote_image_cache_days.data
         site.enable_nsfw = form.enable_nsfw.data
         site.enable_nsfl = form.enable_nsfl.data
         site.community_creation_admin_only = form.community_creation_admin_only.data
@@ -238,7 +237,6 @@ def admin_misc():
         form.enable_this_comment_filter.data = site.enable_this_comment_filter
         form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
-        form.remote_image_cache_days.data = site.remote_image_cache_days
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
         form.community_creation_admin_only.data = site.community_creation_admin_only
@@ -812,14 +810,14 @@ def admin_federation():
             db.session.execute(text('DELETE FROM allowed_instances'))
             for allow in form.allowlist.data.split('\n'):
                 if allow.strip():
-                    db.session.add(AllowedInstances(domain=allow.strip()))
+                    db.session.add(AllowedInstances(domain=allow.strip().lower()))
                     cache.delete_memoized(instance_allowed, allow.strip())
         else:  # blocklist mode
             set_setting('use_allowlist', False)
             db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
             for banned in form.blocklist.data.split('\n'):
                 if banned.strip():
-                    db.session.add(BannedInstances(domain=banned.strip()))
+                    db.session.add(BannedInstances(domain=banned.strip().lower()))
                     cache.delete_memoized(instance_banned, banned.strip())
 
         # update and sync defederation subscriptions
@@ -1117,7 +1115,7 @@ def admin_community_edit(community_id):
     community = Community.query.get_or_404(community_id)
     old_topic_id = community.topic_id if community.topic_id else None
     form.topic.choices = topics_for_form(0)
-    form.languages.choices = languages_for_form(all=True)
+    form.languages.choices = languages_for_form(all_languages=True)
     if form.validate_on_submit():
         community.name = form.url.data
         community.title = form.title.data

@@ -124,12 +124,18 @@ We have supplied a ruff.toml config file in the root of the project.
 
 ```bash
 git clone https://codeberg.org/rimu/pyfedi.git
+cd pyfedi
+git checkout v1.1.x
 ```
 
-* cd into pyfedi, set up and enter virtual environment
+Change the 'git checkout' line to be the latest release. Check the branch name to find what to use after 'checkout' by
+going to https://codeberg.org/rimu/pyfedi and then clicking on the 'main' box:
+
+![branch names](https://join.piefed.social/wp-content/uploads/2025/08/branch_names.png)
+
+* set up and enter virtual environment
 
 ```bash
-cd pyfedi
 python3 -m venv ./venv
 source venv/bin/activate
 ```
@@ -374,16 +380,13 @@ Description=Celery Service
 After=network.target
 
 [Service]
-Type=forking
+Type=simple
 User=rimu
 Group=rimu
-EnvironmentFile=/etc/default/celeryd
 WorkingDirectory=/home/rimu/pyfedi
-ExecStart=/bin/sh -c '${CELERY_BIN} multi start -A ${CELERY_APP} ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE} \
-  --logfile=${CELERYD_LOG_FILE} ${CELERYD_OPTS}'
-ExecStop=/bin/sh -c '${CELERY_BIN} multi stopwait ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE}'
-ExecReload=/bin/sh -c '${CELERY_BIN} multi restart -A ${CELERY_APP} ${CELERYD_NODES} --pidfile=${CELERYD_PID_FILE} \
-  --logfile=${CELERYD_LOG_FILE} ${CELERYD_OPTS}'
+ExecStart=/bin/bash -c '. /etc/default/celeryd && exec "$CELERY_BIN" -A "$CELERY_APP" worker --loglevel="$CELERYD_LOG_LEVEL" $CELERYD_OPTS'
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

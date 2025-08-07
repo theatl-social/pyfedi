@@ -252,6 +252,8 @@ class ChatMessage(db.Model):
     read = db.Column(db.Boolean, default=False)
     encrypted = db.Column(db.String(15))
     created_at = db.Column(db.DateTime, default=utcnow)
+    edited_at = db.Column(db.DateTime, default=utcnow, onupdate=utcnow)
+    deleted = db.Column(db.Boolean, default=False)
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
 
@@ -343,7 +345,7 @@ class File(db.Model):
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
         return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
 
-    def delete_from_disk(self):
+    def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
         s3_files_to_delete = []
         if self.file_path:
@@ -399,7 +401,7 @@ class File(db.Model):
             s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
             s3.close()
 
-        if purge_from_cache:
+        if purge_cdn and purge_from_cache:
             flush_cdn_cache(purge_from_cache)
 
     def filesize(self):
@@ -815,10 +817,10 @@ user_role = db.Table('user_role',
 
 # table to hold users' 'read' post ids
 read_posts = db.Table('read_posts',
-                      db.Column('user_id', db.Integer, db.ForeignKey('user.id'), index=True),
-                      db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), index=True),
-                      db.Column('interacted_at', db.DateTime, index=True, default=utcnow)
-                      # this is when the content is interacted with
+                      db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True, nullable=False),
+                      db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True, nullable=False),
+                      db.Column('interacted_at', db.DateTime, index=True, default=utcnow),
+                      db.Index('ix_read_posts_user_post', 'user_id', 'read_post_id')
                       )
 
 
@@ -1886,7 +1888,7 @@ class Post(db.Model):
 
         if self.archived:
             if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
-                s3_path = self.file_path.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                s3_path = self.archived.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete = []
                 s3_files_to_delete.append(s3_path)
                 delete_payload = {

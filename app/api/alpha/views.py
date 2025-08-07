@@ -762,7 +762,7 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
         return v1
 
 
-def private_message_view(cm: ChatMessage, variant) -> dict:
+def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
     is_local = (creator['instance_id'] == 1 and recipient['instance_id'] == 1)
@@ -772,8 +772,8 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
             'id': cm.id,
             'creator_id': cm.sender_id,
             'recipient_id': cm.recipient_id,
-            'content': cm.body,
-            'deleted': False,
+            'content': cm.body if not cm.deleted else 'Deleted by author',
+            'deleted': cm.deleted,
             'read': cm.read,
             'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
             'ap_id': cm.ap_id,
@@ -792,6 +792,36 @@ def private_message_view(cm: ChatMessage, variant) -> dict:
 
     if variant == 2:
         return v2
+
+    v3 = {
+        'private_message_report_view': {
+            'private_message_report': {
+                'id': report.id,
+                'creator_id': report.reporter_id,
+                'private_message_id': cm.id,
+                'original_pm_text': cm.body,
+                'reason': report.reasons,
+                'resolved': report.status == 3,
+                'published': report.created_at.isoformat(timespec="microseconds") + 'Z'
+            },
+            'private_message': {
+                'id': cm.id,
+                'creator_id': cm.sender_id,
+                'recipient_id': cm.recipient_id,
+                'content': cm.body if not cm.deleted else 'Deleted by author',
+                'deleted': cm.deleted,
+                'read': cm.read,
+                'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
+                'ap_id': cm.ap_id,
+                'local': is_local
+            },
+            'private_message_creator': creator,
+            'creator': user_view(report.reporter_id, variant=1)
+        }
+    }
+
+    if variant == 3:
+        return v3
 
 
 def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_from,

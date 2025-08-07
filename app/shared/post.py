@@ -1,4 +1,5 @@
 import os
+from typing import List
 from zoneinfo import ZoneInfo
 
 import boto3
@@ -44,10 +45,9 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
 
     undo = post.vote(user, vote_direction)
 
-    # mark the post as read for the user
-    user.mark_post_as_read(post)
-
     task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
+
+    mark_post_read([post.id], True, user.id)
 
     if src == SRC_API:
         return user.id
@@ -67,6 +67,8 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
 def bookmark_post(post_id: int, src, auth=None):
     Post.query.filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
+
+    mark_post_read([post_id], True, user_id)
 
     existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
     if not existing_bookmark:
@@ -799,3 +801,18 @@ def mod_restore_post(post_id, reason, src, auth):
         return user.id, post
     else:
         return
+
+
+def mark_post_read(post_ids: List[int], read: bool, user_id: int):
+    if read is True:
+        for post_id in post_ids:
+            db.session.execute(text(
+                'INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp) ON CONFLICT (user_id, read_post_id) DO NOTHING'),
+                {"user_id": user_id, "post_id": post_id, "stamp": utcnow()})
+        db.session.commit()
+    else:
+        for post_id in post_ids:
+            db.session.execute(
+                text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
+                {"user_id": user_id, "post_id": post_id})
+        db.session.commit()

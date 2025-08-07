@@ -9,9 +9,15 @@ Note: This guide uses `docker compose`. Depending on your docker setup, you may 
 
 #### COPY GITHUB REPOSITORY INTO A NEW DIRECTORY (PYFEDI/)
 ```bash
-sudo git clone https://codeberg.org/rimu/pyfedi.git
+git clone https://codeberg.org/rimu/pyfedi.git
 cd pyfedi/
+git checkout v1.1.x
 ```
+
+Change the 'git checkout' line to be the latest release. Check the branch name to find what to use after 'checkout' by
+going to https://codeberg.org/rimu/pyfedi and then clicking on the 'main' box:
+
+![branch names](https://join.piefed.social/wp-content/uploads/2025/08/branch_names.png)
 
 #### PREPARE DOCKER ENVIRONMENT FILE
 ```bash
@@ -81,6 +87,9 @@ sudo docker compose up -d
 
 - During startup, you might see "Running configuration check..." followed by validation messages. Checkmarks (✅)
 indicate successful configuration, warnings (⚠️) are usually fine to ignore, but X marks (❌) indicate critical issues that need fixing.
+
+At this point you have PieFed listening on port 8030. You will need Nginx, etc as a reverse proxy to forward connections
+on port 443 to 8030, or a Cloudflare tunnel going to 8030, or wireguard, etc.
 
 #### SETUP CRON (AUTOMATED) JOBS
 ```bash

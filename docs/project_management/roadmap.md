@@ -20,7 +20,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 [Built-in instance chooser during onboarding](https://piefed.social/post/411579)
 
-[Default sort for comments](https://piefed.social/post/411572)
+✅ [Default sort for comments](https://piefed.social/post/411572)
 
 [Loops integration](https://piefed.social/post/411561)
 

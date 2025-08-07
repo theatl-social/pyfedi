@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-07-26 22:04+1200\n"
-"PO-Revision-Date: 2025-06-19 04:26+0000\n"
-"Last-Translator: snoopy <snoopy@zaclys.net>\n"
+"PO-Revision-Date: 2025-08-01 06:47+0000\n"
+"Last-Translator: Snoopy <snoopy@users.noreply.translate.piefed.social>\n"
+"Language-Team: French <http://translate.piefed.social/projects/piefed/"
+"main-web-app/fr/>\n"
 "Language: fr\n"
-"Language-Team: French <http://translate.piefed.social/projects/piefed"
-"/main-web-app/fr/>\n"
-"Plural-Forms: nplurals=2; plural=n > 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:50
@@ -35,7 +35,7 @@ msgstr "Réponses à mon commentaire sur %(post_title)s"
 
 #: app/email.py:21
 msgid "Check the console for a link."
-msgstr ""
+msgstr "Vérifier la console pour un lien."
 
 #: app/email.py:23
 msgid "[PieFed] Reset Your Password"
@@ -50,37 +50,34 @@ msgid "Your application has been approved - welcome to PieFed"
 msgstr "Votre demande d'inscription a été approuvée - bienvenue sur PieFed"
 
 #: app/models.py:2202
-#, fuzzy
 msgid "Comments are disabled on this post"
-msgstr "Les commentaires sont désactivés."
+msgstr "Les commentaires sont désactivés sur cette publication"
 
 #: app/models.py:2205
-#, fuzzy
 msgid "Banned from commenting"
-msgstr "Bannir de la communauté"
+msgstr "Banni·e, vous ne pouvez plus commenter"
 
 #: app/models.py:2228
-#, fuzzy
 msgid "Blocked phrase in comment"
-msgstr "Connectez-vous pour commenter"
+msgstr "Phrase bloquée dans un commentaire"
 
 #: app/models.py:2235
-#, fuzzy
 msgid "Replier blocked"
-msgstr "Bloqué"
+msgstr "Les réponses sont bloquées"
 
 #: app/models.py:2238
+#, fuzzy
 msgid "Duplicate reply"
-msgstr ""
+msgstr "Réponse en double"
 
 #: app/models.py:2246
-#, fuzzy
 msgid "Gif comment ignored"
-msgstr "Commentaire restauré."
+msgstr "Commentaire Gif ignoré"
 
 #: app/models.py:2249
+#, fuzzy
 msgid "Low quality reply"
-msgstr ""
+msgstr "Réponse de basse qualité"
 
 #: app/models.py:2898
 msgid "Added moderator"
@@ -88,7 +85,7 @@ msgstr "modérateur·ice ajouté·e"
 
 #: app/models.py:2899
 msgid "Removed moderator"
-msgstr "modérateur·ice supprimé·e"
+msgstr "modérateur·ice retiré·e"
 
 #: app/models.py:2900
 msgid "Featured post"
@@ -143,14 +140,12 @@ msgid "Un-lock post"
 msgstr "Publication dévérrouillée"
 
 #: app/models.py:2913
-#, fuzzy
 msgid "Lock comment"
-msgstr "Pas encore de commentaires."
+msgstr "Vérrouiller le commentaire"
 
 #: app/models.py:2914
-#, fuzzy
 msgid "Un-lock comment"
-msgstr "Publication dévérrouillée"
+msgstr "Commentaire dévérrouillé"
 
 #: app/auth/routes.py:139 app/auth/util.py:380 app/post/routes.py:697
 #: app/shared/auth.py:70 app/utils.py:1933
@@ -279,7 +274,7 @@ msgstr "Mentions légales"
 
 #: app/admin/forms.py:22
 msgid "Terms of service url"
-msgstr ""
+msgstr "url des conditions de services"
 
 #: app/admin/forms.py:23
 msgid "General instance contact email address"
@@ -415,9 +410,8 @@ msgid "Additional CSS"
 msgstr "Ajout de CSS"
 
 #: app/admin/forms.py:54
-#, fuzzy
 msgid "Additional JS"
-msgstr "Ajout de CSS"
+msgstr "Ajout de JS"
 
 #: app/admin/forms.py:55 app/templates/_view_filter_nav.html:7
 #: app/templates/_view_filter_nav.html:21
@@ -738,7 +732,7 @@ msgstr "Permalien"
 
 #: app/admin/forms.py:156
 msgid "A short and unique identifier that becomes part of the URL."
-msgstr "Un identifiant court et unique qui devient une partie de l'URL."
+msgstr "Un identifiant court et unique qui deviendra une partie de l'URL."
 
 #: app/admin/forms.py:157
 msgid "Parent topic"
@@ -922,12 +916,11 @@ msgstr "Ce mot de passe n'est pas sécurisé."
 
 #: app/admin/forms.py:261
 msgid "Flag their posts as from a bot"
-msgstr ""
+msgstr "Marquer leurs messages comme provenant d'un bot"
 
 #: app/admin/forms.py:262
-#, fuzzy
 msgid "Hide cross-posts by this user"
-msgstr "Masquer les publications des robots"
+msgstr "Masquer les publications croisées de cette utilisateur·ice"
 
 #: app/admin/forms.py:265
 msgid "Ban posts"
@@ -1201,7 +1194,7 @@ msgstr "Inscription approuvée."
 
 #: app/admin/routes.py:1502
 msgid "Registration denied. User removed from the database."
-msgstr ""
+msgstr "Inscription refusée. Utilisateur·ice supprimé·e de la base de données."
 
 #: app/admin/routes.py:1541
 msgid ""
@@ -1233,9 +1226,8 @@ msgid "Add user"
 msgstr "Ajouter un·e utilisateur·ice"
 
 #: app/admin/routes.py:1629
-#, fuzzy
 msgid "This user cannot be deleted."
-msgstr "Cet·te utilisateur·ice a été supprimé·e."
+msgstr "Cet·te utilisateur·ice ne peut pas être supprimé·e."
 
 #: app/admin/routes.py:1652
 msgid "User deleted"
@@ -1358,7 +1350,7 @@ msgstr "Ou courriel"
 #: app/auth/forms.py:18 app/auth/forms.py:30 app/auth/forms.py:32
 #: app/user/forms.py:15
 msgid "Minimum length 8, maximum 128"
-msgstr ""
+msgstr "Longueur minimale 8, maximale 128"
 
 #: app/auth/forms.py:19 app/user/forms.py:59
 msgid "Low bandwidth mode"
@@ -1381,6 +1373,8 @@ msgstr "Pourquoi souhaitez-vous rejoindre ce site ?"
 #: app/auth/forms.py:34
 msgid "I agree to the terms of service & privacy policy (see links in footer)"
 msgstr ""
+"J'accepte les conditions d'utilisation et la politique de confidentialité ("
+"voir les liens en bas de page)"
 
 #: app/auth/forms.py:35
 msgid "Enter captcha code"
@@ -1443,15 +1437,16 @@ msgid "Choose some topics you are interested in"
 msgstr "Choisissez des rubriques qui vous intéressent"
 
 #: app/auth/forms.py:129
-#, fuzzy
 msgid "Set email"
-msgstr "Courriel"
+msgstr "Définir le courriel"
 
 #: app/auth/oauth_util.py:38
 msgid ""
 "An account with this email already exists, please login and connect this "
 "account over \"Connect OAuth\" setting."
 msgstr ""
+"Un compte avec ce courriel existe déjà, veuillez vous connecter et connecter "
+"ce compte via le paramètre « Connect OAuth »."
 
 #: app/auth/oauth_util.py:124 app/auth/oauth_util.py:127
 msgid "Account registrations are currently closed."
@@ -1466,14 +1461,12 @@ msgid "Sorry, we are not accepting registrations from your country."
 msgstr "Désolé, nous n'acceptons pas les inscriptions venant de votre pays."
 
 #: app/auth/oauth_util.py:142
-#, fuzzy
 msgid "Login failed due to a problem with the OAuth server."
-msgstr "Échec de la connexion en raison d'un problème avec Google."
+msgstr "Échec de la connexion en raison d'un problème avec le serveur OAuth."
 
 #: app/auth/oauth_util.py:158 app/auth/routes.py:261 app/auth/util.py:362
-#, fuzzy
 msgid "This account has been deleted."
-msgstr "Cet·te utilisateur·ice a été supprimé·e."
+msgstr "Ce compte a été supprimé."
 
 #: app/auth/onboarding.py:46
 msgid ""
@@ -1514,6 +1507,8 @@ msgid ""
 "You are not able to do this action due to being a very new account or "
 "because of a low reputation."
 msgstr ""
+"Vous ne pouvez pas effectuer cette action parce que vous êtes un nouveau "
+"compte ou que votre réputation est faible."
 
 #: app/auth/routes.py:92 app/templates/auth/check_email.html:12
 msgid "Check your email"
@@ -1556,45 +1551,42 @@ msgstr "La validation de l'adresse de courriel a échoué."
 
 #: app/auth/routes.py:223
 msgid "This Google account is already connected to another user."
-msgstr ""
+msgstr "Ce compte Google est déjà connecté à un·e autre utilisateur·ice."
 
 #: app/auth/routes.py:230
-#, fuzzy
 msgid "Your Google account has been connected successfully."
-msgstr "Votre nouvelle communauté a été créée."
+msgstr "Votre compte Google a été connecté avec succès."
 
 #: app/auth/routes.py:233
 #, python-format
 msgid "Failed to connect Google account: %(error)s"
-msgstr ""
+msgstr "Échec de la connexion au compte Google : %(error)s"
 
 #: app/auth/routes.py:311
 msgid "This Mastodon account is already connected to another user."
-msgstr ""
+msgstr "Ce compte Mastodon est déjà connecté à un·e autre utilisateur·ice."
 
 #: app/auth/routes.py:318
-#, fuzzy
 msgid "Your Mastodon account has been connected successfully."
-msgstr "Votre nouvelle communauté a été créée."
+msgstr "Votre compte Mastodon a été connecté avec succès."
 
 #: app/auth/routes.py:321
 #, python-format
 msgid "Failed to connect Mastodon account: %(error)s"
-msgstr ""
+msgstr "Échec de la connexion au compte Mastodon : %(error)s"
 
 #: app/auth/routes.py:359
 msgid "This Discord account is already connected to another user."
-msgstr ""
+msgstr "Ce compte Discord est déjà connecté à un·e autre utilisateur·ice."
 
 #: app/auth/routes.py:366
-#, fuzzy
 msgid "Your Discord account has been connected successfully."
-msgstr "Votre don a été annulé."
+msgstr "Votre compte Discord a été connecté avec succès."
 
 #: app/auth/routes.py:369
 #, python-format
 msgid "Failed to connect Discord account: %(error)s"
-msgstr ""
+msgstr "Échec de la connexion au compte Discord : %(error)s"
 
 #: app/auth/util.py:155
 msgid "Sorry, you cannot use that email address"
@@ -1606,11 +1598,12 @@ msgstr "Désolé, vous ne pouvez pas utiliser ce nom d'utilisateur·ice"
 
 #: app/auth/util.py:167
 msgid "Sorry, this username pattern is not allowed."
-msgstr ""
+msgstr "Désolé, ce nom d'utilisateur·ice n'est pas autorisé."
 
 #: app/auth/util.py:181
+#, fuzzy
 msgid "Registration not allowed based on your referrer."
-msgstr ""
+msgstr "L'inscription n'est pas autorisée sur la base de votre référent."
 
 #: app/auth/util.py:224
 #, python-format
@@ -1840,7 +1833,6 @@ msgid "Amend the report description if necessary"
 msgstr "Modifiez la description du rapport si nécessaire"
 
 #: app/community/forms.py:123
-#, fuzzy
 msgid "Escalate report"
 msgstr "Signalez le rapport à un·e responsable"
 
@@ -1961,7 +1953,7 @@ msgstr "Mensuel"
 #: app/community/forms.py:174 app/templates/user/scheduled_posts.html:27
 #: app/templates/user/scheduled_posts.html:35 app/user/forms.py:30
 msgid "Timezone"
-msgstr ""
+msgstr "Fuseau horaire"
 
 #: app/community/forms.py:175
 msgid "Publish"
@@ -2068,7 +2060,7 @@ msgstr "Accepter les votes de cette instance uniquement"
 
 #: app/community/forms.py:340
 msgid "Polls can't be scheduled more than once"
-msgstr ""
+msgstr "Les sondages ne peuvent pas être programmés plus d'une fois"
 
 #: app/community/forms.py:349
 msgid "Polls need options for people to choose from"
@@ -2324,6 +2316,8 @@ msgid ""
 "A community must have one or more owners. Make someone else an owner "
 "before removing this owner."
 msgstr ""
+"Une communauté doit avoir un·e ou plusieur·es propriétaires. Faites de "
+"quelqu'un d'autre un·e propriétaire avant de retirer ce propriétaire."
 
 #: app/community/routes.py:1270
 #: app/templates/community/community_find_moderator.html:14
@@ -2470,12 +2464,10 @@ msgid "Searching for remote communities requires login"
 msgstr "La recherche de communautés distantes requiert une connexion"
 
 #: app/dev/forms.py:12
-#, fuzzy
 msgid "Populate Communities"
 msgstr "Remplir les communautés"
 
 #: app/dev/forms.py:15
-#, fuzzy
 msgid "Populate Topics"
 msgstr "Remplir les Rubriques"
 
@@ -2723,9 +2715,9 @@ msgid "%(name)s has indicated they made a mistake in this post."
 msgstr "%(name)s a indiqué avoir fait une erreur dans cette publication."
 
 #: app/post/routes.py:105
-#, fuzzy, python-format
+#, python-format
 msgid "This post is scheduled to be published at %(when)s in %(_tz)s"
-msgstr "Cette publication a été programmée pour %(when)s"
+msgstr "Cette publication a été programmée pour %(when)s dans %(_tz)s"
 
 #: app/post/routes.py:115 app/post/routes.py:666
 #, python-format
@@ -2760,9 +2752,8 @@ msgid "You are not permitted to comment in this community"
 msgstr "Vous n'êtes pas autorisé·e à commenter sur cette communauté"
 
 #: app/post/routes.py:710
-#, fuzzy
 msgid "This comment cannot be replied to."
-msgstr "Cette action ne peut pas être annulée."
+msgstr "Il n'est pas possible de répondre à ce commentaire."
 
 #: app/post/routes.py:861 app/shared/reply.py:213 app/user/routes.py:318
 #: app/user/routes.py:560 app/user/routes.py:676 app/user/routes.py:1368
@@ -2978,14 +2969,13 @@ msgid "Comment deleted."
 msgstr "Commentaire supprimé."
 
 #: app/shared/reply.py:453
-#, fuzzy
 msgid "Comment has been locked."
-msgstr "Un commentaire a été signalé"
+msgstr "Le commentaire a été vérrouillé."
 
 #: app/shared/reply.py:457
-#, fuzzy, python-format
+#, python-format
 msgid "Comment has been unlocked."
-msgstr "%(name)s a été déverrouillé."
+msgstr "Le commentaire a été déverrouillé."
 
 #: app/shared/user.py:27 app/user/routes.py:813
 msgid "You cannot block yourself."
@@ -3110,17 +3100,15 @@ msgid "Most upvotes in the last hour"
 msgstr "Les plus hautvotés au cours de la dernière heure"
 
 #: app/templates/_home_nav.html:22
-#, fuzzy
 msgid "Most upvotes in the last 6 hours"
-msgstr "Les plus hautvotés au cours de la dernière heure"
+msgstr "Les plus hautvotés au cours des 6 dernières heures"
 
 #: app/templates/_home_nav.html:25
 #: app/templates/community/_community_nav.html:32
 #: app/templates/community/_community_nav.html:258
 #: app/templates/feed/_feed_nav.html:29
-#, fuzzy
 msgid "Most upvotes in the last 12 hours"
-msgstr "Les plus hautvotés au cours de la dernière heure"
+msgstr "Les plus hautvotés au cours des 12 dernières heures"
 
 #: app/templates/_home_nav.html:28
 #: app/templates/community/_community_nav.html:37
@@ -3171,35 +3159,31 @@ msgstr "Mois"
 #: app/templates/community/_community_nav.html:52
 #: app/templates/community/_community_nav.html:278
 #: app/templates/feed/_feed_nav.html:49
-#, fuzzy
 msgid "Most upvotes in the last year"
-msgstr "Les plus hautvotés au cours de la dernière journée"
+msgstr "Les plus hautvotés au cours de la dernière année"
 
 #: app/templates/_home_nav.html:38 app/templates/_home_nav.html:86
 #: app/templates/community/_community_nav.html:96
 #: app/templates/community/_community_nav.html:322
 #: app/templates/community/_community_nav.html:441
 #: app/templates/feed/_feed_nav.html:93
-#, fuzzy
 msgid "Year"
-msgstr "1 an"
+msgstr "Année"
 
 #: app/templates/_home_nav.html:40
 #: app/templates/community/_community_nav.html:57
 #: app/templates/community/_community_nav.html:283
 #: app/templates/feed/_feed_nav.html:54
-#, fuzzy
 msgid "Most upvotes all time"
-msgstr "Les plus hautvotés au cours des 6 dernières heures"
+msgstr "Les plus hautvotés au cours de tous les temps"
 
 #: app/templates/_home_nav.html:41 app/templates/_home_nav.html:91
 #: app/templates/community/_community_nav.html:101
 #: app/templates/community/_community_nav.html:327
 #: app/templates/community/_community_nav.html:446
 #: app/templates/feed/_feed_nav.html:98
-#, fuzzy
 msgid "All Time"
-msgstr "Description de l'image"
+msgstr "Depuis toujours"
 
 #: app/templates/_home_nav.html:46 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -3228,23 +3212,22 @@ msgstr "Auteur·e"
 #: app/templates/post/post_embed.html:23
 #: app/templates/themes/dillo/_macros.html:36
 msgid "Very low reputation. Beware."
-msgstr ""
+msgstr "Réputation faible. Prudence."
 
 #: app/templates/_macros.html:37
 #: app/templates/post/add_reply_inline_result.html:33
 #: app/templates/post/post_embed.html:24
 #: app/templates/themes/dillo/_macros.html:37
 msgid "Very low reputation. Beware!"
-msgstr ""
+msgstr "Réputation faible. Prudence !"
 
 #: app/templates/_macros.html:39
 #: app/templates/admin/approve_registrations.html:53
 #: app/templates/post/add_reply_inline_result.html:35
 #: app/templates/post/post_embed.html:26
 #: app/templates/themes/dillo/_macros.html:39
-#, fuzzy
 msgid "Low reputation."
-msgstr "Réputation"
+msgstr "Réputation faible."
 
 #: app/templates/_macros.html:45
 #: app/templates/post/add_reply_inline_result.html:41
@@ -3351,7 +3334,7 @@ msgstr "Les modérateur·ices n'ont pas été actives récemment."
 #: app/templates/_side_pane.html:96
 #, python-format
 msgid "Posts older than %(number)s days will be removed."
-msgstr ""
+msgstr "Les publications datant de plus de %(number)s jours seront supprimées."
 
 #: app/templates/_side_pane.html:100
 #: app/templates/themes/dillo/_side_pane.html:53
@@ -3377,9 +3360,8 @@ msgid "Subscribers"
 msgstr "Abonné·es"
 
 #: app/templates/_side_pane.html:110
-#, fuzzy
 msgid "Local Subscribers"
-msgstr "Abonné·es"
+msgstr "Abonné·es locaux"
 
 #: app/templates/_side_pane.html:113 app/templates/admin/communities.html:52
 #: app/templates/admin/instances.html:47 app/templates/admin/instances.html:93
@@ -3420,44 +3402,36 @@ msgid "Comments"
 msgstr "Commentaires"
 
 #: app/templates/_side_pane.html:117
-#, fuzzy
 msgid "Active users in the past 24 hours"
-msgstr "Les plus hautvotés au cours de la dernière heure"
+msgstr "Utilisateur·ices actives au cours des dernières 24 heures"
 
 #: app/templates/_side_pane.html:117
-#, fuzzy
 msgid "Daily Users"
-msgstr "Modifier l’utilisateur·ice"
+msgstr "Utilisateur·ices quotidien"
 
 #: app/templates/_side_pane.html:118
-#, fuzzy
 msgid "Active users in the past 7 days"
-msgstr "Les plus hautvotés au cours de la dernière journée"
+msgstr "Utilisateur·ices actives au cours des 7 derniers jours"
 
 #: app/templates/_side_pane.html:118
-#, fuzzy
 msgid "Weekly Users"
-msgstr "Hebdo"
+msgstr "Utilisateur·ices hebdomadaires"
 
 #: app/templates/_side_pane.html:119
-#, fuzzy
 msgid "Active users in the past month"
-msgstr "Les plus hautvotés au cours du dernier mois"
+msgstr "Utilisateur·ices actives au cours du dernier mois"
 
 #: app/templates/_side_pane.html:119
-#, fuzzy
 msgid "Monthly Users"
-msgstr "Mensuel"
+msgstr "Utilisateur·ices Mensuel"
 
 #: app/templates/_side_pane.html:120
-#, fuzzy
 msgid "Active users in the past 6 months"
-msgstr "Les plus hautvotés au cours du dernier mois"
+msgstr "Utilisateur·ices actives au cours des 6 derniers mois"
 
 #: app/templates/_side_pane.html:120
-#, fuzzy
 msgid "Users / 6 Months"
-msgstr "6 mois"
+msgstr "Utilisateur·ices / 6 mois"
 
 #: app/templates/_side_pane.html:132
 #: app/templates/themes/dillo/_side_pane.html:70
@@ -3601,9 +3575,8 @@ msgstr "Alertes d'activités"
 
 #: app/templates/base.html:175 app/templates/user/scheduled_posts.html:15
 #: app/user/routes.py:1635
-#, fuzzy
 msgid "Scheduled posts"
-msgstr "Publication supprimée"
+msgstr "Publications programmées"
 
 #: app/templates/base.html:178
 msgid "Manage donations"
@@ -3629,9 +3602,8 @@ msgid "Dev Tools"
 msgstr "Outils de développement"
 
 #: app/templates/base.html:202
-#, fuzzy
 msgid "Please"
-msgstr "Quitter"
+msgstr "S'il vous plait"
 
 #: app/templates/base.html:204
 #, python-format
@@ -3654,59 +3626,52 @@ msgstr "Raccourcis clavier"
 #: app/templates/base.html:241
 #, python-format
 msgid "PieFed v%(version)s is free and open source"
-msgstr ""
+msgstr "PieFed v%(version)s est libre et open source"
 
 #: app/templates/base.html:243
 msgid "Terms of service"
-msgstr ""
+msgstr "Conditions d'utilisation"
 
 #: app/templates/base.html:245
-#, fuzzy
 msgid "Privacy policy"
-msgstr "Notre Politique de Confidentialité"
+msgstr "Politique de Confidentialité"
 
 #: app/templates/base.html:251
 #, fuzzy
 msgid "Voting Options"
-msgstr "Plus d'options"
+msgstr "Options de vote"
 
 #: app/templates/base.html:252
-#, fuzzy
 msgid "Close"
-msgstr "Fermé"
+msgstr "Fermer"
 
 #: app/templates/base.html:256
-#, fuzzy
 msgid "Upvote (federated)"
-msgstr "Publication supprimé"
+msgstr "Hautvote (fédéré)"
 
 #: app/templates/base.html:259
-#, fuzzy
 msgid "Upvote (local)"
-msgstr "HautVoter"
+msgstr "HautVote (local)"
 
 #: app/templates/base.html:262
-#, fuzzy
 msgid "Downvote (local)"
-msgstr "BasVoter"
+msgstr "BasVote (local)"
 
 #: app/templates/base.html:265
 msgid "Downvote (federated)"
-msgstr ""
+msgstr "BasVote (fédérée)"
 
 #: app/templates/base.html:268
 msgid "Local votes are a bit more private."
-msgstr ""
+msgstr "Les votes locaux sont un peu plus confidentiels."
 
 #: app/templates/base.html:269
-#, fuzzy
 msgid "Default mode: private."
-msgstr "Filtre d'accueil par défaut"
+msgstr "Move par défaut : privée."
 
 #: app/templates/base.html:269
-#, fuzzy
 msgid "Default mode: public."
-msgstr "Filtre d'accueil par défaut"
+msgstr "Mode par défaut : public."
 
 #: app/templates/communities_menu.html:7
 msgid "Skip to:"
@@ -3723,7 +3688,6 @@ msgid "Public Feeds"
 msgstr "Flux publics"
 
 #: app/templates/communities_menu.html:25
-#, fuzzy
 msgid "Add Remote Feed"
 msgstr "Ajouter un Flux distant"
 
@@ -3736,9 +3700,8 @@ msgid "My Feeds"
 msgstr "Mes Flux"
 
 #: app/templates/communities_menu.html:46
-#, fuzzy
 msgid "Filter communities..."
-msgstr "Supprimer les communautés"
+msgstr "Filtrer les communautés..."
 
 #: app/templates/communities_menu.html:50
 #: app/templates/communities_menu.html:88
@@ -3781,9 +3744,8 @@ msgid "Donate using Patreon"
 msgstr "Dons via Patreon"
 
 #: app/templates/donate.html:20 app/templates/user/choose_plan.html:67
-#, fuzzy
 msgid "Donate using Liberapay"
-msgstr "Dons via Patreon"
+msgstr "Dons via Liberapay"
 
 #: app/templates/index.html:29 app/templates/themes/dillo/index.html:32
 msgid "No posts yet. Join some communities to see more."
@@ -4153,9 +4115,8 @@ msgid "Source"
 msgstr "Source"
 
 #: app/templates/admin/approve_registrations.html:30
-#, fuzzy
 msgid "Similar usernames"
-msgstr "Nom d’utilisateur·ice"
+msgstr "Noms d’utilisateur·ices similaires"
 
 #: app/templates/admin/approve_registrations.html:31
 #: app/templates/admin/approve_registrations.html:86
@@ -4172,17 +4133,17 @@ msgid "Actions"
 msgstr "Actions"
 
 #: app/templates/admin/approve_registrations.html:41
-#, fuzzy
 msgid "Throwaway email account, the kind spammers and trolls use."
-msgstr "Adresse courriel jettable. Utilisé pour le pourriel et les trolls."
+msgstr "Adresse courriel jetable. Utilisé pour le pourriel et trolls."
 
 #: app/templates/admin/approve_registrations.html:61
 msgid "Approve"
 msgstr "Approuver"
 
 #: app/templates/admin/approve_registrations.html:62
+#, fuzzy
 msgid "Deny"
-msgstr ""
+msgstr "Refuser"
 
 #: app/templates/admin/approve_registrations.html:68
 #: app/templates/admin/approve_registrations.html:105
@@ -4360,9 +4321,8 @@ msgid "Posts show in the All feed."
 msgstr "Afficher les publications dans la liste Tous les flux."
 
 #: app/templates/admin/communities.html:82
-#, fuzzy
 msgid "Content warning, NSFW set for community."
-msgstr "Avertissement de contenu, NSFW ou NSFL défini pour la communauté."
+msgstr "Avertissement de contenu, NSFW défini pour la communauté."
 
 #: app/templates/admin/communities.html:83
 msgid "Warning"
@@ -4484,14 +4444,12 @@ msgid "Load average: "
 msgstr "Charge moyenne : "
 
 #: app/templates/admin/home.html:41
-#, fuzzy
 msgid "Installed Plugins"
-msgstr "Installer l'app PieFed"
+msgstr "Plugins installés"
 
 #: app/templates/admin/home.html:47
-#, fuzzy
 msgid "Plugin Name"
-msgstr "Nom d'affichage"
+msgstr "Nom du plugin"
 
 #: app/templates/admin/home.html:48 app/templates/admin/instances.html:40
 #: app/templates/admin/instances.html:41 app/templates/admin/instances.html:90
@@ -4505,14 +4463,12 @@ msgid "Hooks"
 msgstr "Choisir"
 
 #: app/templates/admin/home.html:63
-#, fuzzy
 msgid "Source Code"
-msgstr "Source"
+msgstr "Code Source"
 
 #: app/templates/admin/home.html:66
-#, fuzzy
 msgid "No source URL"
-msgstr "Source"
+msgstr "Pas d'URL Source"
 
 #: app/templates/admin/home.html:80
 #, fuzzy
@@ -4521,7 +4477,7 @@ msgstr "Aucunes discussions"
 
 #: app/templates/admin/home.html:89
 msgid "No plugins installed."
-msgstr ""
+msgstr "Pas de plugins installés."
 
 #: app/templates/admin/instances.html:20 app/templates/admin/instances.html:104
 #: app/templates/instance/list_instances.html:19
@@ -4605,17 +4561,18 @@ msgid "CSS in this field will be added to every page."
 msgstr "Le CSS dans ce champs sera ajouté à chaque page."
 
 #: app/templates/admin/misc.html:27
-#, fuzzy
 msgid ""
 "JavaScript in this field will be added to every page. Do not include "
 "&lt;script&gt; tags."
-msgstr "Le CSS dans ce champs sera ajouté à chaque page."
+msgstr ""
+"Le JavaScript dans ce champs sera ajouté à chaque page. Ne pas inclure les "
+"balises &lt;script&gt ;."
 
 #: app/templates/admin/misc.html:47 app/templates/admin/site.html:23
 #: app/templates/admin/site.html:25 app/templates/admin/site.html:31
 #: app/templates/admin/site.html:33
 msgid "You can use markdown here."
-msgstr ""
+msgstr "Vous pouvez utiliser le markdown ici."
 
 #: app/templates/admin/misc.html:53
 #, fuzzy
@@ -4624,7 +4581,7 @@ msgid ""
 "Country information header set."
 msgstr ""
 "Utilisez des codes de pays à deux lettres, un par ligne. Nécessite l'API "
-"IPinfo."
+"IPinfo ou un ensemble d'en-têtes d'informations sur le pays."
 
 #: app/templates/admin/misc.html:56
 msgid "PieFed instances only. One per line, no https:// on the front."
@@ -4637,14 +4594,12 @@ msgstr ""
 "Markdown."
 
 #: app/templates/admin/permissions.html:23
-#, fuzzy
 msgid "User ID #1"
-msgstr "Utilisateur·ice ajouté·e"
+msgstr "ID Utilisateur·ice #1"
 
 #: app/templates/admin/reports.html:17
-#, fuzzy
 msgid "Query"
-msgstr "Utilisateur·ice"
+msgstr "Requête"
 
 #: app/templates/admin/site.html:19
 #, fuzzy
@@ -4679,7 +4634,7 @@ msgstr ""
 
 #: app/templates/admin/site.html:36
 msgid "Create a page in the \"Pages\" area then put it's address in here."
-msgstr ""
+msgstr "Créez une page dans \"Pages\" et mettez son adresse ici."
 
 #: app/templates/admin/users.html:16
 msgid "Add local user"
@@ -4752,15 +4707,13 @@ msgstr "Continuer sans choisir de rubriques"
 
 #: app/templates/auth/login.html:21 app/templates/auth/register.html:45
 #: app/templates/user/edit_profile.html:32
-#, fuzzy
 msgid "Show password"
-msgstr "Choisir un mot de passe"
+msgstr "Montrer le mot de passe"
 
 #: app/templates/auth/login.html:22 app/templates/auth/register.html:46
 #: app/templates/user/edit_profile.html:33
-#, fuzzy
 msgid "Hide password"
-msgstr "Choisir un mot de passe"
+msgstr "Cacher le mot de passe"
 
 #: app/templates/auth/login.html:30
 msgid "Log in with a passkey"
@@ -4771,14 +4724,12 @@ msgid "Log in with Google"
 msgstr "Se connecter avec Google"
 
 #: app/templates/auth/login.html:42 app/templates/auth/register.html:25
-#, fuzzy
 msgid "Log in with Mastodon"
-msgstr "Se connecter avec Google"
+msgstr "Se connecter avec Mastodon"
 
 #: app/templates/auth/login.html:49 app/templates/auth/register.html:32
-#, fuzzy
 msgid "Log in with Discord"
-msgstr "Se connecter avec Google"
+msgstr "Se connecter avec Discord"
 
 #: app/templates/auth/login.html:56
 msgid "New User?"
@@ -4797,8 +4748,9 @@ msgid "Reset it"
 msgstr "Réinitialiser"
 
 #: app/templates/auth/mastodon_authorize.html:14
+#, fuzzy
 msgid "Fill Mastodon data"
-msgstr ""
+msgstr "Compléter les données de Mastodon"
 
 #: app/templates/auth/permission_denied.html:16
 msgid "Your account does not have access to that area."
@@ -5028,44 +4980,38 @@ msgstr "Trier par actif"
 #: app/templates/community/_community_nav.html:33
 #: app/templates/community/_community_nav.html:259
 #: app/templates/feed/_feed_nav.html:30
-#, fuzzy
 msgid "Top 12 hours"
-msgstr "12 heures"
+msgstr "Top 12 heures"
 
 #: app/templates/community/_community_nav.html:38
 #: app/templates/community/_community_nav.html:264
 #: app/templates/feed/_feed_nav.html:35
-#, fuzzy
 msgid "Top Day"
-msgstr "1 jour"
+msgstr "Top de la journée"
 
 #: app/templates/community/_community_nav.html:43
 #: app/templates/community/_community_nav.html:269
 #: app/templates/feed/_feed_nav.html:40
-#, fuzzy
 msgid "Top Week"
-msgstr "1 semaine"
+msgstr "Top de la semaine"
 
 #: app/templates/community/_community_nav.html:48
 #: app/templates/community/_community_nav.html:274
 #: app/templates/feed/_feed_nav.html:45
-#, fuzzy
 msgid "Top Month"
-msgstr "1 mois"
+msgstr "Top du mois"
 
 #: app/templates/community/_community_nav.html:53
 #: app/templates/community/_community_nav.html:279
 #: app/templates/feed/_feed_nav.html:50
-#, fuzzy
 msgid "Top Year"
-msgstr "1 an"
+msgstr "Top de l'année"
 
 #: app/templates/community/_community_nav.html:58
 #: app/templates/community/_community_nav.html:284
 #: app/templates/feed/_feed_nav.html:55
-#, fuzzy
 msgid "Top All Time"
-msgstr "Image de la bannière supérieure"
+msgstr "Top de tous les temps"
 
 #: app/templates/community/_community_nav.html:135
 #: app/templates/community/_community_nav.html:361
@@ -5139,6 +5085,8 @@ msgid ""
 "This is shown above the field where people compose their content. Only "
 "use this if really necessary."
 msgstr ""
+"Elle est affichée au-dessus du champ dans lequel les utilisateur·ices "
+"rédigent leur contenu. Ne l'utilisez que si c'est vraiment nécessaire."
 
 #: app/templates/community/add_local.html:27
 #: app/templates/feed/feed_copy.html:29 app/templates/feed/feed_edit.html:34
@@ -5235,9 +5183,8 @@ msgid "No posts in this community yet."
 msgstr "Aucune publication dans cette communauté pour le moment."
 
 #: app/templates/community/community.html:168
-#, fuzzy
 msgid "No comments in this community yet."
-msgstr "Aucune publication dans cette communauté pour le moment."
+msgstr "Aucun commentaire dans cette communauté pour le moment."
 
 #: app/templates/community/community_ban_user.html:13
 #, python-format
@@ -5322,9 +5269,8 @@ msgid "Add moderator"
 msgstr "Ajouter un·e modérateur·ice"
 
 #: app/templates/community/community_mod_list.html:88
-#, fuzzy
 msgid "Remove mod"
-msgstr "Enlever"
+msgstr "Mod retiré·e"
 
 #: app/templates/community/community_mod_list.html:98
 #, fuzzy
@@ -5332,9 +5278,8 @@ msgid "Make owner"
 msgstr "Définir un nouveau ou nouvelle propriétaire"
 
 #: app/templates/community/community_mod_list.html:108
-#, fuzzy
 msgid "Remove owner"
-msgstr "Supprimer la bannière"
+msgstr "Retirer le/la propriétaire"
 
 #: app/templates/community/community_moderate.html:28
 #, python-format
@@ -5407,9 +5352,8 @@ msgid "See who is subscribed to %(community)s"
 msgstr "Voir qui est abonné·e à %(community)s"
 
 #: app/templates/community/community_moderate_subscribers.html:35
-#, fuzzy
 msgid "Search subscribers..."
-msgstr "Abonné·es"
+msgstr "Rechercher des abonné·es..."
 
 #: app/templates/community/community_moderate_subscribers.html:100
 msgid "Kick"
@@ -5440,14 +5384,13 @@ msgid "No banned people yet"
 msgstr "Pas encore de personnes bannies"
 
 #: app/templates/community/community_moderate_subscribers.html:170
-#, fuzzy
 msgid "Ban a user"
-msgstr "Ajouter un·e utilisateur·ice"
+msgstr "Bannir un·e utilisateur·ice"
 
 #: app/templates/community/community_moderate_subscribers.html:171
-#, fuzzy, python-format
+#, python-format
 msgid "Create a ban from %(community)s"
-msgstr "Bannir de la communauté"
+msgstr "Créer un ban de %(community)s"
 
 #: app/templates/community/community_modlog.html:24
 #, python-format
@@ -5463,9 +5406,8 @@ msgid "This community has had no moderation actions yet."
 msgstr "Cette communauté n'a pas encore d'actions de modération."
 
 #: app/templates/community/community_move.html:16
-#, fuzzy
 msgid "Move"
-msgstr "Enlever"
+msgstr "Déplacer"
 
 #: app/templates/community/community_move.html:22
 msgid "The process to move a community to this instance is:"
@@ -5818,7 +5760,7 @@ msgstr "Voir %(name)s"
 
 #: app/templates/feed/feed_edit.html:20
 msgid "Feed has subscribers, cannot change Url."
-msgstr ""
+msgstr "Le flux a des abonné·es. Vous ne pouvez pas changer son adresse url."
 
 #: app/templates/feed/feed_new.html:13
 msgid "Create Feed"
@@ -5855,9 +5797,8 @@ msgstr "Communautés du Flux"
 
 #: app/templates/feed/show_feed.html:179
 #: app/templates/topic/show_topic.html:111
-#, fuzzy
 msgid "Number of subscribers"
-msgstr "Nombre d'abonné·e·s connu·e·s"
+msgstr "Nombre d'abonné·e·s"
 
 #: app/templates/instance/list_instances.html:28
 #: app/templates/user/show_profile.html:138
@@ -6097,22 +6038,20 @@ msgstr "Supprimer par l'auteur·ice"
 #: app/templates/post/_post_reply_teaser.html:84
 #: app/templates/post/_post_reply_teaser.html:87
 #: app/templates/post/add_reply_inline_result.html:87
-#, fuzzy
 msgid "reply"
-msgstr "Répondre"
+msgstr "répondre"
 
 #: app/templates/post/_post_reply_teaser.html:90
-#, fuzzy
 msgid "locked"
-msgstr "Bloqué"
+msgstr "vérrouillé"
 
 #: app/templates/post/_post_reply_teaser.html:98
 msgid "Un-collapse"
-msgstr ""
+msgstr "Agrandir"
 
 #: app/templates/post/_post_reply_teaser.html:100
 msgid "Collapse"
-msgstr ""
+msgstr "Réduire"
 
 #: app/templates/post/_post_reply_teaser.html:113
 #: app/templates/post/add_reply_inline_result.html:113
@@ -6120,9 +6059,8 @@ msgid "Comment options"
 msgstr "Options des commentaires"
 
 #: app/templates/post/_post_reply_teaser.html:142
-#, fuzzy
 msgid "Continue thread"
-msgstr "Continuer"
+msgstr "Continuer le fil"
 
 #: app/templates/post/_post_teaser.html:14
 #: app/templates/post/_post_teaser_masonry.html:15
@@ -6186,6 +6124,8 @@ msgid ""
 "Warning: You are writing in a language that isn't the same as the user "
 "you are replying to uses! (%(language)s)"
 msgstr ""
+"Attention : Vous écrivez dans une langue différente de celle utilisée par "
+"l'utilisateur·ice auquel vous répondez ! (%(language)s)"
 
 #: app/templates/post/post.html:97
 msgid "Verify your email address to comment"
@@ -6200,9 +6140,8 @@ msgid "Comments are disabled."
 msgstr "Les commentaires sont désactivés."
 
 #: app/templates/post/post.html:113 app/templates/post/post.html:115
-#, fuzzy
 msgid "Loading comments..."
-msgstr "Pas encore de commentaires."
+msgstr "Chargement des commentaires..."
 
 #: app/templates/post/post_block_image_purge_posts.html:14
 #, python-format
@@ -6250,19 +6189,20 @@ msgstr "Séparez chaque mot-clic par une virgule."
 #: app/templates/post/post_edit.html:160
 msgid "Hey, did you know? Scheduled posts have a templating system for titles."
 msgstr ""
+"Le saviez-vous ? Les publications programmées disposent de gabarits pour les "
+"titres."
 
 #: app/templates/post/post_edit.html:165
 msgid "Tags available"
-msgstr ""
+msgstr "Variables de gabarits disponibles"
 
 #: app/templates/post/post_edit.html:166
-#, fuzzy
 msgid "Example"
-msgstr "Personnes"
+msgstr "Exemple"
 
 #: app/templates/post/post_edit.html:167
 msgid "...will generate"
-msgstr ""
+msgstr "...générera"
 
 #: app/templates/post/post_edit.html:179
 msgid ""
@@ -6385,11 +6325,12 @@ msgstr "Correction à distance"
 #: app/templates/post/post_reply_options.html:43
 #, fuzzy
 msgid "Distinguish"
-msgstr "Paramètres"
+msgstr "Mettre en avant"
 
 #: app/templates/post/post_reply_options.html:46
+#, fuzzy
 msgid "Undistinguish"
-msgstr ""
+msgstr "Mettre en retrait"
 
 #: app/templates/post/post_reply_options.html:64
 #, python-format
@@ -6592,9 +6533,9 @@ msgid "How many times has something using this tag been posted"
 msgstr "Combien de fois a-t-on publié en utilisant ce mot-clic"
 
 #: app/templates/tag/tags_community.html:14
-#, fuzzy, python-format
+#, python-format
 msgid "Tags in %(community)s"
-msgstr "Étiquette dans %(community)s"
+msgstr "Étiquettes dans %(community)s"
 
 #: app/templates/themes/dillo/_home_nav.html:6
 #: app/templates/user/_read_posts_nav.html:11
@@ -6691,7 +6632,7 @@ msgstr "Clés de sécurité"
 #: app/templates/user/connect_oauth.html:17
 #: app/templates/user/connect_oauth.html:20 app/user/routes.py:629
 msgid "Connect OAuth"
-msgstr ""
+msgstr "Connexion OAuth"
 
 #: app/templates/user/alerts.html:15
 msgid "Alerts"
@@ -6768,60 +6709,59 @@ msgid "Prices are in US dollars."
 msgstr "Les prix sont en dollars américains."
 
 #: app/templates/user/connect_oauth.html:24
-#, fuzzy
 msgid "OAuth Connections"
-msgstr "Signaler la conversation"
+msgstr "Connexions OAuth"
 
 #: app/templates/user/connect_oauth.html:27
 msgid "Connect your account to these services to log in without a password."
 msgstr ""
+"Reliez votre compte à ces services pour vous connecter sans mot de passe."
 
 #: app/templates/user/connect_oauth.html:41
 #: app/templates/user/connect_oauth.html:76
 #: app/templates/user/connect_oauth.html:110
-#, fuzzy
 msgid "Connected"
-msgstr "Créé"
+msgstr "Connecté·e"
 
 #: app/templates/user/connect_oauth.html:47
 #: app/templates/user/connect_oauth.html:82
 #: app/templates/user/connect_oauth.html:116
-#, fuzzy
 msgid "Disconnect"
-msgstr "Discussion"
+msgstr "Déconnecté·e"
 
 #: app/templates/user/connect_oauth.html:52
 #: app/templates/user/connect_oauth.html:87
 #: app/templates/user/connect_oauth.html:121
-#, fuzzy
 msgid "Not connected"
-msgstr "Non Rejoint"
+msgstr "Non connecté·e"
 
 #: app/templates/user/connect_oauth.html:56
-#, fuzzy
 msgid "Connect Google"
-msgstr "Se connecter avec Google"
+msgstr "Relier à Google"
 
 #: app/templates/user/connect_oauth.html:91
-#, fuzzy
 msgid "Connect Mastodon"
-msgstr "Corps du texte (Markdown)"
+msgstr "Relier à Mastodon"
 
 #: app/templates/user/connect_oauth.html:125
 msgid "Connect Discord"
-msgstr ""
+msgstr "Relier à Discord"
 
 #: app/templates/user/connect_oauth.html:135
 msgid ""
 "Note: If you connect an OAuth provider, you can use it to log in to your "
 "account without a password."
 msgstr ""
+"Remarque : si vous connectez à un fournisseur OAuth, vous pourrez l'utiliser "
+"pour vous connecter à votre compte sans mot de passe."
 
 #: app/templates/user/connect_oauth.html:136
 msgid ""
 "If you disconnect all OAuth providers, you will need to use your password"
 " to log in."
 msgstr ""
+"Si vous vous déconnectez de tous les fournisseurs OAuth, vous devrez "
+"utiliser votre mot de passe pour vous connecter."
 
 #: app/templates/user/delete_account.html:15
 #: app/templates/user/edit_settings.html:17
@@ -6999,11 +6939,12 @@ msgstr ""
 
 #: app/templates/user/edit_settings.html:59
 msgid "Long press to vote differently."
-msgstr ""
+msgstr "Appui long pour changer votre vote."
 
 #: app/templates/user/edit_settings.html:60
+#, fuzzy
 msgid "Hold down the mouse button to vote differently."
-msgstr ""
+msgstr "Maintenez le bouton de la souris enfoncé pour changer votre vote."
 
 #: app/templates/user/edit_settings.html:65
 msgid "Communities joined outside of a feed will not be auto unsubscribed."
@@ -7055,7 +6996,7 @@ msgstr "Masquer les réponses avec un score à ce niveau ou en dessous."
 
 #: app/templates/user/filters.html:33
 msgid "Use a comma between each word."
-msgstr ""
+msgstr "Utilisez une virgule entre chaque mot."
 
 #: app/templates/user/filters.html:42
 msgid ""
@@ -7087,23 +7028,23 @@ msgid "No filters defined yet."
 msgstr "Aucun filtre défini pour l'instant."
 
 #: app/templates/user/filters.html:94 app/templates/user/show_profile.html:117
-#, fuzzy, python-format
+#, python-format
 msgid "Unblock @%(user_name)s"
-msgstr "Bloquer %(user_name)s"
+msgstr "Débloquer @%(user_name)s"
 
 #: app/templates/user/filters.html:94 app/templates/user/show_profile.html:118
-#, fuzzy, python-format
+#, python-format
 msgid "Unblock %(user_name)s"
-msgstr "Bloquer %(user_name)s"
+msgstr "Débloquer %(user_name)s"
 
 #: app/templates/user/filters.html:99
 msgid "No blocked people"
 msgstr "Aucune personne bloquée"
 
 #: app/templates/user/filters.html:112
-#, fuzzy, python-format
+#, python-format
 msgid "Unblock %(community_title)s"
-msgstr "Supprimer \"%(community_title)s\""
+msgstr "Débloquer %(community_title)s"
 
 #: app/templates/user/filters.html:117
 msgid "No blocked communities"
@@ -7185,26 +7126,25 @@ msgstr "Supprimer l'historique"
 
 #: app/templates/user/scheduled_posts.html:26
 #: app/templates/user/scheduled_posts.html:34
-#, fuzzy
 msgid "Scheduled for"
-msgstr "Résultats de recherche pour"
+msgstr "Programmée pour"
 
 #: app/templates/user/scheduled_posts.html:28
 #: app/templates/user/scheduled_posts.html:36
-#, fuzzy
 msgid "Frequency"
-msgstr "Français"
+msgstr "Fréquence"
 
 #: app/templates/user/scheduled_posts.html:44
-#, fuzzy
 msgid "Only once"
-msgstr "En ligne"
+msgstr "Une seule fois"
 
 #: app/templates/user/scheduled_posts.html:55
 msgid ""
 "No scheduled posts yet. To schedule a post, create one in your favorite "
 "community and set up a date and frequency."
 msgstr ""
+"Aucune publication programmée. Pour programmer une publication, créez-en une "
+"dans votre communauté préférée et définissez une date et sa fréquence."
 
 #: app/templates/user/show_profile.html:88
 #: app/templates/user/show_profile.html:91
@@ -7229,7 +7169,7 @@ msgstr "Plus"
 
 #: app/templates/user/show_profile.html:111
 msgid "Edit user in admin panel"
-msgstr ""
+msgstr "Modifiez l'utilisateur·ice dans le panneau d'administration"
 
 #: app/templates/user/show_profile.html:115
 msgid "View user profile on original server"
@@ -7240,9 +7180,9 @@ msgid "View original profile"
 msgstr "Voir le profil d'origine"
 
 #: app/templates/user/show_profile.html:120
-#, fuzzy, python-format
+#, python-format
 msgid "Block @%(user_name)s"
-msgstr "Bloquer %(user_name)s"
+msgstr "Bloquer @%(user_name)s"
 
 #: app/templates/user/show_profile.html:121
 #, python-format
@@ -7296,12 +7236,11 @@ msgstr "donateur·ice"
 #: app/templates/user/show_profile.html:207
 #, fuzzy
 msgid "Overview pagination"
-msgstr "Pagination des publications"
+msgstr "Pagination de l'ensemble"
 
 #: app/templates/user/show_profile.html:222
-#, fuzzy
 msgid "No posts or comments yet."
-msgstr "Pas encore de commentaires."
+msgstr "Pas encore de publications ou de commentaires."
 
 #: app/templates/user/show_profile.html:238
 msgid "Post pagination"
@@ -7478,123 +7417,106 @@ msgstr ""
 "faire."
 
 #: app/templates/user/notifs/0.html:11
-#, fuzzy
 msgid "New post by followed user "
-msgstr "Les publications NSFW ne sont pas autorisées."
+msgstr "Nouvelle publication de l'utilisateur·ice suivant·e "
 
 #: app/templates/user/notifs/0.html:15
-#, fuzzy
 msgid "in"
-msgstr "À moi"
+msgstr "dans"
 
 #: app/templates/user/notifs/1.html:11
-#, fuzzy, python-format
+#, python-format
 msgid "New Post in followed community "
-msgstr "Nouvelles publications dans %(community_name)s"
+msgstr "Nouvelle publication de la communauté suivante "
 
 #: app/templates/user/notifs/2.html:11
-#, fuzzy
 msgid "New Post in followed topic "
-msgstr "Montrer les publications des sous-rubriques"
+msgstr "Nouvelle publication de la rubrique suivante "
 
 #: app/templates/user/notifs/20.html:4
-#, fuzzy
 msgid "Post Reported"
-msgstr "Publication restaurée."
+msgstr "Publication signalée"
 
 #: app/templates/user/notifs/20.html:16 app/templates/user/notifs/20.html:43
-#, fuzzy
 msgid "Post details"
-msgstr "Détails de la Page"
+msgstr "Détails de la publication"
 
 #: app/templates/user/notifs/20.html:32
-#, fuzzy
 msgid "User Reported"
-msgstr "Note de l'utilisateur·ice"
+msgstr "Utilisateur·ice signalé·e"
 
 #: app/templates/user/notifs/20.html:35
-#, fuzzy
 msgid "Username"
 msgstr "Nom d’utilisateur·ice"
 
 #: app/templates/user/notifs/20.html:58
-#, fuzzy
 msgid "Comment Reported"
-msgstr "Commentaire restauré."
+msgstr "Commentaire signalé"
 
 #: app/templates/user/notifs/20.html:69
 #, fuzzy
 msgid "Comment details"
-msgstr "Plus d'informations"
+msgstr "Informations sur le commentaire"
 
 #: app/templates/user/notifs/20.html:85
 msgid "Post From Suspicious Domain"
-msgstr ""
+msgstr "Publication issue d'un domaine suspect"
 
 #: app/templates/user/notifs/20.html:113
 msgid "Post With Suspicious Image"
-msgstr ""
+msgstr "Publication avec une image suspecte"
 
 #: app/templates/user/notifs/3.html:8
-#, fuzzy
 msgid "replied to post"
-msgstr "Signaler la publication"
+msgstr "a répondu à la publication"
 
 #: app/templates/user/notifs/3.html:19 app/templates/user/notifs/4.html:19
 #, fuzzy
 msgid "Reply Details"
-msgstr "Plus d'informations"
+msgstr "Informations sur la réponse"
 
 #: app/templates/user/notifs/3.html:22 app/templates/user/notifs/4.html:22
 #: app/templates/user/notifs/6.html:18 app/templates/user/notifs/6.html:41
 #: app/templates/user/notifs/6.html:55
 msgid "Go to..."
-msgstr ""
+msgstr "Aller à..."
 
 #: app/templates/user/notifs/4.html:8
-#, fuzzy
 msgid "replied to comment"
-msgstr "Signaler le commentaire"
+msgstr "a répondu au commentaire"
 
 #: app/templates/user/notifs/5.html:11
-#, fuzzy
 msgid "New Post in followed feed "
-msgstr "Les publications NSFW ne sont pas autorisées."
+msgstr "Nouvelle publication du flux suivant "
 
 #: app/templates/user/notifs/6.html:4
-#, fuzzy
 msgid "You have been mentioned by"
-msgstr "Vous avez été banni·e."
+msgstr "Vous avez été mentionné·e par"
 
 #: app/templates/user/notifs/6.html:15
 #, fuzzy
 msgid "Comment Details"
-msgstr "Plus d'informations"
+msgstr "Informations sur le commentaire"
 
 #: app/templates/user/notifs/6.html:29
-#, fuzzy
 msgid "Post title: "
-msgstr "Filtres de publication : "
+msgstr "Titre de la publication : "
 
 #: app/templates/user/notifs/6.html:38
-#, fuzzy
 msgid "Post Details"
-msgstr "Détails de la Page"
+msgstr "Informations sur la publication"
 
 #: app/templates/user/notifs/6.html:52
-#, fuzzy
 msgid "This is a request to move the community"
-msgstr "Résultat de la recherche pour la communauté distante"
+msgstr "C'est une demande pour migrer la communauté"
 
 #: app/templates/user/notifs/_time_and_buttons.html:10
-#, fuzzy
 msgid "Mark as read"
-msgstr "Tout marquer comme lu"
+msgstr "Marquer comme lu"
 
 #: app/templates/user/notifs/_time_and_buttons.html:18
-#, fuzzy
 msgid "Mark as unread"
-msgstr "Tout marquer comme lu"
+msgstr "Marquer comme non-lu"
 
 #: app/topic/forms.py:8
 msgid "New topic name"
@@ -7622,7 +7544,7 @@ msgstr ""
 
 #: app/topic/routes.py:287
 msgid "Suggest a topic\""
-msgstr "Suggérer une rubrique"
+msgstr "Suggérer une rubrique\""
 
 #: app/user/forms.py:12
 msgid "Display name"
@@ -7675,7 +7597,7 @@ msgstr "Sauvegarder le profil"
 
 #: app/user/forms.py:39
 msgid "That email address is already in use by another account"
-msgstr "Ce courriel est déjà utilisée par un autre compte"
+msgstr "Ce courriel est déjà utilisé par un autre compte"
 
 #: app/user/forms.py:43
 msgid "Matrix user ids start with @"
@@ -7703,7 +7625,7 @@ msgstr "Seuil de masquage de la réponse"
 
 #: app/user/forms.py:58
 msgid "Use markdown editor GUI when writing"
-msgstr "Utiliser l'éditeur Markdown lors de l'écriture"
+msgstr "Utiliser l'éditeur Markdown lors de la rédaction"
 
 #: app/user/forms.py:60
 msgid "Show profile in user list"
@@ -7711,7 +7633,7 @@ msgstr "Afficher le profil dans la liste des utilisateur·ices"
 
 #: app/user/forms.py:61
 msgid "My posts appear in search results"
-msgstr "Mes publications apparaissent dans les résultats de recherche"
+msgstr "Faire apparaitre mes publications dans les résultats de recherche"
 
 #: app/user/forms.py:62
 msgid ""
@@ -7722,17 +7644,17 @@ msgstr ""
 "(ouvert/hautvoté/basvoté)"
 
 #: app/user/forms.py:63
+#, fuzzy
 msgid "Show communities I've joined on my profile"
-msgstr ""
+msgstr "Montrer les communautés abonnées sur mon profil"
 
 #: app/user/forms.py:64
 msgid "Manually approve followers"
 msgstr "Approuver manuellement les abonné·es"
 
 #: app/user/forms.py:65
-#, fuzzy
 msgid "Federate votes"
-msgstr "Fédération"
+msgstr "Fédérer les votes"
 
 #: app/user/forms.py:66
 msgid "Enable Automatic Follow of Feed Communities."
@@ -7747,9 +7669,8 @@ msgid "Default post sort"
 msgstr "Tri par défaut des publications"
 
 #: app/user/forms.py:82
-#, fuzzy
 msgid "Default comment sort"
-msgstr "Tri par défaut des publications"
+msgstr "Tri par défaut des commentaires"
 
 #: app/user/forms.py:92
 msgid "Theme"
@@ -7826,11 +7747,9 @@ msgid "Malicious reporting"
 msgstr "Signalement malveillant"
 
 #: app/user/forms.py:165
-#, fuzzy
 msgid "Hide posts in communities with these words in their name"
 msgstr ""
-"Rejeter tous les publications et commentaires des utilisateur·ices avec "
-"ces mots dans leur nom (un par ligne)"
+"Masquer les publications dans les communautés dont le nom contient ces mots"
 
 #: app/user/forms.py:168
 msgid "Blur thumbnail"
@@ -7962,9 +7881,9 @@ msgid "Spanish"
 msgstr "Espagnol"
 
 #: app/user/routes.py:626
-#, fuzzy, python-format
+#, python-format
 msgid "Your %(provider)s account has been disconnected."
-msgstr "Votre nouvelle communauté a été créée."
+msgstr "Votre compte %(provider)s a été déconnecté."
 
 #: app/user/routes.py:647
 msgid "Export Complete."
@@ -8500,4 +8419,3 @@ msgstr "Votre don a été annulé."
 
 #~ msgid "Vote privately"
 #~ msgstr "Vote en toute confidentialité"
-

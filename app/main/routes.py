@@ -1,6 +1,6 @@
 import os.path
 import json
-from datetime import timedelta
+from datetime import timedelta, datetime
 from random import randint
 
 import flask
@@ -23,7 +23,7 @@ from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
-from app.main.forms import ShareLinkForm
+from app.main.forms import ShareLinkForm, ContentWarningForm
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
@@ -33,7 +33,8 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
-    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post
+    moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post, \
+    num_topics, referrer
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
@@ -169,6 +170,7 @@ def home_page(sort, view_filter):
                            moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            enable_mod_filter=enable_mod_filter,
+                           has_topics=num_topics() > 0
                            )
 
 
@@ -346,7 +348,7 @@ def list_local_communities():
     else:
         communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -440,7 +442,7 @@ def list_subscribed_communities():
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -535,7 +537,7 @@ def list_not_subscribed_communities():
     if current_user.hide_nsfl == 1:
         communities = communities.filter(Community.nsfl == False)
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -1066,6 +1068,23 @@ def list_feeds():
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds,
                                public_feeds_list=public_feeds,
                                subscribed_feeds=subscribed_feeds(current_user.get_id()))
+
+
+@bp.route('/content_warning', methods=['GET', 'POST'])
+def content_warning():
+    form = ContentWarningForm()
+    if form.validate_on_submit():
+        if form.next.data.startswith("/"):
+            resp = make_response(redirect(form.next.data))
+            resp.set_cookie('warned', 'yes', expires=datetime(year=2099, month=12, day=30))
+            return resp
+    form.next.data = referrer()
+    message = """
+    This website contains age-restricted materials including nudity and explicit depictions of sexual activity.
+
+    By entering, you affirm that you are at least 18 years of age or the age of majority in the jurisdiction you are accessing the website from and you consent to viewing sexually explicit content.
+    """
+    return render_template('generic_form.html', title=_('Content warning'), message=message, form=form)
 
 
 @bp.route('/health', methods=['HEAD', 'GET'])

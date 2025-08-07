@@ -401,6 +401,7 @@ class ListCommunitiesRequest(DefaultSchema):
 
 class ListCommunitiesResponse(DefaultSchema):
     communities = fields.List(fields.Nested(CommunityView), required=True)
+    next_page = fields.String(allow_none=True)
 
 
 class FollowCommunityRequest(DefaultSchema):
@@ -450,7 +451,7 @@ class CommunityModerationBanItem(DefaultSchema):
 
 class CommunityModerationBansListResponse(DefaultSchema):
     items = fields.List(fields.Nested(CommunityModerationBanItem))
-    next_page = fields.String()
+    next_page = fields.String(allow_none=True)
 
 
 class CommunityModerationBanRequest(DefaultSchema):

@@ -142,7 +142,10 @@ class Config(object):
     # Country Header sourcing
     COUNTRY_SOURCE_HEADER = os.environ.get('COUNTRY_SOURCE_HEADER') or ''
 
-    FEP_AWESOME = os.environ.get('FEP_AWESOME') or False
-
     # render a post+replies to json and delete from DB after this many months
     ARCHIVE_POSTS = int(os.environ.get('ARCHIVE_POSTS') or 0)
+
+    # How long to keep content in remote communities before automatically deleting posts. See 'class EditCommunityForm()' for allowed values
+    DEFAULT_CONTENT_RETENTION = int(os.environ.get('DEFAULT_CONTENT_RETENTION') or -1)  # -1 = forever, no deletion
+
+    CONTENT_WARNING = int(os.environ.get('CONTENT_WARNING') or 0)

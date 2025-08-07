@@ -41,11 +41,11 @@ def get_topic_list(auth, data, user_id=None) -> dict:
         communities_moderating = []
         communities_joined = []
 
-    def process_nested_topics(feed_tree):
+    def process_nested_topics(feed_tree_dict):
         """Process nested feed tree while preserving nested structure"""
         processed_feeds = []
 
-        for item in feed_tree:
+        for item in feed_tree_dict:
             view = topic_view(topic=item['topic'], variant=1,
                              communities_moderating=communities_moderating,
                              banned_from=banned_from, communities_joined=communities_joined,

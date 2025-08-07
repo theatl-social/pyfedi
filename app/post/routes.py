@@ -8,7 +8,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc
+from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, constants, cache, limiter
@@ -16,7 +16,7 @@ from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
-from app.constants import NOTIF_REPORT, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -32,7 +32,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
-    vote_for_post
+    vote_for_post, mark_post_read
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
@@ -71,10 +71,6 @@ def show_post(post_id: int):
             return redirect(url_for("auth.login", next=f"/post/{post_id}"))
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
-        if post.archived:
-            sort = 'hot'
-            archived_post = retrieve_archived_post(post.archived)
-            post.body_html = archived_post['body_html']
 
         # If nothing has changed since their last visit, return HTTP 304
         current_etag = f"{post.id}{sort}_{hash(post.last_active)}"
@@ -238,8 +234,7 @@ def show_post(post_id: int):
         if current_user.is_authenticated:
             user = current_user
             if current_user.hide_read_posts:
-                current_user.mark_post_as_read(post)
-                db.session.commit()
+                mark_post_read([post.id], True, current_user.id)
         else:
             user = None
 
@@ -257,6 +252,11 @@ def show_post(post_id: int):
                 recipient_language_name = lang.name
 
         content_filters = user_filters_posts(current_user.id) if current_user.is_authenticated else {}
+
+        if post.archived:
+            sort = 'hot'
+            archived_post = retrieve_archived_post(post.archived)
+            post.body_html = archived_post['body_html']     # do this last to avoid the db.session.commit() in mark_post_read(). We don't want to save data in .body_html to the DB, just have it there for display in the jinja template
 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
                                    is_owner=community.is_owner(),
@@ -1005,9 +1005,9 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
                         send_to_remote_instance(instance.id, post.community.id, announce)
 
         # Federate to microblog followers
-        followers = UserFollower.query.filter_by(local_user_id=post.user_id)
+        followers = db.session.query(UserFollower).filter_by(local_user_id=post.user_id)
         if followers:
-            instances = Instance.query.join(User, User.instance_id == Instance.id).join(UserFollower,
+            instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower,
                                                                                         UserFollower.remote_user_id == User.id)
             instances = instances.filter(UserFollower.local_user_id == post.user_id)
             for instance in instances:
@@ -1017,6 +1017,16 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
     if post.user_id != user.id and reason is not None:
         add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
                       link_text=shorten_string(post.title), link=f'post/{post.id}')
+        
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])

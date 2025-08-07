@@ -1,9 +1,11 @@
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
-from app.models import Community, Instance, Post, PostReply, User, UserFollower, File
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION
+from app.models import Community, Instance, Post, PostReply, User, UserFollower, File, Notification, ChatMessage
 from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app
+from sqlalchemy import Integer
 
 
 """ JSON format
@@ -215,6 +217,17 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
             if instance.domain not in domains_sent_to:
                 send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
+    # remove any notifications about deleted posts
+    if is_post:
+        notifs = session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == object.id)
+        for notif in notifs:
+            # dont delete report notifs
+            if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+                continue
+            session.delete(notif)
+        session.commit()
+
+
 
 @celery.task
 def delete_posts_with_blocked_images(post_ids, user_id, send_async):
@@ -242,3 +255,66 @@ def delete_posts_with_blocked_images(post_ids, user_id, send_async):
             raise
         finally:
             session.close()
+
+
+# deleting PMs will get a new function: I can't be bothered reworking delete_object to remove community logic for such an obscure activity
+@celery.task
+def delete_pm(send_async, message_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                message = session.query(ChatMessage).filter_by(id=message_id).one()
+                recipient = session.query(User).filter_by(id=message.recipient_id).one()
+                delete_message(message, recipient)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+@celery.task
+def restore_pm(send_async, message_id):
+    with current_app.app_context():
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                message = session.query(ChatMessage).filter_by(id=message_id).one()
+                recipient = session.query(User).filter_by(id=message.recipient_id).one()
+                delete_message(message, recipient, is_restore=True)
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+
+def delete_message(message, recipient, is_restore=False):
+    if recipient.is_local():
+        return
+
+    delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    delete = {
+      'id': delete_id,
+      'type': 'Delete',
+      'actor': message.sender.public_url(),
+      'object': message.ap_id,
+      '@context': default_context(),
+      'to': recipient.public_url()
+    }
+
+    if is_restore:
+        del delete['@context']
+        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo = {
+          'id': undo_id,
+          'type': 'Undo',
+          'actor': message.sender.public_url(),
+          'object': delete,
+          '@context': default_context(),
+          'to': recipient.public_url()
+        }
+
+    payload = undo if is_restore else delete
+    send_post_request(recipient.ap_inbox_url, payload, message.sender.private_key, message.sender.public_url() + '#main-key')

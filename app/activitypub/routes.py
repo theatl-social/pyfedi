@@ -784,10 +784,9 @@ def process_inbox_request(request_json, store_ap_json):
                     elif isinstance(request_json['object'], list):  # PieFed can Announce an unlimited amount of objects at once, as long as they are all from the same community.
                         for obj in request_json['object']:
                             # Convert each object into the list into an identical Announce activity containing just that object
-                            if obj['audience'] == request_json['actor']:    # Check if same community. This ensures the HTTP Sig on the original announce is valid for all objects.
-                                fake_activity = request_json.copy()
-                                fake_activity['object'] = obj
-                                process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
+                            fake_activity = request_json.copy()
+                            fake_activity['object'] = obj
+                            process_inbox_request(fake_activity, store_ap_json)  # Process the Announce (with single object) as normal
                         return
 
                     if not feed:
@@ -1140,6 +1139,15 @@ def process_inbox_request(request_json, store_ap_json):
                             delete_post_or_comment(user, to_delete, store_ap_json, request_json, reason)
                             if not announced:
                                 announce_activity_to_followers(to_delete.community, user, request_json)
+                    else:
+                        # no content found. check if it was a PM
+                        updated_message = session.query(ChatMessage).filter_by(ap_id=ap_id, sender_id=user.id).first()
+                        if updated_message:
+                            updated_message.read = True
+                            updated_message.deleted = True
+                            session.commit()
+                            log_incoming_ap(id, APLOG_DELETE, APLOG_SUCCESS, saved_json,
+                                            f"Delete: PM {ap_id} deleted")
                     return
 
                 if core_activity['type'] == 'Like' or core_activity['type'] == 'EmojiReact':  # Upvote
@@ -1522,8 +1530,13 @@ def process_inbox_request(request_json, store_ap_json):
                                 if not announced:
                                     announce_activity_to_followers(to_restore.community, user, request_json)
                         else:
-                            log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_FAILURE, saved_json,
-                                            'Undo delete: cannot find ' + ap_id)
+                            # no content found. check if it was a PM
+                            updated_message = session.query(ChatMessage).filter_by(ap_id=ap_id, sender_id=restorer.id).first()
+                            if updated_message:
+                                updated_message.deleted = False
+                                session.commit()
+                                log_incoming_ap(id, APLOG_UNDO_DELETE, APLOG_SUCCESS, saved_json,
+                                            f"Delete: PM {ap_id} restored")
                         return
 
                     if core_activity['object']['type'] == 'Like' or core_activity['object']['type'] == 'Dislike':  # Undoing an upvote or downvote
@@ -1697,7 +1710,7 @@ def announce_activity_to_followers(community: Community, creator: User, activity
         # All good? Send!
         if instance and instance.online() and not instance_banned(instance.inbox):
             if creator.instance_id != instance.id:  # don't send it to the instance that hosts the creator as presumably they already have the content
-                if can_batch and current_app.config['FEP_AWESOME'] and instance.software == 'piefed':
+                if can_batch and instance.software == 'piefed':
                     db.session.add(ActivityBatch(instance_id=instance.id, community_id=community.id,
                                                  payload=activity))
                     db.session.commit()
@@ -2085,20 +2098,34 @@ def process_chat(user, store_ap_json, core_activity, session):
                 session.commit()
             # Save ChatMessage to DB
             encrypted = core_activity['object']['encrypted'] if 'encrypted' in core_activity['object'] else None
-            new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id,
-                                      conversation_id=existing_conversation.id,
-                                      body_html=core_activity['object']['content'],
-                                      body=html_to_text(core_activity['object']['content']),
-                                      encrypted=encrypted,
-                                      ap_id=core_activity['object']['id'])
-            session.add(new_message)
-            existing_conversation.updated_at = utcnow()
-            session.commit()
+            updated_message = ChatMessage.query.filter_by(ap_id=core_activity['object']['id']).first()
+            if not updated_message:
+                new_message = ChatMessage(sender_id=sender.id, recipient_id=recipient.id,
+                                          conversation_id=existing_conversation.id,
+                                          body_html=core_activity['object']['content'],
+                                          body=html_to_text(core_activity['object']['content']),
+                                          encrypted=encrypted,
+                                          ap_id=core_activity['object']['id'])
+                session.add(new_message)
+                existing_conversation.updated_at = utcnow()
+                session.commit()
+
+                notification_text = 'New message from '
+                message_id = new_message.id
+            else:
+                updated_message.body_html = core_activity['object']['content']
+                updated_message.body = html_to_text(core_activity['object']['content'])
+                updated_message.read = False
+                existing_conversation.updated_at = utcnow()
+                session.commit()
+
+                notification_text = 'Updated message from '
+                message_id = updated_message.id
 
             # Notify recipient
-            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': new_message.id}
-            notify = Notification(title=shorten_string('New message from ' + sender.display_name()),
-                                  url=f'/chat/{existing_conversation.id}#message_{new_message.id}',
+            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
+            notify = Notification(title=shorten_string(notification_text + sender.display_name()),
+                                  url=f'/chat/{existing_conversation.id}#message_{message_id}',
                                   user_id=recipient.id,
                                   author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
                                   targets=targets_data)
