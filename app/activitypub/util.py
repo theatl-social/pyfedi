@@ -1214,7 +1214,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         main_part = content_type.split(';')[0]
 
                                         # Split the main part on the '/' character and take the second part
-                                        file_ext = '.' + main_part.split('/')[1]
+                                        file_ext = '.' + main_part.split('/')[1].lower()
                                         file_ext = file_ext.strip()  # just to be sure
 
                                         if file_ext == '.jpeg':
@@ -1224,7 +1224,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         elif file_ext == '.octet-stream':
                                             file_ext = '.avif'
                                     else:
-                                        file_ext = os.path.splitext(file.source_url)[1]
+                                        file_ext = os.path.splitext(file.source_url)[1].lower()
                                         file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
                                         if '?' in file_ext:
                                             file_ext = file_ext.split('?')[0]
@@ -1261,8 +1261,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
                                     thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
-                                    final_ext = file_ext  # track file extension for conversion
-                                    thumbnail_ext = file_ext
+                                    final_ext = file_ext.lower()  # track file extension for conversion
+                                    thumbnail_ext = file_ext.lower()
 
                                     if medium_image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
                                         import pillow_avif  # NOQA

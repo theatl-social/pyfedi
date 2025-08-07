@@ -345,15 +345,15 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         ensure_directory_exists(directory)
 
         # save the file
-        final_place = os.path.join(directory, new_filename + file_ext)
+        final_place = os.path.join(directory, new_filename + file_ext.lower())
         uploaded_file.seek(0)
         uploaded_file.save(final_place)
 
-        final_ext = file_ext  # track file extension for conversion
+        final_ext = file_ext.lower()  # track file extension for conversion
 
-        if file_ext.lower() == '.heic':
+        if final_ext == '.heic':
             register_heif_opener()
-        if file_ext.lower() == '.avif':
+        if final_ext == '.avif':
             import pillow_avif  # NOQA  # do not remove
 
         Image.MAX_IMAGE_PIXELS = 89478485
