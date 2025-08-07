@@ -558,6 +558,51 @@ def monitor_healthy_instances():
                         response.close()
                 session.commit()
 
+            # Handle admin roles for MBIN instances
+            """
+            (unlike Lemmy / PieFed, API response for this endpoint doesn't give enough info to create User,
+            only add instance role info to Users that the DB is already aware of)
+            """
+            if instance.online() and instance.software == 'mbin':
+                try:
+                    response = get_request(f'https://{instance.domain}/api/users/admins')
+                    if response and response.status_code == 200:
+                        instance_data = response.json()
+                        admin_user_ids = []
+
+                        for item in instance_data['items']:
+                            username = item['username'] if 'username' in item else None
+                            if 'isAdmin' in item and item['isAdmin'] == False:
+                                continue
+                            if username:
+                                user = session.query(User).filter_by(user_name=username, instance_id=instance.id).first()
+                                if user:
+                                    admin_user_ids.append(user.id)
+                                    if not instance.user_is_admin(user.id):
+                                        new_instance_role = InstanceRole(
+                                            instance_id=instance.id,
+                                            user_id=user.id,
+                                            role='admin'
+                                        )
+                                        session.add(new_instance_role)
+
+                        # Remove old admin roles
+                        for instance_admin in session.query(InstanceRole).filter_by(instance_id=instance.id):
+                            if instance_admin.user_id not in admin_user_ids:
+                                session.query(InstanceRole).filter(
+                                    InstanceRole.user_id == instance_admin.user_id,
+                                    InstanceRole.instance_id == instance.id,
+                                    InstanceRole.role == 'admin'
+                                ).delete()
+                except Exception:
+                    session.rollback()
+                    instance.failures += 1
+                finally:
+                    if response:
+                        response.close()
+                session.commit()
+
+
     except Exception:
         session.rollback()
         raise
