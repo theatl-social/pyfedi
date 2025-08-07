@@ -1,6 +1,6 @@
 from random import randint
 
-from flask import flash, g, redirect, render_template, request, url_for, session
+from flask import flash, g, redirect, render_template, request, url_for, session, current_app
 from flask_babel import _
 from flask_login import login_user, current_user
 from sqlalchemy import func
@@ -65,6 +65,8 @@ def initialize_new_user(email, username, oauth_id_key, user_info, ip, country):
         banned=user_ip_banned() or user_cookie_banned(),
         alt_user_name=gibberish(randint(8, 20)),
     )
+    if current_app.config['CONTENT_WARNING']:
+        user.hide_nsfw = False
     setattr(user, oauth_id_key, user_info['id'])  # Assign OAuth provider ID
     db.session.add(user)
     db.session.commit()
