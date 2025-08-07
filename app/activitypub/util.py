@@ -237,17 +237,6 @@ def banned_user_agents():
     return []  # todo: finish this function
 
 
-@cache.memoize(150)
-def instance_allowed(host: str) -> bool:
-    if host is None or host == '':
-        return True
-    host = host.lower()
-    if 'https://' in host or 'http://' in host:
-        host = urlparse(host).hostname
-    instance = AllowedInstances.query.filter_by(domain=host.strip()).first()
-    return instance is not None
-
-
 def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
     """Find an actor by URL or webfinger, optionally creating it if not found.
     """

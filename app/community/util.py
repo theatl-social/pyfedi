@@ -14,12 +14,12 @@ from psycopg2 import IntegrityError
 
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
-from app.activitypub.util import find_actor_or_create, actor_json_to_model, ensure_domains_match, \
+from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
     find_hashtag_or_create, create_post, remote_object_to_json
-from app.models import Community, File, BannedInstances, PostReply, Post, utcnow, CommunityMember, Site, \
+from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed
 from sqlalchemy import func, desc, text
 import os
 
@@ -31,9 +31,11 @@ def search_for_community(address: str) -> Community | None:
     if address.startswith('!'):
         name, server = address[1:].split('@')
 
-        banned = BannedInstances.query.filter_by(domain=server).first()
-        if banned:
-            return None
+        if not instance_allowed(server):
+                return None
+        else:
+            if instance_banned(server):
+                return None
 
         if current_app.config['SERVER_NAME'] == server:
             already_exists = Community.query.filter_by(name=name, ap_id=None).first()

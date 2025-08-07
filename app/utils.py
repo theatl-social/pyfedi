@@ -52,7 +52,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark
+    PostReply, PostReplyBookmark, AllowedInstances
 
 
 # Flask's render_template function, with support for themes added
@@ -1111,6 +1111,17 @@ def user_ip_banned() -> bool:
     current_ip_address = ip_address()
     if current_ip_address:
         return current_ip_address in banned_ip_addresses()
+
+
+@cache.memoize(150)
+def instance_allowed(host: str) -> bool:
+    if host is None or host == '':
+        return True
+    host = host.lower()
+    if 'https://' in host or 'http://' in host:
+        host = urlparse(host).hostname
+    instance = db.session.query(AllowedInstances).filter_by(domain=host.strip()).first()
+    return instance is not None
 
 
 @cache.memoize(timeout=150)
