@@ -1592,6 +1592,11 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
         {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
+#@cache.memoize(timeout=30)
+def num_topics() -> int:
+    return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
+
+
 # topics, in a tree
 def topic_tree() -> List:
     topics = Topic.query.order_by(Topic.name)
