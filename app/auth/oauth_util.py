@@ -66,7 +66,7 @@ def initialize_new_user(email, username, oauth_id_key, user_info, ip, country):
         alt_user_name=gibberish(randint(8, 20)),
     )
     if current_app.config['CONTENT_WARNING']:
-        user.hide_nsfw = False
+        user.hide_nsfw = 0
     setattr(user, oauth_id_key, user_info['id'])  # Assign OAuth provider ID
     db.session.add(user)
     db.session.commit()

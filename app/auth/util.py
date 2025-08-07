@@ -248,7 +248,7 @@ def create_new_user(form, ip, country, verification_token):
         language_id=g.site.language_id
     )
     if current_app.config['CONTENT_WARNING']:
-        user.hide_nsfw = False
+        user.hide_nsfw = 0
     user.set_password(form.password.data)
 
     db.session.add(user)
