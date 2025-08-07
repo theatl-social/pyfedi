@@ -200,7 +200,6 @@ def admin_misc():
         site.enable_chan_image_filter = form.enable_chan_image_filter.data
         site.enable_this_comment_filter = form.enable_this_comment_filter.data
         site.allow_local_image_posts = form.allow_local_image_posts.data
-        site.remote_image_cache_days = form.remote_image_cache_days.data
         site.enable_nsfw = form.enable_nsfw.data
         site.enable_nsfl = form.enable_nsfl.data
         site.community_creation_admin_only = form.community_creation_admin_only.data
@@ -238,7 +237,6 @@ def admin_misc():
         form.enable_this_comment_filter.data = site.enable_this_comment_filter
         form.meme_comms_low_quality.data = get_setting('meme_comms_low_quality', False)
         form.allow_local_image_posts.data = site.allow_local_image_posts
-        form.remote_image_cache_days.data = site.remote_image_cache_days
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
         form.community_creation_admin_only.data = site.community_creation_admin_only

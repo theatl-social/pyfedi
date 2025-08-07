@@ -31,7 +31,6 @@ class SiteMiscForm(FlaskForm):
     enable_this_comment_filter = BooleanField(_l('Filter out comments that are simply a form of "this"'))
     meme_comms_low_quality = BooleanField(_l('Meme communities = low-quality'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
-    remote_image_cache_days = IntegerField(_l('Days to cache images from remote instances for'), render_kw={'placeholder': _l('0 means cache forever')})
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
