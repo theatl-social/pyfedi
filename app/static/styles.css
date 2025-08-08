@@ -2336,6 +2336,7 @@ h1 .warning_badge {
   min-width: 80px;
   min-height: 80px;
   object-fit: cover;
+  font-size: 0;
 }
 
 .community_icon_small {
@@ -2343,6 +2344,7 @@ h1 .warning_badge {
   height: 20px;
   margin-right: 3px;
   object-fit: cover;
+  font-size: 0;
 }
 
 .bump_up {
