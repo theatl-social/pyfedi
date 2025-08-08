@@ -1163,7 +1163,8 @@ def process_inbox_request(request_json, store_ap_json):
                     if reported:
                         process_report(user, reported, core_activity, session)
                         log_incoming_ap(id, APLOG_REPORT, APLOG_SUCCESS, saved_json)
-                        announce_activity_to_followers(reported.community, user, request_json)
+                        announce_activity_to_followers(reported.community, user, request_json,
+                                                       is_flag=True, admin_instance_id=reported.author.instance_id)
                     else:
                         log_incoming_ap(id, APLOG_REPORT, APLOG_IGNORED, saved_json,
                                         'Report ignored due to missing content')
@@ -1678,7 +1679,10 @@ def process_delete_request(request_json, store_ap_json):
             session.close()
 
 
-def announce_activity_to_followers(community: Community, creator: User, activity, can_batch=False):
+# Announces incoming activity back out to subscribers
+# if is_flag is set, the report is just sent to any remote mods and the reported user's instance
+def announce_activity_to_followers(community: Community, creator: User, activity, can_batch=False,
+                                   is_flag=False, admin_instance_id=1):
     # avoid announcing activity sent to local users unless it is also in a local community
     if not community.is_local():
         return
@@ -1703,7 +1707,16 @@ def announce_activity_to_followers(community: Community, creator: User, activity
         "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
     }
 
-    for instance in community.following_instances(include_dormant=True):
+    if is_flag:
+        instances = community.following_instances(include_dormant=True, mod_hosts_only=True)
+        if admin_instance_id != 1 and not any(i.id == admin_instance_id for i in instances):
+            admin_instance = db.session.query(Instance).get(admin_instance_id)
+            if admin_instance:
+                instances.append(admin_instance)
+    else:
+        instances = community.following_instances(include_dormant=True)
+
+    for instance in instances:
         # awaken dormant instances if they've been sleeping for long enough to be worth trying again
         awaken_dormant_instance(instance)
 
