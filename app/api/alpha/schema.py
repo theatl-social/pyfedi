@@ -445,7 +445,8 @@ class CommunityModerationBanItem(DefaultSchema):
     banned_user = fields.Nested(Person)
     community = fields.Nested(Community)
     expired = fields.Boolean()
-    expired_at = fields.String(required=True, allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z, null=permanent ban", "format": "datetime"})
+    expired_at = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z, null=permanent ban", "format": "datetime"})
+    expires_at = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z, null=permanent ban", "format": "datetime"})
     reason = fields.String()
 
 
@@ -458,7 +459,7 @@ class CommunityModerationBanRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     reason = fields.String(required=True)
     user_id = fields.Integer(required=True)
-    expires = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    expires_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     permanent = fields.Boolean()
 
 
