@@ -256,7 +256,10 @@ def list_communities():
             communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
 
     else:
-        communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
+        if current_app.config['CONTENT_WARNING']:
+            communities = communities.filter(Community.nsfl == False)
+        else:
+            communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
 
     communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
 

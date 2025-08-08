@@ -2471,7 +2471,10 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
 
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
-        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
+        if current_app.config['CONTENT_WARNING']:
+            post_id_where.append('p.from_bot is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
+        else:
+            post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
