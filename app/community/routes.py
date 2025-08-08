@@ -314,8 +314,13 @@ def show_community(community: Community):
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
-            posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False, Post.deleted == False,
-                                 Post.status > POST_STATUS_REVIEWING, Post.status > POST_STATUS_REVIEWING)
+            if current_app.config['CONTENT_WARNING']:
+                posts = posts.filter(Post.from_bot == False, Post.nsfl == False, Post.deleted == False,
+                                     Post.status > POST_STATUS_REVIEWING, Post.status > POST_STATUS_REVIEWING)
+            else:
+                posts = posts.filter(Post.from_bot == False, Post.nsfw == False, Post.nsfl == False,
+                                     Post.deleted == False,
+                                     Post.status > POST_STATUS_REVIEWING, Post.status > POST_STATUS_REVIEWING)
             content_filters = {}
             user = None
         else:
