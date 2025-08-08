@@ -606,7 +606,7 @@ def first_paragraph(html):
             second_paragraph = first_para.find_next('p')
             if second_paragraph:
                 return f'<p>{second_paragraph.text}</p>'
-        return f'<p>{first_para.text}</p>'
+        return allowlist_html(f'<p>{first_para.text}</p>')
     else:
         return ''
 
