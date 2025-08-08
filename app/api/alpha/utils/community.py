@@ -396,8 +396,8 @@ def post_community_moderate_ban(auth, data):
         ban_until = datetime.strptime(data['expires_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
         if ban_until < datetime.now():
             raise Exception("expires_at must be a time in the future. - "
-                            f"Current time: {utcnow().isoformat(timespec="microseconds") +  'Z'} - "
-                            f"Time provided: {ban_until.isoformat(timespec="microseconds") + 'Z'}")
+                            f"Current time: {utcnow().isoformat(timespec='microseconds') +  'Z'} - "
+                            f"Time provided: {ban_until.isoformat(timespec='microseconds') + 'Z'}")
     else:
         ban_until = datetime.now() + relativedelta(years=1)
 
