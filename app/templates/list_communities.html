@@ -82,6 +82,16 @@
       </select>
     </div>
   {% endif -%}
+  {% if nsfw is not none -%}
+    <div class="col">
+      <label for="language_id">{{ _('NSFW') }}:</label>
+      <select name="nsfw" id="nsfw" class="form-control-sm form-select submit_on_change" aria-label="{{ _('Show NSFW communities') }}">
+        <option value="all" {{ 'selected' if nsfw == 'all' else '' }}>{{ _('All') }}</option>
+        <option value="yes" {{ 'selected' if nsfw == 'yes' else '' }}>{{ _('Yes') }}</option>
+        <option value="no" {{ 'selected' if nsfw == 'no' else '' }}>{{ _('No') }}</option>
+      </select>
+    </div>
+  {% endif -%}
   <div class="col">
     <label for="search_text">{{ _('Search') }}:<br></label>
     <input id="search_text" class="form-control" type="search"
