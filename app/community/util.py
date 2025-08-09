@@ -19,7 +19,7 @@ from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting
 from sqlalchemy import func, desc, text
 import os
 
@@ -31,11 +31,10 @@ def search_for_community(address: str) -> Community | None:
     if address.startswith('!'):
         name, server = address[1:].split('@')
 
-        if not instance_allowed(server):
-                return None
-        else:
-            if instance_banned(server):
-                return None
+        if get_setting('use_allowlist') and not instance_allowed(server):
+            return None
+        if instance_banned(server):
+            return None
 
         if current_app.config['SERVER_NAME'] == server:
             already_exists = Community.query.filter_by(name=name, ap_id=None).first()

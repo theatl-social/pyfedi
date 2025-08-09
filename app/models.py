@@ -738,15 +738,19 @@ class Community(db.Model):
             text('SELECT user_id FROM "notification_subscription" WHERE entity_id = :community_id AND type = :type '),
             {'community_id': self.id, 'type': NOTIF_COMMUNITY}).scalars())
 
+
     # instances that have users which are members of this community. (excluding the current instance)
-    def following_instances(self, include_dormant=False) -> List[Instance]:
+    def following_instances(self, include_dormant=False, mod_hosts_only=False) -> List[Instance]:
         instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,
                                                                                                 CommunityMember.user_id == User.id)
         instances = instances.filter(CommunityMember.community_id == self.id, CommunityMember.is_banned == False)
+        if mod_hosts_only:
+            instances = instances.filter(CommunityMember.is_moderator == True)
         if not include_dormant:
             instances = instances.filter(Instance.dormant == False)
         instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
         return instances.all()
+
 
     def has_followers_from_domain(self, domain: str) -> bool:
         instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(CommunityMember,

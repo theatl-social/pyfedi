@@ -269,14 +269,21 @@ def get_community_moderate_bans(auth, data):
     for cb in community_bans:
         ban_json = {}
         ban_json['reason'] = cb.reason
-        ban_json['expired_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z" if cb.ban_until else None
         ban_json['community'] = community_view(community, variant=1)
         ban_json['banned_user'] = user_view(user=cb.user_id, variant=1)
         ban_json['banned_by'] = user_view(user=cb.banned_by, variant=1)
         if not cb.ban_until:
+            # Permanent ban
             ban_json['expired'] = False
+            ban_json['expires_at'] = None
+            ban_json['expired_at'] = None
+        elif cb.ban_until < datetime.now():
+            ban_json['expired'] = True
+            ban_json['expired_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z"
         else:
-            ban_json['expired'] = True if cb.ban_until < datetime.now() else False
+            ban_json['expired'] = False
+            ban_json['expires_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z"
+
         items.append(ban_json)
 
     # return that info as json
@@ -363,7 +370,7 @@ def post_community_moderate_ban(auth, data):
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
     string_expected(['reason'], data)
-    string_expected(['expires'], data)
+    string_expected(['expires_at'], data)
     boolean_expected(['permanent'], data)
 
     # get the user to ban
@@ -385,8 +392,12 @@ def post_community_moderate_ban(auth, data):
     # check if ban is permanent or get the ban_until time if it exists, fall back to default of one year
     if data.get('permanent', False):
         ban_until = None
-    elif isinstance(data.get('expires', None), str):
-        ban_until = datetime.strptime(data['expires'], '%Y-%m-%dT%H:%M:%S.%fZ')
+    elif isinstance(data.get('expires_at', None), str):
+        ban_until = datetime.strptime(data['expires_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        if ban_until < datetime.now():
+            raise Exception("expires_at must be a time in the future. - "
+                            f"Current time: {utcnow().isoformat(timespec='microseconds') +  'Z'} - "
+                            f"Time provided: {ban_until.isoformat(timespec='microseconds') + 'Z'}")
     else:
         ban_until = datetime.now() + relativedelta(years=1)
 
@@ -434,7 +445,7 @@ def post_community_moderate_ban(auth, data):
     # build the response
     res = {}
     res['reason'] = cb.reason
-    res['expired_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z" if cb.ban_until else None
+    res['expires_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z" if cb.ban_until else None
     res['community'] = community_view(community, variant=1)
     res['banned_user'] = user_view(user=cb.user_id, variant=1)
     res['banned_by'] = user_view(user=cb.banned_by, variant=1)
