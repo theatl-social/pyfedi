@@ -15,6 +15,7 @@
 
 <div class="row">
     <div class="col mt-4">
+        <h3>{{ _('Resource usage') }}</h3>
         <p>{{ _('Load average: ') }}
         {% if load1 > num_cores %}
             <span class="blink red">{{ '%.2f' % load1 }}</span>
@@ -33,6 +34,14 @@
         {% endif -%}
         </p>
         <p>{{ disk_usage | safe }}</p>
+        {% if translation_languages %}
+            <h3>{{ _('Post translation available:') }}</h3>
+            <ul>
+                {% for language_info in translation_languages %}
+                    <li>{{ language_info['name'] }} to {{ ','.join(language_info['targets']) }}</li>
+                {% endfor %}
+            </ul>
+        {% endif -%}
     </div>
 </div>
 

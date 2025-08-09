@@ -445,6 +445,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e94d";
 }
 
+.fe-translate:before {
+  content: "\e972";
+}
+
 .fe-video {
   position: relative;
   top: 2px;

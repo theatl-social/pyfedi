@@ -390,6 +390,12 @@ h1 {
   }
 }
 
+.fe-translate {
+  &:before {
+    content: "\e972";
+  }
+}
+
 .fe-video {
   position: relative;
   top: 2px;

@@ -35,6 +35,7 @@ from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
 from app.shared.tasks import task_selector
+from app.translation import LibreTranslateAPI
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
@@ -68,12 +69,20 @@ def admin_home():
     from app.plugins import get_loaded_plugins, get_plugin_hooks
     plugins = get_loaded_plugins()
     plugin_hooks = get_plugin_hooks()
+
+    translation_languages = None
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        try:
+            lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'],
+                                   api_key=current_app.config['TRANSLATE_KEY'])
+            translation_languages = lt.languages()
+        except Exception:
+            pass
     
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
-                           num_cores=num_cores,
-                           disk_usage=disk_usage,
-                           plugins=plugins,
-                           plugin_hooks=plugin_hooks)
+                           num_cores=num_cores, disk_usage=disk_usage,
+                           plugins=plugins, plugin_hooks=plugin_hooks,
+                           translation_languages=translation_languages)
 
 
 @bp.route('/site', methods=['GET', 'POST'])

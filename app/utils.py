@@ -27,6 +27,8 @@ import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import orjson
 
+from app.translation import LibreTranslateAPI
+
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
@@ -2920,7 +2922,7 @@ def apply_feed_url_rules(self):
 # notification destination user helper function to make sure the
 # notification text is stored in the database using the language of the
 # recipient, rather than the language of the originator
-def get_recipient_language(user_id):
+def get_recipient_language(user_id: int) -> str:
     lang_to_use = ''
 
     # look up the user in the db based on the id
@@ -3265,3 +3267,13 @@ def archive_post(post_id: int):
         raise
     finally:
         session.close()
+
+
+@cache.memoize(timeout=80600)
+def libretranslate_string(text: str, source: str, target: str):
+    try:
+        lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'], api_key=current_app.config['TRANSLATE_KEY'])
+        return lt.translate(text, source=source, target=target)
+    except Exception as e:
+        current_app.logger.exception(str(e))
+        return ''

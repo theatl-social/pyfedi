@@ -222,6 +222,13 @@
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
         </div>
+        {% if can_translate and current_user.is_authenticated and current_user.language_id and post.language_id and current_user.language_id != post.language_id -%}
+            <div class="post_translate_icon">
+                <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
+                   hx-post="{{ url_for('post.post_translate', post_id=post.id) }}"
+                   hx-trigger="click throttle:1s" hx-target="previous .post_body" hx-swap="outerHTML"><span class="fe fe-translate"></span></a>
+            </div>
+        {% endif -%}
         {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
           <div class="dropdown" id="flair_dropdown_{{ post.id }}">
             <a href="{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}"

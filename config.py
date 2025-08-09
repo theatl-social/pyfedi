@@ -149,3 +149,6 @@ class Config(object):
     DEFAULT_CONTENT_RETENTION = int(os.environ.get('DEFAULT_CONTENT_RETENTION') or -1)  # -1 = forever, no deletion
 
     CONTENT_WARNING = int(os.environ.get('CONTENT_WARNING') or 0)
+
+    TRANSLATE_ENDPOINT = os.environ.get('TRANSLATE_ENDPOINT') or ''
+    TRANSLATE_KEY = os.environ.get('TRANSLATE_KEY') or ''

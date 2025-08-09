@@ -37,6 +37,7 @@ from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_book
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
 from app.shared.tasks import task_selector
+from app.translation import LibreTranslateAPI
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, instance_banned, \
@@ -47,7 +48,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts, approval_required
+    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string
 
 
 @login_required_if_private_instance
@@ -1034,7 +1035,6 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
     db.session.commit()
 
 
-
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
 @login_required
 def post_restore(post_id: int):
@@ -1123,6 +1123,33 @@ def post_purge(post_id: int):
         abort(401)
 
     return redirect(url_for('user.show_profile_by_id', user_id=post.user_id))
+
+
+@bp.route('/post/<int:post_id>/translate', methods=['POST'])
+@login_required
+def post_translate(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        recipient_language = get_recipient_language(current_user.id)
+        result = libretranslate_string(post.body_html,
+                                       source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                       target=recipient_language)
+        result_title = libretranslate_string(post.title,
+                                             source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                             target=recipient_language)
+        return f'<div class="post_body">{result}</div><h1 class="mt-2 post_title" hx-swap-oob="outerHTML:h1.post_title">{result_title}</h1>'
+
+
+@bp.route('/post_reply/<int:post_reply_id>/translate', methods=['POST'])
+@login_required
+def post_reply_translate(post_reply_id: int):
+    post_reply = PostReply.query.get_or_404(post_reply_id)
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        recipient_language = get_recipient_language(current_user.id)
+        result = libretranslate_string(post_reply.body_html,
+                                       source=post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto',
+                                       target=recipient_language)
+        return f'<div class="col-12 pr-0" lang="{recipient_language}">' + result + "</div>"
 
 
 @bp.route('/post/<int:post_id>/bookmark', methods=['POST'])

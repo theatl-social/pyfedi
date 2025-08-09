@@ -24,6 +24,7 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
@@ -953,6 +954,13 @@ def test_ldap():
         return f'LDAP test successful. Connection: {connection_result}, Sync: {sync_result}'
     except Exception as e:
         return f'LDAP test failed: {str(e)}'
+
+
+@bp.route('/test_libretranslate')
+@debug_mode_only
+def test_libretranslate():
+    lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'], api_key=current_app.config['TRANSLATE_KEY'])
+    return lt.translate('<p>Si vous lisez cela en anglais, alors la traduction a fonctionné!</p>', source='auto', target='en')
 
 
 @bp.route('/find_voters')
