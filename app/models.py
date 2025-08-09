@@ -2879,18 +2879,25 @@ class Event(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), primary_key=True)
     start = db.Column(db.DateTime, index=True)
     end = db.Column(db.DateTime)
+    timezone = db.Column(db.String(30))
     max_attendees = db.Column(db.Integer, default=0)
+    participant_count = db.Column(db.Integer, default=0)
     full = db.Column(db.Boolean, default=False)
     online_link = db.Column(db.String(1024))
-    location = db.Column(db.Text)
+    join_mode = db.Column(db.String(10), default='free')            # free, restricted, external, invite
+    external_participation_url = db.Column(db.String(1024))         # join_made = external: the link to the place to RSVP, e.g. meetup.com
+    anonymous_participation = db.Column(db.Boolean, default=False)
+    online = db.Column(db.Boolean, default=False)
     buy_tickets_link = db.Column(db.String(1024))
     event_fee_currency = db.Column(db.String(4))
     event_fee_amount = db.Column(db.Float, default=0)
+    location = db.Column(db.JSON)
 
 
 event_user = db.Table('event_user', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
                       db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
                       db.Column('status', db.Integer),
+                      db.Column('participation_message', db.String(200)),
                       db.PrimaryKeyConstraint('post_id', 'user_id'))
 
 

@@ -10,7 +10,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField
+    DateField, IntegerField
 from wtforms.fields import DateTimeLocalField
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional
 
@@ -245,8 +245,7 @@ class CreateImageForm(CreatePostForm):
         super().validate(extra_validators)
 
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith(
-                '.svg') and not uploaded_file.filename.endswith('.gif'):
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
 
             site = Site.query.get(1)
@@ -296,6 +295,53 @@ class EditImageForm(CreateImageForm):
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
 
+        if self.communities:
+            community = Community.query.get(self.communities.data)
+            if community.is_local() and g.site.allow_local_image_posts is False:
+                self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
+
+
+class CreateEventForm(CreatePostForm):
+    start_datetime = DateTimeLocalField(_l('Start'))
+    end_datetime = DateTimeLocalField(_l('End'))
+    image_file = FileField(_l('Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
+    link_url = StringField(_l('More information link'), validators=[DataRequired(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
+    timezone = SelectField(_('Timezone'), validators=[DataRequired()],
+                           render_kw={'id': 'timezone', "class": "form-control tom-select"})
+    join_mode = SelectField(_('Join mode'), validators=[DataRequired()])
+    max_attendees = IntegerField(_l('Maximum number of attendees'))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.timezone.choices = get_timezones()
+        self.join_mode.choices = [('free', _l('Free'), ('donation', _l('Donation')), ('paid', _l('Paid')))]
+
+    def validate_link_url(self, field):
+        if 'blogspot.com' in field.data:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
+            return False
+        domain = domain_from_url(field.data, create=False)
+        if domain and domain.banned:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
+            return False
+        return True
+
+    def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+
+        uploaded_file = request.files['image_file']
+        if uploaded_file.filename.endswith('.gif'):
+            max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+            if len(uploaded_file.read()) > max_size_in_mb:
+                error_message = "This image filesize is too large."
+                if not isinstance(self.image_file.errors, list):
+                    self.image_file.errors = [error_message]
+                else:
+                    self.image_file.errors.append(error_message)
+                return False
+            uploaded_file.seek(0)
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
