@@ -1270,10 +1270,11 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     # Resize the image to medium
                                     if medium_width:
                                         if img_width > medium_width or medium_image_format:
-                                            image = image.convert('RGB' if (
+                                            medium_image = image.copy()
+                                            medium_image = medium_image.convert('RGB' if (
                                                         medium_image_format == 'JPEG' or final_ext in ['.jpg',
                                                                                                        '.jpeg']) else 'RGBA')
-                                            image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
+                                            medium_image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                         kwargs = {}
                                         if medium_image_format:
@@ -1283,7 +1284,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         if medium_image_quality:
                                             kwargs['quality'] = int(medium_image_quality)
 
-                                        image.save(final_place, optimize=True, **kwargs)
+                                        medium_image.save(final_place, optimize=True, **kwargs)
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place)
@@ -1304,14 +1305,15 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                           '/' + new_filename + final_ext
 
                                         file.file_path = final_place
-                                        file.width = image.width
-                                        file.height = image.height
+                                        file.width = medium_image.width
+                                        file.height = medium_image.height
 
                                     # Resize the image to a thumbnail (webp)
                                     if thumbnail_width:
                                         if img_width > thumbnail_width:
-                                            image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
-                                            image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
+                                            thumbnail_image = image.copy()
+                                            thumbnail_image = thumbnail_image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
+                                            thumbnail_image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                         kwargs = {}
                                         if thumbnail_image_format:
@@ -1321,7 +1323,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         if thumbnail_image_quality:
                                             kwargs['quality'] = int(thumbnail_image_quality)
 
-                                        image.save(final_place_thumbnail, optimize=True, **kwargs)
+                                        thumbnail_image.save(final_place_thumbnail, optimize=True, **kwargs)
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place_thumbnail)
