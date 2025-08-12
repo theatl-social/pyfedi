@@ -24,7 +24,7 @@ from app.utils import domain_from_url, MultiCheckboxField, get_timezones
 class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[Length(max=50)])
-    description = TextAreaField(_l('Description'))
+    description = TextAreaField(_l('Description'), validators=[Length(max=10000)])
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
@@ -72,7 +72,7 @@ class AddCommunityForm(FlaskForm):
 
 class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])
-    description = TextAreaField(_l('Description'))
+    description = TextAreaField(_l('Description'), validators=[Length(max=10000)])
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
