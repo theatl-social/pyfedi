@@ -1,4 +1,4 @@
-VERSION = '1.1.0-dev'
+VERSION = '1.1.0-dev-theatlsocial'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
