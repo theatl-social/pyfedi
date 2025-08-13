@@ -335,6 +335,8 @@ def register(app):
 
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
+        if not current_app.debug:
+            sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
         daily_maintenance_celery()
 
     @app.cli.command('archive-old-posts')
@@ -361,8 +363,8 @@ def register(app):
                                     return
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
-
-                            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+                            if not current_app.debug:
+                                sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
