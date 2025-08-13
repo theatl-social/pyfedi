@@ -1319,3 +1319,162 @@ def parse_communities(interests_source, segment):
             output.append(line)
 
     return "\n".join(output)
+
+
+    @app.cli.command("init-test-db")
+    def init_test_db():
+        """Initialize database with test-specific data for validation testing"""
+        with app.app_context():
+            if not current_app.config.get('TESTING'):
+                print("⚠️  Warning: This command is intended for test environments")
+                print("   Current environment does not have TESTING=true")
+                import sys
+                if not sys.stdin.isatty():
+                    # Non-interactive mode (like in Docker), proceed anyway
+                    print("   Proceeding in non-interactive mode...")
+                else:
+                    # Interactive mode, ask for confirmation
+                    response = input("   Continue anyway? (y/N): ").lower().strip()
+                    if response != 'y':
+                        print("   Cancelled.")
+                        return
+            
+            print("🧪 Initializing test database...")
+            print("📋 This creates minimal data needed for operation validation")
+            
+            # Check if alembic_version table exists
+            inspector = db.inspect(db.engine)
+            if 'alembic_version' not in inspector.get_table_names():
+                print("❌ Error: alembic_version table not found. Please run 'flask db upgrade' first.")
+                return
+
+            # Drop and recreate (safe in test environment)
+            print("🗄️  Recreating database tables...")
+            db.drop_all()
+            db.configure_mappers()
+            db.create_all()
+            
+            # Minimal site setup
+            print("🏗️  Creating site configuration...")
+            private_key, public_key = RsaKeys.generate_keypair()
+            db.session.add(Site(
+                name="PieFed Test Instance", 
+                description='Test instance for validating current operations before changes', 
+                public_key=public_key,
+                private_key=private_key, 
+                language_id=2
+            ))
+            
+            # Local instance
+            print("🌐 Setting up local instance...")
+            db.session.add(Instance(
+                domain=current_app.config['SERVER_NAME'],
+                software='PieFed'
+            ))
+            
+            # Essential settings only (minimal for testing)
+            print("⚙️  Configuring essential settings...")
+            essential_settings = [
+                ('allow_nsfw', False),
+                ('allow_nsfl', False), 
+                ('allow_dislike', True),
+                ('allow_local_image_posts', True),
+                ('allow_remote_image_posts', True),
+                ('federation', False),  # Disabled for isolated testing
+            ]
+            
+            for name, value in essential_settings:
+                db.session.add(Settings(name=name, value=json.dumps(value)))
+            
+            db.session.commit()
+            print("✅ Test database initialized successfully")
+            print("ℹ️  Use 'flask load-test-fixtures' to add test users and communities")
+
+    @app.cli.command("load-test-fixtures")
+    def load_test_fixtures():
+        """Load test fixtures for consistent API and integration testing"""
+        with app.app_context():
+            if not current_app.config.get('TESTING'):
+                print("⚠️  Warning: This command is intended for test environments")
+            
+            print("📊 Loading test fixtures...")
+            print("👥 Creating test users...")
+            
+            # Create test users with predictable credentials
+            test_users = [
+                {"username": "testuser1", "email": "test1@example.com", "admin": False},
+                {"username": "testuser2", "email": "test2@example.com", "admin": False},
+                {"username": "testadmin", "email": "admin@test.local", "admin": True}
+            ]
+            
+            created_users = []
+            for user_data in test_users:
+                existing_user = User.query.filter_by(user_name=user_data["username"]).first()
+                if existing_user:
+                    print(f"   ℹ️  User {user_data['username']} already exists, skipping")
+                    created_users.append(existing_user)
+                    continue
+                    
+                user = User(
+                    user_name=user_data["username"],
+                    email=user_data["email"],
+                    verified=True,
+                    password_hash=generate_password_hash("testpassword123"),
+                    created=utcnow(),
+                    last_seen=utcnow()
+                )
+                
+                # Generate AP keys for the user
+                private_key, public_key = RsaKeys.generate_keypair()
+                user.private_key = private_key
+                user.public_key = public_key
+                user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}"
+                user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
+                
+                db.session.add(user)
+                created_users.append(user)
+                print(f"   ✅ Created user: {user_data['username']}")
+            
+            db.session.commit()
+            
+            # Create test communities
+            print("🏘️  Creating test communities...")
+            admin_user = next((u for u in created_users if u.user_name == "testadmin"), created_users[0])
+            
+            test_communities = [
+                {"name": "testcommunity", "title": "Test Community", "desc": "Community for testing API endpoints"},
+                {"name": "anothercommunity", "title": "Another Test Community", "desc": "Additional test community for validation"},
+            ]
+            
+            for comm_data in test_communities:
+                existing_comm = Community.query.filter_by(name=comm_data["name"]).first()
+                if existing_comm:
+                    print(f"   ℹ️  Community {comm_data['name']} already exists, skipping")
+                    continue
+                    
+                community = Community(
+                    name=comm_data["name"],
+                    title=comm_data["title"], 
+                    description=comm_data["desc"],
+                    user_id=admin_user.id,
+                    instance_id=1,
+                    created_at=utcnow(),
+                    last_active=utcnow()
+                )
+                
+                # Generate AP keys for the community
+                private_key, public_key = RsaKeys.generate_keypair()
+                community.private_key = private_key
+                community.public_key = public_key
+                community.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}"
+                community.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}/inbox"
+                community.ap_followers_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}/followers"
+                community.ap_preferred_username = community.name.lower()
+                community.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}"
+                
+                db.session.add(community)
+                print(f"   ✅ Created community: {comm_data['name']}")
+                
+            db.session.commit()
+            print("✅ Test fixtures loaded successfully")
+            print("🔍 Test environment ready for validation testing")
