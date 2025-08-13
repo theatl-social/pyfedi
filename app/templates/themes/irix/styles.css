@@ -43,6 +43,10 @@ a {
   color: #324467;
 }
 
+.post_list .post_teaser h3 a {
+  color: var(--bs-heading-color);
+}
+
 time {
   color: var(--bs-gray-600)
 }
