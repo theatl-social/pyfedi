@@ -77,7 +77,7 @@ def show_post(post_id: int):
                     flash(_('This post is only visible to logged in users.'))
                     return redirect(url_for("auth.login", next=f"/post/{post_id}"))
         else:
-            if user_in_restricted_country(current_user):
+            if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
                 abort(403)
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
