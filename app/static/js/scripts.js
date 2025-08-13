@@ -986,18 +986,18 @@ function setupAddPollChoice() {
 }
 
 function preventDoubleFormSubmissions() {
-    const form = document.querySelector('form');
-    if (form && !form.dataset.doubleSubmissionPrevented) {
-      form.addEventListener('submit', function (e) {
-          if (form.dataset.submitting) {
-            e.preventDefault();
-          } else {
-            form.dataset.submitting = 'true';
-          }
-      });
-      // Mark this form as having the event listener attached
-      form.dataset.doubleSubmissionPrevented = 'true';
-    }
+    document.querySelectorAll('form').forEach(function (form) {
+        if (!form.dataset.doubleSubmissionPrevented) {
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.submitting) {
+                    e.preventDefault();
+                } else {
+                    form.dataset.submitting = 'true';
+                }
+            });
+            form.dataset.doubleSubmissionPrevented = 'true';
+        }
+    });
 }
 
 function setupSelectAllCheckbox() {
