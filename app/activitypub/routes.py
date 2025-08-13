@@ -84,44 +84,41 @@ def webfinger():
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
+        object = None
         if not feed:
             # look for the User first, then the Community, then the Feed that matches
-            seperator = 'u'
             type = 'Person'
-            user = User.query.filter(
+            object = User.query.filter(
                 or_(User.user_name == actor.strip(), User.alt_user_name == actor.strip())).filter_by(deleted=False,
                                                                                                      banned=False,
                                                                                                      ap_id=None).first()
-            if user is None:
-                community = Community.query.filter_by(name=actor.strip(), ap_id=None).first()
-                seperator = 'c'
+            if object is None:
+                profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.strip().lower()}"
+                object = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                 type = 'Group'
-                if community is None:
-                    feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
-                    if feed is None:
-                        return ''
-                    seperator = 'f'
+                if object is None:
+                    object = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
                     type = 'Feed'
         else:
-            feed = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
-            if feed is None:
-                return ''
-            seperator = 'f'
+            object = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
             type = 'Feed'
+
+        if object is None:
+            return ''
 
         webfinger_data = {
             "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
-            "aliases": [f"https://{current_app.config['SERVER_NAME']}/{seperator}/{actor}"],
+            "aliases": [object.public_url()],
             "links": [
                 {
                     "rel": "http://webfinger.net/rel/profile-page",
                     "type": "text/html",
-                    "href": f"https://{current_app.config['SERVER_NAME']}/{seperator}/{actor}"
+                    "href": object.public_url()
                 },
                 {
                     "rel": "self",
                     "type": "application/activity+json",
-                    "href": f"https://{current_app.config['SERVER_NAME']}/{seperator}/{actor}",
+                    "href": object.public_url(),
                     "properties": {
                         "https://www.w3.org/ns/activitystreams#type": type
                     }
@@ -443,7 +440,8 @@ def community_profile(actor):
             abort(400)
         community: Community = Community.query.filter_by(ap_id=actor.lower(), banned=False).first()
     else:
-        community: Community = Community.query.filter_by(name=actor, ap_id=None).first()
+        profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
+        community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
     if community is not None:
         if is_activitypub_request():
             server = current_app.config['SERVER_NAME']
