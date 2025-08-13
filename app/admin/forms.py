@@ -33,6 +33,7 @@ class SiteMiscForm(FlaskForm):
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
+    nsfw_country_restriction = TextAreaField(_l('Bar people from these countries from accessing NSFW and NSFL content'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     email_verification = BooleanField(_l('Require new accounts to verify their email address'))

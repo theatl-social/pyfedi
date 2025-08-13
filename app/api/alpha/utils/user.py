@@ -11,7 +11,7 @@ from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.utils import authorise_api_user, communities_banned_from
+from app.utils import authorise_api_user, communities_banned_from, get_setting, user_in_restricted_country
 
 
 def get_user(auth, data):
@@ -285,6 +285,10 @@ def put_user_save_user_settings(auth, data):
     if show_nsfl == True:
         user.hide_nsfl = 0
     elif show_nsfl == False:
+        user.hide_nsfl = 1
+
+    if user_in_restricted_country(user):
+        user.hide_nsfw = 1  # Hide nsfw
         user.hide_nsfl = 1
 
     if show_read_posts == True:

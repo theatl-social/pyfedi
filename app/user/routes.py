@@ -39,7 +39,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
-    patch_db_session
+    patch_db_session, user_in_restricted_country
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -1380,6 +1380,8 @@ def import_settings_task(user_id, filename):
 def user_settings_filters():
     form = FilterForm()
     if form.validate_on_submit():
+        if (form.hide_nsfw.data != 1 or form.hide_nsfl.data != 1) and user_in_restricted_country(current_user):
+            flash(_('NSFW content will be hidden due to legal restrictions in your country.'))
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
@@ -1387,6 +1389,10 @@ def user_settings_filters():
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
         current_user.community_keyword_filter = form.community_keyword_filter.data
+        if current_user.ip_address_country and user_in_restricted_country(current_user):
+            current_user.hide_nsfw = 1  # Hide nsfw
+            current_user.hide_nsfl = 1
+
         db.session.commit()
 
         cache.delete_memoized(filtered_out_communities, current_user)

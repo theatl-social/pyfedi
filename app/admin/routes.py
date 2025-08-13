@@ -216,7 +216,6 @@ def admin_misc():
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
         site.auto_decline_referrers = form.auto_decline_referrers.data
-        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         site.log_activitypub_json = form.log_activitypub_json.data
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
@@ -238,6 +237,8 @@ def admin_misc():
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
         set_setting('ban_check_servers', form.ban_check_servers.data)
+        set_setting('nsfw_country_restriction', form.nsfw_country_restriction.data.strip())
+        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -248,12 +249,13 @@ def admin_misc():
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
+        form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
         form.auto_decline_referrers.data = site.auto_decline_referrers
-        form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
+        form.auto_decline_countries.data = get_setting('auto_decline_countries', '').upper()
         form.log_activitypub_json.data = site.log_activitypub_json
         form.language_id.data = site.language_id
         form.show_inoculation_block.data = site.show_inoculation_block

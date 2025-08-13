@@ -172,7 +172,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # Saves an arbitrary object into a persistent key-value store. cached.
 # Similar to g.site.* except g.site.* is populated on every single page load so g.site is best for settings that are
 # accessed very often (e.g. every page load)
-@cache.memoize(timeout=50)
+@cache.memoize(timeout=500)
 def get_setting(name: str, default=None):
     setting = db.session.query(Settings).filter_by(name=name).first()
     if setting is None:
@@ -3267,6 +3267,11 @@ def archive_post(post_id: int):
         raise
     finally:
         session.close()
+
+
+def user_in_restricted_country(user: User) -> bool:
+    restricted_countries = get_setting('nsfw_country_restriction', '').split('\n')
+    return user.ip_address_country and user.ip_address_country in [country_code.strip() for country_code in restricted_countries]
 
 
 @cache.memoize(timeout=80600)
