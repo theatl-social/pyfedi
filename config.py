@@ -120,7 +120,7 @@ class Config(object):
     MEDIA_IMAGE_THUMBNAIL_FORMAT = os.environ.get('MEDIA_IMAGE_THUMBNAIL_FORMAT') or 'WEBP'
     MEDIA_IMAGE_THUMBNAIL_QUALITY = int(os.environ.get('MEDIA_IMAGE_THUMBNAIL_QUALITY') or 93)
 
-    # LDAP configuration
+    # LDAP configuration - used to write to, so other services can use their instance credentials to log in
     LDAP_SERVER = os.environ.get('LDAP_SERVER') or ''
     LDAP_PORT = int(os.environ.get('LDAP_PORT') or 389)
     LDAP_USE_SSL = os.environ.get('LDAP_USE_SSL', '0') in ('1', 'true', 'True')
@@ -132,6 +132,19 @@ class Config(object):
     LDAP_ATTR_USERNAME = os.environ.get('LDAP_ATTR_USERNAME') or 'uid'
     LDAP_ATTR_EMAIL = os.environ.get('LDAP_ATTR_EMAIL') or 'mail'
     LDAP_ATTR_PASSWORD = os.environ.get('LDAP_ATTR_PASSWORD') or 'userPassword'
+
+    # LDAP configuration - used to log in to this instance
+    LDAP_SERVER_LOGIN = os.environ.get('LDAP_SERVER_LOGIN') or ''
+    LDAP_PORT_LOGIN = int(os.environ.get('LDAP_PORT_LOGIN') or 389)
+    LDAP_USE_SSL_LOGIN = os.environ.get('LDAP_USE_SSL_LOGIN', '0') in ('1', 'true', 'True')
+    LDAP_USE_TLS_LOGIN = os.environ.get('LDAP_USE_TLS_LOGIN', '0') in ('1', 'true', 'True')
+    LDAP_BIND_DN_LOGIN = os.environ.get('LDAP_BIND_DN_LOGIN') or ''
+    LDAP_BIND_PASSWORD_LOGIN = os.environ.get('LDAP_BIND_PASSWORD_LOGIN') or ''
+    LDAP_BASE_DN_LOGIN = os.environ.get('LDAP_BASE_DN_LOGIN') or ''
+    LDAP_USER_FILTER_LOGIN = os.environ.get('LDAP_USER_FILTER_LOGIN') or '(uid={username})'
+    LDAP_ATTR_USERNAME_LOGIN = os.environ.get('LDAP_ATTR_USERNAME_LOGIN') or 'uid'
+    LDAP_ATTR_EMAIL_LOGIN = os.environ.get('LDAP_ATTR_EMAIL_LOGIN') or 'mail'
+    LDAP_ATTR_PASSWORD_LOGIN = os.environ.get('LDAP_ATTR_PASSWORD_LOGIN') or 'userPassword'
 
     VERSION = app.constants.VERSION
 
