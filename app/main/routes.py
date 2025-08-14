@@ -38,7 +38,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     num_topics, referrer
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
-from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
+from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, test_login_ldap_connection, login_with_ldap
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -952,6 +952,23 @@ def test_ldap():
         sync_result = sync_user_to_ldap('testuser', 'test@example.com', random_password)
 
         return f'LDAP test successful. Connection: {connection_result}, Sync: {sync_result}'
+    except Exception as e:
+        return f'LDAP test failed: {str(e)}'
+
+
+@bp.route('/test_ldap_login')
+@debug_mode_only
+def test_ldap_login():
+    try:
+        # Test LDAP connection
+        connection_result = test_login_ldap_connection()
+        if not connection_result:
+            return 'LDAP test failed: Could not connect to LDAP server. Check configuration.'
+
+        # Test user sync with dummy data using random password
+        login_result = login_with_ldap(request.args.get('user_name'), request.args.get('password'))
+
+        return f'LDAP test results: Connection: {connection_result}, Login: {str(login_result is not False)}'
     except Exception as e:
         return f'LDAP test failed: {str(e)}'
 
