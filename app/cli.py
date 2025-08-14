@@ -1,7 +1,7 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
 
-# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import imaplib
@@ -89,7 +89,8 @@ def register(app):
         print('Admin keys have been reset')
 
     @app.cli.command("init-db")
-    def init_db():
+    @click.option("--interactive", default='yes', help="Create admin user during setup.")
+    def init_db(interactive):
         with app.app_context():
             # Check if alembic_version table exists
             inspector = db.inspect(db.engine)
@@ -175,30 +176,31 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
-            # Admin user
-            print(
-                'The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
-            user_name = input("Admin user name (ideally not 'admin'): ")
-            email = input("Admin email address: ")
-            password = input("Admin password: ")
-            while '@' in user_name or ' ' in user_name:
-                print('User name cannot be an email address or have spaces.')
+            if interactive == 'yes':
+                # Admin user
+                print(
+                    'The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
                 user_name = input("Admin user name (ideally not 'admin'): ")
-            verification_token = random_token(16)
-            private_key, public_key = RsaKeys.generate_keypair()
-            admin_user = User(user_name=user_name, title=user_name,
-                              email=email, verification_token=verification_token,
-                              instance_id=1, email_unread_sent=False,
-                              private_key=private_key, public_key=public_key,
-                              alt_user_name=gibberish(randint(8, 20)))
-            admin_user.set_password(password)
-            admin_user.roles.append(admin_role)
-            admin_user.verified = True
-            admin_user.last_seen = utcnow()
-            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-            admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
-            db.session.add(admin_user)
+                email = input("Admin email address: ")
+                password = input("Admin password: ")
+                while '@' in user_name or ' ' in user_name:
+                    print('User name cannot be an email address or have spaces.')
+                    user_name = input("Admin user name (ideally not 'admin'): ")
+                verification_token = random_token(16)
+                private_key, public_key = RsaKeys.generate_keypair()
+                admin_user = User(user_name=user_name, title=user_name,
+                                  email=email, verification_token=verification_token,
+                                  instance_id=1, email_unread_sent=False,
+                                  private_key=private_key, public_key=public_key,
+                                  alt_user_name=gibberish(randint(8, 20)))
+                admin_user.set_password(password)
+                admin_user.roles.append(admin_role)
+                admin_user.verified = True
+                admin_user.last_seen = utcnow()
+                admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
+                admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
+                admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
+                db.session.add(admin_user)
 
             db.session.commit()
             print("Initial setup is finished.")
