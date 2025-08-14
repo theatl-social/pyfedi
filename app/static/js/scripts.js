@@ -364,6 +364,7 @@ function setupLightDark() {
         setStoredTheme(theme);
         setTheme(theme);
         showActiveTheme(theme);
+        event.preventDefault();
     });
 
     var preferredTheme = getStoredTheme();
