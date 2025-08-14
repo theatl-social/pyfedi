@@ -259,6 +259,30 @@ def create_new_user(form, ip, country, verification_token):
     return user
 
 
+def create_new_user_from_ldap(user_name, email, password, ip):
+    user = User(
+        user_name=user_name,
+        title=user_name,
+        email=email,
+        verified=True,
+        instance_id=1,
+        ip_address=ip,
+        banned=False,
+        email_unread_sent=False,
+        referrer=session.get("Referer", ""),
+        alt_user_name=gibberish(random.randint(8, 20)),
+        font=get_font_preference(),
+        language_id=g.site.language_id
+    )
+    if current_app.config['CONTENT_WARNING']:
+        user.hide_nsfw = 0
+    user.set_password(password)
+
+    db.session.add(user)
+    db.session.commit()
+    return user
+
+
 def get_font_preference():
     if "Windows" in request.user_agent.string:
         return "inter"  # Default to "Inter" font for better Windows rendering
@@ -391,7 +415,10 @@ def validate_user_ldap_login(user_name: str, password: str, ip: str) -> User | N
         flash(_('Login failed'))
         return None
     else:
-        return find_user(user_name)
+        user = find_user(user_name)
+        if user is None:
+            user = create_new_user_from_ldap(user_name, result, password, ip)
+        return user
 
 
 def handle_banned_user(user, ip):
