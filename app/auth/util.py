@@ -10,15 +10,16 @@ from flask import current_app, flash, g, make_response, redirect, request, sessi
 from flask_babel import _
 from flask_login import current_user, login_user
 from markupsafe import Markup
-from sqlalchemy import func
+from sqlalchemy import func, text
 from wtforms import Label
 
 from app import cache, db
+from app.activitypub.util import users_total
 from app.auth.forms import LoginForm
 from app.constants import NOTIF_REGISTRATION
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap, login_with_ldap
-from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow
+from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow, Role
 from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
     ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
 
@@ -260,6 +261,7 @@ def create_new_user(form, ip, country, verification_token):
 
 
 def create_new_user_from_ldap(user_name, email, password, ip):
+
     user = User(
         user_name=user_name,
         title=user_name,
@@ -272,7 +274,8 @@ def create_new_user_from_ldap(user_name, email, password, ip):
         referrer=session.get("Referer", ""),
         alt_user_name=gibberish(random.randint(8, 20)),
         font=get_font_preference(),
-        language_id=g.site.language_id
+        language_id=g.site.language_id,
+        last_seen=utcnow()
     )
     if current_app.config['CONTENT_WARNING']:
         user.hide_nsfw = 0
@@ -280,6 +283,10 @@ def create_new_user_from_ldap(user_name, email, password, ip):
 
     db.session.add(user)
     db.session.commit()
+    finalize_user_setup(user)
+    if users_total() == 0:
+        user.roles.append(Role.query.get(4))
+        db.session.commit()
     return user
 
 
