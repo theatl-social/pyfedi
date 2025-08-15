@@ -817,4 +817,4 @@ pip install --upgrade <package_name>
 
 ## Developers
 
-See dev_notes.txt and https://join.piefed.social/docs/developers/
+See dev_notes.md and https://join.piefed.social/docs/developers/
