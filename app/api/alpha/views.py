@@ -933,8 +933,8 @@ def site_instance_chooser_view():
         'maturity': maturity,
         'mau': active_month(),
         'can_make_communities': not g.site.community_creation_admin_only,
-        'defederation': [instance.domain for instance in defed_list],
-        'trusts': [instance.domain for instance in trusted_list],
+        'defederation': list(set([instance.domain for instance in defed_list])),
+        'trusts': list(set([instance.domain for instance in trusted_list])),
         'tos_url': g.site.tos_url,
         'registration_mode': g.site.registration_mode
     }

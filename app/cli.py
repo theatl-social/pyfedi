@@ -287,7 +287,7 @@ def register(app):
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
                 recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts, archive_old_users, cleanup_old_read_posts
+                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
