@@ -20,7 +20,7 @@ from app.api.alpha.utils.private_message import get_private_message_list, post_p
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
     get_post_reply_list
-from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances
+from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser
 from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
@@ -28,7 +28,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
 from app.constants import *
-from app.utils import orjson_response
+from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
 
 
@@ -73,6 +73,26 @@ def get_alpha_site_block(data):
         auth = request.headers.get('Authorization')
         resp = post_site_block(auth, data)
         return BlockInstanceResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+# Site
+@site_bp.route('/site/instance_chooser', methods=['GET'])
+@site_bp.doc(summary="Gets the site info for use in the Instance Chooser functionality.")
+@site_bp.response(200, GetSiteInstanceChooserResponse)
+@site_bp.alt_response(400, schema=DefaultError)
+def get_alpha_site_instance_chooser():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        if get_setting('enable_instance_chooser', False):
+            auth = request.headers.get('Authorization')
+            resp = get_site_instance_chooser(auth)
+            return GetSiteInstanceChooserResponse().load(resp)
+        else:
+            return abort(404)
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

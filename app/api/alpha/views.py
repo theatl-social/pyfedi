@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from flask import current_app, g
-from sqlalchemy import text, func
+from sqlalchemy import text, func, or_
 
 from app import cache, db
+from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
-from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from
+from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
+    num_topics
 
 
 # 'stub' param: set to True to exclude optional fields
@@ -887,6 +889,56 @@ def site_view(user) -> dict:
         v1['my_user'] = user_view(user=user, variant=6)
 
     return v1
+
+
+def site_instance_chooser_view():
+    logo = g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png'
+    language = Language.query.get(g.site.language_id)
+    defed_list = BannedInstances.query.filter(or_(BannedInstances.domain == 'hexbear.net',
+                                                  BannedInstances.domain == 'lemmygrad.ml',
+                                                  BannedInstances.domain == 'hilariouschaos.com',
+                                                  BannedInstances.domain == 'lemmy.ml')).order_by(BannedInstances.domain).all()
+    trusted_list = Instance.query.filter(Instance.trusted).all()
+    maturity = 0
+    if get_setting('financial_stability', False):
+        maturity += 1
+    if get_setting('number_of_admins', 0) > 1:
+        maturity += 1
+    if get_setting('daily_backups', False):
+        maturity += 1
+
+    if maturity >= 3:
+        maturity = 'High'
+    elif maturity == 2:
+        maturity = 'Medium'
+    elif maturity == 1:
+        maturity = 'Low'
+    elif maturity <= 0:
+        maturity = 'Embryonic'
+
+    result = {
+        'language': {
+            "id": language.id,
+            "code": language.code,
+            "name": language.name
+        },
+        'nsfw': g.site.enable_nsfw,
+        'newbie_friendly': num_topics() >= 5,
+        'name': g.site.name,
+        'elevator_pitch': get_setting('elevator_pitch', ''),
+        'description': g.site.description or '',
+        'about': g.site.about_html or '',
+        'sidebar': g.site.sidebar_html or '',
+        'logo_url': f"https://{current_app.config['SERVER_NAME']}{logo}",
+        'maturity': maturity,
+        'mau': active_month(),
+        'can_make_communities': not g.site.community_creation_admin_only,
+        'defederation': [instance.domain for instance in defed_list],
+        'trusts': [instance.domain for instance in trusted_list],
+        'tos_url': g.site.tos_url,
+        'registration_mode': g.site.registration_mode
+    }
+    return result
 
 
 @cache.memoize(timeout=600)

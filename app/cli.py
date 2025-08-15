@@ -38,7 +38,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session
+    render_from_tpl, get_task_session, patch_db_session, get_setting
 
 
 def register(app):
@@ -114,7 +114,7 @@ def register(app):
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
-                                'hexbear.net',
+                                'hexbear.net', 'hilariouschaos.com',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
                                 'detroitriotcity.com',
@@ -292,8 +292,13 @@ def register(app):
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
 
+            if not current_app.debug:
+                sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
+
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser()
                 cleanup_old_notifications()
                 cleanup_old_read_posts()
                 cleanup_send_queue()
@@ -314,6 +319,8 @@ def register(app):
                 archive_old_users()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser.delay()
                 cleanup_old_notifications.delay()
                 cleanup_old_read_posts.delay()
                 cleanup_send_queue.delay()
@@ -336,8 +343,6 @@ def register(app):
 
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
-        if not current_app.debug:
-            sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
         daily_maintenance_celery()
 
     @app.cli.command('archive-old-posts')

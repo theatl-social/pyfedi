@@ -67,6 +67,15 @@ class SiteMiscForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class InstanceChooserForm(FlaskForm):
+    enable_instance_chooser = BooleanField(_l('Enable instance chooser'))
+    elevator_pitch = StringField(_l('One-sentence elevator pitch'), validators=[Length(max=90)])
+    number_of_admins = IntegerField(_l('Number of admins with emergency access'))
+    financial_stability = BooleanField(_l('Non-admins donate enough to pay for hosting'))
+    daily_backups = BooleanField(_l('This instance has automated daily backups'))
+    submit = SubmitField(_l('Save'))
+
+
 class FederationForm(FlaskForm):
     federation_mode = RadioField(_l('Federation mode'), choices=[
         ('blocklist', _l('Blocklist - deny federation with specified instances')),
