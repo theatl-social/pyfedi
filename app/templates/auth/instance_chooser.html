@@ -1,0 +1,47 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+
+        <h1 class="mt-2">{{ title }}</h1>
+
+        <table class="table-striped w-100">
+            <tr>
+                <th>{{ _('Name') }}</th>
+                <th>{{ _('Description') }}</th>
+                <th>{{ _('Language') }}</th>
+                <th>{{ _('Newbie friendly') }}</th>
+                <th>{{ _('NSFW available') }}</th>
+            </tr>
+            {% for instance in instances -%}
+                <tr>
+                    <td><a href="https://{{ instance['domain'] }}" title="{{ instance['domain'] }}">
+                        <img src="{{ instance['data']['logo_url'] }}" width="50" height="50" align="absmiddle">
+                        {{ instance['data']['name'] }}</a></td>
+                    <td>{{ instance['data']['elevator_pitch'] }}</td>
+                    <td>{{ instance['data']['language']['name'] }}</td>
+                    <td>{{ 'Yes' if instance['data']['newbie_friendly'] else 'No' }}</td>
+                    <td>{{ 'Yes' if instance['data']['nsfw'] else 'No' }}</td>
+                    <td><a href="https://{{ instance['domain'] }}/auth/register" class="btn btn-primary"><span class="fe fe-join"></span> {{ _('Join') }}</a></td>
+                </tr>
+            {% endfor -%}
+        </table>
+    </main>
+
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+
+    </aside>
+</div>
+<div class="row">
+
+
+</div>
+{% endblock %}
