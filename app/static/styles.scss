@@ -2511,6 +2511,13 @@ form {
 	}
 }
 
+.instance_chooser_results {
+  .card .card-body {
+    height: 95px;
+    overflow-y: auto;
+  }
+}
+
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;

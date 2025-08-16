@@ -20,7 +20,8 @@ from app.api.alpha.utils.private_message import get_private_message_list, post_p
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
     get_post_reply_list
-from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser
+from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
+    get_site_instance_chooser_search
 from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
@@ -78,9 +79,9 @@ def get_alpha_site_block(data):
         return abort(400, message=str(ex))
 
 
-# Site
+# Site instance chooser
 @site_bp.route('/site/instance_chooser', methods=['GET'])
-@site_bp.doc(summary="Gets the site info for use in the Instance Chooser functionality.")
+@site_bp.doc(summary="Gets the site info for use by other instances in the Instance Chooser functionality.")
 @site_bp.response(200, GetSiteInstanceChooserResponse)
 @site_bp.alt_response(400, schema=DefaultError)
 def get_alpha_site_instance_chooser():
@@ -91,6 +92,23 @@ def get_alpha_site_instance_chooser():
             auth = request.headers.get('Authorization')
             resp = get_site_instance_chooser(auth)
             return GetSiteInstanceChooserResponse().load(resp)
+        else:
+            return abort(404)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@site_bp.route('/site/instance_chooser_search', methods=['GET'])
+@site_bp.doc(summary="Search for other instances.")
+@site_bp.arguments(SearchInstanceChooser, location="query")
+@site_bp.response(200, GetSiteInstanceChooserSearchResponse)
+@site_bp.alt_response(400, schema=DefaultError)
+def get_alpha_site_instance_chooser_search(data):
+    try:
+        if get_setting('enable_instance_chooser', False):
+            resp = get_site_instance_chooser_search(data)
+            return GetSiteInstanceChooserSearchResponse().load(resp)
         else:
             return abort(404)
     except Exception as ex:

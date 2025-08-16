@@ -7,7 +7,7 @@ from app.activitypub.signature import send_post_request
 from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
-from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter, InstanceChooser
+from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter, InstanceChooser, Language
 from app.utils import render_template, joined_communities, community_membership, get_setting
 
 
@@ -15,7 +15,12 @@ from app.utils import render_template, joined_communities, community_membership,
 def onboarding_instance_chooser():
     if get_setting('enable_instance_chooser', False):
         instances = InstanceChooser.query.all()
-        return render_template('auth/instance_chooser.html', title='Check these out', instances=instances)
+        language_ids = set()
+        for instance in instances:
+            language_ids.add(instance.language_id)
+        languages = Language.query.filter(Language.id.in_(language_ids)).all()
+        return render_template('auth/instance_chooser.html', title=_('Which server do you want to join?'),
+                               instances=instances, languages=languages)
     else:
         abort(404)
 

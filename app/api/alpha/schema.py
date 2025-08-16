@@ -191,6 +191,31 @@ class GetSiteInstanceChooserResponse(DefaultSchema):
     registration_mode = fields.String(required=True)
 
 
+class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    domain = fields.String(required=True)
+    elevator_pitch = fields.String(required=True)
+    description = fields.String(required=True)
+    about = fields.String(required=True)
+    sidebar = fields.String(required=True)
+    logo_url = fields.String(required=True)
+    maturity = fields.String(required=True)
+    tos_url = fields.String(required=True)
+    uptime = fields.String(required=True)
+    mau = fields.Integer(required=True)
+    can_make_communities = fields.Boolean(required=True)
+    defederation = fields.List(fields.String(), required=True)
+    trusts = fields.List(fields.String(), required=True)
+    registration_mode = fields.String(required=True)
+    language = fields.String(required=True)
+
+
+
+class GetSiteInstanceChooserSearchResponse(DefaultSchema):
+    result = fields.List(fields.Nested(GetSiteInstanceChooserSearchResponseItem), required=True)
+
+
 class BlockInstanceRequest(DefaultSchema):
     block = fields.Boolean(required=True)
     instance_id = fields.Integer(required=True)
@@ -207,7 +232,13 @@ class SearchRequest(DefaultSchema):
     listing_type = fields.String(validate=validate.OneOf(listing_type_list))
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list))
-    
+
+
+class SearchInstanceChooser(DefaultSchema):
+    q = fields.String()
+    nsfw = fields.String()
+    language = fields.String()
+    newbie = fields.String()
 
 
 class Post(DefaultSchema):
