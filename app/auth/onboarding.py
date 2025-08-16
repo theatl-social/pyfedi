@@ -22,7 +22,7 @@ def onboarding_instance_chooser():
         return render_template('auth/instance_chooser.html', title=_('Which server do you want to join?'),
                                instances=instances, languages=languages)
     else:
-        abort(404)
+        return redirect(url_for('auth.register'))
 
 
 @bp.route('/trump_musk', methods=['GET', 'POST'])
