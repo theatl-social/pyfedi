@@ -13,6 +13,7 @@
     <div class="col">
         <h1>{{ _('Instance chooser settings') }}</h1>
         <p>{{ _('During registration, new people are shown a list of instances to join. To include your instance in that list, fill out this form.') }}</p>
+        <p>{{ _('Only instances that commit to active moderation against racism, sexism, homophobia and transphobia should enable this feature.') }}</p>
         <form method="post">
             {{ form.csrf_token() }}
             {{ render_field(form.enable_instance_chooser) }}

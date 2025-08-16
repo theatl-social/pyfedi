@@ -7,6 +7,12 @@
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 
+{% block schema_org %}
+  {% for instance in instances -%}
+      <link rel="dns-prefetch" href="{{ instance['domain'] }}" crossorigin>
+  {% endfor %}
+{% endblock %}
+
 {% block app_content %}
 <div class="row">
     <main class="col-12 position-relative main_pane">
@@ -23,16 +29,16 @@
                 <input type="search" name="q" id="search" class="form-control">
             </div>
             <div class="col col-3">
-                <label for="primary_language">{{ _('Primary language') }}</label>
+                <label for="primary_language"><span class="d-none d-md-inline">{{ _('Primary language') }}</span><span class="d-md-none">{{ _('Language') }}</span></label>
                 <select name="language" id="primary_language" class="form-control form-select">
-                    <option value="">{{ _('Any language') }}</option>
+                    <option value="">{{ _('Any') }}</option>
                     {% for language in languages -%}
                         <option value="{{ language.code }}">{{ language.name }}</option>
                     {% endfor -%}
                 </select>
             </div>
             <div class="col col-3">
-                <label for="newbie">{{ _('Good for newbies') }}</label>
+                <label for="newbie"><span class="d-none d-md-inline">{{ _('Good for newbies') }}</span><span class="d-md-none">{{ _('Newbies') }}</span></label>
                 <select name="newbie" id="newbie" class="form-control form-select">
                     <option value="yes">{{ _('Newbie-friendly') }}</option>
                     <option value="no">{{ _('Choose your own adventure') }}</option>
@@ -110,6 +116,7 @@
                   <li><strong>{{ _('Newbie friendly') }}:</strong> <span id="modal-newbie"></span></li>
                   <li><strong>{{ _('Primary language') }}:</strong> <span id="modal-language"></span></li>
                   <li><strong>{{ _('Registration') }}:</strong> <span id="modal-registration"></span></li>
+                  <li><strong>{{ _('Defederation') }}:</strong> <span id="modal-defederation"></span></li>
                 </ul>
               </div>
               <div class="col-md-6">
@@ -119,13 +126,13 @@
                   <li><a id="modal-instance-link" href="" target="_blank">{{ _('Visit server') }}</a></li>
                 </ul>
                 
-                <h6 class="mt-3">{{ _('Blocked servers') }}</h6>
+                <!--<h6 class="mt-3">{{ _('Blocked servers') }}</h6>
                 <div class="small">
                   <div><span id="hexbear-status"></span> hexbear.net</div>
                   <div><span id="hilariouschaos-status"></span> hilariouschaos.com</div>
                   <div><span id="lemmygrad-status"></span> lemmygrad.ml</div>
                   <div><span id="lemmy-status"></span> lemmy.ml</div>
-                </div>
+                </div>-->
               </div>
             </div>
           </div>
@@ -522,21 +529,36 @@
         };
         
         const defederatedDomains = instance.defederation || [];
+
+        countDefederated = 0;
         
         Object.entries(watchedDomains).forEach(([domain, elementId]) => {
             const statusElement = document.getElementById(elementId);
             const isDefederated = defederatedDomains.includes(domain);
             
             if (isDefederated) {
+                countDefederated += 1
                 // Green tick for blocked
-                statusElement.innerHTML = '<span class="text-success">✓</span>';
-                statusElement.title = `Defederated from ${domain}`;
+                //statusElement.innerHTML = '<span class="text-success">✓</span>';
+                //statusElement.title = `Defederated from ${domain}`;
             } else {
                 // Red cross for federated
-                statusElement.innerHTML = '<span class="text-danger">✗</span>';
-                statusElement.title = `Federated with ${domain}`;
+                //statusElement.innerHTML = '<span class="text-danger">✗</span>';
+                //statusElement.title = `Federated with ${domain}`;
             }
         });
+
+        if(countDefederated >= 3)
+            defederationQuality = 'Good';
+        else if(countDefederated === 2)
+            defederationQuality = 'Ok';
+        else if(countDefederated === 1)
+            defederationQuality = 'Minimal';
+        else if(countDefederated < 1)
+            defederationQuality = 'Negligent';
+
+        const defederationElement = document.getElementById('modal-defederation')
+        defederationElement.innerHTML = defederationQuality;
         
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('instanceModal'));
