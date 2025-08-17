@@ -139,6 +139,9 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
             raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
+    except httpx.StreamError as stream_error:
+        # Convert to a more generic error we handle
+        raise httpx.HTTPError(f"HTTPError: {str(stream_error)}") from None
 
     return response
 
