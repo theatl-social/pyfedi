@@ -732,7 +732,6 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    refresh_instance_chooser()
     return 'Done'
     import json
     user_id = 1
