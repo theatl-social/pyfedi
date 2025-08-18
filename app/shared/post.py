@@ -21,7 +21,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
+    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb
 
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
@@ -370,7 +370,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
-                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                    img = to_srgb(img)
+                else:
+                    img = img.convert('RGBA')
                 img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
                 kwargs = {}

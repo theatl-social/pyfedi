@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session
+    patch_db_session, to_srgb
 
 
 def public_key():
@@ -1271,9 +1271,10 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     if medium_width:
                                         if img_width > medium_width or medium_image_format:
                                             medium_image = image.copy()
-                                            medium_image = medium_image.convert('RGB' if (
-                                                        medium_image_format == 'JPEG' or final_ext in ['.jpg',
-                                                                                                       '.jpeg']) else 'RGBA')
+                                            if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                                                medium_image = to_srgb(medium_image)
+                                            else:
+                                                medium_image = medium_image.convert('RGBA')
                                             medium_image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                         kwargs = {}
@@ -1310,9 +1311,12 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                                     # Resize the image to a thumbnail (webp)
                                     if thumbnail_width:
+                                        thumbnail_image = image.copy()
+                                        if thumbnail_image_format == 'JPEG':
+                                            thumbnail_image = to_srgb(thumbnail_image)
+                                        else:
+                                            thumbnail_image = thumbnail_image.convert('RGBA')
                                         if img_width > thumbnail_width:
-                                            thumbnail_image = image.copy()
-                                            thumbnail_image = thumbnail_image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
                                             thumbnail_image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                         kwargs = {}

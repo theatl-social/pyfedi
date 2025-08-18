@@ -4,6 +4,7 @@ import base64
 import bisect
 import gzip
 import hashlib
+import io
 import mimetypes
 import math
 import random
@@ -46,7 +47,7 @@ import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageCms
 
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
@@ -3285,3 +3286,36 @@ def libretranslate_string(text: str, source: str, target: str):
     except Exception as e:
         current_app.logger.exception(str(e))
         return ''
+
+
+def to_srgb(im: Image.Image, assume="sRGB"):
+    """ Convert a jpeg to sRGB, from other color profiles like CMYK. Test with testing_data/sample-wonky.profile.jpg.
+     See https://civitai.com/articles/18193 for background and the source of this code. """
+    srgb_cms = ImageCms.createProfile("sRGB")
+    srgb_wrap = ImageCms.ImageCmsProfile(srgb_cms)
+
+    # 1) source profile
+    icc_bytes = im.info.get("icc_profile")
+    if icc_bytes:
+        src = ImageCms.ImageCmsProfile(io.BytesIO(icc_bytes))
+    else:
+        src = ImageCms.createProfile(assume)
+
+    # 2) CMYK → RGB first
+    if im.mode == "CMYK":
+        im = im.convert("RGB")
+
+    try:
+        im = ImageCms.profileToProfile(
+            im, src, srgb_cms,
+            outputMode="RGB",
+            renderingIntent=0,
+            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+        )
+        # keep an sRGB tag just in case
+        im.info["icc_profile"] = srgb_wrap.tobytes()
+    except ImageCms.PyCMSError:
+        # Fallback: just convert without ICC
+        im = im.convert("RGB")
+
+    return im
