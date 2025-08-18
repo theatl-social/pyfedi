@@ -203,3 +203,35 @@ The repository includes comprehensive test infrastructure:
 - XSS prevention through HTML sanitization
 - Rate limiting on sensitive endpoints
 - Proper password hashing with bcrypt
+
+## Recent Updates & Notes
+
+### Merge History
+- Successfully merged with upstream/main (commit 14b1416e) on 2025-08-18
+- Branch: `feature/merge-upstream-nightly`
+- Key additions from upstream:
+  - Instance chooser functionality
+  - LDAP authentication improvements
+  - API enhancements (image dimensions, cross-post data)
+  - New migration: `086ebbe4f31b_instance_chooser_migration.py`
+
+### Linting & Code Quality
+- Using `ruff` for Python linting (config in `ruff.toml`)
+- Run `ruff check .` to verify code quality
+- Fixed common issues:
+  - Missing imports (e.g., `generate_password_hash` from `werkzeug.security`)
+  - Indentation errors in CLI commands (must be inside `register(app)` function)
+
+### Test Infrastructure Updates
+- New test file: `tests/test_api_endpoints.py` for API validation
+- Docker test environment: `compose.test.yml` and `entrypoint.test.sh`
+- Production mirror testing: `./scripts/run-production-mirror-tests.sh`
+- CLI commands for test setup:
+  - `flask init-test-db` - Initialize test database
+  - `flask load-test-fixtures` - Load test data
+
+### Git Workflow
+- Main upstream remote: `https://codeberg.org/rimu/pyfedi`
+- Upstream branch to track: `main` (not `nightly`)
+- Always create feature branches before merging
+- Commit linting fixes before merging upstream changes
