@@ -1,14 +1,15 @@
 from datetime import timedelta
+import random
 
 import boto3
 from flask import current_app
 from sqlalchemy import text
 
-from app import celery, cache
+from app import celery, cache, httpx_client
 from app.activitypub.util import find_actor_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
-    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, read_posts, File
+    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, read_posts, File, InstanceChooser
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post, store_files_in_s3
@@ -787,3 +788,98 @@ def archive_user(user_id, session):
         session.delete(cover_file)
 
     session.commit()
+
+
+@celery.task
+def refresh_instance_chooser():
+    session = get_task_session()
+    try:
+        # Make GraphQL request to fediverse.observer API
+        query = {
+            "query": '{ nodes(softwarename:"piefed" status: "UP") { domain uptime_alltime monthsmonitored } }'
+        }
+        
+        headers = {'Content-Type': 'application/json'}
+        response = httpx_client.post('https://api.fediverse.observer/', json=query, headers=headers, timeout=30)
+        
+        if response.status_code != 200:
+            current_app.logger.error(f"fediverse.observer API returned {response.status_code}")
+            return
+            
+        response_data = response.json()
+        if not response_data or 'data' not in response_data or 'nodes' not in response_data['data']:
+            current_app.logger.error("Invalid response from fediverse.observer API")
+            return
+            
+        observer_domains = set()
+        
+        # Shuffle the nodes list so instances are processed in random order each time
+        nodes = response_data['data']['nodes']
+        random.shuffle(nodes)
+        
+        # Process each domain from fediverse.observer
+        for node in nodes:
+            domain = node['domain']
+            observer_domains.add(domain)
+            
+            try:
+                # Request instance_chooser API endpoint
+                try:
+                    chooser_response = get_request(f'https://{domain}/api/alpha/site/instance_chooser')
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to connect to {domain}: {str(e)}")
+                    # Remove existing record if API call failed
+                    existing = session.query(InstanceChooser).filter_by(domain=domain).first()
+                    if existing:
+                        session.delete(existing)
+                    continue
+                
+                if chooser_response.status_code == 200:
+                    chooser_data = chooser_response.json()
+
+                    chooser_data['uptime'] = node['uptime_alltime']
+                    chooser_data['monthsmonitored'] = node['monthsmonitored']
+                    
+                    # Update or create InstanceChooser record
+                    instance_chooser = session.query(InstanceChooser).filter_by(domain=domain).first()
+                    if not instance_chooser:
+                        instance_chooser = InstanceChooser(domain=domain)
+                        session.add(instance_chooser)
+                    
+                    # Map API response to InstanceChooser fields
+                    if 'language' in chooser_data and 'id' in chooser_data['language']:
+                        instance_chooser.language_id = chooser_data['language']['id']
+                    
+                    instance_chooser.nsfw = chooser_data.get('nsfw', False)
+                    instance_chooser.newbie_friendly = chooser_data.get('newbie_friendly', True)
+                    
+                    # Store the full response in the data field
+                    instance_chooser.data = chooser_data
+                    
+                else:
+                    # 404 or other error - remove existing record if it exists
+                    existing = session.query(InstanceChooser).filter_by(domain=domain).first()
+                    if existing:
+                        session.delete(existing)
+                        
+            except Exception as e:
+                current_app.logger.warning(f"Error processing domain {domain}: {str(e)}")
+                # Remove existing record if API call failed
+                existing = session.query(InstanceChooser).filter_by(domain=domain).first()
+                if existing:
+                    session.delete(existing)
+            session.commit()
+        
+        # Remove InstanceChooser records for domains not in fediverse.observer
+        existing_records = session.query(InstanceChooser).all()
+        for record in existing_records:
+            if record.domain not in observer_domains:
+                session.delete(record)
+        
+        session.commit()
+        
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

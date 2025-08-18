@@ -37,7 +37,8 @@ def search_for_community(address: str) -> Community | None:
             return None
 
         if current_app.config['SERVER_NAME'] == server:
-            already_exists = Community.query.filter_by(name=name, ap_id=None).first()
+            profile_id = f"https://{server}/c/{name.lower()}"
+            already_exists = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
             return already_exists
 
         already_exists = Community.query.filter_by(ap_id=address[1:]).first()

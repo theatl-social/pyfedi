@@ -115,7 +115,7 @@ sudo docker compose up -d --build
 Provided script:
 ```bash
 cd pyfedi/
-./deploy-docker.sh
+./deploy-docker2.sh
 ```
 NOTE: Major version updates may require extra steps. Check [PieFed Meta](https://piefed.social/c/piefed_meta) for announcements and further instructions.
 

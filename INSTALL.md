@@ -620,6 +620,46 @@ The values for them are found by registering your instance with Google as 'an ap
 to begin. Create a new project, enable the People API, go to APIs & Services > Credentials and create a new OAuth client ID.
 Under "Authorized Redirect URIs", use `https://yourdomain.tld/auth/google_authorize`.
 
+#### Log in with LDAP
+
+PieFed can connect to a LDAP server and use that to verify people's login details. You need to set the following environment variables:
+
+```
+LDAP_SERVER_LOGIN = 'ip address'
+LDAP_PORT_LOGIN = 389
+LDAP_USE_SSL_LOGIN = 0
+LDAP_USE_TLS_LOGIN = 0
+LDAP_BIND_DN_LOGIN = 'cn=admin,dc=piefed,dc=social'
+LDAP_BIND_PASSWORD_LOGIN = ''
+LDAP_BASE_DN_LOGIN = 'ou=users,dc=piefed,dc=social'
+LDAP_USER_FILTER_LOGIN = '(uid={username})'
+LDAP_ATTR_USERNAME_LOGIN = 'uid'
+LDAP_ATTR_EMAIL_LOGIN = 'mail'
+LDAP_ATTR_PASSWORD_LOGIN = 'userPassword'
+```
+
+Test this out by going to `https://yourinstance.tld/test_ldap_login?username=something&password=something_else`
+
+PieFed can also **write to** a LDAP server so that other services can log in using the account details they use on your instance. 
+piefed.social uses this to let people log in to chat.piefed.social and translate.piefed.social using their piefed.social account. The
+environment variables for this are very similar:
+
+```
+LDAP_SERVER = 'ip address'
+LDAP_PORT = 389
+LDAP_USE_SSL = 0
+LDAP_USE_TLS = 0
+LDAP_BIND_DN = 'cn=admin,dc=piefed,dc=social'
+LDAP_BIND_PASSWORD = ''
+LDAP_BASE_DN = 'ou=users,dc=piefed,dc=social'
+LDAP_USER_FILTER = '(uid={username})'
+LDAP_ATTR_USERNAME = 'uid'
+LDAP_ATTR_EMAIL = 'mail'
+LDAP_ATTR_PASSWORD = 'userPassword'
+```
+
+Test this out by going to `https://yourinstance.tld/test_ldap`
+
 #### CMS
 
 At /admin/pages there is a markdown-based CMS which you can use to add pages to your instance. Create one with the url
@@ -777,4 +817,4 @@ pip install --upgrade <package_name>
 
 ## Developers
 
-See dev_notes.txt and https://join.piefed.social/docs/developers/
+See dev_notes.md and https://join.piefed.social/docs/developers/

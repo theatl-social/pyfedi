@@ -23,7 +23,7 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
@@ -216,7 +216,6 @@ def admin_misc():
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
         site.auto_decline_referrers = form.auto_decline_referrers.data
-        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         site.log_activitypub_json = form.log_activitypub_json.data
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
@@ -238,6 +237,8 @@ def admin_misc():
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
         set_setting('ban_check_servers', form.ban_check_servers.data)
+        set_setting('nsfw_country_restriction', form.nsfw_country_restriction.data.strip())
+        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -248,12 +249,13 @@ def admin_misc():
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
+        form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
         form.auto_decline_referrers.data = site.auto_decline_referrers
-        form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
+        form.auto_decline_countries.data = get_setting('auto_decline_countries', '').upper()
         form.log_activitypub_json.data = site.log_activitypub_json
         form.language_id.data = site.language_id
         form.show_inoculation_block.data = site.show_inoculation_block
@@ -270,6 +272,28 @@ def admin_misc():
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form)
+
+
+@bp.route('/instance_chooser', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_instance_chooser():
+    form = InstanceChooserForm()
+    if form.validate_on_submit():
+        set_setting('enable_instance_chooser', form.enable_instance_chooser.data)
+        set_setting('elevator_pitch', form.elevator_pitch.data or '')
+        set_setting('number_of_admins', form.number_of_admins.data)
+        set_setting('financial_stability', form.financial_stability.data)
+        set_setting('daily_backups', form.daily_backups.data)
+        flash(_('Settings saved.'))
+    elif request.method == 'GET':
+        form.enable_instance_chooser.data = get_setting('enable_instance_chooser', False)
+        form.elevator_pitch.data = get_setting('elevator_pitch', '')
+        form.number_of_admins.data = get_setting('number_of_admins', 0)
+        form.financial_stability.data = get_setting('financial_stability', False)
+        form.daily_backups.data = get_setting('daily_backups', False)
+
+    return render_template('admin/instance_chooser.html', title=_('Misc settings'), form=form)
 
 
 @bp.route('/federation', methods=['GET', 'POST'])

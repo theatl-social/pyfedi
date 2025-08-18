@@ -12,7 +12,6 @@ from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
-from app.community.util import retrieve_mods_and_backfill
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING, POST_TYPE_LINK
 from app.email import send_email, send_registration_approved_email
@@ -24,6 +23,7 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -38,7 +38,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     num_topics, referrer
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
-from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
+from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, test_login_ldap_connection, login_with_ldap
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -732,7 +732,6 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    archive_post(70976)
     return 'Done'
     import json
     user_id = 1
@@ -956,6 +955,23 @@ def test_ldap():
         return f'LDAP test failed: {str(e)}'
 
 
+@bp.route('/test_ldap_login')
+@debug_mode_only
+def test_ldap_login():
+    try:
+        # Test LDAP connection
+        connection_result = test_login_ldap_connection()
+        if not connection_result:
+            return 'LDAP test failed: Could not connect to LDAP server. Check configuration.'
+
+        # Test user sync with dummy data using random password
+        login_result = login_with_ldap(request.args.get('user_name'), request.args.get('password'))
+
+        return f'LDAP test results: Connection: {connection_result}, Login: {str(login_result is not False)}'
+    except Exception as e:
+        return f'LDAP test failed: {str(e)}'
+
+
 @bp.route('/test_libretranslate')
 @debug_mode_only
 def test_libretranslate():
@@ -1148,3 +1164,99 @@ def content_warning():
 @bp.route('/health', methods=['HEAD', 'GET'])
 def health():
     return 'Ok'
+
+
+@bp.route('/health2', methods=['GET', 'HEAD'])
+def health2():
+    # Do some DB access to provide a picture of the performance of the instance
+
+    search_param = request.args.get('search', '')
+    topic_id = int(request.args.get('topic_id', 0))
+    feed_id = int(request.args.get('feed_id', 0))
+    language_id = int(request.args.get('language_id', 0))
+    nsfw = request.args.get('nsfw', None)
+    sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
+
+    if request.args.get('prompt'):
+        flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
+
+    topics = Topic.query.order_by(Topic.name).all()
+    languages = Language.query.order_by(Language.name).all()
+    communities = Community.query.filter_by(banned=False)
+    if search_param == '':
+        pass
+    else:
+        communities = communities.filter(
+            or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+    if topic_id != 0:
+        communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+    # default to no public feeds
+    server_has_feeds = False
+    # find all the feeds marked as public
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
+    if len(public_feeds) > 0:
+        server_has_feeds = True
+
+    create_admin_only = g.site.community_creation_admin_only
+
+    is_admin = current_user.is_authenticated and current_user.is_admin()
+
+    # if filtering by public feed
+    # get all the ids of the communities
+    # then filter the communites to ones whose ids match the feed
+    if feed_id != 0:
+        feed_community_ids = []
+        feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed_id).all()
+        for item in feed_items:
+            feed_community_ids.append(item.community_id)
+        communities = communities.filter(Community.id.in_(feed_community_ids))
+
+    if current_user.is_authenticated:
+        if current_user.hide_low_quality:
+            communities = communities.filter(Community.low_quality == False)
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
+        if current_user.hide_nsfw == 1:
+            nsfw = None
+            communities = communities.filter(Community.nsfw == False)
+        else:
+            if nsfw == 'no':
+                communities = communities.filter(Community.nsfw == False)
+            elif nsfw == 'yes':
+                communities = communities.filter(Community.nsfw == True)
+        if current_user.hide_nsfl == 1:
+            communities = communities.filter(Community.nsfl == False)
+        instance_ids = blocked_instances(current_user.id)
+        if instance_ids:
+            communities = communities.filter(
+                or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
+
+    else:
+        communities = communities.filter(Community.nsfl == False)
+        if nsfw == 'no':
+            communities = communities.filter(and_(Community.nsfw == False))
+        elif nsfw == 'yes':
+            communities = communities.filter(and_(Community.nsfw == True))
+
+    communities = communities.order_by(safe_order_by(sort_by, Community,
+                                                     {'title', 'subscriptions_count', 'post_count', 'post_reply_count',
+                                                      'last_active', 'created_at'})).limit(100)
+
+    c = communities.all()
+
+    return ''

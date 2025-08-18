@@ -33,6 +33,7 @@ class SiteMiscForm(FlaskForm):
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
+    nsfw_country_restriction = TextAreaField(_l('Bar people from these countries from accessing NSFW and NSFL content'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     email_verification = BooleanField(_l('Require new accounts to verify their email address'))
@@ -63,6 +64,15 @@ class SiteMiscForm(FlaskForm):
     private_instance = BooleanField(_l('Private instance - require login to browse'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
 
+    submit = SubmitField(_l('Save'))
+
+
+class InstanceChooserForm(FlaskForm):
+    enable_instance_chooser = BooleanField(_l('Enable instance chooser'))
+    elevator_pitch = StringField(_l('One-sentence elevator pitch'), validators=[Length(max=90)])
+    number_of_admins = IntegerField(_l('Number of admins with emergency access'))
+    financial_stability = BooleanField(_l('Non-admins donate enough to pay for hosting'))
+    daily_backups = BooleanField(_l('This instance has automated daily backups'))
     submit = SubmitField(_l('Save'))
 
 

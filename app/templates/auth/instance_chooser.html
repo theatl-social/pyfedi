@@ -1,0 +1,595 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+
+{% block schema_org %}
+  {% for instance in instances -%}
+      <link rel="dns-prefetch" href="{{ instance['domain'] }}" crossorigin>
+  {% endfor %}
+{% endblock %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 position-relative main_pane">
+
+        <h1 class="mt-2">{{ title }}</h1>
+
+        <p class="mt-4 mb-4"><a href="/auth/register" class="btn btn-primary">{{ _('Join %(domain)s', domain=instance_domain) }}</a>
+        <a href="#begin_searching" class="btn btn-outline-secondary">{{ _("I don't know, help me") }}</a>
+        </p>
+        <form id="begin_searching">
+        <div class="row">
+            <div class="col col-3">
+                <label for="search">{{ _('Search') }}</label>
+                <input type="search" name="q" id="search" class="form-control">
+            </div>
+            <div class="col col-3">
+                <label for="primary_language"><span class="d-none d-md-inline">{{ _('Primary language') }}</span><span class="d-md-none">{{ _('Language') }}</span></label>
+                <select name="language" id="primary_language" class="form-control form-select">
+                    <option value="">{{ _('Any') }}</option>
+                    {% for language in languages -%}
+                        <option value="{{ language.code }}">{{ language.name }}</option>
+                    {% endfor -%}
+                </select>
+            </div>
+            <div class="col col-3">
+                <label for="newbie"><span class="d-none d-md-inline">{{ _('Good for newbies') }}</span><span class="d-md-none">{{ _('Newbies') }}</span></label>
+                <select name="newbie" id="newbie" class="form-control form-select">
+                    <option value="yes">{{ _('Newbie-friendly') }}</option>
+                    <option value="no">{{ _('Choose your own adventure') }}</option>
+                </select>
+            </div>
+            <div class="col col-3">
+                <label for="nsfw">{{ _('NSFW') }}</label>
+                <select name="nsfw" id="nsfw" class="form-control form-select">
+                    <option value="all">{{ _("I don't care") }}</option>
+                    <option value="yes">{{ _('NSFW content available') }}</option>
+                    <option value="no">{{ _('No NSFW content') }}</option>
+                </select>
+            </div>
+        </div>
+        </form>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="text-center d-none mt-3">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+        
+        <!-- Results will be populated here by JavaScript -->
+        <div id="search-results" class="row mt-3 instance_chooser_results">
+        </div>
+        <div class="row">
+            <div class="col"><p>{{ _('These servers are ordered by speed so it may vary depending on time of day, etc') }}</p></div>
+        </div>
+    </main>
+</div>
+
+<!-- Instance Details Modal -->
+<div class="modal fade" id="instanceModal" tabindex="-1" aria-labelledby="instanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="instanceModalLabel">{{ _('Server details') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-3 text-center">
+            <img id="modal-logo" src="" alt="Instance Logo" class="img-fluid mb-3" style="max-width: 100px;">
+            <h5 id="modal-name"></h5>
+            <p class="text-muted" id="modal-domain"></p>
+            <a id="modal-join-link" href="" class="btn btn-primary" target="_blank">{{ _('Join this server') }}</a>
+          </div>
+          <div class="col-md-9">
+            <h6>{{ _('Description') }}</h6>
+            <p id="modal-elevator-pitch"></p>
+            
+            <div id="modal-description-section" class="mb-3">
+              <h6>{{ _('About') }}</h6>
+              <p id="modal-description"></p>
+            </div>
+            
+            <div id="modal-about-section" class="mb-3">
+              <h6>{{ _('More details') }}</h6>
+              <div id="modal-about"></div>
+            </div>
+            
+            <div id="modal-sidebar-section" class="mb-3">
+              <h6>{{ _('Community guidelines') }}</h6>
+              <div id="modal-sidebar"></div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6">
+                <h6>{{ _('Instance Info') }}</h6>
+                <ul class="list-unstyled">
+                  <li><strong>{{ _('Stability') }}:</strong> <span id="modal-maturity"></span></li>
+                  <li><strong>{{ _('Age') }}:</strong> <span id="modal-months"></span></li>
+                  <li><strong>{{ _('Uptime') }}:</strong> <span id="modal-uptime"></span></li>
+                  <li><strong>{{ _('Newbie friendly') }}:</strong> <span id="modal-newbie"></span></li>
+                  <li><strong>{{ _('Primary language') }}:</strong> <span id="modal-language"></span></li>
+                  <li><strong>{{ _('Registration') }}:</strong> <span id="modal-registration"></span></li>
+                  <li><strong>{{ _('Defederation') }}:</strong> <span id="modal-defederation"></span></li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6>{{ _('Links') }}</h6>
+                <ul class="list-unstyled">
+                  <li><a id="modal-tos-link" href="" target="_blank" class="d-none">{{ _('Terms of service') }}</a></li>
+                  <li><a id="modal-instance-link" href="" target="_blank">{{ _('Visit server') }}</a></li>
+                </ul>
+                
+                <!--<h6 class="mt-3">{{ _('Blocked servers') }}</h6>
+                <div class="small">
+                  <div><span id="hexbear-status"></span> hexbear.net</div>
+                  <div><span id="hilariouschaos-status"></span> hilariouschaos.com</div>
+                  <div><span id="lemmygrad-status"></span> lemmygrad.ml</div>
+                  <div><span id="lemmy-status"></span> lemmy.ml</div>
+                </div>-->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block end_scripts -%}
+<script nonce="{{ nonce }}">
+    window.pingResults = {};
+
+    async function pingServers() {
+      const servers = [
+        {% for instance in instances -%}
+          "https://{{ instance['domain'] }}/health2",
+        {% endfor %}
+      ];
+
+      const timeoutMs = 3000; // 3 seconds
+
+      function fetchWithTimeout(url, options = {}, timeout = timeoutMs) {
+        const controller = new AbortController();
+        const id = setTimeout(() => controller.abort(), timeout);
+
+        return fetch(url, { ...options, signal: controller.signal })
+          .finally(() => clearTimeout(id));
+      }
+
+      const checks = servers.map(async (url) => {
+        const start = performance.now();
+
+        try {
+          await fetchWithTimeout(url, { method: "HEAD", mode: "no-cors" });
+          const end = performance.now();
+          window.pingResults[url] = Math.round(end - start);
+        } catch (err) {
+          if (err.name === "AbortError") {
+            window.pingResults[url] = "timeout";
+          } else {
+            window.pingResults[url] = "error";
+          }
+        }
+      });
+
+      await Promise.allSettled(checks);
+
+      // Update data-sort attributes and re-sort after ping results are available
+      updatePingSortValues();
+      sortCardsByPing();
+      updateSpeedIcons();
+    }
+    
+    function updatePingSortValues() {
+        const cards = document.querySelectorAll('.card[data-sort]');
+        cards.forEach(card => {
+            const cardElement = card.closest('.col-12');
+            if (!cardElement) return;
+            
+            // Find the instance domain from the card
+            const domainLink = card.querySelector('a[href*="://"]');
+            if (!domainLink) return;
+            
+            const domain = domainLink.href.match(/https?:\/\/([^\/]+)/)?.[1];
+            if (!domain) return;
+            
+            const domainUrl = `https://${domain}/health2`;
+            const pingResult = window.pingResults[domainUrl];
+            let sortValue = 10000; // Default for no ping result
+            
+            if (pingResult && typeof pingResult === 'number') {
+                sortValue = pingResult;
+            } else if (pingResult === 'timeout') {
+                sortValue = 9999;
+            } else if (pingResult === 'error') {
+                sortValue = 9998;
+            }
+            
+            card.setAttribute('data-sort', sortValue);
+        });
+    }
+
+    // Instance chooser search functionality
+    let searchTimeout;
+    
+    function collectFormData() {
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+        const params = new URLSearchParams();
+        
+        for (const [key, value] of formData.entries()) {
+            if (value && value !== 'all') {
+                params.append(key, value);
+            }
+        }
+        
+        return params.toString();
+    }
+    
+    async function searchInstances() {
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const resultsContainer = document.getElementById('search-results');
+        
+        // Show loading indicator
+        loadingIndicator.classList.remove('d-none');
+        
+        try {
+            const queryString = collectFormData();
+            const response = await fetch(`/api/alpha/site/instance_chooser_search?${queryString}`);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const data = await response.json();
+            renderResults(data.result || []);
+        } catch (error) {
+            console.error('Error searching instances:', error);
+            renderError('Failed to search instances. Please try again.');
+        } finally {
+            // Hide loading indicator
+            loadingIndicator.classList.add('d-none');
+        }
+    }
+    
+    function renderResults(instances) {
+        const resultsContainer = document.getElementById('search-results');
+        
+        if (instances.length === 0) {
+            resultsContainer.innerHTML = '<div class="col-12"><p class="text-center">No instances found matching your criteria.</p></div>';
+            return;
+        }
+
+        const cardsHtml = instances.map((instance) => {
+            // Look up ping result for this domain
+            const domainUrl = `https://${instance.domain}/health2`;
+            const pingResult = window.pingResults[domainUrl];
+            let sortValue = 10000; // Default for no ping result
+            
+            if (pingResult && typeof pingResult === 'number') {
+                sortValue = pingResult;
+            } else if (pingResult === 'timeout') {
+                sortValue = 9999;
+            } else if (pingResult === 'error') {
+                sortValue = 9998;
+            } else {
+                sortValue = 10000;
+            }
+            
+            return `
+            <div class="col-12 col-md-4 col-lg-3 mb-3">
+                <div class="card h-100" data-id="${instance.id}" data-sort="${sortValue}">
+                    <div class="card-header">
+                        <table class="w-100">
+                        <tr>
+                        <td><a href="https://${instance.domain}" title="${instance.domain}" target="_blank" rel="noopener">
+                            <img src="${instance.logo_url}" width="50" height="50" class="me-2" onerror="this.style.display='none'"></a></td>
+                        <td>
+                        <a href="https://${instance.domain}" title="${instance.domain}" target="_blank" rel="noopener">
+                        ${instance.name} <span class="fe fe-external"></span><br>
+                            <small>${instance.domain}</small></a>
+                        </td>
+                        <td><a href="https://${instance.domain}/auth/register" class="btn btn-primary" style="float: right;">{{ _('Join') }}</a></td>
+                        </tr>
+                        </table>
+                    </div>
+                    <div class="card-body">
+                        <div id="speed_${instance.domain.replace(/\./g, '-')}" style="float: right;"></div>
+                        <p class="card-text">${instance.elevator_pitch}</p>
+                        ${instance.description ? `<small class="text-muted">${instance.description}</small>` : ''}
+                    </div>
+                    <div class="card-footer small text-muted">
+                        <button class="btn btn-outline-secondary more-info-btn mt-2" data-id="${instance.id}" style="float: right;">{{ _('More') }}</button>
+                        {{ _('Stability') }}: ${instance.maturity} <br>
+                        {{ _('Newbie friendly') }}: ${instance.newbie_friendly ? 'Yes' : 'No'}  <br>
+                        {{ _('Age') }}: ${instance.monthsmonitored ? instance.monthsmonitored + ' months' : ''}
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
+        
+        resultsContainer.innerHTML = cardsHtml;
+        
+        // Store instances data as a lookup map by ID for modal access
+        window.currentInstancesMap = {};
+        instances.forEach(instance => {
+            window.currentInstancesMap[instance.id] = instance;
+        });
+        
+        // Add event listeners to More buttons
+        addMoreButtonListeners();
+        
+        // Sort by ping results
+        sortCardsByPing();
+        
+        // Update speed icons
+        updateSpeedIcons();
+    }
+    
+    function sortCardsByPing() {
+        const resultsContainer = document.getElementById('search-results');
+        const cards = Array.from(resultsContainer.children);
+        
+        // Sort cards by data-sort attribute (ascending - lowest ping first)
+        cards.sort((a, b) => {
+            const aSort = parseInt(a.querySelector('.card').getAttribute('data-sort')) || 10000;
+            const bSort = parseInt(b.querySelector('.card').getAttribute('data-sort')) || 10000;
+            return aSort - bSort;
+        });
+        
+        // Re-append the sorted cards to the container
+        cards.forEach(card => resultsContainer.appendChild(card));
+    }
+    
+    function calculateSpeedCategories() {
+        // Get all numeric ping results
+        const numericPings = Object.values(window.pingResults)
+            .filter(ping => typeof ping === 'number' && ping > 0)
+            .sort((a, b) => a - b);
+        
+        if (numericPings.length === 0) return { fast: [], medium: [], slow: [] };
+        
+        const third = Math.floor(numericPings.length / 3);
+        const twoThirds = Math.floor((numericPings.length * 2) / 3);
+        
+        return {
+            fast: numericPings.slice(0, third),
+            medium: numericPings.slice(third, twoThirds),
+            slow: numericPings.slice(twoThirds)
+        };
+    }
+    
+    function getSpeedCategory(ping) {
+        if (typeof ping !== 'number' || ping <= 0) return 'unknown';
+        
+        const categories = calculateSpeedCategories();
+        const allPings = [...categories.fast, ...categories.medium, ...categories.slow];
+        
+        if (allPings.length === 0) return 'unknown';
+        
+        const third = Math.floor(allPings.length / 3);
+        const twoThirds = Math.floor((allPings.length * 2) / 3);
+        
+        if (ping <= allPings[third - 1] || (third === 0 && ping <= allPings[0])) {
+            return 'fast';
+        } else if (ping <= allPings[twoThirds - 1] || (twoThirds === third && ping <= allPings[third])) {
+            return 'medium';
+        } else {
+            return 'slow';
+        }
+    }
+    
+    function updateSpeedIcons() {
+        // Go through all current instances and update their speed icons
+        if (!window.currentInstancesMap) return;
+        
+        Object.values(window.currentInstancesMap).forEach(instance => {
+            const domainId = instance.domain.replace(/\./g, '-');
+            const speedElement = document.getElementById(`speed_${domainId}`);
+            
+            if (!speedElement) return;
+            
+            const domainUrl = `https://${instance.domain}/health2`;
+            const pingResult = window.pingResults[domainUrl];
+            
+            let icon = '';
+            let title = '';
+            
+            if (typeof pingResult === 'number' && pingResult > 0) {
+                const category = getSpeedCategory(pingResult);
+                switch (category) {
+                    case 'fast':
+                        icon = '<span class="text-success" title="Fast server">🚀</span>';
+                        title = `Fast (${pingResult}ms)`;
+                        break;
+                    case 'medium':
+                        icon = '<span class="text-warning" title="Medium speed">⚡</span>';
+                        title = `Medium (${pingResult}ms)`;
+                        break;
+                    case 'slow':
+                        icon = '<span class="text-danger" title="Slow server">🐌</span>';
+                        title = `Slow (${pingResult}ms)`;
+                        break;
+                }
+            } else if (pingResult === 'timeout') {
+                icon = '<span class="text-muted" title="Connection timeout">⏱️</span>';
+                title = 'Timeout';
+            } else if (pingResult === 'error') {
+                icon = '<span class="text-muted" title="Connection error">❌</span>';
+                title = 'Error';
+            } else {
+                icon = '<span class="text-muted" title="Testing speed...">⏳</span>';
+                title = 'Testing...';
+            }
+            
+            speedElement.innerHTML = icon;
+            speedElement.title = title;
+        });
+    }
+    
+    function renderError(message) {
+        const resultsContainer = document.getElementById('search-results');
+        resultsContainer.innerHTML = `<div class="col-12"><div class="alert alert-danger">${message}</div></div>`;
+    }
+    
+    function debounceSearch() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(searchInstances, 300);
+    }
+    
+    function addMoreButtonListeners() {
+        const moreButtons = document.querySelectorAll('.more-info-btn');
+        moreButtons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                const instanceId = parseInt(this.getAttribute('data-id'));
+                const instance = window.currentInstancesMap[instanceId];
+                if (instance) {
+                    showInstanceModal(instance);
+                }
+            });
+        });
+    }
+    
+    function showInstanceModal(instance) {
+        // Populate modal with instance data
+        document.getElementById('modal-logo').src = instance.logo_url;
+        document.getElementById('modal-name').textContent = instance.name;
+        document.getElementById('modal-domain').textContent = instance.domain;
+        document.getElementById('modal-elevator-pitch').textContent = instance.elevator_pitch;
+        
+        // Set links
+        document.getElementById('modal-join-link').href = `https://${instance.domain}/auth/register`;
+        document.getElementById('modal-instance-link').href = `https://${instance.domain}`;
+        
+        // Handle optional fields
+        const descriptionSection = document.getElementById('modal-description-section');
+        const modalDescription = document.getElementById('modal-description');
+        if (instance.description && instance.description.trim()) {
+            modalDescription.textContent = instance.description;
+            descriptionSection.style.display = 'block';
+        } else {
+            descriptionSection.style.display = 'none';
+        }
+        
+        const aboutSection = document.getElementById('modal-about-section');
+        const modalAbout = document.getElementById('modal-about');
+        if (instance.about && instance.about.trim()) {
+            modalAbout.innerHTML = instance.about;
+            aboutSection.style.display = 'block';
+        } else {
+            aboutSection.style.display = 'none';
+        }
+        
+        const sidebarSection = document.getElementById('modal-sidebar-section');
+        const modalSidebar = document.getElementById('modal-sidebar');
+        if (instance.sidebar && instance.sidebar.trim()) {
+            modalSidebar.innerHTML = instance.sidebar;
+            sidebarSection.style.display = 'block';
+        } else {
+            sidebarSection.style.display = 'none';
+        }
+        
+        // Populate instance info
+        document.getElementById('modal-maturity').textContent = instance.maturity || 'Unknown';
+        document.getElementById('modal-months').textContent = instance.monthsmonitored ? `${instance.monthsmonitored} months` : 'Unknown';
+        document.getElementById('modal-uptime').textContent = instance.uptime ? `${instance.uptime}%` : 'Unknown';
+        document.getElementById('modal-newbie').textContent = instance.newbie_friendly ? 'Yes' : 'No';
+        document.getElementById('modal-language').textContent = instance.language || 'Not specified';
+        document.getElementById('modal-registration').textContent = instance.registration_mode === 'RequireApplication' ? 'Open' : (instance.registration_mode || 'Unknown');
+        
+        // Handle TOS link
+        const tosLink = document.getElementById('modal-tos-link');
+        if (instance.tos_url && instance.tos_url.trim()) {
+            tosLink.href = instance.tos_url;
+            tosLink.classList.remove('d-none');
+        } else {
+            tosLink.classList.add('d-none');
+        }
+        
+        // Handle federation status
+        const watchedDomains = {
+            'hexbear.net': 'hexbear-status',
+            'hilariouschaos.com': 'hilariouschaos-status',
+            'lemmygrad.ml': 'lemmygrad-status',
+            'lemmy.ml': 'lemmy-status'
+        };
+        
+        const defederatedDomains = instance.defederation || [];
+
+        countDefederated = 0;
+        
+        Object.entries(watchedDomains).forEach(([domain, elementId]) => {
+            const statusElement = document.getElementById(elementId);
+            const isDefederated = defederatedDomains.includes(domain);
+            
+            if (isDefederated) {
+                countDefederated += 1
+                // Green tick for blocked
+                //statusElement.innerHTML = '<span class="text-success">✓</span>';
+                //statusElement.title = `Defederated from ${domain}`;
+            } else {
+                // Red cross for federated
+                //statusElement.innerHTML = '<span class="text-danger">✗</span>';
+                //statusElement.title = `Federated with ${domain}`;
+            }
+        });
+
+        if(countDefederated >= 3)
+            defederationQuality = 'Good';
+        else if(countDefederated === 2)
+            defederationQuality = 'Ok';
+        else if(countDefederated === 1)
+            defederationQuality = 'Minimal';
+        else if(countDefederated < 1)
+            defederationQuality = 'Negligent';
+
+        const defederationElement = document.getElementById('modal-defederation')
+        defederationElement.innerHTML = defederationQuality;
+        
+        // Show the modal
+        const modal = new bootstrap.Modal(document.getElementById('instanceModal'));
+        modal.show();
+    }
+    
+    // Add event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const searchInput = form.querySelector('input[name="q"]');
+        const selectElements = form.querySelectorAll('select');
+        
+        // Search input with debounce
+        searchInput.addEventListener('input', debounceSearch);
+        
+        // Select dropdowns trigger immediate search
+        selectElements.forEach(select => {
+            select.addEventListener('change', searchInstances);
+        });
+        
+        // Prevent form submission
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            searchInstances();
+        });
+        
+        // Perform initial search
+        searchInstances();
+    });
+
+    pingServers();
+
+</script>
+{% endblock -%}

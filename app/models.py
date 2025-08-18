@@ -3335,6 +3335,15 @@ class CmsPage(db.Model):
     edited_at = db.Column(db.DateTime, default=utcnow)
 
 
+class InstanceChooser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    domain = db.Column(db.String(100), index=True)
+    language_id = db.Column(db.Integer, index=True)
+    nsfw = db.Column(db.Boolean, default=False, index=True)
+    newbie_friendly = db.Column(db.Boolean, default=True, index=True)
+    data = db.Column(db.JSON)
+
+
 def _large_community_subscribers() -> float:
     # average number of subscribers in the top 15% communities
 

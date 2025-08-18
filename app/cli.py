@@ -1,7 +1,7 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
 
-# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import imaplib
@@ -39,7 +39,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session
+    render_from_tpl, get_task_session, patch_db_session, get_setting
 
 
 def register(app):
@@ -90,7 +90,8 @@ def register(app):
         print('Admin keys have been reset')
 
     @app.cli.command("init-db")
-    def init_db():
+    @click.option("--interactive", default='yes', help="Create admin user during setup.")
+    def init_db(interactive):
         with app.app_context():
             # Check if alembic_version table exists
             inspector = db.inspect(db.engine)
@@ -114,7 +115,7 @@ def register(app):
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
-                                'hexbear.net',
+                                'hexbear.net', 'hilariouschaos.com',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
                                 'detroitriotcity.com',
@@ -176,30 +177,30 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
-            # Admin user
-            print(
-                'The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
-            user_name = input("Admin user name (ideally not 'admin'): ")
-            email = input("Admin email address: ")
-            password = input("Admin password: ")
-            while '@' in user_name or ' ' in user_name:
-                print('User name cannot be an email address or have spaces.')
+            if interactive == 'yes':
+                # Admin user
+                print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
                 user_name = input("Admin user name (ideally not 'admin'): ")
-            verification_token = random_token(16)
-            private_key, public_key = RsaKeys.generate_keypair()
-            admin_user = User(user_name=user_name, title=user_name,
-                              email=email, verification_token=verification_token,
-                              instance_id=1, email_unread_sent=False,
-                              private_key=private_key, public_key=public_key,
-                              alt_user_name=gibberish(randint(8, 20)))
-            admin_user.set_password(password)
-            admin_user.roles.append(admin_role)
-            admin_user.verified = True
-            admin_user.last_seen = utcnow()
-            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-            admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
-            db.session.add(admin_user)
+                email = input("Admin email address: ")
+                password = input("Admin password: ")
+                while '@' in user_name or ' ' in user_name:
+                    print('User name cannot be an email address or have spaces.')
+                    user_name = input("Admin user name (ideally not 'admin'): ")
+                verification_token = random_token(16)
+                private_key, public_key = RsaKeys.generate_keypair()
+                admin_user = User(user_name=user_name, title=user_name,
+                                  email=email, verification_token=verification_token,
+                                  instance_id=1, email_unread_sent=False,
+                                  private_key=private_key, public_key=public_key,
+                                  alt_user_name=gibberish(randint(8, 20)))
+                admin_user.set_password(password)
+                admin_user.roles.append(admin_role)
+                admin_user.verified = True
+                admin_user.last_seen = utcnow()
+                admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
+                admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
+                admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
+                db.session.add(admin_user)
 
             db.session.commit()
             print("Initial setup is finished.")
@@ -287,13 +288,18 @@ def register(app):
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
                 recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts, archive_old_users, cleanup_old_read_posts
+                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
 
+            if not current_app.debug:
+                sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
+
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser()
                 cleanup_old_notifications()
                 cleanup_old_read_posts()
                 cleanup_send_queue()
@@ -314,6 +320,8 @@ def register(app):
                 archive_old_users()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser.delay()
                 cleanup_old_notifications.delay()
                 cleanup_old_read_posts.delay()
                 cleanup_send_queue.delay()
@@ -362,8 +370,8 @@ def register(app):
                                     return
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
-
-                            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+                            if not current_app.debug:
+                                sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent

@@ -4,6 +4,7 @@
             {% if user_access('change instance settings', current_user.id) %}
                 <a class="nav-link{% if active_child == 'admin_site' %} active{% endif %}" id="site-profile-tab" type="button" role="tab" href="/admin/site" style="view-transition-name: site">{{ _('Site') }}</a>
                 <a class="nav-link{% if active_child == 'admin_misc' %} active{% endif %}" id="misc-tab" type="button" role="tab" href="/admin/misc" style="view-transition-name: misc">{{ _('Misc') }}</a>
+                <a class="nav-link{% if active_child == 'admin_instance_chooser' %} active{% endif %}" id="instance-chooser-tab" type="button" role="tab" href="/admin/instance_chooser" style="view-transition-name: misc">{{ _('Chooser') }}</a>
             {% endif -%}
             {% if user_access('administer all communities', current_user.id) %}
                 <a class="nav-link{% if active_child == 'admin_communities' %} active{% endif %}" id="communities-tab" type="button" role="tab" href="/admin/communities" style="view-transition-name: communities">{{ _('Communities') }}</a>

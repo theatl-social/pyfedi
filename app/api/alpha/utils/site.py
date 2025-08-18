@@ -1,7 +1,7 @@
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
-from app.api.alpha.views import site_view, federated_instances_view
+from app.api.alpha.views import site_view, federated_instances_view, site_instance_chooser_view
 from app.constants import SRC_API
-from app.models import InstanceBlock
+from app.models import InstanceBlock, InstanceChooser, Language
 from app.shared.site import block_remote_instance, unblock_remote_instance
 from app.utils import authorise_api_user
 
@@ -14,6 +14,42 @@ def get_site(auth):
 
     site_json = site_view(user)
     return site_json
+
+
+def get_site_instance_chooser(auth):
+    return site_instance_chooser_view()
+
+
+def get_site_instance_chooser_search(query_params):
+    result = {
+        'result': []
+    }
+
+    instances = InstanceChooser.query
+    if query_params.get('q', '') != '':
+        instances = instances.filter(InstanceChooser.domain.ilike(f"%{query_params['q']}%"))
+    if query_params.get('nsfw', '') != '':
+        if query_params['nsfw'] == 'yes':
+            instances = instances.filter(InstanceChooser.nsfw == True)
+        elif query_params['nsfw'] == 'no':
+            instances = instances.filter(InstanceChooser.nsfw == False)
+    if query_params.get('language', '') != '':
+        language_id = Language.query.filter(Language.code == query_params['language']).first()
+        if language_id:
+            instances = instances.filter(InstanceChooser.language_id == language_id.id)
+    if query_params.get('newbie', '') != '':
+        if query_params['newbie'] == 'yes':
+            instances = instances.filter(InstanceChooser.newbie_friendly == True)
+        elif query_params['newbie'] == 'no':
+            instances = instances.filter(InstanceChooser.newbie_friendly == False)
+
+    for instance in instances.all():
+        instance_data = instance.data
+        instance_data['domain'] = instance.domain
+        instance_data['id'] = instance.id
+        instance_data['language'] = instance_data['language']['name']
+        result['result'].append(instance_data)
+    return result
 
 
 def get_federated_instances(data):

@@ -48,7 +48,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string
+    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country
 
 
 @login_required_if_private_instance
@@ -76,6 +76,9 @@ def show_post(post_id: int):
                 if post.nsfw or post.nsfl:
                     flash(_('This post is only visible to logged in users.'))
                     return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+        else:
+            if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
+                abort(403)
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
 
