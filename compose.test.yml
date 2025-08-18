@@ -108,6 +108,7 @@ services:
         condition: service_healthy
       test-celery:
         condition: service_started
+    entrypoint: ["./entrypoint.test.sh"]
     ports:
       - "8031:5000"  # Different from production port 8030
     volumes:
@@ -143,7 +144,9 @@ services:
       - PYTHONPATH=/app
       - RUN_TESTS=true
     depends_on:
-      test-web:
+      test-db:
+        condition: service_healthy
+      test-redis:
         condition: service_healthy
     command: |
       sh -c "

@@ -81,7 +81,7 @@ RUN pybabel compile -d app/translations || true
 
 # Make the entrypoint scripts executable and ensure ownership is correct.
 # The entrypoint will be run by root, so it needs the execute bit.
-RUN chmod +x ./entrypoint.sh ./entrypoint_celery.sh && \
+RUN chmod +x ./entrypoint.sh ./entrypoint_celery.sh ./entrypoint.test.sh && \
     chown -R python:python /app
 
 # Add the crontab entries

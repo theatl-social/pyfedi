@@ -20,6 +20,7 @@ import redis
 from flask import json, current_app
 from flask_babel import _
 from sqlalchemy import or_, desc, text
+from werkzeug.security import generate_password_hash
 
 from app import db, cache
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
@@ -1302,25 +1303,6 @@ def register(app):
             finally:
                 session.close()
 
-
-def parse_communities(interests_source, segment):
-    lines = interests_source.split("\n")
-    include_in_output = False
-    output = []
-
-    for line in lines:
-        line = line.strip()
-        if line == segment:
-            include_in_output = True
-            continue
-        elif line == '':
-            include_in_output = False
-        if include_in_output:
-            output.append(line)
-
-    return "\n".join(output)
-
-
     @app.cli.command("init-test-db")
     def init_test_db():
         """Initialize database with test-specific data for validation testing"""
@@ -1478,3 +1460,21 @@ def parse_communities(interests_source, segment):
             db.session.commit()
             print("✅ Test fixtures loaded successfully")
             print("🔍 Test environment ready for validation testing")
+
+
+def parse_communities(interests_source, segment):
+    lines = interests_source.split("\n")
+    include_in_output = False
+    output = []
+
+    for line in lines:
+        line = line.strip()
+        if line == segment:
+            include_in_output = True
+            continue
+        elif line == '':
+            include_in_output = False
+        if include_in_output:
+            output.append(line)
+
+    return "\n".join(output)
