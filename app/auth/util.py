@@ -343,7 +343,11 @@ def render_registration_form(form):
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
-    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site, google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"], mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"], discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
+    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site,
+                           instance_chooser_enabled=get_setting('enable_instance_chooser', False),
+                           google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 def redirect_next_page():
