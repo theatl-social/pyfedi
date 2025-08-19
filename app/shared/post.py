@@ -388,12 +388,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             else:
                 raise Exception('filetype not allowed')
 
-        if final_place.endswith('.gif'):
-            gif_image = Image.open(final_place)
-            gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
-            os.remove(final_place)
-            final_place = final_place[:-4] + ".webp"
-            final_ext = '.webp'
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 

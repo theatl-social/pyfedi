@@ -1183,6 +1183,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
             with patch_db_session(session):
                 file: File = session.query(File).get(file_id)
                 if file and file.source_url:
+                    if file.source_url.endswith('.gif'):    # don't resize gifs, it breaks their animation
+                        return
                     try:
                         source_image_response = get_request(file.source_url)
                     except:
