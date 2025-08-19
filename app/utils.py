@@ -379,11 +379,11 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
 
     # replace subscript markdown left in HTML
-    re_subscript = re.compile(r'~(\S+)~')
+    re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
     clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
 
     # replace superscript markdown left in HTML
-    re_superscript = re.compile(r'\^(\S+)\^')
+    re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
     clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
 
     # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
