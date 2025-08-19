@@ -125,6 +125,11 @@ def webfinger():
                 }
             ]
         }
+        if isinstance(object, User):
+            webfinger_data['links'].append({
+              "rel": "https://w3id.org/fep/3b86/Create",
+              "template": f"https://{current_app.config['SERVER_NAME']}/share?url=" + '{object}'
+            })
         resp = jsonify(webfinger_data)
         resp.headers.add_header('Access-Control-Allow-Origin', '*')
         return resp
