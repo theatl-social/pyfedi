@@ -1283,6 +1283,8 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
+    from app.api.alpha.utils.misc import get_resolve_object
+
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -1361,31 +1363,23 @@ def import_settings_task(user_id, filename):
                     ...
 
                 for ap_id in contents_json['saved_posts'] if 'saved_posts' in contents_json else []:
-                    post = session.query(Post).filter_by(ap_id=ap_id).first()
-                    if post:
-                        existing_bookmark = session.query(PostBookmark).filter_by(post_id=post.id, user_id=user.id).first()
-                        if not existing_bookmark:
-                            session.add(PostBookmark(post_id=post.id, user_id=user.id))
-                    else:
+                    try:
+                        post = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if post:
+                            existing_bookmark = session.query(PostBookmark).filter_by(post_id=post.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostBookmark(post_id=post.id, user_id=user.id))
+                    except Exception:
                         continue
-                        """
-                        from app.api.alpha.utils.misc import get_resolve_object
-                        --- unsure if get_resolve_object can be used without change here, or if 'session' would need passing ? ---
-                        try:
-                            object = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
-                            if object:
-                                ...
-                        except:
-                            continue
-                        """
 
                 for ap_id in contents_json['saved_comments'] if 'saved_comments' in contents_json else []:
-                    reply = session.query(PostReply).filter_by(ap_id=ap_id).first()
-                    if reply:
-                        existing_bookmark = session.query(PostReplyBookmark).filter_by(post_reply_id=reply.id, user_id=user.id).first()
-                        if not existing_bookmark:
-                            session.add(PostReplyBookmark(post_reply_id=reply.id, user_id=user.id))
-                    else:
+                    try:
+                        reply = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if reply:
+                            existing_bookmark = session.query(PostReplyBookmark).filter_by(post_reply_id=reply.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostReplyBookmark(post_reply_id=reply.id, user_id=user.id))
+                    except Exception:
                         continue
 
                 session.commit()
