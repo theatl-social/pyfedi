@@ -1611,9 +1611,14 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
         {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
-#@cache.memoize(timeout=30)
+@cache.memoize(timeout=30)
 def num_topics() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
+
+
+@cache.memoize(timeout=30)
+def num_feeds() -> int:
+    return db.session.execute(text('SELECT COUNT(*) as c FROM "feed"')).scalar_one()
 
 
 # topics, in a tree
@@ -3319,3 +3324,8 @@ def to_srgb(im: Image.Image, assume="sRGB"):
         im = im.convert("RGB")
 
     return im
+
+
+@cache.memoize(timeout=30)
+def show_explore():
+    return num_topics() > 0 or num_feeds() > 0

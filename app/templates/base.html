@@ -157,6 +157,12 @@
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                </li>
+                            {% endif -%}
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
@@ -165,6 +171,12 @@
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                </li>
+                            {% endif -%}
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
                                 <ul class="dropdown-menu text-end text-lg-start">

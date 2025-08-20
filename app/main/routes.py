@@ -830,9 +830,15 @@ And if you want to add your score to the database to help your fellow Bookworms 
 
 @bp.route('/communities_menu')
 def communities_menu():
-    return render_template('communities_menu.html', menu_topics=menu_topics(),
+    return render_template('communities_menu.html',
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           )
+
+
+@bp.route('/explore_menu')
+def explore_menu():
+    return render_template('explore_menu.html', menu_topics=menu_topics(),
                            menu_instance_feeds=menu_instance_feeds(),
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
