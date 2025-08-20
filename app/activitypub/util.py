@@ -3316,13 +3316,13 @@ def find_community(request_json):
                 potential_id = rj[location]
                 if isinstance(potential_id, str):
                     if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
-                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        potential_community = db.session.query(Community).filter_by(ap_profile_id=potential_id.lower()).first()
                         if potential_community:
                             return potential_community
                 if isinstance(potential_id, list):
                     for c in potential_id:
                         if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
-                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            potential_community = db.session.query(Community).filter_by(ap_profile_id=c.lower()).first()
                             if potential_community:
                                 return potential_community
 
@@ -3343,7 +3343,7 @@ def find_community(request_json):
         if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
             for a in rj['attributedTo']:
                 if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                    potential_community = db.session.query(Community).filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:
                         return potential_community
 

@@ -10,6 +10,7 @@ from app.community.util import search_for_community
 from app.models import Post, PostReply, User, Community, BannedInstances
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, gibberish
+from app import db
 
 
 def get_search(auth, data):
@@ -40,22 +41,22 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         user_id = authorise_api_user(auth)
 
     query = data['q']
-    object = PostReply.query.filter_by(ap_id=query).first()
+    object = db.session.query(PostReply).filter_by(ap_id=query).first()
     if object:
         if object.deleted:
             raise Exception('No object found.')
         return reply_view(reply=object, variant=6, user_id=user_id) if not recursive else object
-    object = Post.query.filter_by(ap_id=query).first()
+    object = db.session.query(Post).filter_by(ap_id=query).first()
     if object:
         if object.deleted:
             raise Exception('No object found.')
         return post_view(post=object, variant=5, user_id=user_id) if not recursive else object
-    object = Community.query.filter_by(ap_profile_id=query.lower()).first()
+    object = db.session.query(Community).filter_by(ap_profile_id=query.lower()).first()
     if object:
         if object.banned:
             raise Exception('No object found.')
         return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
-    object = User.query.filter_by(ap_profile_id=query.lower()).first()
+    object = db.session.query(User).filter_by(ap_profile_id=query.lower()).first()
     if object:
         if object.deleted or object.banned:
             raise Exception('No object found.')
@@ -79,7 +80,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     if not server:  # can't find server
         raise Exception('No object found.')
 
-    banned = BannedInstances.query.filter_by(domain=server).first()
+    banned = db.session.query(BannedInstances).filter_by(domain=server).first()
     if banned:
         raise Exception('No object found.')
 
