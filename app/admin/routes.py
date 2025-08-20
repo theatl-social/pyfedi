@@ -135,44 +135,72 @@ def admin_site():
                 os.unlink(f'app{site.logo_32}')
             if os.path.isfile(f'app{site.logo_16}'):
                 os.unlink(f'app{site.logo_16}')
+            # Remove existing 512x512 and 192x192 logo files
+            logo_512 = get_setting('logo_512', '')
+            logo_192 = get_setting('logo_192', '')
+            if logo_512 and os.path.isfile(f'app{logo_512}'):
+                os.unlink(f'app{logo_512}')
+            if logo_192 and os.path.isfile(f'app{logo_192}'):
+                os.unlink(f'app{logo_192}')
 
             # Save logo file
             base_filename = f'logo_{gibberish(5)}'
             uploaded_icon.save(f'{directory}/{base_filename}{file_ext}')
+            
             if file_ext == '.svg':
+                # For SVG uploads, clear all logo fields and settings
+                site.logo = f'/static/media/{base_filename}{file_ext}'
+                site.logo_180 = ''
+                site.logo_152 = ''
+                site.logo_32 = ''
+                site.logo_16 = ''
+                set_setting('logo_512', '')
+                set_setting('logo_192', '')
                 delete_original = False
-                site.logo = site.logo_180 = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
             else:
+                # For non-SVG uploads, create PNG thumbnails for PWA compatibility
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 if img.width > 100:
                     img.thumbnail((100, 100))
-                    img.save(f'{directory}/{base_filename}_100{file_ext}')
-                    site.logo = f'/static/media/{base_filename}_100{file_ext}'
+                    img.save(f'{directory}/{base_filename}_100.png')
+                    site.logo = f'/static/media/{base_filename}_100.png'
                     delete_original = True
                 else:
-                    site.logo = f'/static/media/{base_filename}{file_ext}'
-                    delete_original = False
+                    img.save(f'{directory}/{base_filename}.png')
+                    site.logo = f'/static/media/{base_filename}.png'
+                    delete_original = True
 
-                # Save multiple copies of the logo - different sizes
+                # Save multiple copies of the logo - different sizes, all as PNG
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((180, 180))
-                img.save(f'{directory}/{base_filename}_180{file_ext}')
-                site.logo_180 = f'/static/media/{base_filename}_180{file_ext}'
+                img.save(f'{directory}/{base_filename}_180.png')
+                site.logo_180 = f'/static/media/{base_filename}_180.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((152, 152))
-                img.save(f'{directory}/{base_filename}_152{file_ext}')
-                site.logo_152 = f'/static/media/{base_filename}_152{file_ext}'
+                img.save(f'{directory}/{base_filename}_152.png')
+                site.logo_152 = f'/static/media/{base_filename}_152.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((32, 32))
-                img.save(f'{directory}/{base_filename}_32{file_ext}')
-                site.logo_32 = f'/static/media/{base_filename}_32{file_ext}'
+                img.save(f'{directory}/{base_filename}_32.png')
+                site.logo_32 = f'/static/media/{base_filename}_32.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((16, 16))
-                img.save(f'{directory}/{base_filename}_16{file_ext}')
-                site.logo_16 = f'/static/media/{base_filename}_16{file_ext}'
+                img.save(f'{directory}/{base_filename}_16.png')
+                site.logo_16 = f'/static/media/{base_filename}_16.png'
+
+                # Create 512x512 and 192x192 versions using settings
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((512, 512))
+                img.save(f'{directory}/{base_filename}_512.png')
+                set_setting('logo_512', f'/static/media/{base_filename}_512.png')
+
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((192, 192))
+                img.save(f'{directory}/{base_filename}_192.png')
+                set_setting('logo_192', f'/static/media/{base_filename}_192.png')
 
             if delete_original:
                 os.unlink(f'app/static/media/{base_filename}{file_ext}')

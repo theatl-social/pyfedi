@@ -1110,6 +1110,17 @@ def static_manifest():
     manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
     manifest['name'] = g.site.name if g.site.name else 'PieFed'
     manifest['description'] = g.site.description if g.site.description else ''
+    
+    # Update icons to use custom logos with fallbacks
+    logo_512 = get_setting('logo_512', '')
+    logo_192 = get_setting('logo_192', '')
+    
+    # Update the icons array
+    for icon in manifest.get('icons', []):
+        if icon.get('sizes') == '192x192':
+            icon['src'] = logo_192 if logo_192 else '/static/images/piefed_logo_icon_t_192.png'
+        elif icon.get('sizes') == '512x512':
+            icon['src'] = logo_512 if logo_512 else '/static/images/piefed_logo_icon_t_512.png'
 
     # Build response with cache headers
     response = make_response(jsonify(manifest))
