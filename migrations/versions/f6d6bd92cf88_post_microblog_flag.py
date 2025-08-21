@@ -23,7 +23,7 @@ def upgrade():
 
     # ### end Alembic commands ###
 
-    op.execute(sa.DDL("UPDATE \"post\" SET microblog = true WHERE starts_with(title, '[Microblog]')"))
+    op.execute("UPDATE post SET microblog = true WHERE title LIKE '[Microblog]%'")
 
 
 def downgrade():
