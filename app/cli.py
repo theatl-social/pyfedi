@@ -204,6 +204,18 @@ def register(app):
             db.session.commit()
             print("Initial setup is finished.")
 
+
+    @app.cli.command("reset-pwd")
+    def reset_pwd():
+        new_password = input("New password for user ID 1: ")
+        if len(new_password) < 8:
+            print("Password is too short, it needs to be 8 or more characters.")
+        admin_user = User.query.get(1)
+        admin_user.set_password(new_password)
+        db.session.commit()
+        print('Password has been set.')
+
+
     @app.cli.command('testing')
     def testing():
         with app.app_context():
