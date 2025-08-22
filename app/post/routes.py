@@ -244,7 +244,8 @@ def show_post(post_id: int):
         if current_user.is_authenticated:
             user = current_user
             if current_user.hide_read_posts:
-                mark_post_read([post.id], True, current_user.id)
+                main_post_id = [post.id] + post.cross_posts if post.cross_posts is not None else []
+                mark_post_read(main_post_id, True, current_user.id)
         else:
             user = None
 
