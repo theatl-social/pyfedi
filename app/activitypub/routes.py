@@ -1900,7 +1900,7 @@ def post_ap(post_id):
 
 @bp.route('/post/<int:post_id>/replies', methods=['GET'])
 def post_replies_ap(post_id):
-    if request.method == 'GET' or request.method == 'HEAD' and is_activitypub_request():
+    if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post = Post.query.get_or_404(post_id)
 
         if request.method == 'GET':
@@ -1913,6 +1913,32 @@ def post_replies_ap(post_id):
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
         return resp
+
+
+@bp.route('/post/<int:post_id>/context', methods=['GET'])
+def post_ap_context(post_id):
+    if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
+        post = Post.query.get_or_404(post_id)
+        if post.deleted:
+            abort(404)
+        if request.method == 'GET':
+            replies = PostReply.query.filter_by(post_id=post_id, deleted=False).order_by(PostReply.posted_at).limit(2000)
+            urls = [reply.ap_id for reply in replies]
+            urls = [post.ap_id] + urls
+            replies_collection = {"type": "OrderedCollection", "totalItems": len(urls), "orderedItems": urls}
+        else:
+            replies_collection = {}
+        replies_collection['@context'] = default_context()
+        replies_collection['name'] = post.title
+        replies_collection['attributedTo'] = post.community.profile_id()
+        replies_collection['audience'] = post.community.profile_id()
+
+        resp = jsonify(replies_collection)
+        resp.content_type = 'application/activity+json'
+        resp.headers.set('Vary', 'Accept')
+        return resp
+    else:
+        abort(400)
 
 
 @bp.route('/activities/<type>/<id>')
