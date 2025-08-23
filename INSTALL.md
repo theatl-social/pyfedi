@@ -60,7 +60,7 @@ PieFed is quite frugal with storage usage but it will grow over time. After 18 m
 
 #### Install postgresql
 
-PieFed should work on version 13.x or newer. If you have errors running `flask init-db`, check your postrgesql version.
+PieFed should work on version 13.x or newer. If you have errors running `flask init-db` (don't run it now, later on), check your postrgesql version.
 
 ##### Install postgresql 16:
 
