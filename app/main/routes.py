@@ -5,12 +5,12 @@ from random import randint
 
 import flask
 from pyld import jsonld
-from sqlalchemy.sql.operators import or_, and_
+from sqlalchemy import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
-    lemmy_site_data, is_activitypub_request
+    lemmy_site_data, is_activitypub_request, find_actor_or_create
 from app.activitypub.signature import default_context, LDSignature
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING, POST_TYPE_LINK
@@ -23,7 +23,6 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
-from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -617,15 +616,44 @@ def list_not_subscribed_communities():
 def modlog():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    mod_action = request.args.get('mod_action', '')
+    suspect_user_name = request.args.get('suspect_user_name', '')
+    community_id = request.args.get('communities', '0')
+    community_id = int(community_id) if community_id != '' else 0
+    user_name = request.args.get('user_name', '')
     can_see_names = False
+    is_admin = False
 
     # Admins can see all of the modlog, everyone else can only see public entries
+    modlog_entries = ModLog.query
+    if mod_action:
+        modlog_entries = modlog_entries.filter(ModLog.action == mod_action)
+    if suspect_user_name:
+        if f"@{current_app.config['SERVER_NAME']}" in suspect_user_name:
+            suspect_user_name = suspect_user_name.split('@')[0]
+        user = User.query.filter_by(user_name=suspect_user_name, ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_id=suspect_user_name).first()
+        if user:
+            modlog_entries = modlog_entries.filter(ModLog.target_user_id == user.id)
+    if user_name:
+        if f"@{current_app.config['SERVER_NAME']}" in user_name:
+            user_name = user_name.split('@')[0]
+        user = User.query.filter_by(user_name=user_name, ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_id=user_name).first()
+        if user:
+            modlog_entries = modlog_entries.filter(ModLog.user_id == user.id)
+    if community_id:
+        modlog_entries = modlog_entries.filter(ModLog.community_id == community_id)
+
     if current_user.is_authenticated:
         if current_user.is_admin() or current_user.is_staff():
-            modlog_entries = ModLog.query.order_by(desc(ModLog.created_at))
+            is_admin = True
+            modlog_entries = modlog_entries.order_by(desc(ModLog.created_at))
             can_see_names = True
         else:
-            modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+            modlog_entries = modlog_entries.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
     else:
         modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
 
@@ -634,16 +662,30 @@ def modlog():
     next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
     prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
 
-    instances = {}
-    for instance in Instance.query.all():
-        instances[instance.id] = instance.domain
+    instances = {instance.id: instance.domain for instance in Instance.query.all()}
+    communities = {community.id: community.display_name() for community in Community.query.filter(Community.banned == False).all()}
 
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           instances=instances,
+                           instances=instances, is_admin=is_admin, communities=communities,
+                           mod_action=mod_action, suspect_user_name=suspect_user_name, community_id=community_id,
+                           user_name=user_name,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
+
+
+@bp.route("/modlog/search_suggestions", methods=['POST'])
+def modlog_search_suggestions():
+    q = request.form.get("suspect_user_name", "").lower()
+    if q == '':
+        q = request.form.get("user_name", "").lower()
+    results = User.query.filter(or_(User.ap_id.ilike(f"%{q}%"),
+                                    User.user_name.ilike(f"%{q}%"),
+                                    User.ap_profile_id.ilike(f"%{q}%"))
+                                ).limit(5).all()
+    html = "".join(f"<option value='{m.ap_id or m.user_name}'>" for m in results)
+    return html
 
 
 @bp.route('/about')

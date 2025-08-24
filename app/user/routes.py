@@ -1118,7 +1118,7 @@ def send_deletion_requests(user_id):
 def ban_purge_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor).first()
+        user = User.query.filter_by(user_name=actor, ap_id=None).first()
         if user is None:
             user = User.query.filter_by(ap_id=actor).first()
             if user is None:

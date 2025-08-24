@@ -8,8 +8,53 @@
 {% set active_child = 'modlog' -%}
 {% from "_macros.html" import render_username %}
 
+{% block extra_css %}
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+{% endblock %}
+
 {% block app_content -%}
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
     <h1>{{ _('Moderation log') }}</h1>
+    <form method="get" class="mb-3 d-flex gap-3 align-items-center">
+        <select name="mod_action" class="form-select">
+            <option value="">{{ _('Type of action') }}</option>
+            <option value="ban_user" {{ 'selected' if mod_action == 'ban_user' }}>{{ _('Ban user') }}</option>
+            <option value="delete_user" {{ 'selected' if mod_action == 'delete_user' }}>{{ _('Delete user') }}</option>
+            <option value="add_mod" {{ 'selected' if mod_action == 'add_mod' }}>{{ _('Add moderator') }}</option>
+            <option value="remove_mod" {{ 'selected' if mod_action == 'remove_mod' }}>{{ _('Remove moderator') }}</option>
+            <option value="delete_post" {{ 'selected' if mod_action == 'delete_post' }}>{{ _('Delete post') }}</option>
+            <option value="delete_post_reply" {{ 'selected' if mod_action == 'delete_post_reply' }}>{{ _('Delete comment') }}</option>
+        </select>
+        <input type="search" name="suspect_user_name" placeholder="{{ _('user@instance') }}" value="{{ suspect_user_name }}"
+               class="form-control"
+               list="suspect_suggestions"
+               hx-post="/modlog/search_suggestions"
+               hx-trigger="keyup changed delay:300ms"
+               hx-target="#suspect_suggestions"
+               hx-swap="innerHTML settle:0ms"
+               autocomplete="off">
+        <datalist id="suspect_suggestions"></datalist>
+        <select name="communities" id="communities" class="form-select">
+            <option value="">{{ _('All communities') }}</option>
+            {% for value, label in communities.items() %}
+                <option value="{{ value }}" {% if value == community_id %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+        {% if is_admin %}
+            <input type="search" name="user_name" placeholder="{{ _('Moderator user@instance') }}" value="{{ user_name }}"
+                   class="form-control"
+                   list="mod_suggestions"
+                   hx-post="/modlog/search_suggestions"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#mod_suggestions"
+                   hx-swap="innerHTML settle:0ms"
+                   autocomplete="off">
+            <datalist id="mod_suggestions"></datalist>
+        {% endif -%}
+        <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
+    </form>
     <div class="table-responsive-md mt-4">
         {% if modlog_entries.items %}
         <table class="table table-responsive">
