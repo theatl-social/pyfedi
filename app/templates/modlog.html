@@ -82,7 +82,13 @@
                         </td>
                         <td>{{ modlog_entry.action_to_str() }}
                             {% if modlog_entry.link and modlog_entry.link_text -%}
-                                <a href="/{{ modlog_entry.get_correct_link() }}">{{ modlog_entry.link_text}}</a>
+                                <a href="/{{ modlog_entry.get_correct_link() }}">
+                                    {% if modlog_entry.action == 'ban_user' or modlog_entry.action == 'delete_user' -%}
+                                        {{ modlog_entry.link.replace('u/', '') }}
+                                    {% else -%}
+                                        {{ modlog_entry.link_text}}
+                                    {% endif -%}
+                                </a>
                             {% elif modlog_entry.link_text -%}
                                 {{ modlog_entry.link_text }}
                             {% endif -%}
