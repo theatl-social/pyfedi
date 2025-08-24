@@ -2467,7 +2467,7 @@ form h5 {
   text-align: center;
 }
 
-.user_flair {
+.user_flair, .user_note {
   font-size: 87%;
   background-color: #eee;
   border-radius: 3px;
