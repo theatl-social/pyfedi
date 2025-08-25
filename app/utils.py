@@ -1133,7 +1133,7 @@ def instance_allowed(host: str) -> bool:
 
 
 @cache.memoize(timeout=150)
-def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
+def instance_banned(domain: str) -> bool:
     session = get_task_session()
     try:
         if domain is None or domain == '':
@@ -1298,6 +1298,9 @@ def can_create_post(user, content: Community) -> bool:
     if user.is_local():
         if user.verified is False or user.private_key is None:
             return False
+    else:
+        if instance_banned(user.instance.domain):
+            return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1323,6 +1326,9 @@ def can_create_post_reply(user, content: Community) -> bool:
 
     if user.is_local():
         if user.verified is False or user.private_key is None:
+            return False
+    else:
+        if instance_banned(user.instance.domain):
             return False
 
     if content.is_moderator(user) or user.is_admin():

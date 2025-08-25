@@ -2064,7 +2064,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
     if liked is None:
         log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
-    if can_upvote(user, liked.community):
+    if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'upvote')
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
@@ -2084,7 +2084,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
     if liked is None:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
-    if can_downvote(user, liked.community):
+    if can_downvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
             liked.vote(user, 'downvote')
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
