@@ -1228,6 +1228,7 @@ def health():
 @bp.route('/health2', methods=['GET', 'HEAD'])
 def health2():
     # Do some DB access to provide a picture of the performance of the instance
+    # This is all busy-work to give an indication to the caller of the instance performance so there is a lot of # noqa comments to silence ruff.
 
     search_param = request.args.get('search', '')
     topic_id = int(request.args.get('topic_id', 0))
@@ -1245,8 +1246,8 @@ def health2():
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
 
-    topics = Topic.query.order_by(Topic.name).all()
-    languages = Language.query.order_by(Language.name).all()
+    topics = Topic.query.order_by(Topic.name).all()              # noqa f841
+    languages = Language.query.order_by(Language.name).all()     # noqa f841
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
         pass
@@ -1260,16 +1261,8 @@ def health2():
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
 
-    # default to no public feeds
-    server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
-    if len(public_feeds) > 0:
-        server_has_feeds = True
-
-    create_admin_only = g.site.community_creation_admin_only
-
-    is_admin = current_user.is_authenticated and current_user.is_admin()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all() # noqa f841
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -1316,6 +1309,6 @@ def health2():
                                                      {'title', 'subscriptions_count', 'post_count', 'post_reply_count',
                                                       'last_active', 'created_at'})).limit(100)
 
-    c = communities.all()
+    c = communities.all()   # noqa f841
 
     return ''
