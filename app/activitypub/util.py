@@ -2342,7 +2342,7 @@ def update_post_from_activity(post: Post, request_json: dict):
 
     if old_title != new_title:
         post.title = new_title
-        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper():
+        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper() or '[COMBAT]' in new_title.upper():
             post.nsfl = True
         if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
             post.nsfw = True
