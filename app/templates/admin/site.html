@@ -25,6 +25,7 @@
             <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
             {{ render_field(form.icon) }}
             <p class="small field_hint">{{ _('Provide a square image, minimum 50 pixels wide but ideally 152+ pixels.') }}
+            {{ _('It is best to use the PNG file format as that is most widely compatible for PWA icons.') }}
             <h2>{{ _('About this instance') }}</h2>
             <p>{{ _('Provide a more extensive description of the instance, set a contact address and provide legal information. This information appears on the <a href="/about">about</a> page.') }}</p>
             {{ render_field(form.about) }}

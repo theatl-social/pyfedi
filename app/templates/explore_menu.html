@@ -1,0 +1,45 @@
+{% set something_displayed = false -%}
+{% if menu_instance_feeds or menu_my_feeds or menu_subscribed_feeds -%}
+    {% set something_displayed = true -%}
+    <div class="communities_menu_body">
+        <h4 class="dropdown-header">{{ _('Feeds') }}</h4>
+        <ul class="text-end text-lg-start">
+          <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+          {% if menu_instance_feeds -%}
+               {% for feed_menu_item in menu_instance_feeds -%}
+                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+               {% endfor -%}
+               <li><hr class="dropdown-divider"></li>
+          {% endif -%}
+          <li><a class="dropdown-item" href="/feed/add_remote">{{ _('Add Remote Feed') }}</a></li>
+          {% if menu_my_feeds or menu_subscribed_feeds -%}
+               <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
+               {% for feed_menu_item in menu_my_feeds -%}
+                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+               {% endfor -%}
+               {% for feed_menu_item in menu_subscribed_feeds -%}
+                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+               {% endfor -%}
+          {% else -%}
+            <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
+          {% endif -%}
+        </ul>
+    </div>
+    <hr>
+{% endif %}
+{% if menu_topics -%}
+    {% set something_displayed = true -%}
+    <div class="communities_menu_body" id="topics_mega_menu">
+        <h4 class="dropdown-header">{{ _('Topics') }}</h4>
+        <ul class="text-end text-lg-start">
+          {% if menu_topics -%}
+               {% for topic_menu_item in menu_topics -%}
+                    <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
+               {% endfor -%}
+               <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
+          {% else -%}
+            <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
+          {% endif -%}
+        </ul>
+    </div>
+{% endif -%}
