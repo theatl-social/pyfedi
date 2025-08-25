@@ -1,0 +1,191 @@
+# Full Production Mirror Test Environment
+# Purpose: Validate current operations before substantial changes
+# Uses PostgreSQL 17 for maximum compatibility with production environment
+
+version: '3.8'
+
+services:
+  test-db:
+    image: postgres:17-alpine
+    container_name: pyfedi_test_db
+    shm_size: 512mb
+    environment:
+      POSTGRES_DB: pyfedi_test
+      POSTGRES_USER: pyfedi_test
+      POSTGRES_PASSWORD: pyfedi_test_password
+    volumes:
+      - test_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pyfedi_test -d pyfedi_test"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - pyfedi_test_network
+
+  test-redis:
+    image: redis:7-alpine
+    container_name: pyfedi_test_redis
+    volumes:
+      - test_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - pyfedi_test_network
+
+  test-celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: pyfedi_test_celery
+    environment:
+      # Test environment configuration
+      - TESTING=true
+      - SERVER_NAME=test.pyfedi.local
+      - SECRET_KEY=test-secret-key-for-testing-only
+      - DATABASE_URL=postgresql://pyfedi_test:pyfedi_test_password@test-db:5432/pyfedi_test
+      - CACHE_REDIS_URL=redis://test-redis:6379/0
+      - CELERY_BROKER_URL=redis://test-redis:6379/0
+      - RESULT_BACKEND=redis://test-redis:6379/0
+      # Disable external services for testing
+      - MAIL_SUPPRESS_SEND=true
+      - SENTRY_DSN=
+      - S3_BUCKET=
+      - STRIPE_SECRET_KEY=
+      # Test-friendly settings
+      - FULL_AP_CONTEXT=0
+      - LOG_ACTIVITYPUB_TO_DB=false
+      - LOG_ACTIVITYPUB_TO_FILE=false
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    entrypoint: ["./entrypoint_celery.sh"]
+    volumes:
+      - test_media:/app/app/static/media/
+      - test_logs:/app/logs/
+      - test_tmp:/app/app/static/tmp/
+    networks:
+      - pyfedi_test_network
+
+  test-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: pyfedi_test_web
+    environment:
+      # Same as test-celery for consistency
+      - TESTING=true
+      - SERVER_NAME=test.pyfedi.local
+      - SECRET_KEY=test-secret-key-for-testing-only
+      - DATABASE_URL=postgresql://pyfedi_test:pyfedi_test_password@test-db:5432/pyfedi_test
+      - CACHE_REDIS_URL=redis://test-redis:6379/0
+      - CELERY_BROKER_URL=redis://test-redis:6379/0
+      - RESULT_BACKEND=redis://test-redis:6379/0
+      - FLASK_DEBUG=1
+      - FLASK_ENV=development
+      # Disable external services
+      - MAIL_SUPPRESS_SEND=true
+      - SENTRY_DSN=
+      - S3_BUCKET=
+      - STRIPE_SECRET_KEY=
+      # Test settings
+      - FULL_AP_CONTEXT=0
+      - LOG_ACTIVITYPUB_TO_DB=false
+      - LOG_ACTIVITYPUB_TO_FILE=false
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+      test-celery:
+        condition: service_started
+    entrypoint: ["./entrypoint.test.sh"]
+    ports:
+      - "8031:5000"  # Different from production port 8030
+    volumes:
+      - test_media:/app/app/static/media/
+      - test_logs:/app/logs/
+      - test_tmp:/app/app/static/tmp/
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pyfedi_test_network
+
+  # Test runner service - runs our validation tests
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: pyfedi_test_runner
+    environment:
+      # Same environment as web service
+      - TESTING=true
+      - SERVER_NAME=test.pyfedi.local
+      - SECRET_KEY=test-secret-key-for-testing-only
+      - DATABASE_URL=postgresql://pyfedi_test:pyfedi_test_password@test-db:5432/pyfedi_test
+      - CACHE_REDIS_URL=redis://test-redis:6379/0
+      - CELERY_BROKER_URL=redis://test-redis:6379/0
+      - RESULT_BACKEND=redis://test-redis:6379/0
+      # Test runner specific
+      - PYTHONPATH=/app
+      - RUN_TESTS=true
+    depends_on:
+      test-db:
+        condition: service_healthy
+      test-redis:
+        condition: service_healthy
+    command: |
+      sh -c "
+        echo '🔧 Test Environment Ready - Validating Current Operations'
+        echo '📊 Running baseline validation tests...'
+        
+        # Run our existing baseline tests first
+        echo '1️⃣ Database Schema Immutability Tests'
+        python -m pytest tests/test_field_consistency_simple.py -v
+        
+        echo '2️⃣ Content Processing Tests' 
+        python -m pytest tests/test_allowlist_html.py -v
+        python -m pytest tests/test_markdown_to_html.py -v
+        
+        echo '3️⃣ API Endpoint Tests (when ready)'
+        # python -m pytest tests/test_api_endpoints.py -v
+        
+        echo '✅ Baseline validation complete!'
+        echo '📝 Current operations verified before substantial changes'
+      "
+    volumes:
+      - ./tests:/app/tests
+      - test_logs:/app/logs
+    networks:
+      - pyfedi_test_network
+
+volumes:
+  test_pgdata:
+    name: pyfedi_test_pgdata
+  test_redis_data:
+    name: pyfedi_test_redis_data
+  test_media:
+    name: pyfedi_test_media
+  test_logs:
+    name: pyfedi_test_logs
+  test_tmp:
+    name: pyfedi_test_tmp
+
+networks:
+  pyfedi_test_network:
+    name: pyfedi_test_network
+    driver: bridge

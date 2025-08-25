@@ -1,12 +1,71 @@
+# Existing exclusions
 pgdata/
 app/static/media/
 media/
 logs/
+
+# Git files
 .git/
 .gitignore
+.github/
+
+# Python cache and virtual environments
 venv/
+.venv/
+ENV/
+env/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
+*.egg-info/
+dist/
+build/
+
+# Environment files (keep env.sample)
+.env
+.env.*
+!env.sample
+!env.docker.sample
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test and coverage files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Documentation (keep essential docs)
+*.md
+!README.md
+!INSTALL.md
+!FEDERATION.md
+
+# Development/debug files
+*.log
+*.pid
+*.seed
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Backup and temporary files
+*.bak
+*.backup
+*.old
+tmp/
+temp/
+
+# Docker files (avoid recursion during build)
+docker-compose*.yml
+.dockerignore

@@ -39,7 +39,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
-    patch_db_session
+    patch_db_session, user_in_restricted_country
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -1118,7 +1118,7 @@ def send_deletion_requests(user_id):
 def ban_purge_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor).first()
+        user = User.query.filter_by(user_name=actor, ap_id=None).first()
         if user is None:
             user = User.query.filter_by(ap_id=actor).first()
             if user is None:
@@ -1283,6 +1283,8 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
+    from app.api.alpha.utils.misc import get_resolve_object
+
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -1357,8 +1359,28 @@ def import_settings_task(user_id, filename):
                             if not blocked_user.is_local():
                                 ...  # todo: federate block
 
-                for instance_domain in contents_json['blocked_instances']:
+                for instance_domain in contents_json['blocked_instances'] if 'blocked_instances' in contents_json else []:
                     ...
+
+                for ap_id in contents_json['saved_posts'] if 'saved_posts' in contents_json else []:
+                    try:
+                        post = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if post:
+                            existing_bookmark = session.query(PostBookmark).filter_by(post_id=post.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostBookmark(post_id=post.id, user_id=user.id))
+                    except Exception:
+                        continue
+
+                for ap_id in contents_json['saved_comments'] if 'saved_comments' in contents_json else []:
+                    try:
+                        reply = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if reply:
+                            existing_bookmark = session.query(PostReplyBookmark).filter_by(post_reply_id=reply.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostReplyBookmark(post_reply_id=reply.id, user_id=user.id))
+                    except Exception:
+                        continue
 
                 session.commit()
                 cache.delete_memoized(blocked_communities, user.id)
@@ -1380,6 +1402,8 @@ def import_settings_task(user_id, filename):
 def user_settings_filters():
     form = FilterForm()
     if form.validate_on_submit():
+        if (form.hide_nsfw.data != 1 or form.hide_nsfl.data != 1) and user_in_restricted_country(current_user):
+            flash(_('NSFW content will be hidden due to legal restrictions in your country.'))
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
@@ -1387,6 +1411,10 @@ def user_settings_filters():
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
         current_user.community_keyword_filter = form.community_keyword_filter.data
+        if current_user.ip_address_country and user_in_restricted_country(current_user):
+            current_user.hide_nsfw = 1  # Hide nsfw
+            current_user.hide_nsfl = 1
+
         db.session.commit()
 
         cache.delete_memoized(filtered_out_communities, current_user)

@@ -51,7 +51,6 @@ document.addEventListener("DOMContentLoaded", function () {
     setupImagePreview();
     setupNotificationPermission();
     setupFederationModeToggle();
-    setupMegaMenuNavigation();
     setupPopupCommunitySidebar();
     setupVideoSpoilers();
     setupDynamicContentObserver();
@@ -77,22 +76,26 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function setupUserPopup() {
     document.querySelectorAll('.render_username .author_link').forEach(anchor => {
-        let timeoutId;
+        if (!anchor.dataset.userPopupSetup) {
+            let timeoutId;
 
-        anchor.addEventListener('mouseover', function() {
-            timeoutId = setTimeout(function () {
-                anchor.nextElementSibling.classList.remove('d-none');
-            }, 1000);
-        });
+            anchor.addEventListener('mouseover', function() {
+                timeoutId = setTimeout(function () {
+                    anchor.nextElementSibling.classList.remove('d-none');
+                }, 1000);
+            });
 
-        anchor.addEventListener('mouseout', function() {
-            clearTimeout(timeoutId);
+            anchor.addEventListener('mouseout', function() {
+                clearTimeout(timeoutId);
 
-            let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
-            if (userPreview) {
-                userPreview.classList.add('d-none');
-            }
-        });
+                let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
+                if (userPreview) {
+                    userPreview.classList.add('d-none');
+                }
+            });
+            
+            anchor.dataset.userPopupSetup = 'true';
+        }
     });
 }
 function setupPostTeaserHandler() {
@@ -184,14 +187,17 @@ function setupYouTubeLazyLoad() {
 function setupShowElementLinks() {
     var elements = document.querySelectorAll('.showElement');
     elements.forEach(function(element) {
-        element.addEventListener('click', function(event) {
-            event.preventDefault();
-            var dataId = this.getAttribute('data-id');
-            var targetElement = document.getElementById(dataId);
-            if (targetElement) {
-                targetElement.style.display = 'inherit';
-            }
-        });
+        if (!element.dataset.showElementSetup) {
+            element.addEventListener('click', function(event) {
+                event.preventDefault();
+                var dataId = this.getAttribute('data-id');
+                var targetElement = document.getElementById(dataId);
+                if (targetElement) {
+                    targetElement.style.display = 'inherit';
+                }
+            });
+            element.dataset.showElementSetup = 'true';
+        }
     });
 }
 
@@ -357,6 +363,7 @@ function setupLightDark() {
         setStoredTheme(theme);
         setTheme(theme);
         showActiveTheme(theme);
+        event.preventDefault();
     });
 
     var preferredTheme = getStoredTheme();
@@ -468,31 +475,40 @@ function collapseReply(comment_id) {
 function setupConfirmFirst() {
     const show_first = document.querySelectorAll('.confirm_first');
     show_first.forEach(element => {
-        element.addEventListener("click", function(event) {
-            if (!confirm("Are you sure?")) {
-              event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
-              event.stopImmediatePropagation(); // Stop other event listeners from running
-              event.action_cancelled = true; // Custom flag for setupSendPost handlers
-            }
-        }, true); // Use capture phase to run before other handlers
+        if (!element.dataset.confirmFirstSetup) {
+            element.addEventListener("click", function(event) {
+                if (!confirm("Are you sure?")) {
+                  event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
+                  event.stopImmediatePropagation(); // Stop other event listeners from running
+                  event.action_cancelled = true; // Custom flag for setupSendPost handlers
+                }
+            }, true); // Use capture phase to run before other handlers
+            element.dataset.confirmFirstSetup = 'true';
+        }
     });
 
     const go_back = document.querySelectorAll('.go_back');
     go_back.forEach(element => {
-        element.addEventListener("click", function(event) {
-            history.back();
-            event.preventDefault();
-            return false;
-        });
+        if (!element.dataset.goBackSetup) {
+            element.addEventListener("click", function(event) {
+                history.back();
+                event.preventDefault();
+                return false;
+            });
+            element.dataset.goBackSetup = 'true';
+        }
     })
 
     const redirect_login = document.querySelectorAll('.redirect_login');
     redirect_login.forEach(element => {
-        element.addEventListener("click", function(event) {
-            location.href = '/auth/login';
-            event.preventDefault();
-            return false;
-        });
+        if (!element.dataset.redirectLoginSetup) {
+            element.addEventListener("click", function(event) {
+                location.href = '/auth/login';
+                event.preventDefault();
+                return false;
+            });
+            element.dataset.redirectLoginSetup = 'true';
+        }
     });
 }
 
@@ -500,36 +516,39 @@ function setupConfirmFirst() {
 function setupSendPost() {
     const sendPostElements = document.querySelectorAll('a.send_post');
     sendPostElements.forEach(element => {
-        element.addEventListener("click", function(event) {
-            // Check if the event was cancelled by confirm_first
-            if (event.action_cancelled) {
-                return;
-            }
-            
-            event.preventDefault();
-            
-            const url = element.getAttribute('data-url');
-            if (!url) return;
-            
-            // Get CSRF token from meta tag
-            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-            
-            // Create a form and submit it to preserve flash messages
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = url;
-            form.style.display = 'none';
-            
-            // Add CSRF token as hidden input
-            const tokenInput = document.createElement('input');
-            tokenInput.type = 'hidden';
-            tokenInput.name = 'csrf_token';
-            tokenInput.value = csrfToken;
-            form.appendChild(tokenInput);
-            
-            document.body.appendChild(form);
-            form.submit();
-        });
+        if (!element.dataset.sendPostSetup) {
+            element.addEventListener("click", function(event) {
+                // Check if the event was cancelled by confirm_first
+                if (event.action_cancelled) {
+                    return;
+                }
+                
+                event.preventDefault();
+                
+                const url = element.getAttribute('data-url');
+                if (!url) return;
+                
+                // Get CSRF token from meta tag
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                
+                // Create a form and submit it to preserve flash messages
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.style.display = 'none';
+                
+                // Add CSRF token as hidden input
+                const tokenInput = document.createElement('input');
+                tokenInput.type = 'hidden';
+                tokenInput.name = 'csrf_token';
+                tokenInput.value = csrfToken;
+                form.appendChild(tokenInput);
+                
+                document.body.appendChild(form);
+                form.submit();
+            });
+            element.dataset.sendPostSetup = 'true';
+        }
     });
 }
 
@@ -563,7 +582,7 @@ function setupShowMoreLinks() {
 
     comments.forEach(comment => {
         const content = comment.querySelector('.limit_height');
-        if (content && content.clientHeight > 400) {
+        if (content && content.clientHeight > 400 && !content.dataset.showMoreSetup) {
             content.style.overflow = 'hidden';
             content.style.maxHeight = '400px';
             const showMoreLink = document.createElement('a');
@@ -585,6 +604,7 @@ function setupShowMoreLinks() {
                 }
             });
             content.insertAdjacentElement('afterend', showMoreLink);
+            content.dataset.showMoreSetup = 'true';
         }
     });
 }
@@ -635,32 +655,40 @@ function checkForCollapsedComments() {
 function setupHideButtons() {
     const hideEls2 = document.querySelectorAll('.hide_button a');
     hideEls2.forEach(hideEl => {
-        let isHidden = false;
+        if (!hideEl.dataset.hideButtonSetup) {
+            let isHidden = false;
 
-        hideEl.addEventListener('click', event => {
-            event.preventDefault();
-            const parentElement = hideEl.parentElement.parentElement;
-            const hidables = parentElement.parentElement.querySelectorAll('.hidable');
+            hideEl.addEventListener('click', event => {
+                event.preventDefault();
+                const parentElement = hideEl.parentElement.parentElement;
+                const hidables = parentElement.parentElement.querySelectorAll('.hidable');
 
-            hidables.forEach(hidable => {
-                hidable.style.display = 'none';
+                hidables.forEach(hidable => {
+                    hidable.style.display = 'none';
+                });
+
+                const unhide = parentElement.parentElement.querySelectorAll('.unhide');
+                unhide[0].style.display = 'inline-block';
             });
-
-            const unhide = parentElement.parentElement.querySelectorAll('.unhide');
-            unhide[0].style.display = 'inline-block';
-        });
+            
+            hideEl.dataset.hideButtonSetup = 'true';
+        }
     });
 
     const showEls = document.querySelectorAll('a.unhide');
     showEls.forEach(showEl => {
-        showEl.addEventListener('click', event => {
-            event.preventDefault();
-            showEl.style.display = 'none';
-            const hidables = showEl.parentElement.parentElement.parentElement.querySelectorAll('.hidable');
-            hidables.forEach(hidable => {
-                hidable.style.display = '';
+        if (!showEl.dataset.unhideButtonSetup) {
+            showEl.addEventListener('click', event => {
+                event.preventDefault();
+                showEl.style.display = 'none';
+                const hidables = showEl.parentElement.parentElement.parentElement.querySelectorAll('.hidable');
+                hidables.forEach(hidable => {
+                    hidable.style.display = '';
+                });
             });
-        });
+            
+            showEl.dataset.unhideButtonSetup = 'true';
+        }
     });
 
     processToBeHiddenArray();
@@ -958,17 +986,18 @@ function setupAddPollChoice() {
 }
 
 function preventDoubleFormSubmissions() {
-    let submitting = false;
-    const form = document.querySelector('form');
-    if (form) {
-      form.addEventListener('submit', function (e) {
-          if (submitting) {
-            e.preventDefault();
-          } else {
-            submitting = true;
-          }
-      });
-    }
+    document.querySelectorAll('form').forEach(function (form) {
+        if (!form.dataset.doubleSubmissionPrevented) {
+            form.addEventListener('submit', function (e) {
+                if (form.dataset.submitting) {
+                    e.preventDefault();
+                } else {
+                    form.dataset.submitting = 'true';
+                }
+            });
+            form.dataset.doubleSubmissionPrevented = 'true';
+        }
+    });
 }
 
 function setupSelectAllCheckbox() {
@@ -1327,75 +1356,6 @@ document.getElementById('btn_add_home_screen').addEventListener('click', functio
     }
 });
 
-function setupMegaMenuNavigation() {
-    // Custom dropdown management since Bootstrap's data-bs-toggle gets in the way
-    const dropdownToggle = document.querySelector('.nav-link.dropdown-toggle[href="/communities"]');
-    const dropdownMenu = document.querySelector('.dropdown-menu.communities_menu');
-    
-    if (dropdownToggle && dropdownMenu) {
-        // Handle dropdown toggle click
-        dropdownToggle.addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const isVisible = dropdownMenu.style.display === 'block';
-            if (isVisible) {
-                hideDropdown();
-            } else {
-                const accountMenu = document.querySelector('.account_menu_parent');
-                if(accountMenu) {
-                    const accountAnchor = accountMenu.querySelector('a');
-                    if(accountAnchor) {
-                        accountAnchor.classList.remove('show');
-                        accountAnchor.setAttribute('aria-expanded', 'false');
-                    }
-                    const accountUl = accountMenu.querySelector('ul');
-                    if(accountUl) {
-                        accountUl.classList.remove('show');
-                        accountUl.removeAttribute('data-bs-popper');
-                    }
-                }
-                const adminMenu = document.querySelector('.admin_menu_parent');
-                if(adminMenu) {
-                    const adminAnchor = adminMenu.querySelector('a');
-                    if(adminAnchor) {
-                        adminAnchor.classList.remove('show');
-                        adminAnchor.setAttribute('aria-expanded', 'false');
-                    }
-                    const adminUl = adminMenu.querySelector('ul');
-                    if(adminUl) {
-                        adminUl.classList.remove('show');
-                        adminUl.removeAttribute('data-bs-popper');
-                    }
-                }
-                showDropdown();
-            }
-        });
-        
-        // Close dropdown when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!dropdownToggle.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                hideDropdown();
-            }
-        });
-
-    }
-    
-    function showDropdown() {
-        dropdownMenu.classList.add('show');
-        dropdownMenu.style.setProperty('display', 'block', 'important');
-        dropdownToggle.setAttribute('aria-expanded', 'true');
-        dropdownToggle.parentElement.classList.add('show');
-    }
-    
-    function hideDropdown() {
-        dropdownMenu.classList.remove('show');
-        dropdownMenu.style.setProperty('display', 'none', 'important');
-        dropdownToggle.setAttribute('aria-expanded', 'false');
-        dropdownToggle.parentElement.classList.remove('show');
-    }
-}
-
 function setupPopupCommunitySidebar() {
     const dialog = document.getElementById('communitySidebar');
 
@@ -1555,10 +1515,10 @@ function setupDynamicContent() {
 function setupDynamicKeyboardShortcuts() {
     // Add event listeners to any new textarea elements with name "body"
     document.querySelectorAll('textarea[name="body"]').forEach(textarea => {
-        // Remove existing listener to avoid duplicates
-        textarea.removeEventListener('keydown', handleDynamicCtrlEnter);
-        // Add new listener
-        textarea.addEventListener('keydown', handleDynamicCtrlEnter);
+        if (!textarea.dataset.dynamicKeyboardSetup) {
+            textarea.addEventListener('keydown', handleDynamicCtrlEnter);
+            textarea.dataset.dynamicKeyboardSetup = 'true';
+        }
     });
 }
 
@@ -1763,72 +1723,76 @@ function setupVotingLongPress() {
     const votingElements = document.querySelectorAll('.voting_buttons_new');
 
     votingElements.forEach(element => {
-        let longPressTimer;
-        let isLongPress = false;
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let hasMoved = false;
+        if (!element.dataset.votingLongPressSetup) {
+            let longPressTimer;
+            let isLongPress = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            let hasMoved = false;
 
-        // Mouse events
-        element.addEventListener('mousedown', function(event) {
-            isLongPress = false;
-            longPressTimer = setTimeout(() => {
-                isLongPress = true;
-                openVotingDialog(element);
-            }, 2000); // 2 seconds
-        });
-
-        element.addEventListener('mouseup', function(event) {
-            clearTimeout(longPressTimer);
-        });
-
-        element.addEventListener('mouseleave', function(event) {
-            clearTimeout(longPressTimer);
-        });
-
-        // Touch events for mobile
-        element.addEventListener('touchstart', function(event) {
-            isLongPress = false;
-            hasMoved = false;
-            touchStartX = event.touches[0].clientX;
-            touchStartY = event.touches[0].clientY;
-            longPressTimer = setTimeout(() => {
-                if (!hasMoved) {
+            // Mouse events
+            element.addEventListener('mousedown', function(event) {
+                isLongPress = false;
+                longPressTimer = setTimeout(() => {
                     isLongPress = true;
                     openVotingDialog(element);
+                }, 2000); // 2 seconds
+            });
+
+            element.addEventListener('mouseup', function(event) {
+                clearTimeout(longPressTimer);
+            });
+
+            element.addEventListener('mouseleave', function(event) {
+                clearTimeout(longPressTimer);
+            });
+
+            // Touch events for mobile
+            element.addEventListener('touchstart', function(event) {
+                isLongPress = false;
+                hasMoved = false;
+                touchStartX = event.touches[0].clientX;
+                touchStartY = event.touches[0].clientY;
+                longPressTimer = setTimeout(() => {
+                    if (!hasMoved) {
+                        isLongPress = true;
+                        openVotingDialog(element);
+                    }
+                }, 2000); // 2 seconds
+            });
+
+            element.addEventListener('touchmove', function(event) {
+                if (!hasMoved) {
+                    const touch = event.touches[0];
+                    const deltaX = Math.abs(touch.clientX - touchStartX);
+                    const deltaY = Math.abs(touch.clientY - touchStartY);
+                    
+                    // If the user has moved more than 10 pixels in any direction, consider it scrolling
+                    if (deltaX > 10 || deltaY > 10) {
+                        hasMoved = true;
+                        clearTimeout(longPressTimer);
+                    }
                 }
-            }, 2000); // 2 seconds
-        });
+            });
 
-        element.addEventListener('touchmove', function(event) {
-            if (!hasMoved) {
-                const touch = event.touches[0];
-                const deltaX = Math.abs(touch.clientX - touchStartX);
-                const deltaY = Math.abs(touch.clientY - touchStartY);
-                
-                // If the user has moved more than 10 pixels in any direction, consider it scrolling
-                if (deltaX > 10 || deltaY > 10) {
-                    hasMoved = true;
-                    clearTimeout(longPressTimer);
+            element.addEventListener('touchend', function(event) {
+                clearTimeout(longPressTimer);
+            });
+
+            element.addEventListener('touchcancel', function(event) {
+                clearTimeout(longPressTimer);
+            });
+
+            // Prevent normal click if it was a long press
+            element.addEventListener('click', function(event) {
+                if (isLongPress) {
+                    event.preventDefault();
+                    event.stopPropagation();
                 }
-            }
-        });
-
-        element.addEventListener('touchend', function(event) {
-            clearTimeout(longPressTimer);
-        });
-
-        element.addEventListener('touchcancel', function(event) {
-            clearTimeout(longPressTimer);
-        });
-
-        // Prevent normal click if it was a long press
-        element.addEventListener('click', function(event) {
-            if (isLongPress) {
-                event.preventDefault();
-                event.stopPropagation();
-            }
-        });
+            });
+            
+            element.dataset.votingLongPressSetup = 'true';
+        }
     });
 }
 
@@ -1947,19 +1911,21 @@ function setupVotingDialogHandlers() {
 function setupPopupTooltips() {
     // Find all elements with a title, add the necessary bootstrap attributes
     document.querySelectorAll('[title]').forEach(el => {
-      if (!el.hasAttribute('data-bs-toggle')) {     // don't mess with dropdowns that use data-bs-toggle
+      if (!el.hasAttribute('data-bs-toggle') && !el.dataset.tooltipSetup) {     // don't mess with dropdowns that use data-bs-toggle
         el.setAttribute('data-bs-toggle', 'tooltip');
         el.setAttribute('data-bs-placement', 'top');
+        el.dataset.tooltipSetup = 'true';
       }
     });
 
-    // Initialize tooltips
-    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-    [...tooltipTriggerList].map(el =>
+    // Initialize tooltips only for elements that haven't been initialized yet
+    const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-tooltip-initialized])');
+    [...tooltipTriggerList].map(el => {
       new bootstrap.Tooltip(el, {
           delay: { show: 750, hide: 200 }
-      })
-    );
+      });
+      el.dataset.tooltipInitialized = 'true';
+    });
 }
 
 function setupPasswordEye() {
@@ -2008,8 +1974,11 @@ function autoResize(textarea) {
 }
 
 function applyAutoResize(textarea) {
-    textarea.addEventListener('input', () => autoResize(textarea));
-    autoResize(textarea); // initial sizing
+    if (!textarea.dataset.autoResizeSetup) {
+        textarea.addEventListener('input', () => autoResize(textarea));
+        autoResize(textarea); // initial sizing
+        textarea.dataset.autoResizeSetup = 'true';
+    }
 }
 
 function setupBasicAutoResize() {
@@ -2017,8 +1986,11 @@ function setupBasicAutoResize() {
     const textareas = document.querySelectorAll('textarea.autoresize');
     if(textareas) {
         textareas.forEach(applyAutoResize);
-        window.addEventListener('resize', () => {
-            textareas.forEach(autoResize);
-        });
+        if (!window.autoResizeWindowListenerAdded) {
+            window.addEventListener('resize', () => {
+                document.querySelectorAll('textarea.autoresize').forEach(autoResize);
+            });
+            window.autoResizeWindowListenerAdded = true;
+        }
     }
 }

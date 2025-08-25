@@ -1583,6 +1583,7 @@ def community_moderate_subscribers(actor):
                                                                                   CommunityMember.user_id == User.id).filter(
                 CommunityMember.community_id == community.id)
             subscribers = subscribers.filter(CommunityMember.is_banned == False)
+            subscribers = subscribers.filter(User.deleted == False, User.banned == False)
 
             # Apply search filter
             if search:

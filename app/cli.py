@@ -1,7 +1,7 @@
 # if commands in this file are not working (e.g. 'flask translate') make sure you set the FLASK_APP environment variable.
 # e.g. export FLASK_APP=pyfedi.py
 
-# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import imaplib
@@ -20,6 +20,7 @@ import redis
 from flask import json, current_app
 from flask_babel import _
 from sqlalchemy import or_, desc, text
+from werkzeug.security import generate_password_hash
 
 from app import db, cache
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
@@ -38,7 +39,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session
+    render_from_tpl, get_task_session, patch_db_session, get_setting
 
 
 def register(app):
@@ -89,7 +90,8 @@ def register(app):
         print('Admin keys have been reset')
 
     @app.cli.command("init-db")
-    def init_db():
+    @click.option("--interactive", default='yes', help="Create admin user during setup.")
+    def init_db(interactive):
         with app.app_context():
             # Check if alembic_version table exists
             inspector = db.inspect(db.engine)
@@ -113,7 +115,7 @@ def register(app):
             db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
-                                'hexbear.net',
+                                'hexbear.net', 'hilariouschaos.com',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
                                 'detroitriotcity.com',
@@ -175,33 +177,45 @@ def register(app):
             admin_role.permissions.append(RolePermission(permission='edit cms pages'))
             db.session.add(admin_role)
 
-            # Admin user
-            print(
-                'The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
-            user_name = input("Admin user name (ideally not 'admin'): ")
-            email = input("Admin email address: ")
-            password = input("Admin password: ")
-            while '@' in user_name or ' ' in user_name:
-                print('User name cannot be an email address or have spaces.')
+            if interactive == 'yes':
+                # Admin user
+                print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
                 user_name = input("Admin user name (ideally not 'admin'): ")
-            verification_token = random_token(16)
-            private_key, public_key = RsaKeys.generate_keypair()
-            admin_user = User(user_name=user_name, title=user_name,
-                              email=email, verification_token=verification_token,
-                              instance_id=1, email_unread_sent=False,
-                              private_key=private_key, public_key=public_key,
-                              alt_user_name=gibberish(randint(8, 20)))
-            admin_user.set_password(password)
-            admin_user.roles.append(admin_role)
-            admin_user.verified = True
-            admin_user.last_seen = utcnow()
-            admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-            admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-            admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
-            db.session.add(admin_user)
+                email = input("Admin email address: ")
+                password = input("Admin password: ")
+                while '@' in user_name or ' ' in user_name:
+                    print('User name cannot be an email address or have spaces.')
+                    user_name = input("Admin user name (ideally not 'admin'): ")
+                verification_token = random_token(16)
+                private_key, public_key = RsaKeys.generate_keypair()
+                admin_user = User(user_name=user_name, title=user_name,
+                                  email=email, verification_token=verification_token,
+                                  instance_id=1, email_unread_sent=False,
+                                  private_key=private_key, public_key=public_key,
+                                  alt_user_name=gibberish(randint(8, 20)))
+                admin_user.set_password(password)
+                admin_user.roles.append(admin_role)
+                admin_user.verified = True
+                admin_user.last_seen = utcnow()
+                admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
+                admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
+                admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
+                db.session.add(admin_user)
 
             db.session.commit()
             print("Initial setup is finished.")
+
+
+    @app.cli.command("reset-pwd")
+    def reset_pwd():
+        new_password = input("New password for user ID 1: ")
+        if len(new_password) < 8:
+            print("Password is too short, it needs to be 8 or more characters.")
+        admin_user = User.query.get(1)
+        admin_user.set_password(new_password)
+        db.session.commit()
+        print('Password has been set.')
+
 
     @app.cli.command('testing')
     def testing():
@@ -286,13 +300,18 @@ def register(app):
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
                 recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts, archive_old_users, cleanup_old_read_posts
+                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
 
+            if not current_app.debug:
+                sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
+
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser()
                 cleanup_old_notifications()
                 cleanup_old_read_posts()
                 cleanup_send_queue()
@@ -313,6 +332,8 @@ def register(app):
                 archive_old_users()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
+                if get_setting('enable_instance_chooser', False):
+                    refresh_instance_chooser.delay()
                 cleanup_old_notifications.delay()
                 cleanup_old_read_posts.delay()
                 cleanup_send_queue.delay()
@@ -361,8 +382,8 @@ def register(app):
                                     return
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
-
-                            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+                            if not current_app.debug:
+                                sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
@@ -1301,6 +1322,164 @@ def register(app):
                 raise
             finally:
                 session.close()
+
+    @app.cli.command("init-test-db")
+    def init_test_db():
+        """Initialize database with test-specific data for validation testing"""
+        with app.app_context():
+            if not current_app.config.get('TESTING'):
+                print("⚠️  Warning: This command is intended for test environments")
+                print("   Current environment does not have TESTING=true")
+                import sys
+                if not sys.stdin.isatty():
+                    # Non-interactive mode (like in Docker), proceed anyway
+                    print("   Proceeding in non-interactive mode...")
+                else:
+                    # Interactive mode, ask for confirmation
+                    response = input("   Continue anyway? (y/N): ").lower().strip()
+                    if response != 'y':
+                        print("   Cancelled.")
+                        return
+            
+            print("🧪 Initializing test database...")
+            print("📋 This creates minimal data needed for operation validation")
+            
+            # Check if alembic_version table exists
+            inspector = db.inspect(db.engine)
+            if 'alembic_version' not in inspector.get_table_names():
+                print("❌ Error: alembic_version table not found. Please run 'flask db upgrade' first.")
+                return
+
+            # Drop and recreate (safe in test environment)
+            print("🗄️  Recreating database tables...")
+            db.drop_all()
+            db.configure_mappers()
+            db.create_all()
+            
+            # Minimal site setup
+            print("🏗️  Creating site configuration...")
+            private_key, public_key = RsaKeys.generate_keypair()
+            db.session.add(Site(
+                name="PieFed Test Instance", 
+                description='Test instance for validating current operations before changes', 
+                public_key=public_key,
+                private_key=private_key, 
+                language_id=2
+            ))
+            
+            # Local instance
+            print("🌐 Setting up local instance...")
+            db.session.add(Instance(
+                domain=current_app.config['SERVER_NAME'],
+                software='PieFed'
+            ))
+            
+            # Essential settings only (minimal for testing)
+            print("⚙️  Configuring essential settings...")
+            essential_settings = [
+                ('allow_nsfw', False),
+                ('allow_nsfl', False), 
+                ('allow_dislike', True),
+                ('allow_local_image_posts', True),
+                ('allow_remote_image_posts', True),
+                ('federation', False),  # Disabled for isolated testing
+            ]
+            
+            for name, value in essential_settings:
+                db.session.add(Settings(name=name, value=json.dumps(value)))
+            
+            db.session.commit()
+            print("✅ Test database initialized successfully")
+            print("ℹ️  Use 'flask load-test-fixtures' to add test users and communities")
+
+    @app.cli.command("load-test-fixtures")
+    def load_test_fixtures():
+        """Load test fixtures for consistent API and integration testing"""
+        with app.app_context():
+            if not current_app.config.get('TESTING'):
+                print("⚠️  Warning: This command is intended for test environments")
+            
+            print("📊 Loading test fixtures...")
+            print("👥 Creating test users...")
+            
+            # Create test users with predictable credentials
+            test_users = [
+                {"username": "testuser1", "email": "test1@example.com", "admin": False},
+                {"username": "testuser2", "email": "test2@example.com", "admin": False},
+                {"username": "testadmin", "email": "admin@test.local", "admin": True}
+            ]
+            
+            created_users = []
+            for user_data in test_users:
+                existing_user = User.query.filter_by(user_name=user_data["username"]).first()
+                if existing_user:
+                    print(f"   ℹ️  User {user_data['username']} already exists, skipping")
+                    created_users.append(existing_user)
+                    continue
+                    
+                user = User(
+                    user_name=user_data["username"],
+                    email=user_data["email"],
+                    verified=True,
+                    password_hash=generate_password_hash("testpassword123"),
+                    created=utcnow(),
+                    last_seen=utcnow()
+                )
+                
+                # Generate AP keys for the user
+                private_key, public_key = RsaKeys.generate_keypair()
+                user.private_key = private_key
+                user.public_key = public_key
+                user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}"
+                user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
+                
+                db.session.add(user)
+                created_users.append(user)
+                print(f"   ✅ Created user: {user_data['username']}")
+            
+            db.session.commit()
+            
+            # Create test communities
+            print("🏘️  Creating test communities...")
+            admin_user = next((u for u in created_users if u.user_name == "testadmin"), created_users[0])
+            
+            test_communities = [
+                {"name": "testcommunity", "title": "Test Community", "desc": "Community for testing API endpoints"},
+                {"name": "anothercommunity", "title": "Another Test Community", "desc": "Additional test community for validation"},
+            ]
+            
+            for comm_data in test_communities:
+                existing_comm = Community.query.filter_by(name=comm_data["name"]).first()
+                if existing_comm:
+                    print(f"   ℹ️  Community {comm_data['name']} already exists, skipping")
+                    continue
+                    
+                community = Community(
+                    name=comm_data["name"],
+                    title=comm_data["title"], 
+                    description=comm_data["desc"],
+                    user_id=admin_user.id,
+                    instance_id=1,
+                    created_at=utcnow(),
+                    last_active=utcnow()
+                )
+                
+                # Generate AP keys for the community
+                private_key, public_key = RsaKeys.generate_keypair()
+                community.private_key = private_key
+                community.public_key = public_key
+                community.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}"
+                community.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}/inbox"
+                community.ap_followers_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}/followers"
+                community.ap_preferred_username = community.name.lower()
+                community.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/c/{community.name.lower()}"
+                
+                db.session.add(community)
+                print(f"   ✅ Created community: {comm_data['name']}")
+                
+            db.session.commit()
+            print("✅ Test fixtures loaded successfully")
+            print("🔍 Test environment ready for validation testing")
 
 
 def parse_communities(interests_source, segment):

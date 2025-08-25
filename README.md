@@ -19,5 +19,3 @@ much of the fediverse as possible.
 - [API Documentation (old, more complete)](https://freamon.github.io/piefed-api/) + [New API Documentation (more accurate, not complete)](https://piefed.wjs018.xyz/api/alpha/swagger)
 - see [INSTALL.md](INSTALL.md)
 - see docs/project_management/* for a project roadmap, contributing guide and much more.
-- This is an opinionated project where choices have been made which could surprise you. Contributions are welcome,
-but please respect the established formatting and structural choices unless otherwise discussed.

@@ -2467,7 +2467,7 @@ form h5 {
   text-align: center;
 }
 
-.user_flair {
+.user_flair, .user_note {
   font-size: 87%;
   background-color: #eee;
   border-radius: 3px;
@@ -2755,6 +2755,11 @@ form h5 {
   opacity: 0.5;
   width: 30px;
   height: 30px;
+}
+
+.instance_chooser_results .card .card-body {
+  height: 95px;
+  overflow-y: auto;
 }
 
 .blink {

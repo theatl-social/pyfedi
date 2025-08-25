@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session
+    patch_db_session, to_srgb
 
 
 def public_key():
@@ -130,6 +130,7 @@ def post_to_page(post: Post):
     activity_data = {
         "type": "Page",
         "id": post.ap_id,
+        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/context',
         "attributedTo": post.author.ap_public_url,
         "to": [
             post.community.public_url(),
@@ -198,6 +199,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         ],
         "type": "Note",
         "id": reply.ap_id,
+        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{reply.post_id}/context',
         "attributedTo": reply.author.public_url(),
         "inReplyTo": reply.in_reply_to(),
         "to": [
@@ -1183,6 +1185,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
             with patch_db_session(session):
                 file: File = session.query(File).get(file_id)
                 if file and file.source_url:
+                    if file.source_url.endswith('.gif'):    # don't resize gifs, it breaks their animation
+                        return
                     try:
                         source_image_response = get_request(file.source_url)
                     except:
@@ -1254,11 +1258,30 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     boto3_session = None
                                     s3 = None
 
-                                    # Use environment variables to determine medium and thumbnail format and quality
-
-                                    medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                                    # Use environment variables to determine medium and thumbnail format and quality.
+                                    # But for communities and users directories, preserve original file type.
+                                    if original_directory in ['communities', 'users']:
+                                        # Preserve original format by using the file extension
+                                        if file_ext.lower() in ['.jpg', '.jpeg']:
+                                            medium_image_format = 'JPEG'
+                                            thumbnail_image_format = 'JPEG'
+                                        elif file_ext.lower() == '.png':
+                                            medium_image_format = 'PNG'
+                                            thumbnail_image_format = 'PNG'
+                                        elif file_ext.lower() == '.webp':
+                                            medium_image_format = 'WEBP'
+                                            thumbnail_image_format = 'WEBP'
+                                        elif file_ext.lower() == '.avif':
+                                            medium_image_format = 'AVIF'
+                                            thumbnail_image_format = 'AVIF'
+                                        else:
+                                            # Default to PNG for other formats
+                                            medium_image_format = 'PNG'
+                                            thumbnail_image_format = 'PNG'
+                                    else:
+                                        medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                                        thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
                                     medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
-                                    thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
                                     thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
                                     final_ext = file_ext.lower()  # track file extension for conversion
@@ -1271,9 +1294,10 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     if medium_width:
                                         if img_width > medium_width or medium_image_format:
                                             medium_image = image.copy()
-                                            medium_image = medium_image.convert('RGB' if (
-                                                        medium_image_format == 'JPEG' or final_ext in ['.jpg',
-                                                                                                       '.jpeg']) else 'RGBA')
+                                            if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                                                medium_image = to_srgb(medium_image)
+                                            else:
+                                                medium_image = medium_image.convert('RGBA')
                                             medium_image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                         kwargs = {}
@@ -1310,9 +1334,12 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
 
                                     # Resize the image to a thumbnail (webp)
                                     if thumbnail_width:
+                                        thumbnail_image = image.copy()
+                                        if thumbnail_image_format == 'JPEG':
+                                            thumbnail_image = to_srgb(thumbnail_image)
+                                        else:
+                                            thumbnail_image = thumbnail_image.convert('RGBA')
                                         if img_width > thumbnail_width:
-                                            thumbnail_image = image.copy()
-                                            thumbnail_image = thumbnail_image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
                                             thumbnail_image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                         kwargs = {}
@@ -2315,7 +2342,7 @@ def update_post_from_activity(post: Post, request_json: dict):
 
     if old_title != new_title:
         post.title = new_title
-        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper():
+        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper() or '[COMBAT]' in new_title.upper():
             post.nsfl = True
         if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
             post.nsfw = True
@@ -3312,13 +3339,13 @@ def find_community(request_json):
                 potential_id = rj[location]
                 if isinstance(potential_id, str):
                     if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
-                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        potential_community = db.session.query(Community).filter_by(ap_profile_id=potential_id.lower()).first()
                         if potential_community:
                             return potential_community
                 if isinstance(potential_id, list):
                     for c in potential_id:
                         if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
-                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            potential_community = db.session.query(Community).filter_by(ap_profile_id=c.lower()).first()
                             if potential_community:
                                 return potential_community
 
@@ -3339,7 +3366,7 @@ def find_community(request_json):
         if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
             for a in rj['attributedTo']:
                 if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                    potential_community = db.session.query(Community).filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:
                         return potential_community
 

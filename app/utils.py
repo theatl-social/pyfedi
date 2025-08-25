@@ -4,6 +4,7 @@ import base64
 import bisect
 import gzip
 import hashlib
+import io
 import mimetypes
 import math
 import random
@@ -46,7 +47,7 @@ import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageCms
 
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
@@ -139,6 +140,9 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
             raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
+    except httpx.StreamError as stream_error:
+        # Convert to a more generic error we handle
+        raise httpx.HTTPError(f"HTTPError: {str(stream_error)}") from None
 
     return response
 
@@ -172,7 +176,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # Saves an arbitrary object into a persistent key-value store. cached.
 # Similar to g.site.* except g.site.* is populated on every single page load so g.site is best for settings that are
 # accessed very often (e.g. every page load)
-@cache.memoize(timeout=50)
+@cache.memoize(timeout=500)
 def get_setting(name: str, default=None):
     setting = db.session.query(Settings).filter_by(name=name).first()
     if setting is None:
@@ -375,11 +379,11 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
 
     # replace subscript markdown left in HTML
-    re_subscript = re.compile(r'~(\S+)~')
+    re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
     clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
 
     # replace superscript markdown left in HTML
-    re_superscript = re.compile(r'\^(\S+)\^')
+    re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
     clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
 
     # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
@@ -1129,7 +1133,7 @@ def instance_allowed(host: str) -> bool:
 
 
 @cache.memoize(timeout=150)
-def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
+def instance_banned(domain: str) -> bool:
     session = get_task_session()
     try:
         if domain is None or domain == '':
@@ -1294,6 +1298,9 @@ def can_create_post(user, content: Community) -> bool:
     if user.is_local():
         if user.verified is False or user.private_key is None:
             return False
+    else:
+        if instance_banned(user.instance.domain):
+            return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1319,6 +1326,9 @@ def can_create_post_reply(user, content: Community) -> bool:
 
     if user.is_local():
         if user.verified is False or user.private_key is None:
+            return False
+    else:
+        if instance_banned(user.instance.domain):
             return False
 
     if content.is_moderator(user) or user.is_admin():
@@ -1607,9 +1617,14 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
         {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
-#@cache.memoize(timeout=30)
+@cache.memoize(timeout=30)
 def num_topics() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
+
+
+@cache.memoize(timeout=30)
+def num_feeds() -> int:
+    return db.session.execute(text('SELECT COUNT(*) as c FROM "feed"')).scalar_one()
 
 
 # topics, in a tree
@@ -3269,6 +3284,11 @@ def archive_post(post_id: int):
         session.close()
 
 
+def user_in_restricted_country(user: User) -> bool:
+    restricted_countries = get_setting('nsfw_country_restriction', '').split('\n')
+    return user.ip_address_country and user.ip_address_country in [country_code.strip() for country_code in restricted_countries]
+
+
 @cache.memoize(timeout=80600)
 def libretranslate_string(text: str, source: str, target: str):
     try:
@@ -3277,3 +3297,41 @@ def libretranslate_string(text: str, source: str, target: str):
     except Exception as e:
         current_app.logger.exception(str(e))
         return ''
+
+
+def to_srgb(im: Image.Image, assume="sRGB"):
+    """ Convert a jpeg to sRGB, from other color profiles like CMYK. Test with testing_data/sample-wonky.profile.jpg.
+     See https://civitai.com/articles/18193 for background and the source of this code. """
+    srgb_cms = ImageCms.createProfile("sRGB")
+    srgb_wrap = ImageCms.ImageCmsProfile(srgb_cms)
+
+    # 1) source profile
+    icc_bytes = im.info.get("icc_profile")
+    if icc_bytes:
+        src = ImageCms.ImageCmsProfile(io.BytesIO(icc_bytes))
+    else:
+        src = ImageCms.createProfile(assume)
+
+    # 2) CMYK → RGB first
+    if im.mode == "CMYK":
+        im = im.convert("RGB")
+
+    try:
+        im = ImageCms.profileToProfile(
+            im, src, srgb_cms,
+            outputMode="RGB",
+            renderingIntent=0,
+            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+        )
+        # keep an sRGB tag just in case
+        im.info["icc_profile"] = srgb_wrap.tobytes()
+    except ImageCms.PyCMSError:
+        # Fallback: just convert without ICC
+        im = im.convert("RGB")
+
+    return im
+
+
+@cache.memoize(timeout=30)
+def show_explore():
+    return num_topics() > 0 or num_feeds() > 0

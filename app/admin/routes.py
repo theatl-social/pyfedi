@@ -23,7 +23,7 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
@@ -135,44 +135,72 @@ def admin_site():
                 os.unlink(f'app{site.logo_32}')
             if os.path.isfile(f'app{site.logo_16}'):
                 os.unlink(f'app{site.logo_16}')
+            # Remove existing 512x512 and 192x192 logo files
+            logo_512 = get_setting('logo_512', '')
+            logo_192 = get_setting('logo_192', '')
+            if logo_512 and os.path.isfile(f'app{logo_512}'):
+                os.unlink(f'app{logo_512}')
+            if logo_192 and os.path.isfile(f'app{logo_192}'):
+                os.unlink(f'app{logo_192}')
 
             # Save logo file
             base_filename = f'logo_{gibberish(5)}'
             uploaded_icon.save(f'{directory}/{base_filename}{file_ext}')
+            
             if file_ext == '.svg':
+                # For SVG uploads, clear all logo fields and settings
+                site.logo = f'/static/media/{base_filename}{file_ext}'
+                site.logo_180 = ''
+                site.logo_152 = ''
+                site.logo_32 = ''
+                site.logo_16 = ''
+                set_setting('logo_512', '')
+                set_setting('logo_192', '')
                 delete_original = False
-                site.logo = site.logo_180 = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
             else:
+                # For non-SVG uploads, create PNG thumbnails for PWA compatibility
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 if img.width > 100:
                     img.thumbnail((100, 100))
-                    img.save(f'{directory}/{base_filename}_100{file_ext}')
-                    site.logo = f'/static/media/{base_filename}_100{file_ext}'
+                    img.save(f'{directory}/{base_filename}_100.png')
+                    site.logo = f'/static/media/{base_filename}_100.png'
                     delete_original = True
                 else:
-                    site.logo = f'/static/media/{base_filename}{file_ext}'
-                    delete_original = False
+                    img.save(f'{directory}/{base_filename}.png')
+                    site.logo = f'/static/media/{base_filename}.png'
+                    delete_original = True
 
-                # Save multiple copies of the logo - different sizes
+                # Save multiple copies of the logo - different sizes, all as PNG
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((180, 180))
-                img.save(f'{directory}/{base_filename}_180{file_ext}')
-                site.logo_180 = f'/static/media/{base_filename}_180{file_ext}'
+                img.save(f'{directory}/{base_filename}_180.png')
+                site.logo_180 = f'/static/media/{base_filename}_180.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((152, 152))
-                img.save(f'{directory}/{base_filename}_152{file_ext}')
-                site.logo_152 = f'/static/media/{base_filename}_152{file_ext}'
+                img.save(f'{directory}/{base_filename}_152.png')
+                site.logo_152 = f'/static/media/{base_filename}_152.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((32, 32))
-                img.save(f'{directory}/{base_filename}_32{file_ext}')
-                site.logo_32 = f'/static/media/{base_filename}_32{file_ext}'
+                img.save(f'{directory}/{base_filename}_32.png')
+                site.logo_32 = f'/static/media/{base_filename}_32.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((16, 16))
-                img.save(f'{directory}/{base_filename}_16{file_ext}')
-                site.logo_16 = f'/static/media/{base_filename}_16{file_ext}'
+                img.save(f'{directory}/{base_filename}_16.png')
+                site.logo_16 = f'/static/media/{base_filename}_16.png'
+
+                # Create 512x512 and 192x192 versions using settings
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((512, 512))
+                img.save(f'{directory}/{base_filename}_512.png')
+                set_setting('logo_512', f'/static/media/{base_filename}_512.png')
+
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((192, 192))
+                img.save(f'{directory}/{base_filename}_192.png')
+                set_setting('logo_192', f'/static/media/{base_filename}_192.png')
 
             if delete_original:
                 os.unlink(f'app/static/media/{base_filename}{file_ext}')
@@ -216,7 +244,6 @@ def admin_misc():
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
         site.auto_decline_referrers = form.auto_decline_referrers.data
-        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         site.log_activitypub_json = form.log_activitypub_json.data
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
@@ -238,6 +265,8 @@ def admin_misc():
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
         set_setting('ban_check_servers', form.ban_check_servers.data)
+        set_setting('nsfw_country_restriction', form.nsfw_country_restriction.data.strip())
+        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -248,12 +277,13 @@ def admin_misc():
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
+        form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
         form.auto_decline_referrers.data = site.auto_decline_referrers
-        form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
+        form.auto_decline_countries.data = get_setting('auto_decline_countries', '').upper()
         form.log_activitypub_json.data = site.log_activitypub_json
         form.language_id.data = site.language_id
         form.show_inoculation_block.data = site.show_inoculation_block
@@ -270,6 +300,28 @@ def admin_misc():
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form)
+
+
+@bp.route('/instance_chooser', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_instance_chooser():
+    form = InstanceChooserForm()
+    if form.validate_on_submit():
+        set_setting('enable_instance_chooser', form.enable_instance_chooser.data)
+        set_setting('elevator_pitch', form.elevator_pitch.data or '')
+        set_setting('number_of_admins', form.number_of_admins.data)
+        set_setting('financial_stability', form.financial_stability.data)
+        set_setting('daily_backups', form.daily_backups.data)
+        flash(_('Settings saved.'))
+    elif request.method == 'GET':
+        form.enable_instance_chooser.data = get_setting('enable_instance_chooser', False)
+        form.elevator_pitch.data = get_setting('elevator_pitch', '')
+        form.number_of_admins.data = get_setting('number_of_admins', 0)
+        form.financial_stability.data = get_setting('financial_stability', False)
+        form.daily_backups.data = get_setting('daily_backups', False)
+
+    return render_template('admin/instance_chooser.html', title=_('Misc settings'), form=form)
 
 
 @bp.route('/federation', methods=['GET', 'POST'])

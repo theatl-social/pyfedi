@@ -2175,7 +2175,7 @@ form {
   margin-top: 12px;
 }
 
-.user_flair {
+.user_flair, .user_note {
   font-size: 87%;
   background-color: $lightest-grey;
   border-radius: 3px;
@@ -2509,6 +2509,13 @@ form {
   	    width: 30px;
   		height: 30px;
 	}
+}
+
+.instance_chooser_results {
+  .card .card-body {
+    height: 95px;
+    overflow-y: auto;
+  }
 }
 
 .blink {

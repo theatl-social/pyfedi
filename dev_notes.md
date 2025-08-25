@@ -1,5 +1,8 @@
 # Development Notes
 
+This is an opinionated project where choices have been made which could surprise you. Contributions are welcome,
+but please respect the established formatting and structural choices unless otherwise discussed.
+
 A git pre-commit hook can be used to automatically run [ruff](https://docs.astral.sh/ruff/) before committing code:
 
 Save this as .git/hooks/pre-commit and make sure it's executable with chmod +x .git/hooks/pre-commit:
