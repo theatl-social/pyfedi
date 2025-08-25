@@ -207,8 +207,8 @@ The repository includes comprehensive test infrastructure:
 ## Recent Updates & Notes
 
 ### Merge History
-- Successfully merged with upstream/main (commit 14b1416e) on 2025-08-18
-- Branch: `feature/merge-upstream-nightly`
+- Successfully merged with upstream/main (commit aa2e9e85) on 2025-08-25
+- Branch: `feature/merge-upstream-20250825`
 - Key additions from upstream:
   - Instance chooser functionality
   - LDAP authentication improvements
