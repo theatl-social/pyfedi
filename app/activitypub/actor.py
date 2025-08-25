@@ -145,14 +145,14 @@ def fetch_remote_actor_data(url: str, retry_count=1):
                         return None
                 # else: fall through, return None later
 
-        except httpx.ConnectError:
-            # skip retries on unreachable network
-            return None
-        except httpx.HTTPError:
+        # These types of exceptions would tend to indicate an overloaded server. Wait a little while and try again.
+        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.WriteTimeout, httpx.ReadError, httpx.RemoteProtocolError) as exc:
             if attempt < retry_count:
                 time.sleep(randint(3, 10))
             else:
                 return None
+        except httpx.HTTPError: # Otherwise, give up without retrying.
+            return None
 
     return None
 
