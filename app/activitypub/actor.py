@@ -126,36 +126,34 @@ def fetch_remote_actor_data(url: str, retry_count=1):
     """Fetch actor data with retry logic."""
     for attempt in range(retry_count + 1):
         try:
-            response = get_request(url, headers={'Accept': 'application/activity+json'})
-            if response.status_code == 200:
-                try:
-                    data = response.json()
-                    response.close()
-                    return data
-                except Exception:
-                    response.close()
-                    return None
-            elif response.status_code == 401:
-                # Try with a signed request
-                try:
-                    site = db.session.query(Site).get(1)
-                    response = signed_get_request(url, site.private_key,
-                                                  f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            with get_request(url, headers={'Accept': 'application/activity+json'}) as response:
+                if response.status_code == 200:
                     try:
-                        data = response.json()
-                        response.close()
-                        return data
-                    except Exception:
-                        response.close()
+                        return response.json()
+                    except ValueError:
                         return None
-                except Exception:
-                    return None
-            response.close()
+
+                elif response.status_code == 401:
+                    try:
+                        site = db.session.query(Site).get(1)
+                        with signed_get_request(url, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key") as signed_response:
+                            try:
+                                return signed_response.json()
+                            except ValueError:
+                                return None
+                    except Exception:
+                        return None
+                # else: fall through, return None later
+
+        except httpx.ConnectError:
+            # skip retries on unreachable network
+            return None
         except httpx.HTTPError:
             if attempt < retry_count:
                 time.sleep(randint(3, 10))
             else:
                 return None
+
     return None
 
 
