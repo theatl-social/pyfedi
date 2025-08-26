@@ -536,6 +536,9 @@ def shared_inbox():
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
         return '', 200
 
+    if redis_client.get('pause_federation') == '1':
+        abort(429)
+
     g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
     store_ap_json = g.site.log_activitypub_json or False
     saved_json = request_json if store_ap_json else None

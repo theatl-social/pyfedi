@@ -38,7 +38,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session, get_setting
+    render_from_tpl, get_task_session, patch_db_session, get_setting, set_setting
 
 
 def register(app):
@@ -378,7 +378,10 @@ def register(app):
                             try:
                                 if redis_client and redis_client.memory_stats()['total.allocated'] > 200000000:
                                     print('Redis memory is quite full - stopping send queue to avoid making it worse.')
+                                    redis_client.set("pause_federation", "1", ex=600)
                                     return
+                                else:
+                                    redis_client.set("pause_federation", "0", ex=600)
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
                             if not current_app.debug:
