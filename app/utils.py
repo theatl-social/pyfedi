@@ -55,7 +55,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan
 
 
 # Flask's render_template function, with support for themes added
@@ -851,7 +851,9 @@ def communities_banned_from(user_id: int) -> List[int]:
     if user_id == 0:
         return []
     community_bans = db.session.query(CommunityBan).filter(CommunityBan.user_id == user_id).all()
-    return [cb.community_id for cb in community_bans]
+    instance_bans = db.session.query(Community).join(InstanceBan, Community.instance_id == InstanceBan.instance_id).\
+        filter(InstanceBan.user_id == user_id).all()
+    return [cb.community_id for cb in community_bans] + [cb.id for cb in instance_bans]
 
 
 @cache.memoize(timeout=86400)
@@ -1299,7 +1301,7 @@ def can_create_post(user, content: Community) -> bool:
         if user.verified is False or user.private_key is None:
             return False
     else:
-        if instance_banned(user.instance.domain):
+        if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
             return False
 
     if content.is_moderator(user) or user.is_admin():
