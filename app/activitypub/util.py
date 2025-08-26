@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from io import BytesIO
 from json import JSONDecodeError
 from random import randint
@@ -3382,3 +3382,22 @@ def normalise_actor_string(actor: str) -> Tuple[str, str]:
     if '@' in actor:
         parts = actor.split('@')
         return parts[0].lower(), parts[1].lower()
+
+
+def process_banned_message(banned_json, instance_domain: str, session):
+    if banned_person := find_actor_or_create(banned_json['message'], create_if_not_found=False):
+        instance = session.query(Instance).filter(Instance.domain == instance_domain.lower()).first()
+        if instance:
+            session.execute(text(
+                '''
+                INSERT INTO "instance_ban" (user_id, instance_id, banned_until)
+                VALUES (:user_id, :instance_id, :banned_until)
+                ON CONFLICT (user_id, instance_id)
+                DO UPDATE SET banned_until = EXCLUDED.banned_until
+                '''
+            ), {
+                "user_id": banned_person.id,
+                "instance_id": instance.id,
+                "banned_until": utcnow() + timedelta(days=1)
+            })
+            session.commit()
