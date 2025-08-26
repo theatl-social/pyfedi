@@ -555,5 +555,6 @@ class FeedListRequest(DefaultSchema):
     include_communities = fields.Boolean(metadata={"description": "include list of communities in each feed with result"})
     mine_only = fields.Boolean(metadata={"description": "only return feeds created by the authorized user"})
 
+
 class FeedListResponse(DefaultSchema):
     feeds = fields.List(fields.Nested(FeedView))
