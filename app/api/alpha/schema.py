@@ -521,3 +521,40 @@ class CommunityModerationUnbanRequest(DefaultSchema):
 class CommunityModerationNsfwRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     nsfw_status = fields.Boolean(required=True)
+
+
+class FeedView(DefaultSchema):
+    actor_id = fields.Url(required=True)
+    ap_domain = fields.String(required=True)
+    children = fields.List(fields.Nested(lambda: FeedView()), required=True)
+    communities = fields.List(fields.Nested(Community), required=True)
+    communities_count = fields.Integer(required=True)
+    id = fields.Integer(required=True)
+    is_instance_feed = fields.Boolean(required=True)
+    local = fields.Boolean(required=True)
+    name = fields.String(required=True)
+    nsfl = fields.Boolean(required=True)
+    nsfw = fields.Boolean(required=True)
+    owner = fields.Boolean(required=True, metadata={"description": "Is the authorized user the creator of the feed?"})
+    public = fields.Boolean(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    show_posts_from_children = fields.Boolean(required=True)
+    subscribed = fields.Boolean(required=True)
+    subscriptions_count = fields.Integer(required=True)
+    title = fields.String(required=True)
+    updated = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    user_id = fields.Integer(required=True, metadata={"description": "user_id of the feed creator/owner"}) 
+    banner = fields.Url(allow_none=True)
+    description = fields.String(allow_none=True, metadata={"format": "markdown"})
+    description_html = fields.String(allow_none=True, metadata={"format": "html"})
+    icon = fields.Url(allow_none=True)
+    parent_feed_id = fields.Integer(allow_none=True)
+
+
+class FeedListRequest(DefaultSchema):
+    include_communities = fields.Boolean(metadata={"description": "include list of communities in each feed with result"})
+    mine_only = fields.Boolean(metadata={"description": "only return feeds created by the authorized user"})
+
+
+class FeedListResponse(DefaultSchema):
+    feeds = fields.List(fields.Nested(FeedView))

@@ -751,16 +751,28 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
     if variant == 1:
         include = ['id', 'user_id', 'title', 'name', 'machine_name', 'description', 'description_html', 'nsfw', 'nsfl',
                    'subscriptions_count', 'num_communities', 'public', 'parent_feed_id',
-                   'is_instance_feed', 'ap_id', 'ap_profile_id', 'show_posts_in_children']
+                   'is_instance_feed', 'ap_domain', 'show_posts_in_children']
         v1 = {column.name: getattr(feed, column.name) for column in feed.__table__.columns if
               column.name in include}
-        v1.update({'version': '0.0.1'})
+        
+        # Rename some fields for consistency with other endpoints
+        v1["communities_count"] = v1.pop("num_communities")
+        v1["show_posts_from_children"] = v1.pop("show_posts_in_children")
+
+        if v1["public"]:
+            v1["actor_id"] = feed.public_url()
+        else:
+            v1["actor_id"] = feed.public_url() + "/" + feed.name.rsplit("/", 1)[1]
+
         if feed.icon_id:
             v1['icon'] = feed.icon.medium_url()
         if feed.image_id:
             v1['banner'] = feed.image.medium_url()
+
         v1['subscribed'] = feed.id in subscribed
         v1['owner'] = user_id == feed.user_id
+        v1['local'] = feed.is_local()
+
         v1['communities'] = []
         if include_communities:
             for community in Community.query.filter(Community.banned == False).\
