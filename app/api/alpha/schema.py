@@ -557,4 +557,4 @@ class FeedListRequest(DefaultSchema):
 
 
 class FeedListResponse(DefaultSchema):
-    feeds = fields.List(fields.Nested(FeedView))
+    feeds = fields.List(fields.Nested(FeedView), required=True)
