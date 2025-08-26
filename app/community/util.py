@@ -16,6 +16,8 @@ from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
     find_hashtag_or_create, create_post, remote_object_to_json
+from app.community.forms import CreateLinkForm
+from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
@@ -339,6 +341,8 @@ def tags_from_string(tags: str) -> List[dict]:
 
 def tags_from_string_old(tags: str) -> List[Tag]:
     return_value = []
+    if tags is None:
+        return []
     tags = tags.strip()
     if tags == '':
         return []
@@ -356,6 +360,8 @@ def tags_from_string_old(tags: str) -> List[Tag]:
 
 
 def flair_from_form(tag_ids) -> List[CommunityFlair]:
+    if tag_ids is None:
+        return []
     return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
 
 
@@ -817,3 +823,51 @@ def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
         tag['font_size'] = round(scale(tag['pc']), 1)   # add a font size based on its post count
 
     return tags
+
+
+def publicize_community(community: Community):
+    from app.shared.post import make_post
+    form = CreateLinkForm()
+    form.title.data = community.title
+    form.link_url.data = community.public_url()
+    form.body.data = f'{community.lemmy_link()}\n\n'
+    form.body.data += community.description if community.description else ''
+    form.language_id.data = current_user.language_id or g.site.language_id
+    if current_app.debug:
+        community = Community.query.filter(Community.ap_id == 'playground@piefed.social').first()
+    else:
+        community = Community.query.filter(Community.ap_id == 'newcommunities@lemmy.world').first()
+
+    if community:
+        post = make_post(form, community, POST_TYPE_LINK, SRC_WEB)
+
+        if current_app.debug:
+            publicize_community_task(community.id)
+        else:
+            publicize_community_task.delay(community.id)
+
+
+@celery.task
+def publicize_community_task(community_id: int):
+    session = get_task_session()
+    community = session.query(Community).get(community_id)
+    with get_request(f'https://lemmy.world/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://sh.itjust.works/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://lemmy.zip/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://feddit.org/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://lemmy.dbzer0.com/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://lemmy.ca/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://lemmy.blahaj.zone/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+    with get_request(f'https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}') as response:
+        pass
+
+
+
+

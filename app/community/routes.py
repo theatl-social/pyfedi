@@ -25,7 +25,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
-    find_potential_moderators, hashtags_used_in_community
+    find_potential_moderators, hashtags_used_in_community, publicize_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
@@ -121,11 +121,17 @@ def add_local():
         # Always include the undetermined language, so posts with no language will be accepted
         community.languages.append(Language.query.filter(Language.code == 'und').first())
         db.session.commit()
+
+        if not form.local_only.data and form.publicize.data:
+            publicize_community(community)
+
         flash(_('Your new community has been created.'))
         cache.delete_memoized(community_membership, current_user, community)
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(moderating_communities, current_user.id)
         return redirect('/c/' + community.name)
+    else:
+        form.publicize.data = True
 
     return render_template('community/add_local.html', title=_('Create community'), form=form,
                            current_app=current_app)
