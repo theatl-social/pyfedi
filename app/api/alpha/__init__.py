@@ -26,4 +26,11 @@ comm_bp = ApiBlueprint(
     description="",
 )
 
+feed_bp = ApiBlueprint(
+    "Feed",
+    __name__,
+    url_prefix="/api/alpha",
+    description="",
+)
+
 from app.api.alpha import routes

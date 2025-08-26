@@ -1635,9 +1635,9 @@ def topic_tree() -> List:
 
     for topic in topics:
         if topic.parent_id is not None:
-            parent_comment = topics_dict.get(topic.parent_id)
-            if parent_comment:
-                parent_comment['children'].append(topics_dict[topic.id])
+            parent_topic = topics_dict.get(topic.parent_id)
+            if parent_topic:
+                parent_topic['children'].append(topics_dict[topic.id])
 
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
@@ -1650,9 +1650,9 @@ def feed_tree(user_id) -> List[dict]:
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
@@ -1664,9 +1664,9 @@ def feed_tree_public() -> List[dict]:
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
