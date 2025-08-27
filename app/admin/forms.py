@@ -87,12 +87,14 @@ class FederationForm(FlaskForm):
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))
     blocked_actors = TextAreaField(_l('Discard all posts and comments by users with these words in their name (one per line)'))
     blocked_bio = TextAreaField(_l('Discard all posts and comments by users with these phrases in their bio (one per line)'))
+    auto_add_remote_instances = BooleanField(_l('Automatically add new remote communities'))
     submit = SubmitField(_l('Save'))
 
 
 class PreLoadCommunitiesForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))
+
 
 class RemoteInstanceScanForm(FlaskForm):
     remote_url = StringField(_l('Remote Server'), validators=[DataRequired()])
@@ -101,6 +103,7 @@ class RemoteInstanceScanForm(FlaskForm):
     minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
     dry_run = BooleanField(_l('Dry Run'))
     remote_scan_submit = SubmitField(_l('Scan'))
+
 
 class ImportExportBannedListsForm(FlaskForm):
     import_file = FileField(_l('Import Bans List Json File'))

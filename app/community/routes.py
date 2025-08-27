@@ -122,7 +122,7 @@ def add_local():
         community.languages.append(Language.query.filter(Language.code == 'und').first())
         db.session.commit()
 
-        if not form.local_only.data and form.publicize.data:
+        if not form.local_only.data and form.publicize.data and 'test' not in community.title.lower():
             publicize_community(community)
 
         flash(_('Your new community has been created.'))

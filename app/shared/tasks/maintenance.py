@@ -1,7 +1,8 @@
 from datetime import timedelta
 import random
+import re
 
-import boto3
+import httpx
 from flask import current_app
 from sqlalchemy import text
 
@@ -9,11 +10,11 @@ from app import celery, cache, httpx_client
 from app.activitypub.util import find_actor_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
-    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, read_posts, File, InstanceChooser, \
+    DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, InstanceChooser, \
     InstanceBan
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session, archive_post, store_files_in_s3
+    shorten_string, patch_db_session, archive_post, get_setting, set_setting
 
 
 @celery.task
@@ -889,3 +890,51 @@ def refresh_instance_chooser():
         raise
     finally:
         session.close()
+
+
+@celery.task
+def add_remote_communities():
+    try:
+        response = get_request('https://lemmy.world/api/v3/post/list', params={
+            'community_name': 'newcommunities@lemmy.world',
+            'sort': 'New',
+            'limit': '50'
+        })
+    except httpx.HTTPError:
+        return
+
+    if response.status_code == 200:
+        new_communities_data = response.json()
+        response.close()
+
+        # track the post IDs so we know when we hit old posts that we've already processed
+        last_successful_import = get_setting('last_successful_import', 0)
+
+        for post in reversed(new_communities_data['posts']):
+            post_data = post['post']
+            if post_data['featured_community']:  # skip sticky posts
+                continue
+
+            if post_data['id'] <= last_successful_import:
+                continue
+
+            add_remote_community_from_post(post_data)
+
+            last_successful_import = post_data['id']
+            set_setting('last_successful_import', last_successful_import)
+
+
+def add_remote_community_from_post(post_data):
+    if 'url' in post_data:
+        from app.activitypub.util import extract_domain_and_actor
+        server, community = extract_domain_and_actor(post_data['url'])
+        community_lookup = ['!' + community + '@' + server]
+    else:
+        pattern = r'![A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+        community_lookup = re.findall(pattern, post_data['body'])
+
+    if len(community_lookup):
+        from app.community.util import search_for_community
+        for cl in community_lookup:
+            if f"@{current_app.config['SERVER_NAME']}" not in cl:
+                search_for_community(cl)

@@ -33,6 +33,7 @@ from app.models import Settings, BannedInstances, Role, User, RolePermission, Do
     InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
     ActivityBatch
 from app.shared.tasks import task_selector
+from app.shared.tasks.maintenance import add_remote_communities
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
@@ -329,6 +330,8 @@ def register(app):
                 cleanup_old_activitypub_logs()
                 archive_old_posts()
                 archive_old_users()
+                if get_setting('add_remote_communities', True):
+                    add_remote_communities()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
                 if get_setting('enable_instance_chooser', False):
@@ -351,6 +354,8 @@ def register(app):
                 cleanup_old_activitypub_logs.delay()
                 archive_old_posts.delay()
                 archive_old_users.delay()
+                if get_setting('add_remote_communities', True):
+                    add_remote_communities.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
     @app.cli.command('daily-maintenance')
