@@ -253,6 +253,7 @@ def create_new_user(form, ip, country, verification_token):
     )
     if current_app.config['CONTENT_WARNING']:
         user.hide_nsfw = 0
+    
     user.set_password(form.password.data)
 
     db.session.add(user)
@@ -400,7 +401,7 @@ def validate_user_login(user, password, ip):
     if user.deleted:
         flash(_("No account exists with that user name."), "error")
         return False
-
+    
     if not user.check_password(password):
         if user.password_hash is None:
             message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
