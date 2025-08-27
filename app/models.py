@@ -1328,10 +1328,10 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityWikiPageRevision).filter(CommunityWikiPageRevision.user_id == self.id).update({CommunityWikiPageRevision.user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
 
-    def purge_content(self, soft=True):
+    def purge_content(self, soft=True, flush=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
         for file in files:
-            file.delete_from_disk()
+            file.delete_from_disk(purge_cdn=flush)
         self.delete_dependencies()
         posts = Post.query.filter_by(user_id=self.id).all()
         for post in posts:

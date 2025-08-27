@@ -134,6 +134,7 @@ class BanUserForm(FlaskForm):
     reason = StringField(_l('Reason'), render_kw={'list': 'reasons'})
     ip_address = BooleanField(_l('Ban IP address'))
     purge = BooleanField(_l('Delete all content by this account'))
+    flush = BooleanField(_l('Flush CDN cache when deleting (slow)'))
     submit = SubmitField(_l('Ban'), render_kw={'autofocus': True})
 
 

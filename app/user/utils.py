@@ -14,15 +14,15 @@ from app.utils import gibberish, ap_datetime, instance_banned, get_request
 import httpx
 
 
-def purge_user_then_delete(user_id):
+def purge_user_then_delete(user_id, flush=True):
     if current_app.debug:
-        purge_user_then_delete_task(user_id)
+        purge_user_then_delete_task(user_id, flush)
     else:
-        purge_user_then_delete_task.delay(user_id)
+        purge_user_then_delete_task.delay(user_id, flush)
 
 
 @celery.task
-def purge_user_then_delete_task(user_id):
+def purge_user_then_delete_task(user_id, flush):
     with current_app.app_context():
         user = User.query.get(user_id)
         if user:
@@ -88,7 +88,7 @@ def purge_user_then_delete_task(user_id):
                         send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
             user.delete_dependencies()
-            user.purge_content()
+            user.purge_content(flush)
             from app import redis_client
             with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                 user = User.query.get(user_id)
