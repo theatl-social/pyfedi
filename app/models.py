@@ -2,6 +2,7 @@ import html
 import math
 import os
 import uuid
+import re
 from datetime import datetime, timedelta
 from time import time
 from typing import List, Union
@@ -1980,10 +1981,13 @@ class Post(db.Model):
     def blocked_by_content_filter(self, content_filters, user_id):
         if self.user_id == user_id:
             return False
-        lowercase_title = self.title.lower()
-        for name, keywords in content_filters.items() if content_filters else {}:
+
+        # tokenize title into words (lowercase)
+        tokens = re.findall(r"\w+", self.title.lower())
+
+        for name, keywords in (content_filters or {}).items():
             for keyword in keywords:
-                if keyword in lowercase_title:
+                if keyword.lower() in tokens:
                     return name
         return False
 
