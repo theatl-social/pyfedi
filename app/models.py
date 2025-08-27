@@ -26,7 +26,7 @@ from sqlalchemy_utils.types import \
     TSVectorType  # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app import db, login, cache, celery, httpx_client, constants
+from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
@@ -957,10 +957,20 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
+    
+    def set_bcrypt_password(self, password):
+        self.password_hash = app_bcrypt.generate_password_hash(password).decode('utf-8')
 
     def check_password(self, password):
         try:
             result = check_password_hash(self.password_hash, password)
+            return result
+        except Exception:
+            return False
+    
+    def check_bcrypt_password(self, password):
+        try:
+            result = app_bcrypt.check_password_hash(self.password_hash, password)
             return result
         except Exception:
             return False

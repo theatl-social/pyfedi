@@ -253,7 +253,11 @@ def create_new_user(form, ip, country, verification_token):
     )
     if current_app.config['CONTENT_WARNING']:
         user.hide_nsfw = 0
-    user.set_password(form.password.data)
+    
+    if current_app.config['USE_BCRYPT_HASH']:
+        user.set_bcrypt_password(form.password.data)
+    else:
+        user.set_password(form.password.data)
 
     db.session.add(user)
     db.session.commit()
@@ -400,14 +404,16 @@ def validate_user_login(user, password, ip):
     if user.deleted:
         flash(_("No account exists with that user name."), "error")
         return False
-
+    
+    # Check the password, fall back to bcrypt if it fails
     if not user.check_password(password):
-        if user.password_hash is None:
-            message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
-            flash(message, "error")
-        else:
-            flash(_("Invalid password"), "error")
-        return False
+        if not user.check_bcrypt_password(password):
+            if user.password_hash is None:
+                message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
+                flash(message, "error")
+            else:
+                flash(_("Invalid password"), "error")
+            return False
 
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
         handle_banned_user(user, ip)
