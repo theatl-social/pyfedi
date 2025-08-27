@@ -50,16 +50,15 @@ def log_user_in(input, src):
             return redirect(url_for('auth.login'))
 
     if not user.check_password(password):
-        if not user.check_bcrypt_password(password):
-            if src == SRC_WEB:
-                if user.password_hash is None:
-                    message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
-                    flash(message, 'error')
-                    return redirect(url_for('auth.login'))
-                flash(_('Invalid password'))
+        if src == SRC_WEB:
+            if user.password_hash is None:
+                message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
+                flash(message, 'error')
                 return redirect(url_for('auth.login'))
-            elif src == SRC_API:
-                raise Exception('incorrect_login')
+            flash(_('Invalid password'))
+            return redirect(url_for('auth.login'))
+        elif src == SRC_API:
+            raise Exception('incorrect_login')
 
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
         # Detect if a banned user tried to log in from a new IP address

@@ -957,20 +957,20 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
-    
-    def set_bcrypt_password(self, password):
-        self.password_hash = app_bcrypt.generate_password_hash(password).decode('utf-8')
 
     def check_password(self, password):
         try:
             result = check_password_hash(self.password_hash, password)
             return result
-        except Exception:
-            return False
-    
-    def check_bcrypt_password(self, password):
-        try:
+        except ValueError:
+            # Caused when invalid hash method used, check bcrypt as a fallback
             result = app_bcrypt.check_password_hash(self.password_hash, password)
+
+            # If pw validates, resave the hash using a more secure hashing algorithm
+            if result:
+                self.set_password(password)
+                db.session.commit()
+
             return result
         except Exception:
             return False

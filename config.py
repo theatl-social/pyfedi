@@ -34,7 +34,6 @@ class Config(object):
     SQLALCHEMY_ECHO = False     # set to true to see SQL in console
     WTF_CSRF_TIME_LIMIT = None  # a value of None ensures csrf token is valid for the lifetime of the session
     HTTP_PROTOCOL = os.environ.get('HTTP_PROTOCOL') or 'https'  # useful during development
-    USE_BCRYPT_HASH = os.environ.get('USE_BCRYPT_HASH', False)  # use bcrypt for new user pw hashing (same method as lemmy)
 
     BOUNCE_ADDRESS = os.environ.get('BOUNCE_ADDRESS') or MAIL_FROM or ''    # Warning: all emails in this inbox will be deleted!
     BOUNCE_HOST = os.environ.get('BOUNCE_HOST') or ''
