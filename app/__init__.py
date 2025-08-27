@@ -14,6 +14,7 @@ from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_smorest import Api
+from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
@@ -58,6 +59,7 @@ httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
 rest_api = Api()
+app_bcrypt = Bcrypt()
 
 
 def create_app(config_class=Config):
@@ -138,6 +140,7 @@ def create_app(config_class=Config):
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
     limiter.init_app(app)
+    app_bcrypt.init_app(app)
     celery.conf.update(app.config)
 
     celery.conf.update(CELERY_ROUTES={
