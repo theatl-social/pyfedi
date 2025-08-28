@@ -851,23 +851,12 @@ def publicize_community(community: Community):
 def publicize_community_task(community_id: int):
     session = get_task_session()
     community = session.query(Community).get(community_id)
-    with get_request(f'https://lemmy.world/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://sh.itjust.works/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://lemmy.zip/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://feddit.org/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://lemmy.dbzer0.com/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://lemmy.ca/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://lemmy.blahaj.zone/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-    with get_request(f'https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}') as response:
-        pass
-
-
-
-
+    get_request(f'https://lemmy.world/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://sh.itjust.works/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.zip/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://feddit.org/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.dbzer0.com/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.ca/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.blahaj.zone/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}')
+    session.close()

@@ -3,6 +3,7 @@ import random
 import re
 
 import httpx
+import boto3
 from flask import current_app
 from sqlalchemy import text
 
@@ -938,3 +939,21 @@ def add_remote_community_from_post(post_data):
         for cl in community_lookup:
             if f"@{current_app.config['SERVER_NAME']}" not in cl:
                 search_for_community(cl)
+
+
+@celery.task
+def delete_from_s3(s3_files_to_delete):
+    delete_payload = {
+        'Objects': [{'Key': key} for key in s3_files_to_delete],
+        'Quiet': True  # Optional: if True, successful deletions are not returned
+    }
+    boto3_session = boto3.session.Session()
+    s3 = boto3_session.client(
+        service_name='s3',
+        region_name=current_app.config['S3_REGION'],
+        endpoint_url=current_app.config['S3_ENDPOINT'],
+        aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
+        aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+    )
+    s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+    s3.close()
