@@ -936,7 +936,7 @@ def add_remote_community_from_post(post_data):
 
     if len(community_lookup):
         from app.community.util import search_for_community
-        for cl in community_lookup:
+        for cl in set(community_lookup):
             if f"@{current_app.config['SERVER_NAME']}" not in cl:
                 search_for_community(cl)
 
