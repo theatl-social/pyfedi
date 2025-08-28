@@ -552,9 +552,28 @@ class FeedView(DefaultSchema):
 
 
 class FeedListRequest(DefaultSchema):
-    include_communities = fields.Boolean(metadata={"description": "include list of communities in each feed with result"})
-    mine_only = fields.Boolean(metadata={"description": "only return feeds created by the authorized user"})
+    include_communities = fields.Boolean(metadata={"description": "include list of communities in each feed with result", "default": True})
+    mine_only = fields.Boolean(metadata={"description": "only return feeds created by the authorized user", "default": False})
 
 
 class FeedListResponse(DefaultSchema):
     feeds = fields.List(fields.Nested(FeedView), required=True)
+
+
+class TopicView(DefaultSchema):
+    children = fields.List(fields.Nested(lambda: TopicView()), required=True)
+    communities = fields.List(fields.Nested(Community), required=True)
+    communities_count = fields.Integer(required=True)
+    id = fields.Integer(required=True)
+    name = fields.String(required=True)
+    show_posts_from_children = fields.Boolean(required=True)
+    title = fields.String(required=True)
+    parent_topic_id = fields.Integer(allow_none=True)
+
+
+class TopicListRequest(DefaultSchema):
+    include_communities = fields.Boolean(metadata={"description": "include list of communities in each topic with result", "default": True})
+
+
+class TopicListResponse(DefaultSchema):
+    topics = fields.List(fields.Nested(TopicView), required=True)
