@@ -87,7 +87,7 @@ class FederationForm(FlaskForm):
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))
     blocked_actors = TextAreaField(_l('Discard all posts and comments by users with these words in their name (one per line)'))
     blocked_bio = TextAreaField(_l('Discard all posts and comments by users with these phrases in their bio (one per line)'))
-    auto_add_remote_instances = BooleanField(_l('Automatically add new remote communities'))
+    auto_add_remote_communities = BooleanField(_l('Automatically add new remote communities'))
     submit = SubmitField(_l('Save'))
 
 

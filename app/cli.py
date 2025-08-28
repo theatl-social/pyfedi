@@ -330,7 +330,7 @@ def register(app):
                 cleanup_old_activitypub_logs()
                 archive_old_posts()
                 archive_old_users()
-                if get_setting('add_remote_communities', True):
+                if get_setting('auto_add_remote_communities', False):
                     add_remote_communities()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
@@ -354,7 +354,7 @@ def register(app):
                 cleanup_old_activitypub_logs.delay()
                 archive_old_posts.delay()
                 archive_old_users.delay()
-                if get_setting('add_remote_communities', True):
+                if get_setting('auto_add_remote_communities', False):
                     add_remote_communities.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
