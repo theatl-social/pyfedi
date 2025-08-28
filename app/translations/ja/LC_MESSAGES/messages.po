@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-07-26 22:04+1200\n"
-"PO-Revision-Date: 2025-07-27 10:47+0000\n"
+"PO-Revision-Date: 2025-08-21 13:06+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
 "Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ja/>\n"
@@ -35,7 +35,7 @@ msgstr "%(post_title)sに対する私のコメントへの返信"
 
 #: app/email.py:21
 msgid "Check the console for a link."
-msgstr ""
+msgstr "コンソールでリンクを確認してください。"
 
 #: app/email.py:23
 msgid "[PieFed] Reset Your Password"
@@ -54,32 +54,28 @@ msgid "Comments are disabled on this post"
 msgstr "この投稿のコメントは無効になっています"
 
 #: app/models.py:2205
-#, fuzzy
 msgid "Banned from commenting"
-msgstr "コミュニティからBAN"
+msgstr "コメントがBANされています"
 
 #: app/models.py:2228
-#, fuzzy
 msgid "Blocked phrase in comment"
-msgstr "ログインしてコメントする"
+msgstr "そのフレーズはブロックされています"
 
 #: app/models.py:2235
-#, fuzzy
 msgid "Replier blocked"
-msgstr "ブロック"
+msgstr "リプライ先からブロックされています"
 
 #: app/models.py:2238
 msgid "Duplicate reply"
-msgstr ""
+msgstr "リプライが重複しています"
 
 #: app/models.py:2246
-#, fuzzy
 msgid "Gif comment ignored"
-msgstr "コメントを戻しました。"
+msgstr "Gifが添付されているコメントは無視されます"
 
 #: app/models.py:2249
 msgid "Low quality reply"
-msgstr ""
+msgstr "低品質なリプライ"
 
 #: app/models.py:2898
 msgid "Added moderator"
@@ -142,14 +138,12 @@ msgid "Un-lock post"
 msgstr "投稿のロックが解除されました"
 
 #: app/models.py:2913
-#, fuzzy
 msgid "Lock comment"
-msgstr "コメントはありません。"
+msgstr "コメントをピン留め"
 
 #: app/models.py:2914
-#, fuzzy
 msgid "Un-lock comment"
-msgstr "投稿のロックが解除されました"
+msgstr "コメントのピン留めを外す"
 
 #: app/auth/routes.py:139 app/auth/util.py:380 app/post/routes.py:697
 #: app/shared/auth.py:70 app/utils.py:1933
@@ -276,7 +270,7 @@ msgstr "法的情報"
 
 #: app/admin/forms.py:22
 msgid "Terms of service url"
-msgstr ""
+msgstr "利用規約のURL"
 
 #: app/admin/forms.py:23
 msgid "General instance contact email address"
@@ -406,9 +400,8 @@ msgid "Additional CSS"
 msgstr "追加のCSS"
 
 #: app/admin/forms.py:54
-#, fuzzy
 msgid "Additional JS"
-msgstr "追加のCSS"
+msgstr "追加のJS"
 
 #: app/admin/forms.py:55 app/templates/_view_filter_nav.html:7
 #: app/templates/_view_filter_nav.html:21
@@ -899,12 +892,11 @@ msgstr "このパスワードは安全ではありません。"
 
 #: app/admin/forms.py:261
 msgid "Flag their posts as from a bot"
-msgstr ""
+msgstr "BOTからの投稿としてマーク"
 
 #: app/admin/forms.py:262
-#, fuzzy
 msgid "Hide cross-posts by this user"
-msgstr "ボットによる投稿の表示"
+msgstr "このユーザからのクロスポストを隠す"
 
 #: app/admin/forms.py:265
 msgid "Ban posts"
@@ -1169,7 +1161,7 @@ msgstr "ユーザー登録が承認されました。"
 
 #: app/admin/routes.py:1502
 msgid "Registration denied. User removed from the database."
-msgstr ""
+msgstr "登録を拒否し、ユーザーをデータベースから削除しました。"
 
 #: app/admin/routes.py:1541
 msgid ""
@@ -1196,9 +1188,8 @@ msgid "Add user"
 msgstr "ユーザーを追加"
 
 #: app/admin/routes.py:1629
-#, fuzzy
 msgid "This user cannot be deleted."
-msgstr "このユーザーは削除されました。"
+msgstr "このユーザーを削除することはできません。"
 
 #: app/admin/routes.py:1652
 msgid "User deleted"
@@ -1317,7 +1308,7 @@ msgstr "またはメールアドレス"
 #: app/auth/forms.py:18 app/auth/forms.py:30 app/auth/forms.py:32
 #: app/user/forms.py:15
 msgid "Minimum length 8, maximum 128"
-msgstr ""
+msgstr "8文字以上、128文字以下"
 
 #: app/auth/forms.py:19 app/user/forms.py:59
 msgid "Low bandwidth mode"
@@ -1339,7 +1330,8 @@ msgstr "このサイトに登録したいと思った理由を教えて下さい
 
 #: app/auth/forms.py:34
 msgid "I agree to the terms of service & privacy policy (see links in footer)"
-msgstr ""
+msgstr "利用規約およびプライバシーポリシーに同意します（詳細はフッターのリンクをご確"
+"認ください）"
 
 #: app/auth/forms.py:35
 msgid "Enter captcha code"
@@ -1400,15 +1392,15 @@ msgid "Choose some topics you are interested in"
 msgstr "興味のあるトピックを選択してください"
 
 #: app/auth/forms.py:129
-#, fuzzy
 msgid "Set email"
-msgstr "メール"
+msgstr "メールアドレスを設定"
 
 #: app/auth/oauth_util.py:38
 msgid ""
 "An account with this email already exists, please login and connect this "
 "account over \"Connect OAuth\" setting."
-msgstr ""
+msgstr "入力されたメールアドレスは既に登録されています。ログイン後、「OAuth接続」設定"
+"からアカウントを連携してください。"
 
 #: app/auth/oauth_util.py:124 app/auth/oauth_util.py:127
 msgid "Account registrations are currently closed."
@@ -1423,14 +1415,12 @@ msgid "Sorry, we are not accepting registrations from your country."
 msgstr "申し訳ありませんが、お住まいの国からの登録は受け付けていません。"
 
 #: app/auth/oauth_util.py:142
-#, fuzzy
 msgid "Login failed due to a problem with the OAuth server."
-msgstr "Googleの問題によりログインに失敗しました。"
+msgstr "OAuthサーバーエラーのため、ログインに失敗しました。"
 
 #: app/auth/oauth_util.py:158 app/auth/routes.py:261 app/auth/util.py:362
-#, fuzzy
 msgid "This account has been deleted."
-msgstr "このユーザーは削除されました。"
+msgstr "このアカウントは削除されました。"
 
 #: app/auth/onboarding.py:46
 msgid ""
@@ -1464,7 +1454,7 @@ msgstr "すみません"
 msgid ""
 "You are not able to do this action due to being a very new account or "
 "because of a low reputation."
-msgstr ""
+msgstr "この操作はアカウントが新しすぎるか、評価が低いため実行できません。"
 
 #: app/auth/routes.py:92 app/templates/auth/check_email.html:12
 msgid "Check your email"
@@ -1503,45 +1493,42 @@ msgstr "メールアドレスの認証に失敗しました。"
 
 #: app/auth/routes.py:223
 msgid "This Google account is already connected to another user."
-msgstr ""
+msgstr "指定されたGoogleアカウントは既に別のユーザーと連携しています。"
 
 #: app/auth/routes.py:230
-#, fuzzy
 msgid "Your Google account has been connected successfully."
-msgstr "新しいコミュニティが作成されました。"
+msgstr "Googleアカウントとの連携が完了しました。"
 
 #: app/auth/routes.py:233
 #, python-format
 msgid "Failed to connect Google account: %(error)s"
-msgstr ""
+msgstr "Googleアカウントの連携に失敗しました: %(error)s"
 
 #: app/auth/routes.py:311
 msgid "This Mastodon account is already connected to another user."
-msgstr ""
+msgstr "指定されたMastodonアカウントは既に別のユーザーと連携しています。"
 
 #: app/auth/routes.py:318
-#, fuzzy
 msgid "Your Mastodon account has been connected successfully."
-msgstr "新しいコミュニティが作成されました。"
+msgstr "Mastodonアカウントとの連携が完了しました。"
 
 #: app/auth/routes.py:321
 #, python-format
 msgid "Failed to connect Mastodon account: %(error)s"
-msgstr ""
+msgstr "Mastodonアカウントの連携に失敗しました: %(error)s"
 
 #: app/auth/routes.py:359
 msgid "This Discord account is already connected to another user."
-msgstr ""
+msgstr "指定されたDiscordアカウントは既に別のユーザーと連携しています。"
 
 #: app/auth/routes.py:366
-#, fuzzy
 msgid "Your Discord account has been connected successfully."
-msgstr "寄付がキャンセルされました。"
+msgstr "Discordアカウントとの連携が完了しました。"
 
 #: app/auth/routes.py:369
 #, python-format
 msgid "Failed to connect Discord account: %(error)s"
-msgstr ""
+msgstr "Discordアカウントの連携に失敗しました: %(error)s"
 
 #: app/auth/util.py:155
 msgid "Sorry, you cannot use that email address"
@@ -1553,11 +1540,11 @@ msgstr "申し訳ありませんが、そのユーザー名は使用できませ
 
 #: app/auth/util.py:167
 msgid "Sorry, this username pattern is not allowed."
-msgstr ""
+msgstr "このユーザー名のパターンは許可されていません。"
 
 #: app/auth/util.py:181
 msgid "Registration not allowed based on your referrer."
-msgstr ""
+msgstr "登録許可のないアクセス元です。"
 
 #: app/auth/util.py:224
 #, python-format
@@ -1900,7 +1887,7 @@ msgstr "1か月毎"
 #: app/community/forms.py:174 app/templates/user/scheduled_posts.html:27
 #: app/templates/user/scheduled_posts.html:35 app/user/forms.py:30
 msgid "Timezone"
-msgstr ""
+msgstr "タイムゾーン"
 
 #: app/community/forms.py:175
 msgid "Publish"
@@ -2007,7 +1994,7 @@ msgstr "このサーバーからのみ投票を受け付ける"
 
 #: app/community/forms.py:340
 msgid "Polls can't be scheduled more than once"
-msgstr ""
+msgstr "投票は反復投稿することはできません"
 
 #: app/community/forms.py:349
 msgid "Polls need options for people to choose from"
@@ -2255,7 +2242,8 @@ msgstr "%(community)s のモデレーター"
 msgid ""
 "A community must have one or more owners. Make someone else an owner "
 "before removing this owner."
-msgstr ""
+msgstr "コミュニティには最低1人のオーナーが必要です。このオーナーを削除する前に、他の"
+"人をオーナーに任命してください。"
 
 #: app/community/routes.py:1270
 #: app/templates/community/community_find_moderator.html:14
@@ -2641,9 +2629,9 @@ msgid "%(name)s has indicated they made a mistake in this post."
 msgstr "この投稿について、%(name)s さんは誤りがあったと考えています。"
 
 #: app/post/routes.py:105
-#, fuzzy, python-format
+#, python-format
 msgid "This post is scheduled to be published at %(when)s in %(_tz)s"
-msgstr "この投稿は%(when)sに公開予定です"
+msgstr "この投稿は %(when)s (%(_tz)s)に公開されます"
 
 #: app/post/routes.py:115 app/post/routes.py:666
 #, python-format
@@ -2678,9 +2666,8 @@ msgid "You are not permitted to comment in this community"
 msgstr "このコミュニティへのコメントは禁止されています"
 
 #: app/post/routes.py:710
-#, fuzzy
 msgid "This comment cannot be replied to."
-msgstr "この操作は元に戻せません。"
+msgstr "このコメントには返信できません。"
 
 #: app/post/routes.py:861 app/shared/reply.py:213 app/user/routes.py:318
 #: app/user/routes.py:560 app/user/routes.py:676 app/user/routes.py:1368
@@ -2890,14 +2877,13 @@ msgid "Comment deleted."
 msgstr "コメントを削除しました。"
 
 #: app/shared/reply.py:453
-#, fuzzy
 msgid "Comment has been locked."
-msgstr "コメントを通報しました"
+msgstr "コメントをロックしました。"
 
 #: app/shared/reply.py:457
-#, fuzzy, python-format
+#, python-format
 msgid "Comment has been unlocked."
-msgstr "%(name)sのロックは解除されました。"
+msgstr "コメントのロックを解除しました。"
 
 #: app/shared/user.py:27 app/user/routes.py:813
 msgid "You cannot block yourself."
@@ -3022,17 +3008,15 @@ msgid "Most upvotes in the last hour"
 msgstr "1時間で最も賛成された投票"
 
 #: app/templates/_home_nav.html:22
-#, fuzzy
 msgid "Most upvotes in the last 6 hours"
-msgstr "1時間で最も賛成された投票"
+msgstr "6時間で最も賛成された投票"
 
 #: app/templates/_home_nav.html:25
 #: app/templates/community/_community_nav.html:32
 #: app/templates/community/_community_nav.html:258
 #: app/templates/feed/_feed_nav.html:29
-#, fuzzy
 msgid "Most upvotes in the last 12 hours"
-msgstr "1時間で最も賛成された投票"
+msgstr "12時間で最も賛成された投票"
 
 #: app/templates/_home_nav.html:28
 #: app/templates/community/_community_nav.html:37
@@ -3083,16 +3067,14 @@ msgstr "1か月"
 #: app/templates/community/_community_nav.html:52
 #: app/templates/community/_community_nav.html:278
 #: app/templates/feed/_feed_nav.html:49
-#, fuzzy
 msgid "Most upvotes in the last year"
-msgstr "1日で最も賛成された投票"
+msgstr "1年で最も賛成された投票"
 
 #: app/templates/_home_nav.html:38 app/templates/_home_nav.html:86
 #: app/templates/community/_community_nav.html:96
 #: app/templates/community/_community_nav.html:322
 #: app/templates/community/_community_nav.html:441
 #: app/templates/feed/_feed_nav.html:93
-#, fuzzy
 msgid "Year"
 msgstr "1 年"
 
@@ -3100,18 +3082,16 @@ msgstr "1 年"
 #: app/templates/community/_community_nav.html:57
 #: app/templates/community/_community_nav.html:283
 #: app/templates/feed/_feed_nav.html:54
-#, fuzzy
 msgid "Most upvotes all time"
-msgstr "6時間で最も賛成された投票"
+msgstr "最も賛成された投票"
 
 #: app/templates/_home_nav.html:41 app/templates/_home_nav.html:91
 #: app/templates/community/_community_nav.html:101
 #: app/templates/community/_community_nav.html:327
 #: app/templates/community/_community_nav.html:446
 #: app/templates/feed/_feed_nav.html:98
-#, fuzzy
 msgid "All Time"
-msgstr "代替テキスト"
+msgstr "全時間"
 
 #: app/templates/_home_nav.html:46 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -3140,23 +3120,22 @@ msgstr "作成者"
 #: app/templates/post/post_embed.html:23
 #: app/templates/themes/dillo/_macros.html:36
 msgid "Very low reputation. Beware."
-msgstr ""
+msgstr "このユーザーは評価が低いため注意が必要です。"
 
 #: app/templates/_macros.html:37
 #: app/templates/post/add_reply_inline_result.html:33
 #: app/templates/post/post_embed.html:24
 #: app/templates/themes/dillo/_macros.html:37
 msgid "Very low reputation. Beware!"
-msgstr ""
+msgstr "このユーザーは評価が低いため注意してください！"
 
 #: app/templates/_macros.html:39
 #: app/templates/admin/approve_registrations.html:53
 #: app/templates/post/add_reply_inline_result.html:35
 #: app/templates/post/post_embed.html:26
 #: app/templates/themes/dillo/_macros.html:39
-#, fuzzy
 msgid "Low reputation."
-msgstr "評価値"
+msgstr "低評価。"
 
 #: app/templates/_macros.html:45
 #: app/templates/post/add_reply_inline_result.html:41
@@ -3263,7 +3242,7 @@ msgstr "モデレーターは最近活動していません。"
 #: app/templates/_side_pane.html:96
 #, python-format
 msgid "Posts older than %(number)s days will be removed."
-msgstr ""
+msgstr "%(number)s日以上前の投稿は自動的に削除されます。"
 
 #: app/templates/_side_pane.html:100
 #: app/templates/themes/dillo/_side_pane.html:53
@@ -3513,9 +3492,8 @@ msgstr "新着通知の設定"
 
 #: app/templates/base.html:175 app/templates/user/scheduled_posts.html:15
 #: app/user/routes.py:1635
-#, fuzzy
 msgid "Scheduled posts"
-msgstr "投稿を削除しました"
+msgstr "予約投稿"
 
 #: app/templates/base.html:178
 msgid "Manage donations"
@@ -3566,11 +3544,11 @@ msgstr "キーボードショートカット"
 #: app/templates/base.html:241
 #, python-format
 msgid "PieFed v%(version)s is free and open source"
-msgstr ""
+msgstr "PieFed v%(version)s はオープンソースソフトウェアです"
 
 #: app/templates/base.html:243
 msgid "Terms of service"
-msgstr ""
+msgstr "利用規約"
 
 #: app/templates/base.html:245
 #, fuzzy
@@ -4086,7 +4064,7 @@ msgstr "承認"
 
 #: app/templates/admin/approve_registrations.html:62
 msgid "Deny"
-msgstr ""
+msgstr "拒否"
 
 #: app/templates/admin/approve_registrations.html:68
 #: app/templates/admin/approve_registrations.html:105
@@ -4412,7 +4390,7 @@ msgstr "チャットがありません"
 
 #: app/templates/admin/home.html:89
 msgid "No plugins installed."
-msgstr ""
+msgstr "プラグインはインストールされていません。"
 
 #: app/templates/admin/instances.html:20 app/templates/admin/instances.html:104
 #: app/templates/instance/list_instances.html:19
@@ -4506,7 +4484,7 @@ msgstr "CSSは全てのページに追加されます。"
 #: app/templates/admin/site.html:25 app/templates/admin/site.html:31
 #: app/templates/admin/site.html:33
 msgid "You can use markdown here."
-msgstr ""
+msgstr "ここではMarkdownが使えます。"
 
 #: app/templates/admin/misc.html:53
 #, fuzzy
@@ -4960,7 +4938,7 @@ msgstr "コミュニティの概要"
 #: app/templates/community/_community_nav.html:393
 #: app/templates/topic/show_topic.html:96
 msgid "Create feed"
-msgstr "フィードの作成"
+msgstr "トピックの編集"
 
 #: app/templates/community/_community_nav.html:462
 msgid "Show posts"
@@ -5997,7 +5975,7 @@ msgstr "Markdownエディターを有効にする"
 msgid ""
 "Warning: You are writing in a language that isn't the same as the user "
 "you are replying to uses! (%(language)s)"
-msgstr ""
+msgstr "注意：現在の入力言語は、相手ユーザーの言語 (%(language)s) と一致していません"
 
 #: app/templates/post/post.html:97
 msgid "Verify your email address to comment"
@@ -6060,7 +6038,7 @@ msgstr "タグはコンマで区切ることができます。"
 
 #: app/templates/post/post_edit.html:160
 msgid "Hey, did you know? Scheduled posts have a templating system for titles."
-msgstr ""
+msgstr "ヒント: 予約投稿はタイトルにテンプレートを使うことができます。"
 
 #: app/templates/post/post_edit.html:165
 msgid "Tags available"
@@ -6925,26 +6903,24 @@ msgstr "履歴を削除"
 
 #: app/templates/user/scheduled_posts.html:26
 #: app/templates/user/scheduled_posts.html:34
-#, fuzzy
 msgid "Scheduled for"
-msgstr "検索結果"
+msgstr "予定日時"
 
 #: app/templates/user/scheduled_posts.html:28
 #: app/templates/user/scheduled_posts.html:36
-#, fuzzy
 msgid "Frequency"
-msgstr "French"
+msgstr "間隔"
 
 #: app/templates/user/scheduled_posts.html:44
-#, fuzzy
 msgid "Only once"
-msgstr "オンライン"
+msgstr "1回のみ"
 
 #: app/templates/user/scheduled_posts.html:55
 msgid ""
 "No scheduled posts yet. To schedule a post, create one in your favorite "
 "community and set up a date and frequency."
-msgstr ""
+msgstr "まだ予約投稿がありません。予約するには、投稿を作成して公開日時と反復投稿の設"
+"定をしてください。"
 
 #: app/templates/user/show_profile.html:88
 #: app/templates/user/show_profile.html:91
