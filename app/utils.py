@@ -998,6 +998,8 @@ def trustworthy_account_required(func):
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
+        if is_activitypub_request():
+            return func(*args, **kwargs)
         if current_app.config['CONTENT_WARNING'] and request.cookies.get('warned') is None:
             return redirect(url_for('main.content_warning', next=request.path))
         if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
