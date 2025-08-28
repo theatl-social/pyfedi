@@ -203,10 +203,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
                                                      {"user_id": user_id}).scalars())
             posts = posts.filter(Post.id.in_(bookmarked_post_ids))
-        elif user.hide_read_posts:
-            u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
-                                          {"user_id": user_id}).scalars())
-            posts = posts.filter(Post.id.not_in(u_rp_ids))              # do not pass set() into not_in(), only tuples or lists
+        # For API endpoints, don't filter out read posts server-side to allow client-side dimming
+        # The native UI will still respect user.hide_read_posts via app/utils.py filtering
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
