@@ -269,6 +269,10 @@ def show_post(post_id: int):
             archived_post = retrieve_archived_post(post.archived)
             post.body_html = archived_post['body_html']     # do this last to avoid the db.session.commit() in mark_post_read(). We don't want to save data in .body_html to the DB, just have it there for display in the jinja template
 
+        author_banned = False
+        if post.author.banned or post.community_id in communities_banned_from(post.author.id):
+            author_banned = True
+
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
                                    is_owner=community.is_owner(),
                                    community=post.community, community_flair=community_flair,
@@ -299,6 +303,7 @@ def show_post(post_id: int):
                                    recipient_language_id=recipient_language_id,
                                    recipient_language_code=recipient_language_code,
                                    recipient_language_name=recipient_language_name,
+                                   author_banned=author_banned
                                    )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link',
@@ -740,12 +745,16 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                 recipient_language_code = lang.code
                 recipient_language_name = lang.name
 
+        author_banned = False
+        if in_reply_to.author.banned or in_reply_to.community_id in communities_banned_from(in_reply_to.author.id):
+            author_banned = True
+
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
                                languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
                                recipient_language_id=recipient_language_id,
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
-                               in_reply_to=in_reply_to)
+                               in_reply_to=in_reply_to, author_banned=author_banned)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))

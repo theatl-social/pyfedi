@@ -121,16 +121,16 @@
                         </button>
                     </th>
                     <th scope="col">
-                        <button 
+                        <button
                             form="searchCommunities"
                             hx-boost="true"
                             name="sort_by"
-                            value="subscriptions_count{{ ' asc' if sort_by == 'subscriptions_count desc' else ' desc' }}" 
-                            title="{{ _('Sort by post count') }}"
+                            value="active_weekly{{ ' asc' if sort_by == 'active_weekly desc' else ' desc' }}"
+                            title="{{ _('Sort by number of active users') }}"
                             class="btn text-nowrap"
                         >
-                            {{ _('Subscribers') }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'subscriptions_count asc' }}{{ 'fe fe-chevron-down' if sort_by == 'subscriptions_count desc' }}"></span>
+                            {{ _('Active People') }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'active_weekly asc' }}{{ 'fe fe-chevron-down' if sort_by == 'active_weekly desc' }}"></span>
                         </button>
                     </th>
                     <th scope="col">
@@ -215,9 +215,9 @@
                             </td>
                         {% endif -%}
                         <th scope="row" class="pl-0"><a href="/c/{{ community.link() }}" aria-label="{{ _('Browse %(name)s', name=community.display_name()) }}">{{ community.display_name() }}</a></th>
-                        <td>{{ community.subscriptions_count }}</td>
-                        <td>{{ community.post_count }}</td>
-                        <td>{{ community.post_reply_count }}</td>
+                        <td align="center">{{ community.active_weekly }}</td>
+                        <td align="center">{{ community.post_count }}</td>
+                        <td align="center">{{ community.post_reply_count }}</td>
                         <td>{{ arrow.get(community.last_active).humanize(locale=locale) }}</td>
                         <td>{{ arrow.get(community.created_at).humanize(locale=locale) }}</td>
                     </tr>

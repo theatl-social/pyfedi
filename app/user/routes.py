@@ -730,12 +730,12 @@ def ban_profile(actor):
                     # federate deletion
                     if user.is_local():
                         user.deleted_by = current_user.id
-                        purge_user_then_delete(user.id)
+                        purge_user_then_delete(user.id, flush=form.flush.data)
                         flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
                               actor=actor))
                     else:
                         user.delete_dependencies()
-                        user.purge_content()
+                        user.purge_content(flush=form.flush.data)
                         from app import redis_client
                         with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                             user = User.query.get(user.id)
@@ -784,9 +784,9 @@ def ban_profile(actor):
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, deleted=False).first()
+        user = User.query.filter_by(user_name=actor).first()
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
+            user = User.query.filter_by(ap_id=actor).first()
             if user is None:
                 abort(404)
 
@@ -794,6 +794,7 @@ def unban_profile(actor):
             flash(_('You cannot unban yourself.'), 'error')
         else:
             user.banned = False
+            user.deleted = False
             db.session.commit()
 
             add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())

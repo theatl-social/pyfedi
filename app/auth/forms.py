@@ -1,5 +1,6 @@
 import re
 
+from flask import current_app
 from flask_babel import _, lazy_gettext as _l
 from flask_wtf import FlaskForm
 from sqlalchemy import func

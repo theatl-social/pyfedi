@@ -125,36 +125,59 @@ def schedule_actor_refresh(actor):
 def fetch_remote_actor_data(url: str, retry_count=1):
     """Fetch actor data with retry logic."""
     for attempt in range(retry_count + 1):
+        response = None
         try:
-            with get_request(url, headers={'Accept': 'application/activity+json'}) as response:
-                if response.status_code == 200:
+            response = get_request(url, headers={'Accept': 'application/activity+json'})
+            if response.status_code == 200:
+                try:
+                    return response.json()
+                except ValueError:
+                    return None
+
+            elif response.status_code == 401:
+                signed_response = None
+                try:
+                    site = db.session.query(Site).get(1)
+                    signed_response = signed_get_request(url, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
                     try:
-                        return response.json()
+                        return signed_response.json()
                     except ValueError:
                         return None
+                except Exception:
+                    return None
+                finally:
+                    if signed_response is not None:
+                        signed_response.close()
 
-                elif response.status_code == 401:
-                    try:
-                        site = db.session.query(Site).get(1)
-                        with signed_get_request(url, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key") as signed_response:
-                            try:
-                                return signed_response.json()
-                            except ValueError:
-                                return None
-                    except Exception:
-                        return None
-                # else: fall through, return None later
+            elif response.status_code in (429, 502, 503, 504):
+                # Retryable server errors
+                if attempt < retry_count:
+                    time.sleep(randint(3, 10))
+                    continue
+                else:
+                    return None
 
-        # These types of exceptions would tend to indicate an overloaded server. Wait a little while and try again.
-        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.WriteTimeout, httpx.ReadError, httpx.RemoteProtocolError) as exc:
-            if attempt < retry_count:
-                time.sleep(randint(3, 10))
-            else:
-                return None
-        except httpx.HTTPError: # Otherwise, give up without retrying.
+            # Any other status code → give up
             return None
 
+        # These exceptions usually mean "server is overloaded", so retry
+        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.WriteTimeout, httpx.ReadError, httpx.RemoteProtocolError):
+            if attempt < retry_count:
+                time.sleep(randint(3, 10))
+                continue
+            else:
+                return None
+
+        except httpx.HTTPError:
+            # Non-retryable network issues (DNS fail, unreachable, SSL error, etc.)
+            return None
+
+        finally:
+            if response is not None:
+                response.close()
+
     return None
+
 
 
 def fetch_actor_from_webfinger(address: str, server: str):

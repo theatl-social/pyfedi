@@ -12,6 +12,7 @@ from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request, find_actor_or_create
 from app.activitypub.signature import default_context, LDSignature
+from app.community.util import publicize_community
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING, POST_TYPE_LINK
 from app.email import send_email, send_registration_approved_email
@@ -23,6 +24,7 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.shared.tasks.maintenance import add_remote_communities
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -271,7 +273,9 @@ def list_communities():
         elif nsfw == 'yes':
             communities = communities.filter(and_(Community.nsfw == True))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -375,7 +379,9 @@ def list_local_communities():
         elif nsfw == 'yes':
             communities = communities.filter(and_(Community.nsfw == True))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -482,7 +488,9 @@ def list_subscribed_communities():
         elif nsfw == 'yes':
             communities = communities.filter(Community.nsfw == True)
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -587,7 +595,9 @@ def list_not_subscribed_communities():
     if current_user.hide_nsfl == 1:
         communities = communities.filter(Community.nsfl == False)
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -774,6 +784,9 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    #community = Community.query.get(33)
+    #publicize_community(community)
+    add_remote_communities()
     return 'Done'
     import json
     user_id = 1
@@ -1228,6 +1241,7 @@ def health():
 @bp.route('/health2', methods=['GET', 'HEAD'])
 def health2():
     # Do some DB access to provide a picture of the performance of the instance
+    # This is all busy-work to give an indication to the caller of the instance performance so there is a lot of # noqa comments to silence ruff.
 
     search_param = request.args.get('search', '')
     topic_id = int(request.args.get('topic_id', 0))
@@ -1245,8 +1259,8 @@ def health2():
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
 
-    topics = Topic.query.order_by(Topic.name).all()
-    languages = Language.query.order_by(Language.name).all()
+    topics = Topic.query.order_by(Topic.name).all()              # noqa f841
+    languages = Language.query.order_by(Language.name).all()     # noqa f841
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
         pass
@@ -1260,16 +1274,8 @@ def health2():
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
 
-    # default to no public feeds
-    server_has_feeds = False
     # find all the feeds marked as public
-    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
-    if len(public_feeds) > 0:
-        server_has_feeds = True
-
-    create_admin_only = g.site.community_creation_admin_only
-
-    is_admin = current_user.is_authenticated and current_user.is_admin()
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all() # noqa f841
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -1316,6 +1322,6 @@ def health2():
                                                      {'title', 'subscriptions_count', 'post_count', 'post_reply_count',
                                                       'last_active', 'created_at'})).limit(100)
 
-    c = communities.all()
+    c = communities.all()   # noqa f841
 
     return ''

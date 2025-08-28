@@ -895,6 +895,7 @@ def admin_federation():
         g.site.blocked_phrases = form.blocked_phrases.data
         set_setting('actor_blocked_words', form.blocked_actors.data)
         set_setting('actor_bio_blocked_words', form.blocked_bio.data)
+        set_setting('auto_add_remote_communities', form.auto_add_remote_communities.data)
         cache.delete_memoized(blocked_phrases)
         cache.delete_memoized(get_setting, 'actor_blocked_words')
         db.session.commit()
@@ -913,6 +914,7 @@ def admin_federation():
         form.blocked_phrases.data = g.site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
         form.blocked_bio.data = get_setting('actor_bio_blocked_words', '')
+        form.auto_add_remote_communities.data = get_setting('auto_add_remote_communities', False)
 
     return render_template('admin/federation.html', title=_('Federation settings'),
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,

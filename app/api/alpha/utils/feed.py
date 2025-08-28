@@ -16,10 +16,8 @@ from app.utils import authorise_api_user, blocked_communities, blocked_instances
 
 def get_feed_list(auth, data, user_id=None) -> dict:
 
-    mine_only = data['mine_only'] if data and 'mine_only' in data else 'false'
-    mine_only = True if mine_only == 'true' else False
-    include_communities = data['include_communities'] if data and 'include_communities' in data else 'true'
-    include_communities = True if include_communities == 'true' else False
+    mine_only = data['mine_only'] if data and 'mine_only' in data else False
+    include_communities = data['include_communities'] if data and 'include_communities' in data else True
 
     if auth:
         user_id = authorise_api_user(auth)

@@ -67,9 +67,6 @@ PieFed should work on version 13.x or newer. If you have errors running `flask i
 For installation environments that use `apt` as a package manager:
 
 ```bash
-sudo apt install ca-certificates pkg-config
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
 sudo apt update
 sudo apt install libpq-dev postgresql
 ```

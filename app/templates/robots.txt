@@ -58,6 +58,9 @@ Crawl-delay: 5
 User-Agent: VelenPublicWebCrawler
 Disallow: /
 
+User-Agent: PerplexityBot
+Crawl-delay: 1
+
 User-agent: meta-externalagent
 User-agent: Meta-ExternalAgent
 User-agent: meta-externalfetcher

@@ -55,7 +55,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan
 
 
 # Flask's render_template function, with support for themes added
@@ -851,7 +851,9 @@ def communities_banned_from(user_id: int) -> List[int]:
     if user_id == 0:
         return []
     community_bans = db.session.query(CommunityBan).filter(CommunityBan.user_id == user_id).all()
-    return [cb.community_id for cb in community_bans]
+    instance_bans = db.session.query(Community).join(InstanceBan, Community.instance_id == InstanceBan.instance_id).\
+        filter(InstanceBan.user_id == user_id).all()
+    return [cb.community_id for cb in community_bans] + [cb.id for cb in instance_bans]
 
 
 @cache.memoize(timeout=86400)
@@ -996,6 +998,8 @@ def trustworthy_account_required(func):
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
+        if is_activitypub_request():
+            return func(*args, **kwargs)
         if current_app.config['CONTENT_WARNING'] and request.cookies.get('warned') is None:
             return redirect(url_for('main.content_warning', next=request.path))
         if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
@@ -1299,7 +1303,7 @@ def can_create_post(user, content: Community) -> bool:
         if user.verified is False or user.private_key is None:
             return False
     else:
-        if instance_banned(user.instance.domain):
+        if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
             return False
 
     if content.is_moderator(user) or user.is_admin():
@@ -1635,9 +1639,9 @@ def topic_tree() -> List:
 
     for topic in topics:
         if topic.parent_id is not None:
-            parent_comment = topics_dict.get(topic.parent_id)
-            if parent_comment:
-                parent_comment['children'].append(topics_dict[topic.id])
+            parent_topic = topics_dict.get(topic.parent_id)
+            if parent_topic:
+                parent_topic['children'].append(topics_dict[topic.id])
 
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
@@ -1650,9 +1654,9 @@ def feed_tree(user_id) -> List[dict]:
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
@@ -1664,9 +1668,9 @@ def feed_tree_public() -> List[dict]:
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 

@@ -2,6 +2,7 @@ import html
 import math
 import os
 import uuid
+import re
 from datetime import datetime, timedelta
 from time import time
 from typing import List, Union
@@ -9,7 +10,6 @@ from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import ZoneInfo
 
 import arrow
-import boto3
 import jwt
 from flask import current_app
 from flask_babel import _, lazy_gettext as _l
@@ -26,7 +26,7 @@ from sqlalchemy_utils.types import \
     TSVectorType  # https://sqlalchemy-searchable.readthedocs.io/en/latest/installation.html
 from werkzeug.security import generate_password_hash, check_password_hash
 
-from app import db, login, cache, celery, httpx_client, constants
+from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
@@ -386,20 +386,11 @@ class File(db.Model):
                 purge_from_cache.append(self.source_url)
 
         if len(s3_files_to_delete) > 0:
-            delete_payload = {
-                'Objects': [{'Key': key} for key in s3_files_to_delete],
-                'Quiet': True  # Optional: if True, successful deletions are not returned
-            }
-            boto3_session = boto3.session.Session()
-            s3 = boto3_session.client(
-                service_name='s3',
-                region_name=current_app.config['S3_REGION'],
-                endpoint_url=current_app.config['S3_ENDPOINT'],
-                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-            )
-            s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
-            s3.close()
+            from app.shared.tasks.maintenance import delete_from_s3
+            if current_app.debug:
+                delete_from_s3(s3_files_to_delete)
+            else:
+                delete_from_s3.delay(s3_files_to_delete)
 
         if purge_cdn and purge_from_cache:
             flush_cdn_cache(purge_from_cache)
@@ -962,6 +953,16 @@ class User(UserMixin, db.Model):
         try:
             result = check_password_hash(self.password_hash, password)
             return result
+        except ValueError:
+            # Caused when invalid hash method used, check bcrypt as a fallback
+            result = app_bcrypt.check_password_hash(self.password_hash, password)
+
+            # If pw validates, resave the hash using a more secure hashing algorithm
+            if result:
+                self.set_password(password)
+                db.session.commit()
+
+            return result
         except Exception:
             return False
 
@@ -1317,11 +1318,13 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityWikiPageRevision).filter(CommunityWikiPageRevision.user_id == self.id).update({CommunityWikiPageRevision.user_id: None})
         db.session.query(UserNote).filter(or_(UserNote.user_id == self.id, UserNote.target_id == self.id)).delete()
 
-    def purge_content(self, soft=True):
+    def purge_content(self, soft=True, flush=True):
         files = File.query.join(Post).filter(Post.user_id == self.id).all()
         for file in files:
-            file.delete_from_disk()
+            file.delete_from_disk(purge_cdn=flush)
+        db.session.commit()
         self.delete_dependencies()
+        db.session.commit()
         posts = Post.query.filter_by(user_id=self.id).all()
         for post in posts:
             post.delete_dependencies()
@@ -1329,7 +1332,8 @@ class User(UserMixin, db.Model):
                 post.deleted = True
             else:
                 db.session.delete(post)
-        db.session.commit()
+            db.session.commit()
+
         post_replies = PostReply.query.filter_by(user_id=self.id).all()
         for reply in post_replies:
             reply.delete_dependencies()
@@ -1337,7 +1341,7 @@ class User(UserMixin, db.Model):
                 reply.deleted = True
             else:
                 db.session.delete(reply)
-        db.session.commit()
+            db.session.commit()
 
     def mention_tag(self):
         if self.ap_domain is None:
@@ -1861,7 +1865,7 @@ class Post(db.Model):
             for image_id in reply_image_ids:
                 file = db.session.query(File).get(image_id)
                 if file:
-                    file.delete_from_disk()
+                    file.delete_from_disk(purge_cdn=False)
             
             # Delete all reply-related data
             db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'),
@@ -1886,29 +1890,20 @@ class Post(db.Model):
             if other_posts_count == 0:
                 file = db.session.query(File).get(self.image_id)
                 if file:
-                    file.delete_from_disk()
+                    file.delete_from_disk(purge_cdn=False)
                     db.session.delete(file)
             self.image_id = None
 
         if self.archived:
             if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
+                from app.shared.tasks.maintenance import delete_from_s3
                 s3_path = self.archived.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
                 s3_files_to_delete = []
                 s3_files_to_delete.append(s3_path)
-                delete_payload = {
-                    'Objects': [{'Key': key} for key in s3_files_to_delete],
-                    'Quiet': True  # Optional: if True, successful deletions are not returned
-                }
-                boto3_session = boto3.session.Session()
-                s3 = boto3_session.client(
-                    service_name='s3',
-                    region_name=current_app.config['S3_REGION'],
-                    endpoint_url=current_app.config['S3_ENDPOINT'],
-                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
-                )
-                s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
-                s3.close()
+                if current_app.debug:
+                    delete_from_s3(s3_files_to_delete)
+                else:
+                    delete_from_s3.delay(s3_files_to_delete)
             elif os.path.isfile(self.archived):
                 try:
                     os.unlink(self.archived)
@@ -1970,10 +1965,13 @@ class Post(db.Model):
     def blocked_by_content_filter(self, content_filters, user_id):
         if self.user_id == user_id:
             return False
-        lowercase_title = self.title.lower()
-        for name, keywords in content_filters.items() if content_filters else {}:
+
+        # tokenize title into words (lowercase)
+        tokens = re.findall(r"\w+", self.title.lower())
+
+        for name, keywords in (content_filters or {}).items():
             for keyword in keywords:
-                if keyword in lowercase_title:
+                if keyword.lower() in tokens:
                     return name
         return False
 
@@ -2402,7 +2400,7 @@ class PostReply(db.Model):
                            {'post_reply_id': self.id})
         if self.image_id:
             file = db.session.query(File).get(self.image_id)
-            file.delete_from_disk()
+            file.delete_from_disk(purge_cdn=False)
 
     def child_replies(self):
         return db.session(PostReply).filter_by(parent_id=self.id).all()
@@ -2542,7 +2540,7 @@ class Domain(db.Model):
     def purge_content(self):
         files = File.query.join(Post).filter(Post.domain_id == self.id).all()
         for file in files:
-            file.delete_from_disk()
+            file.delete_from_disk(purge_cdn=False)
         posts = Post.query.filter_by(domain_id=self.id).all()
         for post in posts:
             post.delete_dependencies()

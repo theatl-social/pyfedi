@@ -214,7 +214,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.add(vote)
     db.session.commit()
 
-    try:
+    try:    # federation is done in edit_post
         post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
     except Exception as e:
         if str(e) == 'This image is blocked':

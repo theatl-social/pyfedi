@@ -123,6 +123,9 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                         # log.activity_json += result.text[]
                     elif 'community_has_no_followers' in result.text:
                         fix_local_community_membership(uri, private_key, session)
+                    elif result.status_code == 400 and 'person_is_banned_from_site' in result.text:
+                        from app.activitypub.util import process_banned_message
+                        process_banned_message(result.json(), furl(uri).host, session)
                     else:
                         if current_app.debug:
                             current_app.logger.error(f'Response code for post attempt to {uri} was ' +
@@ -132,6 +135,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                     log.exception_message += ' 202'
                 if result.status_code == 204:
                     log.exception_message += ' 204'
+                result.close()
             except Exception as e:
                 log.result = 'failure'
                 log.exception_message = 'could not send:' + str(e)

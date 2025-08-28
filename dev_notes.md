@@ -84,6 +84,8 @@ flask run
 
 See [The Flask Mega-Tutorial Part XIII: I18n and L10n](https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-xiii-i18n-and-l10n-2018)
 
+Before doing any of the below, run `export FLASK_APP=pyfedi.py`
+
 To add a new language:
 ```bash
 flask translate init <language-code>
