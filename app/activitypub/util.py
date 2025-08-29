@@ -321,8 +321,11 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
 
 
 def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
-    existing_flair = CommunityFlair.query.filter(CommunityFlair.flair == flair['display_name'].strip(),
-                                                 CommunityFlair.community_id == community_id).first()
+    existing_flair = db.session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+
+    if existing_flair is None:
+        existing_flair = db.session.query(CommunityFlair).filter(CommunityFlair.flair == flair['display_name'].strip(),
+                                                                 CommunityFlair.community_id == community_id).first()
     if existing_flair:
         # Update colors and blur in case they have changed
         existing_flair.text_color = flair['text_color']
@@ -332,7 +335,8 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
     else:
         new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
                                    text_color=flair['text_color'], background_color=flair['background_color'],
-                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False)
+                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False,
+                                   ap_id=flair['id'])
         return new_flair
 
 
