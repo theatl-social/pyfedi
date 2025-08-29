@@ -948,7 +948,7 @@ def site_instance_chooser_view():
             "name": language.name
         },
         'nsfw': g.site.enable_nsfw,
-        'newbie_friendly': num_topics() >= 5,
+        'newbie_friendly': num_topics() >= 3,
         'name': g.site.name,
         'elevator_pitch': get_setting('elevator_pitch', ''),
         'description': g.site.description or '',
