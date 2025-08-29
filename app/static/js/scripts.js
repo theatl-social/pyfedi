@@ -681,6 +681,7 @@ function setupHideButtons() {
             showEl.addEventListener('click', event => {
                 event.preventDefault();
                 showEl.style.display = 'none';
+                toBeHidden = Array(); // This array is used during page initialization to hide comments. If we empty it then the mutation observer won't re-collapse comments whenever the DOM changes.
                 const hidables = showEl.parentElement.parentElement.parentElement.querySelectorAll('.hidable');
                 hidables.forEach(hidable => {
                     hidable.style.display = '';
