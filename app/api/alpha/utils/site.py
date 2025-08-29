@@ -1,6 +1,6 @@
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import site_view, federated_instances_view, site_instance_chooser_view
-from app.constants import SRC_API
+from app.constants import SRC_API, VERSION
 from app.models import InstanceBlock, InstanceChooser, Language
 from app.shared.site import block_remote_instance, unblock_remote_instance
 from app.utils import authorise_api_user
@@ -14,6 +14,10 @@ def get_site(auth):
 
     site_json = site_view(user)
     return site_json
+
+
+def get_site_version(auth):
+    return {'version': VERSION}
 
 
 def get_site_instance_chooser(auth):

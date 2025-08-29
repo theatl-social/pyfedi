@@ -21,7 +21,7 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
     get_post_reply_list
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
-    get_site_instance_chooser_search
+    get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
@@ -57,6 +57,22 @@ def get_alpha_site():
         auth = request.headers.get('Authorization')
         resp = get_site(auth)
         return GetSiteResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@site_bp.route('/site/version', methods=['GET'])
+@site_bp.doc(summary="Gets version of PieFed.")
+@site_bp.response(200, GetSiteVersionResponse)
+@site_bp.alt_response(400, schema=DefaultError)
+def get_alpha_site():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = get_site_version(auth)
+        return GetSiteVersionResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

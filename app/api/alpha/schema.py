@@ -172,6 +172,10 @@ class GetSiteResponse(DefaultSchema):
     my_user = fields.Nested(MyUserInfo)
 
 
+class GetSiteVersionResponse(DefaultSchema):
+    version = fields.String(required=True)
+
+
 class GetSiteInstanceChooserResponse(DefaultSchema):
     language = fields.Nested(LanguageView, required=True)
     nsfw = fields.Boolean(required=True)
