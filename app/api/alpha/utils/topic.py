@@ -16,6 +16,8 @@ from app.utils import authorise_api_user, blocked_communities, blocked_instances
 
 def get_topic_list(auth, data, user_id=None) -> dict:
 
+    include_communities = data['include_communities'] if data and 'include_communities' in data else True
+
     if auth:
         user_id = authorise_api_user(auth)
 
@@ -50,7 +52,8 @@ def get_topic_list(auth, data, user_id=None) -> dict:
                              communities_moderating=communities_moderating,
                              banned_from=banned_from, communities_joined=communities_joined,
                              blocked_community_ids=blocked_community_ids,
-                             blocked_instance_ids=blocked_instance_ids)
+                             blocked_instance_ids=blocked_instance_ids,
+                             include_communities=include_communities)
 
             # Process nested children
             if item['children']:

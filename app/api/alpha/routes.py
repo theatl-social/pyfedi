@@ -4,7 +4,7 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp
+from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -865,17 +865,22 @@ def post_alpha_private_message_report():
 
 
 # Topic
-@bp.route('/api/alpha/topic/list', methods=['GET'])
-def get_alpha_topic_list():
+@topic_bp.route('/topic/list', methods=["GET"])
+@topic_bp.doc(summary="Get list of topics")
+@topic_bp.arguments(TopicListRequest, location="query")
+@topic_bp.response(200, TopicListResponse)
+@topic_bp.alt_response(400, schema=DefaultError)
+def get_alpha_topic_list(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return orjson_response(get_topic_list(auth, data))
+        resp = get_topic_list(auth, data)
+        validated = TopicListResponse().load(resp)
+        return orjson_response(validated)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # User
