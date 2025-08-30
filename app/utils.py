@@ -1306,6 +1306,9 @@ def can_create_post(user, content: Community) -> bool:
         if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
             return False
 
+    if content.banned:
+        return False
+
     if content.is_moderator(user) or user.is_admin():
         return True
 
@@ -1334,6 +1337,9 @@ def can_create_post_reply(user, content: Community) -> bool:
     else:
         if instance_banned(user.instance.domain):
             return False
+
+    if content.banned:
+        return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
