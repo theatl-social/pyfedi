@@ -29,7 +29,7 @@ from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
-from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
@@ -1616,6 +1616,15 @@ def admin_user_edit(user_id):
 
         db.session.commit()
         cache.delete_memoized(low_value_reposters)
+        g.admin_ids = list(db.session.execute(
+            text("""SELECT u.id FROM "user" u WHERE u.id = 1
+                                UNION
+                                SELECT u.id
+                                FROM "user" u
+                                JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                                ORDER BY id"""),
+            {'role_admin': ROLE_ADMIN}).scalars())
+        set_setting('admin_ids', g.admin_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))
