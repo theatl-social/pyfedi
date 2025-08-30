@@ -209,6 +209,7 @@ class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
     uptime = fields.String(required=True)
     mau = fields.Integer(required=True)
     can_make_communities = fields.Boolean(required=True)
+    newbie_friendly = fields.Boolean(required=True)
     defederation = fields.List(fields.String(), required=True)
     trusts = fields.List(fields.String(), required=True)
     registration_mode = fields.String(required=True)
