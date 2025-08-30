@@ -65,6 +65,7 @@
 
             {{ render_field(form.submit) }}
         </form>
+        {% if current_user.id == 1 %}
         <hr class="bg-danger border-4 border-top border-danger" />
         <div class="accordion" id="deleteAccordion">
           <div class="accordion-item">
@@ -86,6 +87,7 @@
             </div>
           </div>
         </div>
+        {% endif -%}
     </div>
 </div>
 <hr />
