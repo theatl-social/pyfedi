@@ -1096,7 +1096,7 @@ def send_deletion_requests(user_id):
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
