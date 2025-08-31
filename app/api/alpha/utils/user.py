@@ -346,8 +346,8 @@ def get_user_notifications(auth, data):
     # get the user from data.user_id
     user = authorise_api_user(auth, return_type='model')
 
-    # get the status from data.status_request
-    status = data['status_request']
+    # get the status from data.status
+    status = data['status']
 
     # get the page for pagination from the data.page
     page = int(data['page']) if data and 'page' in data else 1
@@ -372,35 +372,47 @@ def get_user_notifications(auth, data):
     ]
 
     # new
-    if status == 'New':
+    if status == 'Unread':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
     # all
     elif status == 'All':
         for item in user_notifications:
             if isinstance(item.subtype, str) and item.notif_type in supported_notif_types:
-                notif = _process_notification_item(item)
-                items.append(notif)
+                try:
+                    notif = _process_notification_item(item)
+                    items.append(notif)
+                except AttributeError:
+                    # Something couldn't be fetched from the db, just skip
+                    continue
     # read
     elif status == 'Read':
         for item in user_notifications:
             if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
 
     # get counts for new/read/all
     counts = {}
-    counts['total_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
-    counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
-    counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
+    counts['total'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
+    counts['unread'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    counts['read'] = counts['total'] - counts['unread']
 
     # make dicts of that and pass back
     res = {}
-    res['user'] = user.user_name
+    res['username'] = user.user_name
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
@@ -470,7 +482,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_REPLY
+    # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
@@ -501,7 +513,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_MENTION
+    # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
         notification_json = {}
         if item.subtype == 'post_mention':

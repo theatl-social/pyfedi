@@ -14,6 +14,7 @@ listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating"]
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
+notification_status_list = ["All", "Unread", "Read"]
 
 
 def validate_datetime_string(text):
@@ -723,3 +724,36 @@ class UserSaveSettingsRequest(DefaultSchema):
 
 class UserSaveSettingsResponse(DefaultSchema):
     my_user = fields.Nested(MyUserInfo)
+
+
+class UserNotificationsRequest(DefaultSchema):
+    status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+
+
+class UserNotificationItemView(DefaultSchema):
+    author = fields.Nested(Person, required=True, metadata={"description": "returned for all notif types"})
+    notif_body = fields.String(required=True, metadata={"description": "returned for all notif types"})
+    notif_id = fields.Integer(required=True, metadata={"description": "returned for all notif types"})
+    notif_subtype = fields.String(required=True, metadata={"description": "returned for all notif types"})
+    notif_type = fields.Integer(required=True, metadata={"description": "returned for all notif types"})
+    status = fields.String(validate=validate.OneOf(["Unread", "Read"]), required=True, metadata={"description": "returned for all notif types"})
+    comment = fields.Nested(Comment, metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
+    comment_id = fields.Integer(metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
+    community = fields.Nested(Community, metadata={"description": "returned for notif_type 1"})
+    post = fields.Nested(PostView, metadata={"description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"})
+    post_id = fields.Integer(metadata={"description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"})
+
+class UserNotificationsCounts(DefaultSchema):
+    unread = fields.Integer(required=True)
+    read = fields.Integer(required=True)
+    total = fields.Integer(required=True)
+
+
+class UserNotificationsResponse(DefaultSchema):
+    counts = fields.Nested(UserNotificationsCounts, required=True)
+    items = fields.List(fields.Nested(UserNotificationItemView), required=True)
+    status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
+    username = fields.String(required=True)
+    next_page = fields.Integer(required=True, allow_none=True)

@@ -1061,19 +1061,21 @@ def put_alpha_user_save_user_settings(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/user/notifications', methods=['GET'])
-def get_alpha_user_notifications():
+@user_bp.route('/user/notifications', methods=['GET'])
+@user_bp.doc(summary="Get your user notifications (not all notification types supported yet)")
+@user_bp.arguments(UserNotificationsRequest, location="query")
+@user_bp.response(200, UserNotificationsResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def get_alpha_user_notifications(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = {}
-        data['status_request'] = request.args.get('status_request', 'All')
-        data['page'] = request.args.get('page', '1')
-        return jsonify(get_user_notifications(auth, data))
+        resp = get_user_notifications(auth, data)
+        return UserNotificationsResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/user/notification_state', methods=['PUT'])
