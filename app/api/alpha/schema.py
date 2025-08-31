@@ -766,3 +766,7 @@ class UserNotificationStateRequest(DefaultSchema):
 
 class UserNotificationsCountResponse(DefaultSchema):
     count = fields.Integer(required=True)
+
+
+class UserMarkAllNotifsReadResponse(DefaultSchema):
+    mark_all_notifications_as_read = fields.String(required=True, metadata={"example": "complete"})
