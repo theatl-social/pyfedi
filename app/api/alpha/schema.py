@@ -762,3 +762,7 @@ class UserNotificationsResponse(DefaultSchema):
 class UserNotificationStateRequest(DefaultSchema):
     notif_id = fields.Integer(required=True)
     read_state = fields.Boolean(required=True, metadata={"description": "true sets notification as read, false marks it unread"})
+
+
+class UserNotificationsCountResponse(DefaultSchema):
+    count = fields.Integer(required=True)

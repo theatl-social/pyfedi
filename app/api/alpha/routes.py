@@ -1097,16 +1097,20 @@ def put_alpha_user_notification_state(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/user/notifications_count', methods=['GET'])
+@user_bp.route('/user/notifications_count', methods=['GET'])
+@user_bp.doc(summary="Get user unread notifications count")
+@user_bp.response(200, UserNotificationsCountResponse)
+@user_bp.alt_response(400, schema=DefaultError)
 def get_alpha_user_notifications_count():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        return jsonify(get_user_notifications_count(auth))
+        resp = get_user_notifications_count(auth)
+        return UserNotificationsCountResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/user/mark_all_notifications_read', methods=['PUT'])
