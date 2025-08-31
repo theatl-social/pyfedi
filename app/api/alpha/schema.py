@@ -757,3 +757,8 @@ class UserNotificationsResponse(DefaultSchema):
     status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
     username = fields.String(required=True)
     next_page = fields.Integer(required=True, allow_none=True)
+
+
+class UserNotificationStateRequest(DefaultSchema):
+    notif_id = fields.Integer(required=True)
+    read_state = fields.Boolean(required=True, metadata={"description": "true sets notification as read, false marks it unread"})

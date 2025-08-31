@@ -1078,19 +1078,23 @@ def get_alpha_user_notifications(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/user/notification_state', methods=['PUT'])
-def put_alpha_user_notification_state():
+@user_bp.route('/user/notification_state', methods=['PUT'])
+@user_bp.doc(summary="Set the read status of a given notification (not all notification types supported yet)")
+@user_bp.arguments(UserNotificationStateRequest)
+@user_bp.response(200, UserNotificationItemView)
+@user_bp.alt_response(400, schema=DefaultError)
+def put_alpha_user_notification_state(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_user_notification_state(auth, data))
+        resp = put_user_notification_state(auth, data)
+        return UserNotificationItemView().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Notification not found"}), 400
+        return abort(400, message="Notification not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/user/notifications_count', methods=['GET'])

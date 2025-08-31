@@ -540,6 +540,8 @@ def _process_notification_item(item):
             notification_json['notif_body'] = comment.body if comment.body else ''
             notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
+    
+    return False
 
 
 def put_user_notification_state(auth, data):
@@ -554,14 +556,23 @@ def put_user_notification_state(auth, data):
     # get the notification from the data.notif_id
     notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
+    try:
+        # make a json for the specific notification and return that one item
+        res = _process_notification_item(notif)
+    except AttributeError:
+        # Problems looking something up in the db
+        raise Exception("There was a problem processing that notification")
+    
+    if not res:
+        # Unsupported notification type
+        raise Exception("This notification type is currently unsupported in the api")
+
     # set the read state for the notification
     notif.read = read_state
 
     # commit that change to the db
     db.session.commit()
 
-    # make a json for the specific notification and return that one item
-    res = _process_notification_item(notif)
     return res
 
 
