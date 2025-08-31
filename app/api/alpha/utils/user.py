@@ -34,10 +34,11 @@ def get_user(auth, data):
         person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain,
                                    User.deleted == False).one()
         data['person_id'] = person.id
-    include_content = data['include_content'] if 'include_content' in data else 'false'
-    include_content = True if include_content == 'true' else False
-    saved_only = data['saved_only'] if 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    include_content = data['include_content'] if 'include_content' in data else False
+    # include_content = True if include_content == 'true' else False
+    saved_only = data['saved_only'] if 'saved_only' in data else False
+    # saved_only = True if saved_only == 'true' else False
+    data["limit"] = data["limit"] if data and "limit" in data else 20
 
     user_id = None
     if auth:
@@ -135,13 +136,16 @@ def get_user_unread_count(auth):
             "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'comment_mention'"),
             {'user_id': user.id, 'notif_type': NOTIF_MENTION}).scalar()
-        unread_mentions = unread_comment_mentions
+        unread_post_mentions = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'post_mention'"),
+            {"user_id": user.id, "notif_type": NOTIF_MENTION}).scalar()
+        unread_mentions = unread_comment_mentions + unread_post_mentions
         unread_messages = db.session.execute(
             text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"),
             {'user_id': user.id}).scalar()
 
     # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
-    # "mentions" are just comment mentions as /user/mentions endpoint will only deliver a CommentView
 
     unread_count = {
         "replies": unread_replies,
@@ -157,8 +161,7 @@ def get_user_replies(auth, data, mentions=False):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     sort = data['sort'] if data and 'sort' in data else "New"
-    unread_only = data['unread_only'] if data and 'unread_only' in data else 'true'
-    unread_only = True if unread_only == 'true' else False
+    unread_only = data['unread_only'] if data and 'unread_only' in data else True
 
     user_id = authorise_api_user(auth)
 
@@ -263,6 +266,7 @@ def put_user_subscribe(auth, data):
 
     user_id = subscribe_user(person_id, subscribe, SRC_API, auth)
     user_json = user_view(user=person_id, variant=5, user_id=user_id)
+    user_json["subscribed"] = subscribe
     return user_json
 
 
@@ -592,23 +596,30 @@ def post_user_verify_credentials(data):
 
 
 def post_user_set_flair(auth, data):
-    required(['community_id', 'flair_text'], data)
+    required(['community_id'], data)
     integer_expected(['community_id'], data)
-    string_expected(['flair_text'], data)
-    if len(data['flair_text']) > 50:
+
+    flair_text = data['flair_text'] if data and 'flair_text' in data else None
+
+    if flair_text is not None and len(flair_text) > 50:
         raise Exception('Flair text is too long (50 chars max)')
 
     user = authorise_api_user(auth, return_type='model')
     community_id = data['community_id']
-    flair_text = data['flair_text']
 
     try:
-        user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
-        user_flair.flair = flair_text
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            user_flair.flair = flair_text
+            db.session.commit()
+        else:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            db.session.delete(user_flair)
+            db.session.commit()
     except NoResultFound:
-        user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
-        db.session.add(user_flair)
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
+            db.session.add(user_flair)
+            db.session.commit()
 
     return user_view(user=user, variant=5, flair_community_id=community_id)

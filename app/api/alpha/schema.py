@@ -1,11 +1,13 @@
 from datetime import datetime
-from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE
+from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema
 
 
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
 sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
              "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled"]
+default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
+default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 comment_sort_list = ["Hot", "Top", "New", "Old"]
 community_sort_list = ["Hot", "Top", "New"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating"]
@@ -42,7 +44,8 @@ class Person(DefaultSchema):
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
     user_name = fields.String(required=True)
-    about = fields.String(metadata={"format": "markdown"})
+    about = fields.String(allow_none=True, metadata={"format": "markdown"})
+    about_html = fields.String(allow_none=True, metadata={"format": "html"})
     avatar = fields.Url(allow_none=True)
     banner = fields.Url(allow_none=True)
     flair = fields.String()
@@ -582,3 +585,141 @@ class TopicListRequest(DefaultSchema):
 
 class TopicListResponse(DefaultSchema):
     topics = fields.List(fields.Nested(TopicView), required=True)
+
+
+class GetUserRequest(DefaultSchema):
+    person_id = fields.Integer(metadata={"description": "One of either person_id or username must be specified"})
+    username = fields.String(metadata={"description": "One of either person_id or username must be specified"})
+    sort = fields.String(validate=validate.OneOf(sort_list))
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 20})  # Previous defaults were 50 for posts, 10 for comments
+    community_id = fields.Integer(metadata={"description": "Limit posts/comments to just a single community"})
+    saved_only = fields.Boolean(metadata={"default": False})
+    include_content = fields.Boolean(metadata={"default": False})
+
+    @validates_schema
+    def validate_input(self, data, **kwargs):
+        if "person_id" not in data and "username" not in data:
+            raise ValidationError("One of either person_id or username must be specified")
+
+
+class GetUserResponse(DefaultSchema):
+    comments = fields.List(fields.Nested(CommentView), required=True)
+    moderates = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    person_view = fields.Nested(PersonView, required=True)
+    posts = fields.List(fields.Nested(PostView), required=True)
+    site = fields.Nested(Site)
+
+
+class UserLoginRequest(DefaultSchema):
+    username = fields.String(required=True)
+    password = fields.String(required=True)
+
+
+class UserLoginResponse(DefaultSchema):
+    jwt = fields.String(required=True)
+
+
+class UserUnreadCountsResponse(DefaultSchema):
+    mentions = fields.Integer(required=True, metadata={"description": "Post and comment mentions"})
+    private_messages = fields.Integer(required=True)
+    replies = fields.Integer(required=True, metadata={"description": "Replies to posts and comments"})
+    other = fields.Integer(required=True, metadata={"description": "Any other type of notification (reports, activity alerts, etc.)"})
+
+
+class UserRepliesRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    unread_only = fields.Boolean(metadata={"default": True})
+
+
+class CommentReply(DefaultSchema):
+    id = fields.Integer(required=True)  # redundant with comment_id
+    comment_id = fields.Integer(required=True)  # redundant with id
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    read = fields.Boolean(required=True)
+    recipient_id = fields.Integer(required=True)
+
+
+class CommentReplyView(DefaultSchema):
+    activity_alert = fields.Boolean(required=True)
+    comment = fields.Nested(Comment, required=True)
+    comment_reply = fields.Nested(CommentReply, required=True)
+    community = fields.Nested(Community, required=True)
+    counts = fields.Nested(CommentAggregates, required=True)
+    creator = fields.Nested(Person, required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_blocked = fields.Boolean(required=True)
+    creator_is_admin = fields.Boolean(required=True)
+    creator_is_moderator = fields.Boolean(required=True)
+    my_vote = fields.Integer(required=True)
+    post = fields.Nested(Post, required=True)
+    recipient = fields.Nested(Person, required=True)
+    saved = fields.Boolean(required=True)
+    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+
+
+class UserRepliesResponse(DefaultSchema):
+    next_page = fields.Integer(required=True, allow_none=True)
+    replies = fields.List(fields.Nested(CommentReplyView), required=True)
+
+
+class UserMentionsRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    unread_only = fields.Boolean(metadata={"default": True})
+
+
+class UserMentionsResponse(DefaultSchema):
+    next_page = fields.Integer(required=True, allow_none=True)
+    replies = fields.List(fields.Nested(CommentReplyView), required=True)
+
+
+class UserBlockRequest(DefaultSchema):
+    block = fields.Boolean(required=True)
+    person_id = fields.Integer(required=True)
+
+
+class UserBlockResponse(DefaultSchema):
+    blocked = fields.Boolean(required=True)
+    person_view = fields.Nested(PersonView, required=True)
+
+
+class UserMarkAllReadResponse(DefaultSchema):
+    replies = fields.List(fields.Nested(CommentReplyView), required=True, metadata={"description": "Should be empty list"})
+
+
+class UserSubscribeRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class UserSubscribeResponse(DefaultSchema):
+    person_view = fields.Nested(PersonView, required=True)
+    subscribed = fields.Boolean(required=True)  # Added field
+
+
+class UserSetFlairRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    flair_text = fields.String(allow_none=True, metadata={"description": "Either omit or set to null to remove existing flair"})
+
+
+class UserSetFlairResponse(DefaultSchema):
+    person_view = fields.Nested(PersonView)
+
+
+class UserSaveSettingsRequest(DefaultSchema):
+    avatar = fields.Url()
+    bio = fields.String(metadata={"format": "markdown"})
+    cover = fields.Url()
+    default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
+    default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    show_nsfw = fields.Boolean()
+    show_nsfl = fields.Boolean()
+    show_read_posts = fields.Boolean()
+
+
+class UserSaveSettingsResponse(DefaultSchema):
+    my_user = fields.Nested(MyUserInfo)

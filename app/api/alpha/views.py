@@ -283,6 +283,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "title": user.display_name(),
                     "avatar": user.avatar.medium_url() if user.avatar_id else None,
                     "banner": user.cover.medium_url() if user.cover_id else None,
+                    "about": user.about,
+                    "about_html": user.about_html,
                 },
                 "counts": {
                     "person_id": user.id,

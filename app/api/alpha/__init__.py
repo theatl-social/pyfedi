@@ -40,4 +40,11 @@ topic_bp = ApiBlueprint(
     description="",
 )
 
+user_bp = ApiBlueprint(
+    "User",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes
