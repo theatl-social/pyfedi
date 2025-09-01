@@ -1129,21 +1129,24 @@ def put_alpha_user_notifications_read():
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/user/verify_credentials', methods=['POST'])
-def post_alpha_user_verify_credentials():
+@user_bp.route('/user/verify_credentials', methods=['POST'])
+@user_bp.doc(summary="Verify username/password credentials")
+@user_bp.arguments(UserLoginRequest)
+@user_bp.response(200)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_verify_credentials(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('6/hour', exempt_when=is_trusted_request):
-            data = request.get_json(force=True) or {}
-            return jsonify(post_user_verify_credentials(data))
+            post_user_verify_credentials(data)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except NoResultFound:
-        return jsonify({"error": "Bad credentials"}), 400
+        return abort(400, message="Bad credentials")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @user_bp.route('/user/set_flair', methods=['POST'])
