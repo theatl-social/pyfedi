@@ -34,10 +34,11 @@ def get_user(auth, data):
         person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain,
                                    User.deleted == False).one()
         data['person_id'] = person.id
-    include_content = data['include_content'] if 'include_content' in data else 'false'
-    include_content = True if include_content == 'true' else False
-    saved_only = data['saved_only'] if 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    include_content = data['include_content'] if 'include_content' in data else False
+    # include_content = True if include_content == 'true' else False
+    saved_only = data['saved_only'] if 'saved_only' in data else False
+    # saved_only = True if saved_only == 'true' else False
+    data["limit"] = data["limit"] if data and "limit" in data else 20
 
     user_id = None
     if auth:
@@ -135,13 +136,16 @@ def get_user_unread_count(auth):
             "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'comment_mention'"),
             {'user_id': user.id, 'notif_type': NOTIF_MENTION}).scalar()
-        unread_mentions = unread_comment_mentions
+        unread_post_mentions = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'post_mention'"),
+            {"user_id": user.id, "notif_type": NOTIF_MENTION}).scalar()
+        unread_mentions = unread_comment_mentions + unread_post_mentions
         unread_messages = db.session.execute(
             text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"),
             {'user_id': user.id}).scalar()
 
     # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
-    # "mentions" are just comment mentions as /user/mentions endpoint will only deliver a CommentView
 
     unread_count = {
         "replies": unread_replies,
@@ -157,8 +161,7 @@ def get_user_replies(auth, data, mentions=False):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     sort = data['sort'] if data and 'sort' in data else "New"
-    unread_only = data['unread_only'] if data and 'unread_only' in data else 'true'
-    unread_only = True if unread_only == 'true' else False
+    unread_only = data['unread_only'] if data and 'unread_only' in data else True
 
     user_id = authorise_api_user(auth)
 
@@ -263,6 +266,7 @@ def put_user_subscribe(auth, data):
 
     user_id = subscribe_user(person_id, subscribe, SRC_API, auth)
     user_json = user_view(user=person_id, variant=5, user_id=user_id)
+    user_json["subscribed"] = subscribe
     return user_json
 
 
@@ -342,8 +346,8 @@ def get_user_notifications(auth, data):
     # get the user from data.user_id
     user = authorise_api_user(auth, return_type='model')
 
-    # get the status from data.status_request
-    status = data['status_request']
+    # get the status from data.status
+    status = data['status']
 
     # get the page for pagination from the data.page
     page = int(data['page']) if data and 'page' in data else 1
@@ -368,35 +372,47 @@ def get_user_notifications(auth, data):
     ]
 
     # new
-    if status == 'New':
+    if status == 'Unread':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
     # all
     elif status == 'All':
         for item in user_notifications:
             if isinstance(item.subtype, str) and item.notif_type in supported_notif_types:
-                notif = _process_notification_item(item)
-                items.append(notif)
+                try:
+                    notif = _process_notification_item(item)
+                    items.append(notif)
+                except AttributeError:
+                    # Something couldn't be fetched from the db, just skip
+                    continue
     # read
     elif status == 'Read':
         for item in user_notifications:
             if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
 
     # get counts for new/read/all
     counts = {}
-    counts['total_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
-    counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
-    counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
+    counts['total'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
+    counts['unread'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    counts['read'] = counts['total'] - counts['unread']
 
     # make dicts of that and pass back
     res = {}
-    res['user'] = user.user_name
+    res['username'] = user.user_name
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
@@ -466,7 +482,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_REPLY
+    # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
@@ -497,7 +513,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_MENTION
+    # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
         notification_json = {}
         if item.subtype == 'post_mention':
@@ -524,6 +540,8 @@ def _process_notification_item(item):
             notification_json['notif_body'] = comment.body if comment.body else ''
             notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
+    
+    return False
 
 
 def put_user_notification_state(auth, data):
@@ -538,14 +556,23 @@ def put_user_notification_state(auth, data):
     # get the notification from the data.notif_id
     notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
+    try:
+        # make a json for the specific notification and return that one item
+        res = _process_notification_item(notif)
+    except AttributeError:
+        # Problems looking something up in the db
+        raise Exception("There was a problem processing that notification")
+    
+    if not res:
+        # Unsupported notification type
+        raise Exception("This notification type is currently unsupported in the api")
+
     # set the read state for the notification
     notif.read = read_state
 
     # commit that change to the db
     db.session.commit()
 
-    # make a json for the specific notification and return that one item
-    res = _process_notification_item(notif)
     return res
 
 
@@ -581,9 +608,9 @@ def post_user_verify_credentials(data):
     password = data['password']
 
     if '@' in username:
-        user = User.query.filter(func.lower(User.email) == username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).one()
     else:
-        user = User.query.filter(func.lower(User.user_name) == username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).one()
 
     if user is None or not user.check_password(password):
         raise NoResultFound
@@ -592,23 +619,30 @@ def post_user_verify_credentials(data):
 
 
 def post_user_set_flair(auth, data):
-    required(['community_id', 'flair_text'], data)
+    required(['community_id'], data)
     integer_expected(['community_id'], data)
-    string_expected(['flair_text'], data)
-    if len(data['flair_text']) > 50:
+
+    flair_text = data['flair_text'] if data and 'flair_text' in data else None
+
+    if flair_text is not None and len(flair_text) > 50:
         raise Exception('Flair text is too long (50 chars max)')
 
     user = authorise_api_user(auth, return_type='model')
     community_id = data['community_id']
-    flair_text = data['flair_text']
 
     try:
-        user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
-        user_flair.flair = flair_text
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            user_flair.flair = flair_text
+            db.session.commit()
+        else:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            db.session.delete(user_flair)
+            db.session.commit()
     except NoResultFound:
-        user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
-        db.session.add(user_flair)
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
+            db.session.add(user_flair)
+            db.session.commit()
 
     return user_view(user=user, variant=5, flair_community_id=community_id)
