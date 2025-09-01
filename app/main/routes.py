@@ -1190,9 +1190,15 @@ def static_manifest():
 def list_feeds():
     # default to no public feeds
     server_has_feeds = False
+    search_param = request.args.get('search', '')
 
-    # find all the feeds marked as public
-    public_feeds = feed_tree_public()
+    if search_param == '':
+        # find all the feeds marked as public
+        public_feeds = feed_tree_public()
+        
+    else:
+        # find all the feeds marked as public that match the search param
+        public_feeds = feed_tree_public(search_param)
 
     if len(public_feeds) > 0:
         server_has_feeds = True
@@ -1213,7 +1219,8 @@ def list_feeds():
         # render the page
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds,
                                public_feeds_list=public_feeds,
-                               subscribed_feeds=subscribed_feeds(current_user.get_id()))
+                               subscribed_feeds=subscribed_feeds(current_user.get_id()),
+                               search_hint=search_param)
 
 
 @bp.route('/content_warning', methods=['GET', 'POST'])

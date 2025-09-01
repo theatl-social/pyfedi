@@ -1667,8 +1667,11 @@ def feed_tree(user_id) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-def feed_tree_public() -> List[dict]:
-    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
+def feed_tree_public(search_param=None) -> List[dict]:
+    if search_param:
+        feeds = Feed.query.filter(Feed.public == True).filter(Feed.title.ilike(f"%{search_param}%")).order_by(Feed.title)
+    else:
+        feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
 

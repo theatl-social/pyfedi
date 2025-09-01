@@ -16,6 +16,14 @@
             <a href="{{ url_for('feed.feed_add_remote') }}" class="btn btn-outline-secondary" aria-label="{{ _('Add a Feed from another instance') }}">{{ _('Add remote Feed') }}</a>
         </div>
     </div>    
+    <div class="col-auto">
+        <form id="searchFeeds" method="get">
+            <input id="search_text" class="form-control" type="search"
+                   name="search"
+                   placeholder="{{ '' if search_hint != '' else _('Search') }}"
+                   value="{{ search_hint if search_hint != '' }}">
+        </form>
+    </div>
 </div>
 {% if server_has_feeds %}
     {% macro render_feed(feed, depth) %}
