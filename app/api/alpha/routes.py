@@ -103,16 +103,12 @@ def get_alpha_site_block(data):
 def get_alpha_site_instance_chooser():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
-    try:
-        if get_setting('enable_instance_chooser', False):
-            auth = request.headers.get('Authorization')
-            resp = get_site_instance_chooser(auth)
-            return GetSiteInstanceChooserResponse().load(resp)
-        else:
-            return abort(404)
-    except Exception as ex:
-        current_app.logger.error(str(ex))
-        return abort(400, message=str(ex))
+    if get_setting('enable_instance_chooser', False):
+        auth = request.headers.get('Authorization')
+        resp = get_site_instance_chooser(auth)
+        return GetSiteInstanceChooserResponse().load(resp)
+    else:
+        return abort(404)
 
 
 @site_bp.route('/site/instance_chooser_search', methods=['GET'])
