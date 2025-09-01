@@ -15,7 +15,7 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow, Instance
+    Report, Site, User, utcnow, Instance, Event
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
@@ -505,6 +505,15 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         if poll.local_only:
             federate = False
+
+    if type == POST_TYPE_EVENT:
+        post.type = POST_TYPE_EVENT
+        event = Event.query.filter_by(post_id=post.id).first()
+        if event is None:
+            event = Event(post_id=post.id)
+            db.session.add(event)
+        # todo: populate event model
+        db.session.commit()
 
     # add tags & flair
     post.tags = tags

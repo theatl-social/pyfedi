@@ -307,9 +307,9 @@ class EditImageForm(CreateImageForm):
 class CreateEventForm(CreatePostForm):
     start_datetime = DateTimeLocalField(_l('Start'))
     end_datetime = DateTimeLocalField(_l('End'))
-    image_file = FileField(_l('Image'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
-    link_url = StringField(_l('More information link'), validators=[DataRequired(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
-    timezone = SelectField(_('Timezone'), validators=[DataRequired()],
+    image_file = FileField(_l('Banner'), validators=[DataRequired()], render_kw={'accept': 'image/*'})
+    more_info_url = StringField(_l('More information link'), validators=[DataRequired(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
+    event_timezone = SelectField(_('Timezone'), validators=[DataRequired()],
                            render_kw={'id': 'timezone', "class": "form-control tom-select"})
     join_mode = SelectField(_('Join mode'), validators=[DataRequired()])
     max_attendees = IntegerField(_l('Maximum number of attendees'))
@@ -333,16 +333,15 @@ class CreateEventForm(CreatePostForm):
         super().validate(extra_validators)
 
         uploaded_file = request.files['image_file']
-        if uploaded_file.filename.endswith('.gif'):
-            max_size_in_mb = 10 * 1024 * 1024  # 10 MB
-            if len(uploaded_file.read()) > max_size_in_mb:
-                error_message = "This image filesize is too large."
-                if not isinstance(self.image_file.errors, list):
-                    self.image_file.errors = [error_message]
-                else:
-                    self.image_file.errors.append(error_message)
-                return False
-            uploaded_file.seek(0)
+        max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+        if len(uploaded_file.read()) > max_size_in_mb:
+            error_message = "This image filesize is too large."
+            if not isinstance(self.image_file.errors, list):
+                self.image_file.errors = [error_message]
+            else:
+                self.image_file.errors.append(error_message)
+            return False
+        uploaded_file.seek(0)
         if self.communities:
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:

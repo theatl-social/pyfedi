@@ -1071,7 +1071,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 return
 
                         object_type = core_activity['object']['type']
-                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question', 'Event']
                         if object_type in new_content_types:  # create or update a post
                             process_new_content(user, community, store_ap_json, request_json, announced)
                             return

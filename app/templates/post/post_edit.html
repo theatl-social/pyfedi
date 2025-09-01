@@ -136,6 +136,11 @@
                 {{ render_field(form.local_only) }}
             {% endif %}
 
+            {% if post_type == POST_TYPE_EVENT %}
+            {{ render_field(form.start_datetime) }}
+            {{ render_field(form.end_datetime) }}
+            {% endif %}
+
             {{ render_field(form.tags) }}
             <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
 
