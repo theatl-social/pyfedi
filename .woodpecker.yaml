@@ -1,14 +1,59 @@
 steps:
-  - name: docker-build
-    image: woodpeckerci/plugin-docker-buildx
-    settings:
-      repo: codeberg.org/${CI_REPO_OWNER}/pyfedi
-      registry: codeberg.org
-      tags: latest
-      username: ${CI_REPO_OWNER}
-      password:
-        from_secret: cb_token
+  # --- Podman variant (runs on agents with podman backend/label) ---
+  - name: podman-login
+    when:
+      event:
+        - push
+        - tag
+      # If your Woodpecker agents are labeled, uncomment and adjust:
+      # instance:
+      #   labels:
+      #     backend: podman
+    image: quay.io/podman/stable
+    privileged: true
+    environment:
+      PACKAGER_TOKEN:
+        from_secret: PACKAGER_TOKEN
+    commands:
+      - sh -lc 'OWNER="${CI_REPO%%/*}"; echo "$PACKAGER_TOKEN" | podman login codeberg.org -u "$OWNER" --password-stdin'
+
+  - name: podman-build-and-push
+    when:
+      event:
+        - push
+        - tag
+      # instance:
+      #   labels:
+      #     backend: podman
+    image: quay.io/podman/stable
+    privileged: true
+    environment:
+      PACKAGER_TOKEN:
+        from_secret: PACKAGER_TOKEN
+    commands:
+      - |
+        sh -lc '
+          set -e
+          OWNER="${CI_REPO%%/*}"
+          echo "$PACKAGER_TOKEN" | podman login codeberg.org -u "$OWNER" --password-stdin
+          IMAGE_REPO="codeberg.org/$CI_REPO"
+          if [ -n "$CI_COMMIT_TAG" ]; then IMAGE_TAG="$CI_COMMIT_TAG"; else IMAGE_TAG=$(printf "$CI_COMMIT_SHA" | cut -c1-7); fi
+          echo "CI_REPO=$CI_REPO"
+          echo "CI_COMMIT_SHA=$CI_COMMIT_SHA"
+          echo "CI_COMMIT_TAG=$CI_COMMIT_TAG"
+          echo "Resolved IMAGE_REPO=$IMAGE_REPO"
+          echo "Resolved IMAGE_TAG=$IMAGE_TAG"
+          echo "Building $IMAGE_REPO:$IMAGE_TAG (linux/amd64) via Podman"
+          podman build -t "$IMAGE_REPO:$IMAGE_TAG" -t "$IMAGE_REPO:latest" -f Dockerfile .
+          podman push "$IMAGE_REPO:$IMAGE_TAG"
+          podman push "$IMAGE_REPO:latest"
+        '
+
   - name: mail
+    when:
+      event:
+        - push
+        - tag
     image: deblan/woodpecker-email
     settings:
       dsn:
