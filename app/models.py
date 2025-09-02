@@ -3282,6 +3282,7 @@ class CommunityFlair(db.Model):
     text_color = db.Column(db.String(50))
     background_color = db.Column(db.String(50))
     blur_images = db.Column(db.Boolean, default=False)
+    ap_id = db.Column(db.String(255), index=True, unique=True)
 
 
 class UserFlair(db.Model):

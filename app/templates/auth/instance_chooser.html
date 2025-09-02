@@ -63,6 +63,7 @@
         </div>
         
         <!-- Results will be populated here by JavaScript -->
+        <hr>
         <div id="search-results" class="row mt-3 instance_chooser_results">
         </div>
         <div class="row">
@@ -314,7 +315,7 @@
                         <button class="btn btn-outline-secondary more-info-btn mt-2" data-id="${instance.id}" style="float: right;">{{ _('More') }}</button>
                         {{ _('Stability') }}: ${instance.maturity} <br>
                         {{ _('Newbie friendly') }}: ${instance.newbie_friendly ? 'Yes' : 'No'}  <br>
-                        {{ _('Age') }}: ${instance.monthsmonitored ? instance.monthsmonitored + ' months' : ''}
+                        {{ _('Age') }}: ${instance.monthsmonitored ? instance.monthsmonitored + ' months' : 'New'}
                     </div>
                 </div>
             </div>

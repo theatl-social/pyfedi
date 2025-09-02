@@ -1306,6 +1306,9 @@ def can_create_post(user, content: Community) -> bool:
         if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
             return False
 
+    if content.banned:
+        return False
+
     if content.is_moderator(user) or user.is_admin():
         return True
 
@@ -1334,6 +1337,9 @@ def can_create_post_reply(user, content: Community) -> bool:
     else:
         if instance_banned(user.instance.domain):
             return False
+
+    if content.banned:
+        return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1661,8 +1667,11 @@ def feed_tree(user_id) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-def feed_tree_public() -> List[dict]:
-    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
+def feed_tree_public(search_param=None) -> List[dict]:
+    if search_param:
+        feeds = Feed.query.filter(Feed.public == True).filter(Feed.title.ilike(f"%{search_param}%")).order_by(Feed.title)
+    else:
+        feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
 

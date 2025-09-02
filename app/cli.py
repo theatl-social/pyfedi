@@ -300,7 +300,8 @@ def register(app):
                 update_community_stats, cleanup_old_voting_data, unban_expired_users,
                 sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
                 recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser
+                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser,
+                clean_up_tmp
             )
 
             print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
@@ -330,6 +331,9 @@ def register(app):
                 cleanup_old_activitypub_logs()
                 archive_old_posts()
                 archive_old_users()
+                if get_setting('auto_add_remote_communities', False):
+                    add_remote_communities()
+                clean_up_tmp()
                 print('All maintenance tasks completed synchronously (debug mode)')
             else:
                 if get_setting('enable_instance_chooser', False):
@@ -352,6 +356,9 @@ def register(app):
                 cleanup_old_activitypub_logs.delay()
                 archive_old_posts.delay()
                 archive_old_users.delay()
+                if get_setting('auto_add_remote_communities', False):
+                    add_remote_communities.delay()
+                clean_up_tmp.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
     @app.cli.command('daily-maintenance')
