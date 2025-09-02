@@ -3,6 +3,7 @@ from typing import List
 from zoneinfo import ZoneInfo
 
 import boto3
+import arrow
 from PIL import Image, ImageOps
 from flask import flash, request, current_app, g
 from flask_babel import _, force_locale, gettext
@@ -388,7 +389,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             else:
                 raise Exception('filetype not allowed')
 
-
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
         if current_app.config['IMAGE_HASHING_ENDPOINT']:  # and not user.trustworthy():
@@ -452,15 +452,22 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url, hash=hash)
-            post.type = POST_TYPE_IMAGE
-            if uploaded_file:
+            if uploaded_file and type == POST_TYPE_IMAGE:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
-            make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
-            post.url = url
+
+            
+            # For events, uploaded images are banners - don't change post type or URL
+            if type == POST_TYPE_EVENT:
+                post.url = None  # Events don't have URLs when they have banner images
+                make_image_sizes(post.image_id, 170, 2000, 'posts', post.community.low_quality)
+            else:
+                make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+                post.type = POST_TYPE_IMAGE
+                post.url = url
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
@@ -513,12 +520,23 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             event = Event(post_id=post.id)
             db.session.add(event)
         # populate event model
-        event.start = input.start_datetime.data
-        event.end = input.end_datetime.data
+        # Treat datetime-local input as naive datetime in the specified timezone
+        local_tz = ZoneInfo(input.event_timezone.data)
+        local_start = input.start_datetime.data.replace(tzinfo=local_tz)
+        local_end = input.end_datetime.data.replace(tzinfo=local_tz)
+
+        # Convert to UTC for storage
+        utc_start = local_start.astimezone(ZoneInfo('UTC'))
+        utc_end = local_end.astimezone(ZoneInfo('UTC'))
+
+        # Store as naive UTC
+        event.start = utc_start.replace(tzinfo=None)
+        event.end = utc_end.replace(tzinfo=None)
         event.timezone = input.event_timezone.data
         event.max_attendees = input.max_attendees.data
         event.online = input.online.data
         event.online_link = input.online_link.data
+        event.join_mode = input.join_mode.data
         event.location = {
             'address': input.irl_address.data,
             'city': input.irl_city.data,

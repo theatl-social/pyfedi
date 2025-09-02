@@ -58,6 +58,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPopupTooltips();
     setupPasswordEye();
     setupBasicAutoResize();
+    setupEventTimes();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1994,4 +1995,24 @@ function setupBasicAutoResize() {
             window.autoResizeWindowListenerAdded = true;
         }
     }
+}
+
+function setupEventTimes() {
+    document.querySelectorAll("time.convert_to_local").forEach(el => {
+        const utcStr = el.textContent.trim();
+
+        // Parse as UTC - handle both ISO format with Z and plain format
+        const utcDate = utcStr.endsWith('Z') ? new Date(utcStr) : new Date(utcStr + " UTC");
+
+        // Format in viewer's local timezone
+        el.textContent = utcDate.toLocaleString([], {
+            weekday: "short",
+            year: "numeric",
+            month: "short",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZoneName: "short"
+        });
+    });
 }

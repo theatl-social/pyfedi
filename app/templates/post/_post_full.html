@@ -106,6 +106,34 @@
                     <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" rel="nofollow ugc"><img src="{{ post.image.view_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                             width="{{ post.image.width }}" height="{{ post.image.height }}" loading="lazy" /></a>
                 </div>
+            {% elif post.type == POST_TYPE_EVENT -%}
+                <div class="post_event">
+                    <p><strong>{{ _('When') }}:</strong> <time class="convert_to_local">{{ event.start.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time> - <time class="convert_to_local">{{ event.end.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time></p>
+                    
+                    {% if event.online -%}
+                        <p><strong>{{ _('Online Event') }}</strong></p>
+                        {% if event.online_link -%}
+                            <p><strong>{{ _('Join Link') }}:</strong> <a href="{{ event.online_link }}" target="_blank" rel="nofollow ugc">{{ event.online_link }} <span class="fe fe-external"></span></a></p>
+                        {% endif -%}
+                    {% else -%}
+                        <p><strong>{{ _('Location') }}:</strong></p>
+                        {% if event.location -%}
+                            <p>
+                                {% if event.location.address -%}{{ event.location.address }}<br>{% endif -%}
+                                {% if event.location.city -%}{{ event.location.city }}{% endif -%}
+                                {% if event.location.country -%}{% if event.location.city %}, {% endif %}{{ event.location.country }}{% endif -%}
+                            </p>
+                        {% endif -%}
+                    {% endif -%}
+                    
+                    {% if event.max_attendees -%}
+                        <p><strong>{{ _('Max Attendees') }}:</strong> {{ event.max_attendees }}</p>
+                    {% endif -%}
+                    
+                    {% if event.join_mode -%}
+                        <p><strong>{{ _('Join Mode') }}:</strong> {{ event.join_mode|title }}</p>
+                    {% endif -%}
+                </div>
             {% else -%}
                 {% if post.image_id and not (post.url and 'youtube.com' in post.url) -%}
                         <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" aria-label="Go to video" rel="nofollow ugc"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"

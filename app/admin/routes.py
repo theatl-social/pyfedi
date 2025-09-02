@@ -42,7 +42,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
     safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
-    instance_allowed, trusted_instance_ids, trusted_instance_domains
+    instance_allowed, trusted_instance_ids
 from app.admin import bp
 
 

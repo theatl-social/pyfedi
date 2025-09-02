@@ -39,7 +39,12 @@
                 <input type="hidden" id="retrieved_title" value="">
             {% endif -%}
             {{ render_field(form.title) }}
-            {% if post_type == POST_TYPE_IMAGE %}
+            {% if post_type == POST_TYPE_EVENT %}
+                {{ render_field(form.start_datetime) }}
+                {{ render_field(form.end_datetime) }}
+                {{ render_field(form.event_timezone) }}
+            {% endif %}
+            {% if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT %}
                 {% if post.image_id -%}
                     <div class="post_image">
                         {% if low_bandwidth -%}
@@ -58,8 +63,10 @@
                 {% endif %}
                 {{ render_field(form.image_file) }}
                 <img id="image_preview" style="" alt="Image preview">
-                {{ render_field(form.image_alt_text) }}
-                <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
+                {% if post_type == POST_TYPE_IMAGE -%}
+                    {{ render_field(form.image_alt_text) }}
+                    <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
+                {% endif %}
             {% elif post_type == POST_TYPE_VIDEO %}
                 {{ render_field(form.video_url) }}
                 <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
@@ -137,10 +144,8 @@
             {% endif %}
 
             {% if post_type == POST_TYPE_EVENT %}
-                {{ render_field(form.start_datetime) }}
-                {{ render_field(form.end_datetime) }}
-                {{ render_field(form.event_timezone) }}
                 {{ render_field(form.max_attendees) }}
+                {{ render_field(form.join_mode) }}
                 {{ render_field(form.online) }}
                 <div id="online_location" style="{% if event_online is false %}display: none;{% endif %}">
                     {{ render_field(form.online_link) }}

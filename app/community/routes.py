@@ -14,9 +14,8 @@ from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery, httpx_client, limiter, plugins
-from app.activitypub.signature import RsaKeys, post_request, send_post_request
+from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
-from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
@@ -25,7 +24,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     CreateEventForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
+    delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
@@ -35,21 +34,21 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
-    File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
+    File, utcnow, Report, Notification, Topic, PostReply, \
+    NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
     post_tag, Tag
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
     remove_mod_from_community
-from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
-    shorten_string, gibberish, community_membership, ap_datetime, \
+from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
+    shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
     blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, languages_for_form, menu_topics, add_to_modlog, \
+    blocked_users, languages_for_form, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
@@ -908,7 +907,6 @@ def add_post(actor, type):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = possible_communities()
-
     form.language_id.choices = languages_for_form()
     flair_choices = flair_for_form(community.id)
     if len(flair_choices):
@@ -927,8 +925,8 @@ def add_post(actor, type):
                 'user_id': current_user.id
             }
             plugins.fire_hook('before_post_create', post_data)
-            
-            uploaded_file = request.files['image_file'] if type == 'image' else None
+
+            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' else None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -957,8 +955,8 @@ def add_post(actor, type):
         if post_type == POST_TYPE_POLL:
             form.finish_in.data = '3d'
         elif post_type == POST_TYPE_EVENT:
-            # todo: load timezones into form.event_timezones
             form.online.data = True
+            form.event_timezone.data = current_user.timezone
         if community.posting_warning:
             flash(community.posting_warning)
 

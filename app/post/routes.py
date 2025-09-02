@@ -39,7 +39,6 @@ from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_book
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
 from app.shared.tasks import task_selector
-from app.translation import LibreTranslateAPI
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, instance_banned, \
@@ -236,6 +235,11 @@ def show_post(post_id: int):
                 else:
                     poll_form = True
 
+        # Events
+        event = None
+        if post.type == POST_TYPE_EVENT:
+            event = Event.query.filter_by(post_id=post.id).first()
+
         # Archive.ph link
         archive_link = None
         if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
@@ -281,6 +285,7 @@ def show_post(post_id: int):
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                                   event=event,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
                                    user_flair=user_flair, lazy_load_replies=lazy_load_replies,
                                    THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
@@ -888,7 +893,7 @@ def post_edit(post_id: int):
 
         if form.validate_on_submit():
             try:
-                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
+                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT else None
                 edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
