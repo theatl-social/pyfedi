@@ -46,7 +46,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         if object.deleted:
             raise Exception('No object found.')
         return reply_view(reply=object, variant=5, user_id=user_id) if not recursive else object
-    object = Post.query.filter_by(ap_id=query).first()
+    object = db.session.query(Post).filter_by(ap_id=query).first()
     if object:
         if object.deleted:
             raise Exception('No object found.')
