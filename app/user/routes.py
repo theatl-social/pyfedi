@@ -1866,7 +1866,7 @@ def lookup(person, domain):
 
 # ----- user feed related routes
 
-@bp.route('/u/<actor>/myfeeds', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/myfeeds', methods=['GET'])
 @login_required
 def user_myfeeds(actor):
     # this will show a user's personal feeds
@@ -1889,7 +1889,7 @@ def user_myfeeds(actor):
                            )
 
 
-@bp.route('/u/<actor>/feeds', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/feeds', methods=['GET'])
 def user_feeds(actor):
     # this will show a specific user's public feeds
     user_has_public_feeds = False
