@@ -63,7 +63,7 @@
           aria-label="{{ _('Choose a public feed to filter communities by') }}">
         <option value="0">{{ _('All') }}</option>
         {% for feed in public_feeds -%}
-          <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.link() }}
+          <option value="{{ feed.id }}" {{ 'selected' if feed.id == feed_id }}>{{ feed.display_name() }}
           </option>
         {% endfor -%}
       </select></label>
