@@ -977,7 +977,7 @@ class AdminRegistrationStatsResponse(DefaultSchema):
 class AdminUserExportRequest(DefaultSchema):
     format = fields.String(validate=validate.OneOf(["csv", "json"]), 
                           metadata={"description": "Export format", "default": "csv"})
-    fields = fields.List(fields.String(), 
+    export_fields = fields.List(fields.String(), 
                         metadata={"description": "Fields to include in export"})
     filters = fields.Dict(metadata={"description": "Same filters as user list endpoint"})
 

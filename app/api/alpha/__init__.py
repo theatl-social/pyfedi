@@ -56,3 +56,4 @@ admin_bp = ApiBlueprint(
 
 from app.api.alpha import routes
 from app.api.admin import routes as admin_routes
+from app.api.admin import monitoring_routes

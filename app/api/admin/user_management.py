@@ -375,7 +375,7 @@ def get_registration_statistics(days=30, include_hourly=False):
     }
 
 
-def export_user_data(format_type='csv', fields=None, filters=None):
+def export_user_data(format_type='csv', export_fields=None, filters=None):
     """
     Export user data in various formats.
     
@@ -388,8 +388,8 @@ def export_user_data(format_type='csv', fields=None, filters=None):
         dict: Export result with download info
     """
     # Default fields
-    if not fields:
-        fields = ['id', 'username', 'email', 'display_name', 'created_at', 
+    if not export_fields:
+        export_fields = ['id', 'username', 'email', 'display_name', 'created_at', 
                  'last_seen', 'is_verified', 'is_banned', 'is_local']
     
     # Build query with filters

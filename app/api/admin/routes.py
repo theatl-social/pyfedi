@@ -30,6 +30,7 @@ from app.api.alpha.schema import (
     AdminUserExportResponse
 )
 from app.api.admin.security import require_private_registration_auth
+from app.api.admin.monitoring import track_admin_request, check_advanced_rate_limit
 from app.api.admin.private_registration import (
     create_private_user,
     validate_user_availability,
@@ -79,8 +80,12 @@ from datetime import datetime
 @admin_bp.alt_response(429, AdminPrivateRegistrationError, 
                        description="Rate limit exceeded")
 @require_private_registration_auth
+@track_admin_request('private_register', 'POST')
 def create_private_user_endpoint(json_data):
     """Create a new user via private registration"""
+    # Apply advanced rate limiting
+    check_advanced_rate_limit('private_registration')
+    
     try:
         result = create_private_user(json_data)
         return result, 201
@@ -465,8 +470,12 @@ def delete_user_endpoint(json_data, user_id):
 @admin_bp.response(200, AdminBulkUserResponse, description="Bulk operation completed")
 @admin_bp.alt_response(400, AdminPrivateRegistrationError, description="Invalid request or too many users")
 @require_private_registration_auth
+@track_admin_request('users_bulk', 'POST')
 def bulk_user_operations_endpoint(json_data):
     """Perform bulk operations on users"""
+    # Apply strict rate limiting for bulk operations
+    check_advanced_rate_limit('bulk_operations')
+    
     try:
         result = bulk_user_operations(
             operation=json_data['operation'],
@@ -495,8 +504,12 @@ def bulk_user_operations_endpoint(json_data):
 )
 @admin_bp.response(200, AdminUserStatsResponse, description="User statistics")
 @require_private_registration_auth
+@track_admin_request('stats_users', 'GET')
 def user_statistics_endpoint():
     """Get comprehensive user statistics"""
+    # Apply rate limiting for statistics
+    check_advanced_rate_limit('statistics')
+    
     try:
         result = get_user_statistics()
         return result, 200
@@ -558,7 +571,7 @@ def export_users_endpoint(json_data):
     try:
         result = export_user_data(
             format_type=json_data.get('format', 'csv'),
-            fields=json_data.get('fields'),
+            export_fields=json_data.get('export_fields'),
             filters=json_data.get('filters')
         )
         return result, 200
