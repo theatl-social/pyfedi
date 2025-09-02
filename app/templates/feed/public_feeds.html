@@ -31,7 +31,7 @@
             <td>
                 {% if current_user.is_authenticated %}
                     {% if feed['feed'].id in subscribed_feeds %}
-                        <a class="btn btn-primary btn-sm" href="{{ url_for('feed.feed_unsubscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}" rel="nofollow" aria-label="{{ _('Unsubscribe %(name)s', name=feed['feed'].title) }}">{{ _('Unsubscribe') }}</a>
+                        <a class="btn btn-warning btn-sm" href="{{ url_for('feed.feed_unsubscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}" rel="nofollow" aria-label="{{ _('Unsubscribe %(name)s', name=feed['feed'].title) }}">{{ _('Unsubscribe') }}</a>
                     {% else %}
                         <a class="btn btn-primary btn-sm" href="{{ url_for('feed.subscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}" rel="nofollow" aria-label="{{ _('Join %(name)s', name=feed['feed'].title) }}">{{ _('Subscribe') }}</a>
                     {% endif %}
