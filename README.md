@@ -1,4 +1,23 @@
-# PieFed
+# PeachPie
+
+A federated discussion and link aggregation platform, forked from PieFed.
+
+## About This Fork
+
+**PeachPie** is a fork of [PieFed](https://codeberg.org/rimu/pyfedi) that maintains compatibility with the upstream project while adding additional features and enhancements. This fork will largely follow the PieFed upstream development.
+
+### Key Differences from PieFed
+
+- **Enhanced Admin API**: Comprehensive administrative API with private registration, user management, and monitoring capabilities
+- **Advanced Rate Limiting**: Redis-backed sliding window rate limiting with Prometheus metrics
+- **Extended Monitoring**: Real-time performance metrics, health checks, and audit trails
+- **Improved Security**: Enhanced authentication systems and IP whitelisting support
+
+### Relationship to Upstream
+
+PeachPie tracks the main PieFed repository and regularly merges upstream changes to stay current with the latest developments. All core functionality remains compatible with standard PieFed instances, ensuring federation compatibility across the network.
+
+## About PieFed
 
 A Lemmy/Mbin alternative written in Python with Flask.
 
