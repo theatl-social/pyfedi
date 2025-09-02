@@ -491,6 +491,18 @@ server {
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
 
+Recommended anti-scraper (they use fake user agent strings) config:
+
+```
+    # Scrapers often use old user-agents
+    if ($http_user_agent ~* "(Chrome/[0-9]{1,2}(?![0-9])|Firefox/[0-9]{1,2}(?![0-9])|Safari/([0-9]|1[0-4])(?![0-9]))") {
+        return 403;
+    }
+    if ($http_user_agent ~* "(Opera/[0-9]|Presto/|MSIE|Trident/)") {
+        return 403;
+    }
+```
+
 #### Caddy
 
 ```
