@@ -121,7 +121,7 @@
                         </p>
 
                             {% if menu_instance_feeds -%}
-                                <h4 class="mb-0"><a href="/u/myfeeds">{{ _('Feeds') }}</a></h4>
+                                <h4 class="mb-0"><a href="/u/{{ current_user.link() }}/myfeeds">{{ _('Feeds') }}</a></h4>
                                 <p>
                                 {% for feed_menu_item in menu_instance_feeds -%}
                                     <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
@@ -130,7 +130,7 @@
                            {% endif -%}
 
                               {% if menu_my_feeds or menu_subscribed_feeds -%}
-                                <h4 class="mb-0"><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></h4>
+                                <h4 class="mb-0"><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></h4>
                                 <p>
                                    {% for feed_menu_item in menu_my_feeds -%}
                                         <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
@@ -140,7 +140,7 @@
                                    {% endfor -%}
                                     <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></p>
                               {% else -%}
-                                <p><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a><br>
+                                <p><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a><br>
                                 <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></p>
                               {% endif -%}
 

@@ -41,7 +41,7 @@
             </td>
             <td nowrap="nowrap">{{ '--' * depth }}
                 {% if depth == 0 %}<strong>{% endif %}
-                    <a href="/f/{{ feed['feed'].link() }}">{{ feed['feed'].title }}</a>
+                    <a href="/f/{{ feed['feed'].link() }}">{{ feed['feed'].display_name() }}</a>
                 {% if depth == 0 %}</strong>{% endif %}
             </td>
             <td>{{ feed['feed'].num_communities }}</td>
