@@ -14,9 +14,11 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import db, constants, cache, limiter
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
-from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
+    CreateEventForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
-from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
+    POST_TYPE_EVENT
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -24,7 +26,7 @@ from app.inoculation import inoculation
 from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
@@ -847,8 +849,9 @@ def post_edit(post_id: int):
             post_type = POST_TYPE_LINK
     elif post.type == POST_TYPE_POLL:
         form = CreatePollForm()
-        poll = Poll.query.filter_by(post_id=post_id).first()
         del form.finish_in
+    elif post.type == POST_TYPE_EVENT:
+        form = CreateEventForm()
     else:
         abort(404)
 
@@ -894,6 +897,7 @@ def post_edit(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
+            event_online = None
             form.title.data = post.title
             form.body.data = post.body
             form.notify_author.data = post.notify_author
@@ -933,12 +937,27 @@ def post_edit(post_id: int):
                     form_field = getattr(form, f"choice_{i}")
                     form_field.data = choice.choice_text
                     i += 1
+            elif post_type == POST_TYPE_EVENT:
+                event = Event.query.filter_by(post_id=post.id).first()
+                form.start_datetime.data = event.start
+                form.end_datetime.data = event.end
+                form.event_timezone.data = event.timezone
+                form.max_attendees.data = event.max_attendees
+                form.online.data = event.online
+                if event.online:
+                    form.online_link.data = event.online_link
+                else:
+                    form.irl_address.data = event.location['address']
+                    form.irl_city.data = event.location['city']
+                    form.irl_country.data = event.location['country']
+                event_online = event.online
 
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
                                    post_type=post_type, community=post.community, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
+                                   event_online=event_online,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    )
     else:

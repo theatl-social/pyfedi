@@ -137,8 +137,19 @@
             {% endif %}
 
             {% if post_type == POST_TYPE_EVENT %}
-            {{ render_field(form.start_datetime) }}
-            {{ render_field(form.end_datetime) }}
+                {{ render_field(form.start_datetime) }}
+                {{ render_field(form.end_datetime) }}
+                {{ render_field(form.event_timezone) }}
+                {{ render_field(form.max_attendees) }}
+                {{ render_field(form.online) }}
+                <div id="online_location" style="{% if event_online is false %}display: none;{% endif %}">
+                    {{ render_field(form.online_link) }}
+                </div>
+                <div id="irl_location" style="{% if event_online %}display: none;{% endif %}">
+                    {{ render_field(form.irl_address) }}
+                    {{ render_field(form.irl_city) }}
+                    {{ render_field(form.irl_country) }}
+                </div>
             {% endif %}
 
             {{ render_field(form.tags) }}

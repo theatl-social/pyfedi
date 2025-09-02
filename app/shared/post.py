@@ -512,7 +512,18 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         if event is None:
             event = Event(post_id=post.id)
             db.session.add(event)
-        # todo: populate event model
+        # populate event model
+        event.start = input.start_datetime.data
+        event.end = input.end_datetime.data
+        event.timezone = input.event_timezone.data
+        event.max_attendees = input.max_attendees.data
+        event.online = input.online.data
+        event.online_link = input.online_link.data
+        event.location = {
+            'address': input.irl_address.data,
+            'city': input.irl_city.data,
+            'country': input.irl_country.data
+        }
         db.session.commit()
 
     # add tags & flair

@@ -956,6 +956,9 @@ def add_post(actor, type):
         form.notify_author.data = True
         if post_type == POST_TYPE_POLL:
             form.finish_in.data = '3d'
+        elif post_type == POST_TYPE_EVENT:
+            # todo: load timezones into form.event_timezones
+            form.online.data = True
         if community.posting_warning:
             flash(community.posting_warning)
 
@@ -991,7 +994,7 @@ def add_post(actor, type):
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post, hide_community_actions=True,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, event_online=True,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 

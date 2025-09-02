@@ -313,6 +313,12 @@ class CreateEventForm(CreatePostForm):
                            render_kw={'id': 'timezone', "class": "form-control tom-select"})
     join_mode = SelectField(_('Join mode'), validators=[DataRequired()])
     max_attendees = IntegerField(_l('Maximum number of attendees'))
+    online = BooleanField(_l('Online'))
+    online_link = StringField(_l('Online link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
+    irl_address = StringField(_l('Address'))
+    irl_city = StringField(_l('City'))
+    irl_country = StringField(_l('Country'))
+
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

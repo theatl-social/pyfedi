@@ -1880,6 +1880,8 @@ class Post(db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
+        db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.query(Event).filter(Event.post_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
