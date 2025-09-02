@@ -11,7 +11,7 @@ from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.utils import authorise_api_user, communities_banned_from, get_setting, user_in_restricted_country
+from app.utils import authorise_api_user, communities_banned_from, blocked_users, in_sorted_list, user_in_restricted_country
 
 
 def get_user(auth, data):
@@ -40,9 +40,12 @@ def get_user(auth, data):
     # saved_only = True if saved_only == 'true' else False
     data["limit"] = data["limit"] if data and "limit" in data else 20
 
+    user_details = None
     user_id = None
     if auth:
-        user_id = authorise_api_user(auth)
+        user_details = authorise_api_user(auth, return_type='dict')
+        if user_details:
+            user_id = user_details['id']
         auth = None  # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
@@ -50,7 +53,7 @@ def get_user(auth, data):
         if saved_only:
             del data['person_id']
         post_list = get_post_list(auth, data, user_id)
-        reply_list = get_reply_list(auth, data, user_id)
+        reply_list = get_reply_list(auth, data, user_details)
     else:
         post_list = {'posts': []}
         reply_list = {'comments': []}
@@ -163,7 +166,8 @@ def get_user_replies(auth, data, mentions=False):
     sort = data['sort'] if data and 'sort' in data else "New"
     unread_only = data['unread_only'] if data and 'unread_only' in data else True
 
-    user_id = authorise_api_user(auth)
+    user_details = authorise_api_user(auth, return_type='dict')
+    user_id = user_details['id']
 
     all_comment_ids = []
     read_comment_ids = []
@@ -206,24 +210,25 @@ def get_user_replies(auth, data, mentions=False):
         replies = replies.order_by(desc(PostReply.posted_at))
     replies = replies.paginate(page=page, per_page=limit, error_out=False)
 
-    banned_from = communities_banned_from(user_id)
-    bookmarked_replies = list(db.session.execute(text(
-        'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
-        {'user_id': user_id}).scalars())
-    if bookmarked_replies is None:
-        bookmarked_replies = []
-    reply_subscriptions = list(db.session.execute(text(
-        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
-        {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
-    if reply_subscriptions is None:
-        reply_subscriptions = []
-
     reply_list = []
+    recipient = user_view(user=user_id, variant=1)
     for reply in replies:
-        read = True if reply.id in read_comment_ids else False
-        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id, read=read,
-                                     bookmarked_replies=bookmarked_replies, banned_from=banned_from,
-                                     reply_subscriptions=reply_subscriptions))
+        vote_effect = 0
+        if in_sorted_list(user_details['upvoted_reply_ids'], reply.id):
+            vote_effect = 1
+        elif in_sorted_list(user_details['downvoted_reply_ids'], reply.id):
+            vote_effect = -1
+        reply_json = reply_view(reply=reply, variant=3, user_id=user_id,
+            is_user_banned_from_community=reply.community_id in user_details['user_ban_community_ids'],
+            is_user_following_community=reply.community_id in user_details['followed_community_ids'],
+            is_reply_bookmarked=reply.id in user_details['bookmarked_reply_ids'],
+            is_creator_blocked=reply.user_id in user_details['blocked_creator_ids'],
+            vote_effect=vote_effect,
+            is_reply_subscribed=reply.id in user_details['subscribed_reply_ids'],
+            is_user_moderator=reply.community_id in user_details['moderated_community_ids'])
+        reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=read_comment_ids)
+        reply_json['recipient'] = recipient
+        reply_list.append(reply_json)
     list_json = {
         "replies": reply_list,
         'next_page': str(replies.next_num) if replies.next_num else None

@@ -439,12 +439,44 @@ def calculate_child_count(reply):
     db.session.commit()
 
 
-def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, read=False, mods=None, banned_from=None,
-               bookmarked_replies=None, reply_subscriptions=None) -> dict:
+def reply_view(reply: PostReply | int, variant: int, user_id=None,
+                        is_user_banned_from_community=None,
+                        is_user_following_community=None,
+                        is_reply_bookmarked=None,
+                        is_creator_blocked=None,
+                        vote_effect=None,
+                        is_reply_subscribed=None,
+                        is_creator_banned_from_community=None,
+                        is_creator_moderator=None,
+                        is_creator_admin=None,
+                        is_user_moderator=None,
+                        add_creator_in_view=True,
+                        add_post_in_view=True,
+                        add_community_in_view=True,
+                        read_comment_ids=[]) -> dict:
     if isinstance(reply, int):
         reply = PostReply.query.filter_by(id=reply).one()
 
-    # Variant 1 - models/comment/comment.dart
+    #print(reply.id)
+    #print(is_user_banned_from_community)
+
+    """
+    ,
+          is_user_following_community,
+          is_reply_bookmarked,
+          is_creator_blocked,
+          vote_effect,
+          is_reply_subscribed,
+          is_creator_banned_from_community,
+          is_creator_moderator,
+          is_creator_admin,
+          is_user_moderator,
+          add_creator_in_view,
+          add_post_in_view,
+          add_community_in_view)
+    """
+
+    # Variant 1 - Comment model
     if variant == 1:
         include = ['id', 'user_id', 'post_id', 'body', 'deleted']
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
@@ -453,8 +485,8 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                    'ap_id': reply.profile_id(),
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
-                   'distinguished': reply.distinguished,
-                   'repliesEnabled': reply.replies_enabled,
+                   'distinguished': reply.distinguished if reply.distinguished else False,
+                   'replies_enabled': reply.replies_enabled if reply.replies_enabled else True,
                    'removed': False})
 
         if not reply.path:
@@ -470,17 +502,215 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
         return v1
 
-    # Variant 2 - currently unused
-    # Variant 3 - currently unused
+    # Variant 2 - CommentAggregatesModel
+    if variant == 2:
+        v2 = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
+              'downvotes': reply.down_votes,
+              'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
+              'child_count': reply.child_count if reply.child_count is not None else 0}
 
-    # Variant 4 - models/comment/comment_response.dart - /comment/like api endpoint
+        return v2
+
+    # Variant 3 - CommentView
+    if variant == 3:
+        if is_user_banned_from_community is not None:
+            user_banned = is_user_banned_from_community
+        else:
+            user_banned = reply.community_id in communities_banned_from(user_id) if user_id else False
+
+        if is_user_following_community is not None:
+            subscribe_type = 'Subscribed' if is_user_following_community else 'NotSubscribed'
+        else:
+            subscribe_type = 'NotSubscribed'
+            if user_id:
+                followed = db.session.execute(text(
+                            'SELECT user_id FROM "community_member" WHERE community_id = :community_id and user_id = :user_id'),
+                            {"community_id": reply.community_id, "user_id": user_id}).scalar()
+                if followed:
+                    subscribe_type = 'Subscribed'
+
+        if is_reply_bookmarked is not None:
+            saved = is_reply_bookmarked
+        else:
+            bookmarked = db.session.execute(text(
+                'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                {'post_reply_id': reply.id, 'user_id': user_id}).scalar() if user_id else False
+            saved = True if bookmarked else False
+
+        if is_creator_blocked is not None:
+            creator_blocked = is_creator_blocked
+        else:
+            creator_blocked = reply.user_id in blocked_users(user_id) if user_id else False
+
+        if vote_effect is not None:
+            my_vote = vote_effect
+        else:
+            reply_vote = db.session.execute(text(
+                'SELECT effect FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+                {'post_reply_id': reply.id, 'user_id': user_id}).scalar() if user_id else 0
+            effect = reply_vote if reply_vote else 0
+            my_vote = int(effect)
+
+        if is_reply_subscribed is not None:
+            activity_alert = is_reply_subscribed
+        else:
+            reply_sub = db.session.execute(text(
+                'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
+                {'type': NOTIF_REPLY, 'entity_id': reply.id, 'user_id': user_id}).scalar() if user_id else False
+            activity_alert = True if reply_sub else False
+
+        if is_creator_banned_from_community is not None:
+            creator_banned = is_creator_banned_from_community
+        else:
+            creator_banned = reply.community_id in communities_banned_from(reply.user_id)
+
+        if is_creator_moderator is not None:
+            creator_is_moderator = is_creator_moderator
+        else:
+            creator_is_moderator = reply.community.is_moderator(reply.author)
+
+        if is_creator_admin is not None:
+            creator_is_admin = is_creator_admin
+        else:
+            creator_is_admin = reply.user_id in g.admin_ids
+
+        if is_user_moderator is not None:
+            can_auth_user_moderate = is_user_moderator
+        else:
+            can_auth_user_moderate = any(
+                moderator.user_id == user_id for moderator in reply.community.moderators()) if user_id else False
+
+        v3 = {
+            'comment': reply_view(reply=reply, variant=1),
+            'counts': reply_view(reply=reply, variant=2),
+            'banned_from_community': user_banned,
+            'subscribed': subscribe_type,
+            'saved': saved,
+            'creator_blocked': creator_blocked,
+            'my_vote': my_vote,
+            'activity_alert': activity_alert,
+            'creator_banned_from_community': creator_banned,
+            'creator_is_moderator': creator_is_moderator,
+            'creator_is_admin': creator_is_admin,
+            'can_auth_user_moderate': can_auth_user_moderate
+        }
+        if add_creator_in_view:
+            v3['creator'] = user_view(user=reply.author, variant=1, stub=True, flair_community_id=reply.community_id)
+        if add_post_in_view:
+            v3['post'] = post_view(post=reply.post, variant=1)
+        if add_community_in_view:
+            v3['community'] = community_view(community=reply.community, variant=1, stub=True)
+
+        return v3
+
+    # Variant 4 - CommentResponse
     if variant == 4:
-        v4 = {'comment_view': reply_view(reply=reply, variant=9, user_id=user_id)}
+        v4 = {
+            'comment_view': reply_view(reply=reply, variant=3, user_id=user_id,
+                                                is_reply_bookmarked=is_reply_bookmarked,
+                                                is_reply_subscribed=is_reply_subscribed)
+        }
 
         return v4
 
-    # Variant 5 - views/comment_reply_view.dart - /user/replies api endpoint
+    # Variant 5 - ResolveObjectResponse
     if variant == 5:
+        v5 = {
+            'comment': reply_view(reply=reply, variant=3, user_id=user_id)
+        }
+
+        return v5
+
+    # Variant 6 - CommentReply model (part of GetRepliesResponse to /user/replies endpoint)
+    if variant == 6:
+        v6 = {
+            'id': reply.id, 'recipient_id': user_id, 'comment_id': reply.id,
+            'read': reply.id in read_comment_ids,
+            'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z'
+        }
+
+        return v6
+
+
+# passing a bit 'replies' object goes against other ideas for API
+# so still might be best doing in /util/
+# get working here, then move (there aren't *that* many functions that return a list of replies)
+# some lists can be smaller if things like the post_id is already known (depends what's in the relevant table).
+
+"""
+def list_reply_view(replies, variant, user_id=None, read_comment_ids=[]):
+    reply_list = []
+
+    if user_id:
+        user_ban_community_ids = communities_banned_from(user_id)
+        followed_community_ids = list(db.session.execute(text(
+            'SELECT community_id FROM "community_member" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+        bookmarked_reply_ids = list(db.session.execute(text(
+            'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+            {'user_id': user_id}).scalars())
+        blocked_creator_ids = blocked_users(user_id)
+        upvoted_reply_ids = list(db.session.execute(text(
+            'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id and effect = 1'),
+            {'user_id': user_id}).scalars())
+        downvoted_reply_ids = list(db.session.execute(text(
+            'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id and effect = -1'),
+            {'user_id': user_id}).scalars())
+        subscribed_reply_ids = list(db.session.execute(text(
+            'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+            {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
+        moderated_community_ids = list(db.session.execute(text(
+            'SELECT community_id FROM "community_member" WHERE user_id = :user_id AND is_moderator = true'),
+            {'user_id': user_id}).scalars())
+    else:
+        user_ban_community_ids = []
+        followed_community_ids = []
+        bookmarked_reply_ids = []
+        blocked_creator_ids = []
+        upvoted_reply_ids = []
+        downvoted_reply_ids = []
+        subscribed_reply_ids = []
+        moderated_community_ids = []
+
+#                        [x] is_user_following_community=None,
+#                        [x] is_reply_bookmarked=None,
+#                        [x] is_creator_blocked=None,
+#                        [x] vote_effect=None,
+ #                       [x] is_reply_subscribed=None,
+ #                       is_creator_banned_from_community=None,
+ ##                       is_creator_moderator=None,
+ #                       is_creator_admin=None,
+ #                       [x] is_user_moderator=None,
+  #                      add_creator=True,
+  ##                      add_post=True,
+ #                       add_community=True
+
+    # Variant 1 - /user/replies api endpoint
+    # GetRepliesResponse: same as reply_view with addition of comment_reply and recipient
+    # recipient is the same for every entry in list. Will always have a user_id as user must be logged in
+    if variant == 1:
+        recipient = user_view(user=user_id, variant=1)
+        for reply in replies:
+            vote_effect = 0
+            if reply.id in upvoted_reply_ids:
+                vote_effect = 1
+            elif reply.id in downvoted_reply_ids:
+                vote_effect = -1
+            v1 = reply_view(reply=reply, variant=3, user_id=user_id,
+                is_user_banned_from_community=reply.community_id in user_ban_community_ids,
+                is_user_following_community=reply.community_id in followed_community_ids,
+                is_reply_bookmarked=reply.id in bookmarked_reply_ids,
+                is_creator_blocked=reply.user_id in blocked_creator_ids,
+                vote_effect=vote_effect,
+                is_reply_subscribed=reply.id in subscribed_reply_ids,
+                is_user_moderator=reply.community_id in moderated_community_ids)
+            v1['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=read_comment_ids)
+            v1['recipient'] = recipient
+            reply_list.append(v1)
+
+    return reply_list
+
+
         if bookmarked_replies is None:
             bookmarked = db.session.execute(text(
                 'SELECT user_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
@@ -496,7 +726,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
             reply_sub = reply.id in reply_subscriptions
 
         if banned_from is None:
-            banned = reply.community_id in communities_banned_from(user_id)
+            banned = reply.community_id in communities_banned_from(reply.user_id)
         else:
             banned = reply.community_id in banned_from
 
@@ -543,7 +773,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
 
     # Variant 6 - from resolve_object
     if variant == 6:
-        v6 = {'comment': reply_view(reply=reply, variant=9, user_id=user_id)}
+        v6 = {'comment': reply_view(reply=reply, variant=3, user_id=user_id)}
 
         return v6
 
@@ -559,12 +789,12 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                   'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
                   'child_count': reply.child_count if reply.child_count is not None else 0}
 
-        if bookmarked_replies is None:
-            bookmarked = list(db.session.execute(text(
-                'SELECT post_reply_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
-                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalars())
-        else:
-            bookmarked = reply.id in bookmarked_replies
+#        if bookmarked_replies is None:
+#            bookmarked = list(db.session.execute(text(
+#                'SELECT post_reply_id FROM "post_reply_bookmark" WHERE post_reply_id = :post_reply_id and user_id = :user_id'),
+#                                            {'post_reply_id': reply.id, 'user_id': user_id}).scalars())
+#        else:
+#            bookmarked = reply.id in bookmarked_replies
 
         if reply_subscriptions is None:
             reply_sub = list(db.session.execute(text(
@@ -622,6 +852,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None, my_vote=0, re
                 v9['can_auth_user_moderate'] = any(
                     moderator.user_id == user_id for moderator in reply.community.moderators())
             return v9
+"""
 
 
 def reply_report_view(report, reply_id, user_id) -> dict:
@@ -1095,3 +1326,5 @@ def blocked_instances_view(user) -> list[dict]:
     for blocked_id in blocked_ids:
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
     return blocked
+
+
