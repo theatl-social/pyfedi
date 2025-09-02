@@ -3348,3 +3348,37 @@ def to_srgb(im: Image.Image, assume="sRGB"):
 @cache.memoize(timeout=30)
 def show_explore():
     return num_topics() > 0 or num_feeds() > 0
+
+
+# Private Registration Configuration Helpers
+def is_private_registration_enabled():
+    """Check if private registration feature is enabled"""
+    return get_setting('PRIVATE_REGISTRATION_ENABLED', 'false').lower() == 'true'
+
+
+def get_private_registration_secret():
+    """Get the private registration secret from environment"""
+    return get_setting('PRIVATE_REGISTRATION_SECRET', '')
+
+
+def get_private_registration_rate_limit():
+    """Get rate limit configuration"""
+    return get_setting('PRIVATE_REGISTRATION_RATE_LIMIT', '10/hour')
+
+
+def get_private_registration_allowed_ips():
+    """Get list of allowed IP ranges for private registration"""
+    ips = get_setting('PRIVATE_REGISTRATION_IPS', '')
+    if not ips:
+        return []
+    return [ip.strip() for ip in ips.split(',') if ip.strip()]
+
+
+def should_log_private_registration_attempts():
+    """Check if registration attempts should be logged"""
+    return get_setting('PRIVATE_REGISTRATION_LOG_ATTEMPTS', 'true').lower() == 'true'
+
+
+def should_require_verification():
+    """Check if email verification should be required for private registration"""
+    return get_setting('PRIVATE_REGISTRATION_REQUIRE_VERIFICATION', 'false').lower() == 'true'

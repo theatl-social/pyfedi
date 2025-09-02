@@ -47,4 +47,12 @@ user_bp = ApiBlueprint(
     description=""
 )
 
+admin_bp = ApiBlueprint(
+    "Admin", 
+    __name__,
+    url_prefix="/api/alpha/admin",
+    description="Administrative endpoints for user management and private registration"
+)
+
 from app.api.alpha import routes
+from app.api.admin import routes as admin_routes
