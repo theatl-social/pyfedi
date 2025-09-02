@@ -283,6 +283,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "title": user.display_name(),
                     "avatar": user.avatar.medium_url() if user.avatar_id else None,
                     "banner": user.cover.medium_url() if user.cover_id else None,
+                    "about": user.about,
+                    "about_html": user.about_html,
                 },
                 "counts": {
                     "person_id": user.id,
@@ -852,7 +854,8 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
 
 
 def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_from,
-               communities_joined, blocked_community_ids, blocked_instance_ids, ) -> dict:
+               communities_joined, blocked_community_ids, blocked_instance_ids,
+               include_communities) -> dict:
     if isinstance(topic, int):
         topic = Topic.query.get(topic)
 
@@ -860,14 +863,21 @@ def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_
         include = ['id', 'machine_name', 'name', 'num_communities', 'parent_id', 'show_posts_in_children']
         v1 = {column.name: getattr(topic, column.name) for column in topic.__table__.columns if
               column.name in include}
-        v1.update({'version': '0.0.1'})
+
+        # Rename some fields for consistency with other endpoints
+        v1["title"] = v1.pop("name")
+        v1["name"] = v1.pop("machine_name")
+        v1["communities_count"] = v1.pop("num_communities")
+        v1["show_posts_from_children"] = v1.pop("show_posts_in_children")
+        v1["parent_topic_id"] = v1.pop("parent_id")
 
         v1['communities'] = []
-        for community in Community.query.filter(Community.banned == False, Community.topic_id == topic.id):
-            if community.id not in blocked_community_ids and \
-                    community.instance_id not in blocked_instance_ids and \
-                    community.id not in banned_from:
-                v1['communities'].append(community_view(community, variant=1, stub=True))
+        if include_communities:
+            for community in Community.query.filter(Community.banned == False, Community.topic_id == topic.id):
+                if community.id not in blocked_community_ids and \
+                        community.instance_id not in blocked_instance_ids and \
+                        community.id not in banned_from:
+                    v1['communities'].append(community_view(community, variant=1, stub=True))
 
         return v1
 
@@ -948,7 +958,7 @@ def site_instance_chooser_view():
             "name": language.name
         },
         'nsfw': g.site.enable_nsfw,
-        'newbie_friendly': num_topics() >= 5,
+        'newbie_friendly': num_topics() >= 3,
         'name': g.site.name,
         'elevator_pitch': get_setting('elevator_pitch', ''),
         'description': g.site.description or '',

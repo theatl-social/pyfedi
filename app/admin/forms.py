@@ -91,6 +91,11 @@ class FederationForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class CloseInstanceForm(FlaskForm):
+    announcement = TextAreaField(_l('Closing down announcement for home page'))
+    submit = SubmitField(_l('Yes, close my instance'))
+
+
 class PreLoadCommunitiesForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))

@@ -126,6 +126,11 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                     elif result.status_code == 400 and 'person_is_banned_from_site' in result.text:
                         from app.activitypub.util import process_banned_message
                         process_banned_message(result.json(), furl(uri).host, session)
+                    elif result.status_code == 410 or result.status_code == 418:    # When an instance returns 410, never send to it again.
+                        existing_instance = session.query(Instance).filter_by(domain=furl(uri).host).first()
+                        if existing_instance:
+                            existing_instance.gone_forever = True
+                        session.query(SendQueue).filter_by(destination_domain=furl(uri).host).delete()
                     else:
                         if current_app.debug:
                             current_app.logger.error(f'Response code for post attempt to {uri} was ' +

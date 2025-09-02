@@ -536,8 +536,11 @@ def shared_inbox():
         log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
         return '', 200
 
-    if redis_client.get('pause_federation') == '1':
+    pause_federation = redis_client.get('pause_federation')
+    if pause_federation == '1': # temporary pause as this instance ise overloaded
         abort(429)
+    elif pause_federation == '666':
+        abort(410)              # this instance has been permanently closed down, everyone should stop sending to it.
 
     g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
     store_ap_json = g.site.log_activitypub_json or False

@@ -60,7 +60,22 @@
                                             {{ render_field(form.distinguished) }}
                                             {{ render_field(form.language_id) }}
                                         </fieldset>
-                                        {{ render_field(form.submit) }}
+                                        <table>
+                                            <tr>
+                                                <td>{{ render_field(form.submit) }}</td>
+                                                <td><a href="#"
+                                                    class="btn btn-outline"
+                                                    hx-post="{{ url_for('post.preview') }}"
+                                                    hx-target="#textarea_comment_to_preview">
+                                                    {{ _('Preview') }}
+                                                </a></td>
+                                            </tr>
+                                        </table>
+                                            <div class="row">
+                                                <div class="col">
+                                                    <div id="textarea_comment_to_preview" class="reply_preview"></div>
+                                                </div>
+                                            </div>
                                     </form>
                                 {% endif -%}
                                 {% if not low_bandwidth -%}

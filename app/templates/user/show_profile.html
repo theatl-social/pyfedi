@@ -129,7 +129,7 @@
                         {% endif -%}
                     {% endif -%}
                     <li><a class="dropdown-item" href="{{ url_for('user.report_profile', actor=user.link()) }}" rel="nofollow">{{ _('Report') }}</a></li>
-                    <li><a class="dropdown-item" href="http://lemmyverse.link/u/{{ user.lemmy_link() }}" rel="nofollow">{{ _('Lemmyverse.link') }}</a></li>
+                    <li><a class="dropdown-item" href="https://lemmyverse.link/u/{{ user.lemmy_link() }}" rel="nofollow">{{ _('Lemmyverse.link') }}</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('user.edit_user_note', actor=user.link()) }}" rel="nofollow">{{ _('Edit note') }}</a></li>
                   </ul>
                 </div>

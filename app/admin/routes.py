@@ -23,13 +23,13 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
-from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
@@ -226,12 +226,22 @@ def admin_site():
 @login_required
 def admin_misc():
     form = SiteMiscForm()
+    close_form = CloseInstanceForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
     form.default_theme.choices = theme_list()
     form.language_id.choices = languages_for_form(all_languages=True)
-    if form.validate_on_submit():
+    if close_form.submit.data and close_form.validate():
+        from app import redis_client
+        redis_client.set('pause_federation', '666', ex=86400 * 365 * 10)
+        site.registration_mode = 'Closed'
+        if close_form.announcement.data:
+            set_setting('announcement', close_form.announcement.data)
+            set_setting('announcement_html', markdown_to_html(close_form.announcement.data, anchors_new_tab=False))
+        db.session.commit()
+        flash(_('Settings saved.'))
+    elif form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
         site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
         site.enable_chan_image_filter = form.enable_chan_image_filter.data
@@ -299,7 +309,7 @@ def admin_misc():
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
-    return render_template('admin/misc.html', title=_('Misc settings'), form=form)
+    return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 
 @bp.route('/instance_chooser', methods=['GET', 'POST'])
@@ -1606,6 +1616,15 @@ def admin_user_edit(user_id):
 
         db.session.commit()
         cache.delete_memoized(low_value_reposters)
+        g.admin_ids = list(db.session.execute(
+            text("""SELECT u.id FROM "user" u WHERE u.id = 1
+                                UNION
+                                SELECT u.id
+                                FROM "user" u
+                                JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                                ORDER BY id"""),
+            {'role_admin': ROLE_ADMIN}).scalars())
+        set_setting('admin_ids', g.admin_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))

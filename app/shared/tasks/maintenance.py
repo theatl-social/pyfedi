@@ -1,6 +1,8 @@
 from datetime import timedelta
 import random
 import re
+import os
+import time
 
 import httpx
 import boto3
@@ -957,3 +959,23 @@ def delete_from_s3(s3_files_to_delete):
     )
     s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
     s3.close()
+
+
+@celery.task
+def clean_up_tmp():
+    DELETABLE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".mp3", ".mp4"}
+    ONE_DAY = 24 * 60 * 60
+
+    now = time.time()
+    directory = 'app/static/tmp'
+    for filename in os.listdir(directory):
+        file_path = os.path.join(directory, filename)
+        if os.path.isfile(file_path):
+            _, ext = os.path.splitext(filename.lower())
+            if ext.lower() in DELETABLE_EXTENSIONS:
+                mtime = os.path.getmtime(file_path)
+                if now - mtime > ONE_DAY:
+                    try:
+                        os.remove(file_path)
+                    except Exception as e:
+                        pass
