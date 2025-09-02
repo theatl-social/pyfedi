@@ -2168,7 +2168,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                                 'comment_body': new_reply.body}
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
                                                                        post_title=new_reply.post.title), 150),
-                                                url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
+                                                url=f"/post/{new_reply.post.id}/comment/{new_reply.id}#comment_{new_reply.id}",
                                                 user_id=notify_id, author_id=new_reply.user_id,
                                                 notif_type=NOTIF_POST,
                                                 subtype='top_level_comment_on_followed_post',
