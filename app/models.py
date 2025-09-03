@@ -1459,6 +1459,7 @@ class Post(db.Model):
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
+    event = db.relationship('Event', uselist=False, backref='post')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1782,6 +1783,35 @@ class Post(db.Model):
                     i += 1
                 db.session.commit()
 
+            if request_json['object']['type'] == 'Event':
+                post.type = constants.POST_TYPE_EVENT
+                event = Event(post_id=post.id,
+                              start=request_json['object']['startTime'],
+                              end=request_json['object']['endTime'],
+                              timezone=request_json['object']['timezone'],
+                              max_attendees=request_json['object']['maximumAttendeeCapacity'],
+                              participant_count=request_json['object']['participantCount'],
+                              online_link=request_json['object']['onlineLink'],
+                              join_mode=request_json['object']['joinMode'],
+                              external_participation_url=request_json['object']['externalParticipationUrl'],
+                              anonymous_participation=request_json['object']['anonymousParticipation'],
+                              online=request_json['object']['isOnline'],
+                              buy_tickets_link=request_json['object']['buyTicketsLink'],
+                              event_fee_currency=request_json['object']['feeCurrency'],
+                              event_fee_amount=request_json['object']['feeAmount'])
+                db.session.add(event)
+                post.url = ''   # Mobilizon puts the AP ID in request_json['object']['url'] and any attached website links in a request_json['object']['attachment'] list
+                if ('attachment' in request_json['object'] and
+                        isinstance(request_json['object']['attachment'], list) and
+                        len(request_json['object']['attachment']) > 0):
+                    for attachment_item in request_json['object']['attachment']:
+                        if attachment_item['type'] == 'Link':
+                            if 'href' in attachment_item:
+                                post.url = attachment_item['href']
+                                break
+
+                db.session.commit()
+
             if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
                 if post.type == constants.POST_TYPE_IMAGE:
                     make_image_sizes(post.image_id, 512, 1200, 'posts',
@@ -1851,6 +1881,8 @@ class Post(db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
+        db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.query(Event).filter(Event.post_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})

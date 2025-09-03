@@ -1,4 +1,4 @@
-{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video, render_event -%}
 {% set content_blocked = post.blocked_by_content_filter(content_filters, current_user.get_id())
                          or (current_user.hide_nsfw == 3 and post.nsfw)
                          or (current_user.hide_nsfl == 3 and post.nsfl)
@@ -23,6 +23,8 @@
                 {{ render_image(post, show_post_community=show_post_community, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes, moderated_community_ids=moderated_community_ids) }}
             {% elif post.type == POST_TYPE_VIDEO %}
                 {{ render_video(post, show_post_community=show_post_community, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, autoplay=autoplay|default(false), current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes, moderated_community_ids=moderated_community_ids) }}
+            {% elif post.type == POST_TYPE_EVENT %}
+                {{ render_event(post, show_post_community=show_post_community, low_bandwidth=low_bandwidth, blur_content=blur_content, sort=sort, current_user=current_user, request=request, locale=locale, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes, moderated_community_ids=moderated_community_ids) }}
             {% endif -%}
         </div>
     </div>

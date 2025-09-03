@@ -1389,7 +1389,7 @@ def reply_is_stupid(body) -> bool:
     return False
 
 
-@cache.memoize(timeout=10)
+@cache.memoize(timeout=3000)
 def trusted_instance_ids() -> List[int]:
     return [instance.id for instance in Instance.query.filter(Instance.trusted == True)]
 

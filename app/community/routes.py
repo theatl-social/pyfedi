@@ -14,40 +14,41 @@ from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery, httpx_client, limiter, plugins
-from app.activitypub.signature import RsaKeys, post_request, send_post_request
+from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
-from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm
+    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm, \
+    CreateEventForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
+    delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
-    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING
+    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING, \
+    POST_TYPE_EVENT
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
-    File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
+    File, utcnow, Report, Notification, Topic, PostReply, \
+    NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
     post_tag, Tag
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
     remove_mod_from_community
-from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
-    shorten_string, gibberish, community_membership, ap_datetime, \
+from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
+    shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
     blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, languages_for_form, menu_topics, add_to_modlog, \
+    blocked_users, languages_for_form, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
@@ -315,8 +316,11 @@ def show_community(community: Community):
     sticky_posts = None
     posts = None
     comments = None
-    if content_type == 'posts':
-        posts = community.posts
+    if content_type == 'posts' or content_type == 'events':
+        posts = Post.query.filter(Post.community_id == community.id)
+
+        if content_type == 'events':
+            posts = posts.filter(Post.type == POST_TYPE_EVENT)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
@@ -476,6 +480,18 @@ def show_community(community: Community):
     community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).\
         order_by(CommunityFlair.flair).all()
 
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false AND p.community_id = :community_id
+                                                 ORDER BY e.start"""),
+                                         {'community_id': community.id}).all()
+
+    has_events = db.session.execute(text("""SELECT COUNT(p.id) as c FROM "event" e
+                                            INNER JOIN post p on e.post_id = p.id
+                                            WHERE p.deleted is false AND p.community_id = :community_id"""),
+                                    {'community_id': community.id}).scalar_one_or_none()
+
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
     breadcrumb.text = _('Home')
@@ -537,7 +553,7 @@ def show_community(community: Community):
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
-    if content_type == 'posts':
+    if content_type == 'posts' or content_type == 'events':
         next_url = url_for('activitypub.community_profile',
                            actor=community.ap_id if community.ap_id is not None else community.name,
                            page=posts.next_num, sort=sort, layout=post_layout,
@@ -567,7 +583,7 @@ def show_community(community: Community):
     return render_template('community/community.html', community=community, title=community.title,
                            breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
-                           comments=comments,
+                           comments=comments, upcoming_events=upcoming_events, has_events=has_events,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                            POST_TYPE_LINK=POST_TYPE_LINK,
                            POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
@@ -610,8 +626,8 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = community.posts.filter(Post.from_bot == False, Post.deleted == False,
-                                       Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
+        posts = Post.query.filter(Post.community_id == community.id).filter(Post.from_bot == False, Post.deleted == False,
+                                  Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()
@@ -890,6 +906,9 @@ def add_post(actor, type):
     elif type == 'poll':
         post_type = POST_TYPE_POLL
         form = CreatePollForm()
+    elif type == 'event':
+        post_type = POST_TYPE_EVENT
+        form = CreateEventForm()
     else:
         abort(404)
 
@@ -903,7 +922,6 @@ def add_post(actor, type):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = possible_communities()
-
     form.language_id.choices = languages_for_form()
     flair_choices = flair_for_form(community.id)
     if len(flair_choices):
@@ -922,8 +940,8 @@ def add_post(actor, type):
                 'user_id': current_user.id
             }
             plugins.fire_hook('before_post_create', post_data)
-            
-            uploaded_file = request.files['image_file'] if type == 'image' else None
+
+            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' else None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -951,6 +969,9 @@ def add_post(actor, type):
         form.notify_author.data = True
         if post_type == POST_TYPE_POLL:
             form.finish_in.data = '3d'
+        elif post_type == POST_TYPE_EVENT:
+            form.online.data = True
+            form.event_timezone.data = current_user.timezone
         if community.posting_warning:
             flash(community.posting_warning)
 
@@ -986,7 +1007,7 @@ def add_post(actor, type):
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post, hide_community_actions=True,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, event_online=True,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 

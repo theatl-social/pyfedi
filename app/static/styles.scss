@@ -451,7 +451,7 @@ form {
   }
 }
 
-.community_header {
+.community_header, .event_banner {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -492,6 +492,12 @@ form {
          color: white;
       }
     }
+  }
+}
+
+.event_banner {
+  @include breakpoint(tablet) {
+    height: 176px;
   }
 }
 
@@ -2150,6 +2156,12 @@ form {
 #image_preview {
   max-width: 200px;
   display: none;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+#image_preview_edit {
+  max-width: 200px;
   margin-top: -10px;
   margin-bottom: 10px;
 }

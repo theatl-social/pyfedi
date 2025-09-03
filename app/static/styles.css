@@ -473,6 +473,14 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e91b"; /* possibly e985 */
 }
 
+.fe-event {
+  position: relative;
+  top: 1px;
+}
+.fe-event:before {
+  content: "\e927";
+}
+
 .fe-sticky-left::before {
   position: relative;
   top: 2px;
@@ -944,7 +952,7 @@ form > .mb-3.required > label:after {
   padding-bottom: 20px;
 }
 
-.community_header {
+.community_header, .event_banner {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -955,37 +963,43 @@ form > .mb-3.required > label:after {
   margin-top: -9px;
 }
 @media (min-width: 992px) {
-  .community_header {
+  .community_header, .event_banner {
     height: 240px;
   }
 }
 @media (min-width: 992px) {
-  .community_header #breadcrumb_nav {
+  .community_header #breadcrumb_nav, .event_banner #breadcrumb_nav {
     padding-left: 13px;
     padding-top: 13px;
   }
 }
-.community_header #breadcrumb_nav .breadcrumb {
+.community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
   background-color: rgba(0, 0, 0, 0.6);
   display: inline-block;
   padding: 5px 10px;
   margin-bottom: 0;
 }
 @media (min-width: 992px) {
-  .community_header #breadcrumb_nav .breadcrumb {
+  .community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
     border-radius: 6px;
   }
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item {
   color: white;
   display: inline-block;
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item a {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item a, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item a {
   color: white;
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before {
   content: ">";
   color: white;
+}
+
+@media (min-width: 992px) {
+  .event_banner {
+    height: 176px;
+  }
 }
 
 .community_header_no_background .community_icon, .community_header .community_icon {
@@ -2443,6 +2457,12 @@ form h5 {
 #image_preview {
   max-width: 200px;
   display: none;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
+#image_preview_edit {
+  max-width: 200px;
   margin-top: -10px;
   margin-bottom: 10px;
 }

@@ -150,6 +150,11 @@
                                     <option value="comments" {{ 'selected' if content_type == 'comments' }}>
                                         {{ _('Comments') }}
                                     </option>
+                                    {% if has_events -%}
+                                        <option value="events" {{ 'selected' if content_type == 'events' }}>
+                                            {{ _('Events') }}
+                                        </option>
+                                    {% endif -%}
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">
@@ -376,6 +381,11 @@
                                     <option value="comments" {{ 'selected' if content_type == 'comments' }}>
                                         {{ _('Comments') }}
                                     </option>
+                                    {% if has_events -%}
+                                    <option value="events" {{ 'selected' if content_type == 'events' }}>
+                                        {{ _('Events') }}
+                                    </option>
+                                    {% endif -%}
                                 </select>
                             </div>
                             <button type="submit" class="btn btn-primary">
@@ -471,6 +481,9 @@
                 {{ _('Comments') }}
             </a>
         {% endif %}
+        <a href="?content_type=events&sort={{ sort }}&layout={{ post_layout }}" aria-label="{{ _('Show events') }}" class="btn {{ 'btn-primary' if content_type == 'events' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+            {{ _('Events') }}
+        </a>
     </div>
     {% if post_layout != '' and post_layout is not none %}
         <div class="btn-group me-lg-1 layout_switcher">

@@ -420,6 +420,14 @@ h1 {
   }
 }
 
+.fe-event {
+  position: relative;
+  top: 1px;
+  &:before {
+    content: "\e927";
+  }
+}
+
 .fe-sticky-left::before {
   position: relative;
   top: 2px;

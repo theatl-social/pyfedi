@@ -7,6 +7,7 @@
 {% set POST_TYPE_IMAGE = 3 -%}
 {% set POST_TYPE_VIDEO = 4 -%}
 {% set POST_TYPE_POLL = 5 -%}
+{% set POST_TYPE_EVENT = 6 -%}
 {% if embed -%}
 <div class="embed_logo">
     <a href="/" target="_blank" title="{{ g.site.name }}"><img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="40" height="40"></a>
@@ -15,6 +16,9 @@
 <h3 lang="{{ post.language_code() }}">{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _external=embed) }}" {{ 'target="_blank"' if embed }} class="post_teaser_title_a" {% if not post.indexable %}rel="noindex"{% endif %} >{{ post.title }}</a>
     {% if post.type == POST_TYPE_IMAGE -%}
         <span class="fe fe-image" aria-hidden="true"> </span>
+    {% endif -%}
+    {% if post.type == POST_TYPE_EVENT -%}
+        <span class="fe fe-event" aria-hidden="true"> </span>
     {% endif -%}
     {% if post.domain_id and post.url -%}
         {% if post.url.endswith('.mp3') -%}
@@ -176,6 +180,30 @@
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.body_html -%}
         <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+</div>
+{%- endmacro %}
+
+{% macro render_event(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+<div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
+            {% else -%}
+                    <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% endif -%}
+
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if post.body_html -%}
+        <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {% if post.event and post.event.start %}<time class="convert_to_local">{{ post.event.start.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time>{% endif %}
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}

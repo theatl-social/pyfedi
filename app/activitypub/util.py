@@ -23,10 +23,10 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache, celery
 from app.activitypub.signature import signed_get_request
 from app.constants import *
-from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, utcnow, \
+from app.models import User, Post, Community, File, PostReply, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic
+    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic, Event
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
     shorten_string, fixup_url, \
@@ -156,7 +156,7 @@ def post_to_page(post: Post):
     }
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
-    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO or post.type == POST_TYPE_EVENT) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -181,6 +181,23 @@ def post_to_page(post: Post):
         activity_data[mode] = choices
         activity_data['endTime'] = ap_datetime(poll.end_poll)
         activity_data['votersCount'] = poll.total_votes()
+    elif post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+        activity_data['type'] = 'Event'
+        activity_data['startTime'] = ap_datetime(event.start)
+        activity_data['endTime'] = ap_datetime(event.end)
+        activity_data['timezone'] = event.timezone
+        activity_data['maximumAttendeeCapacity'] = event.max_attendees
+        activity_data['participantCount'] = event.participant_count
+        activity_data['onlineLink'] = event.online_link
+        activity_data['joinMode'] = event.join_mode
+        activity_data['externalParticipationUrl'] = event.external_participation_url
+        activity_data['anonymousParticipation'] = event.anonymous_participation
+        activity_data['isOnline'] = event.online
+        activity_data['buyTicketsLink'] = event.buy_tickets_link
+        activity_data['feeCurrency'] = event.event_fee_currency
+        activity_data['feeAmount'] = event.event_fee_amount
+
     if post.indexable:
         activity_data['searchableBy'] = 'https://www.w3.org/ns/activitystreams#Public'
     return activity_data
@@ -2519,9 +2536,27 @@ def update_post_from_activity(post: Post, request_json: dict):
         # no URLs in Polls to worry about, so return now
         return
 
+    if request_json['object']['type'] == 'Event':
+        event = Event.query.filter_by(post_id=post.id).first()
+        if event:
+            event.start = datetime.fromisoformat(request_json['object']['startTime'])
+            event.end = datetime.fromisoformat(request_json['object']['endTime'])
+            event.timezone = request_json['object']['timezone']
+            event.max_attendees = request_json['object']['maximumAttendeeCapacity']
+            event.participant_count = request_json['object']['participantCount']
+            event.online_link = request_json['object']['onlineLink']
+            event.join_mode = request_json['object']['joinMode']
+            event.external_participation_url = request_json['object']['externalParticipationUrl']
+            event.anonymous_participation = request_json['object']['anonymousParticipation']
+            event.online = request_json['object']['isOnline']
+            event.buy_tickets_link = request_json['object']['buyTicketsLink']
+            event.event_fee_currency = request_json['object']['feeCurrency']
+            event.event_fee_amount = request_json['object']['feeAmount']
+            db.session.commit()
+
     # Links
     old_url = post.url
-    new_url = None
+    new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
     if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and

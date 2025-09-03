@@ -41,7 +41,8 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, instance_allowed
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
+    instance_allowed, trusted_instance_ids
 from app.admin import bp
 
 
@@ -1866,6 +1867,8 @@ def admin_instance_edit(instance_id):
         instance.inbox = form.inbox.data
 
         db.session.commit()
+
+        cache.delete_memoized(trusted_instance_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_instances'))

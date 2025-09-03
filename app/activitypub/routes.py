@@ -1071,7 +1071,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 return
 
                         object_type = core_activity['object']['type']
-                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question', 'Event']
                         if object_type in new_content_types:  # create or update a post
                             process_new_content(user, community, store_ap_json, request_json, announced)
                             return
@@ -1745,12 +1745,11 @@ def community_outbox(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        sticky_posts = community.posts.filter(Post.sticky == True, Post.deleted == False,
-                                              Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
+        sticky_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == True, Post.deleted == False,
+                                         Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
         remaining_limit = 50 - len(sticky_posts)
-        remaining_posts = community.posts.filter(Post.sticky == False, Post.deleted == False,
-                                                 Post.status > POST_STATUS_REVIEWING).order_by(
-            desc(Post.posted_at)).limit(remaining_limit).all()
+        remaining_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == False, Post.deleted == False,
+                                            Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(remaining_limit).all()
         posts = sticky_posts + remaining_posts
 
         community_data = {
