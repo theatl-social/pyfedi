@@ -336,6 +336,7 @@ class Comment(DefaultSchema):
     user_id = fields.Integer(required=True)
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    locked = fields.Boolean()
 
 
 class CommentAggregates(DefaultSchema):
