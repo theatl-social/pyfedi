@@ -813,3 +813,10 @@ class SaveCommentRequest(DefaultSchema):
 class SubscribeCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     subscribe = fields.Boolean(required=True)
+
+
+class CreateCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    post_id = fields.Integer(required=True)
+    parent_id = fields.Integer()
+    language_id = fields.Integer()

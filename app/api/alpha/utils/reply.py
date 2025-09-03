@@ -302,9 +302,6 @@ def get_reply_list(auth, data, user_details=None):
 
 
 def get_reply(auth, data):
-    if not data or 'id' not in data:
-        raise Exception('missing parameters for comment')
-
     id = int(data['id'])
 
     user_id = authorise_api_user(auth) if auth else None
@@ -314,10 +311,6 @@ def get_reply(auth, data):
 
 
 def post_reply_like(auth, data):
-    required(['comment_id', 'score'], data)
-    integer_expected(['comment_id', 'score'], data)
-    boolean_expected(['private'], data)
-
     score = data['score']
     reply_id = data['comment_id']
     if score == 1:
@@ -335,10 +328,6 @@ def post_reply_like(auth, data):
 
 
 def put_reply_save(auth, data):
-    required(['comment_id', 'save'], data)
-    integer_expected(['comment_id'], data)
-    boolean_expected(['save'], data)
-
     reply_id = data['comment_id']
     save = data['save']
 
@@ -348,10 +337,6 @@ def put_reply_save(auth, data):
 
 
 def put_reply_subscribe(auth, data):
-    required(['comment_id', 'subscribe'], data)
-    integer_expected(['comment_id'], data)
-    boolean_expected(['subscribe'], data)
-
     reply_id = data['comment_id']
     subscribe = data['subscribe']
 
@@ -361,10 +346,6 @@ def put_reply_subscribe(auth, data):
 
 
 def post_reply(auth, data):
-    required(['body', 'post_id'], data)
-    string_expected(['body', ], data)
-    integer_expected(['post_id', 'parent_id', 'language_id'], data)
-
     body = data['body']
     post_id = data['post_id']
     parent_id = data['parent_id'] if 'parent_id' in data else None
