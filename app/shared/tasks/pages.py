@@ -1,9 +1,10 @@
 import json
+from zoneinfo import ZoneInfo
 from app import celery, db
 from app.activitypub.signature import default_context, send_post_request
 from app.constants import POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, POST_TYPE_VIDEO, \
-    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION
-from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow
+    POST_TYPE_POLL, MICROBLOG_APPS, NOTIF_MENTION, POST_TYPE_EVENT
+from app.models import CommunityBan, Instance, Notification, Poll, PollChoice, Post, User, UserFollower, utcnow, Event
 from app.user.utils import search_for_user
 from app.utils import gibberish, instance_banned, ap_datetime, get_recipient_language, get_task_session
 
@@ -157,7 +158,12 @@ def send_post(post_id, edit=False, session=None):
         if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
             return
 
-    type = 'Question' if post.type == POST_TYPE_POLL else 'Page'
+    if post.type == POST_TYPE_POLL:
+        type = 'Question'
+    elif post.type == POST_TYPE_EVENT:
+        type = 'Event'
+    else:
+        type = 'Page'
     to = [community.public_url(), "https://www.w3.org/ns/activitystreams#Public"]
     cc = []
     tag = post.tags_for_activitypub()
@@ -213,6 +219,21 @@ def send_post(post_id, edit=False, session=None):
         for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
             choices.append({'type': 'Note', 'name': choice.choice_text, 'replies': {'type': 'Collection', 'totalItems': choice.num_votes if edit else 0}})
         page['oneOf' if poll.mode == 'single' else 'anyOf'] = choices
+    elif post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+        page['startTime'] = ap_datetime(event.start)
+        page['endTime'] = ap_datetime(event.end)
+        page['timezone'] = event.timezone
+        page['maximumAttendeeCapacity'] = event.max_attendees
+        page['participantCount'] = event.participant_count
+        page['onlineLink'] = event.online_link
+        page['joinMode'] = event.join_mode
+        page['externalParticipationUrl'] = event.external_participation_url
+        page['anonymousParticipation'] = event.anonymous_participation
+        page['isOnline'] = event.online
+        page['buyTicketsLink'] = event.buy_tickets_link
+        page['feeCurrency'] = event.event_fee_currency
+        page['feeAmount'] = event.event_fee_amount
 
     activity = 'create' if not edit else 'update'
     create_id = f"https://{current_app.config['SERVER_NAME']}/activities/{activity}/{gibberish(15)}"
@@ -279,12 +300,17 @@ def send_post(post_id, edit=False, session=None):
     if 'name' in page:
         del page['name']
     note = page
-    if note['type'] == 'Page':
+    if note['type'] == 'Page' or note['type'] == 'Event':
         note['type'] = 'Note'
     if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
         note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
     elif post.type != POST_TYPE_POLL:
         note['content'] = '<p>' + post.title + '</p>'
+    if post.type == POST_TYPE_EVENT:
+        # Convert UTC time to event timezone
+        event_tz = ZoneInfo(post.event.timezone)
+        local_start = post.event.start.replace(tzinfo=ZoneInfo('UTC')).astimezone(event_tz)
+        note['content'] += '<p>' + local_start.strftime('%Y-%m-%dT%H:%M:%S') + f' ({post.event.timezone})</p>'
     if post_body_html:
         note['content'] = note['content'] + post_body_html
     note['inReplyTo'] = None
