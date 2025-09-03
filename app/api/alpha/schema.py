@@ -790,3 +790,11 @@ class ListCommentsRequest(DefaultSchema):
 class ListCommentsResponse(DefaultSchema):
     comments = fields.List(fields.Nested(CommentView), required=True)
     next_page = fields.String(allow_none=True)
+
+
+class GetCommentRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetCommentResponse(DefaultSchema):
+    comment_view = fields.Nested(CommentView, required=True)

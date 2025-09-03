@@ -184,7 +184,7 @@ def get_alpha_federated_instances():
 @comm_bp.doc(summary="Get / fetch a community.")
 @comm_bp.arguments(GetCommunityRequest, location="query")
 @comm_bp.response(200, GetCommunityResponse)
-@misc_bp.alt_response(400, schema=DefaultError)
+@comm_bp.alt_response(400, schema=DefaultError)
 def get_alpha_community(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
@@ -762,17 +762,21 @@ def post_alpha_comment_mark_as_read():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/comment', methods=['GET'])
-def get_alpha_comment():
+@reply_bp.route("/comment", methods=["GET"])
+@reply_bp.doc(summary="Get / fetch a comment.")
+@reply_bp.arguments(GetCommentRequest, location="query")
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def get_alpha_comment(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_reply(auth, data))
+        resp = get_reply(auth, data)
+        return GetCommentResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # Private Message
