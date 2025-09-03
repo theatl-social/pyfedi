@@ -316,8 +316,11 @@ def show_community(community: Community):
     sticky_posts = None
     posts = None
     comments = None
-    if content_type == 'posts':
+    if content_type == 'posts' or content_type == 'events':
         posts = Post.query.filter(Post.community_id == community.id)
+
+        if content_type == 'events':
+            posts = posts.filter(Post.type == POST_TYPE_EVENT)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
@@ -477,6 +480,18 @@ def show_community(community: Community):
     community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).\
         order_by(CommunityFlair.flair).all()
 
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false AND p.community_id = :community_id
+                                                 ORDER BY e.start"""),
+                                         {'community_id': community.id}).all()
+
+    has_events = db.session.execute(text("""SELECT COUNT(p.id) as c FROM "event" e
+                                            INNER JOIN post p on e.post_id = p.id
+                                            WHERE p.deleted is false AND p.community_id = :community_id"""),
+                                    {'community_id': community.id}).scalar_one_or_none()
+
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
     breadcrumb.text = _('Home')
@@ -538,7 +553,7 @@ def show_community(community: Community):
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
-    if content_type == 'posts':
+    if content_type == 'posts' or content_type == 'events':
         next_url = url_for('activitypub.community_profile',
                            actor=community.ap_id if community.ap_id is not None else community.name,
                            page=posts.next_num, sort=sort, layout=post_layout,
@@ -568,7 +583,7 @@ def show_community(community: Community):
     return render_template('community/community.html', community=community, title=community.title,
                            breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
-                           comments=comments,
+                           comments=comments, upcoming_events=upcoming_events, has_events=has_events,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                            POST_TYPE_LINK=POST_TYPE_LINK,
                            POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,

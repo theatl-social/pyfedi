@@ -119,7 +119,7 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
-        {% if content_type == 'posts' and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
+        {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
             <div class="masonry" id="masonry">
                 <!-- Masonry columns will be added here -->
             </div>
@@ -140,7 +140,7 @@
                 });
             </script>
         {% else -%}
-            {% if content_type == "posts" -%}
+            {% if content_type == "posts" or content_type == 'events' -%}
                 {% if posts or sticky_posts %}
                     <div class="post_list">
                         {% if sticky_posts -%}
