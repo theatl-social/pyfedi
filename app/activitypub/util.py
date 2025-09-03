@@ -2556,7 +2556,7 @@ def update_post_from_activity(post: Post, request_json: dict):
 
     # Links
     old_url = post.url
-    new_url = None
+    new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
     if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and
