@@ -803,3 +803,13 @@ class GetCommentResponse(DefaultSchema):
 class LikeCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     score = fields.Integer(required=True, metadata={"example": 1, "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote"})
+
+
+class SaveCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    save = fields.Boolean(required=True)
+
+
+class SubscribeCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
