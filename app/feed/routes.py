@@ -145,6 +145,8 @@ def feed_add_remote():
             else:
                 flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'),
                       'warning')
+        else:
+            cache.delete_memoized(feed_membership, current_user, new_feed)
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
@@ -843,7 +845,6 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-@celery.task
 def do_feed_subscribe(actor, user_id):
     try:
         remote = False
