@@ -1459,6 +1459,7 @@ class Post(db.Model):
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
+    event = db.relationship('Event', uselist=False, backref='post')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side

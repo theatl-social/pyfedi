@@ -451,7 +451,7 @@ form {
   }
 }
 
-.community_header {
+.community_header, .event_banner {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -492,6 +492,12 @@ form {
          color: white;
       }
     }
+  }
+}
+
+.event_banner {
+  @include breakpoint(tablet) {
+    height: 176px;
   }
 }
 
@@ -2550,46 +2556,3 @@ form {
 
 @import "scss/compact";
 @import "scss/print";
-
-// Event Banner Styles
-.event_banner {
-  background-repeat: no-repeat;
-  background-position: center center;
-  background-size: cover;
-  border-radius: 5px 5px 0 0;
-  height: 200px;
-  margin-left: -12px;
-  margin-right: -12px;
-  margin-top: -9px;
-  margin-bottom: 20px;
-  position: relative;
-  display: flex;
-  align-items: flex-end;
-
-  @include breakpoint(tablet) {
-    height: 280px;
-  }
-}
-
-.event_banner_overlay {
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
-  width: 100%;
-  padding: 20px;
-  border-radius: 0 0 5px 5px;
-}
-
-.event_banner_title {
-  color: white;
-  margin: 0;
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  font-size: 1.8rem;
-  font-weight: bold;
-
-  @include breakpoint(phablet) {
-    font-size: 2.2rem;
-  }
-
-  @include breakpoint(tablet) {
-    font-size: 2.5rem;
-  }
-}

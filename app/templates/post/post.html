@@ -23,9 +23,7 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% if post.type == POST_TYPE_EVENT and post.image_id and not low_bandwidth -%}
             <div class="event_banner" style="background-image: url({{ post.image.view_url() }});">
-                <div class="event_banner_overlay">
-                    <h1 class="event_banner_title">{{ post.title }}</h1>
-                </div>
+                {% include 'post/_breadcrumb_nav.html' %}
             </div>
         {% endif -%}
         {% include 'post/_post_full.html' -%}
