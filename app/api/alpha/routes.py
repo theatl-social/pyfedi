@@ -638,14 +638,18 @@ def get_alpha_comment_list(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/comment/like', methods=['POST'])
-def post_alpha_comment_like():
+@reply_bp.route('/comment/like', methods=['POST'])
+@reply_bp.doc(summary="Like / vote on a comment.")
+@reply_bp.arguments(LikeCommentRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_like(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_reply_like(auth, data))
+        resp = post_reply_like(auth, data)
+        return GetCommentResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400

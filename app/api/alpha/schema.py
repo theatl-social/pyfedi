@@ -798,3 +798,8 @@ class GetCommentRequest(DefaultSchema):
 
 class GetCommentResponse(DefaultSchema):
     comment_view = fields.Nested(CommentView, required=True)
+
+
+class LikeCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    score = fields.Integer(required=True, metadata={"example": 1, "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote"})
