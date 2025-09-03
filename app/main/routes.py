@@ -196,6 +196,7 @@ def list_communities():
     language_id = int(request.args.get('language_id', 0))
     nsfw = request.args.get('nsfw', None)
     page = request.args.get('page', 1, type=int)
+    instance = request.args.get('instance', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
 
@@ -242,6 +243,10 @@ def list_communities():
         for item in feed_items:
             feed_community_ids.append(item.community_id)
         communities = communities.filter(Community.id.in_(feed_community_ids))
+    
+    # if filtering by home instance
+    if instance:
+        communities = communities.filter(Community.ap_domain == instance)
 
     if current_user.is_authenticated:
         if current_user.hide_low_quality:
