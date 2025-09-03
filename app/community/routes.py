@@ -317,7 +317,7 @@ def show_community(community: Community):
     posts = None
     comments = None
     if content_type == 'posts':
-        posts = community.posts
+        posts = Post.query.filter(Post.community_id == community.id)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
@@ -611,8 +611,8 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = community.posts.filter(Post.from_bot == False, Post.deleted == False,
-                                       Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
+        posts = Post.query.filter(Post.community_id == community.id).filter(Post.from_bot == False, Post.deleted == False,
+                                  Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()
