@@ -288,7 +288,7 @@ def send_post(post_id, edit=False, session=None):
                             send_post_request(instance.inbox, create, user.private_key, user.public_url() + '#main-key')
                     else:
                         send_post_request(instance.inbox, group_announce, community.private_key, community.public_url() + '#main-key')
-                    if post.type < POST_TYPE_POLL:
+                    if post.type != POST_TYPE_POLL:
                           domains_sent_to.append(instance.domain)
         else:
             send_post_request(community.ap_inbox_url, create, user.private_key, user.public_url() + '#main-key')
