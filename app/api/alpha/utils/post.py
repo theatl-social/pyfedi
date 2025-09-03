@@ -327,6 +327,7 @@ def get_post_replies(auth, data):
         # get_comment_branch() is borrowed from the web-ui so needs the full User
         user = User.query.filter_by(id=user_id).one()
     else:
+        user_details = {}
         user_id = None
         user = None
 
