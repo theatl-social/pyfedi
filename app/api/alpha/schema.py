@@ -771,3 +771,22 @@ class UserNotificationsCountResponse(DefaultSchema):
 
 class UserMarkAllNotifsReadResponse(DefaultSchema):
     mark_all_notifications_as_read = fields.String(required=True, metadata={"example": "complete"})
+
+
+class ListCommentsRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    liked_only = fields.Boolean()
+    saved_only = fields.Boolean()
+    person_id = fields.Integer()
+    community_id = fields.Integer()
+    post_id = fields.Integer()
+    parent_id = fields.Integer()
+    max_depth = fields.Integer()
+    depth_first = fields.Boolean(metadata={"description": "guarantee parent comments are on the same page as any fetched comments"})
+
+
+class ListCommentsResponse(DefaultSchema):
+    comments = fields.List(fields.Nested(CommentView), required=True)
+    next_page = fields.String(allow_none=True)

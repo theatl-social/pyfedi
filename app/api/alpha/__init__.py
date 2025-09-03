@@ -47,4 +47,11 @@ user_bp = ApiBlueprint(
     description=""
 )
 
+reply_bp = ApiBlueprint(
+    "Comment",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes

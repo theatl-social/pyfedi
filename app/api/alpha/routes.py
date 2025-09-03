@@ -4,7 +4,7 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp
+from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, reply_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -82,7 +82,7 @@ def get_alpha_site_version():
 @site_bp.arguments(BlockInstanceRequest)
 @site_bp.response(200, BlockInstanceResponse)
 @site_bp.alt_response(400, schema=DefaultError)
-def get_alpha_site_block(data):
+def post_alpha_site_block(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
@@ -620,17 +620,22 @@ def post_alpha_post_mark_as_read():
 
 
 # Reply
-@bp.route('/api/alpha/comment/list', methods=['GET'])
-def get_alpha_comment_list():
+@reply_bp.route('/comment/list', methods=['GET'])
+@reply_bp.doc(summary="List comments, with various filters.")
+@reply_bp.arguments(ListCommentsRequest, location="query")
+@reply_bp.response(200, ListCommentsResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def get_alpha_comment_list(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return orjson_response(get_reply_list(auth, data))
+        resp = get_reply_list(auth, data)
+        validated = ListCommentsResponse().load(resp)
+        return orjson_response(validated)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/comment/like', methods=['POST'])
