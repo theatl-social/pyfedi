@@ -2178,6 +2178,35 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
             raise Exception('incorrect_login')
         if return_type and return_type == 'model':
             return user
+        elif return_type and return_type == 'dict':
+            user_ban_community_ids = communities_banned_from(user_id)
+            followed_community_ids = list(db.session.execute(text(
+                'SELECT community_id FROM "community_member" WHERE user_id = :user_id'),
+                {'user_id': user_id}).scalars())
+            bookmarked_reply_ids = list(db.session.execute(text(
+                'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+                {'user_id': user_id}).scalars())
+            blocked_creator_ids = blocked_users(user_id)
+            upvoted_reply_ids = recently_upvoted_post_replies(user_id)
+            downvoted_reply_ids = recently_downvoted_post_replies(user_id)
+            subscribed_reply_ids = list(db.session.execute(text(
+                'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+                {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
+            moderated_community_ids = list(db.session.execute(text(
+                'SELECT community_id FROM "community_member" WHERE user_id = :user_id AND is_moderator = true'),
+                {'user_id': user_id}).scalars())
+            user_dict = {
+                'id': user.id,
+                'user_ban_community_ids': user_ban_community_ids,
+                'followed_community_ids': followed_community_ids,
+                'bookmarked_reply_ids': bookmarked_reply_ids,
+                'blocked_creator_ids': blocked_creator_ids,
+                'upvoted_reply_ids': upvoted_reply_ids,
+                'downvoted_reply_ids': downvoted_reply_ids,
+                'subscribed_reply_ids': subscribed_reply_ids,
+                'moderated_community_ids': moderated_community_ids
+            }
+            return user_dict
         else:
             return user.id
 

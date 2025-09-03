@@ -13,13 +13,12 @@ from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read
+    post_post_mark_as_read, get_post_replies
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
-    get_post_reply_list
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
@@ -461,7 +460,9 @@ def get_alpha_post_replies():
     try:
         auth = request.headers.get('Authorization')
         data = request.args.to_dict() or None
-        return orjson_response(get_post_reply_list(auth, data))
+        return orjson_response(get_post_replies(auth, data))
+    except NoResultFound:
+        return jsonify({"error": "Post not found"}), 400
     except Exception as ex:
         current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
