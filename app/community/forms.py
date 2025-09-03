@@ -311,7 +311,7 @@ class CreateEventForm(CreatePostForm):
     more_info_url = StringField(_l('More information link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
     event_timezone = SelectField(_('Timezone'), validators=[Optional()],
                            render_kw={'id': 'timezone', "class": "form-control tom-select"})
-    join_mode = SelectField(_('Join mode'), validators=[Optional()])
+    join_mode = SelectField(_('Cost'), validators=[Optional()])
     max_attendees = IntegerField(_l('Maximum number of attendees'))
     online = BooleanField(_l('Online'))
     online_link = StringField(_l('Online link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])

@@ -26,6 +26,29 @@
 
     // Start the checking loop
     checkAndCopyTitle();
+
+    function showHideLocationDivs(element) {
+        const onlineLocation = document.getElementById('online_location');
+        const irlLocation = document.getElementById('irl_location');
+
+        if (element.checked) {
+            onlineLocation.style.display = "block";
+            irlLocation.style.display = "none";
+        } else {
+            onlineLocation.style.display = "none";
+            irlLocation.style.display = "block";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const online = document.getElementById("online");
+
+        online.addEventListener('change', function () {
+            showHideLocationDivs(online);
+        });
+
+        showHideLocationDivs(online);
+    });
 </script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
@@ -53,7 +76,7 @@
                                 width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                         {% else -%}
                             <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
-                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
+                                <img id="image_preview_edit" src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
                                     sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                                     fetchpriority="high" referrerpolicy="same-origin" >
