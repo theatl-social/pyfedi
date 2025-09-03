@@ -1822,8 +1822,12 @@ def ban_user(blocker, blocked, community, core_activity):
             except ValueError:
                 ban_until = arrow.get(core_activity['endTime']).datetime
 
-        if ban_until and ban_until > datetime.now(timezone.utc):
-            new_ban.ban_until = ban_until
+        if ban_until:
+            # Ensure ban_until is timezone-aware for comparison
+            if ban_until.tzinfo is None:
+                ban_until = ban_until.replace(tzinfo=timezone.utc)
+            if ban_until > datetime.now(timezone.utc):
+                new_ban.ban_until = ban_until
 
         db.session.add(new_ban)
 
