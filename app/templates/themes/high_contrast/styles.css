@@ -23,9 +23,8 @@
     --bs-btn-bg: white;
     --bs-btn-border-color: white;
     --bs-btn-hover-bg: white;
+    --bs-btn-hover-border-color: white;
     --bs-btn-color: black;
-}
-[data-bs-theme="dark"] .btn-primary:hover {
     --bs-btn-hover-color: black;
 }
 
