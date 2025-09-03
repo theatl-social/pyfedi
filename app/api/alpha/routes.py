@@ -695,20 +695,27 @@ def put_alpha_comment_subscribe(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/comment', methods=['POST'])
-def post_alpha_comment():
+@reply_bp.route('/comment', methods=['POST'])
+@reply_bp.doc(summary="Create a comment.")
+@reply_bp.arguments(CreateCommentRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+@reply_bp.alt_response(429, schema=DefaultError)
+def post_alpha_comment(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('3/minute'):
             auth = request.headers.get('Authorization')
-            data = request.get_json(force=True) or {}
-            return jsonify(post_reply(auth, data))
+            resp = post_reply(auth, data)
+            return GetCommentResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
+    except NoResultFound:
+        return abort(400, message="Post / Parent Comment not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/comment', methods=['PUT'])

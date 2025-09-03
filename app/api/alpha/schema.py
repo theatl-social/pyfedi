@@ -803,6 +803,7 @@ class GetCommentResponse(DefaultSchema):
 class LikeCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     score = fields.Integer(required=True, metadata={"example": 1, "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote"})
+    private = fields.Boolean(metadata={"description": "private votes are not federated to other instances", "default": False})
 
 
 class SaveCommentRequest(DefaultSchema):
@@ -813,3 +814,10 @@ class SaveCommentRequest(DefaultSchema):
 class SubscribeCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     subscribe = fields.Boolean(required=True)
+
+
+class CreateCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    post_id = fields.Integer(required=True)
+    parent_id = fields.Integer()
+    language_id = fields.Integer()
