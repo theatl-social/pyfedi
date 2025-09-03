@@ -652,7 +652,7 @@ def post_alpha_comment_like(data):
         return GetCommentResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/comment/save', methods=['PUT'])
