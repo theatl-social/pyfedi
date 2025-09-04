@@ -869,3 +869,12 @@ class RemoveCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     removed = fields.Boolean(required=True)
     reason = fields.String()
+
+
+class MarkCommentAsReadRequest(DefaultSchema):
+    comment_reply_id = fields.Integer(required=True)
+    read = fields.Boolean(required=True)
+
+
+class GetCommentReplyResponse(DefaultSchema):
+    comment_reply_view = fields.Nested(CommentReplyView, required=True)

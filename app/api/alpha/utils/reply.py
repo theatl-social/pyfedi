@@ -425,10 +425,6 @@ def post_reply_remove(auth, data):
 
 
 def post_reply_mark_as_read(auth, data):
-    required(['comment_reply_id', 'read'], data)
-    integer_expected(['comment_reply_id'], data)
-    boolean_expected(['read'], data)
-
     reply_id = data['comment_reply_id']
     read = data['read']
 
@@ -472,4 +468,4 @@ def post_reply_mark_as_read(auth, data):
         is_user_moderator=reply.community_id in user_details['moderated_community_ids'])
     reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id] if read else [])
     reply_json['recipient'] = recipient
-    return reply_json
+    return {'comment_reply_view': reply_json}
