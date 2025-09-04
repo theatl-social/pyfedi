@@ -1307,6 +1307,7 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.user_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.user_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.user_id == self.id).delete()
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.user_id == self.id).delete()
         db.session.query(ChatMessage).filter(or_(ChatMessage.sender_id == self.id, ChatMessage.recipient_id == self.id)).delete()
         db.session.query(UserBlock).filter(or_(UserBlock.blocker_id == self.id, UserBlock.blocked_id == self.id)).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
