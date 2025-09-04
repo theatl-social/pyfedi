@@ -8,7 +8,7 @@ from app.constants import *
 from app.models import Notification, PostReply, Post, User
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
     edit_reply, \
-    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply
+    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply, lock_post_reply
 from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
     communities_banned_from, in_sorted_list
 
@@ -469,3 +469,13 @@ def post_reply_mark_as_read(auth, data):
     reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id] if read else [])
     reply_json['recipient'] = recipient
     return {'comment_reply_view': reply_json}
+
+
+def post_reply_lock(auth, data):
+    comment_id = data['comment_id']
+    locked = data['locked']
+
+    user_id, reply = lock_post_reply(comment_id, locked, SRC_API, auth)
+
+    reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
+    return reply_json

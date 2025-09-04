@@ -433,10 +433,11 @@ def mod_restore_reply(reply_id, reason, src, auth):
 def lock_post_reply(post_reply_id, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
+        post_reply = PostReply.query.filter_by(id=post_reply_id).one()
     else:
         user = current_user
+        post_reply = PostReply.query.get(post_reply_id)
 
-    post_reply = PostReply.query.get(post_reply_id)
     if locked:
         replies_enabled = False
         modlog_type = 'lock_post_reply'

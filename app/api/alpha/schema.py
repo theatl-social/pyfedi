@@ -878,3 +878,8 @@ class MarkCommentAsReadRequest(DefaultSchema):
 
 class GetCommentReplyResponse(DefaultSchema):
     comment_reply_view = fields.Nested(CommentReplyView, required=True)
+
+
+class LockCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    locked = fields.Boolean(required=True)

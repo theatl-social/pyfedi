@@ -18,7 +18,7 @@ from app.api.alpha.utils.private_message import get_private_message_list, post_p
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
@@ -825,6 +825,27 @@ def get_alpha_comment(data):
         auth = request.headers.get('Authorization')
         resp = get_reply(auth, data)
         return GetCommentResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Comment not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@reply_bp.route('/comment/lock', methods=['POST'])
+@reply_bp.doc(summary="Lock a comment chain as a moderator.")
+@reply_bp.arguments(LockCommentRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_lock(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_reply_lock(auth, data)
+        return GetCommentResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Comment not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
