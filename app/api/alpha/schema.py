@@ -336,6 +336,7 @@ class Comment(DefaultSchema):
     user_id = fields.Integer(required=True)
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    locked = fields.Boolean()
 
 
 class CommentAggregates(DefaultSchema):
@@ -821,3 +822,15 @@ class CreateCommentRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     parent_id = fields.Integer()
     language_id = fields.Integer()
+
+
+class EditCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    comment_id = fields.Integer(required=True)
+    language_id = fields.Integer()
+    distinguished = fields.Boolean(metadata={"default": False, "description": "Visibly mark reply as from a moderator in the web UI"})
+
+
+class DeleteCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)

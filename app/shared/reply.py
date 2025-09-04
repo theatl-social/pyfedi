@@ -192,7 +192,10 @@ def edit_reply(input, reply, post, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
-        distinguished = input['distinguished'] if 'distinguished' in input else False
+        distinguished = input['distinguished']
+        if (not reply.distinguished and distinguished == True) or (reply.distinguished == True and distinguished == False):
+            if not reply.community.is_moderator(user) and not reply.community.is_owner(user) and not user.is_staff() and not user.is_admin():
+                raise Exception('Not a moderator')
     else:
         user = current_user
         content = input.body.data

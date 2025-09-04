@@ -467,7 +467,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
                    'local': reply.is_local(),
                    'language_id': reply.language_id if reply.language_id else 0,
                    'distinguished': reply.distinguished if reply.distinguished else False,
-                   'replies_enabled': reply.replies_enabled if reply.replies_enabled else True,
+                   'locked': not reply.replies_enabled if reply.replies_enabled is not None else False,
                    'removed': False})
 
         if not reply.path:
