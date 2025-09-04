@@ -822,3 +822,10 @@ class CreateCommentRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     parent_id = fields.Integer()
     language_id = fields.Integer()
+
+
+class EditCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    comment_id = fields.Integer(required=True)
+    language_id = fields.Integer()
+    distinguished = fields.Boolean(metadata={"default": False, "description": "Visibly mark reply as from a moderator in the web UI"})

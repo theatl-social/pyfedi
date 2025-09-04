@@ -718,17 +718,23 @@ def post_alpha_comment(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/comment', methods=['PUT'])
-def put_alpha_comment():
+@reply_bp.route('/comment', methods=['PUT'])
+@reply_bp.doc(summary="Edit a comment.")
+@reply_bp.arguments(EditCommentRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def put_alpha_comment(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_reply(auth, data))
+        resp = put_reply(auth, data)
+        return GetCommentResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Comment not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/comment/delete', methods=['POST'])
