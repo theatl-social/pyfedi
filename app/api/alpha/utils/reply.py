@@ -384,10 +384,6 @@ def put_reply(auth, data):
 
 
 def post_reply_delete(auth, data):
-    required(['comment_id', 'deleted'], data)
-    integer_expected(['comment_id'], data)
-    boolean_expected(['deleted'], data)
-
     reply_id = data['comment_id']
     deleted = data['deleted']
 

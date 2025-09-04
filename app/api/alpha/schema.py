@@ -829,3 +829,8 @@ class EditCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     language_id = fields.Integer()
     distinguished = fields.Boolean(metadata={"default": False, "description": "Visibly mark reply as from a moderator in the web UI"})
+
+
+class DeleteCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
