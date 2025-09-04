@@ -5,13 +5,14 @@ from random import randint
 import flask
 from bs4 import BeautifulSoup
 
-from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, g, json
-from markupsafe import Markup
+from flask import redirect, url_for, flash, request, make_response, current_app, abort, g, json
+from markupsafe import Markup, escape
 from flask_login import current_user
 from flask_babel import _, force_locale, gettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
+from ics import Calendar, Event, DisplayAlarm
 
 from app import db, cache, celery, httpx_client, limiter, plugins
 from app.activitypub.signature import RsaKeys, send_post_request
@@ -52,7 +53,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required
+    approval_required, markdown_to_text
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -663,6 +664,39 @@ def show_community_rss(actor):
         response.headers.add_header('ETag', f"{community.id}_{hash(community.last_active)}")
         response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
         return response
+    else:
+        abort(404)
+
+
+# iCal feed of the community
+@bp.route('/<actor>/ical', methods=['GET'])
+def show_community_ical(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        community: Community = Community.query.filter_by(ap_id=actor, banned=False).first()
+    else:
+        community: Community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
+    if community is not None:
+        posts = Post.query.filter(Post.community_id == community.id, Post.type == POST_TYPE_EVENT).\
+            filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
+            order_by(desc(Post.created_at)).limit(50).all()
+        ical = Calendar(creator='PieFed')
+        for post in posts:
+            evt = Event(uid=post.ap_id)
+            evt.name = post.title
+            evt.description = f'For more information see {post.ap_id}'
+            evt.begin = post.event.start
+            evt.end = post.event.end
+            alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
+            evt.alarms += [alarm]
+            ical.events.add(evt)
+        ical_data = ical.serialize()
+        ical_data = ical_data.replace("BEGIN:VCALENDAR", f"BEGIN:VCALENDAR\nX-WR-CALNAME:{community.display_name()}\nX-WR-TIMEZONE:UTC")
+        resp = make_response(ical_data)
+        resp.headers['Content-Disposition'] = 'inline; filename="Events in ' + slugify(community.display_name()) + '.ics"'
+        resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
+        resp.mimetype = 'text/calendar'
+        return resp
     else:
         abort(404)
 

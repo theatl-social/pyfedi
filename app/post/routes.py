@@ -10,6 +10,10 @@ from flask_login import current_user
 from furl import furl
 from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
+from ics import Calendar, DisplayAlarm
+import ics
+from markupsafe import escape
+from slugify import slugify
 
 from app import db, constants, cache, limiter
 from app.activitypub.signature import default_context, send_post_request
@@ -2118,3 +2122,28 @@ def post_cross_post(post_id: int):
 @login_required
 def preview():
     return markdown_to_html(request.form.get('body'))
+
+
+@bp.route('/post/<int:post_id>/ical', methods=['GET'])
+def show_post_ical(post_id: int):
+    with limiter.limit('30/minute'):
+        post = Post.query.get_or_404(post_id)
+        if post.type != POST_TYPE_EVENT:
+            abort(404)
+        ical = Calendar(creator='PieFed')
+        evt = ics.Event(uid=post.ap_id)
+        evt.name = post.title
+        evt.description = f'For more information see {post.ap_id}'
+        evt.begin = post.event.start
+        evt.end = post.event.end
+        alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
+        evt.alarms += [alarm]
+        ical.events.add(evt)
+        ical_data = ical.serialize()
+        ical_data = ical_data.replace("BEGIN:VCALENDAR",
+                                      f"BEGIN:VCALENDAR\nX-WR-CALNAME:{escape(post.title)}\nX-WR-TIMEZONE:UTC")
+        resp = make_response(ical_data)
+        resp.headers['Content-Disposition'] = 'inline; filename="' + slugify(post.title) + '.ics"'
+        resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
+        resp.mimetype = 'text/calendar'
+        return resp
