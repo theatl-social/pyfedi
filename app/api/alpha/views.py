@@ -9,7 +9,7 @@ from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
-    num_topics
+    num_topics, moderating_communities_ids
 
 
 # 'stub' param: set to True to exclude optional fields
@@ -614,48 +614,36 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
 
 
 def reply_report_view(report, reply_id, user_id) -> dict:
-    # views/comment_report_view.dart - /comment/report api endpoint
-    reply_json = reply_view(reply=reply_id, variant=9, user_id=user_id)
-    post_json = post_view(post=reply_json['comment']['post_id'], variant=1, stub=True)
-    community_json = community_view(community=post_json['community_id'], variant=1, stub=True)
+    # /comment/report api endpoint
+    # similar to a reply_view in many ways, except that the 'creator' is the report creator,
+    # not the reported comment's creator.
+    is_creator_blocked = report.reporter_id in blocked_users(user_id)
+    is_creator_banned_from_community = report.suspect_community_id in communities_banned_from(report.reporter_id)
+    is_creator_moderator = report.suspect_community_id in moderating_communities_ids(report.reporter_id)
+    is_creator_admin = report.reporter_id in g.admin_ids
+    report_json = reply_view(reply=reply_id, variant=3, user_id=user_id,
+                             is_creator_blocked=is_creator_blocked,
+                             is_creator_banned_from_community=is_creator_banned_from_community,
+                             is_creator_moderator=is_creator_moderator,
+                             is_creator_admin=is_creator_admin)
+    report_json['comment_creator'] = user_view(user=report.suspect_user_id, variant=1, stub=True)
+    report_json['creator'] = user_view(user=user_id, variant=1, stub=True)
 
-    banned = db.session.execute(
-        text('SELECT user_id FROM "community_ban" WHERE user_id = :user_id and community_id = :community_id'),
-        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    moderator = db.session.execute(
-        text('SELECT is_moderator FROM "community_member" WHERE user_id = :user_id and community_id = :community_id'),
-        {'user_id': report.reporter_id, 'community_id': community_json['id']}).scalar()
-    admin = db.session.execute(text('SELECT user_id FROM "user_role" WHERE user_id = :user_id and role_id = 4'),
-                               {'user_id': report.reporter_id}).scalar()
-
-    creator_banned_from_community = True if banned else False
-    creator_is_moderator = True if moderator else False
-    creator_is_admin = True if admin else False
+    report_json['comment_report'] = {
+        'id': report.id,
+        'creator_id': report.reporter_id,
+        'comment_id': report.suspect_post_reply_id,
+        'original_comment_text': report_json['comment']['body'],
+        'reason': report.reasons,
+        'resolved': report.status == 3,
+        'published': report.created_at.isoformat(timespec="microseconds") + 'Z'
+    }
+    # TODO when it's easy to get a report's resolver
+    # - add resolver_id to 'comment_report'
+    # - add resolver{} user_view
 
     v1 = {
-        'comment_report_view': {
-            'comment_report': {
-                'id': report.id,
-                'creator_id': report.reporter_id,
-                'comment_id': report.suspect_post_reply_id,
-                'original_comment_text': reply_json['comment']['body'],
-                'reason': report.reasons,
-                'resolved': report.status == 3,
-                'published': report.created_at.isoformat(timespec="microseconds") + 'Z'
-            },
-            'comment': reply_json['comment'],
-            'post': post_json,
-            'community': community_json,
-            'creator': user_view(user=user_id, variant=1, stub=True),
-            'comment_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
-            'counts': reply_json['counts'],
-            'creator_banned_from_community': creator_banned_from_community,
-            'creator_is_moderator': creator_is_moderator,
-            'creator_is_admin': creator_is_admin,
-            'creator_blocked': False,
-            'subscribed': reply_json['subscribed'],
-            'saved': reply_json['saved']
-        }
+        'comment_report_view': report_json
     }
     return v1
 

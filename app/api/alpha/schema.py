@@ -339,6 +339,18 @@ class Comment(DefaultSchema):
     locked = fields.Boolean()
 
 
+class CommentReport(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    comment_id = fields.Integer(required=True)
+    original_comment_text = fields.String()
+    reason = fields.String()
+    resolved = fields.Boolean(required=True)
+    # TODO: resolver_id = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
 class CommentAggregates(DefaultSchema):
     child_count = fields.Integer(required=True)
     comment_id = fields.Integer(required=True)
@@ -364,6 +376,12 @@ class CommentView(DefaultSchema):
     subscribed = fields.String(required=True)
     my_vote = fields.Integer()
     can_auth_user_moderate = fields.Boolean()
+
+
+class CommentReportView(CommentView):
+    comment_report = fields.Nested(CommentReport, required=True)
+    comment_creator = fields.Nested(Person, required=True)
+    # TODO: resolver = fields.Nested(Person, required=True)
 
 
 class SearchResponse(DefaultSchema):
@@ -834,3 +852,14 @@ class EditCommentRequest(DefaultSchema):
 class DeleteCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     deleted = fields.Boolean(required=True)
+
+
+class ReportCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+    description = fields.String()
+    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
+
+
+class GetCommentReportResponse(DefaultSchema):
+    comment_report_view = fields.Nested(CommentReportView, required=True)

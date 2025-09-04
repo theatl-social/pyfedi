@@ -397,13 +397,11 @@ def post_reply_delete(auth, data):
 
 
 def post_reply_report(auth, data):
-    required(['comment_id', 'reason'], data)
-    integer_expected(['comment_id'], data)
-    string_expected(['reason'], data)
-
     reply_id = data['comment_id']
     reason = data['reason']
-    input = {'reason': reason, 'description': '', 'report_remote': True}
+    description =data['description'] if 'description' in data else ''
+    report_remote = data['report_remote'] if 'report_remote' in data else True
+    input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
     user_id, report = report_reply(reply_id, input, SRC_API, auth)
 
