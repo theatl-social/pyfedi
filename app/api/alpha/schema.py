@@ -863,3 +863,9 @@ class ReportCommentRequest(DefaultSchema):
 
 class GetCommentReportResponse(DefaultSchema):
     comment_report_view = fields.Nested(CommentReportView, required=True)
+
+
+class RemoveCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    reason = fields.String()

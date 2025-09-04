@@ -775,17 +775,23 @@ def post_alpha_comment_report(data):
         return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/comment/remove', methods=['POST'])
-def post_alpha_comment_remove():
+@reply_bp.route('/comment/remove', methods=['POST'])
+@reply_bp.doc(summary="Remove a comment as a moderator.")
+@reply_bp.arguments(RemoveCommentRequest)
+@reply_bp.response(200, GetCommentResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_remove(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_reply_remove(auth, data))
+        resp = post_reply_remove(auth, data)
+        return GetCommentResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Comment not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/comment/mark_as_read', methods=['POST'])
