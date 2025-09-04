@@ -369,7 +369,8 @@ def mod_remove_reply(reply_id, reason, src, auth):
         raise Exception('Does not have permission')
 
     reply.deleted = True
-    reply.deleted_by = user.id
+    # set deleted_by to -1 if a mod is removing their own reply as part of a mod action, so it's shows as 'removed' rather than 'deleted'
+    reply.deleted_by = user.id if user.id != reply.user_id else -1
     if not reply.author.bot:
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
@@ -409,8 +410,9 @@ def mod_restore_reply(reply_id, reason, src, auth):
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
+
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))
