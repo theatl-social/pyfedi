@@ -410,11 +410,6 @@ def post_reply_report(auth, data):
 
 
 def post_reply_remove(auth, data):
-    required(['comment_id', 'removed'], data)
-    integer_expected(['comment_id'], data)
-    boolean_expected(['removed'], data)
-    string_expected(['reason'], data)
-
     reply_id = data['comment_id']
     removed = data['removed']
 
