@@ -191,6 +191,8 @@ def list_topics():
 def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
+    home_select = request.args.get('home_select', 'any')
+    subscribe_select = request.args.get('subscribe_select', 'any')
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
@@ -222,6 +224,29 @@ def list_communities():
 
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+    
+    if home_select == "local":
+        communities = communities.filter(Community.ap_id == None)
+    elif home_select == "remote":
+        communities = communities.filter(Community.ap_id != None)
+    
+    if subscribe_select != "any":
+        # get the user's joined communities
+        user_joined_communities = joined_communities(current_user.id)
+        user_moderating_communities = moderating_communities(current_user.id)
+        # get the joined community ids list
+        joined_ids = []
+        for jc in user_joined_communities:
+            joined_ids.append(jc.id)
+        for mc in user_moderating_communities:
+            joined_ids.append(mc.id)
+        
+        if subscribe_select == "subscribed":
+            # filter down to just the joined communities
+            communities = communities.filter(Community.id.in_(joined_ids))
+        elif subscribe_select == "not_subscribed":
+            # filter out the joined communities from all communities
+            communities = communities.filter(Community.id.not_in(joined_ids))
 
     # default to no public feeds
     server_has_feeds = False
@@ -292,13 +317,13 @@ def list_communities():
                        language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param,
-                           title=_('Communities'),
+                           title=_('Communities'), instance=instance, home_select=home_select,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by, nsfw=nsfw,
+                           sort_by=sort_by, nsfw=nsfw, subscribe_select=subscribe_select,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
