@@ -428,6 +428,12 @@ def register(app):
             finally:
                 session.close()
 
+    @app.cli.command('reopen')
+    def reopen():
+        from app import redis_client
+        redis_client.set('pause_federation', '666', ex=1)
+        print('Done')
+
     @app.cli.command('publish-scheduled-posts')
     def publish_scheduled_posts_command():
         # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to remove the @app.cli.command decorator

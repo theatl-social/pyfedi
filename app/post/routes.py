@@ -1480,6 +1480,9 @@ def post_set_flair(post_id):
             comm_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
                 order_by(CommunityFlair.flair).all()
 
+            post.nsfw = request.form.get('nsfw') == '1'
+            post.nsfl = request.form.get('nsfl') == '1'
+
             # Reset flair for the post
             post.flair = []
 
@@ -1515,12 +1518,16 @@ def post_set_flair(post_id):
         if form.validate_on_submit():
             post.flair.clear()
             post.flair = flair_from_form(form.flair.data)
+            post.nsfw = form.nsfw.data
+            post.nsfl = form.nsfl.data
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector('edit_post', post_id=post.id)
             return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
         form.referrer.data = referrer()
         form.flair.data = [flair.id for flair in post.flair]
+        form.nsfw.data = post.nsfw
+        form.nsfl.data = post.nsfl
         return render_template('generic_form.html', form=form,
                                title=_('Set flair for %(post_title)s', post_title=post.title))
     else:
@@ -1546,7 +1553,7 @@ def post_flair_list(post_id):
         post_flair = [flair.id for flair in post.flair]
 
         return render_template('post/_flair_choices.html', post_id=post.id, post_preview=post_preview,
-                               flair_objs=flair_objs, post_flair=post_flair)
+                               flair_objs=flair_objs, post_flair=post_flair, post=post)
     else:
         abort(401)
 

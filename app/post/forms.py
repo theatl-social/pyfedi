@@ -75,4 +75,6 @@ class ConfirmationMultiDeleteForm(FlaskForm):
 class FlairPostForm(FlaskForm):
     referrer = HiddenField()
     flair = MultiCheckboxField(_l('Flair'), coerce=int, render_kw={'class': 'form-multicheck-columns'})
+    nsfw = BooleanField(_l('NSFW'))
+    nsfl = BooleanField(_l('Gore/gross'))
     submit = SubmitField(_l('Save'))
