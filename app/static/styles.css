@@ -942,6 +942,9 @@ form > .mb-3.required > label:after {
 .communities_table tbody .btn {
   text-wrap: nowrap;
 }
+.communities_table tbody tr td {
+  padding: 6px;
+}
 
 .topics_list {
   list-style-type: none;
