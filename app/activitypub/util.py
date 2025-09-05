@@ -2006,26 +2006,59 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                        announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
-                if recipient:
-                    blocked_senders = blocked_users(recipient.id)
-                    if post_reply.user_id not in blocked_senders:
-                        author = User.query.get(post_reply.user_id)
-                        targets_data = {'gen': '0',
-                                        'post_id': post_reply.post_id,
-                                        'comment_id': post_reply.id,
-                                        'comment_body': post_reply.body,
-                                        'author_user_name': author.ap_id if author.ap_id else author.user_name
-                                        }
-                        with force_locale(get_recipient_language(recipient.id)):
-                            notification = Notification(user_id=recipient.id, title=gettext(
-                                f"You have been mentioned in comment {post_reply.id}"),
-                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                        author_id=user.id, notif_type=NOTIF_MENTION,
-                                                        subtype='comment_mention',
-                                                        targets=targets_data)
-                            recipient.unread_notifications += 1
-                            db.session.add(notification)
-                            db.session.commit()
+                if not recipient:
+                    continue
+                if post_reply.instance.software == 'mbin' or post_reply.instance.software in MICROBLOG_APPS:
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention made in a post body
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "post_mention",
+                                                                   Notification.targets.op("->>")("post_id").cast(Integer) == post_reply.post_id).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention someone else made in the comment chain
+                    ids = []
+                    for element in post_reply.path:
+                        if element == 0 or element == post_reply.id:
+                            continue
+                        ids.append(element)
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "comment_mention",
+                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just there because a local user authored a comment further up in the comment chain
+                    # (direct replies will generate a different kind of Notification)
+                    # note: can't just check for any Notifications (reply or mention) 'cos local users could conceivably have turned inbox replies off
+                    ids = tuple(ids)
+                    user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                    if recipient.id in user_ids:
+                        continue
+
+                    # if checking for previous comments seems overly-involved, a cheaper solution is perhaps to just be to reject Mentions from MBIN in comments with a depth > 0
+
+                blocked_senders = blocked_users(recipient.id)
+                if post_reply.user_id not in blocked_senders:
+                    author = User.query.get(post_reply.user_id)
+                    targets_data = {'gen': '0',
+                                    'post_id': post_reply.post_id,
+                                    'comment_id': post_reply.id,
+                                    'comment_body': post_reply.body,
+                                    'author_user_name': author.ap_id if author.ap_id else author.user_name
+                                    }
+                    with force_locale(get_recipient_language(recipient.id)):
+                        notification = Notification(user_id=recipient.id, title=gettext(
+                            f"You have been mentioned in comment {post_reply.id}"),
+                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                            author_id=user.id, notif_type=NOTIF_MENTION,
+                            subtype='comment_mention',
+                            targets=targets_data)
+                        recipient.unread_notifications += 1
+                        db.session.add(notification)
+                        db.session.commit()
 
             return post_reply
         except Exception as ex:
