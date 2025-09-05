@@ -147,6 +147,14 @@ def home_page(sort, view_filter):
         new_communities = new_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
 
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false 
+                                                 AND p.status > :reviewing
+                                                 ORDER BY e.start LIMIT 5"""),
+                                         {'reviewing': POST_STATUS_REVIEWING}).all()
+
     # Voting history and ban status
     if current_user.is_authenticated:
         recently_upvoted = recently_upvoted_posts(current_user.id)
@@ -158,7 +166,7 @@ def home_page(sort, view_filter):
         communities_banned_from_list = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities,
-                           new_communities=new_communities,
+                           new_communities=new_communities, upcoming_events=upcoming_events,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            communities_banned_from_list=communities_banned_from_list,

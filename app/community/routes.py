@@ -484,14 +484,16 @@ def show_community(community: Community):
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
                                                  INNER JOIN post p on e.post_id = p.id
-                                                 WHERE e.start > now() AND p.deleted is false AND p.community_id = :community_id
-                                                 ORDER BY e.start"""),
-                                         {'community_id': community.id}).all()
+                                                 WHERE e.start > now() AND p.deleted is false 
+                                                 AND p.community_id = :community_id AND p.status > :reviewing
+                                                 ORDER BY e.start LIMIT 5"""),
+                                         {'community_id': community.id, 'reviewing': POST_STATUS_REVIEWING}).all()
 
     has_events = db.session.execute(text("""SELECT COUNT(p.id) as c FROM "event" e
                                             INNER JOIN post p on e.post_id = p.id
-                                            WHERE p.deleted is false AND p.community_id = :community_id"""),
-                                    {'community_id': community.id}).scalar_one_or_none()
+                                            WHERE p.deleted is false AND p.community_id = :community_id
+                                            AND p.status > :reviewing"""),
+                                    {'community_id': community.id, 'reviewing': POST_STATUS_REVIEWING}).scalar_one_or_none()
 
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
