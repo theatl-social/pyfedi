@@ -338,6 +338,22 @@ class CreateEventForm(CreatePostForm):
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
 
+        local_tz = ZoneInfo(self.event_timezone.data)
+        local_start = self.start_datetime.data.replace(tzinfo=local_tz)
+        local_end = self.end_datetime.data.replace(tzinfo=local_tz)
+
+        # Convert to UTC for comparison with utcnow()
+        utc_start = local_start.astimezone(ZoneInfo('UTC'))
+        utc_end = local_end.astimezone(ZoneInfo('UTC'))
+
+        if utc_start < utcnow(naive=False):
+            self.start_datetime.errors.append(_('This time is in the past.'))
+        if utc_end < utcnow(naive=False):
+            self.end_datetime.errors.append(_('This time is in the past.'))
+
+        if self.start_datetime.data > self.end_datetime.data:
+            self.start_datetime.errors.append(_('Start must be less than end.'))
+
         # Validate online vs physical event requirements
         if self.online.data:
             # Online event - online_link is required
