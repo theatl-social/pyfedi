@@ -69,7 +69,7 @@ def show_topic(topic_path):
 
         topic_communities = Community.query.filter(
             Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
-            filter(Community.id.notin_(blocked_instances(current_user.get_id()))).\
+            filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         posts = None

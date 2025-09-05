@@ -130,6 +130,8 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             active_communities = active_communities.filter(Community.id.not_in(community_ids))
+        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
+
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # New Communities
@@ -142,6 +144,7 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
+        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
 
     # Voting history and ban status
