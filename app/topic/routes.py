@@ -18,7 +18,7 @@ from app.models import Topic, Community, NotificationSubscription, PostReply, ut
 from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
-    gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
+    gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, blocked_communities, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
     approval_required
@@ -70,6 +70,7 @@ def show_topic(topic_path):
         topic_communities = Community.query.filter(
             Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
             filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         posts = None

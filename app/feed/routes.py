@@ -29,7 +29,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
     communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
-    blocked_instances
+    blocked_instances, blocked_communities
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -748,6 +748,7 @@ def show_feed(feed):
         feed_communities = Community.query.filter(
             Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
             filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
