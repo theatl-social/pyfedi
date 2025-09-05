@@ -92,7 +92,7 @@ class FederationForm(FlaskForm):
 
 
 class CloseInstanceForm(FlaskForm):
-    announcement = TextAreaField(_l('Closing down announcement for home page'))
+    announcement = TextAreaField(_l('Closing down announcement for home page'), validators=[DataRequired()])
     submit = SubmitField(_l('Yes, close my instance'))
 
 
