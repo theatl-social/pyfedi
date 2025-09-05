@@ -2112,8 +2112,10 @@ def process_chat(user, store_ap_json, core_activity, session):
     recipient_ap_id = core_activity['object']['to'][0]
     recipient = find_actor_or_create(recipient_ap_id)
     if recipient and recipient.is_local():
-        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and not sender.trustworthy():
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
+        if sender.ap_profile_id == 'https://fediseer.com/api/v1/user/fediseer':
+            return True
+        if sender.created_very_recently():
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender is too new')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')
