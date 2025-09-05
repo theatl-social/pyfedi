@@ -1700,7 +1700,8 @@ def announce_activity_to_followers(community: Community, creator: User, activity
         return
 
     # remove context from what will be inner object
-    del activity["@context"]
+    if '@context' in activity:
+        del activity["@context"]
 
     announce_activity = {
         '@context': default_context(),
