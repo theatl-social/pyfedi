@@ -873,8 +873,8 @@ class User(UserMixin, db.Model):
     post_reply_count = db.Column(db.Integer, default=0)
     stripe_customer_id = db.Column(db.String(50))
     stripe_subscription_id = db.Column(db.String(50))
-    searchable = db.Column(db.Boolean, default=True)
-    indexable = db.Column(db.Boolean, default=False)
+    searchable = db.Column(db.Boolean, default=True)        # whether their profile is visible in profile list
+    indexable = db.Column(db.Boolean, default=True)         # whether posts appear in search results
     bot = db.Column(db.Boolean, default=False, index=True)
     bot_override = db.Column(db.Boolean, default=False, index=True)
     suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
@@ -1450,7 +1450,7 @@ class Post(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('title', 'body'))
+    search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}))
 
     image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])

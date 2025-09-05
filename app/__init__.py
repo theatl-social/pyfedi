@@ -45,6 +45,7 @@ def get_ip_address() -> str:
 
 
 db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
+make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
@@ -136,7 +137,6 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
-    make_searchable(db.metadata)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
     limiter.init_app(app)
