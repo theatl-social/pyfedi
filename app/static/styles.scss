@@ -2530,6 +2530,10 @@ form {
   }
 }
 
+.accordion-button {
+  padding: 7px 12px;
+}
+
 .blink {
   animation: blink-animation 1s steps(2, start) infinite;
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
