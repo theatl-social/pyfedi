@@ -66,17 +66,17 @@ def webfinger():
         if actor == current_app.config['SERVER_NAME']:
             webfinger_data = {
                 "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
-                "aliases": [f"https://{current_app.config['SERVER_NAME']}/actor"],
+                "aliases": [f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/actor"],
                 "links": [
                     {
                         "rel": "http://webfinger.net/rel/profile-page",
                         "type": "text/html",
-                        "href": f"https://{current_app.config['SERVER_NAME']}/about"
+                        "href": f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/about"
                     },
                     {
                         "rel": "self",
                         "type": "application/activity+json",
-                        "href": f"https://{current_app.config['SERVER_NAME']}/actor",
+                        "href": f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/actor",
                     }
                 ]
             }
