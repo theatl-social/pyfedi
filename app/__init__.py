@@ -150,7 +150,8 @@ def create_app(config_class=Config):
         'app.activitypub.signature.post_request': {'queue': 'send'},
         # Maintenance tasks - all go to background queue
         'app.shared.tasks.maintenance.*': {'queue': 'background'},
-        'app.admin.*': {'queue': 'background'},
+        'app.admin.routes.*': {'queue': 'background'},
+        'app.admin.util.*': {'queue': 'background'},
         'app.utils.archive_post': {'queue': 'background'},
     })
 
