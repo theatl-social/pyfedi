@@ -204,6 +204,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                    'instance_id': user.instance_id if user.instance_id else 1})
         if user.about and not stub:
             v1['about'] = user.about
+        if user.about_html and not stub:
+            v1['about_html'] = user.about_html
         if user.avatar_id:
             v1['avatar'] = user.avatar.medium_url()
         if user.cover_id and not stub:
@@ -299,6 +301,13 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             "person_blocks": blocked_people_view(user),
             "discussion_languages": []  # TODO
         }
+
+        # Delete some fields if they are null for backwards compatibility
+        if not v6["local_user_view"]["person"]["about"]:
+            del v6["local_user_view"]["person"]["about"]
+        if not v6["local_user_view"]["person"]["about_html"]:
+            del v6["local_user_view"]["person"]["about_html"]
+
         return v6
 
     # Variant 7 - from resolve_object
