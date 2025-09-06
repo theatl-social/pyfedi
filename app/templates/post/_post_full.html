@@ -1,16 +1,27 @@
 <div class="row position-relative post_full">
-        <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
-            {% if post.type != POST_TYPE_EVENT or (post.type == POST_TYPE_EVENT and post.image_id is none) -%}
-                {% include "post/_breadcrumb_nav.html" %}
-            {% endif %}
-            <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">{{ post.title }}
-                {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
-                {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
+    <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
+        {% if post.type != POST_TYPE_EVENT or (post.type == POST_TYPE_EVENT and post.image_id is none) -%}
+            {% include "post/_breadcrumb_nav.html" %}
+        {% endif %}
+            <h1 class="mt-2 post_title" lang="{{ post.language_code() }}">
+                {{ post.title }}
+                {% if post.nsfw -%}
+                    <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">
+                        nsfw
+                    </span>
+                {% endif -%}
+                {% if post.nsfl -%}
+                    <span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">
+                        nsfl
+                    </span>
+                {% endif -%}
             </h1>
             {% if post.type == POST_TYPE_LINK and post.image_id and not (post.url and 'youtube.com' in post.url) -%}
                 <div class="url_thumbnail">
-                    <a href="{{ post.url }}" target="_blank" rel="nofollow ugc" class="post_link"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                            width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
+                    <a href="{{ post.url }}" target="_blank" rel="nofollow ugc" class="post_link">
+                        <img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
+                                width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" />
+                    </a>
                 </div>
             {% endif -%}
             <div class="mb-2">
@@ -25,152 +36,228 @@
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_IMAGE -%}
-            <p class="mt-2"><a href="{{ post.image.view_url() if post.image_id else post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">{{ post.image.view_url() if post.image_id else post.url|shorten_url }}
-                    <span class="fe fe-external"></span></a></p>
+                <p class="mt-2">
+                    <a href="{{ post.image.view_url() if post.image_id else post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">
+                        {{ post.image.view_url() if post.image_id else post.url|shorten_url }}
+                        <span class="fe fe-external"></span>
+                    </a>
+                </p>
                 <div class="post_image">
                     {% if post.image_id -%}
                         {% if low_bandwidth -%}
-                            <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc"><img src="{{ post.image.medium_url() }}"
-                                 alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
-                                 width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+                            <a href="{{ post.image.view_url(resize=True) }}" rel="nofollow ugc">
+                                <img src="{{ post.image.medium_url() }}"
+                                        alt="{{ post.image.alt_text if post.image.alt_text else post.title }}" fetchpriority="high" referrerpolicy="same-origin"
+                                        width="{{ post.image.width }}" height="{{ post.image.height }}" />
+                            </a>
                         {% else -%}
                             <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
                                 {% if post.image.height and post.image.width -%}
                                     {% set is_portrait = post.image.height > post.image.width * 1.2 -%}
                                 {% endif -%}
                                 {% if is_portrait -%}
-                                <img src="{{ post.image.medium_url() }}"
-                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                                     fetchpriority="high" referrerpolicy="same-origin" >
+                                    <img src="{{ post.image.medium_url() }}"
+                                            alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                            fetchpriority="high" referrerpolicy="same-origin" />
                                 {% else -%}
-                                <img src="{{ post.image.medium_url() }}"
-                                     sizes="(max-width: 512px) 100vw, 100vw"
-                                     srcset="{{ post.image.thumbnail_url() }} 512w, {{ post.image.medium_url() }} 1024w"
-                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                                     fetchpriority="high" referrerpolicy="same-origin" >
+                                    <img src="{{ post.image.medium_url() }}"
+                                            sizes="(max-width: 512px) 100vw, 100vw"
+                                            srcset="{{ post.image.thumbnail_url() }} 512w, {{ post.image.medium_url() }} 1024w"
+                                            alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                            fetchpriority="high" referrerpolicy="same-origin" />
                                 {% endif -%}
                             </a>
                         {% endif -%}
                     {% else -%}
-                        <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image"><img src="{{ post.url }}" style="max-width: 100%; height: auto;"  /></a>
+                        <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _("Go to image") }}">
+                            <img src="{{ post.url }}" style="max-width: 100%; height: auto;"  />
+                        </a>
                     {% endif -%}
                 </div>
             {% elif post.type == POST_TYPE_LINK and post.url -%}
-                <p class="mt-2"><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
-                <span class="fe fe-external"></span></a>
+                <p class="mt-2">
+                    <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">
+                        {{ post.url|shorten_url }}
+                        <span class="fe fe-external"></span>
+                    </a>
                     {% if post.domain.post_warning -%}
                         <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
-                    {% endif -%}</p>
+                    {% endif -%}
+                </p>
                 {% if post.url.endswith('.mp3') -%}
-                    <p><audio controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" src="{{ post.url }}"></audio></p>
+                    <p>
+                        <audio controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" src="{{ post.url }}"></audio>
+                    </p>
                 {% elif post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
                     <p>
                         <video class="responsive-video" controls preload="{{ 'metadata' if low_bandwidth else 'auto' }}" {{ 'loop' if post.community.loop_videos() }}>
-                        {% if post.url.endswith('.mp4') -%}
-                            <source src="{{ post.url }}" type="video/mp4" />
-                        {% elif post.url.endswith('.webm') -%}
-                            <source src="{{ post.url }}" type="video/webm" />
-                        {% endif -%}
-                        </video></p>
+                            {% if post.url.endswith('.mp4') -%}
+                                <source src="{{ post.url }}" type="video/mp4" />
+                            {% elif post.url.endswith('.webm') -%}
+                                <source src="{{ post.url }}" type="video/webm" />
+                            {% endif -%}
+                        </video>
+                    </p>
                 {% elif post.url.startswith('https://streamable.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
-                    <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <p>
+                        <a href="https://piped.video/watch?v={{ post.youtube_embed() }}">
+                            {{ _('Watch on piped.video') }} <span class="fe fe-external"></span>
+                        </a>
+                    </p>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% endif -%}
             {% elif post.type == POST_TYPE_VIDEO and post.url -%}
-                <p><a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">{{ post.url|shorten_url }}
-                <span class="fe fe-external"></span></a></p>
+                <p>
+                    <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" class="post_link" aria-label="Go to post url">
+                        {{ post.url|shorten_url }}
+                        <span class="fe fe-external"></span>
+                    </a>
+                </p>
                 {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
                     <p>
                         <video class="responsive-video" controls preload="{{ 'none' if low_bandwidth else 'auto' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
-                        {% if post.url.endswith('.mp4') -%}
-                            <source src="{{ post.url }}" type="video/mp4" />
-                        {% elif post.url.endswith('.webm') -%}
-                            <source src="{{ post.url }}" type="video/webm" />
-                        {% endif -%}
-                        </video></p>
+                            {% if post.url.endswith('.mp4') -%}
+                                <source src="{{ post.url }}" type="video/mp4" />
+                            {% elif post.url.endswith('.webm') -%}
+                                <source src="{{ post.url }}" type="video/webm" />
+                            {% endif -%}
+                        </video>
+                    </p>
                 {% elif post.url.startswith('https://vimeo.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% elif post.url.startswith('https://streamable.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
-                    <p><a href="https://piped.video/watch?v={{ post.youtube_embed() }}">{{ _('Watch on piped.video') }} <span class="fe fe-external"></span></a></p>
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <p>
+                        <a href="https://piped.video/watch?v={{ post.youtube_embed() }}">
+                            {{ _('Watch on piped.video') }} <span class="fe fe-external"></span>
+                        </a>
+                    </p>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="https://www.youtube-nocookie.com/embed/{{ post.youtube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% endif -%}
                 {% if 'videos/watch' in post.url -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div style="padding-bottom: 56.25%; position: relative;">
+                        <iframe style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe>
+                    </div>
                 {% endif -%}
             {% elif post.type == POST_TYPE_IMAGE -%}
                 <div class="post_image">
-                    <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" rel="nofollow ugc"><img src="{{ post.image.view_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                            width="{{ post.image.width }}" height="{{ post.image.height }}" loading="lazy" /></a>
+                    <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" rel="nofollow ugc">
+                        <img src="{{ post.image.view_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                width="{{ post.image.width }}" height="{{ post.image.height }}" loading="lazy" />
+                    </a>
                 </div>
             {% elif post.type == POST_TYPE_EVENT -%}
                 <div class="post_event">
-                    <p><strong>{{ _('When') }}:</strong><br>
+                    <p>
+                        <strong>{{ _('When') }}:</strong>
+                        <br>
                         <time class="convert_to_local">{{ event.start.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time> -
-                        <time class="convert_to_local">{{ event.end.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time></p>
-                    
+                        <time class="convert_to_local">{{ event.end.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time>
+                    </p>
                     {% if event.online -%}
-                        <p><strong>{{ _('Online Event') }}:</strong><br>
-                            <a href="{{ event.online_link }}" target="_blank" rel="nofollow ugc">{{ event.online_link }} <span class="fe fe-external"></span></a>
+                        <p>
+                            <strong>{{ _('Online Event') }}:</strong>
+                            <br>
+                            <a href="{{ event.online_link }}" target="_blank" rel="nofollow ugc">
+                                {{ event.online_link }} <span class="fe fe-external"></span>
+                            </a>
                         </p>
-
                     {% else -%}
-                        <p><strong>{{ _('Location') }}:</strong><br>
+                        <p>
+                            <strong>{{ _('Location') }}:</strong><br>
                             {% if event.location.address -%}{{ event.location.address }}<br>{% endif -%}
                             {% if event.location.city -%}{{ event.location.city }}{% endif -%}
                             {% if event.location.country -%}{% if event.location.city %}, {% endif %}{{ event.location.country }}{% endif -%}
                         </p>
                     {% endif -%}
-                    
                     {% if event.max_attendees -%}
-                        <p><strong>{{ _('Max Attendees') }}:</strong><br>{{ event.max_attendees }}</p>
+                        <p>
+                            <strong>{{ _('Max Attendees') }}:</strong>
+                            <br>
+                            {{ event.max_attendees }}
+                        </p>
                     {% endif -%}
-                    
                     {% if event.join_mode -%}
-                        <p><strong>{{ _('Join Mode') }}:</strong><br>{{ event.join_mode|title }}</p>
+                        <p>
+                            <strong>{{ _('Join Mode') }}:</strong>
+                            <br>
+                            {{ event.join_mode|title }}
+                        </p>
                     {% endif -%}
                 </div>
             {% else -%}
                 {% if post.image_id and not (post.url and 'youtube.com' in post.url) -%}
-                        <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" aria-label="Go to video" rel="nofollow ugc"><img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
-                            width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" /></a>
+                    <a href="{{ post.image.view_url() }}" target="_blank" class="post_link" aria-label="Go to video" rel="nofollow ugc">
+                        <img src="{{ post.image.thumbnail_url() }}" alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
+                                width="{{ post.image.thumbnail_width }}" height="{{ post.image.thumbnail_height }}" loading="lazy" />
+                    </a>
                 {% endif -%}
             {% endif -%}
             <div class="post_body" lang="{{ post.language_code() }}">
                 {{ post.body_html | community_links | feed_links| person_links | safe if post.body_html else '' }}
                 {% if archive_link -%}
-                    <p><a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">{{ _('Archive.ph link') }} <span class="fe fe-external"></span></a></p>
+                    <p>
+                        <a href="{{ archive_link }}" rel="nofollow ucg noindex" target="_blank">
+                            {{ _('Archive.ph link') }} <span class="fe fe-external"></span>
+                        </a>
+                    </p>
                 {% endif -%}
                 {% if post.licence_id -%}
-                    <p>{{ _('Licence') }}: {{ post.licence.name }}</p>
+                    <p>
+                        {{ _('Licence') }}: {{ post.licence.name }}
+                    </p>
                 {% endif -%}
             </div>
             {% if post.type == POST_TYPE_POLL -%}
                 <div class="post_poll" lang="{{ post.language_code() }}">
                     {% if poll_results and poll_total_votes == 0 -%}
-                        <p>{{ _('The poll has finished, yet no votes were cast.') }}</p>
+                        <p>
+                            {{ _('The poll has finished, yet no votes were cast.') }}
+                        </p>
                     {% elif poll_results and poll_total_votes -%}
                         <ul>
-                        {% for choice in poll_choices -%}
-                            <li>
-                                <div class="vote_bar">
-                                    <p class="mb-0 mt-3">{{ choice.choice_text }}</p>
-                                    <div class="vote_score" style="width: {{ choice.percentage(poll_total_votes) }}%">{{ choice.percentage(poll_total_votes) }}%</div>
-                                </div>
-                            </li>
-                        {% endfor -%}
+                            {% for choice in poll_choices -%}
+                                <li>
+                                    <div class="vote_bar">
+                                        <p class="mb-0 mt-3">
+                                            {{ choice.choice_text }}
+                                        </p>
+                                        <div class="vote_score" style="width: {{ choice.percentage(poll_total_votes) }}%">
+                                            {{ choice.percentage(poll_total_votes) }}%
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor -%}
                         </ul>
-                        <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
-                        <p>{{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.</p>
+                        <p>
+                            {{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}
+                        </p>
+                        <p>
+                            {{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.
+                        </p>
                     {% elif poll_form -%}
                         {% if current_user.is_authenticated -%}
                             <form action='/poll/{{ post.id }}/vote' method="post">
@@ -178,32 +265,38 @@
                             <form action='/auth/login' method="get">
                                 <input type="hidden" name="next" value="/post/{{ post.id }}">
                         {% endif -%}
-                            <ul>
+                        <ul>
                             {% for choice in poll_choices -%}
                                 {% if poll_data.mode == 'single' -%}
-                                    <li><label for="choice_{{ choice.id }}">
-                                        <input type="radio" name="poll_choice" id="choice_{{ choice.id }}" required value="{{ choice.id }}"> {{ choice.choice_text }}
-                                    </label></li>
+                                    <li>
+                                        <label for="choice_{{ choice.id }}">
+                                            <input type="radio" name="poll_choice" id="choice_{{ choice.id }}" required value="{{ choice.id }}"> {{ choice.choice_text }}
+                                        </label>
+                                    </li>
                                 {% else -%}
-                                    <li><label for="choice_{{ choice.id }}">
-                                        <input type="checkbox" name="poll_choice[]" id="choice_{{ choice.id }}" value="{{ choice.id }}"> {{ choice.choice_text }}
-                                    </label></li>
+                                    <li>
+                                        <label for="choice_{{ choice.id }}">
+                                            <input type="checkbox" name="poll_choice[]" id="choice_{{ choice.id }}" value="{{ choice.id }}"> {{ choice.choice_text }}
+                                        </label>
+                                    </li>
                                 {% endif -%}
                             {% endfor -%}
-                            </ul>
-                            {{ form.csrf_token() }}
-                            <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}">
+                        </ul>
+                        {{ form.csrf_token() }}
+                        <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}">
                         </form>
                     {% endif -%}
                 </div>
             {% endif -%}
             {% if post.type == POST_TYPE_EVENT -%}
-                     <a class="btn btn-sm btn-outline-secondary" style="float: right;" href="{{ url_for('post.show_post_ical', post_id=post.id) }}">{{ _('Add to calendar') }}</a>
-                    <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
-                    {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
-                    {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
-                    {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
-                {% endif -%}
+                <a class="btn btn-sm btn-outline-secondary" style="float: right;" href="{{ url_for('post.show_post_ical', post_id=post.id) }}">
+                    {{ _('Add to calendar') }}
+                </a>
+                <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
+                {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
+                {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
+                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
+            {% endif -%}
         </div>
 
     {% if len(post.tags) > 0 -%}
