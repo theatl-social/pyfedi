@@ -1935,6 +1935,7 @@ def post_ap_context(post_id):
         else:
             replies_collection = {}
         replies_collection['@context'] = default_context()
+        replies_collection['id'] = f'https://{current_app.config["SERVER_NAME"]}/post/{post_id}/context'
         replies_collection['name'] = post.title
         replies_collection['attributedTo'] = post.community.profile_id()
         replies_collection['audience'] = post.community.profile_id()
