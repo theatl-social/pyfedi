@@ -10,11 +10,11 @@ from ua_parser import parse as uaparse
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
-    lemmy_site_data, is_activitypub_request, find_actor_or_create
+    lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
-from app.community.util import publicize_community
+from app.admin.util import topics_for_form
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING, POST_TYPE_LINK
+    POST_STATUS_REVIEWING
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -222,7 +222,7 @@ def list_communities():
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
 
-    topics = Topic.query.order_by(Topic.name).all()
+    topics = topics_for_form(0)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
@@ -1262,6 +1262,15 @@ def list_feeds():
                                public_feeds_list=public_feeds,
                                subscribed_feeds=subscribed_feeds(current_user.get_id()),
                                search_hint=search_param)
+
+
+@bp.route('/explore')
+@login_required_if_private_instance
+def explore():
+    topics = topic_tree()
+    return render_template('explore.html', topics=topics, menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
 
 
 @bp.route('/content_warning', methods=['GET', 'POST'])

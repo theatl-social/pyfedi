@@ -271,6 +271,15 @@
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
+        <nav class="d-lg-none mobilenav nav nav-pills nav-fill border-top">
+            <a class="nav-link py-2 small" href="/"><span class="fe fe-home"></span><br>{{ _('Home') }}</a>
+            {% if show_explore() -%}
+            <a class="nav-link py-2 small" href="/explore"><span class="fe fe-explore"></span><br>{{ _('Explore') }}</a>
+            {% endif -%}
+            <a class="nav-link py-2 small" href="/communities"><span class="fe fe-communities"></span><br>{{ _('Communities') }}</a>
+            <a class="nav-link py-2 small" href="/search" id="search-link"><span class="fe fe-search"></span><br>{{ _('Search') }}</a>
+            <a class="nav-link py-2 small" href="/user/settings"><span class="fe fe-settings"></span><br>{{ _('Settings') }}</a>
+        </nav>
         <dialog id="voting_dialog">
             <div class="p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">

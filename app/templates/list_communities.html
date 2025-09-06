@@ -111,8 +111,8 @@
                                                 {{ _('All') }}
                                             </option>
                                             {% for topic in topics -%}
-                                                <option value="{{ topic.id }}" {{ 'selected' if topic.id == topic_id }}>
-                                                    {{ topic.name }}
+                                                <option value="{{ topic[0] }}" {{ 'selected' if topic[0] == topic_id }}>
+                                                    {{ topic[1] }}
                                                 </option>
                                             {% endfor -%}
                                         </select>

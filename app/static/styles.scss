@@ -424,6 +424,51 @@ form {
   }
 }
 
+.mobilenav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--bs-body-bg);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1031;
+
+  a {
+    flex-grow: 1;
+    text-align: center;
+    height: 80px;
+    padding-top: 17px !important;
+    @media (orientation: landscape) {
+      height: 60px;
+      padding-top: 12px !important;
+    }
+  }
+
+  .fe {
+    font-size: 150%;
+  }
+
+  @media (max-width: 350px) {
+    a {
+      font-size: 80%;
+      padding-left: 0;
+      padding-right: 0;
+    }
+    #search-link {
+      display: none;
+    }
+  }
+
+  @media (max-width: 420px) {
+    a {
+      font-size: 80%;
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+}
+
 .communities_table {
   tbody tr th {
     padding: 0;
