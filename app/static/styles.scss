@@ -434,6 +434,7 @@ form {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
+  border-top-width: 2px!important;
 
   a {
     flex-grow: 1;

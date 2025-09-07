@@ -948,6 +948,7 @@ form > .mb-3.required > label:after {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
   text-wrap: nowrap;
+  border-top-width: 2px !important;
 }
 .mobilenav a {
   flex-grow: 1;
