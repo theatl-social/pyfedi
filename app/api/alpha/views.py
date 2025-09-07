@@ -9,7 +9,7 @@ from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
-    num_topics, moderating_communities_ids
+    num_topics, moderating_communities_ids, moderating_communities, joined_communities
 
 
 # 'stub' param: set to True to exclude optional fields
@@ -1035,51 +1035,43 @@ def users_total():
         'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
-# @cache.memoize(timeout=60)
 def moderating_communities_view(user):
-    cms = CommunityMember.query.filter_by(user_id=user.id, is_moderator=True)
     moderates = []
     inner_user_view = user_view(user, variant=1, stub=True)
-    for cm in cms:
-        moderates.append({'community': community_view(cm.community_id, variant=1, stub=True), 'moderator': inner_user_view})
+    for community in moderating_communities(user.id):
+        moderates.append({'community': community_view(community, variant=1, stub=True), 'moderator': inner_user_view})
     return moderates
 
 
-# @cache.memoize(timeout=60)
 def joined_communities_view(user):
-    cms = CommunityMember.query.filter_by(user_id=user.id, is_banned=False)
     follows = []
     inner_user_view = user_view(user, variant=1, stub=True)
-    for cm in cms:
-        follows.append({'community': community_view(cm.community_id, variant=1, stub=True), 'follower': inner_user_view})
+    for community in joined_communities(user.id):
+        follows.append({'community': community_view(community, variant=1, stub=True), 'follower': inner_user_view})
     return follows
 
 
-# @cache.memoize(timeout=86400)
 def blocked_people_view(user) -> list[dict]:
     blocked_ids = blocked_users(user.id)
     blocked = []
-    for blocked_id in blocked_ids:
-        blocked.append({'person': user_view(user, variant=1, stub=True), 'target': user_view(blocked_id, variant=1, stub=True)})
+    for blocked_user in User.query.filter(User.id.in_(blocked_ids)).all():
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'target': user_view(blocked_user, variant=1, stub=True)})
     return blocked
 
 
-# @cache.memoize(timeout=86400)
 def blocked_communities_view(user) -> list[dict]:
     blocked_ids = blocked_communities(user.id)
     blocked = []
-    for blocked_id in blocked_ids:
-        blocked.append({'person': user_view(user, variant=1, stub=True),
-                        'community': community_view(blocked_id, variant=1, stub=True)})
+    for blocked_comm in Community.query.filter(Community.id.in_(blocked_ids)).all():
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'community': community_view(blocked_comm, variant=1, stub=True)})
     return blocked
 
 
-# @cache.memoize(timeout=86400)
 def blocked_instances_view(user) -> list[dict]:
     blocked_ids = blocked_instances(user.id)
     blocked = []
-    for blocked_id in blocked_ids:
-        blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_id, variant=1)})
+    for blocked_instance in Instance.query.filter(Instance.id.in_(blocked_ids)).all():
+        blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_instance, variant=1)})
     return blocked
 
 

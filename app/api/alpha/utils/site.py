@@ -11,7 +11,6 @@ def get_site(auth):
         user = authorise_api_user(auth, return_type='model')
     else:
         user = None
-
     site_json = site_view(user)
     return site_json
 
