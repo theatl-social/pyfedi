@@ -433,11 +433,12 @@ form {
   background-color: var(--bs-body-bg);
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 1031;
+  text-wrap: nowrap;
 
   a {
     flex-grow: 1;
     text-align: center;
-    height: 80px;
+    height: 70px;
     padding-top: 17px !important;
     @media (orientation: landscape) {
       height: 60px;
@@ -449,7 +450,7 @@ form {
     font-size: 150%;
   }
 
-  @media (max-width: 350px) {
+  @media (max-width: 340px) {
     a {
       font-size: 80%;
       padding-left: 0;
