@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import arrow
 import jwt
-from flask import current_app
+from flask import current_app, g
 from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
@@ -3059,8 +3059,11 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
-                                      or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
+        if hasattr(g, 'admin_ids'):
+            return db.session.query(User).filter(User.id.in_(tuple(g.admin_ids))).all()
+        else:
+            return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                          or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
