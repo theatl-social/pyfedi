@@ -493,7 +493,9 @@ def get_reply_like_list(auth, data):
         banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
         banned_from_community_user_ids = list(db.session.execute(text
             ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post_reply.community_id}).scalars())
-        likes = PostReplyVote.query.filter_by(post_reply_id=comment_id).order_by(PostReplyVote.created_at)
+        likes = PostReplyVote.query.filter(
+            PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect != 0).order_by(
+            PostReplyVote.created_at).paginate(page=page, per_page=limit, error_out=False)
         comment_likes = []
         for like in likes:
             comment_likes.append({
@@ -502,13 +504,10 @@ def get_reply_like_list(auth, data):
                 'creator_banned': like.user_id in banned_from_site_user_ids,
                 'creator': user_view(user=like.user_id, variant=1, stub=True)
             })
-        start_index = (page - 1) * limit
-        end_index = start_index + limit
-        comment_likes_page = comment_likes[start_index:end_index]
-        next_page = None
-        if len(comment_likes_page) == limit and (page * limit) % len(comment_likes) > 0:
-            next_page = str(page + 1)
-        response_json = {'next_page': next_page, 'comment_likes': comment_likes_page}
+        response_json = {
+            'next_page': str(likes.next_num) if likes.next_num is not None else None,
+            'comment_likes': comment_likes
+        }
         return response_json
     else:
         raise Exception('Not a moderator')

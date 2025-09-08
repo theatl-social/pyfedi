@@ -710,7 +710,8 @@ def get_post_like_list(auth, data):
         banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
         banned_from_community_user_ids = list(db.session.execute(text
             ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post.community_id}).scalars())
-        likes = PostVote.query.filter_by(post_id=post_id).order_by(PostVote.created_at)
+        likes = PostVote.query.filter(PostVote.post_id == post_id, PostVote.effect != 0).order_by(
+                  PostVote.created_at).paginate(page=page, per_page=limit, error_out=False)
         post_likes = []
         for like in likes:
             post_likes.append({
@@ -719,13 +720,10 @@ def get_post_like_list(auth, data):
                 'creator_banned': like.user_id in banned_from_site_user_ids,
                 'creator': user_view(user=like.user_id, variant=1, stub=True)
             })
-        start_index = (page - 1) * limit
-        end_index = start_index + limit
-        post_likes_page = post_likes[start_index:end_index]
-        next_page = None
-        if len(post_likes_page) == limit and (page * limit) % len(post_likes) > 0:
-            next_page = str(page + 1)
-        response_json = {'next_page': next_page, 'post_likes': post_likes_page}
+        response_json = {
+            'next_page': str(likes.next_num) if likes.next_num is not None else None,
+            'post_likes': post_likes
+        }
         return response_json
     else:
         raise Exception('Not a moderator')
