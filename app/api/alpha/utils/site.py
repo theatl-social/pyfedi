@@ -3,7 +3,7 @@ from app.api.alpha.views import site_view, federated_instances_view, site_instan
 from app.constants import SRC_API, VERSION
 from app.models import InstanceBlock, InstanceChooser, Language
 from app.shared.site import block_remote_instance, unblock_remote_instance
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, instance_banned
 
 
 def get_site(auth):
@@ -47,6 +47,8 @@ def get_site_instance_chooser_search(query_params):
             instances = instances.filter(InstanceChooser.newbie_friendly == False)
 
     for instance in instances.all():
+        if instance.hide or instance_banned(instance.domain):
+            continue
         instance_data = instance.data
         instance_data['domain'] = instance.domain
         instance_data['id'] = instance.id

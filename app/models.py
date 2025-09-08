@@ -543,7 +543,7 @@ class Community(db.Model):
 
     ignore_remote_language = db.Column(db.Boolean, default=False)
 
-    search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules'))
+    search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules', auto_index=False))
 
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -927,7 +927,7 @@ class User(UserMixin, db.Model):
     ap_inbox_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))
 
-    search_vector = db.Column(TSVectorType('user_name', 'about', 'keywords'))
+    search_vector = db.Column(TSVectorType('user_name', 'about', 'keywords', auto_index=False))
     activity = db.relationship('ActivityLog', backref='account', lazy='dynamic', cascade="all, delete-orphan")
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -1450,7 +1450,7 @@ class Post(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}))
+    search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}, auto_index=False))
 
     image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
@@ -2224,7 +2224,7 @@ class PostReply(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('body'))
+    search_vector = db.Column(TSVectorType('body', auto_index=False))
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
@@ -3150,7 +3150,7 @@ class Feed(db.Model):
     show_posts_in_children = db.Column(db.Boolean, default=False)
     member_communities = db.relationship('FeedItem', lazy='dynamic', cascade="all, delete-orphan")
 
-    search_vector = db.Column(TSVectorType('name', 'description'))
+    search_vector = db.Column(TSVectorType('name', 'description', auto_index=False))
 
     icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
     image = db.relationship('File', lazy='joined', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
@@ -3376,6 +3376,7 @@ class InstanceChooser(db.Model):
     language_id = db.Column(db.Integer, index=True)
     nsfw = db.Column(db.Boolean, default=False, index=True)
     newbie_friendly = db.Column(db.Boolean, default=True, index=True)
+    hide = db.Column(db.Boolean, index=True, default=False)
     data = db.Column(db.JSON)
 
 

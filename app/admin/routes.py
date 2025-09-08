@@ -1858,6 +1858,8 @@ def admin_instances():
 def admin_instance_edit(instance_id):
     form = EditInstanceForm()
     instance = Instance.query.get_or_404(instance_id)
+    if instance.software != 'piefed':
+        del form.hide
     if form.validate_on_submit():
         instance.vote_weight = form.vote_weight.data
         instance.dormant = form.dormant.data
@@ -1865,6 +1867,10 @@ def admin_instance_edit(instance_id):
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
         instance.inbox = form.inbox.data
+
+        if instance.software == 'piefed':
+            db.session.execute(text('UPDATE "instance_chooser" SET hide = :hide WHERE domain = :domain'),
+                               {'hide': form.hide.data, 'domain': instance.domain})
 
         db.session.commit()
 
@@ -1879,6 +1885,10 @@ def admin_instance_edit(instance_id):
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
         form.inbox.data = instance.inbox
+        if instance.software == 'piefed':
+            hide = db.session.execute(text('SELECT hide FROM "instance_chooser" WHERE domain = :domain'),
+                                      {'domain': instance.domain}).scalar_one_or_none()
+            form.hide.data = hide
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
 
