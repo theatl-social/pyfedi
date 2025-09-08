@@ -85,6 +85,14 @@
   content: "\e979";
 }
 
+.fe-communities::before {
+  content: "\e9f6";
+}
+
+.fe-explore::before {
+  content: "\e943";
+}
+
 .fe-popular::before {
   content: "\e9e6";
 }
@@ -417,6 +425,14 @@ h1 {
   top: 2px;
   &:before {
     content: "\e91b"; /* possibly e985 */
+  }
+}
+
+.fe-event {
+  position: relative;
+  top: 1px;
+  &:before {
+    content: "\e927";
   }
 }
 

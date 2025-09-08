@@ -11,7 +11,7 @@ from zoneinfo import ZoneInfo
 
 import arrow
 import jwt
-from flask import current_app
+from flask import current_app, g
 from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
@@ -543,7 +543,7 @@ class Community(db.Model):
 
     ignore_remote_language = db.Column(db.Boolean, default=False)
 
-    search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules'))
+    search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules', auto_index=False))
 
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -873,8 +873,8 @@ class User(UserMixin, db.Model):
     post_reply_count = db.Column(db.Integer, default=0)
     stripe_customer_id = db.Column(db.String(50))
     stripe_subscription_id = db.Column(db.String(50))
-    searchable = db.Column(db.Boolean, default=True)
-    indexable = db.Column(db.Boolean, default=False)
+    searchable = db.Column(db.Boolean, default=True)        # whether their profile is visible in profile list
+    indexable = db.Column(db.Boolean, default=True)         # whether posts appear in search results
     bot = db.Column(db.Boolean, default=False, index=True)
     bot_override = db.Column(db.Boolean, default=False, index=True)
     suppress_crossposts = db.Column(db.Boolean, default=False, index=True)
@@ -927,7 +927,7 @@ class User(UserMixin, db.Model):
     ap_inbox_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))
 
-    search_vector = db.Column(TSVectorType('user_name', 'about', 'keywords'))
+    search_vector = db.Column(TSVectorType('user_name', 'about', 'keywords', auto_index=False))
     activity = db.relationship('ActivityLog', backref='account', lazy='dynamic', cascade="all, delete-orphan")
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -1307,6 +1307,7 @@ class User(UserMixin, db.Model):
         db.session.query(CommunityMember).filter(CommunityMember.user_id == self.id).delete()
         db.session.query(CommunityBlock).filter(CommunityBlock.user_id == self.id).delete()
         db.session.query(CommunityBan).filter(CommunityBan.user_id == self.id).delete()
+        db.session.query(CommunityJoinRequest).filter(CommunityJoinRequest.user_id == self.id).delete()
         db.session.query(ChatMessage).filter(or_(ChatMessage.sender_id == self.id, ChatMessage.recipient_id == self.id)).delete()
         db.session.query(UserBlock).filter(or_(UserBlock.blocker_id == self.id, UserBlock.blocked_id == self.id)).delete()
         db.session.query(Notification).filter(Notification.user_id == self.id).delete()
@@ -1449,7 +1450,7 @@ class Post(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('title', 'body'))
+    search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}, auto_index=False))
 
     image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
@@ -1459,6 +1460,7 @@ class Post(db.Model):
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
+    event = db.relationship('Event', uselist=False, backref='post')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1782,6 +1784,35 @@ class Post(db.Model):
                     i += 1
                 db.session.commit()
 
+            if request_json['object']['type'] == 'Event':
+                post.type = constants.POST_TYPE_EVENT
+                event = Event(post_id=post.id,
+                              start=request_json['object']['startTime'],
+                              end=request_json['object']['endTime'],
+                              timezone=request_json['object']['timezone'],
+                              max_attendees=request_json['object']['maximumAttendeeCapacity'],
+                              participant_count=request_json['object']['participantCount'],
+                              online_link=request_json['object']['onlineLink'],
+                              join_mode=request_json['object']['joinMode'],
+                              external_participation_url=request_json['object']['externalParticipationUrl'],
+                              anonymous_participation=request_json['object']['anonymousParticipation'],
+                              online=request_json['object']['isOnline'],
+                              buy_tickets_link=request_json['object']['buyTicketsLink'],
+                              event_fee_currency=request_json['object']['feeCurrency'],
+                              event_fee_amount=request_json['object']['feeAmount'])
+                db.session.add(event)
+                post.url = ''   # Mobilizon puts the AP ID in request_json['object']['url'] and any attached website links in a request_json['object']['attachment'] list
+                if ('attachment' in request_json['object'] and
+                        isinstance(request_json['object']['attachment'], list) and
+                        len(request_json['object']['attachment']) > 0):
+                    for attachment_item in request_json['object']['attachment']:
+                        if attachment_item['type'] == 'Link':
+                            if 'href' in attachment_item:
+                                post.url = attachment_item['href']
+                                break
+
+                db.session.commit()
+
             if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
                 if post.type == constants.POST_TYPE_IMAGE:
                     make_image_sizes(post.image_id, 512, 1200, 'posts',
@@ -1851,6 +1882,8 @@ class Post(db.Model):
         db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
         db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
         db.session.query(Poll).filter(Poll.post_id == self.id).delete()
+        db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
+        db.session.query(Event).filter(Event.post_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
@@ -2191,7 +2224,7 @@ class PostReply(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('body'))
+    search_vector = db.Column(TSVectorType('body', auto_index=False))
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
@@ -3026,8 +3059,11 @@ class Site(db.Model):
 
     @staticmethod
     def admins() -> List[User]:
-        return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
-                                      or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
+        if hasattr(g, 'admin_ids'):
+            return db.session.query(User).filter(User.id.in_(tuple(g.admin_ids))).all()
+        else:
+            return db.session.query(User).filter_by(deleted=False, banned=False).join(user_role).filter(
+                                          or_(user_role.c.role_id == ROLE_ADMIN, User.id == 1)).order_by(User.id).all()
 
     @staticmethod
     def staff() -> List[User]:
@@ -3114,7 +3150,7 @@ class Feed(db.Model):
     show_posts_in_children = db.Column(db.Boolean, default=False)
     member_communities = db.relationship('FeedItem', lazy='dynamic', cascade="all, delete-orphan")
 
-    search_vector = db.Column(TSVectorType('name', 'description'))
+    search_vector = db.Column(TSVectorType('name', 'description', auto_index=False))
 
     icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
     image = db.relationship('File', lazy='joined', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
@@ -3340,6 +3376,7 @@ class InstanceChooser(db.Model):
     language_id = db.Column(db.Integer, index=True)
     nsfw = db.Column(db.Boolean, default=False, index=True)
     newbie_friendly = db.Column(db.Boolean, default=True, index=True)
+    hide = db.Column(db.Boolean, index=True, default=False)
     data = db.Column(db.JSON)
 
 

@@ -28,7 +28,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
-    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required
+    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
+    blocked_instances, blocked_communities
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -95,7 +96,7 @@ def feed_new():
             _feed_add_community(added_community, 0, feed.id, current_user.id)
 
         flash(_('Your new Feed has been created.'))
-        return redirect(url_for('user.user_myfeeds'))
+        return redirect(url_for('user.user_myfeeds', actor=current_user.link()))
 
     # Create Feed from a topic
     if request.args.get('topic_id'):
@@ -145,6 +146,8 @@ def feed_add_remote():
             else:
                 flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'),
                       'warning')
+        else:
+            cache.delete_memoized(feed_membership, current_user, new_feed)
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
@@ -744,6 +747,8 @@ def show_feed(feed):
 
         feed_communities = Community.query.filter(
             Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
+            filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
@@ -843,7 +848,6 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-@celery.task
 def do_feed_subscribe(actor, user_id):
     try:
         remote = False

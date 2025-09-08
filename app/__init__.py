@@ -45,6 +45,7 @@ def get_ip_address() -> str:
 
 
 db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
+make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
@@ -142,7 +143,6 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
-    make_searchable(db.metadata)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
     limiter.init_app(app)
@@ -156,7 +156,8 @@ def create_app(config_class=Config):
         'app.activitypub.signature.post_request': {'queue': 'send'},
         # Maintenance tasks - all go to background queue
         'app.shared.tasks.maintenance.*': {'queue': 'background'},
-        'app.admin.*': {'queue': 'background'},
+        'app.admin.routes.*': {'queue': 'background'},
+        'app.admin.util.*': {'queue': 'background'},
         'app.utils.archive_post': {'queue': 'background'},
     })
 
@@ -250,13 +251,16 @@ def create_app(config_class=Config):
     app.register_blueprint(app_api_bp)
 
     # API Namespaces
-    from app.api.alpha import site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, admin_bp
+    from app.api.alpha import site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
+                              reply_bp, post_bp, admin_bp
     rest_api.register_blueprint(site_bp)
     rest_api.register_blueprint(misc_bp)
     rest_api.register_blueprint(comm_bp)
     rest_api.register_blueprint(feed_bp)
     rest_api.register_blueprint(topic_bp)
     rest_api.register_blueprint(user_bp)
+    rest_api.register_blueprint(reply_bp)
+    rest_api.register_blueprint(post_bp)
     rest_api.register_blueprint(admin_bp)
 
     # send error reports via email

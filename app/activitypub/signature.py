@@ -81,8 +81,8 @@ def parse_ld_date(value: str | None) -> datetime | None:
 
 def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                       content_type: str = "application/activity+json",
-                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
-    if current_app.debug:
+                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0, new_task=True):
+    if current_app.debug or new_task is False:
         return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                             method=method, timeout=timeout, retries=retries)
     else:

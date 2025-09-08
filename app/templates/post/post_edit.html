@@ -26,6 +26,29 @@
 
     // Start the checking loop
     checkAndCopyTitle();
+
+    function showHideLocationDivs(element) {
+        const onlineLocation = document.getElementById('online_location');
+        const irlLocation = document.getElementById('irl_location');
+
+        if (element.checked) {
+            onlineLocation.style.display = "block";
+            irlLocation.style.display = "none";
+        } else {
+            onlineLocation.style.display = "none";
+            irlLocation.style.display = "block";
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const online = document.getElementById("online");
+
+        online.addEventListener('change', function () {
+            showHideLocationDivs(online);
+        });
+
+        showHideLocationDivs(online);
+    });
 </script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
@@ -39,7 +62,12 @@
                 <input type="hidden" id="retrieved_title" value="">
             {% endif -%}
             {{ render_field(form.title) }}
-            {% if post_type == POST_TYPE_IMAGE %}
+            {% if post_type == POST_TYPE_EVENT %}
+                {{ render_field(form.start_datetime) }}
+                {{ render_field(form.end_datetime) }}
+                {{ render_field(form.event_timezone) }}
+            {% endif %}
+            {% if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT %}
                 {% if post.image_id -%}
                     <div class="post_image">
                         {% if low_bandwidth -%}
@@ -48,7 +76,7 @@
                                 width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                         {% else -%}
                             <a href="{{ post.image.view_url() }}" rel="nofollow ugc">
-                                <img src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
+                                <img id="image_preview_edit" src="{{ post.image.view_url(resize=True) }}" lowsrc="{{ post.image.medium_url() }}"
                                     sizes="(max-width: 512px) 100vw, 854px" srcset="{{ post.image.medium_url() }} 512w, {{ post.image.view_url(resize=True) }} 1024w"
                                     alt="{{ post.image.alt_text if post.image.alt_text else post.title }}"
                                     fetchpriority="high" referrerpolicy="same-origin" >
@@ -58,8 +86,10 @@
                 {% endif %}
                 {{ render_field(form.image_file) }}
                 <img id="image_preview" style="" alt="Image preview">
-                {{ render_field(form.image_alt_text) }}
-                <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
+                {% if post_type == POST_TYPE_IMAGE -%}
+                    {{ render_field(form.image_alt_text) }}
+                    <small class="field_hint">{{ _('Describe the image, to help visually impaired people.') }}</small>
+                {% endif %}
             {% elif post_type == POST_TYPE_VIDEO %}
                 {{ render_field(form.video_url) }}
                 <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
@@ -134,6 +164,20 @@
                 {{ render_field(form.mode) }}
                 {% if form.finish_in %}{{ render_field(form.finish_in) }}{% endif %}
                 {{ render_field(form.local_only) }}
+            {% endif %}
+
+            {% if post_type == POST_TYPE_EVENT %}
+                {{ render_field(form.max_attendees) }}
+                {{ render_field(form.join_mode) }}
+                {{ render_field(form.online) }}
+                <div id="online_location" style="{% if event_online is false %}display: none;{% endif %}">
+                    {{ render_field(form.online_link) }}
+                </div>
+                <div id="irl_location" style="{% if event_online %}display: none;{% endif %}">
+                    {{ render_field(form.irl_address) }}
+                    {{ render_field(form.irl_city) }}
+                    {{ render_field(form.irl_country) }}
+                </div>
             {% endif %}
 
             {{ render_field(form.tags) }}

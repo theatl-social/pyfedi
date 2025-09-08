@@ -41,7 +41,8 @@ from app.utils import render_template, permission_required, set_setting, get_set
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, instance_allowed
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
+    instance_allowed, trusted_instance_ids
 from app.admin import bp
 
 
@@ -1857,6 +1858,8 @@ def admin_instances():
 def admin_instance_edit(instance_id):
     form = EditInstanceForm()
     instance = Instance.query.get_or_404(instance_id)
+    if instance.software != 'piefed':
+        del form.hide
     if form.validate_on_submit():
         instance.vote_weight = form.vote_weight.data
         instance.dormant = form.dormant.data
@@ -1865,7 +1868,13 @@ def admin_instance_edit(instance_id):
         instance.posting_warning = form.posting_warning.data
         instance.inbox = form.inbox.data
 
+        if instance.software == 'piefed':
+            db.session.execute(text('UPDATE "instance_chooser" SET hide = :hide WHERE domain = :domain'),
+                               {'hide': form.hide.data, 'domain': instance.domain})
+
         db.session.commit()
+
+        cache.delete_memoized(trusted_instance_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_instances'))
@@ -1876,6 +1885,10 @@ def admin_instance_edit(instance_id):
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
         form.inbox.data = instance.inbox
+        if instance.software == 'piefed':
+            hide = db.session.execute(text('SELECT hide FROM "instance_chooser" WHERE domain = :domain'),
+                                      {'domain': instance.domain}).scalar_one_or_none()
+            form.hide.data = hide
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
 

@@ -97,9 +97,9 @@ class SettingsForm(FlaskForm):
                                  render_kw={'class': 'form-select'})
     theme = SelectField(_l('Theme'), coerce=str, render_kw={'class': 'form-select'})
     compact_levels = [
-        ('', _l('No - expand images')),
-        ('compact-min', _l('Yes - thumbnails only')),
-        ('compact-min compact-max', _l('YEESSS - no images, only text')),  # this will apply both classes to the body tag
+        ('', _l('Not compact - expand images')),
+        ('compact-min', _l('More compact - only thumbnails for images')),
+        ('compact-min compact-max', _l('Most compact - no images, only text')),  # this will apply both classes to the body tag
     ]
     compaction = SelectField(_l('Compact UI'), choices=compact_levels, coerce=str, render_kw={'class': 'form-select'})
     fonts = [('', _l('Theme default - fastest')),

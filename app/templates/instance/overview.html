@@ -17,8 +17,19 @@
         </nav>
         <h1 class="mt-2">{{ _('%(instance)s overview', instance=instance.domain) }}</h1>
         <p>{{ _('This is a %(software)s instance.', software=instance.software) }}</p>
-        <p><a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">{{ _('People') }}</a><br />
-                                <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">{{ _('Posts') }}</a></p>
+        <p>
+            <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">
+                {{ _('People') }}
+            </a>
+            <br />
+            <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">
+                {{ _('Posts') }}
+            </a>
+            <br />
+            <a href="{{ url_for('main.list_communities', instance=instance.domain) }}">
+                {{ _('Communities') }}
+            </a>
+        </p>
         <p><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ _('Go to instance') }} <span class="fe fe-external"></span></a></p>
     </main>
 

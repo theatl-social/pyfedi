@@ -192,7 +192,10 @@ def edit_reply(input, reply, post, src, auth=None):
         content = input['body']
         notify_author = input['notify_author']
         language_id = input['language_id']
-        distinguished = input['distinguished'] if 'distinguished' in input else False
+        distinguished = input['distinguished']
+        if (not reply.distinguished and distinguished == True) or (reply.distinguished == True and distinguished == False):
+            if not reply.community.is_moderator(user) and not reply.community.is_owner(user) and not user.is_staff() and not user.is_admin():
+                raise Exception('Not a moderator')
     else:
         user = current_user
         content = input.body.data
@@ -366,7 +369,8 @@ def mod_remove_reply(reply_id, reason, src, auth):
         raise Exception('Does not have permission')
 
     reply.deleted = True
-    reply.deleted_by = user.id
+    # set deleted_by to -1 if a mod is removing their own reply as part of a mod action, so it's shows as 'removed' rather than 'deleted'
+    reply.deleted_by = user.id if user.id != reply.user_id else -1
     if not reply.author.bot:
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
@@ -406,8 +410,9 @@ def mod_restore_reply(reply_id, reason, src, auth):
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in (:parents)'),
+        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
                            {'parents': tuple(reply.path[:-1])})
+
     db.session.commit()
     if src == SRC_WEB:
         flash(_('Comment restored.'))
@@ -428,10 +433,11 @@ def mod_restore_reply(reply_id, reason, src, auth):
 def lock_post_reply(post_reply_id, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
+        post_reply = PostReply.query.filter_by(id=post_reply_id).one()
     else:
         user = current_user
+        post_reply = PostReply.query.get(post_reply_id)
 
-    post_reply = PostReply.query.get(post_reply_id)
     if locked:
         replies_enabled = False
         modlog_type = 'lock_post_reply'

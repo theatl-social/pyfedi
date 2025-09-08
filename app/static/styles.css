@@ -144,6 +144,14 @@
   content: "\e979";
 }
 
+.fe-communities::before {
+  content: "\e9f6";
+}
+
+.fe-explore::before {
+  content: "\e943";
+}
+
 .fe-popular::before {
   content: "\e9e6";
 }
@@ -471,6 +479,14 @@ h1 .fe-bell, h1 .fe-no-bell {
 }
 .fe-poll:before {
   content: "\e91b"; /* possibly e985 */
+}
+
+.fe-event {
+  position: relative;
+  top: 1px;
+}
+.fe-event:before {
+  content: "\e927";
 }
 
 .fe-sticky-left::before {
@@ -922,6 +938,51 @@ form > .mb-3.required > label:after {
     content: ">";
   }
 }
+.mobilenav {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  background-color: var(--bs-body-bg);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1031;
+  text-wrap: nowrap;
+  border-top-width: 2px !important;
+}
+.mobilenav a {
+  flex-grow: 1;
+  text-align: center;
+  height: 70px;
+  padding-top: 17px !important;
+}
+@media (orientation: landscape) {
+  .mobilenav a {
+    height: 60px;
+    padding-top: 12px !important;
+  }
+}
+.mobilenav .fe {
+  font-size: 150%;
+}
+@media (max-width: 340px) {
+  .mobilenav a {
+    font-size: 80%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  .mobilenav #search-link {
+    display: none;
+  }
+}
+@media (max-width: 420px) {
+  .mobilenav a {
+    font-size: 80%;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 .communities_table tbody tr th {
   padding: 0;
 }
@@ -934,6 +995,9 @@ form > .mb-3.required > label:after {
 .communities_table tbody .btn {
   text-wrap: nowrap;
 }
+.communities_table tbody tr td {
+  padding: 6px;
+}
 
 .topics_list {
   list-style-type: none;
@@ -944,7 +1008,7 @@ form > .mb-3.required > label:after {
   padding-bottom: 20px;
 }
 
-.community_header {
+.community_header, .event_banner {
   background-repeat: no-repeat;
   background-position: center center;
   background-size: cover;
@@ -955,37 +1019,43 @@ form > .mb-3.required > label:after {
   margin-top: -9px;
 }
 @media (min-width: 992px) {
-  .community_header {
+  .community_header, .event_banner {
     height: 240px;
   }
 }
 @media (min-width: 992px) {
-  .community_header #breadcrumb_nav {
+  .community_header #breadcrumb_nav, .event_banner #breadcrumb_nav {
     padding-left: 13px;
     padding-top: 13px;
   }
 }
-.community_header #breadcrumb_nav .breadcrumb {
+.community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
   background-color: rgba(0, 0, 0, 0.6);
   display: inline-block;
   padding: 5px 10px;
   margin-bottom: 0;
 }
 @media (min-width: 992px) {
-  .community_header #breadcrumb_nav .breadcrumb {
+  .community_header #breadcrumb_nav .breadcrumb, .event_banner #breadcrumb_nav .breadcrumb {
     border-radius: 6px;
   }
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item {
   color: white;
   display: inline-block;
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item a {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item a, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item a {
   color: white;
 }
-.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+.community_header #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before, .event_banner #breadcrumb_nav .breadcrumb .breadcrumb-item + .breadcrumb-item::before {
   content: ">";
   color: white;
+}
+
+@media (min-width: 992px) {
+  .event_banner {
+    height: 176px;
+  }
 }
 
 .community_header_no_background .community_icon, .community_header .community_icon {
@@ -2010,15 +2080,15 @@ a.unread:before, div.unread:before {
   float: right;
 }
 
-.post_body, .comment_body, #preview, .reply_preview, .accordion-body {
+.post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col {
   word-wrap: break-word;
 }
-.post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img {
+.post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img {
   max-height: 40vh;
   max-width: 100%;
   height: auto;
 }
-.post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote {
+.post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
   padding: 0.2em 5px;
   font-style: italic;
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
@@ -2027,10 +2097,10 @@ a.unread:before, div.unread:before {
   border-left-style: solid;
   border-left-width: 4px;
 }
-.post_body blockquote p, .comment_body blockquote p, #preview blockquote p, .reply_preview blockquote p, .accordion-body blockquote p {
+.post_body blockquote p, .comment_body blockquote p, #preview blockquote p, .reply_preview blockquote p, .accordion-body blockquote p, .post_col blockquote p {
   margin-bottom: 0px;
 }
-.post_body pre, .comment_body pre, #preview pre, .reply_preview pre, .accordion-body pre {
+.post_body pre, .comment_body pre, #preview pre, .reply_preview pre, .accordion-body pre, .post_col pre {
   background: var(--bs-secondary-bg);
   font-family: monospace;
   padding-left: 0.5rem;
@@ -2040,20 +2110,20 @@ a.unread:before, div.unread:before {
   border-width: 2px;
   border-radius: 5px;
 }
-.post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code {
+.post_body p > code, .comment_body p > code, #preview p > code, .reply_preview p > code, .accordion-body p > code, .post_col p > code {
   background: var(--bs-secondary-bg);
   padding: 0.25rem 0.5rem;
   border-radius: 5px;
 }
-.post_body table.table, .comment_body table.table, #preview table.table, .reply_preview table.table, .accordion-body table.table {
+.post_body table.table, .comment_body table.table, #preview table.table, .reply_preview table.table, .accordion-body table.table, .post_col table.table {
   display: block;
   width: 100%;
   overflow-x: auto;
 }
-.post_body ol li, .post_body ul li, .comment_body ol li, .comment_body ul li, #preview ol li, #preview ul li, .reply_preview ol li, .reply_preview ul li, .accordion-body ol li, .accordion-body ul li {
+.post_body ol li, .post_body ul li, .comment_body ol li, .comment_body ul li, #preview ol li, #preview ul li, .reply_preview ol li, .reply_preview ul li, .accordion-body ol li, .accordion-body ul li, .post_col ol li, .post_col ul li {
   margin-bottom: 7px;
 }
-.post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p, #preview ol li > p, #preview ul li > p, .reply_preview ol li > p, .reply_preview ul li > p, .accordion-body ol li > p, .accordion-body ul li > p {
+.post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p, #preview ol li > p, #preview ul li > p, .reply_preview ol li > p, .reply_preview ul li > p, .accordion-body ol li > p, .accordion-body ul li > p, .post_col ol li > p, .post_col ul li > p {
   margin-bottom: 0;
 }
 
@@ -2447,6 +2517,12 @@ form h5 {
   margin-bottom: 10px;
 }
 
+#image_preview_edit {
+  max-width: 200px;
+  margin-top: -10px;
+  margin-bottom: 10px;
+}
+
 #search_community {
   margin-top: 16px;
 }
@@ -2760,6 +2836,10 @@ form h5 {
 .instance_chooser_results .card .card-body {
   height: 95px;
   overflow-y: auto;
+}
+
+.accordion-button {
+  padding: 7px 12px;
 }
 
 .blink {

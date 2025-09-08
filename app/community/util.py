@@ -757,7 +757,8 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
         if community:
             instance: Instance = session.query(Instance).get(instance_id)
             if instance.inbox and instance.online() and not instance_banned(instance.domain):
-                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
+                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key',
+                                  timeout=10, new_task=False)
     except Exception:
         session.rollback()
         raise
