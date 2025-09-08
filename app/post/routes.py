@@ -10,13 +10,19 @@ from flask_login import current_user
 from furl import furl
 from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
+from ics import Calendar, DisplayAlarm
+import ics
+from markupsafe import escape
+from slugify import slugify
 
 from app import db, constants, cache, limiter
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
-from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
+    CreateEventForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
-from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
+    POST_TYPE_EVENT
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -24,7 +30,7 @@ from app.inoculation import inoculation
 from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
@@ -37,7 +43,6 @@ from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_book
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
 from app.shared.tasks import task_selector
-from app.translation import LibreTranslateAPI
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, instance_banned, \
@@ -234,6 +239,11 @@ def show_post(post_id: int):
                 else:
                     poll_form = True
 
+        # Events
+        event = None
+        if post.type == POST_TYPE_EVENT:
+            event = Event.query.filter_by(post_id=post.id).first()
+
         # Archive.ph link
         archive_link = None
         if post.type == POST_TYPE_LINK and body_has_no_archive_link(post.body_html) and url_needs_archive(post.url):
@@ -279,6 +289,7 @@ def show_post(post_id: int):
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                                   event=event,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
                                    user_flair=user_flair, lazy_load_replies=lazy_load_replies,
                                    THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
@@ -847,8 +858,9 @@ def post_edit(post_id: int):
             post_type = POST_TYPE_LINK
     elif post.type == POST_TYPE_POLL:
         form = CreatePollForm()
-        poll = Poll.query.filter_by(post_id=post_id).first()
         del form.finish_in
+    elif post.type == POST_TYPE_EVENT:
+        form = CreateEventForm()
     else:
         abort(404)
 
@@ -885,7 +897,7 @@ def post_edit(post_id: int):
 
         if form.validate_on_submit():
             try:
-                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
+                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT else None
                 edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
@@ -894,6 +906,7 @@ def post_edit(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
+            event_online = None
             form.title.data = post.title
             form.body.data = post.body
             form.notify_author.data = post.notify_author
@@ -933,12 +946,27 @@ def post_edit(post_id: int):
                     form_field = getattr(form, f"choice_{i}")
                     form_field.data = choice.choice_text
                     i += 1
+            elif post_type == POST_TYPE_EVENT:
+                event = Event.query.filter_by(post_id=post.id).first()
+                form.start_datetime.data = event.start
+                form.end_datetime.data = event.end
+                form.event_timezone.data = event.timezone
+                form.max_attendees.data = event.max_attendees
+                form.online.data = event.online
+                if event.online:
+                    form.online_link.data = event.online_link
+                else:
+                    form.irl_address.data = event.location['address']
+                    form.irl_city.data = event.location['city']
+                    form.irl_country.data = event.location['country']
+                event_online = event.online
 
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
                                    post_type=post_type, community=post.community, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
+                                   event_online=event_online,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    )
     else:
@@ -1452,6 +1480,9 @@ def post_set_flair(post_id):
             comm_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
                 order_by(CommunityFlair.flair).all()
 
+            post.nsfw = request.form.get('nsfw') == '1'
+            post.nsfl = request.form.get('nsfl') == '1'
+
             # Reset flair for the post
             post.flair = []
 
@@ -1487,12 +1518,16 @@ def post_set_flair(post_id):
         if form.validate_on_submit():
             post.flair.clear()
             post.flair = flair_from_form(form.flair.data)
+            post.nsfw = form.nsfw.data
+            post.nsfl = form.nsfl.data
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector('edit_post', post_id=post.id)
             return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
         form.referrer.data = referrer()
         form.flair.data = [flair.id for flair in post.flair]
+        form.nsfw.data = post.nsfw
+        form.nsfl.data = post.nsfl
         return render_template('generic_form.html', form=form,
                                title=_('Set flair for %(post_title)s', post_title=post.title))
     else:
@@ -1518,7 +1553,7 @@ def post_flair_list(post_id):
         post_flair = [flair.id for flair in post.flair]
 
         return render_template('post/_flair_choices.html', post_id=post.id, post_preview=post_preview,
-                               flair_objs=flair_objs, post_flair=post_flair)
+                               flair_objs=flair_objs, post_flair=post_flair, post=post)
     else:
         abort(401)
 
@@ -2094,3 +2129,28 @@ def post_cross_post(post_id: int):
 @login_required
 def preview():
     return markdown_to_html(request.form.get('body'))
+
+
+@bp.route('/post/<int:post_id>/ical', methods=['GET'])
+def show_post_ical(post_id: int):
+    with limiter.limit('30/minute'):
+        post = Post.query.get_or_404(post_id)
+        if post.type != POST_TYPE_EVENT:
+            abort(404)
+        ical = Calendar(creator='PieFed')
+        evt = ics.Event(uid=post.ap_id)
+        evt.name = post.title
+        evt.description = f'For more information see {post.ap_id}'
+        evt.begin = post.event.start
+        evt.end = post.event.end
+        alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
+        evt.alarms += [alarm]
+        ical.events.add(evt)
+        ical_data = ical.serialize()
+        ical_data = ical_data.replace("BEGIN:VCALENDAR",
+                                      f"BEGIN:VCALENDAR\nX-WR-CALNAME:{escape(post.title)}\nX-WR-TIMEZONE:UTC")
+        resp = make_response(ical_data)
+        resp.headers['Content-Disposition'] = 'inline; filename="' + slugify(post.title) + '.ics"'
+        resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
+        resp.mimetype = 'text/calendar'
+        return resp

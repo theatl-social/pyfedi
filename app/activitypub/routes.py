@@ -66,17 +66,17 @@ def webfinger():
         if actor == current_app.config['SERVER_NAME']:
             webfinger_data = {
                 "subject": f"acct:{actor}@{current_app.config['SERVER_NAME']}",
-                "aliases": [f"https://{current_app.config['SERVER_NAME']}/actor"],
+                "aliases": [f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/actor"],
                 "links": [
                     {
                         "rel": "http://webfinger.net/rel/profile-page",
                         "type": "text/html",
-                        "href": f"https://{current_app.config['SERVER_NAME']}/about"
+                        "href": f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/about"
                     },
                     {
                         "rel": "self",
                         "type": "application/activity+json",
-                        "href": f"https://{current_app.config['SERVER_NAME']}/actor",
+                        "href": f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/actor",
                     }
                 ]
             }
@@ -1071,7 +1071,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 return
 
                         object_type = core_activity['object']['type']
-                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question']
+                        new_content_types = ['Page', 'Article', 'Link', 'Note', 'Question', 'Event']
                         if object_type in new_content_types:  # create or update a post
                             process_new_content(user, community, store_ap_json, request_json, announced)
                             return
@@ -1700,7 +1700,8 @@ def announce_activity_to_followers(community: Community, creator: User, activity
         return
 
     # remove context from what will be inner object
-    del activity["@context"]
+    if '@context' in activity:
+        del activity["@context"]
 
     announce_activity = {
         '@context': default_context(),
@@ -1745,12 +1746,11 @@ def community_outbox(actor):
     actor = actor.strip()
     community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
-        sticky_posts = community.posts.filter(Post.sticky == True, Post.deleted == False,
-                                              Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
+        sticky_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == True, Post.deleted == False,
+                                         Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(50).all()
         remaining_limit = 50 - len(sticky_posts)
-        remaining_posts = community.posts.filter(Post.sticky == False, Post.deleted == False,
-                                                 Post.status > POST_STATUS_REVIEWING).order_by(
-            desc(Post.posted_at)).limit(remaining_limit).all()
+        remaining_posts = Post.query.filter(Post.community_id == community.id).filter(Post.sticky == False, Post.deleted == False,
+                                            Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.posted_at)).limit(remaining_limit).all()
         posts = sticky_posts + remaining_posts
 
         community_data = {
@@ -1935,6 +1935,7 @@ def post_ap_context(post_id):
         else:
             replies_collection = {}
         replies_collection['@context'] = default_context()
+        replies_collection['id'] = f'https://{current_app.config["SERVER_NAME"]}/post/{post_id}/context'
         replies_collection['name'] = post.title
         replies_collection['attributedTo'] = post.community.profile_id()
         replies_collection['audience'] = post.community.profile_id()
@@ -2113,8 +2114,8 @@ def process_chat(user, store_ap_json, core_activity, session):
     recipient_ap_id = core_activity['object']['to'][0]
     recipient = find_actor_or_create(recipient_ap_id)
     if recipient and recipient.is_local():
-        if sender.ap_profile_id != 'https://fediseer.com/api/v1/user/fediseer' and not sender.trustworthy():
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender not eligible to send')
+        if sender.created_very_recently():
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender is too new')
             return True
         elif recipient.has_blocked_user(sender.id) or recipient.has_blocked_instance(sender.instance_id):
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender blocked by recipient')

@@ -5,53 +5,55 @@ from random import randint
 import flask
 from bs4 import BeautifulSoup
 
-from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, g, json
-from markupsafe import Markup
+from flask import redirect, url_for, flash, request, make_response, current_app, abort, g, json
+from markupsafe import Markup, escape
 from flask_login import current_user
 from flask_babel import _, force_locale, gettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound
+from ics import Calendar, Event, DisplayAlarm
 
 from app import db, cache, celery, httpx_client, limiter, plugins
-from app.activitypub.signature import RsaKeys, post_request, send_post_request
+from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
-from app.chat.util import send_message
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
-    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm
+    InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm, \
+    CreateEventForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
-    delete_post_from_community, delete_post_reply_from_community, community_in_list, find_local_users, \
+    delete_post_from_community, delete_post_reply_from_community, \
     find_potential_moderators, hashtags_used_in_community, publicize_community
 from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LINK, POST_TYPE_ARTICLE, POST_TYPE_IMAGE, \
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
-    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING
+    NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING, \
+    POST_TYPE_EVENT
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
-    File, PostVote, utcnow, Report, Notification, ActivityPubLog, Topic, Conversation, PostReply, \
-    NotificationSubscription, UserFollower, Instance, Language, Poll, PollChoice, ModLog, CommunityWikiPage, \
+    File, utcnow, Report, Notification, Topic, PostReply, \
+    NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
     post_tag, Tag
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
     remove_mod_from_community
-from app.utils import get_setting, render_template, allowlist_html, markdown_to_html, validation_required, \
-    shorten_string, gibberish, community_membership, ap_datetime, \
+from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
+    shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
     blocked_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
-    blocked_users, languages_for_form, menu_topics, add_to_modlog, \
+    blocked_users, languages_for_form, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required
+    approval_required, markdown_to_text
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -315,8 +317,11 @@ def show_community(community: Community):
     sticky_posts = None
     posts = None
     comments = None
-    if content_type == 'posts':
-        posts = community.posts
+    if content_type == 'posts' or content_type == 'events':
+        posts = Post.query.filter(Post.community_id == community.id)
+
+        if content_type == 'events':
+            posts = posts.filter(Post.type == POST_TYPE_EVENT)
 
         # filter out nsfw and nsfl if desired
         if current_user.is_anonymous:
@@ -476,6 +481,20 @@ def show_community(community: Community):
     community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).\
         order_by(CommunityFlair.flair).all()
 
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false 
+                                                 AND p.community_id = :community_id AND p.status > :reviewing
+                                                 ORDER BY e.start LIMIT 5"""),
+                                         {'community_id': community.id, 'reviewing': POST_STATUS_REVIEWING}).all()
+
+    has_events = db.session.execute(text("""SELECT COUNT(p.id) as c FROM "event" e
+                                            INNER JOIN post p on e.post_id = p.id
+                                            WHERE p.deleted is false AND p.community_id = :community_id
+                                            AND p.status > :reviewing"""),
+                                    {'community_id': community.id, 'reviewing': POST_STATUS_REVIEWING}).scalar_one_or_none()
+
     breadcrumbs = []
     breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
     breadcrumb.text = _('Home')
@@ -537,7 +556,7 @@ def show_community(community: Community):
     description = shorten_string(community.description, 150) if community.description else None
     og_image = community.image.source_url if community.image_id else None
 
-    if content_type == 'posts':
+    if content_type == 'posts' or content_type == 'events':
         next_url = url_for('activitypub.community_profile',
                            actor=community.ap_id if community.ap_id is not None else community.name,
                            page=posts.next_num, sort=sort, layout=post_layout,
@@ -567,7 +586,7 @@ def show_community(community: Community):
     return render_template('community/community.html', community=community, title=community.title,
                            breadcrumbs=breadcrumbs,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
-                           comments=comments,
+                           comments=comments, upcoming_events=upcoming_events, has_events=has_events,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                            POST_TYPE_LINK=POST_TYPE_LINK,
                            POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
@@ -610,8 +629,8 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
-        posts = community.posts.filter(Post.from_bot == False, Post.deleted == False,
-                                       Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
+        posts = Post.query.filter(Post.community_id == community.id).filter(Post.from_bot == False, Post.deleted == False,
+                                  Post.status > POST_STATUS_REVIEWING).order_by(desc(Post.created_at)).limit(20).all()
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()
@@ -647,6 +666,39 @@ def show_community_rss(actor):
         response.headers.add_header('ETag', f"{community.id}_{hash(community.last_active)}")
         response.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
         return response
+    else:
+        abort(404)
+
+
+# iCal feed of the community
+@bp.route('/<actor>/ical', methods=['GET'])
+def show_community_ical(actor):
+    actor = actor.strip()
+    if '@' in actor:
+        community: Community = Community.query.filter_by(ap_id=actor, banned=False).first()
+    else:
+        community: Community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
+    if community is not None:
+        posts = Post.query.filter(Post.community_id == community.id, Post.type == POST_TYPE_EVENT).\
+            filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
+            order_by(desc(Post.created_at)).limit(50).all()
+        ical = Calendar(creator='PieFed')
+        for post in posts:
+            evt = Event(uid=post.ap_id)
+            evt.name = post.title
+            evt.description = f'For more information see {post.ap_id}'
+            evt.begin = post.event.start
+            evt.end = post.event.end
+            alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
+            evt.alarms += [alarm]
+            ical.events.add(evt)
+        ical_data = ical.serialize()
+        ical_data = ical_data.replace("BEGIN:VCALENDAR", f"BEGIN:VCALENDAR\nX-WR-CALNAME:{community.display_name()}\nX-WR-TIMEZONE:UTC")
+        resp = make_response(ical_data)
+        resp.headers['Content-Disposition'] = 'inline; filename="Events in ' + slugify(community.display_name()) + '.ics"'
+        resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
+        resp.mimetype = 'text/calendar'
+        return resp
     else:
         abort(404)
 
@@ -890,6 +942,9 @@ def add_post(actor, type):
     elif type == 'poll':
         post_type = POST_TYPE_POLL
         form = CreatePollForm()
+    elif type == 'event':
+        post_type = POST_TYPE_EVENT
+        form = CreateEventForm()
     else:
         abort(404)
 
@@ -903,7 +958,6 @@ def add_post(actor, type):
         form.sticky.render_kw = {'disabled': True}
 
     form.communities.choices = possible_communities()
-
     form.language_id.choices = languages_for_form()
     flair_choices = flair_for_form(community.id)
     if len(flair_choices):
@@ -922,8 +976,8 @@ def add_post(actor, type):
                 'user_id': current_user.id
             }
             plugins.fire_hook('before_post_create', post_data)
-            
-            uploaded_file = request.files['image_file'] if type == 'image' else None
+
+            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' else None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
@@ -951,6 +1005,9 @@ def add_post(actor, type):
         form.notify_author.data = True
         if post_type == POST_TYPE_POLL:
             form.finish_in.data = '3d'
+        elif post_type == POST_TYPE_EVENT:
+            form.online.data = True
+            form.event_timezone.data = current_user.timezone
         if community.posting_warning:
             flash(community.posting_warning)
 
@@ -986,7 +1043,7 @@ def add_post(actor, type):
 
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post, hide_community_actions=True,
-                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor,
+                           markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, event_online=True,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
 

@@ -54,6 +54,20 @@ admin_bp = ApiBlueprint(
     description="Administrative endpoints for user management and private registration"
 )
 
+reply_bp = ApiBlueprint(
+    "Comment",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+post_bp = ApiBlueprint(
+    "Post",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes
 from app.api.admin import routes as admin_routes
 from app.api.admin import monitoring_routes

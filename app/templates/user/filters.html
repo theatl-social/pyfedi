@@ -67,7 +67,9 @@
         {% endif %}
 
         <h5>Blocks</h5>
-        <p class="card-text">Manage what users, communities, domains or instances you want to block. Blocking them means you will no longer see any posts associated with them.</p>
+        <p class="card-text">{{ _('Manage which users, communities, domains or instances you want to block. Blocking them means you will no longer see any posts associated with them.') }}</p>
+        <p class="card-text">{{ _("Add new blocks when you see content you don't like - click the 3 dot menu on the post or comment to see blocking options.") }}</p>
+
         <nav id="block_chooser">
           <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist">
             <button class="nav-link active" id="discussion-tab" data-bs-toggle="tab" data-bs-target="#people-tab-pane"

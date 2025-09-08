@@ -21,6 +21,11 @@
 </script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
+        {% if post.type == POST_TYPE_EVENT and post.image_id and not low_bandwidth -%}
+            <div class="event_banner" style="background-image: url({{ post.image.view_url() }});">
+                {% include 'post/_breadcrumb_nav.html' %}
+            </div>
+        {% endif -%}
         {% include 'post/_post_full.html' -%}
         {% if post.comments_enabled -%}
             {% if current_user.is_authenticated -%}

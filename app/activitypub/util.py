@@ -23,10 +23,10 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache, celery
 from app.activitypub.signature import signed_get_request
 from app.constants import *
-from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, utcnow, \
+from app.models import User, Post, Community, File, PostReply, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic
+    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic, Event
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
     shorten_string, fixup_url, \
@@ -156,7 +156,7 @@ def post_to_page(post: Post):
     }
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
-    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO or post.type == POST_TYPE_EVENT) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -181,6 +181,23 @@ def post_to_page(post: Post):
         activity_data[mode] = choices
         activity_data['endTime'] = ap_datetime(poll.end_poll)
         activity_data['votersCount'] = poll.total_votes()
+    elif post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+        activity_data['type'] = 'Event'
+        activity_data['startTime'] = ap_datetime(event.start)
+        activity_data['endTime'] = ap_datetime(event.end)
+        activity_data['timezone'] = event.timezone
+        activity_data['maximumAttendeeCapacity'] = event.max_attendees
+        activity_data['participantCount'] = event.participant_count
+        activity_data['onlineLink'] = event.online_link
+        activity_data['joinMode'] = event.join_mode
+        activity_data['externalParticipationUrl'] = event.external_participation_url
+        activity_data['anonymousParticipation'] = event.anonymous_participation
+        activity_data['isOnline'] = event.online
+        activity_data['buyTicketsLink'] = event.buy_tickets_link
+        activity_data['feeCurrency'] = event.event_fee_currency
+        activity_data['feeAmount'] = event.event_fee_amount
+
     if post.indexable:
         activity_data['searchableBy'] = 'https://www.w3.org/ns/activitystreams#Public'
     return activity_data
@@ -1805,8 +1822,12 @@ def ban_user(blocker, blocked, community, core_activity):
             except ValueError:
                 ban_until = arrow.get(core_activity['endTime']).datetime
 
-        if ban_until and ban_until > datetime.now(timezone.utc):
-            new_ban.ban_until = ban_until
+        if ban_until:
+            # Ensure ban_until is timezone-aware for comparison
+            if ban_until.tzinfo is None:
+                ban_until = ban_until.replace(tzinfo=timezone.utc)
+            if ban_until > datetime.now(timezone.utc):
+                new_ban.ban_until = ban_until
 
         db.session.add(new_ban)
 
@@ -1961,7 +1982,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         # Check for Mentions of local users
         reply_parent = parent_comment if parent_comment else post
         local_users_to_notify = []
-        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
             for json_tag in request_json['object']['tag']:
                 if 'type' in json_tag and json_tag['type'] == 'Mention':
                     profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -1985,26 +2006,64 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                        announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
-                if recipient:
-                    blocked_senders = blocked_users(recipient.id)
-                    if post_reply.user_id not in blocked_senders:
-                        author = User.query.get(post_reply.user_id)
-                        targets_data = {'gen': '0',
-                                        'post_id': post_reply.post_id,
-                                        'comment_id': post_reply.id,
-                                        'comment_body': post_reply.body,
-                                        'author_user_name': author.ap_id if author.ap_id else author.user_name
-                                        }
-                        with force_locale(get_recipient_language(recipient.id)):
-                            notification = Notification(user_id=recipient.id, title=gettext(
-                                f"You have been mentioned in comment {post_reply.id}"),
-                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                        author_id=user.id, notif_type=NOTIF_MENTION,
-                                                        subtype='comment_mention',
-                                                        targets=targets_data)
-                            recipient.unread_notifications += 1
-                            db.session.add(notification)
-                            db.session.commit()
+                if not recipient:
+                    continue
+                if post_reply.instance.software == 'mbin' or post_reply.instance.software in MICROBLOG_APPS:
+                    # ignore Mention of post author from microblog apps
+                    # (direct replies will generate a different kind of Notification)
+                    if recipient.id == post.user_id:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention made in a post body
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "post_mention",
+                                                                   Notification.targets.op("->>")("post_id").cast(Integer) == post_reply.post_id).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention someone else made in the comment chain
+                    ids = []
+                    for element in post_reply.path:
+                        if element == 0 or element == post_reply.id:
+                            continue
+                        ids.append(element)
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "comment_mention",
+                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just there because a local user authored a comment further up in the comment chain
+                    # (direct replies will generate a different kind of Notification)
+                    # note: can't just check for any Notifications (reply or mention) 'cos local users could conceivably have turned inbox replies off
+                    ids = tuple(ids)
+                    user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                    if recipient.id in user_ids:
+                        continue
+
+                    # if checking for previous comments seems overly-involved, a cheaper solution is perhaps to just be to reject Mentions from MBIN in comments with a depth > 0
+
+                blocked_senders = blocked_users(recipient.id)
+                if post_reply.user_id not in blocked_senders:
+                    author = User.query.get(post_reply.user_id)
+                    targets_data = {'gen': '0',
+                                    'post_id': post_reply.post_id,
+                                    'comment_id': post_reply.id,
+                                    'comment_body': post_reply.body,
+                                    'author_user_name': author.ap_id if author.ap_id else author.user_name
+                                    }
+                    with force_locale(get_recipient_language(recipient.id)):
+                        notification = Notification(user_id=recipient.id, title=gettext(
+                            f"You have been mentioned in comment {post_reply.id}"),
+                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                            author_id=user.id, notif_type=NOTIF_MENTION,
+                            subtype='comment_mention',
+                            targets=targets_data)
+                        recipient.unread_notifications += 1
+                        db.session.add(notification)
+                        db.session.commit()
 
             return post_reply
         except Exception as ex:
@@ -2265,7 +2324,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         reply.ap_updated = utcnow()
 
     # Check for Mentions of local users (that weren't in the original)
-    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
         for json_tag in request_json['object']['tag']:
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -2278,6 +2337,38 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                     if reply_parent and profile_id != reply_parent.author.ap_profile_id:
                         recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                         if recipient:
+                            if reply.instance.software == 'mbin' or reply.instance.software in MICROBLOG_APPS:
+                                # ignore Mention of post author
+                                if recipient.id == reply.post.user_id:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention made in a post body
+                                notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                               Notification.notif_type == NOTIF_MENTION,
+                                                                               Notification.subtype == "post_mention",
+                                                                               Notification.targets.op("->>")("post_id").cast(Integer) == reply.post_id).first()
+                                if notifs:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention someone else made in the comment chain
+                                ids = []
+                                for element in reply.path:
+                                    if element == 0 or element == reply.id:
+                                        continue
+                                    ids.append(element)
+                                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                                   Notification.subtype == "comment_mention",
+                                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                                    if notifs:
+                                        continue
+
+                                # ignore Mentions generated because a local user authored a comment further up in the comment chain
+                                ids = tuple(ids)
+                                user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                                if recipient.id in user_ids:
+                                    continue
+
                             blocked_senders = blocked_users(recipient.id)
                             if reply.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
@@ -2519,9 +2610,27 @@ def update_post_from_activity(post: Post, request_json: dict):
         # no URLs in Polls to worry about, so return now
         return
 
+    if request_json['object']['type'] == 'Event':
+        event = Event.query.filter_by(post_id=post.id).first()
+        if event:
+            event.start = datetime.fromisoformat(request_json['object']['startTime'])
+            event.end = datetime.fromisoformat(request_json['object']['endTime'])
+            event.timezone = request_json['object']['timezone']
+            event.max_attendees = request_json['object']['maximumAttendeeCapacity']
+            event.participant_count = request_json['object']['participantCount']
+            event.online_link = request_json['object']['onlineLink']
+            event.join_mode = request_json['object']['joinMode']
+            event.external_participation_url = request_json['object']['externalParticipationUrl']
+            event.anonymous_participation = request_json['object']['anonymousParticipation']
+            event.online = request_json['object']['isOnline']
+            event.buy_tickets_link = request_json['object']['buyTicketsLink']
+            event.event_fee_currency = request_json['object']['feeCurrency']
+            event.event_fee_amount = request_json['object']['feeAmount']
+            db.session.commit()
+
     # Links
     old_url = post.url
-    new_url = None
+    new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
     if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and

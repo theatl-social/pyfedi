@@ -10,11 +10,11 @@ from ua_parser import parse as uaparse
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
-    lemmy_site_data, is_activitypub_request, find_actor_or_create
+    lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
-from app.community.util import publicize_community
+from app.admin.util import topics_for_form
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING, POST_TYPE_LINK
+    POST_STATUS_REVIEWING
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
@@ -130,6 +130,8 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             active_communities = active_communities.filter(Community.id.not_in(community_ids))
+        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
+
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # New Communities
@@ -142,7 +144,16 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
+        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
+
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false 
+                                                 AND p.status > :reviewing
+                                                 ORDER BY e.start LIMIT 5"""),
+                                         {'reviewing': POST_STATUS_REVIEWING}).all()
 
     # Voting history and ban status
     if current_user.is_authenticated:
@@ -155,7 +166,7 @@ def home_page(sort, view_filter):
         communities_banned_from_list = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities,
-                           new_communities=new_communities,
+                           new_communities=new_communities, upcoming_events=upcoming_events,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            communities_banned_from_list=communities_banned_from_list,
@@ -191,11 +202,14 @@ def list_topics():
 def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
+    home_select = request.args.get('home_select', 'any')
+    subscribe_select = request.args.get('subscribe_select', 'any')
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
     nsfw = request.args.get('nsfw', None)
     page = request.args.get('page', 1, type=int)
+    instance = request.args.get('instance', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
 
@@ -208,7 +222,7 @@ def list_communities():
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
 
-    topics = Topic.query.order_by(Topic.name).all()
+    topics = topics_for_form(0)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
@@ -221,6 +235,29 @@ def list_communities():
 
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+    
+    if home_select == "local":
+        communities = communities.filter(Community.ap_id == None)
+    elif home_select == "remote":
+        communities = communities.filter(Community.ap_id != None)
+    
+    if subscribe_select != "any":
+        # get the user's joined communities
+        user_joined_communities = joined_communities(current_user.id)
+        user_moderating_communities = moderating_communities(current_user.id)
+        # get the joined community ids list
+        joined_ids = []
+        for jc in user_joined_communities:
+            joined_ids.append(jc.id)
+        for mc in user_moderating_communities:
+            joined_ids.append(mc.id)
+        
+        if subscribe_select == "subscribed":
+            # filter down to just the joined communities
+            communities = communities.filter(Community.id.in_(joined_ids))
+        elif subscribe_select == "not_subscribed":
+            # filter out the joined communities from all communities
+            communities = communities.filter(Community.id.not_in(joined_ids))
 
     # default to no public feeds
     server_has_feeds = False
@@ -242,6 +279,10 @@ def list_communities():
         for item in feed_items:
             feed_community_ids.append(item.community_id)
         communities = communities.filter(Community.id.in_(feed_community_ids))
+    
+    # if filtering by home instance
+    if instance:
+        communities = communities.filter(Community.ap_domain == instance)
 
     if current_user.is_authenticated:
         if current_user.hide_low_quality:
@@ -287,13 +328,13 @@ def list_communities():
                        language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param,
-                           title=_('Communities'),
+                           title=_('Communities'), instance=instance, home_select=home_select,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by, nsfw=nsfw,
+                           sort_by=sort_by, nsfw=nsfw, subscribe_select=subscribe_select,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
@@ -1221,6 +1262,15 @@ def list_feeds():
                                public_feeds_list=public_feeds,
                                subscribed_feeds=subscribed_feeds(current_user.get_id()),
                                search_hint=search_param)
+
+
+@bp.route('/explore')
+@login_required_if_private_instance
+def explore():
+    topics = topic_tree()
+    return render_template('explore.html', topics=topics, menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
 
 
 @bp.route('/content_warning', methods=['GET', 'POST'])

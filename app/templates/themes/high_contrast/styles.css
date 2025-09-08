@@ -23,10 +23,26 @@
     --bs-btn-bg: white;
     --bs-btn-border-color: white;
     --bs-btn-hover-bg: white;
+    --bs-btn-hover-border-color: white;
     --bs-btn-color: black;
-}
-[data-bs-theme="dark"] .btn-primary:hover {
     --bs-btn-hover-color: black;
+}
+
+.btn-outline-primary {
+    --bs-btn-bg: white;
+    --bs-btn-active-bg: black;
+    --bs-btn-border-color: black;
+    --bs-btn-active-border-color: white;
+    --bs-btn-color: black;
+    --bs-btn-active-color: white;
+}
+[data-bs-theme="dark"] .btn-outline-primary {
+    --bs-btn-bg: black;
+    --bs-btn-active-bg: white;
+    --bs-btn-border-color: white;
+    --bs-btn-active-border-color: black;
+    --bs-btn-color: white;
+    --bs-btn-active-color: black;
 }
 
 .btn-outline-secondary {

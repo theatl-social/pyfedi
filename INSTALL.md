@@ -11,6 +11,7 @@
 * [Database Management](#database-management)
 * [Keeping your local instance up to date](#keeping-your-local-instance-up-to=date)
 * [Running PieFed in production](#running-piefed-in-production)
+* [Push notifications](#push-notifications)
 * [Accepting donations through Stripe](#stripe)
 * [Testing and debugging](#testing)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
@@ -491,6 +492,18 @@ server {
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
 
+Recommended anti-scraper (they use fake user agent strings) config:
+
+```
+    # Scrapers often use old user-agents
+    if ($http_user_agent ~* "(Chrome/[0-9]{1,2}(?![0-9])|Firefox/[0-9]{1,2}(?![0-9])|Safari/([0-9]|1[0-4])(?![0-9]))") {
+        return 403;
+    }
+    if ($http_user_agent ~* "(Opera/[0-9]|Presto/|MSIE|Trident/)") {
+        return 403;
+    }
+```
+
 #### Caddy
 
 ```
@@ -663,6 +676,21 @@ At /admin/pages there is a markdown-based CMS which you can use to add pages to 
 'privacy' to override the default privacy policy. Create one with the url 'about' and it will be appended to the existing about page.
 
 All other urls have no special behaviour and will just display the page.
+
+---
+
+<div id="push-notifications"></div>
+
+## Push notifications
+
+To have realtime popup notifications your instance needs to install another web app: [https://codeberg.org/PieFed/piefed-notifs](https://codeberg.org/PieFed/piefed-notifs)
+
+This service needs to have access to the same redis service that the main PieFed app uses so putting it on the same server is simplest.
+
+You need to configure Nginx on the main PieFed app server to proxy requests to /notifications/stream through to the piefed-notifs service.
+See [the readme](https://codeberg.org/PieFed/piefed-notifs/src/branch/main/README.md) for more details. If you do this then you
+can set the `NOTIF_SERVER` environment variable to the same url as your instance. If you want to run piefed-notifs on an entirely different
+server then you can set `NOTIF_SERVER` to that url instead but I expect most will not need to -  Piefed-notifs is very lightweight.
 
 ---
 

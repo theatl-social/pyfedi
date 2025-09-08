@@ -79,7 +79,7 @@ def join_topic(topic_id):
                 join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
-                send_community_follow(community.id, join_request.id, current_user.id)
+                send_community_follow(community.id, join_request.uuid, current_user.id)
 
             existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id, CommunityMember.user_id == current_user.id).first()
             if not existing_member:

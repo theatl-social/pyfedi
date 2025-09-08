@@ -45,8 +45,8 @@ class Person(DefaultSchema):
     instance_id = fields.Integer(required=True)
     local = fields.Boolean(required=True)
     user_name = fields.String(required=True)
-    about = fields.String(allow_none=True, metadata={"format": "markdown"})
-    about_html = fields.String(allow_none=True, metadata={"format": "html"})
+    about = fields.String(metadata={"format": "markdown"})
+    about_html = fields.String(metadata={"format": "html"})
     avatar = fields.Url(allow_none=True)
     banner = fields.Url(allow_none=True)
     flair = fields.String()
@@ -242,6 +242,8 @@ class SearchRequest(DefaultSchema):
     listing_type = fields.String(validate=validate.OneOf(listing_type_list))
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list))
+    community_name = fields.String()
+    community_id = fields.Integer()
 
 
 class SearchInstanceChooser(DefaultSchema):
@@ -336,6 +338,19 @@ class Comment(DefaultSchema):
     user_id = fields.Integer(required=True)
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    locked = fields.Boolean()
+
+
+class CommentReport(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    comment_id = fields.Integer(required=True)
+    original_comment_text = fields.String()
+    reason = fields.String()
+    resolved = fields.Boolean(required=True)
+    # TODO: resolver_id = fields.Integer(required=True)
+    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
 
 class CommentAggregates(DefaultSchema):
@@ -363,6 +378,12 @@ class CommentView(DefaultSchema):
     subscribed = fields.String(required=True)
     my_vote = fields.Integer()
     can_auth_user_moderate = fields.Boolean()
+
+
+class CommentReportView(CommentView):
+    comment_report = fields.Nested(CommentReport, required=True)
+    comment_creator = fields.Nested(Person, required=True)
+    # TODO: resolver = fields.Nested(Person, required=True)
 
 
 class SearchResponse(DefaultSchema):
@@ -713,9 +734,9 @@ class UserSetFlairResponse(DefaultSchema):
 
 
 class UserSaveSettingsRequest(DefaultSchema):
-    avatar = fields.Url()
+    avatar = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     bio = fields.String(metadata={"format": "markdown"})
-    cover = fields.Url()
+    cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
     show_nsfw = fields.Boolean()
@@ -771,6 +792,133 @@ class UserNotificationsCountResponse(DefaultSchema):
 
 class UserMarkAllNotifsReadResponse(DefaultSchema):
     mark_all_notifications_as_read = fields.String(required=True, metadata={"example": "complete"})
+
+
+# Upstream API Schemas - Added from merge
+class ListCommentsRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    liked_only = fields.Boolean()
+    saved_only = fields.Boolean()
+    person_id = fields.Integer()
+    community_id = fields.Integer()
+    post_id = fields.Integer()
+    parent_id = fields.Integer()
+    max_depth = fields.Integer()
+    depth_first = fields.Boolean(metadata={"description": "guarantee parent comments are on the same page as any fetched comments"})
+
+
+class ListCommentsResponse(DefaultSchema):
+    comments = fields.List(fields.Nested(CommentView), required=True)
+    next_page = fields.String(allow_none=True)
+
+
+class GetCommentRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetCommentResponse(DefaultSchema):
+    comment_view = fields.Nested(CommentView, required=True)
+
+
+class LikeCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    score = fields.Integer(required=True, metadata={"example": 1, "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote"})
+    private = fields.Boolean(metadata={"description": "private votes are not federated to other instances", "default": False})
+
+
+class SaveCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    save = fields.Boolean(required=True)
+
+
+class SubscribeCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class CreateCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    post_id = fields.Integer(required=True)
+    parent_id = fields.Integer()
+    language_id = fields.Integer()
+
+
+class EditCommentRequest(DefaultSchema):
+    body = fields.String(required=True)
+    comment_id = fields.Integer(required=True)
+    language_id = fields.Integer()
+    distinguished = fields.Boolean(metadata={"default": False, "description": "Visibly mark reply as from a moderator in the web UI"})
+
+
+class DeleteCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+    description = fields.String()
+    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
+
+
+class GetCommentReportResponse(DefaultSchema):
+    comment_report_view = fields.Nested(CommentReportView, required=True)
+
+
+class RemoveCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    reason = fields.String()
+
+
+class MarkCommentAsReadRequest(DefaultSchema):
+    comment_reply_id = fields.Integer(required=True)
+    read = fields.Boolean(required=True)
+
+
+class GetCommentReplyResponse(DefaultSchema):
+    comment_reply_view = fields.Nested(CommentReplyView, required=True)
+
+
+class LockCommentRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    locked = fields.Boolean(required=True)
+
+
+class ListCommentLikesRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 50})
+
+
+class CommentLikeView(DefaultSchema):
+    score = fields.Integer(required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_banned = fields.Boolean(required=True)
+    creator = fields.Nested(Person, required=True)
+
+
+class ListCommentLikesResponse(DefaultSchema):
+    comment_likes = fields.List(fields.Nested(CommentLikeView, required=True))
+    next_page = fields.String(allow_none=True)
+
+
+class ListPostLikesRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 50})
+
+
+class PostLikeView(CommentLikeView):
+    pass
+
+
+class ListPostLikesResponse(DefaultSchema):
+    post_likes = fields.List(fields.Nested(PostLikeView, required=True))
+    next_page = fields.String(allow_none=True)
 
 
 # Admin API Schemas
