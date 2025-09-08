@@ -732,9 +732,9 @@ class UserSetFlairResponse(DefaultSchema):
 
 
 class UserSaveSettingsRequest(DefaultSchema):
-    avatar = fields.Url()
+    avatar = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     bio = fields.String(metadata={"format": "markdown"})
-    cover = fields.Url()
+    cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
     show_nsfw = fields.Boolean()

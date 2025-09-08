@@ -281,10 +281,36 @@ def put_user_save_user_settings(auth, data):
     show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
-    avatar = data['avatar'] if 'avatar' in data else None
+    # avatar = data['avatar'] if 'avatar' in data else None
     cover = data['cover'] if 'cover' in data else None
     default_sort = data['default_sort_type'] if 'default_sort' in data else None
     default_comment_sort = data['default_comment_sort_type'] if 'default_comment_sort' in data else None
+
+    if "avatar" in data:
+        if not data["avatar"]:
+            # null value passed, remove avatar image
+            avatar = None
+            remove_avatar = True
+        else:
+            # valid url passed, set avatar image
+            avatar = data["avatar"]
+            remove_avatar = False
+    else:
+        avatar = None
+        remove_avatar = False
+    
+    if "cover" in data:
+        if not data["cover"]:
+            # null value passed, remove avatar image
+            cover = None
+            remove_cover = True
+        else:
+            # valid url passed, set avatar image
+            cover = data["cover"]
+            remove_cover = False
+    else:
+        cover = None
+        remove_cover = False
 
     # english is fun, so lets do the reversing and update the user settings
     if show_nsfw == True:
@@ -321,6 +347,13 @@ def put_user_save_user_settings(auth, data):
         db.session.commit()
         user.avatar_id = file.id
         make_image_sizes(user.avatar_id, 40, 250, 'users')
+    elif remove_avatar:
+        if user.avatar_id:
+            remove_file = File.query.get(user.avatar_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.avatar_id = None
+        db.session.commit()
 
     if cover:
         if user.cover_id:
@@ -333,6 +366,14 @@ def put_user_save_user_settings(auth, data):
         db.session.commit()
         user.cover_id = file.id
         make_image_sizes(user.cover_id, 700, 1600, 'users')
+        cache.delete_memoized(User.cover_image, user)
+    elif remove_cover:
+        if user.cover_id:
+            remove_file = File.query.get(user.cover_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.cover_id = None
+        db.session.commit()
         cache.delete_memoized(User.cover_image, user)
 
     if default_sort is not None:
