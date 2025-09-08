@@ -9,7 +9,7 @@ from app.api.alpha.utils.validators import required, integer_expected, boolean_e
 from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
-from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply
+from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read
 from app.post.util import post_replies, get_comment_branch
@@ -696,3 +696,36 @@ def post_post_mark_as_read(auth, data):
         mark_post_read(data['post_ids'], data['read'], user_id)
 
     return {"success": True}
+
+
+def get_post_like_list(auth, data):
+    post_id = data['post_id']
+    page = data['page'] if 'page' in data else 1
+    limit = data['limit'] if 'limit' in data else 50
+
+    user = authorise_api_user(auth, return_type='model')
+    post = Post.query.filter_by(id=post_id).one()
+
+    if post.community.is_moderator(user) or user.is_admin() or user.is_staff():
+        banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
+        banned_from_community_user_ids = list(db.session.execute(text
+            ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post.community_id}).scalars())
+        likes = PostVote.query.filter_by(post_id=post_id).order_by(PostVote.created_at)
+        post_likes = []
+        for like in likes:
+            post_likes.append({
+                'score': like.effect,
+                'creator_banned_from_community': like.user_id in banned_from_community_user_ids,
+                'creator_banned': like.user_id in banned_from_site_user_ids,
+                'creator': user_view(user=like.user_id, variant=1, stub=True)
+            })
+        start_index = (page - 1) * limit
+        end_index = start_index + limit
+        post_likes_page = post_likes[start_index:end_index]
+        next_page = None
+        if len(post_likes_page) == limit and (page * limit) % len(post_likes) > 0:
+            next_page = str(page + 1)
+        response_json = {'next_page': next_page, 'post_likes': post_likes_page}
+        return response_json
+    else:
+        raise Exception('Not a moderator')

@@ -883,3 +883,36 @@ class GetCommentReplyResponse(DefaultSchema):
 class LockCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     locked = fields.Boolean(required=True)
+
+
+class ListCommentLikesRequest(DefaultSchema):
+    comment_id = fields.Integer(required=True)
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 50})
+
+
+class CommentLikeView(DefaultSchema):
+    score = fields.Integer(required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_banned = fields.Boolean(required=True)
+    creator = fields.Nested(Person, required=True)
+
+
+class ListCommentLikesResponse(DefaultSchema):
+    comment_likes = fields.List(fields.Nested(CommentLikeView, required=True))
+    next_page = fields.String(allow_none=True)
+
+
+class ListPostLikesRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 50})
+
+
+class PostLikeView(CommentLikeView):
+    pass
+
+
+class ListPostLikesResponse(DefaultSchema):
+    post_likes = fields.List(fields.Nested(PostLikeView, required=True))
+    next_page = fields.String(allow_none=True)
