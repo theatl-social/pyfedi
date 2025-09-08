@@ -1573,7 +1573,7 @@ def menu_my_feeds(user_id):
 @cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
     return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(
-        is_owner=False).all()
+        is_owner=False).order_by(Feed.name).all()
 
 
 # @cache.memoize(timeout=3000)
