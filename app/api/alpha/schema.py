@@ -242,6 +242,8 @@ class SearchRequest(DefaultSchema):
     listing_type = fields.String(validate=validate.OneOf(listing_type_list))
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list))
+    community_name = fields.String()
+    community_id = fields.Integer()
 
 
 class SearchInstanceChooser(DefaultSchema):
