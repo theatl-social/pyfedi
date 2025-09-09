@@ -29,7 +29,8 @@ def upgrade():
     # Configure search manager to recognize the weights from TSVectorType
     # This recreates the trigger with proper weight handling
     metadata = sa.MetaData()
-    post_table = sa.Table('post', metadata,
+    # Define the table structure for the search trigger
+    sa.Table('post', metadata,
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('title', sa.String(255)),
         sa.Column('body', sa.Text),

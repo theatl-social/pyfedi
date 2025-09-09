@@ -60,6 +60,7 @@ jobs:
           echo "🚀 Running standalone startup validation"
           python tests/test_startup_validation.py
         env:
+          PYTHONPATH: ${{ github.workspace }}
           SERVER_NAME: test.localhost
           SECRET_KEY: test-secret-key-for-ci
           DATABASE_URL: sqlite:///memory:test.db
