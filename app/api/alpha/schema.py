@@ -292,7 +292,7 @@ class CommunityFlair(DefaultSchema):
     text_color = fields.String(required=True)
     background_color = fields.String(required=True)
     blur_images = fields.Boolean(required=True)
-    ap_id = fields.Url(required=True)
+    ap_id = fields.Url(required=True, allow_none=True, metadata={"description": "Legacy tags that existed prior to 1.2 might not have a defined ap_id"})
 
 
 class PostView(DefaultSchema):

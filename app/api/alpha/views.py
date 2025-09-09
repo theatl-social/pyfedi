@@ -470,7 +470,10 @@ def flair_view(flair: CommunityFlair | int):
         flair_item["ap_id"] = flair.ap_id
     else:
         community = Community.query.filter_by(id=flair.id).one()
-        flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
+        if community.is_local():
+            flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
+        else:
+            flair_item["ap_id"] = None
     
     return flair_item
 
