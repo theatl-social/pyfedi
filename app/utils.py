@@ -3382,11 +3382,19 @@ def show_explore():
 # Private Registration Configuration Helpers
 def is_private_registration_enabled():
     """Check if private registration feature is enabled"""
+    # Check environment variable first, then fall back to database setting
+    env_value = os.environ.get('PRIVATE_REGISTRATION_ENABLED')
+    if env_value is not None:
+        return env_value.lower() == 'true'
     return get_setting('PRIVATE_REGISTRATION_ENABLED', 'false').lower() == 'true'
 
 
 def get_private_registration_secret():
     """Get the private registration secret from environment"""
+    # Check environment variable first, then fall back to database setting
+    env_value = os.environ.get('PRIVATE_REGISTRATION_SECRET')
+    if env_value is not None:
+        return env_value
     return get_setting('PRIVATE_REGISTRATION_SECRET', '')
 
 
