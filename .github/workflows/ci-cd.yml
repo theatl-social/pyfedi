@@ -18,21 +18,18 @@ jobs:
   startup-validation:
     name: 🚀 Startup Validation
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: "3.13"
       
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -47,7 +44,7 @@ jobs:
       
       - name: Run startup validation tests
         run: |
-          echo "🧪 Running startup validation tests with Python ${{ matrix.python-version }}"
+          echo "🧪 Running startup validation tests with Python 3.13"
           python -m pytest tests/test_startup_validation.py -v --tb=short
         env:
           SERVER_NAME: test.localhost
@@ -81,13 +78,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       
       - name: Cache pip dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
@@ -146,10 +143,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.13"
       
       - name: Install linting tools
         run: |
@@ -237,7 +234,7 @@ jobs:
       
       - name: Upload test logs on failure
         if: failure()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: production-mirror-logs
           path: |
@@ -264,7 +261,7 @@ jobs:
       
       - name: Upload security report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: security-report
           path: bandit-report.json
