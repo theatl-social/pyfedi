@@ -316,12 +316,23 @@ class CommunityAggregates(DefaultSchema):
     active_6monthly = fields.Integer()
 
 
+class CommunityFlair(DefaultSchema):
+    id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    flair_title = fields.String(required=True)
+    text_color = fields.String(required=True)
+    background_color = fields.String(required=True)
+    blur_images = fields.Boolean(required=True)
+    ap_id = fields.Url(required=True)
+
+
 class CommunityView(DefaultSchema):
     activity_alert = fields.Boolean(required=True)
     blocked = fields.Boolean(required=True)
     community = fields.Nested(Community, required=True)
     counts = fields.Nested(CommunityAggregates, required=True)
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    flair_list = fields.List(fields.Nested(CommunityFlair))
 
 
 class Comment(DefaultSchema):

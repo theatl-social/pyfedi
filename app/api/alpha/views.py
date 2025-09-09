@@ -7,7 +7,7 @@ from app import cache, db
 from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
-    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
+    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities
 
@@ -382,7 +382,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
         activity_alert = True if community_sub else False
         v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
-              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
+              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,
+              'flair_list': get_flair_list(community)}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
@@ -414,6 +415,50 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if variant == 6:
         v6 = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
         return v6
+
+
+def get_flair_list(community: Community | int | str) -> list:
+    if isinstance(community, int):
+        community_id = community
+        community = Community.query.filter_by(id=community).one()
+    elif isinstance(community, Community):
+        community_id = community.id
+    elif isinstance(community, str):
+        name, ap_domain = community.strip().split('@')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+        if community is None:
+            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
+        community_id = community.id
+    
+    flair_list = []
+
+    for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
+        flair_item = flair_view(flair)
+        flair_list.append(flair_item)
+    
+    return flair_list
+
+
+def flair_view(flair: CommunityFlair | int):
+    if isinstance(flair, int):
+        flair = CommunityFlair.query.filter_by(id=flair).one()
+    
+    flair_item = {}
+    flair_item["id"] = flair.id
+    flair_item["community_id"] = flair.community_id
+    flair_item["flair_title"] = flair.flair
+    flair_item["text_color"] = flair.text_color
+    flair_item["background_color"] = flair.background_color
+    flair_item["blur_images"] = flair.blur_images
+    
+    if flair.ap_id:
+        flair_item["ap_id"] = flair.ap_id
+    else:
+        community = Community.query.filter_by(id=flair.id).one()
+        flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
+    
+    return flair_item
 
 
 # emergency function - shouldn't be called in normal circumstances
