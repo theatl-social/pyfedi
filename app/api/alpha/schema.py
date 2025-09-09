@@ -941,3 +941,15 @@ class GetPostResponse(DefaultSchema):
     community_view = fields.Nested(CommunityView, required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
     cross_posts = fields.List(fields.Nested(PostView), required=True)
+
+
+class PostSetFlairRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    flair_id_list = fields.List(
+        fields.Integer(),
+        allow_none=True,
+        metadata={"description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"})
+
+
+class PostSetFlairResponse(PostView):
+    pass

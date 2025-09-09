@@ -14,7 +14,7 @@ from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read, get_post_replies, get_post_like_list
+    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report
@@ -640,6 +640,23 @@ def get_alpha_post_like_list(data):
         return orjson_response(validated)
     except NoResultFound:
         return abort(400, message="Post not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@post_bp.route('/post/assign_flair', methods=['POST'])
+@post_bp.doc(summary="Add/remove flair from a post")
+@post_bp.arguments(PostSetFlairRequest)
+@post_bp.response(200, PostSetFlairResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_set_flair(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = put_post_set_flair(auth, data)
+        return PostSetFlairResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
