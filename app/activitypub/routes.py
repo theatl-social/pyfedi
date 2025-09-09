@@ -1051,9 +1051,10 @@ def process_inbox_request(request_json, store_ap_json):
                                                                     choice_text=core_activity['object']['name']).first()
                                 if poll_data and choice:
                                     poll_data.vote_for_choice(choice.id, user.id)
-                                    session.commit()
                                     log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
                                     if post_being_replied_to.author.is_local():
+                                        post_being_replied_to.edited_at = utcnow()
+                                        session.commit()
                                         task_selector('edit_post', post_id=post_being_replied_to.id)
                             return
                         if not announced and not community:
