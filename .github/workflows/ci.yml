@@ -1,0 +1,184 @@
+name: CI Checks
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        
+    - name: Create virtual environment
+      run: uv venv
+      
+    - name: Install dependencies
+      run: |
+        source .venv/bin/activate
+        uv pip install -r requirements.txt
+        
+    - name: Lint with ruff
+      run: |
+        source .venv/bin/activate
+        uv pip install ruff
+        ruff check . --output-format=github
+        
+    - name: Check code formatting with black
+      run: |
+        source .venv/bin/activate
+        uv pip install black
+        black --check --diff .
+        
+    - name: Check import sorting with isort
+      run: |
+        source .venv/bin/activate
+        uv pip install isort
+        isort --check-only --diff .
+        
+    - name: Run field consistency tests
+      run: |
+        source .venv/bin/activate
+        SERVER_NAME=localhost python -m pytest tests/test_field_consistency_simple.py -v
+        
+    - name: Run private registration API tests
+      run: |
+        source .venv/bin/activate
+        SERVER_NAME=localhost python -m pytest tests/test_private_registration_simple.py -v
+        
+    - name: Python syntax validation
+      run: |
+        source .venv/bin/activate
+        python -c "
+        import ast
+        import sys
+        from pathlib import Path
+        
+        files_to_check = [
+            'app/api/admin/security.py',
+            'app/api/admin/private_registration.py', 
+            'app/api/admin/monitoring.py',
+            'app/api/admin/user_management.py',
+            'app/api/admin/monitoring_routes.py',
+            'app/api/admin/routes.py'
+        ]
+        
+        failed = False
+        for file_path in files_to_check:
+            if Path(file_path).exists():
+                with open(file_path, 'r') as f:
+                    source = f.read()
+                try:
+                    ast.parse(source, filename=file_path)
+                    print(f'✅ {file_path}: Valid Python syntax')
+                except SyntaxError as e:
+                    print(f'❌ {file_path}: Syntax error - {e}')
+                    failed = True
+                    
+        if failed:
+            sys.exit(1)
+        print('All admin API modules have valid Python syntax!')
+        "
+
+  security-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.13'
+        
+    - name: Install uv
+      uses: astral-sh/setup-uv@v4
+      with:
+        enable-cache: true
+        
+    - name: Install security tools
+      run: |
+        uv venv
+        source .venv/bin/activate
+        uv pip install bandit safety
+        
+    - name: Run bandit security linter
+      run: |
+        source .venv/bin/activate
+        bandit -r app/ -x app/tests/ --format json -o bandit-report.json || true
+        bandit -r app/ -x app/tests/ --severity-level medium
+        
+    - name: Check for known security vulnerabilities
+      run: |
+        source .venv/bin/activate
+        safety check --json --output safety-report.json || true
+        safety check
+
+  admin-api-validation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate admin API completeness
+      run: |
+        echo "Checking admin API implementation..."
+        
+        # Check that all expected admin API files exist
+        files=(
+          "app/api/admin/__init__.py"
+          "app/api/admin/security.py"
+          "app/api/admin/private_registration.py"
+          "app/api/admin/user_management.py"
+          "app/api/admin/monitoring.py"
+          "app/api/admin/monitoring_routes.py"
+          "app/api/admin/routes.py"
+          "ADMIN_API.md"
+        )
+        
+        missing_files=()
+        for file in "${files[@]}"; do
+          if [[ ! -f "$file" ]]; then
+            missing_files+=("$file")
+          fi
+        done
+        
+        if [[ ${#missing_files[@]} -gt 0 ]]; then
+          echo "❌ Missing admin API files:"
+          printf '%s\n' "${missing_files[@]}"
+          exit 1
+        fi
+        
+        echo "✅ All admin API files present"
+        
+        # Check for required environment variables documentation
+        if ! grep -q "PRIVATE_REGISTRATION_SECRET" ADMIN_API.md; then
+          echo "❌ ADMIN_API.md missing PRIVATE_REGISTRATION_SECRET documentation"
+          exit 1
+        fi
+        
+        echo "✅ Admin API documentation complete"
+        
+        # Check for security imports
+        if ! grep -q "hmac.compare_digest" app/api/admin/security.py; then
+          echo "❌ Missing secure comparison in security.py"
+          exit 1
+        fi
+        
+        echo "✅ Admin API security implementation validated"
