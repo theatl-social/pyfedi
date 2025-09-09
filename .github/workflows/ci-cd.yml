@@ -217,7 +217,7 @@ jobs:
   production-mirror-tests:
     name: 🏭 Production Mirror Tests
     runs-on: ubuntu-latest
-    if: ${{ github.event.inputs.run_full_tests == 'true' || github.ref == 'refs/heads/main' }}
+    if: ${{ github.event.inputs.run_full_tests == 'true' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
     needs: [startup-validation, core-tests]
     
     steps:
