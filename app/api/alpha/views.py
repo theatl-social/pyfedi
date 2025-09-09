@@ -143,7 +143,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'blurred': post.blurred(g.user if hasattr(g, 'user') else None),
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
-              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
+              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin,
+              'flair': get_post_flair_list(post)}
 
         creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
         community = community_view(community=post.community, variant=1, stub=True)
@@ -383,7 +384,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         activity_alert = True if community_sub else False
         v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
               'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,
-              'flair_list': get_flair_list(community)}
+              'flair_list': get_comm_flair_list(community)}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
@@ -417,7 +418,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         return v6
 
 
-def get_flair_list(community: Community | int | str) -> list:
+def get_comm_flair_list(community: Community | int | str) -> list:
     if isinstance(community, int):
         community_id = community
         community = Community.query.filter_by(id=community).one()
@@ -434,6 +435,19 @@ def get_flair_list(community: Community | int | str) -> list:
     flair_list = []
 
     for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
+        flair_item = flair_view(flair)
+        flair_list.append(flair_item)
+    
+    return flair_list
+
+
+def get_post_flair_list(post: Post | int) -> list:
+    if isinstance(post, int):
+        post = Post.query.filter_by(id=post).one()
+    
+    flair_list = []
+
+    for flair in post.flair:
         flair_item = flair_view(flair)
         flair_list.append(flair_item)
     

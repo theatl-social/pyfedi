@@ -272,7 +272,7 @@ class Post(DefaultSchema):
     small_thumbnail_url = fields.Url()
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    url = fields.Url()   
+    url = fields.Url()
 
 
 class PostAggregates(DefaultSchema):
@@ -283,6 +283,16 @@ class PostAggregates(DefaultSchema):
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
+
+
+class CommunityFlair(DefaultSchema):
+    id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    flair_title = fields.String(required=True)
+    text_color = fields.String(required=True)
+    background_color = fields.String(required=True)
+    blur_images = fields.Boolean(required=True)
+    ap_id = fields.Url(required=True)
 
 
 class PostView(DefaultSchema):
@@ -301,6 +311,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
+    flair = fields.List(fields.Nested(CommunityFlair))
 
 
 class CommunityAggregates(DefaultSchema):
@@ -314,16 +325,6 @@ class CommunityAggregates(DefaultSchema):
     active_weekly = fields.Integer()
     active_monthly = fields.Integer()
     active_6monthly = fields.Integer()
-
-
-class CommunityFlair(DefaultSchema):
-    id = fields.Integer(required=True)
-    community_id = fields.Integer(required=True)
-    flair_title = fields.String(required=True)
-    text_color = fields.String(required=True)
-    background_color = fields.String(required=True)
-    blur_images = fields.Boolean(required=True)
-    ap_id = fields.Url(required=True)
 
 
 class CommunityView(DefaultSchema):
@@ -929,3 +930,14 @@ class PostLikeView(CommentLikeView):
 class ListPostLikesResponse(DefaultSchema):
     post_likes = fields.List(fields.Nested(PostLikeView, required=True))
     next_page = fields.String(allow_none=True)
+
+
+class GetPostRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetPostResponse(DefaultSchema):
+    post_view = fields.Nested(PostView, required=True)
+    community_view = fields.Nested(CommunityView, required=True)
+    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    cross_posts = fields.List(fields.Nested(PostView), required=True)

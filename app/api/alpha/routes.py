@@ -442,17 +442,21 @@ def get_alpha_post_list():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post', methods=['GET'])
-def get_alpha_post():
+@post_bp.route('/post', methods=['GET'])
+@post_bp.doc(summary="Get/fetch a post")
+@post_bp.arguments(GetPostRequest, location="query")
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def get_alpha_post(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_post(auth, data))
+        resp = get_post(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/post/replies', methods=['GET'])
