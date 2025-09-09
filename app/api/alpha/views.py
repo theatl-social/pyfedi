@@ -501,7 +501,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
             calculate_path(reply)
         v1['path'] = '.'.join(str(id) for id in reply.path)
         if reply.edited_at:
-            v1['edited_at'] = reply.edited_at.isoformat(timespec="microseconds") + 'Z'
+            v1['updated'] = reply.edited_at.isoformat(timespec="microseconds") + 'Z'
         if reply.deleted == True:
             v1['body'] = ''
             if reply.deleted_by and reply.user_id != reply.deleted_by:
