@@ -202,6 +202,7 @@ jobs:
         run: |
           echo "🧪 Testing Docker image startup"
           docker run --rm \
+            -e PYTHONPATH=/app \
             -e SERVER_NAME=test.localhost \
             -e SECRET_KEY=test-secret-key \
             -e DATABASE_URL=sqlite:///memory:test.db \
