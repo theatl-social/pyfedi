@@ -167,6 +167,8 @@ def post_to_page(post: Post):
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         activity_data['type'] = 'Question'
+        del activity_data['name']
+        activity_data['content'] = f"<p>{post.title}</p>{post.body_html if post.body_html else ''}"
         mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
         choices = []
         for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
