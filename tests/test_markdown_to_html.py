@@ -9,7 +9,9 @@ class TestMarkdownToHtml(unittest.TestCase):
         """Test basic markdown formatting"""
         markdown = "**Bold** and *italic* text"
         result = markdown_to_html(markdown)
-        self.assertEqual(result, "<p><strong>Bold</strong> and <em>italic</em> text</p>\n")
+        self.assertEqual(
+            result, "<p><strong>Bold</strong> and <em>italic</em> text</p>\n"
+        )
 
     def test_paragraphs(self):
         """Test paragraph formatting"""
@@ -21,15 +23,19 @@ class TestMarkdownToHtml(unittest.TestCase):
         """Test links formatting"""
         markdown = "[Link text](https://example.com)"
         result = markdown_to_html(markdown)
-        self.assertEqual(result,
-                         '<p><a href="https://example.com" rel="nofollow ugc" target="_blank">Link text</a></p>\n')
+        self.assertEqual(
+            result,
+            '<p><a href="https://example.com" rel="nofollow ugc" target="_blank">Link text</a></p>\n',
+        )
 
     def test_links_w_periods(self):
         """Test links formatting with a period on the end"""
         markdown = "This is a test link https://pizza.com. Will it work?"
         result = markdown_to_html(markdown)
-        self.assertEqual(result,
-                         '<p>This is a test link <a href="https://pizza.com" rel="nofollow ugc" target="_blank">https://pizza.com</a>. Will it work?</p>\n')
+        self.assertEqual(
+            result,
+            '<p>This is a test link <a href="https://pizza.com" rel="nofollow ugc" target="_blank">https://pizza.com</a>. Will it work?</p>\n',
+        )
 
     def test_code_blocks(self):
         """Test code blocks formatting"""
@@ -66,14 +72,19 @@ class TestMarkdownToHtml(unittest.TestCase):
         """Test usage of angle brackets in code block"""
         markdown = "Normal text `code block > something else` normal text again"
         result = markdown_to_html(markdown)
-        self.assertEqual(result, "<p>Normal text <code>code block &gt; something else</code> normal text again</p>\n")
+        self.assertEqual(
+            result,
+            "<p>Normal text <code>code block &gt; something else</code> normal text again</p>\n",
+        )
 
     def test_gt_lt_in_code_block(self):
         """Test usage of angle brackets in large code block"""
         markdown = "Normal text\n\n```\n<html>\n```\n\nnormal text again"
         result = markdown_to_html(markdown)
-        self.assertEqual(result,
-                         "<p>Normal text</p>\n<pre><code>&lt;html&gt;\n</code></pre>\n<p>normal text again</p>\n")
+        self.assertEqual(
+            result,
+            "<p>Normal text</p>\n<pre><code>&lt;html&gt;\n</code></pre>\n<p>normal text again</p>\n",
+        )
 
     def test_complex_markdown_with_angle_brackets(self):
         """Test a more complex markdown sample with angle brackets"""
@@ -92,8 +103,11 @@ And if you want to add your score to the database to help your fellow Bookworms 
         """Test that disallowed tags are removed"""
         markdown = "Paragraph with <script>alert('xss')</script> script."
         result = markdown_to_html(markdown)
-        self.assertEqual(result, "<p>Paragraph with &lt;script&gt;alert('xss')&lt;/script&gt; script.</p>\n")
-    
+        self.assertEqual(
+            result,
+            "<p>Paragraph with &lt;script&gt;alert('xss')&lt;/script&gt; script.</p>\n",
+        )
+
     def test_double_bold(self):
         """Test a variety of cases where bold markdown has caused problems in the past"""
         markdown = "Two **bold** words in one **bold** sentence."
@@ -105,32 +119,39 @@ And if you want to add your score to the database to help your fellow Bookworms 
         result = markdown_to_html(markdown)
         correct_html = (
             '<p>Links with underscores still work: <a href="https://en.wikipedia.org/wiki/Rick_Astley" '
-            'rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Rick_Astley</a></p>\n')
+            'rel="nofollow ugc" target="_blank">https://en.wikipedia.org/wiki/Rick_Astley</a></p>\n'
+        )
         self.assertEqual(result, correct_html)
 
         markdown = "Double **bold** and ***italics* words** in *one* sentence."
         result = markdown_to_html(markdown)
-        correct_html = ('<p>Double <strong>bold</strong> and <strong><em>italics</em> words</strong> in '
-            '<em>one</em> sentence.</p>\n')
+        correct_html = (
+            "<p>Double <strong>bold</strong> and <strong><em>italics</em> words</strong> in "
+            "<em>one</em> sentence.</p>\n"
+        )
         self.assertEqual(result, correct_html)
 
         markdown = "Ignore `**bold**` words in code block with **bold** markdown."
         result = markdown_to_html(markdown)
-        correct_html = '<p>Ignore <code>**bold**</code> words in code block with <strong>bold</strong> markdown.</p>\n'
+        correct_html = "<p>Ignore <code>**bold**</code> words in code block with <strong>bold</strong> markdown.</p>\n"
         self.assertEqual(result, correct_html)
 
         markdown = "What about ignoring **bold** words inside a\n\n```\nfenced **code** block?\n```"
         result = markdown_to_html(markdown)
         correct_html = (
-            '<p>What about ignoring <strong>bold</strong> words inside a</p>\n<pre><code>fenced **code** block?\n'
-            '</code></pre>\n')
+            "<p>What about ignoring <strong>bold</strong> words inside a</p>\n<pre><code>fenced **code** block?\n"
+            "</code></pre>\n"
+        )
         self.assertEqual(result, correct_html)
 
-        markdown = "[Bold in **part of** a link](https://en.wikipedia.org/wiki/Rick_Astley)"
+        markdown = (
+            "[Bold in **part of** a link](https://en.wikipedia.org/wiki/Rick_Astley)"
+        )
         result = markdown_to_html(markdown)
         correct_html = (
             '<p><a href="https://en.wikipedia.org/wiki/Rick_Astley" rel="nofollow ugc" target="_blank">Bold in '
-            '<strong>part of</strong> a link</a></p>\n')
+            "<strong>part of</strong> a link</a></p>\n"
+        )
         self.assertEqual(result, correct_html)
 
     def test_strikethrough_in_inline_code(self):
@@ -139,14 +160,14 @@ And if you want to add your score to the database to help your fellow Bookworms 
         correct_html = "<p><code>don't ~~strikethrough~~</code></p>\n"
         result = markdown_to_html(markdown)
         self.assertEqual(result, correct_html)
-    
+
     def test_strikethrough_in_fenced_code(self):
         """Don't strikethrough text in fenced code block."""
         markdown = "```\ndon't ~~strikethrough~~\n```"
         correct_html = "<pre><code>don't ~~strikethrough~~\n</code></pre>\n"
         result = markdown_to_html(markdown)
         self.assertEqual(result, correct_html)
-    
+
     def test_spoiler_in_fenced_code(self):
         """Don't format spoiler block in fenced code block."""
         markdown = "```\n::: spoiler Spoiler Title\ndon't ~~strikethrough~~\n:::\n```"
@@ -159,8 +180,11 @@ And if you want to add your score to the database to help your fellow Bookworms 
 
         markdown = "```\ncode block with link: https://example.com/ \n```"
         result = markdown_to_html(markdown)
-        self.assertEqual("<pre><code>code block with link: https://example.com/ \n</code></pre>\n", result)
+        self.assertEqual(
+            "<pre><code>code block with link: https://example.com/ \n</code></pre>\n",
+            result,
+        )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

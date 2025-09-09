@@ -5,21 +5,40 @@ from sqlalchemy import text
 
 from app import db
 from app.constants import *
-from app.models import Notification, NotificationSubscription, Post, PostReply, PostReplyBookmark, Report, Site, User, \
-    utcnow, Instance
+from app.models import (
+    Instance,
+    Notification,
+    NotificationSubscription,
+    Post,
+    PostReply,
+    PostReplyBookmark,
+    Report,
+    Site,
+    User,
+    utcnow,
+)
 from app.shared.tasks import task_selector
-from app.utils import render_template, authorise_api_user, shorten_string, \
-    piefed_markdown_to_lemmy_markdown, markdown_to_html, add_to_modlog, can_create_post_reply, \
-    can_upvote, can_downvote, get_recipient_language
+from app.utils import (
+    add_to_modlog,
+    authorise_api_user,
+    can_create_post_reply,
+    can_downvote,
+    can_upvote,
+    get_recipient_language,
+    markdown_to_html,
+    piefed_markdown_to_lemmy_markdown,
+    render_template,
+    shorten_string,
+)
 
 
 def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
-        user = authorise_api_user(auth, return_type='model')
-        if vote_direction == 'upvote' and not can_upvote(user, reply.community):
+        user = authorise_api_user(auth, return_type="model")
+        if vote_direction == "upvote" and not can_upvote(user, reply.community):
             return user.id
-        elif vote_direction == 'downvote' and not can_downvote(user, reply.community):
+        elif vote_direction == "downvote" and not can_downvote(user, reply.community):
             return user.id
     else:
         reply = PostReply.query.get_or_404(reply_id)
@@ -27,36 +46,48 @@ def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None
 
     undo = reply.vote(user, vote_direction)
 
-    task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo,
-                  vote_direction=vote_direction, federate=federate)
+    task_selector(
+        "vote_for_reply",
+        user_id=user.id,
+        reply_id=reply_id,
+        vote_to_undo=undo,
+        vote_direction=vote_direction,
+        federate=federate,
+    )
 
     if src == SRC_API:
         return user.id
     else:
         recently_upvoted = []
         recently_downvoted = []
-        if vote_direction == 'upvote' and undo is None:
+        if vote_direction == "upvote" and undo is None:
             recently_upvoted = [reply_id]
-        elif vote_direction == 'downvote' and undo is None:
+        elif vote_direction == "downvote" and undo is None:
             recently_downvoted = [reply_id]
 
-        return render_template('post/_comment_voting_buttons.html', comment=reply,
-                               recently_upvoted_replies=recently_upvoted,
-                               recently_downvoted_replies=recently_downvoted,
-                               community=reply.community)
+        return render_template(
+            "post/_comment_voting_buttons.html",
+            comment=reply,
+            recently_upvoted_replies=recently_upvoted,
+            recently_downvoted_replies=recently_downvoted,
+            community=reply.community,
+        )
 
 
 def bookmark_reply(reply_id: int, src, auth=None):
-    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(
-        deleted=False).one()
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(
+        Post, Post.id == PostReply.post_id
+    ).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(
+        post_reply_id=reply_id, user_id=user_id
+    ).first()
     if not existing_bookmark:
         db.session.add(PostReplyBookmark(post_reply_id=reply_id, user_id=user_id))
         db.session.commit()
     else:
-        msg = 'This comment has already been bookmarked.'
+        msg = "This comment has already been bookmarked."
         if src == SRC_API:
             raise Exception(msg)
         else:
@@ -67,15 +98,19 @@ def bookmark_reply(reply_id: int, src, auth=None):
 
 
 def remove_bookmark_reply(reply_id: int, src, auth=None):
-    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    PostReply.query.filter_by(id=reply_id, deleted=False).join(
+        Post, Post.id == PostReply.post_id
+    ).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
+    existing_bookmark = PostReplyBookmark.query.filter_by(
+        post_reply_id=reply_id, user_id=user_id
+    ).first()
     if existing_bookmark:
         db.session.delete(existing_bookmark)
         db.session.commit()
     else:
-        msg = 'This comment was not bookmarked.'
+        msg = "This comment was not bookmarked."
         if src == SRC_API:
             raise Exception(msg)
         else:
@@ -86,20 +121,26 @@ def remove_bookmark_reply(reply_id: int, src, auth=None):
 
 
 def subscribe_reply(reply_id: int, subscribe, src, auth=None):
-    reply = PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    reply = (
+        PostReply.query.filter_by(id=reply_id, deleted=False)
+        .join(Post, Post.id == PostReply.post_id)
+        .filter_by(deleted=False)
+        .one()
+    )
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
         subscribe = False if reply.notify_new_replies(user_id) else True
 
-    existing_notification = NotificationSubscription.query.filter_by(entity_id=reply_id, user_id=user_id,
-                                                                     type=NOTIF_REPLY).first()
+    existing_notification = NotificationSubscription.query.filter_by(
+        entity_id=reply_id, user_id=user_id, type=NOTIF_REPLY
+    ).first()
     if subscribe == False:
         if existing_notification:
             db.session.delete(existing_notification)
             db.session.commit()
         else:
-            msg = 'A subscription for this comment did not exist.'
+            msg = "A subscription for this comment did not exist."
             if src == SRC_API:
                 raise Exception(msg)
             else:
@@ -107,23 +148,32 @@ def subscribe_reply(reply_id: int, subscribe, src, auth=None):
 
     else:
         if existing_notification:
-            msg = 'A subscription for this comment already existed.'
+            msg = "A subscription for this comment already existed."
             if src == SRC_API:
                 raise Exception(msg)
             else:
                 flash(_(msg))
         else:
-            new_notification = NotificationSubscription(name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                                                              post_title=reply.post.title)),
-                                                        user_id=user_id, entity_id=reply_id,
-                                                        type=NOTIF_REPLY)
+            new_notification = NotificationSubscription(
+                name=shorten_string(
+                    _(
+                        "Replies to my comment on %(post_title)s",
+                        post_title=reply.post.title,
+                    )
+                ),
+                user_id=user_id,
+                entity_id=reply_id,
+                type=NOTIF_REPLY,
+            )
             db.session.add(new_notification)
             db.session.commit()
 
     if src == SRC_API:
         return user_id
     else:
-        return render_template('post/_reply_notification_toggle.html', comment={'comment': reply})
+        return render_template(
+            "post/_reply_notification_toggle.html", comment={"comment": reply}
+        )
 
 
 def extra_rate_limit_check(user):
@@ -136,13 +186,13 @@ def extra_rate_limit_check(user):
 
 def make_reply(input, post, parent_id, src, auth=None):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user = authorise_api_user(auth, return_type="model")
         if extra_rate_limit_check(user):
-            raise Exception('rate_limited')
-        content = input['body']
-        notify_author = input['notify_author']
-        language_id = input['language_id']
-        distinguished = input['distinguished'] if 'distinguished' in input else False
+            raise Exception("rate_limited")
+        content = input["body"]
+        notify_author = input["notify_author"]
+        language_id = input["language_id"]
+        distinguished = input["distinguished"] if "distinguished" in input else False
     else:
         user = current_user
         content = input.body.data
@@ -152,33 +202,48 @@ def make_reply(input, post, parent_id, src, auth=None):
 
     if parent_id:
         parent_reply = PostReply.query.filter_by(id=parent_id).one()
-        if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
-            raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
+        if parent_reply.author.has_blocked_user(
+            user.id
+        ) or parent_reply.author.has_blocked_instance(user.instance_id):
+            raise Exception(
+                "The author of the parent reply has blocked the author or instance of the new reply."
+            )
         if not parent_reply.replies_enabled:
-            raise Exception('This comment cannot be replied to.')
+            raise Exception("This comment cannot be replied to.")
     else:
         parent_reply = None
 
-    if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(user.instance_id):
-        raise Exception('The author of the parent post has blocked the author or instance of the new reply.')
+    if post.author.has_blocked_user(user.id) or post.author.has_blocked_instance(
+        user.instance_id
+    ):
+        raise Exception(
+            "The author of the parent post has blocked the author or instance of the new reply."
+        )
 
     if not can_create_post_reply(user, post.community):
-        raise Exception('You are not permitted to comment in this community')
+        raise Exception("You are not permitted to comment in this community")
 
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
-    reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
-                          body_html=markdown_to_html(content), notify_author=notify_author,
-                          language_id=language_id, distinguished=distinguished)
+    reply = PostReply.new(
+        user,
+        post,
+        in_reply_to=parent_reply,
+        body=piefed_markdown_to_lemmy_markdown(content),
+        body_html=markdown_to_html(content),
+        notify_author=notify_author,
+        language_id=language_id,
+        distinguished=distinguished,
+    )
 
     user.language_id = language_id
     user.post_reply_count += 1
     reply.ap_id = reply.profile_id()
     db.session.commit()
     if src == SRC_WEB:
-        input.body.data = ''
-        flash(_('Your comment has been added.'))
+        input.body.data = ""
+        flash(_("Your comment has been added."))
 
-    task_selector('make_reply', reply_id=reply.id, parent_id=parent_id)
+    task_selector("make_reply", reply_id=reply.id, parent_id=parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -188,14 +253,21 @@ def make_reply(input, post, parent_id, src, auth=None):
 
 def edit_reply(input, reply, post, src, auth=None):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model', id_match=reply.user_id)
-        content = input['body']
-        notify_author = input['notify_author']
-        language_id = input['language_id']
-        distinguished = input['distinguished']
-        if (not reply.distinguished and distinguished == True) or (reply.distinguished == True and distinguished == False):
-            if not reply.community.is_moderator(user) and not reply.community.is_owner(user) and not user.is_staff() and not user.is_admin():
-                raise Exception('Not a moderator')
+        user = authorise_api_user(auth, return_type="model", id_match=reply.user_id)
+        content = input["body"]
+        notify_author = input["notify_author"]
+        language_id = input["language_id"]
+        distinguished = input["distinguished"]
+        if (not reply.distinguished and distinguished == True) or (
+            reply.distinguished == True and distinguished == False
+        ):
+            if (
+                not reply.community.is_moderator(user)
+                and not reply.community.is_owner(user)
+                and not user.is_staff()
+                and not user.is_admin()
+            ):
+                raise Exception("Not a moderator")
     else:
         user = current_user
         content = input.body.data
@@ -213,9 +285,9 @@ def edit_reply(input, reply, post, src, auth=None):
     db.session.commit()
 
     if src == SRC_WEB:
-        flash(_('Your changes have been saved.'), 'success')
+        flash(_("Your changes have been saved."), "success")
 
-    task_selector('edit_reply', reply_id=reply.id, parent_id=reply.parent_id)
+    task_selector("edit_reply", reply_id=reply.id, parent_id=reply.parent_id)
 
     if src == SRC_API:
         return user.id, reply
@@ -238,11 +310,15 @@ def delete_reply(reply_id, src, auth):
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
-                           {'parents': tuple(reply.path[:-1])})
+        db.session.execute(
+            text(
+                "update post_reply set child_count = child_count - 1 where id in :parents"
+            ),
+            {"parents": tuple(reply.path[:-1])},
+        )
     db.session.commit()
 
-    task_selector('delete_reply', user_id=user_id, reply_id=reply.id)
+    task_selector("delete_reply", user_id=user_id, reply_id=reply.id)
 
     if src == SRC_API:
         return user_id, reply
@@ -264,13 +340,17 @@ def restore_reply(reply_id, src, auth):
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
-                           {'parents': tuple(reply.path[:-1])})
+        db.session.execute(
+            text(
+                "update post_reply set child_count = child_count + 1 where id in :parents"
+            ),
+            {"parents": tuple(reply.path[:-1])},
+        )
     db.session.commit()
     if src == SRC_WEB:
-        flash(_('Comment restored.'))
+        flash(_("Comment restored."))
 
-    task_selector('restore_reply', user_id=user_id, reply_id=reply.id)
+    task_selector("restore_reply", user_id=user_id, reply_id=reply.id)
 
     if src == SRC_API:
         return user_id, reply
@@ -282,9 +362,9 @@ def report_reply(reply_id, input, src, auth=None):
     if src == SRC_API:
         reply = PostReply.query.filter_by(id=reply_id).one()
         user_id = authorise_api_user(auth)
-        reason = input['reason']
-        description = input['description']
-        report_remote = input['report_remote']
+        reason = input["reason"]
+        description = input["description"]
+        report_remote = input["report_remote"]
     else:
         reply = PostReply.query.get_or_404(reply_id)
         user_id = current_user.id
@@ -292,30 +372,46 @@ def report_reply(reply_id, input, src, auth=None):
         description = input.description.data
         report_remote = input.report_remote.data
 
-    if reply.reports == -1:  # When a mod decides to ignore future reports, reply.reports is set to -1
+    if (
+        reply.reports == -1
+    ):  # When a mod decides to ignore future reports, reply.reports is set to -1
         if src == SRC_API:
-            raise Exception('already_reported')
+            raise Exception("already_reported")
         else:
-            flash(_('Comment has already been reported, thank you!'))
+            flash(_("Comment has already been reported, thank you!"))
             return
 
     suspect_author = User.query.get(reply.author.id)
     source_instance = Instance.query.get(suspect_author.instance_id)
     reporter_user = User.query.get(user_id)
-    targets_data = {'gen': '0',
-                    'suspect_comment_id': reply.id,
-                    'suspect_user_id': reply.author.id,
-                    'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                    'source_instance_id': suspect_author.instance_id,
-                    'source_instance_domain': source_instance.domain,
-                    'reporter_id': user_id,
-                    'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
-                    'orig_comment_body': reply.body
-                    }
-    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id,
-                    suspect_community_id=reply.community.id,
-                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id,
-                    source_instance_id=1, targets=targets_data)
+    targets_data = {
+        "gen": "0",
+        "suspect_comment_id": reply.id,
+        "suspect_user_id": reply.author.id,
+        "suspect_user_user_name": (
+            suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name
+        ),
+        "source_instance_id": suspect_author.instance_id,
+        "source_instance_domain": source_instance.domain,
+        "reporter_id": user_id,
+        "reporter_user_name": (
+            reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name
+        ),
+        "orig_comment_body": reply.body,
+    }
+    report = Report(
+        reasons=reason,
+        description=description,
+        type=2,
+        reporter_id=user_id,
+        suspect_post_id=reply.post.id,
+        suspect_community_id=reply.community.id,
+        suspect_user_id=reply.author.id,
+        suspect_post_reply_id=reply.id,
+        in_community_id=reply.community.id,
+        source_instance_id=1,
+        targets=targets_data,
+    )
     db.session.add(report)
 
     # Notify moderators
@@ -324,21 +420,30 @@ def report_reply(reply_id, input, src, auth=None):
         moderator = User.query.get(mod.user_id)
         if moderator and moderator.is_local():
             with force_locale(get_recipient_language(moderator.id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user_id, notif_type=NOTIF_REPORT,
-                                            subtype='comment_reported',
-                                            targets=targets_data)
+                notification = Notification(
+                    user_id=mod.user_id,
+                    title=gettext("A comment has been reported"),
+                    url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                    author_id=user_id,
+                    notif_type=NOTIF_REPORT,
+                    subtype="comment_reported",
+                    targets=targets_data,
+                )
                 db.session.add(notification)
                 already_notified.add(mod.user_id)
     reply.reports += 1
     # todo: only notify admins for certain types of report
     for admin in Site.admins():
         if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
-                                  author_id=user_id, notif_type=NOTIF_REPORT,
-                                  subtype='comment_reported',
-                                  targets=targets_data)
+            notify = Notification(
+                title="Suspicious content",
+                url="/admin/reports",
+                user_id=admin.id,
+                author_id=user_id,
+                notif_type=NOTIF_REPORT,
+                subtype="comment_reported",
+                targets=targets_data,
+            )
             db.session.add(notify)
             admin.unread_notifications += 1
     db.session.commit()
@@ -347,9 +452,11 @@ def report_reply(reply_id, input, src, auth=None):
     if not reply.community.is_local() and report_remote:
         summary = reason
         if description:
-            summary += ' - ' + description
+            summary += " - " + description
 
-        task_selector('report_reply', user_id=user_id, reply_id=reply_id, summary=summary)
+        task_selector(
+            "report_reply", user_id=user_id, reply_id=reply_id, summary=summary
+        )
 
     if src == SRC_API:
         return user_id, report
@@ -360,13 +467,17 @@ def report_reply(reply_id, input, src, auth=None):
 # mod deletes
 def mod_remove_reply(reply_id, reason, src, auth):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user = authorise_api_user(auth, return_type="model")
     else:
         user = current_user
 
     reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
-    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin_or_staff():
-        raise Exception('Does not have permission')
+    if (
+        not reply.community.is_moderator(user)
+        and not reply.community.is_instance_admin(user)
+        and not user.is_admin_or_staff()
+    ):
+        raise Exception("Does not have permission")
 
     reply.deleted = True
     # set deleted_by to -1 if a mod is removing their own reply as part of a mod action, so it's shows as 'removed' rather than 'deleted'
@@ -375,18 +486,29 @@ def mod_remove_reply(reply_id, reason, src, auth):
         reply.post.reply_count -= 1
     reply.author.post_reply_count -= 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count - 1 where id in :parents'),
-                           {'parents': tuple(reply.path[:-1])})
+        db.session.execute(
+            text(
+                "update post_reply set child_count = child_count - 1 where id in :parents"
+            ),
+            {"parents": tuple(reply.path[:-1])},
+        )
     db.session.commit()
     if src == SRC_WEB:
-        flash(_('Comment deleted.'))
+        flash(_("Comment deleted."))
 
-    add_to_modlog('delete_post_reply', actor=user, target_user=reply.author, reason=reason,
-                  community=reply.community, post=reply.post, reply=reply,
-                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                  link=f'post/{reply.post_id}#comment_{reply.id}')
+    add_to_modlog(
+        "delete_post_reply",
+        actor=user,
+        target_user=reply.author,
+        reason=reason,
+        community=reply.community,
+        post=reply.post,
+        reply=reply,
+        link_text=shorten_string(f"comment on {shorten_string(reply.post.title)}"),
+        link=f"post/{reply.post_id}#comment_{reply.id}",
+    )
 
-    task_selector('delete_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+    task_selector("delete_reply", user_id=user.id, reply_id=reply.id, reason=reason)
 
     if src == SRC_API:
         return user.id, reply
@@ -396,13 +518,15 @@ def mod_remove_reply(reply_id, reason, src, auth):
 
 def mod_restore_reply(reply_id, reason, src, auth):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user = authorise_api_user(auth, return_type="model")
     else:
         user = current_user
 
     reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
-    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
-        raise Exception('Does not have permission')
+    if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(
+        user
+    ):
+        raise Exception("Does not have permission")
 
     reply.deleted = False
     reply.deleted_by = None
@@ -410,19 +534,30 @@ def mod_restore_reply(reply_id, reason, src, auth):
         reply.post.reply_count += 1
     reply.author.post_reply_count += 1
     if reply.path:
-        db.session.execute(text('update post_reply set child_count = child_count + 1 where id in :parents'),
-                           {'parents': tuple(reply.path[:-1])})
+        db.session.execute(
+            text(
+                "update post_reply set child_count = child_count + 1 where id in :parents"
+            ),
+            {"parents": tuple(reply.path[:-1])},
+        )
 
     db.session.commit()
     if src == SRC_WEB:
-        flash(_('Comment restored.'))
+        flash(_("Comment restored."))
 
-    add_to_modlog('restore_post_reply', actor=user, target_user=reply.author, reason=reason,
-                  community=reply.community, post=reply.post, reply=reply,
-                  link_text=shorten_string(f'comment on {shorten_string(reply.post.title)}'),
-                  link=f'post/{reply.post_id}#comment_{reply.id}')
+    add_to_modlog(
+        "restore_post_reply",
+        actor=user,
+        target_user=reply.author,
+        reason=reason,
+        community=reply.community,
+        post=reply.post,
+        reply=reply,
+        link_text=shorten_string(f"comment on {shorten_string(reply.post.title)}"),
+        link=f"post/{reply.post_id}#comment_{reply.id}",
+    )
 
-    task_selector('restore_reply', user_id=user.id, reply_id=reply.id, reason=reason)
+    task_selector("restore_reply", user_id=user.id, reply_id=reply.id, reason=reason)
 
     if src == SRC_API:
         return user.id, reply
@@ -432,7 +567,7 @@ def mod_restore_reply(reply_id, reason, src, auth):
 
 def lock_post_reply(post_reply_id, locked, src, auth=None):
     if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
+        user = authorise_api_user(auth, return_type="model")
         post_reply = PostReply.query.filter_by(id=post_reply_id).one()
     else:
         user = current_user
@@ -440,28 +575,45 @@ def lock_post_reply(post_reply_id, locked, src, auth=None):
 
     if locked:
         replies_enabled = False
-        modlog_type = 'lock_post_reply'
+        modlog_type = "lock_post_reply"
     else:
         replies_enabled = True
-        modlog_type = 'unlock_post_reply'
+        modlog_type = "unlock_post_reply"
 
-    if post_reply.community.is_moderator(user) or post_reply.community.is_instance_admin(user):
+    if post_reply.community.is_moderator(
+        user
+    ) or post_reply.community.is_instance_admin(user):
         post_reply.replies_enabled = replies_enabled
-        db.session.execute(text('update post_reply set replies_enabled = :replies_enabled where path @> ARRAY[:parent_id]'),
-                           {'parent_id': post_reply.id, 'replies_enabled': replies_enabled})
+        db.session.execute(
+            text(
+                "update post_reply set replies_enabled = :replies_enabled where path @> ARRAY[:parent_id]"
+            ),
+            {"parent_id": post_reply.id, "replies_enabled": replies_enabled},
+        )
         db.session.commit()
-        add_to_modlog(modlog_type, actor=user, target_user=post_reply.author, reason='',
-                      community=post_reply.community, reply=post_reply,
-                      link_text=shorten_string(post_reply.body), link=f'post/{post_reply.post_id}#comment_{post_reply.id}')
+        add_to_modlog(
+            modlog_type,
+            actor=user,
+            target_user=post_reply.author,
+            reason="",
+            community=post_reply.community,
+            reply=post_reply,
+            link_text=shorten_string(post_reply.body),
+            link=f"post/{post_reply.post_id}#comment_{post_reply.id}",
+        )
 
         if locked:
             if src == SRC_WEB:
-                flash(_('Comment has been locked.'))
-            task_selector('lock_post_reply', user_id=user.id, post_reply_id=post_reply_id)
+                flash(_("Comment has been locked."))
+            task_selector(
+                "lock_post_reply", user_id=user.id, post_reply_id=post_reply_id
+            )
         else:
             if src == SRC_WEB:
-                flash(_('Comment has been unlocked.'))
-            task_selector('unlock_post_reply', user_id=user.id, post_reply_id=post_reply_id)
+                flash(_("Comment has been unlocked."))
+            task_selector(
+                "unlock_post_reply", user_id=user.id, post_reply_id=post_reply_id
+            )
 
     if src == SRC_API:
         return user.id, post_reply

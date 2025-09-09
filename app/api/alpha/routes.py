@@ -1,53 +1,130 @@
 from flask import current_app, jsonify, request
-from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
+from flask_smorest import abort
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
-    reply_bp, post_bp
-from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
-    post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
-    get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
-    post_community_moderate_post_nsfw, post_community_mod
-from app.api.alpha.utils.feed import get_feed_list
-from app.api.alpha.utils.misc import get_search, get_resolve_object
-from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
-    post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read, get_post_replies, get_post_like_list
-from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
-    post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
-    post_private_message_report
-from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock, \
-    get_reply_like_list
-from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
-    get_site_instance_chooser_search, get_site_version
-from app.api.alpha.utils.topic import get_topic_list
-from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
-from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
-    post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
-    get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
-from app.constants import *
-from app.utils import orjson_response, get_setting
+from app.api.alpha import (
+    bp,
+    comm_bp,
+    feed_bp,
+    misc_bp,
+    post_bp,
+    reply_bp,
+    site_bp,
+    topic_bp,
+    user_bp,
+)
 from app.api.alpha.schema import *
+from app.api.alpha.utils.community import (
+    get_community,
+    get_community_list,
+    get_community_moderate_bans,
+    post_community,
+    post_community_block,
+    post_community_delete,
+    post_community_follow,
+    post_community_mod,
+    post_community_moderate_ban,
+    post_community_moderate_post_nsfw,
+    put_community,
+    put_community_moderate_unban,
+    put_community_subscribe,
+)
+from app.api.alpha.utils.feed import get_feed_list
+from app.api.alpha.utils.misc import get_resolve_object, get_search
+from app.api.alpha.utils.post import (
+    get_post,
+    get_post_like_list,
+    get_post_list,
+    get_post_replies,
+    post_post,
+    post_post_delete,
+    post_post_feature,
+    post_post_like,
+    post_post_lock,
+    post_post_mark_as_read,
+    post_post_remove,
+    post_post_report,
+    put_post,
+    put_post_save,
+    put_post_subscribe,
+)
+from app.api.alpha.utils.private_message import (
+    get_private_message_conversation,
+    get_private_message_list,
+    post_private_message,
+    post_private_message_delete,
+    post_private_message_mark_as_read,
+    post_private_message_report,
+    put_private_message,
+)
+from app.api.alpha.utils.reply import (
+    get_reply,
+    get_reply_like_list,
+    get_reply_list,
+    post_reply,
+    post_reply_delete,
+    post_reply_like,
+    post_reply_lock,
+    post_reply_mark_as_read,
+    post_reply_remove,
+    post_reply_report,
+    put_reply,
+    put_reply_save,
+    put_reply_subscribe,
+)
+from app.api.alpha.utils.site import (
+    get_federated_instances,
+    get_site,
+    get_site_instance_chooser,
+    get_site_instance_chooser_search,
+    get_site_version,
+    post_site_block,
+)
+from app.api.alpha.utils.topic import get_topic_list
+from app.api.alpha.utils.upload import (
+    post_upload_community_image,
+    post_upload_image,
+    post_upload_user_image,
+)
+from app.api.alpha.utils.user import (
+    get_user,
+    get_user_notifications,
+    get_user_notifications_count,
+    get_user_replies,
+    get_user_unread_count,
+    post_user_block,
+    post_user_mark_all_as_read,
+    post_user_set_flair,
+    post_user_verify_credentials,
+    put_user_mark_all_notifications_read,
+    put_user_notification_state,
+    put_user_save_user_settings,
+    put_user_subscribe,
+)
+from app.constants import *
+from app.utils import get_setting, orjson_response
 
 
 def enable_api():
-    return True if current_app.debug or current_app.config['ENABLE_ALPHA_API'] == 'true' else False
+    return (
+        True
+        if current_app.debug or current_app.config["ENABLE_ALPHA_API"] == "true"
+        else False
+    )
 
 
 def is_trusted_request():
     if current_app.debug:
         return True
-    if request.remote_addr in current_app.config['SKIP_RATE_LIMIT_IPS']:
+    if request.remote_addr in current_app.config["SKIP_RATE_LIMIT_IPS"]:
         return True
     return False
 
 
 # Site
-@site_bp.route('/site', methods=['GET'])
+@site_bp.route("/site", methods=["GET"])
 @site_bp.doc(summary="Gets the site, and your user data.")
 @site_bp.response(200, GetSiteResponse)
 @site_bp.alt_response(400, schema=DefaultError)
@@ -55,7 +132,7 @@ def get_alpha_site():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_site(auth)
         return GetSiteResponse().load(resp)
     except Exception as ex:
@@ -63,7 +140,7 @@ def get_alpha_site():
         return abort(400, message=str(ex))
 
 
-@site_bp.route('/site/version', methods=['GET'])
+@site_bp.route("/site/version", methods=["GET"])
 @site_bp.doc(summary="Gets version of PieFed.")
 @site_bp.response(200, GetSiteVersionResponse)
 @site_bp.alt_response(400, schema=DefaultError)
@@ -71,7 +148,7 @@ def get_alpha_site_version():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_site_version(auth)
         return GetSiteVersionResponse().load(resp)
     except Exception as ex:
@@ -79,7 +156,7 @@ def get_alpha_site_version():
         return abort(400, message=str(ex))
 
 
-@site_bp.route('/site/block', methods=['POST'])
+@site_bp.route("/site/block", methods=["POST"])
 @site_bp.doc(summary="Block an instance.")
 @site_bp.arguments(BlockInstanceRequest)
 @site_bp.response(200, BlockInstanceResponse)
@@ -88,7 +165,7 @@ def post_alpha_site_block(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_site_block(auth, data)
         return BlockInstanceResponse().load(resp)
     except Exception as ex:
@@ -97,29 +174,31 @@ def post_alpha_site_block(data):
 
 
 # Site instance chooser
-@site_bp.route('/site/instance_chooser', methods=['GET'])
-@site_bp.doc(summary="Gets the site info for use by other instances in the Instance Chooser functionality.")
+@site_bp.route("/site/instance_chooser", methods=["GET"])
+@site_bp.doc(
+    summary="Gets the site info for use by other instances in the Instance Chooser functionality."
+)
 @site_bp.response(200, GetSiteInstanceChooserResponse)
 @site_bp.alt_response(400, schema=DefaultError)
 def get_alpha_site_instance_chooser():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
-    if get_setting('enable_instance_chooser', False):
-        auth = request.headers.get('Authorization')
+    if get_setting("enable_instance_chooser", False):
+        auth = request.headers.get("Authorization")
         resp = get_site_instance_chooser(auth)
         return GetSiteInstanceChooserResponse().load(resp)
     else:
         return abort(404)
 
 
-@site_bp.route('/site/instance_chooser_search', methods=['GET'])
+@site_bp.route("/site/instance_chooser_search", methods=["GET"])
 @site_bp.doc(summary="Search for other instances.")
 @site_bp.arguments(SearchInstanceChooser, location="query")
 @site_bp.response(200, GetSiteInstanceChooserSearchResponse)
 @site_bp.alt_response(400, schema=DefaultError)
 def get_alpha_site_instance_chooser_search(data):
     try:
-        if get_setting('enable_instance_chooser', False):
+        if get_setting("enable_instance_chooser", False):
             resp = get_site_instance_chooser_search(data)
             return GetSiteInstanceChooserSearchResponse().load(resp)
         else:
@@ -130,7 +209,7 @@ def get_alpha_site_instance_chooser_search(data):
 
 
 # Misc
-@misc_bp.route('/search', methods=["GET"])
+@misc_bp.route("/search", methods=["GET"])
 @misc_bp.doc(summary="Search PieFed.")
 @misc_bp.arguments(SearchRequest, location="query")
 @misc_bp.response(200, SearchResponse)
@@ -139,7 +218,7 @@ def get_alpha_search(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_search(auth, data)
         return SearchResponse().load(resp)
     except Exception as ex:
@@ -147,7 +226,7 @@ def get_alpha_search(data):
         return abort(400, message=str(ex))
 
 
-@misc_bp.route('/resolve_object', methods=['GET'])
+@misc_bp.route("/resolve_object", methods=["GET"])
 @misc_bp.doc(summary="Fetch a non-local / federated object.")
 @misc_bp.arguments(ResolveObjectRequest, location="query")
 @misc_bp.response(200, ResolveObjectResponse)
@@ -156,7 +235,7 @@ def get_alpha_resolve_object(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_resolve_object(auth, data)
         return ResolveObjectResponse().load(resp)
     except Exception as ex:
@@ -164,8 +243,7 @@ def get_alpha_resolve_object(data):
         return abort(400, message=str(ex))
 
 
-
-@misc_bp.route('/federated_instances', methods=['GET'])
+@misc_bp.route("/federated_instances", methods=["GET"])
 @misc_bp.doc(summary="Fetch federated instances.")
 @misc_bp.response(200, GetFederatedInstancesResponse)
 @misc_bp.alt_response(400, schema=DefaultError)
@@ -191,7 +269,7 @@ def get_alpha_community(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_community(auth, data)
         return GetCommunityResponse().load(resp)
     except Exception as ex:
@@ -208,7 +286,7 @@ def get_alpha_community_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_community_list(auth, data)
         return ListCommunitiesResponse().load(resp)
     except Exception as ex:
@@ -225,7 +303,7 @@ def post_alpha_community_follow(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_follow(auth, data)
         return CommunityResponse().load(resp)
     except Exception as ex:
@@ -242,7 +320,7 @@ def post_alpha_community_block(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_block(auth, data)
         return BlockCommunityResponse().load(resp)
     except Exception as ex:
@@ -260,8 +338,8 @@ def post_alpha_community(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        with limiter.limit('10/day'):
-            auth = request.headers.get('Authorization')
+        with limiter.limit("10/day"):
+            auth = request.headers.get("Authorization")
             resp = post_community(auth, data)
             return CommunityResponse().load(resp)
     except RateLimitExceeded as ex:
@@ -280,7 +358,7 @@ def put_alpha_community(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_community(auth, data)
         return CommunityResponse().load(resp)
     except Exception as ex:
@@ -297,7 +375,7 @@ def put_alpha_community_subscribe(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_community_subscribe(auth, data)
         return CommunityResponse().load(resp)
     except NoResultFound:
@@ -316,7 +394,7 @@ def post_alpha_community_delete(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_delete(auth, data)
         return CommunityResponse().load(resp)
     except Exception as ex:
@@ -324,7 +402,7 @@ def post_alpha_community_delete(data):
         return abort(400, message=str(ex))
 
 
-@comm_bp.route('/community/mod', methods=['POST'])
+@comm_bp.route("/community/mod", methods=["POST"])
 @comm_bp.doc(summary="Add or remove a moderator for your community.")
 @comm_bp.arguments(ModCommunityRequest)
 @comm_bp.response(200, ModCommunityResponse)
@@ -333,7 +411,7 @@ def post_alpha_community_mod(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_mod(auth, data)
         return ModCommunityResponse().load(resp)
     except Exception as ex:
@@ -341,7 +419,7 @@ def post_alpha_community_mod(data):
         return abort(400, message=str(ex))
 
 
-@comm_bp.route('/community/moderate/bans', methods=['GET'])
+@comm_bp.route("/community/moderate/bans", methods=["GET"])
 @comm_bp.doc(summary="Get the list of banned users for a community.")
 @comm_bp.arguments(CommunityModerationBansListRequest, location="query")
 @comm_bp.response(200, CommunityModerationBansListResponse)
@@ -350,7 +428,7 @@ def get_alpha_community_moderate_bans(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_community_moderate_bans(auth, data)
         return CommunityModerationBansListResponse().load(resp)
     except Exception as ex:
@@ -358,7 +436,7 @@ def get_alpha_community_moderate_bans(data):
         return abort(400, message=str(ex))
 
 
-@comm_bp.route('/community/moderate/unban', methods=['PUT'])
+@comm_bp.route("/community/moderate/unban", methods=["PUT"])
 @comm_bp.doc(summary="Unban a user from a community.")
 @comm_bp.arguments(CommunityModerationUnbanRequest)
 @comm_bp.response(200, CommunityModerationBanItem)
@@ -367,7 +445,7 @@ def put_alpha_community_moderate_unban(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_community_moderate_unban(auth, data)
         return CommunityModerationBanItem().load(resp)
     except Exception as ex:
@@ -375,7 +453,7 @@ def put_alpha_community_moderate_unban(data):
         return abort(400, message=str(ex))
 
 
-@comm_bp.route('/community/moderate/ban', methods=['POST'])
+@comm_bp.route("/community/moderate/ban", methods=["POST"])
 @comm_bp.doc(summary="Ban a user from a community.")
 @comm_bp.arguments(CommunityModerationBanRequest)
 @comm_bp.response(200, CommunityModerationBanItem)
@@ -384,7 +462,7 @@ def post_alpha_community_moderate_ban(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_moderate_ban(auth, data)
         return CommunityModerationBanItem().load(resp)
     except Exception as ex:
@@ -392,7 +470,7 @@ def post_alpha_community_moderate_ban(data):
         return abort(400, message=str(ex))
 
 
-@comm_bp.route('/community/moderate/post/nsfw', methods=['POST'])
+@comm_bp.route("/community/moderate/post/nsfw", methods=["POST"])
 @comm_bp.doc(summary="Mark or unmark a post as NSFW.")
 @comm_bp.arguments(CommunityModerationNsfwRequest)
 @comm_bp.response(200, PostView)
@@ -401,7 +479,7 @@ def post_alpha_community_moderate_post_nsfw(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_community_moderate_post_nsfw(auth, data)
         return PostView().load(resp)
     except Exception as ex:
@@ -410,7 +488,7 @@ def post_alpha_community_moderate_post_nsfw(data):
 
 
 # Feed
-@feed_bp.route('/feed/list', methods=["GET"])
+@feed_bp.route("/feed/list", methods=["GET"])
 @feed_bp.doc(summary="Get list of feeds")
 @feed_bp.arguments(FeedListRequest, location="query")
 @feed_bp.response(200, FeedListResponse)
@@ -419,7 +497,7 @@ def get_alpha_feed_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_feed_list(auth, data)
         validated = FeedListResponse().load(resp)
         return orjson_response(validated)
@@ -429,12 +507,12 @@ def get_alpha_feed_list(data):
 
 
 # Post
-@bp.route('/api/alpha/post/list', methods=['GET'])
+@bp.route("/api/alpha/post/list", methods=["GET"])
 def get_alpha_post_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.args.to_dict() or None
         return orjson_response(get_post_list(auth, data))
     except Exception as ex:
@@ -442,12 +520,12 @@ def get_alpha_post_list():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post', methods=['GET'])
+@bp.route("/api/alpha/post", methods=["GET"])
 def get_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.args.to_dict() or None
         return jsonify(get_post(auth, data))
     except Exception as ex:
@@ -455,12 +533,12 @@ def get_alpha_post():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/replies', methods=['GET'])
+@bp.route("/api/alpha/post/replies", methods=["GET"])
 def get_alpha_post_replies():
     if not enable_api():
-        return jsonify({'error': 'api is not enabled'}), 400
+        return jsonify({"error": "api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.args.to_dict() or None
         return orjson_response(get_post_replies(auth, data))
     except NoResultFound:
@@ -470,12 +548,12 @@ def get_alpha_post_replies():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/like', methods=['POST'])
+@bp.route("/api/alpha/post/like", methods=["POST"])
 def post_alpha_post_like():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_like(auth, data))
     except Exception as ex:
@@ -483,12 +561,12 @@ def post_alpha_post_like():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/save', methods=['PUT'])
+@bp.route("/api/alpha/post/save", methods=["PUT"])
 def put_alpha_post_save():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(put_post_save(auth, data))
     except NoResultFound:
@@ -498,12 +576,12 @@ def put_alpha_post_save():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/subscribe', methods=['PUT'])
+@bp.route("/api/alpha/post/subscribe", methods=["PUT"])
 def put_alpha_post_subscribe():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(put_post_subscribe(auth, data))
     except NoResultFound:
@@ -513,13 +591,13 @@ def put_alpha_post_subscribe():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post', methods=['POST'])
+@bp.route("/api/alpha/post", methods=["POST"])
 def post_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        with limiter.limit('3/minute'):
-            auth = request.headers.get('Authorization')
+        with limiter.limit("3/minute"):
+            auth = request.headers.get("Authorization")
             data = request.get_json(force=True) or {}
             return jsonify(post_post(auth, data))
     except RateLimitExceeded as ex:
@@ -529,12 +607,12 @@ def post_alpha_post():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post', methods=['PUT'])
+@bp.route("/api/alpha/post", methods=["PUT"])
 def put_alpha_post():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(put_post(auth, data))
     except Exception as ex:
@@ -542,24 +620,24 @@ def put_alpha_post():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/delete', methods=['POST'])
+@bp.route("/api/alpha/post/delete", methods=["POST"])
 def post_alpha_post_delete():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_delete(auth, data))
     except Exception as ex:
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/report', methods=['POST'])
+@bp.route("/api/alpha/post/report", methods=["POST"])
 def post_alpha_post_report():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_report(auth, data))
     except Exception as ex:
@@ -567,12 +645,12 @@ def post_alpha_post_report():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/lock', methods=['POST'])
+@bp.route("/api/alpha/post/lock", methods=["POST"])
 def post_alpha_post_lock():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_lock(auth, data))
     except Exception as ex:
@@ -580,12 +658,12 @@ def post_alpha_post_lock():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/feature', methods=['POST'])
+@bp.route("/api/alpha/post/feature", methods=["POST"])
 def post_alpha_post_feature():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_feature(auth, data))
     except Exception as ex:
@@ -593,12 +671,12 @@ def post_alpha_post_feature():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/remove', methods=['POST'])
+@bp.route("/api/alpha/post/remove", methods=["POST"])
 def post_alpha_post_remove():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_remove(auth, data))
     except Exception as ex:
@@ -606,12 +684,12 @@ def post_alpha_post_remove():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post/mark_as_read', methods=['POST'])
+@bp.route("/api/alpha/post/mark_as_read", methods=["POST"])
 def post_alpha_post_mark_as_read():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_post_mark_as_read(auth, data))
     except NoResultFound:
@@ -621,7 +699,7 @@ def post_alpha_post_mark_as_read():
         return jsonify({"error": str(ex)}), 400
 
 
-@post_bp.route('/post/like/list', methods=['GET'])
+@post_bp.route("/post/like/list", methods=["GET"])
 @post_bp.doc(summary="View post votes as a moderator.")
 @post_bp.arguments(ListPostLikesRequest, location="query")
 @post_bp.response(200, ListPostLikesResponse)
@@ -630,7 +708,7 @@ def get_alpha_post_like_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_post_like_list(auth, data)
         validated = ListPostLikesResponse().load(resp)
         return orjson_response(validated)
@@ -642,7 +720,7 @@ def get_alpha_post_like_list(data):
 
 
 # Reply
-@reply_bp.route('/comment/list', methods=['GET'])
+@reply_bp.route("/comment/list", methods=["GET"])
 @reply_bp.doc(summary="List comments, with various filters.")
 @reply_bp.arguments(ListCommentsRequest, location="query")
 @reply_bp.response(200, ListCommentsResponse)
@@ -651,7 +729,7 @@ def get_alpha_comment_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_reply_list(auth, data)
         validated = ListCommentsResponse().load(resp)
         return orjson_response(validated)
@@ -660,7 +738,7 @@ def get_alpha_comment_list(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/like', methods=['POST'])
+@reply_bp.route("/comment/like", methods=["POST"])
 @reply_bp.doc(summary="Like / vote on a comment.")
 @reply_bp.arguments(LikeCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -669,7 +747,7 @@ def post_alpha_comment_like(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_like(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -679,7 +757,7 @@ def post_alpha_comment_like(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/save', methods=['PUT'])
+@reply_bp.route("/comment/save", methods=["PUT"])
 @reply_bp.doc(summary="Save a comment.")
 @reply_bp.arguments(SaveCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -688,7 +766,7 @@ def put_alpha_comment_save(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_reply_save(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -698,7 +776,7 @@ def put_alpha_comment_save(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/subscribe', methods=['PUT'])
+@reply_bp.route("/comment/subscribe", methods=["PUT"])
 @reply_bp.doc(summary="Subscribe to a comment.")
 @reply_bp.arguments(SubscribeCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -707,7 +785,7 @@ def put_alpha_comment_subscribe(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_reply_subscribe(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -717,7 +795,7 @@ def put_alpha_comment_subscribe(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment', methods=['POST'])
+@reply_bp.route("/comment", methods=["POST"])
 @reply_bp.doc(summary="Create a comment.")
 @reply_bp.arguments(CreateCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -727,8 +805,8 @@ def post_alpha_comment(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        with limiter.limit('3/minute'):
-            auth = request.headers.get('Authorization')
+        with limiter.limit("3/minute"):
+            auth = request.headers.get("Authorization")
             resp = post_reply(auth, data)
             return GetCommentResponse().load(resp)
     except RateLimitExceeded as ex:
@@ -740,7 +818,7 @@ def post_alpha_comment(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment', methods=['PUT'])
+@reply_bp.route("/comment", methods=["PUT"])
 @reply_bp.doc(summary="Edit a comment.")
 @reply_bp.arguments(EditCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -749,7 +827,7 @@ def put_alpha_comment(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_reply(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -759,7 +837,7 @@ def put_alpha_comment(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/delete', methods=['POST'])
+@reply_bp.route("/comment/delete", methods=["POST"])
 @reply_bp.doc(summary="Delete a comment.")
 @reply_bp.arguments(DeleteCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -768,7 +846,7 @@ def post_alpha_comment_delete(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_delete(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -778,7 +856,7 @@ def post_alpha_comment_delete(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/report', methods=['POST'])
+@reply_bp.route("/comment/report", methods=["POST"])
 @reply_bp.doc(summary="Report a comment.")
 @reply_bp.arguments(ReportCommentRequest)
 @reply_bp.response(200, GetCommentReportResponse)
@@ -787,7 +865,7 @@ def post_alpha_comment_report(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_report(auth, data)
         return GetCommentReportResponse().load(resp)
     except NoResultFound:
@@ -797,7 +875,7 @@ def post_alpha_comment_report(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/remove', methods=['POST'])
+@reply_bp.route("/comment/remove", methods=["POST"])
 @reply_bp.doc(summary="Remove a comment as a moderator.")
 @reply_bp.arguments(RemoveCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -806,7 +884,7 @@ def post_alpha_comment_remove(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_remove(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -816,7 +894,7 @@ def post_alpha_comment_remove(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/mark_as_read', methods=['POST'])
+@reply_bp.route("/comment/mark_as_read", methods=["POST"])
 @reply_bp.doc(summary="Mark a comment reply as read.")
 @reply_bp.arguments(MarkCommentAsReadRequest)
 @reply_bp.response(200, GetCommentReplyResponse)
@@ -825,7 +903,7 @@ def post_alpha_comment_mark_as_read(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_mark_as_read(auth, data)
         return GetCommentReplyResponse().load(resp)
     except NoResultFound:
@@ -844,7 +922,7 @@ def get_alpha_comment(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_reply(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -854,7 +932,7 @@ def get_alpha_comment(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/lock', methods=['POST'])
+@reply_bp.route("/comment/lock", methods=["POST"])
 @reply_bp.doc(summary="Lock a comment chain as a moderator.")
 @reply_bp.arguments(LockCommentRequest)
 @reply_bp.response(200, GetCommentResponse)
@@ -863,7 +941,7 @@ def post_alpha_comment_lock(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_reply_lock(auth, data)
         return GetCommentResponse().load(resp)
     except NoResultFound:
@@ -873,7 +951,7 @@ def post_alpha_comment_lock(data):
         return abort(400, message=str(ex))
 
 
-@reply_bp.route('/comment/like/list', methods=['GET'])
+@reply_bp.route("/comment/like/list", methods=["GET"])
 @reply_bp.doc(summary="View comment votes as a moderator.")
 @reply_bp.arguments(ListCommentLikesRequest, location="query")
 @reply_bp.response(200, ListCommentLikesResponse)
@@ -882,7 +960,7 @@ def get_alpha_comment_like_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_reply_like_list(auth, data)
         validated = ListCommentLikesResponse().load(resp)
         return orjson_response(validated)
@@ -894,12 +972,12 @@ def get_alpha_comment_like_list(data):
 
 
 # Private Message
-@bp.route('/api/alpha/private_message/list', methods=['GET'])
+@bp.route("/api/alpha/private_message/list", methods=["GET"])
 def get_alpha_private_message_list():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.args.to_dict() or None
         return jsonify(get_private_message_list(auth, data))
     except Exception as ex:
@@ -907,12 +985,12 @@ def get_alpha_private_message_list():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message/conversation', methods=['GET'])
+@bp.route("/api/alpha/private_message/conversation", methods=["GET"])
 def get_alpha_private_message_conversation():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.args.to_dict() or None
         return jsonify(get_private_message_conversation(auth, data))
     except NoResultFound:
@@ -922,13 +1000,13 @@ def get_alpha_private_message_conversation():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message', methods=['POST'])
+@bp.route("/api/alpha/private_message", methods=["POST"])
 def post_alpha_private_message():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        with limiter.limit('3/minute'):
-            auth = request.headers.get('Authorization')
+        with limiter.limit("3/minute"):
+            auth = request.headers.get("Authorization")
             data = request.get_json(force=True) or {}
             return jsonify(post_private_message(auth, data))
     except NoResultFound:
@@ -940,12 +1018,12 @@ def post_alpha_private_message():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message', methods=['PUT'])
+@bp.route("/api/alpha/private_message", methods=["PUT"])
 def put_alpha_private_message():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(put_private_message(auth, data))
     except NoResultFound:
@@ -955,12 +1033,12 @@ def put_alpha_private_message():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])
+@bp.route("/api/alpha/private_message/mark_as_read", methods=["POST"])
 def post_alpha_private_message_mark_as_read():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_private_message_mark_as_read(auth, data))
     except NoResultFound:
@@ -970,12 +1048,12 @@ def post_alpha_private_message_mark_as_read():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message/delete', methods=['POST'])
+@bp.route("/api/alpha/private_message/delete", methods=["POST"])
 def post_alpha_private_message_delete():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_private_message_delete(auth, data))
     except NoResultFound:
@@ -985,12 +1063,12 @@ def post_alpha_private_message_delete():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/private_message/report', methods=['POST'])
+@bp.route("/api/alpha/private_message/report", methods=["POST"])
 def post_alpha_private_message_report():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         data = request.get_json(force=True) or {}
         return jsonify(post_private_message_report(auth, data))
     except NoResultFound:
@@ -1001,7 +1079,7 @@ def post_alpha_private_message_report():
 
 
 # Topic
-@topic_bp.route('/topic/list', methods=["GET"])
+@topic_bp.route("/topic/list", methods=["GET"])
 @topic_bp.doc(summary="Get list of topics")
 @topic_bp.arguments(TopicListRequest, location="query")
 @topic_bp.response(200, TopicListResponse)
@@ -1010,7 +1088,7 @@ def get_alpha_topic_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_topic_list(auth, data)
         validated = TopicListResponse().load(resp)
         return orjson_response(validated)
@@ -1029,7 +1107,7 @@ def get_alpha_user(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user(auth, data)
         validated = GetUserResponse().load(resp)
         return orjson_response(validated)
@@ -1048,10 +1126,11 @@ def get_alpha_user(data):
 @user_bp.alt_response(429, schema=DefaultError)
 def post_alpha_user_login(data):
     from app.shared.auth import log_user_in
+
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        with limiter.limit('20/hour', exempt_when=is_trusted_request):
+        with limiter.limit("20/hour", exempt_when=is_trusted_request):
             resp = log_user_in(data, SRC_API)
             return UserLoginResponse().load(resp)
     except RateLimitExceeded as ex:
@@ -1061,7 +1140,7 @@ def post_alpha_user_login(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/unread_count', methods=['GET'])
+@user_bp.route("/user/unread_count", methods=["GET"])
 @user_bp.doc(summary="Get your unread counts")
 @user_bp.response(200, UserUnreadCountsResponse)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1069,7 +1148,7 @@ def get_alpha_user_unread_count():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user_unread_count(auth)
         return UserUnreadCountsResponse().load(resp)
     except Exception as ex:
@@ -1077,7 +1156,7 @@ def get_alpha_user_unread_count():
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/replies', methods=['GET'])
+@user_bp.route("/user/replies", methods=["GET"])
 @user_bp.doc(summary="Get comment replies")
 @user_bp.arguments(UserRepliesRequest, location="query")
 @user_bp.response(200, UserRepliesResponse)
@@ -1086,7 +1165,7 @@ def get_alpha_user_replies(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user_replies(auth, data)
         return UserRepliesResponse().load(resp)
     except Exception as ex:
@@ -1094,7 +1173,7 @@ def get_alpha_user_replies(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/mentions', methods=['GET'])
+@user_bp.route("/user/mentions", methods=["GET"])
 @user_bp.doc(summary="Get mentions of your account made in comments")
 @user_bp.arguments(UserMentionsRequest, location="query")
 @user_bp.response(200, UserMentionsResponse)
@@ -1103,7 +1182,7 @@ def get_alpha_user_mentions(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user_replies(auth, data, mentions=True)
         return UserMentionsResponse().load(resp)
     except Exception as ex:
@@ -1111,7 +1190,7 @@ def get_alpha_user_mentions(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/block', methods=['POST'])
+@user_bp.route("/user/block", methods=["POST"])
 @user_bp.doc(summary="Block or unblock a person")
 @user_bp.arguments(UserBlockRequest)
 @user_bp.response(200, UserBlockResponse)
@@ -1120,7 +1199,7 @@ def post_alpha_user_block(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_user_block(auth, data)
         return UserBlockResponse().load(resp)
     except Exception as ex:
@@ -1128,7 +1207,7 @@ def post_alpha_user_block(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/mark_all_as_read', methods=['POST'])
+@user_bp.route("/user/mark_all_as_read", methods=["POST"])
 @user_bp.doc(summary="Mark all notifications and messages as read")
 @user_bp.response(200, UserMarkAllReadResponse)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1136,7 +1215,7 @@ def post_alpha_user_mark_all_as_read():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_user_mark_all_as_read(auth)
         return UserMarkAllReadResponse().load(resp)
     except Exception as ex:
@@ -1144,7 +1223,7 @@ def post_alpha_user_mark_all_as_read():
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/subscribe', methods=['PUT'])
+@user_bp.route("/user/subscribe", methods=["PUT"])
 @user_bp.doc(summary="Subscribe or unsubscribe to activites of another user")
 @user_bp.arguments(UserSubscribeRequest)
 @user_bp.response(200, UserSubscribeResponse)
@@ -1153,7 +1232,7 @@ def put_alpha_user_subscribe(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_user_subscribe(auth, data)
         return UserSubscribeResponse().load(resp)
     except NoResultFound:
@@ -1164,7 +1243,7 @@ def put_alpha_user_subscribe(data):
 
 
 # not all settings implemented yet, nor all choices for settings (eg. blur nsfw)
-@user_bp.route('/user/save_user_settings', methods=['PUT'])
+@user_bp.route("/user/save_user_settings", methods=["PUT"])
 @user_bp.doc(summary="Save your user settings")
 @user_bp.arguments(UserSaveSettingsRequest)
 @user_bp.response(200, UserSaveSettingsResponse)
@@ -1173,7 +1252,7 @@ def put_alpha_user_save_user_settings(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_user_save_user_settings(auth, data)
         return UserSaveSettingsResponse().load(resp)
     except Exception as ex:
@@ -1181,8 +1260,10 @@ def put_alpha_user_save_user_settings(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/notifications', methods=['GET'])
-@user_bp.doc(summary="Get your user notifications (not all notification types supported yet)")
+@user_bp.route("/user/notifications", methods=["GET"])
+@user_bp.doc(
+    summary="Get your user notifications (not all notification types supported yet)"
+)
 @user_bp.arguments(UserNotificationsRequest, location="query")
 @user_bp.response(200, UserNotificationsResponse)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1190,7 +1271,7 @@ def get_alpha_user_notifications(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user_notifications(auth, data)
         return UserNotificationsResponse().load(resp)
     except Exception as ex:
@@ -1198,8 +1279,10 @@ def get_alpha_user_notifications(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/notification_state', methods=['PUT'])
-@user_bp.doc(summary="Set the read status of a given notification (not all notification types supported yet)")
+@user_bp.route("/user/notification_state", methods=["PUT"])
+@user_bp.doc(
+    summary="Set the read status of a given notification (not all notification types supported yet)"
+)
 @user_bp.arguments(UserNotificationStateRequest)
 @user_bp.response(200, UserNotificationItemView)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1207,7 +1290,7 @@ def put_alpha_user_notification_state(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_user_notification_state(auth, data)
         return UserNotificationItemView().load(resp)
     except NoResultFound:
@@ -1217,7 +1300,7 @@ def put_alpha_user_notification_state(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/notifications_count', methods=['GET'])
+@user_bp.route("/user/notifications_count", methods=["GET"])
 @user_bp.doc(summary="Get user unread notifications count")
 @user_bp.response(200, UserNotificationsCountResponse)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1225,7 +1308,7 @@ def get_alpha_user_notifications_count():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = get_user_notifications_count(auth)
         return UserNotificationsCountResponse().load(resp)
     except Exception as ex:
@@ -1233,7 +1316,7 @@ def get_alpha_user_notifications_count():
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/mark_all_notifications_read', methods=['PUT'])
+@user_bp.route("/user/mark_all_notifications_read", methods=["PUT"])
 @user_bp.doc(summary="Mark all notifications as read")
 @user_bp.response(200, UserMarkAllNotifsReadResponse)
 @user_bp.alt_response(400, schema=DefaultError)
@@ -1241,7 +1324,7 @@ def put_alpha_user_notifications_read():
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = put_user_mark_all_notifications_read(auth)
         return UserMarkAllNotifsReadResponse().load(resp)
     except Exception as ex:
@@ -1249,7 +1332,7 @@ def put_alpha_user_notifications_read():
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/verify_credentials', methods=['POST'])
+@user_bp.route("/user/verify_credentials", methods=["POST"])
 @user_bp.doc(summary="Verify username/password credentials")
 @user_bp.arguments(UserLoginRequest)
 @user_bp.response(200)
@@ -1258,7 +1341,7 @@ def post_alpha_user_verify_credentials(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        with limiter.limit('6/hour', exempt_when=is_trusted_request):
+        with limiter.limit("6/hour", exempt_when=is_trusted_request):
             post_user_verify_credentials(data)
     except RateLimitExceeded as ex:
         return abort(429, message=str(ex))
@@ -1269,7 +1352,7 @@ def post_alpha_user_verify_credentials(data):
         return abort(400, message=str(ex))
 
 
-@user_bp.route('/user/set_flair', methods=['POST'])
+@user_bp.route("/user/set_flair", methods=["POST"])
 @user_bp.doc(summary="Set your flair for a community")
 @user_bp.arguments(UserSetFlairRequest)
 @user_bp.response(200, UserSetFlairResponse)
@@ -1278,7 +1361,7 @@ def post_alpha_user_set_flair(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
-        auth = request.headers.get('Authorization')
+        auth = request.headers.get("Authorization")
         resp = post_user_set_flair(auth, data)
         return UserSetFlairResponse().load(resp)
     except Exception as ex:
@@ -1287,14 +1370,14 @@ def post_alpha_user_set_flair(data):
 
 
 # Upload
-@bp.route('/api/alpha/upload/image', methods=['POST'])
+@bp.route("/api/alpha/upload/image", methods=["POST"])
 def post_alpha_upload_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        with limiter.limit('15/hour'):
-            auth = request.headers.get('Authorization')
-            image_file = request.files['file']
+        with limiter.limit("15/hour"):
+            auth = request.headers.get("Authorization")
+            image_file = request.files["file"]
             return jsonify(post_upload_image(auth, image_file))
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
@@ -1303,14 +1386,14 @@ def post_alpha_upload_image():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/upload/community_image', methods=['POST'])
+@bp.route("/api/alpha/upload/community_image", methods=["POST"])
 def post_alpha_upload_community_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        with limiter.limit('20/day'):
-            auth = request.headers.get('Authorization')
-            image_file = request.files['file']
+        with limiter.limit("20/day"):
+            auth = request.headers.get("Authorization")
+            image_file = request.files["file"]
             return jsonify(post_upload_community_image(auth, image_file))
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
@@ -1319,14 +1402,14 @@ def post_alpha_upload_community_image():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/upload/user_image', methods=['POST'])
+@bp.route("/api/alpha/upload/user_image", methods=["POST"])
 def post_alpha_upload_user_image():
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return jsonify({"error": "alpha api is not enabled"}), 400
     try:
-        with limiter.limit('20/day'):
-            auth = request.headers.get('Authorization')
-            image_file = request.files['file']
+        with limiter.limit("20/day"):
+            auth = request.headers.get("Authorization")
+            image_file = request.files["file"]
             return jsonify(post_upload_user_image(auth, image_file))
     except RateLimitExceeded as ex:
         return jsonify({"error": str(ex)}), 429
@@ -1337,15 +1420,16 @@ def post_alpha_upload_user_image():
 
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing
 
+
 # Site - not yet implemented
-@bp.route('/api/alpha/site', methods=['POST'])  # Create New Site. No plans to implement
-@bp.route('/api/alpha/site', methods=['PUT'])  # Edit Site. Not available in app
+@bp.route("/api/alpha/site", methods=["POST"])  # Create New Site. No plans to implement
+@bp.route("/api/alpha/site", methods=["PUT"])  # Edit Site. Not available in app
 def alpha_site():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # Miscellaneous - not yet implemented
-@bp.route('/api/alpha/modlog', methods=['GET'])  # Get Modlog. Not usually public
+@bp.route("/api/alpha/modlog", methods=["GET"])  # Get Modlog. Not usually public
 def alpha_miscellaneous():
     return jsonify({"error": "not_yet_implemented"}), 400
 
@@ -1353,83 +1437,93 @@ def alpha_miscellaneous():
 # Community - not yet implemented
 # @bp.route('/api/alpha/community', methods=['POST'])                               # (none
 # @bp.route('/api/alpha/community', methods=['PUT'])                                #  of
-@bp.route('/api/alpha/community/hide', methods=['PUT'])  # these
+@bp.route("/api/alpha/community/hide", methods=["PUT"])  # these
 # @bp.route('/api/alpha/community/delete', methods=['POST'])                        #  are
-@bp.route('/api/alpha/community/remove', methods=['POST'])  # available
-@bp.route('/api/alpha/community/transfer', methods=['POST'])  # in
-@bp.route('/api/alpha/community/ban_user', methods=['POST'])  # the app)
+@bp.route("/api/alpha/community/remove", methods=["POST"])  # available
+@bp.route("/api/alpha/community/transfer", methods=["POST"])  # in
+@bp.route("/api/alpha/community/ban_user", methods=["POST"])  # the app)
 def alpha_community():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # Post - not yet implemented
-@bp.route('/api/alpha/post/report/resolve', methods=['PUT'])  # Stage 2
-@bp.route('/api/alpha/post/report/list', methods=['GET'])  # Stage 2
-@bp.route('/api/alpha/post/site_metadata', methods=['GET'])  # Not available in app
+@bp.route("/api/alpha/post/report/resolve", methods=["PUT"])  # Stage 2
+@bp.route("/api/alpha/post/report/list", methods=["GET"])  # Stage 2
+@bp.route("/api/alpha/post/site_metadata", methods=["GET"])  # Not available in app
 def alpha_post():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # Reply - not yet implemented
-@bp.route('/api/alpha/comment/distinguish', methods=['POST'])  # Not really used
-@bp.route('/api/alpha/comment/report/resolve', methods=['PUT'])  # Stage 2
-@bp.route('/api/alpha/comment/report/list', methods=['GET'])  # Stage 2
+@bp.route("/api/alpha/comment/distinguish", methods=["POST"])  # Not really used
+@bp.route("/api/alpha/comment/report/resolve", methods=["PUT"])  # Stage 2
+@bp.route("/api/alpha/comment/report/list", methods=["GET"])  # Stage 2
 def alpha_reply():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # Chat
-@bp.route('/api/alpha/private_message/report/resolve', methods=['PUT'])  # Stage 2
-@bp.route('/api/alpha/private_message/report/list', methods=['GET'])  # Stage 2
+@bp.route("/api/alpha/private_message/report/resolve", methods=["PUT"])  # Stage 2
+@bp.route("/api/alpha/private_message/report/list", methods=["GET"])  # Stage 2
 def alpha_chat():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # User - not yet implemented
-@bp.route('/api/alpha/user/register', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/get_captcha', methods=['GET'])  # Not available in app
-@bp.route('/api/alpha/user/mention/mark_as_read',
-          methods=['POST'])  # No DB support / Not available in app (using mark_all instead)
-@bp.route('/api/alpha/user/ban', methods=['POST'])  # Admin function. No plans to implement
-@bp.route('/api/alpha/user/banned', methods=['GET'])  # Admin function. No plans to implement
-@bp.route('/api/alpha/user/delete_account', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/password_reset', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/password_change', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/change_password', methods=['PUT'])  # Stage 2
-@bp.route('/api/alpha/user/report_count', methods=['GET'])  # Stage 2
-@bp.route('/api/alpha/user/verify_email', methods=['POST'])  # Admin function. No plans to implement
-@bp.route('/api/alpha/user/leave_admin', methods=['POST'])  # Admin function. No plans to implement
-@bp.route('/api/alpha/user/totp/generate', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/totp/update', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/export_settings', methods=['GET'])  # Not available in app
-@bp.route('/api/alpha/user/import_settings', methods=['POST'])  # Not available in app
-@bp.route('/api/alpha/user/list_logins', methods=['GET'])  # Not available in app
-@bp.route('/api/alpha/user/validate_auth', methods=['GET'])  # Not available in app
-@bp.route('/api/alpha/user/logout', methods=['POST'])  # Stage 2
+@bp.route("/api/alpha/user/register", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/get_captcha", methods=["GET"])  # Not available in app
+@bp.route(
+    "/api/alpha/user/mention/mark_as_read", methods=["POST"]
+)  # No DB support / Not available in app (using mark_all instead)
+@bp.route(
+    "/api/alpha/user/ban", methods=["POST"]
+)  # Admin function. No plans to implement
+@bp.route(
+    "/api/alpha/user/banned", methods=["GET"]
+)  # Admin function. No plans to implement
+@bp.route("/api/alpha/user/delete_account", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/password_reset", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/password_change", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/change_password", methods=["PUT"])  # Stage 2
+@bp.route("/api/alpha/user/report_count", methods=["GET"])  # Stage 2
+@bp.route(
+    "/api/alpha/user/verify_email", methods=["POST"]
+)  # Admin function. No plans to implement
+@bp.route(
+    "/api/alpha/user/leave_admin", methods=["POST"]
+)  # Admin function. No plans to implement
+@bp.route("/api/alpha/user/totp/generate", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/totp/update", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/export_settings", methods=["GET"])  # Not available in app
+@bp.route("/api/alpha/user/import_settings", methods=["POST"])  # Not available in app
+@bp.route("/api/alpha/user/list_logins", methods=["GET"])  # Not available in app
+@bp.route("/api/alpha/user/validate_auth", methods=["GET"])  # Not available in app
+@bp.route("/api/alpha/user/logout", methods=["POST"])  # Stage 2
 def alpha_user():
     return jsonify({"error": "not_yet_implemented"}), 400
 
-@bp.route('/api/alpha/user/mention', methods=['GET'])
+
+@bp.route("/api/alpha/user/mention", methods=["GET"])
 def alpha_user_mention():
     return jsonify({"error": "renamed to user/mentions"}), 400
 
 
 # Admin - not yet implemented
-@bp.route('/api/alpha/admin/add', methods=['POST'])
-@bp.route('/api/alpha/admin/registration_application/count', methods=['GET'])  # (no
-@bp.route('/api/alpha/admin/registration_application/list', methods=['GET'])  # plans
-@bp.route('/api/alpha/admin/registration_application/approve', methods=['PUT'])  # to
-@bp.route('/api/alpha/admin/purge/person', methods=['POST'])  # implement
-@bp.route('/api/alpha/admin/purge/community', methods=['POST'])  # any
-@bp.route('/api/alpha/admin/purge/post', methods=['POST'])  # endpoints
-@bp.route('/api/alpha/admin/purge/comment', methods=['POST'])  # for admin user)
+@bp.route("/api/alpha/admin/add", methods=["POST"])
+@bp.route("/api/alpha/admin/registration_application/count", methods=["GET"])  # (no
+@bp.route("/api/alpha/admin/registration_application/list", methods=["GET"])  # plans
+@bp.route("/api/alpha/admin/registration_application/approve", methods=["PUT"])  # to
+@bp.route("/api/alpha/admin/purge/person", methods=["POST"])  # implement
+@bp.route("/api/alpha/admin/purge/community", methods=["POST"])  # any
+@bp.route("/api/alpha/admin/purge/post", methods=["POST"])  # endpoints
+@bp.route("/api/alpha/admin/purge/comment", methods=["POST"])  # for admin user)
 def alpha_admin():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
 # CustomEmoji - not yet implemented
-@bp.route('/api/alpha/custom_emoji', methods=['PUT'])  # (doesn't
-@bp.route('/api/alpha/custom_emoji', methods=['POST'])  # seem
-@bp.route('/api/alpha/custom_emoji/delete', methods=['POST'])  # important)
+@bp.route("/api/alpha/custom_emoji", methods=["PUT"])  # (doesn't
+@bp.route("/api/alpha/custom_emoji", methods=["POST"])  # seem
+@bp.route("/api/alpha/custom_emoji/delete", methods=["POST"])  # important)
 def alpha_emoji():
     return jsonify({"error": "not_yet_implemented"}), 400

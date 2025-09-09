@@ -4,19 +4,36 @@ from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
-    array_of_integers_expected
+from app.api.alpha.utils.validators import (
+    array_of_integers_expected,
+    boolean_expected,
+    integer_expected,
+    required,
+    string_expected,
+)
 from app.api.alpha.views import feed_view, topic_view
 from app.constants import *
 from app.models import User
-from app.utils import authorise_api_user, blocked_communities, blocked_instances, filtered_out_communities, \
-    communities_banned_from, moderating_communities_ids, joined_or_modding_communities, feed_tree_public, feed_tree, \
-    subscribed_feeds, topic_tree
+from app.utils import (
+    authorise_api_user,
+    blocked_communities,
+    blocked_instances,
+    communities_banned_from,
+    feed_tree,
+    feed_tree_public,
+    filtered_out_communities,
+    joined_or_modding_communities,
+    moderating_communities_ids,
+    subscribed_feeds,
+    topic_tree,
+)
 
 
 def get_topic_list(auth, data, user_id=None) -> dict:
 
-    include_communities = data['include_communities'] if data and 'include_communities' in data else True
+    include_communities = (
+        data["include_communities"] if data and "include_communities" in data else True
+    )
 
     if auth:
         user_id = authorise_api_user(auth)
@@ -48,18 +65,22 @@ def get_topic_list(auth, data, user_id=None) -> dict:
         processed_feeds = []
 
         for item in feed_tree_dict:
-            view = topic_view(topic=item['topic'], variant=1,
-                             communities_moderating=communities_moderating,
-                             banned_from=banned_from, communities_joined=communities_joined,
-                             blocked_community_ids=blocked_community_ids,
-                             blocked_instance_ids=blocked_instance_ids,
-                             include_communities=include_communities)
+            view = topic_view(
+                topic=item["topic"],
+                variant=1,
+                communities_moderating=communities_moderating,
+                banned_from=banned_from,
+                communities_joined=communities_joined,
+                blocked_community_ids=blocked_community_ids,
+                blocked_instance_ids=blocked_instance_ids,
+                include_communities=include_communities,
+            )
 
             # Process nested children
-            if item['children']:
-                view['children'] = process_nested_topics(item['children'])
+            if item["children"]:
+                view["children"] = process_nested_topics(item["children"])
             else:
-                view['children'] = []
+                view["children"] = []
 
             processed_feeds.append(view)
 
@@ -67,8 +88,6 @@ def get_topic_list(auth, data, user_id=None) -> dict:
 
     feedlist = process_nested_topics(topics)
 
-    list_json = {
-        "topics": feedlist
-    }
+    list_json = {"topics": feedlist}
 
     return list_json

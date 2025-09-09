@@ -12,13 +12,15 @@ def block_remote_instance(instance_id, src, auth=None):
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if instance_id == 1:
-        msg = 'You cannot block the local instance.'
+        msg = "You cannot block the local instance."
         if src == SRC_API:
             raise Exception(msg)
         else:
-            flash(_(msg), 'error')
+            flash(_(msg), "error")
 
-    existing = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
+    existing = InstanceBlock.query.filter_by(
+        user_id=user_id, instance_id=instance_id
+    ).first()
     if not existing:
         db.session.add(InstanceBlock(user_id=user_id, instance_id=instance_id))
         db.session.commit()
@@ -34,7 +36,9 @@ def block_remote_instance(instance_id, src, auth=None):
 def unblock_remote_instance(instance_id, src, auth=None):
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
-    existing = InstanceBlock.query.filter_by(user_id=user_id, instance_id=instance_id).first()
+    existing = InstanceBlock.query.filter_by(
+        user_id=user_id, instance_id=instance_id
+    ).first()
     if existing:
         db.session.delete(existing)
         db.session.commit()

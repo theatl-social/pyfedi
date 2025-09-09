@@ -2,7 +2,7 @@ from flask import Blueprint
 from flask_smorest import Blueprint as ApiBlueprint
 
 # Non-documented routes in swagger UI
-bp = Blueprint('api_alpha', __name__)
+bp = Blueprint("api_alpha", __name__)
 
 # Different blueprints to organize different api namespaces
 site_bp = ApiBlueprint(
@@ -40,34 +40,19 @@ topic_bp = ApiBlueprint(
     description="",
 )
 
-user_bp = ApiBlueprint(
-    "User",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+user_bp = ApiBlueprint("User", __name__, url_prefix="/api/alpha", description="")
 
 admin_bp = ApiBlueprint(
-    "Admin", 
+    "Admin",
     __name__,
     url_prefix="/api/alpha/admin",
-    description="Administrative endpoints for user management and private registration"
+    description="Administrative endpoints for user management and private registration",
 )
 
-reply_bp = ApiBlueprint(
-    "Comment",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+reply_bp = ApiBlueprint("Comment", __name__, url_prefix="/api/alpha", description="")
 
-post_bp = ApiBlueprint(
-    "Post",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+post_bp = ApiBlueprint("Post", __name__, url_prefix="/api/alpha", description="")
 
-from app.api.alpha import routes
-from app.api.admin import routes as admin_routes
 from app.api.admin import monitoring_routes
+from app.api.admin import routes as admin_routes
+from app.api.alpha import routes

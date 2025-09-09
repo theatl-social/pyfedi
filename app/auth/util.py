@@ -6,7 +6,16 @@ from typing import Any
 from unicodedata import normalize
 from urllib.parse import urlsplit
 
-from flask import current_app, flash, g, make_response, redirect, request, session, url_for
+from flask import (
+    current_app,
+    flash,
+    g,
+    make_response,
+    redirect,
+    request,
+    session,
+    url_for,
+)
 from flask_babel import _
 from flask_login import current_user, login_user
 from markupsafe import Markup
@@ -18,56 +27,79 @@ from app.activitypub.util import users_total
 from app.auth.forms import LoginForm
 from app.constants import NOTIF_REGISTRATION
 from app.email import send_verification_email
-from app.ldap_utils import sync_user_to_ldap, login_with_ldap
-from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow, Role
-from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
-    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
+from app.ldap_utils import login_with_ldap, sync_user_to_ldap
+from app.models import IpBan, Notification, Role, Site, User, UserRegistration, utcnow
+from app.utils import (
+    banned_ip_addresses,
+    blocked_referrers,
+    finalize_user_setup,
+    get_request,
+    get_setting,
+    gibberish,
+    ip_address,
+    markdown_to_html,
+    render_template,
+    user_cookie_banned,
+    user_ip_banned,
+)
 
 
 # Return a random string of 6 letter/digits.
 def random_token(length=6) -> str:
-    return "".join([random.choice('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ') for x in range(length)])
+    return "".join(
+        [
+            random.choice(
+                "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            )
+            for x in range(length)
+        ]
+    )
 
 
 def normalize_utf(username):
-    return normalize('NFKC', username)
+    return normalize("NFKC", username)
 
 
 def ip2location(ip: str):
-    """ city, region and country for the requester, using the ipinfo.io service """
-    if ip is None or ip == '':
+    """city, region and country for the requester, using the ipinfo.io service"""
+    if ip is None or ip == "":
         return {}
-    ip = '208.97.120.117' if ip == '127.0.0.1' else ip
+    ip = "208.97.120.117" if ip == "127.0.0.1" else ip
     # test
-    data = cache.get('ip_' + ip)
+    data = cache.get("ip_" + ip)
     if data is None:
-        if not current_app.config['IPINFO_TOKEN']:
+        if not current_app.config["IPINFO_TOKEN"]:
             return {}
-        url = 'http://ipinfo.io/' + ip + '?token=' + current_app.config['IPINFO_TOKEN']
+        url = "http://ipinfo.io/" + ip + "?token=" + current_app.config["IPINFO_TOKEN"]
         response = get_request(url)
         if response.status_code == 200:
             data = response.json()
-            cache.set('ip_' + ip, data, timeout=86400)
+            cache.set("ip_" + ip, data, timeout=86400)
         else:
             return {}
 
-    if 'postal' in data:
-        postal = data['postal']
+    if "postal" in data:
+        postal = data["postal"]
     else:
-        postal = ''
-    return {'city': data['city'], 'region': data['region'], 'country': data['country'], 'postal': postal,
-            'timezone': data['timezone']}
+        postal = ""
+    return {
+        "city": data["city"],
+        "region": data["region"],
+        "country": data["country"],
+        "postal": postal,
+        "timezone": data["timezone"],
+    }
 
 
-def get_country(ip: str, fallback: Any = '') -> str:
-    country_header = current_app.config['COUNTRY_SOURCE_HEADER']
+def get_country(ip: str, fallback: Any = "") -> str:
+    country_header = current_app.config["COUNTRY_SOURCE_HEADER"]
 
     if country_header and country_header in request.headers:
         return request.headers[country_header]
-    if ip is None or ip.strip() == '':
+    if ip is None or ip.strip() == "":
         return fallback
 
-    return ip2location(ip).get('country', fallback)
+    return ip2location(ip).get("country", fallback)
 
 
 def no_admins_logged_in_recently():
@@ -84,15 +116,19 @@ def no_admins_logged_in_recently():
 
 
 def create_user_application(user: User, registration_answer: str):
-    application = UserRegistration(user_id=user.id, answer='Signed in with Google')
+    application = UserRegistration(user_id=user.id, answer="Signed in with Google")
     db.session.add(application)
-    targets_data = {'application_id': application.id, 'user_id': user.id}
+    targets_data = {"application_id": application.id, "user_id": user.id}
     for admin in Site.admins():
-        notify = Notification(title='New registration', url=f'/admin/approve_registrations?account={user.id}',
-                              user_id=admin.id,
-                              author_id=user.id, notif_type=NOTIF_REGISTRATION,
-                              subtype='new_registration_for_approval',
-                              targets=targets_data)
+        notify = Notification(
+            title="New registration",
+            url=f"/admin/approve_registrations?account={user.id}",
+            user_id=admin.id,
+            author_id=user.id,
+            notif_type=NOTIF_REGISTRATION,
+            subtype="new_registration_for_approval",
+            targets=targets_data,
+        )
         admin.unread_notifications += 1
         db.session.add(notify)
         # todo: notify everyone with the "approve registrations" permission, instead of just all admins
@@ -101,13 +137,21 @@ def create_user_application(user: User, registration_answer: str):
 
 def notify_admins_of_registration(application):
     """Notify admins when a registration application is ready for review"""
-    targets_data = {'gen': '0', 'application_id': application.id, 'user_id': application.user_id}
+    targets_data = {
+        "gen": "0",
+        "application_id": application.id,
+        "user_id": application.user_id,
+    }
     for admin in Site.admins():
-        notify = Notification(title='New registration',
-                              url=f'/admin/approve_registrations?account={application.user_id}', user_id=admin.id,
-                              author_id=application.user_id, notif_type=NOTIF_REGISTRATION,
-                              subtype='new_registration_for_approval',
-                              targets=targets_data)
+        notify = Notification(
+            title="New registration",
+            url=f"/admin/approve_registrations?account={application.user_id}",
+            user_id=admin.id,
+            author_id=application.user_id,
+            notif_type=NOTIF_REGISTRATION,
+            subtype="new_registration_for_approval",
+            targets=targets_data,
+        )
         admin.unread_notifications += 1
         db.session.add(notify)
 
@@ -115,7 +159,7 @@ def notify_admins_of_registration(application):
 def create_registration_application(user, answer):
     """Create a UserRegistration application with proper status based on email verification"""
     # Set status to -1 if email verification needed, 0 if not
-    status = -1 if get_setting('email_verification', True) and not user.verified else 0
+    status = -1 if get_setting("email_verification", True) and not user.verified else 0
     application = UserRegistration(user_id=user.id, answer=answer, status=status)
     db.session.add(application)
 
@@ -124,6 +168,7 @@ def create_registration_application(user, answer):
         notify_admins_of_registration(application)
 
     return application
+
 
 def handle_abandoned_open_instance():
     if g.site.registration_mode == "Open" and no_admins_logged_in_recently():
@@ -145,8 +190,11 @@ def process_registration_form(form):
         return redirect_with_session_cookie("auth.please_wait")
 
     if is_country_blocked(country):
-        return render_template("generic_message.html", title=_("Application declined"),
-                               message=_("Sorry, we are not accepting registrations from your country."))
+        return render_template(
+            "generic_message.html",
+            title=_("Application declined"),
+            message=_("Sorry, we are not accepting registrations from your country."),
+        )
 
     return register_new_user(form, ip, country)
 
@@ -175,7 +223,9 @@ def contains_banned_username_patterns(username):
 
 def redirect_with_session_cookie(route):
     response = make_response(redirect(url_for(route)))
-    response.set_cookie("sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30))
+    response.set_cookie(
+        "sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30)
+    )
     return response
 
 
@@ -249,11 +299,11 @@ def create_new_user(form, ip, country, verification_token):
         font=get_font_preference(),
         ip_address_country=country,
         timezone=form.timezone.data,
-        language_id=g.site.language_id
+        language_id=g.site.language_id,
     )
-    if current_app.config['CONTENT_WARNING']:
+    if current_app.config["CONTENT_WARNING"]:
         user.hide_nsfw = 0
-    
+
     user.set_password(form.password.data)
 
     db.session.add(user)
@@ -276,9 +326,9 @@ def create_new_user_from_ldap(user_name, email, password, ip):
         alt_user_name=gibberish(random.randint(8, 20)),
         font=get_font_preference(),
         language_id=g.site.language_id,
-        last_seen=utcnow()
+        last_seen=utcnow(),
     )
-    if current_app.config['CONTENT_WARNING']:
+    if current_app.config["CONTENT_WARNING"]:
         user.hide_nsfw = 0
     user.set_password(password)
 
@@ -304,12 +354,18 @@ def requires_email_verification(user):
 def send_email_verification(user):
     send_verification_email(user)
     if current_app.debug:
-        current_app.logger.info("Verify account:" +
-                                url_for("auth.verify_email", token=user.verification_token, _external=True))
+        current_app.logger.info(
+            "Verify account:"
+            + url_for(
+                "auth.verify_email", token=user.verification_token, _external=True
+            )
+        )
 
 
 def requires_approval(user):
-    return g.site.registration_mode == "RequireApplication" and g.site.application_question
+    return (
+        g.site.registration_mode == "RequireApplication" and g.site.application_question
+    )
 
 
 def handle_user_application(user, form):
@@ -340,15 +396,22 @@ def finalize_user_registration(user, form):
 
 def render_registration_form(form):
     if g.site.registration_mode == "RequireApplication" and g.site.application_question:
-        form.question.label = Label("question", markdown_to_html(g.site.application_question))
+        form.question.label = Label(
+            "question", markdown_to_html(g.site.application_question)
+        )
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
-    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site,
-                           instance_chooser_enabled=get_setting('enable_instance_chooser', False),
-                           google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
-                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
-                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
+    return render_template(
+        "auth/register.html",
+        title=_("Register"),
+        form=form,
+        site=g.site,
+        instance_chooser_enabled=get_setting("enable_instance_chooser", False),
+        google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+        mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+        discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"],
+    )
 
 
 def redirect_next_page():
@@ -362,8 +425,10 @@ def process_login(form: LoginForm):
     ip = ip_address()
     country = get_country(ip)
 
-    if current_app.config['LDAP_SERVER_LOGIN']:
-        user = validate_user_ldap_login(form.user_name.data.strip(), form.password.data.strip(), ip)
+    if current_app.config["LDAP_SERVER_LOGIN"]:
+        user = validate_user_ldap_login(
+            form.user_name.data.strip(), form.password.data.strip(), ip
+        )
         if user is None:
             return redirect(url_for("auth.login"))
         ldap_sync = False
@@ -386,13 +451,19 @@ def process_login(form: LoginForm):
 
 def find_user(user_name):
     username = user_name.strip()
-    user = User.query.filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
+    user = (
+        User.query.filter(func.lower(User.user_name) == func.lower(username))
+        .filter_by(ap_id=None, deleted=False)
+        .first()
+    )
 
     if not user:
         user = User.query.filter_by(email=username, ap_id=None, deleted=False).first()
     if not user:
         ap_id = f"https://{current_app.config['SERVER_NAME']}/u/{username.lower()}"
-        user = User.query.filter(User.ap_profile_id.ilike(ap_id), User.deleted.is_(False)).first()
+        user = User.query.filter(
+            User.ap_profile_id.ilike(ap_id), User.deleted.is_(False)
+        ).first()
 
     return user
 
@@ -401,10 +472,14 @@ def validate_user_login(user, password, ip):
     if user.deleted:
         flash(_("No account exists with that user name."), "error")
         return False
-    
+
     if not user.check_password(password):
         if user.password_hash is None:
-            message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
+            message = Markup(
+                _(
+                    'Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'
+                )
+            )
             flash(message, "error")
         else:
             flash(_("Invalid password"), "error")
@@ -424,7 +499,7 @@ def validate_user_login(user, password, ip):
 def validate_user_ldap_login(user_name: str, password: str, ip: str) -> User | None:
     result = login_with_ldap(user_name, password)
     if result is False:
-        flash(_('Login failed'))
+        flash(_("Login failed"))
         return None
     else:
         user = find_user(user_name)
@@ -443,7 +518,9 @@ def handle_banned_user(user, ip):
         db.session.commit()
         cache.delete_memoized(banned_ip_addresses)
 
-    response.set_cookie("sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30))
+    response.set_cookie(
+        "sesion", "17489047567495", expires=datetime(year=2099, month=12, day=30)
+    )
     return response
 
 
@@ -486,11 +563,17 @@ def determine_next_page():
 
 def configure_bandwidth_cookies(response, low_bandwidth_mode):
     mode = "1" if low_bandwidth_mode else "0"
-    response.set_cookie("low_bandwidth", mode, expires=datetime(year=2099, month=12, day=30))
+    response.set_cookie(
+        "low_bandwidth", mode, expires=datetime(year=2099, month=12, day=30)
+    )
 
 
 def render_login_form(form):
-    return render_template("auth/login.html", title=_("Login"), form=form,
-                           google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
-                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
-                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
+    return render_template(
+        "auth/login.html",
+        title=_("Login"),
+        form=form,
+        google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+        mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+        discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"],
+    )

@@ -47,16 +47,26 @@ from furl import furl
 from pyld import jsonld
 from sqlalchemy import text
 
-from app import db, celery, httpx_client
+from app import celery, db, httpx_client
 from app.constants import DATETIME_MS_FORMAT
-from app.models import utcnow, ActivityPubLog, Community, Instance, CommunityMember, User, SendQueue
+from app.models import (
+    ActivityPubLog,
+    Community,
+    CommunityMember,
+    Instance,
+    SendQueue,
+    User,
+    utcnow,
+)
 from app.utils import get_task_session
 
 
 def http_date(epoch_seconds=None):
     if epoch_seconds is None:
         epoch_seconds = arrow.utcnow().timestamp()
-    return formatdate(epoch_seconds, usegmt=True)  # takahe uses formatdate so let's try that
+    return formatdate(
+        epoch_seconds, usegmt=True
+    )  # takahe uses formatdate so let's try that
     # formatted_date = arrow.get(epoch_seconds).format('ddd, DD MMM YYYY HH:mm:ss ZZ', 'en_US')     # mastodon does not like this
     # return formatted_date
 
@@ -69,7 +79,7 @@ def format_ld_date(value: datetime) -> str:
 
 
 def parse_http_date(http_date_str):
-    parsed_date = arrow.get(http_date_str, 'ddd, DD MMM YYYY HH:mm:ss Z')
+    parsed_date = arrow.get(http_date_str, "ddd, DD MMM YYYY HH:mm:ss Z")
     return parsed_date.datetime
 
 
@@ -79,90 +89,163 @@ def parse_ld_date(value: str | None) -> datetime | None:
     return parser.isoparse(value).replace(microsecond=0)
 
 
-def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str,
-                      content_type: str = "application/activity+json",
-                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0, new_task=True):
+def send_post_request(
+    uri: str,
+    body: dict | None,
+    private_key: str,
+    key_id: str,
+    content_type: str = "application/activity+json",
+    method: Literal["get", "post"] = "post",
+    timeout: int = 10,
+    retries: int = 0,
+    new_task=True,
+):
     if current_app.debug or new_task is False:
-        return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
-                            method=method, timeout=timeout, retries=retries)
+        return post_request(
+            uri=uri,
+            body=body,
+            private_key=private_key,
+            key_id=key_id,
+            content_type=content_type,
+            method=method,
+            timeout=timeout,
+            retries=retries,
+        )
     else:
-        post_request.delay(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
-                           method=method, timeout=timeout, retries=retries)
+        post_request.delay(
+            uri=uri,
+            body=body,
+            private_key=private_key,
+            key_id=key_id,
+            content_type=content_type,
+            method=method,
+            timeout=timeout,
+            retries=retries,
+        )
         return True
 
 
 @celery.task
-def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
-                 content_type: str = "application/activity+json",
-                 method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
+def post_request(
+    uri: str,
+    body: dict | None,
+    private_key: str,
+    key_id: str,
+    content_type: str = "application/activity+json",
+    method: Literal["get", "post"] = "post",
+    timeout: int = 10,
+    retries: int = 0,
+):
     session = get_task_session()
     try:
-        if '@context' not in body:  # add a default json-ld context if necessary
-            body['@context'] = default_context()
-        type = body['type'] if 'type' in body else ''
-        log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
+        if "@context" not in body:  # add a default json-ld context if necessary
+            body["@context"] = default_context()
+        type = body["type"] if "type" in body else ""
+        log = ActivityPubLog(
+            direction="out",
+            activity_type=type,
+            result="processing",
+            activity_id=body["id"],
+            exception_message="",
+        )
         log.activity_json = json.dumps(body)
         session.add(log)
         session.commit()
 
         http_status_code = None
 
-        if uri is None or uri == '':
-            log.result = 'failure'
-            log.exception_message = 'empty uri'
+        if uri is None or uri == "":
+            log.result = "failure"
+            log.exception_message = "empty uri"
         else:
             try:
-                result = HttpSignature.signed_request(uri, body, private_key, key_id, content_type, method, timeout)
+                result = HttpSignature.signed_request(
+                    uri, body, private_key, key_id, content_type, method, timeout
+                )
                 http_status_code = result.status_code
-                if result.status_code != 200 and result.status_code != 202 and result.status_code != 204:
-                    log.result = 'failure'
-                    log.exception_message = f'{result.status_code}: {result.text:.100}' + ' - '
-                    if 'DOCTYPE html' in result.text:
-                        log.result = 'ignored'
-                        log.exception_message = f'{result.status_code}: HTML instead of JSON response'
+                if (
+                    result.status_code != 200
+                    and result.status_code != 202
+                    and result.status_code != 204
+                ):
+                    log.result = "failure"
+                    log.exception_message = (
+                        f"{result.status_code}: {result.text:.100}" + " - "
+                    )
+                    if "DOCTYPE html" in result.text:
+                        log.result = "ignored"
+                        log.exception_message = (
+                            f"{result.status_code}: HTML instead of JSON response"
+                        )
                         # log.activity_json += result.text[]
-                    elif 'community_has_no_followers' in result.text:
+                    elif "community_has_no_followers" in result.text:
                         fix_local_community_membership(uri, private_key, session)
-                    elif result.status_code == 400 and 'person_is_banned_from_site' in result.text:
+                    elif (
+                        result.status_code == 400
+                        and "person_is_banned_from_site" in result.text
+                    ):
                         from app.activitypub.util import process_banned_message
+
                         process_banned_message(result.json(), furl(uri).host, session)
-                    elif result.status_code == 410 or result.status_code == 418:    # When an instance returns 410, never send to it again.
-                        existing_instance = session.query(Instance).filter_by(domain=furl(uri).host).first()
+                    elif (
+                        result.status_code == 410 or result.status_code == 418
+                    ):  # When an instance returns 410, never send to it again.
+                        existing_instance = (
+                            session.query(Instance)
+                            .filter_by(domain=furl(uri).host)
+                            .first()
+                        )
                         if existing_instance:
                             existing_instance.gone_forever = True
-                        session.query(SendQueue).filter_by(destination_domain=furl(uri).host).delete()
+                        session.query(SendQueue).filter_by(
+                            destination_domain=furl(uri).host
+                        ).delete()
                     else:
                         if current_app.debug:
-                            current_app.logger.error(f'Response code for post attempt to {uri} was ' +
-                                                     str(result.status_code) + ' ' + result.text[:50])
+                            current_app.logger.error(
+                                f"Response code for post attempt to {uri} was "
+                                + str(result.status_code)
+                                + " "
+                                + result.text[:50]
+                            )
                 log.exception_message += uri
                 if result.status_code == 202:
-                    log.exception_message += ' 202'
+                    log.exception_message += " 202"
                 if result.status_code == 204:
-                    log.exception_message += ' 204'
+                    log.exception_message += " 204"
                 result.close()
             except Exception as e:
-                log.result = 'failure'
-                log.exception_message = 'could not send:' + str(e)
+                log.result = "failure"
+                log.exception_message = "could not send:" + str(e)
                 if current_app.debug:
-                    current_app.logger.error(f'Exception while sending post to {uri}')
+                    current_app.logger.error(f"Exception while sending post to {uri}")
                 http_status_code = 404
-        if log.result == 'processing':
-            log.result = 'success'
+        if log.result == "processing":
+            log.result = "success"
         session.commit()
 
-        if log.result != 'failure':
+        if log.result != "failure":
             return
         else:
-            if http_status_code is not None and (http_status_code == 429 or http_status_code >= 500):
+            if http_status_code is not None and (
+                http_status_code == 429 or http_status_code >= 500
+            ):
                 if content_type == "application/activity+json":
                     # Calculate retry delay with exponential backoff. 1 min, 2 mins, 4 mins, 8 mins, up to 4h
-                    backoff = 60 * (2 ** retries)
+                    backoff = 60 * (2**retries)
                     backoff = min(backoff, 15360)
-                    session.add(SendQueue(destination=uri, destination_domain=furl(uri).host, actor=key_id,
-                                             private_key=private_key, payload=json.dumps(body), retries=retries,
-                                             retry_reason=log.exception_message,
-                                             send_after=datetime.utcnow() + timedelta(seconds=backoff)))
+                    session.add(
+                        SendQueue(
+                            destination=uri,
+                            destination_domain=furl(uri).host,
+                            actor=key_id,
+                            private_key=private_key,
+                            payload=json.dumps(body),
+                            retries=retries,
+                            retry_reason=log.exception_message,
+                            send_after=datetime.utcnow() + timedelta(seconds=backoff),
+                        )
+                    )
                     session.commit()
 
             return
@@ -173,9 +256,17 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
         session.close()
 
 
-def signed_get_request(uri: str, private_key: str, key_id: str, content_type: str = "application/activity+json",
-                       method: Literal["get", "post"] = "get", timeout: int = 10, ):
-    result = HttpSignature.signed_request(uri, None, private_key, key_id, content_type, method, timeout)
+def signed_get_request(
+    uri: str,
+    private_key: str,
+    key_id: str,
+    content_type: str = "application/activity+json",
+    method: Literal["get", "post"] = "get",
+    timeout: int = 10,
+):
+    result = HttpSignature.signed_request(
+        uri, None, private_key, key_id, content_type, method, timeout
+    )
     return result
 
 
@@ -223,13 +314,13 @@ class RsaKeys:
 
 # Get a piece of the signature string. Similar to parse_signature except unencumbered by needing to return a HttpSignatureDetails
 def signature_part(signature, key):
-    parts = signature.split(',')
+    parts = signature.split(",")
     for part in parts:
-        part_parts = part.split('=')
+        part_parts = part.split("=")
         part_parts[0] = part_parts[0].strip()
         if part_parts[0] == key:
-            return part_parts[1].strip().replace('"', '')
-    return ''
+            return part_parts[1].strip().replace('"', "")
+    return ""
 
 
 class HttpSignature:
@@ -258,10 +349,12 @@ class HttpSignature:
         for header_name in header_names:
             if header_name == "(request-target)":
                 value = f"{request.method.lower()} {request.path}"
-            elif header_name == '(created)':
-                value = signature_part(request.headers.get('Signature'), 'created')  # Don't use parse_signature because changing HttpSignatureDetails changes everything & I don't have the spoons for that ATM.
-            elif header_name == '(expires)':
-                value = signature_part(request.headers.get('Signature'), 'expires')
+            elif header_name == "(created)":
+                value = signature_part(
+                    request.headers.get("Signature"), "created"
+                )  # Don't use parse_signature because changing HttpSignatureDetails changes everything & I don't have the spoons for that ATM.
+            elif header_name == "(expires)":
+                value = signature_part(request.headers.get("Signature"), "expires")
             elif header_name == "content-type":
                 value = request.headers.get("Content-Type", "")
             elif header_name == "content-length":
@@ -303,10 +396,10 @@ class HttpSignature:
 
     @classmethod
     def verify_signature(
-            cls,
-            signature: bytes,
-            cleartext: str,
-            public_key: str,
+        cls,
+        signature: bytes,
+        cleartext: str,
+        public_key: str,
     ):
         public_key_instance: rsa.RSAPublicKey = cast(
             rsa.RSAPublicKey,
@@ -348,8 +441,8 @@ class HttpSignature:
         # hs2019 is used by some libraries to obfuscate the real algorithm per the spec
         # https://datatracker.ietf.org/doc/html/draft-cavage-http-signatures-12
         if (
-                signature_details["algorithm"] != "rsa-sha256"
-                and signature_details["algorithm"] != "hs2019"
+            signature_details["algorithm"] != "rsa-sha256"
+            and signature_details["algorithm"] != "hs2019"
         ):
             raise VerificationFormatError("Unknown signature algorithm")
         # Create the signature payload
@@ -363,14 +456,14 @@ class HttpSignature:
 
     @classmethod
     def signed_request(
-            cls,
-            uri: str,
-            body: dict | None,
-            private_key: str,
-            key_id: str,
-            content_type: str = "application/activity+json",
-            method: Literal["get", "post"] = "post",
-            timeout: int = 5,
+        cls,
+        uri: str,
+        body: dict | None,
+        private_key: str,
+        key_id: str,
+        content_type: str = "application/activity+json",
+        method: Literal["get", "post"] = "post",
+        timeout: int = 5,
     ):
         """
         Performs a request to the given path, with a document, signed
@@ -388,8 +481,8 @@ class HttpSignature:
         }
         # If we have a body, add a digest and content type
         if body is not None:
-            if '@context' not in body:  # add a default json-ld context if necessary
-                body['@context'] = default_context()
+            if "@context" not in body:  # add a default json-ld context if necessary
+                body["@context"] = default_context()
             body_bytes = json.dumps(body).encode("utf8")
             headers["Digest"] = cls.calculate_digest(body_bytes)
             headers["Content-Type"] = content_type
@@ -423,7 +516,9 @@ class HttpSignature:
             }
         )
 
-        headers["User-Agent"] = f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+        headers["User-Agent"] = (
+            f'PieFed/{current_app.config["VERSION"]}; +https://{current_app.config["SERVER_NAME"]}'
+        )
 
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]
@@ -438,12 +533,14 @@ class HttpSignature:
             )
         except httpx.HTTPError as ex:
             # Convert to a more generic error we handle
-            raise httpx.HTTPError(f"HTTP Exception for {ex.request.url} - {ex}") from None
+            raise httpx.HTTPError(
+                f"HTTP Exception for {ex.request.url} - {ex}"
+            ) from None
 
         if (
-                method == "POST"
-                and 400 <= response.status_code < 500
-                and response.status_code != 404
+            method == "POST"
+            and 400 <= response.status_code < 500
+            and response.status_code != 404
         ):
             raise ValueError(
                 f"POST error to {uri}: {response.status_code} {response.content!r}"
@@ -501,7 +598,7 @@ class LDSignature:
 
     @classmethod
     def create_signature(
-            cls, document: dict, private_key: str, key_id: str
+        cls, document: dict, private_key: str, key_id: str
     ) -> dict[str, str]:
         """
         Creates the signature for a document
@@ -556,28 +653,27 @@ def default_context():
         "https://www.w3.org/ns/activitystreams",
         "https://w3id.org/security/v1",
     ]
-    if current_app.config['FULL_AP_CONTEXT']:
-        context.append({
-            "lemmy": "https://join-lemmy.org/ns#",
-            "litepub": "http://litepub.social/ns#",
-            "pt": "https://joinpeertube.org/ns#",
-            "sc": "http://schema.org/",
-            "ChatMessage": "litepub:ChatMessage",
-            "commentsEnabled": "pt:commentsEnabled",
-            "sensitive": "as:sensitive",
-            "matrixUserId": "lemmy:matrixUserId",
-            "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
-            "removeData": "lemmy:removeData",
-            "stickied": "lemmy:stickied",
-            "moderators": {
-                "@type": "@id",
-                "@id": "lemmy:moderators"
-            },
-            "expires": "as:endTime",
-            "distinguished": "lemmy:distinguished",
-            "language": "sc:inLanguage",
-            "identifier": "sc:identifier"
-        })
+    if current_app.config["FULL_AP_CONTEXT"]:
+        context.append(
+            {
+                "lemmy": "https://join-lemmy.org/ns#",
+                "litepub": "http://litepub.social/ns#",
+                "pt": "https://joinpeertube.org/ns#",
+                "sc": "http://schema.org/",
+                "ChatMessage": "litepub:ChatMessage",
+                "commentsEnabled": "pt:commentsEnabled",
+                "sensitive": "as:sensitive",
+                "matrixUserId": "lemmy:matrixUserId",
+                "postingRestrictedToMods": "lemmy:postingRestrictedToMods",
+                "removeData": "lemmy:removeData",
+                "stickied": "lemmy:stickied",
+                "moderators": {"@type": "@id", "@id": "lemmy:moderators"},
+                "expires": "as:endTime",
+                "distinguished": "lemmy:distinguished",
+                "language": "sc:inLanguage",
+                "identifier": "sc:identifier",
+            }
+        )
     return context
 
 
@@ -588,10 +684,16 @@ def fix_local_community_membership(uri: str, private_key: str, session):
     instance = session.query(Instance).filter_by(domain=instance_domain).first()
 
     if community and instance:
-        followers = session.query(CommunityMember).filter_by(community_id=community.id). \
-            join(User, User.id == CommunityMember.user_id). \
-            filter(User.instance_id == instance.id)
+        followers = (
+            session.query(CommunityMember)
+            .filter_by(community_id=community.id)
+            .join(User, User.id == CommunityMember.user_id)
+            .filter(User.instance_id == instance.id)
+        )
         for f in followers:
             session.execute(
-                text('DELETE FROM "community_member" WHERE user_id = :user_id AND community_id = :community_id'),
-                {'user_id': f.user_id, 'community_id': community.id})
+                text(
+                    'DELETE FROM "community_member" WHERE user_id = :user_id AND community_id = :community_id'
+                ),
+                {"user_id": f.user_id, "community_id": community.id},
+            )

@@ -27,14 +27,21 @@ def validate_user_availability(username, email):
     Returns:
         dict: Validation result with availability and suggestions
     """
-    result = {"username_available": True, "email_available": True, "username_suggestions": [], "validation_errors": {}}
+    result = {
+        "username_available": True,
+        "email_available": True,
+        "username_suggestions": [],
+        "validation_errors": {},
+    }
 
     # Check username availability
     existing_user = User.query.filter_by(user_name=username).first()
     if existing_user:
         result["username_available"] = False
         result["username_suggestions"] = generate_username_suggestions(username)
-        result["validation_errors"]["username"] = f"Username '{username}' is already taken"
+        result["validation_errors"][
+            "username"
+        ] = f"Username '{username}' is already taken"
 
     # Check email availability
     existing_email = User.query.filter_by(email=email).first()
@@ -74,7 +81,9 @@ def create_private_user(user_data):
             error_details["username_suggestions"] = validation["username_suggestions"]
 
         log_registration_attempt(username, email, False, "validation_failed")
-        raise ValidationError("User validation failed", field_name="validation", details=error_details)
+        raise ValidationError(
+            "User validation failed", field_name="validation", details=error_details
+        )
 
     # Generate password if not provided
     password = user_data.get("password")
@@ -120,7 +129,9 @@ def create_private_user(user_data):
         # Send welcome email if requested (implement this based on existing email system)
         if send_welcome_email:
             # TODO: Implement welcome email sending
-            current_app.logger.info(f"Welcome email requested for user {user_id} but not yet implemented")
+            current_app.logger.info(
+                f"Welcome email requested for user {user_id} but not yet implemented"
+            )
 
         db.session.commit()
 
@@ -142,7 +153,9 @@ def create_private_user(user_data):
         if generated_password:
             response["generated_password"] = generated_password
 
-        current_app.logger.info(f"Private registration successful: user_id={user_id}, username={username}")
+        current_app.logger.info(
+            f"Private registration successful: user_id={user_id}, username={username}"
+        )
 
         return response
 
@@ -199,7 +212,14 @@ def get_user_by_lookup(username=None, email=None, user_id=None):
 
 
 def list_users(
-    local_only=True, verified=None, active=None, search=None, sort="created_desc", page=1, limit=50, last_seen_days=None
+    local_only=True,
+    verified=None,
+    active=None,
+    search=None,
+    sort="created_desc",
+    page=1,
+    limit=50,
+    last_seen_days=None,
 ):
     """
     List users with filtering and pagination.
@@ -234,7 +254,9 @@ def list_users(
 
     if search:
         search_term = f"%{search}%"
-        query = query.filter(db.or_(User.user_name.ilike(search_term), User.email.ilike(search_term)))
+        query = query.filter(
+            db.or_(User.user_name.ilike(search_term), User.email.ilike(search_term))
+        )
 
     if last_seen_days:
         cutoff_date = utcnow() - timedelta(days=last_seen_days)
@@ -260,7 +282,9 @@ def list_users(
         query = query.order_by(User.created.desc())
 
     # Paginate
-    paginated = query.paginate(page=page, per_page=min(limit, 100), error_out=False)  # Cap at 100
+    paginated = query.paginate(
+        page=page, per_page=min(limit, 100), error_out=False
+    )  # Cap at 100
 
     # Build user list
     users = []

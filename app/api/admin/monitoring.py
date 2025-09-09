@@ -26,7 +26,9 @@ class AdminAPIMonitor:
         """Generate consistent Redis keys for rate limiting"""
         return f"piefed:admin_api:{key_type}:{identifier}"
 
-    def record_request(self, endpoint, method, status_code, duration_ms, client_ip=None):
+    def record_request(
+        self, endpoint, method, status_code, duration_ms, client_ip=None
+    ):
         """Record API request metrics"""
         timestamp = utcnow()
 
@@ -57,7 +59,9 @@ class AdminAPIMonitor:
 
                 # Store individual request (for debugging)
                 redis_key = self.get_redis_key("request", f"{timestamp.timestamp()}")
-                redis_client.setex(redis_key, 86400, json.dumps(metric_data))  # 24h expiry
+                redis_client.setex(
+                    redis_key, 86400, json.dumps(metric_data)
+                )  # 24h expiry
 
                 # Update hourly aggregates
                 hour_key = self.get_redis_key("hourly", metric_data["hour"])
@@ -67,7 +71,9 @@ class AdminAPIMonitor:
 
                 # Update error rates
                 if status_code >= 400:
-                    error_key = self.get_redis_key("errors", timestamp.strftime("%Y%m%d%H%M"))
+                    error_key = self.get_redis_key(
+                        "errors", timestamp.strftime("%Y%m%d%H%M")
+                    )
                     redis_client.incr(error_key)
                     redis_client.expire(error_key, 3600)  # 1 hour
 
@@ -77,7 +83,9 @@ class AdminAPIMonitor:
     def get_performance_stats(self):
         """Get performance statistics"""
         stats = {
-            "total_requests": sum(v for k, v in self.metrics.items() if k.startswith("requests_total_")),
+            "total_requests": sum(
+                v for k, v in self.metrics.items() if k.startswith("requests_total_")
+            ),
             "error_rate": 0.0,
             "average_response_times": {},
             "endpoint_usage": {},
@@ -86,7 +94,9 @@ class AdminAPIMonitor:
         # Calculate error rate
         total_requests = stats["total_requests"]
         error_requests = sum(
-            v for k, v in self.metrics.items() if k.startswith("requests_status_") and int(k.split("_")[-1]) >= 400
+            v
+            for k, v in self.metrics.items()
+            if k.startswith("requests_status_") and int(k.split("_")[-1]) >= 400
         )
 
         if total_requests > 0:
@@ -134,8 +144,12 @@ class AdminAPIMonitor:
                 "redis_available": True,
                 "current_hour_stats": hourly_stats,
                 "redis_info": {
-                    "used_memory": redis_client.info().get("used_memory_human", "unknown"),
-                    "connected_clients": redis_client.info().get("connected_clients", 0),
+                    "used_memory": redis_client.info().get(
+                        "used_memory_human", "unknown"
+                    ),
+                    "connected_clients": redis_client.info().get(
+                        "connected_clients", 0
+                    ),
                 },
             }
         except Exception as e:
@@ -268,7 +282,9 @@ class AdvancedRateLimiter:
 
         # Remove old requests
         g.rate_limit_cache[cache_key] = [
-            req_time for req_time in g.rate_limit_cache[cache_key] if req_time > current_time - window_seconds
+            req_time
+            for req_time in g.rate_limit_cache[cache_key]
+            if req_time > current_time - window_seconds
         ]
 
         current_count = len(g.rate_limit_cache[cache_key])
@@ -307,7 +323,9 @@ class AdvancedRateLimiter:
             return f"secret:{secret_hash}"
 
         # Fallback to IP address
-        client_ip = request_obj.environ.get("HTTP_X_FORWARDED_FOR", request_obj.remote_addr)
+        client_ip = request_obj.environ.get(
+            "HTTP_X_FORWARDED_FOR", request_obj.remote_addr
+        )
         if client_ip and "," in client_ip:
             client_ip = client_ip.split(",")[0].strip()
 
@@ -333,13 +351,17 @@ def track_admin_request(endpoint, method="GET"):
                 duration_ms = int((time.time() - start_time) * 1000)
 
                 # Record metrics
-                admin_monitor.record_request(endpoint, method, status_code, duration_ms, client_ip)
+                admin_monitor.record_request(
+                    endpoint, method, status_code, duration_ms, client_ip
+                )
 
                 return response
 
             except Exception:
                 duration_ms = int((time.time() - start_time) * 1000)
-                admin_monitor.record_request(endpoint, method, 500, duration_ms, client_ip)
+                admin_monitor.record_request(
+                    endpoint, method, 500, duration_ms, client_ip
+                )
                 raise
 
         wrapper.__name__ = func.__name__
@@ -371,7 +393,9 @@ def check_advanced_rate_limit(operation_type):
 
         # Log rate limit violation
         try:
-            current_app.logger.warning(f"Rate limit exceeded: {identifier} for {operation_type}")
+            current_app.logger.warning(
+                f"Rate limit exceeded: {identifier} for {operation_type}"
+            )
         except RuntimeError:
             pass
 

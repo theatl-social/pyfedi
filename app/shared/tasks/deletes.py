@@ -1,12 +1,21 @@
-from app import celery, db
-from app.activitypub.signature import default_context, send_post_request
-from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION
-from app.models import Community, Instance, Post, PostReply, User, UserFollower, File, Notification, ChatMessage
-from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
-
 from flask import current_app
 from sqlalchemy import Integer
 
+from app import celery, db
+from app.activitypub.signature import default_context, send_post_request
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION
+from app.models import (
+    ChatMessage,
+    Community,
+    File,
+    Instance,
+    Notification,
+    Post,
+    PostReply,
+    User,
+    UserFollower,
+)
+from app.utils import get_task_session, gibberish, instance_banned, patch_db_session
 
 """ JSON format
 Delete:
@@ -47,7 +56,9 @@ def restore_reply(send_async, user_id, reply_id, reason=None):
         try:
             with patch_db_session(session):
                 reply = session.query(PostReply).filter_by(id=reply_id).one()
-                delete_object(user_id, reply, is_restore=True, reason=reason, session=session)
+                delete_object(
+                    user_id, reply, is_restore=True, reason=reason, session=session
+                )
         except Exception:
             session.rollback()
             raise
@@ -62,7 +73,9 @@ def delete_post(send_async, user_id, post_id, reason=None):
         try:
             with patch_db_session(session):
                 post = session.query(Post).filter_by(id=post_id).one()
-                delete_object(user_id, post, is_post=True, reason=reason, session=session)
+                delete_object(
+                    user_id, post, is_post=True, reason=reason, session=session
+                )
         except Exception:
             session.rollback()
             raise
@@ -77,7 +90,14 @@ def restore_post(send_async, user_id, post_id, reason=None):
         try:
             with patch_db_session(session):
                 post = session.query(Post).filter_by(id=post_id).one()
-                delete_object(user_id, post, is_post=True, is_restore=True, reason=reason, session=session)
+                delete_object(
+                    user_id,
+                    post,
+                    is_post=True,
+                    is_restore=True,
+                    reason=reason,
+                    session=session,
+                )
         except Exception:
             session.rollback()
             raise
@@ -115,7 +135,9 @@ def restore_community(send_async, user_id, community_id):
             session.close()
 
 
-def delete_object(user_id, object, is_post=False, is_restore=False, reason=None, session=None):
+def delete_object(
+    user_id, object, is_post=False, is_restore=False, reason=None, session=None
+):
     user = session.query(User).filter_by(id=user_id).one()
     if isinstance(object, Community):
         community = object
@@ -134,72 +156,89 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
         return
 
     # commented out because surely we still want to be able to delete stuff in banned/blocked places?
-    #banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
-    #if banned:
+    # banned = CommunityBan.query.filter_by(user_id=user_id, community_id=community.id).first()
+    # if banned:
     #    return
-    #if not community.is_local():
+    # if not community.is_local():
     #    if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
     #        return
 
-    delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    delete_id = (
+        f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    )
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     delete = {
-      'id': delete_id,
-      'type': 'Delete',
-      'actor': user.public_url(),
-      'object': object.public_url(),
-      '@context': default_context(),
-      'audience': community.public_url(),
-      'to': to,
-      'cc': cc
+        "id": delete_id,
+        "type": "Delete",
+        "actor": user.public_url(),
+        "object": object.public_url(),
+        "@context": default_context(),
+        "audience": community.public_url(),
+        "to": to,
+        "cc": cc,
     }
     if reason:
-        delete['summary'] = reason
+        delete["summary"] = reason
 
     if is_restore:
-        del delete['@context']
+        del delete["@context"]
         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
         undo = {
-          'id': undo_id,
-          'type': 'Undo',
-          'actor': user.public_url(),
-          'object': delete,
-          '@context': default_context(),
-          'audience': community.public_url(),
-          'to': to,
-          'cc': cc
+            "id": undo_id,
+            "type": "Undo",
+            "actor": user.public_url(),
+            "object": delete,
+            "@context": default_context(),
+            "audience": community.public_url(),
+            "to": to,
+            "cc": cc,
         }
 
     domains_sent_to = []
 
     if community.is_local():
         if is_restore:
-            del undo['@context']
-            object=undo
+            del undo["@context"]
+            object = undo
         else:
-            del delete['@context']
-            object=delete
+            del delete["@context"]
+            object = delete
 
         announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {
-          'id': announce_id,
-          'type': 'Announce',
-          'actor': actor,
-          'object': object,
-          '@context': default_context(),
-          'to': to,
-          'cc': cc
+            "id": announce_id,
+            "type": "Announce",
+            "actor": actor,
+            "object": object,
+            "@context": default_context(),
+            "to": to,
+            "cc": cc,
         }
         for instance in community.following_instances():
-            if instance.inbox and instance.online() and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+            if (
+                instance.inbox
+                and instance.online()
+                and not user.has_blocked_instance(instance.id)
+                and not instance_banned(instance.domain)
+            ):
+                send_post_request(
+                    instance.inbox,
+                    announce,
+                    community.private_key,
+                    community.public_url() + "#main-key",
+                )
                 domains_sent_to.append(instance.domain)
     else:
         payload = undo if is_restore else delete
-        send_post_request(community.ap_inbox_url, payload, user.private_key, user.public_url() + '#main-key')
+        send_post_request(
+            community.ap_inbox_url,
+            payload,
+            user.private_key,
+            user.public_url() + "#main-key",
+        )
         domains_sent_to.append(community.instance.domain)
 
     if reason:
@@ -210,23 +249,38 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
         for follower in followers:
             user_details = session.query(User).get(follower.remote_user_id)
             if user_details:
-                payload['cc'].append(user_details.public_url())
-        instances = session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower, UserFollower.remote_user_id == User.id)
-        instances = instances.filter(UserFollower.local_user_id == user.id).filter(Instance.gone_forever == False)
+                payload["cc"].append(user_details.public_url())
+        instances = (
+            session.query(Instance)
+            .join(User, User.instance_id == Instance.id)
+            .join(UserFollower, UserFollower.remote_user_id == User.id)
+        )
+        instances = instances.filter(UserFollower.local_user_id == user.id).filter(
+            Instance.gone_forever == False
+        )
         for instance in instances:
             if instance.domain not in domains_sent_to:
-                send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
+                send_post_request(
+                    instance.inbox,
+                    payload,
+                    user.private_key,
+                    user.public_url() + "#main-key",
+                )
 
     # remove any notifications about deleted posts
     if is_post:
-        notifs = session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == object.id)
+        notifs = session.query(Notification).filter(
+            Notification.targets.op("->>")("post_id").cast(Integer) == object.id
+        )
         for notif in notifs:
             # dont delete report notifs
-            if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            if (
+                notif.notif_type == NOTIF_REPORT
+                or notif.notif_type == NOTIF_REPORT_ESCALATION
+            ):
                 continue
             session.delete(notif)
         session.commit()
-
 
 
 @celery.task
@@ -249,7 +303,9 @@ def delete_posts_with_blocked_images(post_ids, user_id, send_async):
                             file.delete_from_disk()
                         session.commit()
 
-                        delete_object(user_id, post, is_post=True, reason='Contains blocked image')
+                        delete_object(
+                            user_id, post, is_post=True, reason="Contains blocked image"
+                        )
         except Exception:
             session.rollback()
             raise
@@ -294,27 +350,34 @@ def delete_message(message, recipient, is_restore=False):
     if recipient.is_local():
         return
 
-    delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    delete_id = (
+        f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    )
     delete = {
-      'id': delete_id,
-      'type': 'Delete',
-      'actor': message.sender.public_url(),
-      'object': message.ap_id,
-      '@context': default_context(),
-      'to': recipient.public_url()
+        "id": delete_id,
+        "type": "Delete",
+        "actor": message.sender.public_url(),
+        "object": message.ap_id,
+        "@context": default_context(),
+        "to": recipient.public_url(),
     }
 
     if is_restore:
-        del delete['@context']
+        del delete["@context"]
         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
         undo = {
-          'id': undo_id,
-          'type': 'Undo',
-          'actor': message.sender.public_url(),
-          'object': delete,
-          '@context': default_context(),
-          'to': recipient.public_url()
+            "id": undo_id,
+            "type": "Undo",
+            "actor": message.sender.public_url(),
+            "object": delete,
+            "@context": default_context(),
+            "to": recipient.public_url(),
         }
 
     payload = undo if is_restore else delete
-    send_post_request(recipient.ap_inbox_url, payload, message.sender.private_key, message.sender.public_url() + '#main-key')
+    send_post_request(
+        recipient.ap_inbox_url,
+        payload,
+        message.sender.private_key,
+        message.sender.public_url() + "#main-key",
+    )

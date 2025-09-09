@@ -1,10 +1,9 @@
+from flask import current_app
+
 from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import CommunityBan, Post, PostReply, User
-from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
-
-from flask import current_app
-
+from app.utils import get_task_session, gibberish, instance_banned, patch_db_session
 
 """ JSON format
 Flag:
@@ -57,26 +56,34 @@ def report_object(session, user_id, object, summary):
     if community.local_only or not community.instance.online():
         return
 
-    banned = session.query(CommunityBan).filter_by(user_id=user_id, community_id=community.id).first()
+    banned = (
+        session.query(CommunityBan)
+        .filter_by(user_id=user_id, community_id=community.id)
+        .first()
+    )
     if banned:
         return
     if not community.is_local():
-        if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
+        if user.has_blocked_instance(community.instance.id) or instance_banned(
+            community.instance.domain
+        ):
             return
 
-    flag_id = f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}"
+    flag_id = (
+        f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}"
+    )
     to = [community.public_url()]
     flag = {
-      'id': flag_id,
-      'type': 'Flag',
-      'actor': user.public_url(),
-      'object': object.public_url(),
-      '@context': default_context(),
-      'audience': community.public_url(),
-      'to': to,
-      'summary': summary
+        "id": flag_id,
+        "type": "Flag",
+        "actor": user.public_url(),
+        "object": object.public_url(),
+        "@context": default_context(),
+        "audience": community.public_url(),
+        "to": to,
+        "summary": summary,
     }
 
-    send_post_request(community.ap_inbox_url, flag, user.private_key, user.public_url() + '#main-key')
-
-
+    send_post_request(
+        community.ap_inbox_url, flag, user.private_key, user.public_url() + "#main-key"
+    )

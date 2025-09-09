@@ -90,7 +90,9 @@ def validate_private_registration_request():
         client_ip = client_ip.split(",")[0].strip()
 
     if not is_ip_whitelisted(client_ip):
-        current_app.logger.warning(f"Unauthorized IP attempted private registration: {client_ip}")
+        current_app.logger.warning(
+            f"Unauthorized IP attempted private registration: {client_ip}"
+        )
         raise Forbidden("IP not authorized for private registration")
 
     # 3. Secret validation
@@ -143,7 +145,9 @@ def log_registration_attempt(username, email, success, error_reason=None, user_i
         "success": success,
         "error": error_reason,
         "user_id": user_id,
-        "user_agent": user_agent[:100] if user_agent else None,  # Truncate long user agents
+        "user_agent": (
+            user_agent[:100] if user_agent else None
+        ),  # Truncate long user agents
     }
 
     if success:

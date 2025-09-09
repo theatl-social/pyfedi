@@ -47,7 +47,9 @@ def get_metrics():
             "system": {
                 "uptime_seconds": 0,  # TODO: Track application uptime
                 "memory_usage": "unknown",  # TODO: Add memory monitoring
-                "active_connections": redis_stats.get("redis_info", {}).get("connected_clients", 0),
+                "active_connections": redis_stats.get("redis_info", {}).get(
+                    "connected_clients", 0
+                ),
             },
         }
 
@@ -55,7 +57,11 @@ def get_metrics():
         accept_header = current_app.config.get("HTTP_ACCEPT", "")
         if "text/plain" in accept_header:
             prometheus_metrics = _format_prometheus_metrics(metrics)
-            return prometheus_metrics, 200, {"Content-Type": "text/plain; version=0.0.4"}
+            return (
+                prometheus_metrics,
+                200,
+                {"Content-Type": "text/plain; version=0.0.4"},
+            )
 
         return metrics, 200
 
@@ -82,7 +88,11 @@ def get_metrics():
 @track_admin_request("health")
 def comprehensive_health_check():
     """Comprehensive health check with dependency validation"""
-    health_status = {"timestamp": utcnow().isoformat(), "status": "healthy", "checks": {}}
+    health_status = {
+        "timestamp": utcnow().isoformat(),
+        "status": "healthy",
+        "checks": {},
+    }
 
     overall_healthy = True
 
@@ -125,7 +135,10 @@ def comprehensive_health_check():
             }
             overall_healthy = False
     else:
-        health_status["checks"]["redis"] = {"status": "disabled", "message": "Redis not configured"}
+        health_status["checks"]["redis"] = {
+            "status": "disabled",
+            "message": "Redis not configured",
+        }
 
     # Rate limiting health check
     try:
@@ -231,7 +244,11 @@ def get_audit_trail():
     """Get audit trail from Redis logs"""
     try:
         if not redis_client:
-            return {"audit_logs": [], "message": "Audit logging requires Redis", "redis_available": False}, 200
+            return {
+                "audit_logs": [],
+                "message": "Audit logging requires Redis",
+                "redis_available": False,
+            }, 200
 
         # Get recent audit entries from Redis
         current_time = datetime.utcnow()
@@ -246,7 +263,10 @@ def get_audit_trail():
                 hourly_data = redis_client.hgetall(hour_key)
                 if hourly_data:
                     # Convert Redis data to audit format
-                    hour_audit = {"hour": check_time.strftime("%Y-%m-%d %H:00"), "operations": {}}
+                    hour_audit = {
+                        "hour": check_time.strftime("%Y-%m-%d %H:00"),
+                        "operations": {},
+                    }
 
                     for key, value in hourly_data.items():
                         if isinstance(key, bytes):
@@ -258,7 +278,9 @@ def get_audit_trail():
                     if hour_audit["operations"]:  # Only include hours with activity
                         audit_logs.append(hour_audit)
             except Exception as e:
-                current_app.logger.warning(f"Failed to read audit data for {hour_key}: {e}")
+                current_app.logger.warning(
+                    f"Failed to read audit data for {hour_key}: {e}"
+                )
 
         return {
             "audit_logs": audit_logs,
@@ -301,15 +323,21 @@ def _format_prometheus_metrics(metrics_data):
         avg_ms = timing_info.get("avg_ms", 0)
         endpoint_safe = endpoint_method.replace("/", "_").replace("-", "_")
 
-        prometheus_lines.append("# HELP piefed_admin_api_response_time_ms Response time in milliseconds")
+        prometheus_lines.append(
+            "# HELP piefed_admin_api_response_time_ms Response time in milliseconds"
+        )
         prometheus_lines.append("# TYPE piefed_admin_api_response_time_ms gauge")
-        prometheus_lines.append(f'piefed_admin_api_response_time_ms{{endpoint="{endpoint_safe}"}} {avg_ms}')
+        prometheus_lines.append(
+            f'piefed_admin_api_response_time_ms{{endpoint="{endpoint_safe}"}} {avg_ms}'
+        )
 
     # Redis metrics
     redis_info = metrics_data.get("redis", {})
     if redis_info.get("redis_available"):
         connected_clients = redis_info.get("redis_info", {}).get("connected_clients", 0)
-        prometheus_lines.append("# HELP piefed_admin_api_redis_clients Connected Redis clients")
+        prometheus_lines.append(
+            "# HELP piefed_admin_api_redis_clients Connected Redis clients"
+        )
         prometheus_lines.append("# TYPE piefed_admin_api_redis_clients gauge")
         prometheus_lines.append(f"piefed_admin_api_redis_clients {connected_clients}")
 

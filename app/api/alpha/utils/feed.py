@@ -4,20 +4,36 @@ from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
-    array_of_integers_expected
+from app.api.alpha.utils.validators import (
+    array_of_integers_expected,
+    boolean_expected,
+    integer_expected,
+    required,
+    string_expected,
+)
 from app.api.alpha.views import feed_view
 from app.constants import *
 from app.models import User
-from app.utils import authorise_api_user, blocked_communities, blocked_instances, filtered_out_communities, \
-    communities_banned_from, moderating_communities_ids, joined_or_modding_communities, feed_tree_public, feed_tree, \
-    subscribed_feeds
+from app.utils import (
+    authorise_api_user,
+    blocked_communities,
+    blocked_instances,
+    communities_banned_from,
+    feed_tree,
+    feed_tree_public,
+    filtered_out_communities,
+    joined_or_modding_communities,
+    moderating_communities_ids,
+    subscribed_feeds,
+)
 
 
 def get_feed_list(auth, data, user_id=None) -> dict:
 
-    mine_only = data['mine_only'] if data and 'mine_only' in data else False
-    include_communities = data['include_communities'] if data and 'include_communities' in data else True
+    mine_only = data["mine_only"] if data and "mine_only" in data else False
+    include_communities = (
+        data["include_communities"] if data and "include_communities" in data else True
+    )
 
     if auth:
         user_id = authorise_api_user(auth)
@@ -52,28 +68,33 @@ def get_feed_list(auth, data, user_id=None) -> dict:
     def process_nested_feeds(feed_tree):
         """Process nested feed tree while preserving nested structure"""
         processed_feeds = []
-        
+
         for item in feed_tree:
-            view = feed_view(feed=item['feed'], variant=1, user_id=user_id, subscribed=subscribed,
-                             include_communities=include_communities, communities_moderating=communities_moderating,
-                             banned_from=banned_from, communities_joined=communities_joined,
-                             blocked_community_ids=blocked_community_ids,
-                             blocked_instance_ids=blocked_instance_ids)
-            
+            view = feed_view(
+                feed=item["feed"],
+                variant=1,
+                user_id=user_id,
+                subscribed=subscribed,
+                include_communities=include_communities,
+                communities_moderating=communities_moderating,
+                banned_from=banned_from,
+                communities_joined=communities_joined,
+                blocked_community_ids=blocked_community_ids,
+                blocked_instance_ids=blocked_instance_ids,
+            )
+
             # Process nested children
-            if item['children']:
-                view['children'] = process_nested_feeds(item['children'])
+            if item["children"]:
+                view["children"] = process_nested_feeds(item["children"])
             else:
-                view['children'] = []
-            
+                view["children"] = []
+
             processed_feeds.append(view)
-        
+
         return processed_feeds
-    
+
     feedlist = process_nested_feeds(feeds)
 
-    list_json = {
-        "feeds": feedlist
-    }
+    list_json = {"feeds": feedlist}
 
     return list_json
