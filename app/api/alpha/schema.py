@@ -997,7 +997,6 @@ class ListPostLikesResponse(DefaultSchema):
     next_page = fields.String(allow_none=True)
 
 
-<<<<<<< HEAD
 # Admin API Schemas
 class AdminPrivateRegistrationRequest(DefaultSchema):
     username = fields.String(required=True, validate=validate.Length(min=3, max=50), 

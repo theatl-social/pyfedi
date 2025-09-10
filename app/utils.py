@@ -3387,7 +3387,6 @@ def show_explore():
     return num_topics() > 0 or num_feeds() > 0
 
 
-<<<<<<< HEAD
 # Private Registration Configuration Helpers
 def is_private_registration_enabled():
     """Check if private registration feature is enabled"""
