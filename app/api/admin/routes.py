@@ -71,10 +71,10 @@ from app.utils import is_private_registration_enabled
 )
 @admin_bp.arguments(AdminPrivateRegistrationRequest, location="json")
 @admin_bp.response(201, AdminPrivateRegistrationResponse, description="User created successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="Validation error or user already exists")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
-@admin_bp.alt_response(403, AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
-@admin_bp.alt_response(429, AdminPrivateRegistrationError, description="Rate limit exceeded")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="Validation error or user already exists")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(403, schema=AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
+@admin_bp.alt_response(429, schema=AdminPrivateRegistrationError, description="Rate limit exceeded")
 @require_private_registration_auth
 @track_admin_request("private_register", "POST")
 def create_private_user_endpoint(json_data):
@@ -117,8 +117,8 @@ def create_private_user_endpoint(json_data):
 )
 @admin_bp.arguments(AdminUserValidationRequest, location="json")
 @admin_bp.response(200, AdminUserValidationResponse, description="Validation result")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
-@admin_bp.alt_response(403, AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(403, schema=AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
 @require_private_registration_auth
 def validate_user_endpoint(json_data):
     """Validate username and email availability"""
@@ -148,8 +148,8 @@ def validate_user_endpoint(json_data):
 )
 @admin_bp.arguments(AdminUserListRequest, location="query")
 @admin_bp.response(200, AdminUserListResponse, description="User list with pagination")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
-@admin_bp.alt_response(403, AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(403, schema=AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
 @require_private_registration_auth
 def list_users_endpoint(query_args):
     """List users with filtering and pagination"""
@@ -177,8 +177,8 @@ def list_users_endpoint(query_args):
 )
 @admin_bp.arguments(AdminUserLookupRequest, location="query")
 @admin_bp.response(200, AdminUserLookupResponse, description="User lookup result")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
-@admin_bp.alt_response(403, AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(403, schema=AdminPrivateRegistrationError, description="Feature disabled or IP not authorized")
 @require_private_registration_auth
 def lookup_user_endpoint(query_args):
     """Look up user by username, email, or ID"""
@@ -198,7 +198,7 @@ def lookup_user_endpoint(query_args):
     security=[{"PrivateRegistrationSecret": []}],
 )
 @admin_bp.response(200, AdminHealthResponse, description="Health check result")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
 @require_private_registration_auth
 def health_check_endpoint():
     """Health check for admin API"""
@@ -264,9 +264,9 @@ def handle_bad_request(error):
 )
 @admin_bp.arguments(AdminUserUpdateRequest, location="json")
 @admin_bp.response(200, AdminUserUpdateResponse, description="User updated successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="Validation error")
-@admin_bp.alt_response(401, AdminPrivateRegistrationError, description="Invalid secret")
-@admin_bp.alt_response(404, AdminPrivateRegistrationError, description="User not found")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="Validation error")
+@admin_bp.alt_response(401, schema=AdminPrivateRegistrationError, description="Invalid secret")
+@admin_bp.alt_response(404, schema=AdminPrivateRegistrationError, description="User not found")
 @require_private_registration_auth
 def update_user_endpoint(json_data, user_id):
     """Update user profile information"""
@@ -290,7 +290,7 @@ def update_user_endpoint(json_data, user_id):
 )
 @admin_bp.arguments(AdminUserActionRequest, location="json")
 @admin_bp.response(200, AdminUserActionResponse, description="User disabled successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="User already disabled or other error")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="User already disabled or other error")
 @require_private_registration_auth
 def disable_user_endpoint(json_data, user_id):
     """Disable user account"""
@@ -314,7 +314,7 @@ def disable_user_endpoint(json_data, user_id):
     security=[{"PrivateRegistrationSecret": []}],
 )
 @admin_bp.response(200, AdminUserActionResponse, description="User enabled successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="User already enabled or other error")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="User already enabled or other error")
 @require_private_registration_auth
 def enable_user_endpoint(user_id):
     """Enable user account"""
@@ -336,7 +336,7 @@ def enable_user_endpoint(user_id):
 )
 @admin_bp.arguments(AdminUserActionRequest, location="json")
 @admin_bp.response(200, AdminUserActionResponse, description="User banned successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="User already banned or other error")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="User already banned or other error")
 @require_private_registration_auth
 def ban_user_endpoint(json_data, user_id):
     """Ban user account"""
@@ -360,7 +360,7 @@ def ban_user_endpoint(json_data, user_id):
     security=[{"PrivateRegistrationSecret": []}],
 )
 @admin_bp.response(200, AdminUserActionResponse, description="User unbanned successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="User not banned or other error")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="User not banned or other error")
 @require_private_registration_auth
 def unban_user_endpoint(user_id):
     """Unban user account"""
@@ -382,7 +382,7 @@ def unban_user_endpoint(user_id):
 )
 @admin_bp.arguments(AdminUserActionRequest, location="json")
 @admin_bp.response(200, AdminUserActionResponse, description="User deleted successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="User already deleted or other error")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="User already deleted or other error")
 @require_private_registration_auth
 def delete_user_endpoint(json_data, user_id):
     """Soft delete user account"""
@@ -406,7 +406,7 @@ def delete_user_endpoint(json_data, user_id):
 )
 @admin_bp.arguments(AdminBulkUserRequest, location="json")
 @admin_bp.response(200, AdminBulkUserResponse, description="Bulk operation completed")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="Invalid request or too many users")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="Invalid request or too many users")
 @require_private_registration_auth
 @track_admin_request("users_bulk", "POST")
 def bulk_user_operations_endpoint(json_data):
@@ -496,7 +496,7 @@ def registration_statistics_endpoint(query_args):
 )
 @admin_bp.arguments(AdminUserExportRequest, location="json")
 @admin_bp.response(200, AdminUserExportResponse, description="Export prepared successfully")
-@admin_bp.alt_response(400, AdminPrivateRegistrationError, description="Invalid export request")
+@admin_bp.alt_response(400, schema=AdminPrivateRegistrationError, description="Invalid export request")
 @require_private_registration_auth
 def export_users_endpoint(json_data):
     """Export user data"""

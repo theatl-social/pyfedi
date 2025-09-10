@@ -42,7 +42,7 @@ print_error() {
 # Function to cleanup containers
 cleanup() {
     print_status "🧹 Cleaning up test environment..."
-    docker-compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
+    docker compose -f "$COMPOSE_FILE" down -v --remove-orphans 2>/dev/null || true
     docker network rm "$TEST_NETWORK" 2>/dev/null || true
     print_success "✅ Cleanup completed"
 }
@@ -66,7 +66,7 @@ fi
 print_status "🔧 Building test environment..."
 
 # Build the containers
-if ! docker-compose -f "$COMPOSE_FILE" build --no-cache; then
+if ! docker compose -f "$COMPOSE_FILE" build --no-cache; then
     print_error "❌ Failed to build test containers"
     exit 1
 fi
@@ -80,7 +80,7 @@ print_status "   - Celery worker"
 print_status "   - Web application"
 
 # Start services in background
-if ! docker-compose -f "$COMPOSE_FILE" up -d test-db test-redis test-celery test-web; then
+if ! docker compose -f "$COMPOSE_FILE" up -d test-db test-redis test-celery test-web; then
     print_error "❌ Failed to start test services"
     exit 1
 fi
@@ -91,7 +91,7 @@ print_status "⏳ Waiting for services to be healthy..."
 print_status "   Checking PostgreSQL 17..."
 timeout=60
 while [ $timeout -gt 0 ]; do
-    if docker-compose -f "$COMPOSE_FILE" exec -T test-db pg_isready -U pyfedi_test -d pyfedi_test >/dev/null 2>&1; then
+    if docker compose -f "$COMPOSE_FILE" exec -T test-db pg_isready -U pyfedi_test -d pyfedi_test >/dev/null 2>&1; then
         print_success "   ✅ PostgreSQL 17 is ready"
         break
     fi
@@ -101,13 +101,13 @@ done
 
 if [ $timeout -le 0 ]; then
     print_error "❌ PostgreSQL 17 failed to start within 60 seconds"
-    print_error "   Check logs: docker-compose -f $COMPOSE_FILE logs test-db"
+    print_error "   Check logs: docker compose -f $COMPOSE_FILE logs test-db"
     exit 1
 fi
 
 # Wait for Redis to be ready
 print_status "   Checking Redis..."
-if docker-compose -f "$COMPOSE_FILE" exec -T test-redis redis-cli ping >/dev/null 2>&1; then
+if docker compose -f "$COMPOSE_FILE" exec -T test-redis redis-cli ping >/dev/null 2>&1; then
     print_success "   ✅ Redis is ready"
 else
     print_error "❌ Redis is not responding"
@@ -118,7 +118,7 @@ fi
 print_status "   Checking web application..."
 timeout=120
 while [ $timeout -gt 0 ]; do
-    if docker-compose -f "$COMPOSE_FILE" exec -T test-web curl -f http://localhost:5000/ >/dev/null 2>&1; then
+    if docker compose -f "$COMPOSE_FILE" exec -T test-web curl -f http://localhost:5000/ >/dev/null 2>&1; then
         print_success "   ✅ Web application is ready"
         break
     fi
@@ -128,7 +128,7 @@ done
 
 if [ $timeout -le 0 ]; then
     print_warning "⚠️  Web application health check timed out, but continuing..."
-    print_warning "   You can check logs: docker-compose -f $COMPOSE_FILE logs test-web"
+    print_warning "   You can check logs: docker compose -f $COMPOSE_FILE logs test-web"
 fi
 
 print_success "🎉 Full production mirror environment is ready!"
@@ -141,7 +141,7 @@ print_status "   - Network: $TEST_NETWORK (isolated)"
 print_status "🧪 Running comprehensive validation tests..."
 
 # Run the test suite
-if docker-compose -f "$COMPOSE_FILE" run --rm test-runner; then
+if docker compose -f "$COMPOSE_FILE" run --rm test-runner; then
     print_success "🎉 All validation tests passed!"
     print_success "✅ Current operations verified successfully"
     print_success "🚀 Safe to proceed with substantial changes"
@@ -178,7 +178,7 @@ fi
 
 echo ""
 print_status "📚 For more information:"
-print_status "   - Logs: docker-compose -f $COMPOSE_FILE logs"
+print_status "   - Logs: docker compose -f $COMPOSE_FILE logs"
 print_status "   - Interactive: ./scripts/test-shell.sh"
 print_status "   - Lightweight tests: ./scripts/run-unit-tests.sh"
 

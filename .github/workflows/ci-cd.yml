@@ -1,0 +1,316 @@
+name: CI/CD - Build, Test & Validate
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      run_full_tests:
+        description: 'Run full production mirror tests'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # Fast validation jobs that run on every commit
+  startup-validation:
+    name: 🚀 Startup Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-mock
+      
+      - name: Run startup validation tests
+        run: |
+          echo "🧪 Running startup validation tests with Python 3.13"
+          python -m pytest tests/test_startup_validation.py -v --tb=short
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          CELERY_BROKER_URL: memory://localhost/
+          TESTING: true
+      
+      - name: Standalone startup test
+        run: |
+          echo "🚀 Running standalone startup validation"
+          python tests/test_startup_validation.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          CELERY_BROKER_URL: memory://localhost/
+          TESTING: true
+
+  # Schema immutability and core logic tests
+  core-tests:
+    name: 🔒 Core Logic Tests
+    runs-on: ubuntu-latest
+    needs: startup-validation
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+      
+      - name: Run field consistency tests
+        run: |
+          echo "🔒 Testing database schema immutability"
+          python -m pytest tests/test_field_consistency_simple.py -v
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          TESTING: true
+      
+      - name: Run HTML processing tests
+        run: |
+          echo "🧹 Testing HTML sanitization and processing"
+          python -m pytest tests/test_allowlist_html.py -v
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          TESTING: true
+          
+      - name: Run additional core tests
+        run: |
+          echo "📝 Running additional core logic tests"
+          # Run any other fast unit tests
+          find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -exec python -m pytest {} -v \; || true
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          TESTING: true
+
+  # Linting and code quality
+  code-quality:
+    name: 📊 Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Install linting tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black isort mypy
+          # Install project dependencies for mypy
+          pip install -r requirements.txt
+      
+      - name: Run ruff linting
+        run: |
+          echo "🔍 Running ruff linting"
+          ruff check . --output-format=github
+        continue-on-error: true
+      
+      - name: Run black formatting check
+        run: |
+          echo "🖤 Checking code formatting with black"
+          black --check --diff .
+        continue-on-error: true
+      
+      - name: Run isort import sorting check
+        run: |
+          echo "📦 Checking import sorting with isort" 
+          isort --check-only --diff .
+        continue-on-error: true
+      
+      - name: Run mypy type checking
+        run: |
+          echo "🏷️ Running type checking with mypy"
+          mypy app/ --ignore-missing-imports --follow-imports=silent
+        continue-on-error: true
+
+  # Docker build validation
+  docker-validation:
+    name: 🐳 Docker Build Validation
+    runs-on: ubuntu-latest
+    needs: startup-validation
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build Docker image
+        run: |
+          echo "🐳 Building Docker image for validation"
+          docker build --target builder -t pyfedi:test .
+      
+      - name: Test Docker image startup
+        run: |
+          echo "🧪 Testing Docker image startup"
+          docker run --rm \
+            -e PYTHONPATH=/app \
+            -e SERVER_NAME=test.localhost \
+            -e SECRET_KEY=test-secret-key \
+            -e DATABASE_URL=sqlite:///memory:test.db \
+            -e CACHE_TYPE=NullCache \
+            -e CACHE_REDIS_URL=memory:// \
+            -e CELERY_BROKER_URL=memory://localhost/ \
+            -e TESTING=true \
+            pyfedi:test \
+            python tests/test_startup_validation.py
+
+  # Full production mirror tests (optional/conditional)
+  production-mirror-tests:
+    name: 🏭 Production Mirror Tests
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.run_full_tests == 'true' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
+    needs: [startup-validation, core-tests]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Run production mirror tests
+        run: |
+          echo "🏭 Running full production mirror test suite"
+          chmod +x scripts/run-production-mirror-tests.sh
+          ./scripts/run-production-mirror-tests.sh
+        timeout-minutes: 15
+      
+      - name: Upload test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-mirror-logs
+          path: |
+            logs/
+            *.log
+          retention-days: 7
+
+  # Security scanning
+  security-scan:
+    name: 🔐 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Bandit security scan
+        run: |
+          pip install bandit[toml]
+          echo "🔐 Running security scan with Bandit"
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ || true
+        continue-on-error: true
+      
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-report
+          path: bandit-report.json
+          retention-days: 30
+
+  # Summary job
+  ci-summary:
+    name: 📋 CI Summary
+    runs-on: ubuntu-latest
+    needs: [startup-validation, core-tests, code-quality, docker-validation]
+    if: always()
+    
+    steps:
+      - name: CI Summary
+        run: |
+          echo "## 🧪 CI/CD Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.startup-validation.result }}" == "success" ]]; then
+            echo "✅ **Startup Validation**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Startup Validation**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.core-tests.result }}" == "success" ]]; then
+            echo "✅ **Core Tests**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Core Tests**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.code-quality.result }}" == "success" ]]; then
+            echo "✅ **Code Quality**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Code Quality**: Issues found (not blocking)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.docker-validation.result }}" == "success" ]]; then
+            echo "✅ **Docker Build**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Docker Build**: Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔍 Test Coverage" >> $GITHUB_STEP_SUMMARY
+          echo "- Flask app initialization and blueprint registration" >> $GITHUB_STEP_SUMMARY
+          echo "- Celery worker initialization and task discovery" >> $GITHUB_STEP_SUMMARY
+          echo "- Database schema immutability validation" >> $GITHUB_STEP_SUMMARY
+          echo "- HTML sanitization and content processing" >> $GITHUB_STEP_SUMMARY
+          echo "- Docker container startup validation" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scanning and code quality checks" >> $GITHUB_STEP_SUMMARY
