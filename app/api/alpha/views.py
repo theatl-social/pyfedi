@@ -482,7 +482,11 @@ def flair_view(flair: CommunityFlair | int):
     flair_item["flair_title"] = flair.flair
     flair_item["text_color"] = flair.text_color
     flair_item["background_color"] = flair.background_color
-    flair_item["blur_images"] = flair.blur_images
+
+    if flair.blur_images:
+        flair_item["blur_images"] = flair.blur_images
+    else:
+        flair_item["blur_images"] = False
     
     if flair.ap_id:
         flair_item["ap_id"] = flair.ap_id
