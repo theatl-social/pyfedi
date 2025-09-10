@@ -6,10 +6,11 @@ from sqlalchemy import desc, text
 from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
     array_of_integers_expected
-from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view
+from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
-from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote
+from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
+    CommunityFlair
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read
 from app.post.util import post_replies, get_comment_branch
@@ -17,6 +18,7 @@ from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
     moderating_communities_ids, user_filters_home, user_filters_posts, in_sorted_list
+from app.shared.tasks import task_selector
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -725,3 +727,33 @@ def get_post_like_list(auth, data):
         return response_json
     else:
         raise Exception('Not a moderator')
+
+
+def put_post_set_flair(auth, data):
+    post_id = data['post_id']
+    flair_list = data['flair_id_list'] if 'flair_id_list' in data else []
+
+    post = Post.query.filter_by(id=post_id).one()
+    user = authorise_api_user(auth, return_type='model')
+    
+    if post.community.is_moderator(user) or user.is_admin_or_staff() or post.user_id == user.id:
+        # Start by clearing the existing flair
+        post.flair = []
+
+        if flair_list:
+            comm_flair = CommunityFlair.query.filter_by(community_id=post.community_id).all()
+            flair_objs = [CommunityFlair.query.get(flair_id) for flair_id in flair_list]
+
+            for flair in flair_objs:
+                if flair in comm_flair:
+                    # Flair from correct community, add it
+                    post.flair.append(flair)
+
+        db.session.commit()
+
+        if post.status == POST_STATUS_PUBLISHED:
+            task_selector('edit_post', post_id=post.id)
+        
+        return post_view(post=post, variant=2, stub=False)
+    else:
+        raise Exception("Insufficient permissions")

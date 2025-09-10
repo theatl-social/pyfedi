@@ -977,5 +977,5 @@ def clean_up_tmp():
                 if now - mtime > ONE_DAY:
                     try:
                         os.remove(file_path)
-                    except Exception as e:
+                    except Exception:
                         pass

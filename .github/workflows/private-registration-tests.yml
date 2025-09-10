@@ -1,0 +1,362 @@
+name: Private Registration API Tests
+
+on:
+  # Run on PRs that modify private registration code
+  pull_request:
+    paths:
+      - 'app/api/admin/**'
+      - 'app/api/alpha/schema.py'
+      - 'app/utils.py'
+      - 'tests/test_private_registration*'
+      - 'scripts/test-private-registration.sh'
+      - '.github/workflows/private-registration-tests.yml'
+  
+  # Run on pushes to main branch
+  push:
+    branches: [ main ]
+    paths:
+      - 'app/api/admin/**'
+      - 'app/api/alpha/schema.py'
+      - 'app/utils.py'
+  
+  # Allow manual triggering
+  workflow_dispatch:
+    inputs:
+      test_config:
+        description: 'Test configuration to run'
+        required: false
+        default: 'all'
+        type: choice
+        options:
+          - 'all'
+          - 'default'
+          - 'env-only'
+          - 'mixed'
+
+jobs:
+  # Unit and Integration Tests
+  private-registration-tests:
+    name: Private Registration Tests
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        config: [default, env-only, mixed]
+      fail-fast: false
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-private-reg-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-private-reg-
+            ${{ runner.os }}-pip-
+            
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-cov pytest-html
+          
+      - name: Set environment variables
+        run: |
+          echo "PYTHONPATH=${{ github.workspace }}" >> $GITHUB_ENV
+          echo "SERVER_NAME=localhost" >> $GITHUB_ENV
+          echo "DATABASE_URL=sqlite:///:memory:" >> $GITHUB_ENV
+          echo "TESTING=true" >> $GITHUB_ENV
+          
+      - name: Run Private Registration Tests - ${{ matrix.config }}
+        run: |
+          ./scripts/test-private-registration.sh --ci --config ${{ matrix.config }} --verbose
+        env:
+          # Test-specific secrets (safe for CI)
+          PRIVATE_REGISTRATION_SECRET: test-secret-ci-${{ github.run_id }}
+          PRIVATE_REGISTRATION_ENABLED: true
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: private-registration-test-results-${{ matrix.config }}
+          path: |
+            test-results/
+            coverage-*.xml
+          retention-days: 30
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        if: matrix.config == 'default'
+        with:
+          file: ./coverage-${{ matrix.config }}.xml
+          flags: private-registration
+          name: private-registration-coverage
+
+  # Security and Performance Tests
+  security-tests:
+    name: Security & Performance Tests
+    runs-on: ubuntu-latest
+    needs: private-registration-tests
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest-benchmark pytest-asyncio locust
+          
+      - name: Run rate limiting tests
+        run: |
+          # Test rate limiting enforcement
+          export PYTHONPATH=${{ github.workspace }}
+          export SERVER_NAME=localhost
+          export PRIVATE_REGISTRATION_ENABLED=true
+          export PRIVATE_REGISTRATION_SECRET=test-secret-rate-limit
+          export PRIVATE_REGISTRATION_RATE_LIMIT=3
+          
+          python -m pytest tests/test_private_registration_endpoints.py::TestRateLimiting -v
+          
+      - name: Run IP whitelist security tests  
+        run: |
+          export PYTHONPATH=${{ github.workspace }}
+          export SERVER_NAME=localhost
+          export PRIVATE_REGISTRATION_ENABLED=true
+          export PRIVATE_REGISTRATION_SECRET=test-secret-ip-test
+          export PRIVATE_REGISTRATION_ALLOWED_IPS=10.0.0.0/8
+          
+          python -m pytest tests/test_private_registration_endpoints.py::TestIPSecurity -v
+          
+      - name: Run performance benchmarks
+        run: |
+          export PYTHONPATH=${{ github.workspace }}
+          export SERVER_NAME=localhost
+          
+          # Basic performance test
+          python -c "
+          import time
+          import requests
+          from app import create_app
+          from tests.test_private_registration_endpoints import PrivateRegistrationTestConfig
+          
+          # Quick performance check
+          app = create_app(PrivateRegistrationTestConfig)
+          with app.test_client() as client:
+              headers = {
+                  'X-PieFed-Secret': 'test-perf-secret',
+                  'Content-Type': 'application/json',
+                  'X-Forwarded-For': '127.0.0.1'
+              }
+              
+              start = time.time()
+              for i in range(10):
+                  client.get('/api/alpha/admin/health', headers=headers)
+              end = time.time()
+              
+              avg_time = (end - start) / 10
+              print(f'Average health check time: {avg_time:.3f}s')
+              
+              if avg_time > 1.0:
+                  raise Exception(f'Performance regression: {avg_time:.3f}s > 1.0s')
+              else:
+                  print('Performance check passed')
+          "
+
+  # End-to-End Integration Tests
+  e2e-tests:
+    name: E2E Integration Tests
+    runs-on: ubuntu-latest
+    needs: [private-registration-tests, security-tests]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+          
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Start Flask application
+        run: |
+          export PYTHONPATH=${{ github.workspace }}
+          export SERVER_NAME=localhost
+          export DATABASE_URL=sqlite:///test_e2e.db
+          export PRIVATE_REGISTRATION_ENABLED=true
+          export PRIVATE_REGISTRATION_SECRET=test-e2e-secret-${{ github.run_id }}
+          export REDIS_URL=redis://localhost:6379/0
+          export FLASK_ENV=testing
+          
+          # Initialize database
+          python -c "
+          from app import create_app, db
+          app = create_app()
+          with app.app_context():
+              db.create_all()
+          "
+          
+          # Start Flask server in background
+          flask run --host=0.0.0.0 --port=5000 &
+          FLASK_PID=$!
+          echo "FLASK_PID=$FLASK_PID" >> $GITHUB_ENV
+          
+          # Wait for server to start
+          sleep 10
+          
+          # Health check
+          curl -f http://localhost:5000/api/alpha/admin/health \
+            -H "X-PieFed-Secret: test-e2e-secret-${{ github.run_id }}" \
+            -H "X-Forwarded-For: 127.0.0.1" || exit 1
+            
+      - name: Run E2E tests with curl
+        run: |
+          export SECRET="test-e2e-secret-${{ github.run_id }}"
+          export BASE_URL="http://localhost:5000/api/alpha/admin"
+          
+          # Test 1: Health endpoint
+          echo "Testing health endpoint..."
+          HEALTH_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "X-PieFed-Secret: $SECRET" \
+            -H "X-Forwarded-For: 127.0.0.1" \
+            "$BASE_URL/health")
+          
+          if [[ "$HEALTH_RESPONSE" != *"200" ]]; then
+            echo "Health check failed: $HEALTH_RESPONSE"
+            exit 1
+          fi
+          
+          # Test 2: User validation
+          echo "Testing user validation endpoint..."
+          VALIDATION_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "X-PieFed-Secret: $SECRET" \
+            -H "Content-Type: application/json" \
+            -H "X-Forwarded-For: 127.0.0.1" \
+            -d '{"username":"e2etestuser","email":"e2etest@example.com"}' \
+            "$BASE_URL/user/validate")
+          
+          if [[ "$VALIDATION_RESPONSE" != *"200" ]]; then
+            echo "User validation failed: $VALIDATION_RESPONSE"
+            exit 1
+          fi
+          
+          # Test 3: User registration  
+          echo "Testing user registration endpoint..."
+          REGISTER_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "X-PieFed-Secret: $SECRET" \
+            -H "Content-Type: application/json" \
+            -H "X-Forwarded-For: 127.0.0.1" \
+            -d '{
+              "username":"e2etestuser",
+              "email":"e2etest@example.com",
+              "display_name":"E2E Test User",
+              "auto_activate":true,
+              "bio":"Created via E2E testing"
+            }' \
+            "$BASE_URL/private_register")
+          
+          if [[ "$REGISTER_RESPONSE" != *"201" ]]; then
+            echo "User registration failed: $REGISTER_RESPONSE"
+            exit 1
+          fi
+          
+          # Test 4: Duplicate registration (should fail)
+          echo "Testing duplicate registration handling..."
+          DUPLICATE_RESPONSE=$(curl -s -w "%{http_code}" \
+            -H "X-PieFed-Secret: $SECRET" \
+            -H "Content-Type: application/json" \
+            -H "X-Forwarded-For: 127.0.0.1" \
+            -d '{
+              "username":"e2etestuser",
+              "email":"e2etest@example.com"
+            }' \
+            "$BASE_URL/private_register")
+          
+          if [[ "$DUPLICATE_RESPONSE" == *"201" ]]; then
+            echo "Duplicate registration should have failed but didn't: $DUPLICATE_RESPONSE"
+            exit 1
+          fi
+          
+          echo "All E2E tests passed!"
+          
+      - name: Cleanup
+        if: always()
+        run: |
+          if [ ! -z "$FLASK_PID" ]; then
+            kill $FLASK_PID || true
+          fi
+          rm -f test_e2e.db
+
+  # Comprehensive test report
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [private-registration-tests, security-tests, e2e-tests]
+    if: always()
+    
+    steps:
+      - name: Download all test artifacts
+        uses: actions/download-artifact@v4
+        
+      - name: Generate test summary
+        run: |
+          echo "# Private Registration API Test Results" > test-summary.md
+          echo "" >> test-summary.md
+          echo "## Test Status" >> test-summary.md
+          echo "- Unit/Integration Tests: ${{ needs.private-registration-tests.result }}" >> test-summary.md
+          echo "- Security Tests: ${{ needs.security-tests.result }}" >> test-summary.md  
+          echo "- E2E Tests: ${{ needs.e2e-tests.result }}" >> test-summary.md
+          echo "" >> test-summary.md
+          
+          if [ "${{ needs.private-registration-tests.result }}" = "success" ] && \
+             [ "${{ needs.security-tests.result }}" = "success" ] && \
+             [ "${{ needs.e2e-tests.result }}" = "success" ]; then
+            echo "## ✅ All Tests Passed" >> test-summary.md
+            echo "" >> test-summary.md
+            echo "Private Registration API is working correctly across all test scenarios:" >> test-summary.md
+            echo "- Environment variable configuration ✅" >> test-summary.md
+            echo "- Authentication and authorization ✅" >> test-summary.md
+            echo "- Rate limiting and IP restrictions ✅" >> test-summary.md
+            echo "- End-to-end integration ✅" >> test-summary.md
+          else
+            echo "## ❌ Some Tests Failed" >> test-summary.md
+            echo "" >> test-summary.md
+            echo "Please check individual test results for details." >> test-summary.md
+          fi
+          
+          cat test-summary.md
+          
+      - name: Upload test summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-summary
+          path: test-summary.md

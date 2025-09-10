@@ -43,6 +43,7 @@
         <li><a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-mea-culpa"></span>
             {{ _("I made a mistake with this post and have changed my mind about the topic") }}</a></li>
     {% endif -%}
+    <li><a href="{{ url_for('post.post_reminder', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-reminder"></span>{{ _('Remind me about this') }}</a></li>
     {% if post.user_id != current_user.id -%}
         {% if post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
             <li><a class="dropdown-item no-underline" style="white-space: normal" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span>
