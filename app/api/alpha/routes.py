@@ -9,7 +9,8 @@ from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
-    post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit
+    post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
+    post_community_flair_delete
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
@@ -438,6 +439,23 @@ def put_alpha_community_flair(data):
         auth = request.headers.get('Authorization')
         resp = put_community_flair_edit(auth, data)
         return CommunityFlairEditResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@comm_bp.route('/community/flair/delete', methods=['POST'])
+@comm_bp.doc(summary="Delete a post flair in a community")
+@comm_bp.arguments(CommunityFlairDeleteRequest)
+@comm_bp.response(200, CommunityFlairDeleteResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_flair_delete(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_community_flair_delete(auth, data)
+        return CommunityFlairDeleteResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

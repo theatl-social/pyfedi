@@ -2,7 +2,7 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
@@ -586,3 +586,24 @@ def put_community_flair_edit(auth, data):
     db.session.commit()
 
     return flair_view(flair)
+
+
+def post_community_flair_delete(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    flair = CommunityFlair.query.get(data['flair_id'])
+
+    if not flair:
+        raise Exception(f'No matching flair with id={data['flair_id']} found.')
+    
+    community = Community.query.get(flair.community_id)
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair.id})
+    db.session.query(CommunityFlair).filter(CommunityFlair.id == flair.id).delete()
+    db.session.commit()
+
+    # Return Community View that includes updated flair list
+    community_json = community_view(community=community, variant=3, stub=False, user_id=user.id)
+    return community_json

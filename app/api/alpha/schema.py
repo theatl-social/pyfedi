@@ -504,6 +504,14 @@ class GetCommunityResponse(DefaultSchema):
     site = fields.Nested(Site)
 
 
+class CommunityFlairDeleteRequest(DefaultSchema):
+    flair_id = fields.Integer(required=True)
+
+
+class CommunityFlairDeleteResponse(GetCommunityResponse):
+    pass
+
+
 class CreateCommunityRequest(DefaultSchema):
     name = fields.String(required=True)
     title = fields.String(required=True)
