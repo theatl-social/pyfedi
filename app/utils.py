@@ -3377,3 +3377,11 @@ def to_srgb(im: Image.Image, assume="sRGB"):
 @cache.memoize(timeout=30)
 def show_explore():
     return num_topics() > 0 or num_feeds() > 0
+
+
+def expand_hex_color(text: str) -> str:
+    new_text = ("#" +
+                text[1] * 2 +
+                text[2] * 2 +
+                text[3] * 2)
+    return new_text

@@ -1,3 +1,5 @@
+import re
+
 from datetime import datetime
 from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema
 
@@ -24,6 +26,15 @@ def validate_datetime_string(text):
         return True
     except ValueError:
         raise ValidationError(f"Bad datetime string: {text}")
+
+
+def validate_color_code(text):
+    try:
+        # Ensures that hex color code strings have the correct format
+        color_pattern = re.compile(r'^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$')
+        return bool(re.match(color_pattern, text))
+    except:
+        raise ValidationError(f"Bad hex color code string: {text}")
 
 
 class DefaultError(Schema):
@@ -272,7 +283,7 @@ class Post(DefaultSchema):
     small_thumbnail_url = fields.Url()
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    url = fields.Url()   
+    url = fields.Url()
 
 
 class PostAggregates(DefaultSchema):
@@ -283,6 +294,19 @@ class PostAggregates(DefaultSchema):
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
+
+
+class CommunityFlair(DefaultSchema):
+    id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    flair_title = fields.String(required=True)
+    text_color = fields.String(required=True, validate=validate_color_code,
+                               metadata={"example": "#000000", "description": "Hex color code for the text of the flair"})
+    background_color = fields.String(required=True, validate=validate_color_code,
+                                     metadata={"example": "#DEDDDA", "description": "Hex color code for the background of the flair"})
+    blur_images = fields.Boolean(required=True)
+    ap_id = fields.Url(required=True, allow_none=True,
+                       metadata={"description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id"})
 
 
 class PostView(DefaultSchema):
@@ -301,6 +325,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
+    flair = fields.List(fields.Nested(CommunityFlair))
 
 
 class CommunityAggregates(DefaultSchema):
@@ -322,6 +347,49 @@ class CommunityView(DefaultSchema):
     community = fields.Nested(Community, required=True)
     counts = fields.Nested(CommunityAggregates, required=True)
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    flair_list = fields.List(fields.Nested(CommunityFlair))
+
+
+class CommunityFlairCreateRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    flair_title = fields.String(required=True)
+    text_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#000 or #000000",
+            "default": "#000000",
+            "description": "Hex color code for the text of the flair."})
+    background_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#fff or #FFFFFF",
+            "default": "#DEDDDA",
+            "description": "Hex color code for the background of the flair."})
+    blur_images = fields.Boolean(metadata={"default": False})
+
+
+class CommunityFlairCreateResponse(CommunityFlair):
+    pass
+
+
+class CommunityFlairEditRequest(DefaultSchema):
+    flair_id = fields.Integer(required=True)
+    flair_title = fields.String()
+    text_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#000 or #000000",
+            "description": "Hex color code for the text of the flair."})
+    background_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#fff or #FFFFFF",
+            "description": "Hex color code for the background of the flair."})
+    blur_images = fields.Boolean()
+
+
+class CommunityFlairEditResponse(CommunityFlair):
+    pass
 
 
 class Comment(DefaultSchema):
@@ -434,6 +502,14 @@ class GetCommunityResponse(DefaultSchema):
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
     site = fields.Nested(Site)
+
+
+class CommunityFlairDeleteRequest(DefaultSchema):
+    flair_id = fields.Integer(required=True)
+
+
+class CommunityFlairDeleteResponse(GetCommunityResponse):
+    pass
 
 
 class CreateCommunityRequest(DefaultSchema):
@@ -918,3 +994,26 @@ class PostLikeView(CommentLikeView):
 class ListPostLikesResponse(DefaultSchema):
     post_likes = fields.List(fields.Nested(PostLikeView, required=True))
     next_page = fields.String(allow_none=True)
+
+
+class GetPostRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetPostResponse(DefaultSchema):
+    post_view = fields.Nested(PostView, required=True)
+    community_view = fields.Nested(CommunityView, required=True)
+    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    cross_posts = fields.List(fields.Nested(PostView), required=True)
+
+
+class PostSetFlairRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    flair_id_list = fields.List(
+        fields.Integer(),
+        allow_none=True,
+        metadata={"description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"})
+
+
+class PostSetFlairResponse(PostView):
+    pass
