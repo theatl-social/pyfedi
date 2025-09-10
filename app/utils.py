@@ -2523,12 +2523,18 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
 
-    # filter out posts in communities where the community name is objectionable to them
+    # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
         filtered_out_community_ids = filtered_out_communities(current_user)
         if len(filtered_out_community_ids):
             post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
             params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
+
+        if bi := blocked_instances(current_user.id):
+            post_id_where.append('c.instance_id NOT IN :filtered_out_instance_ids ')
+            params['filtered_out_instance_ids'] = tuple(bi)
+            post_id_where.append('p.instance_id NOT IN :filtered_out_instance_ids2 ')
+            params['filtered_out_instance_ids2'] = tuple(bi)
 
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
