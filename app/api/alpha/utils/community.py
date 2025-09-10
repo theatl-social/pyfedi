@@ -3,15 +3,16 @@ from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from flask import current_app
 from sqlalchemy import desc, or_
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
     array_of_integers_expected
-from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
+from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community, flair_view
 from app.community.util import search_for_community
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
-    NotificationSubscription, Post, utcnow
+    NotificationSubscription, Post, CommunityFlair, utcnow
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
@@ -19,6 +20,7 @@ from app.shared.tasks import task_selector
 from app.utils import authorise_api_user
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities
+from app.activitypub.util import find_flair_or_create
 
 
 def get_community_list(auth, data):
@@ -504,3 +506,55 @@ def post_community_mod(auth, data):
         'moderators': cached_modlist_for_community(community_id)
     }
     return community_json
+
+
+def post_community_flair_create(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    community = Community.query.get(data['community_id'])
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    if 'text_color' not in data:
+        data['text_color'] = "#000000"
+    elif len(data['text_color']) == 4:
+        # Go ahead and expand this out to the full notation for consistency
+        data['text_color'] = ("#" + 
+                              data['text_color'][1] * 2 +
+                              data['text_color'][2] * 2 +
+                              data['text_color'][3] * 2)
+
+    if 'background_color' not in data:
+        data['background_color'] = "#DEDDDA"
+    elif len(data['background_color']) == 4:
+        # Go ahead and expand this out to the full notation for consistency
+        data['background_color'] = ("#" +
+                                    data['background_color'][1] * 2 +
+                                    data['background_color'][2] * 2 +
+                                    data['background_color'][3] * 2)
+
+    if 'blur_images' not in data:
+        data['blur_images'] = False
+    
+    try:
+        CommunityFlair.query.filter_by(community_id=community.id, flair=data['flair_title'],
+                                       text_color=data['text_color'], background_color=data['background_color'],
+                                       blur_images=data['blur_images']).one()
+        raise Exception("Flair already exists")
+    except NoResultFound:
+        # Flair is new, create it
+        new_flair = CommunityFlair(community_id = community.id)
+        db.session.add(new_flair)
+        new_flair.flair = data['flair_title'].strip()
+        new_flair.text_color = data['text_color']
+        new_flair.background_color = data['background_color']
+        new_flair.blur_images = data['blur_images']
+
+        # Need a commit here or else the flair id is not defined for the ap_id
+        db.session.commit()
+        
+        if community.is_local():
+            new_flair.ap_id = community.public_url() + f"/tag/{new_flair.id}"
+            db.session.commit()
+    
+    return flair_view(new_flair)

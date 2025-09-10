@@ -3,13 +3,15 @@ from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
+import traceback
+
 from app import limiter
 from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
     reply_bp, post_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
-    post_community_moderate_post_nsfw, post_community_mod
+    post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
@@ -405,6 +407,24 @@ def post_alpha_community_moderate_post_nsfw(data):
         resp = post_community_moderate_post_nsfw(auth, data)
         return PostView().load(resp)
     except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@comm_bp.route('/community/flair', methods=['POST'])
+@comm_bp.doc(summary="Create a new post flair")
+@comm_bp.arguments(CommunityFlairCreateRequest)
+@comm_bp.response(200, CommunityFlair)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_flair(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_community_flair_create(auth, data)
+        return CommunityFlair().load(resp)
+    except Exception as ex:
+        print(traceback.format_exc())
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
