@@ -7,7 +7,7 @@ from app import cache, db
 from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
-    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic
+    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities
 
@@ -42,15 +42,25 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if post.url:
                 v1['url'] = post.url
             if post.image_id:
-                v1['thumbnail_url'] = post.image.medium_url()
-                v1['small_thumbnail_url'] = post.image.thumbnail_url()
+                valid_url = post.image.medium_url()
+                if valid_url:
+                    v1['thumbnail_url'] = valid_url
+                valid_url = post.image.thumbnail_url()
+                if valid_url:
+                    v1['small_thumbnail_url'] = valid_url
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
         if post.type == POST_TYPE_IMAGE:
             if post.image_id:
-                v1['url'] = post.image.view_url()
-                v1['thumbnail_url'] = post.image.medium_url()
-                v1['small_thumbnail_url'] = post.image.thumbnail_url()
+                valid_url = post.image.view_url()
+                if valid_url:
+                    v1['url'] = valid_url
+                valid_url = post.image.medium_url()
+                if valid_url:
+                    v1['thumbnail_url'] = valid_url
+                valid_url = post.image.thumbnail_url()
+                if valid_url:
+                    v1['small_thumbnail_url'] = valid_url
                 if post.image.alt_text:
                     v1['alt_text'] = post.image.alt_text
         if post.cross_posts:
@@ -143,7 +153,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'blurred': post.blurred(g.user if hasattr(g, 'user') else None),
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
-              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
+              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin,
+              'flair': get_post_flair_list(post)}
 
         creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
         community = community_view(community=post.community, variant=1, stub=True)
@@ -207,9 +218,13 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
         if user.about_html and not stub:
             v1['about_html'] = user.about_html
         if user.avatar_id:
-            v1['avatar'] = user.avatar.medium_url()
+            valid_url = user.avatar.medium_url()
+            if valid_url:
+                v1['avatar'] = valid_url
         if user.cover_id and not stub:
-            v1['banner'] = user.cover.medium_url()
+            valid_url = user.cover.medium_url()
+            if valid_url:
+                v1['banner'] = valid_url
         if not v1['title']:
             v1['title'] = v1['user_name']
         if flair_community_id:
@@ -345,9 +360,13 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if not stub:
             v1['posting_warning'] = community.posting_warning
         if community.icon_id:
-            v1['icon'] = community.icon.medium_url()
+            valid_url = community.icon.medium_url()
+            if valid_url:
+                v1['icon'] = valid_url
         if community.image_id and not stub:
-            v1['banner'] = community.image.medium_url()
+            valid_url = community.image.medium_url()
+            if valid_url:
+                v1['banner'] = valid_url
 
         return v1
 
@@ -382,7 +401,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
         activity_alert = True if community_sub else False
         v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
-              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts}
+              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,
+              'flair_list': get_comm_flair_list(community)}
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
@@ -414,6 +434,66 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if variant == 6:
         v6 = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
         return v6
+
+
+def get_comm_flair_list(community: Community | int | str) -> list:
+    if isinstance(community, int):
+        community_id = community
+        community = Community.query.filter_by(id=community).one()
+    elif isinstance(community, Community):
+        community_id = community.id
+    elif isinstance(community, str):
+        name, ap_domain = community.strip().split('@')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+        if community is None:
+            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
+        community_id = community.id
+    
+    flair_list = []
+
+    for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
+        flair_item = flair_view(flair)
+        flair_list.append(flair_item)
+    
+    return flair_list
+
+
+def get_post_flair_list(post: Post | int) -> list:
+    if isinstance(post, int):
+        post = Post.query.filter_by(id=post).one()
+    
+    flair_list = []
+
+    for flair in post.flair:
+        flair_item = flair_view(flair)
+        flair_list.append(flair_item)
+    
+    return flair_list
+
+
+def flair_view(flair: CommunityFlair | int):
+    if isinstance(flair, int):
+        flair = CommunityFlair.query.filter_by(id=flair).one()
+    
+    flair_item = {}
+    flair_item["id"] = flair.id
+    flair_item["community_id"] = flair.community_id
+    flair_item["flair_title"] = flair.flair
+    flair_item["text_color"] = flair.text_color
+    flair_item["background_color"] = flair.background_color
+    flair_item["blur_images"] = flair.blur_images
+    
+    if flair.ap_id:
+        flair_item["ap_id"] = flair.ap_id
+    else:
+        community = Community.query.filter_by(id=flair.community_id).one()
+        if community.is_local():
+            flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
+        else:
+            flair_item["ap_id"] = None
+    
+    return flair_item
 
 
 # emergency function - shouldn't be called in normal circumstances
@@ -483,7 +563,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
             calculate_path(reply)
         v1['path'] = '.'.join(str(id) for id in reply.path)
         if reply.edited_at:
-            v1['edited_at'] = reply.edited_at.isoformat(timespec="microseconds") + 'Z'
+            v1['updated'] = reply.edited_at.isoformat(timespec="microseconds") + 'Z'
         if reply.deleted == True:
             v1['body'] = ''
             if reply.deleted_by and reply.user_id != reply.deleted_by:
@@ -753,9 +833,13 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
             v1["actor_id"] = feed.public_url() + "/" + feed.name.rsplit("/", 1)[1]
 
         if feed.icon_id:
-            v1['icon'] = feed.icon.medium_url()
+            valid_url = feed.icon.medium_url()
+            if valid_url:
+                v1['icon'] = valid_url
         if feed.image_id:
-            v1['banner'] = feed.image.medium_url()
+            valid_url = feed.image.medium_url()
+            if valid_url:
+                v1['banner'] = valid_url
 
         v1['subscribed'] = feed.id in subscribed
         v1['owner'] = user_id == feed.user_id

@@ -540,12 +540,14 @@ def poll_vote(post_id):
 
     post = Post.query.get(post_id)
     if post:
-        poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
-            PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
-        for pv in poll_votes:
-            if post.author.is_local():
-                task_selector('edit_post', post_id=post.id)
-            else:
+        if post.author.is_local():
+            post.edited_at = utcnow()
+            db.session.commit()
+            task_selector('edit_post', post_id=post.id)
+        else:
+            poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
+                PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
+            for pv in poll_votes:
                 pollvote_json = {
                     '@context': default_context(),
                     'actor': current_user.public_url(),

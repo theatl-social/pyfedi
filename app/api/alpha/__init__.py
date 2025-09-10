@@ -54,4 +54,11 @@ reply_bp = ApiBlueprint(
     description=""
 )
 
+post_bp = ApiBlueprint(
+    "Post",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes

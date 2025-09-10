@@ -4,21 +4,24 @@ from flask_limiter import RateLimitExceeded
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
-from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, reply_bp
+from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
+    reply_bp, post_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
-    post_community_moderate_post_nsfw, post_community_mod
+    post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
+    post_community_flair_delete
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read, get_post_replies
+    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock, \
+    get_reply_like_list
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
@@ -407,6 +410,57 @@ def post_alpha_community_moderate_post_nsfw(data):
         return abort(400, message=str(ex))
 
 
+@comm_bp.route('/community/flair', methods=['POST'])
+@comm_bp.doc(summary="Create a new post flair in the community")
+@comm_bp.arguments(CommunityFlairCreateRequest)
+@comm_bp.response(200, CommunityFlairCreateResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_flair(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_community_flair_create(auth, data)
+        return CommunityFlairCreateResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@comm_bp.route('/community/flair', methods=['PUT'])
+@comm_bp.doc(summary="Edit an existing post flair in the community")
+@comm_bp.arguments(CommunityFlairEditRequest)
+@comm_bp.response(200, CommunityFlairEditResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def put_alpha_community_flair(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = put_community_flair_edit(auth, data)
+        return CommunityFlairEditResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@comm_bp.route('/community/flair/delete', methods=['POST'])
+@comm_bp.doc(summary="Delete a post flair in a community")
+@comm_bp.arguments(CommunityFlairDeleteRequest)
+@comm_bp.response(200, CommunityFlairDeleteResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_flair_delete(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_community_flair_delete(auth, data)
+        return CommunityFlairDeleteResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
 # Feed
 @feed_bp.route('/feed/list', methods=["GET"])
 @feed_bp.doc(summary="Get list of feeds")
@@ -440,17 +494,21 @@ def get_alpha_post_list():
         return jsonify({"error": str(ex)}), 400
 
 
-@bp.route('/api/alpha/post', methods=['GET'])
-def get_alpha_post():
+@post_bp.route('/post', methods=['GET'])
+@post_bp.doc(summary="Get/fetch a post")
+@post_bp.arguments(GetPostRequest, location="query")
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def get_alpha_post(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_post(auth, data))
+        resp = get_post(auth, data)
+        return GetPostResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 @bp.route('/api/alpha/post/replies', methods=['GET'])
@@ -617,6 +675,43 @@ def post_alpha_post_mark_as_read():
     except Exception as ex:
         current_app.logger.error(str(ex))
         return jsonify({"error": str(ex)}), 400
+
+
+@post_bp.route('/post/like/list', methods=['GET'])
+@post_bp.doc(summary="View post votes as a moderator.")
+@post_bp.arguments(ListPostLikesRequest, location="query")
+@post_bp.response(200, ListPostLikesResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def get_alpha_post_like_list(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = get_post_like_list(auth, data)
+        validated = ListPostLikesResponse().load(resp)
+        return orjson_response(validated)
+    except NoResultFound:
+        return abort(400, message="Post not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@post_bp.route('/post/assign_flair', methods=['POST'])
+@post_bp.doc(summary="Add/remove flair from a post")
+@post_bp.arguments(PostSetFlairRequest)
+@post_bp.response(200, PostSetFlairResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_set_flair(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = put_post_set_flair(auth, data)
+        return PostSetFlairResponse().load(resp)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
 
 
 # Reply
@@ -844,6 +939,26 @@ def post_alpha_comment_lock(data):
         auth = request.headers.get('Authorization')
         resp = post_reply_lock(auth, data)
         return GetCommentResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Comment not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@reply_bp.route('/comment/like/list', methods=['GET'])
+@reply_bp.doc(summary="View comment votes as a moderator.")
+@reply_bp.arguments(ListCommentLikesRequest, location="query")
+@reply_bp.response(200, ListCommentLikesResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def get_alpha_comment_like_list(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = get_reply_like_list(auth, data)
+        validated = ListCommentLikesResponse().load(resp)
+        return orjson_response(validated)
     except NoResultFound:
         return abort(400, message="Comment not found")
     except Exception as ex:
@@ -1380,9 +1495,7 @@ def alpha_user_mention():
 @bp.route('/api/alpha/admin/purge/person', methods=['POST'])  # implement
 @bp.route('/api/alpha/admin/purge/community', methods=['POST'])  # any
 @bp.route('/api/alpha/admin/purge/post', methods=['POST'])  # endpoints
-@bp.route('/api/alpha/admin/purge/comment', methods=['POST'])  # for
-@bp.route('/api/alpha/post/like/list', methods=['GET'])  # admin
-@bp.route('/api/alpha/comment/like/list', methods=['GET'])  # use)
+@bp.route('/api/alpha/admin/purge/comment', methods=['POST'])  # for admin user)
 def alpha_admin():
     return jsonify({"error": "not_yet_implemented"}), 400
 

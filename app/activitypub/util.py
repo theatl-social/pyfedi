@@ -167,6 +167,8 @@ def post_to_page(post: Post):
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         activity_data['type'] = 'Question'
+        del activity_data['name']
+        activity_data['content'] = f"<p>{post.title}</p>{post.body_html if post.body_html else ''}"
         mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
         choices = []
         for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
@@ -1982,7 +1984,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         # Check for Mentions of local users
         reply_parent = parent_comment if parent_comment else post
         local_users_to_notify = []
-        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
             for json_tag in request_json['object']['tag']:
                 if 'type' in json_tag and json_tag['type'] == 'Mention':
                     profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -2009,6 +2011,11 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                 if not recipient:
                     continue
                 if post_reply.instance.software == 'mbin' or post_reply.instance.software in MICROBLOG_APPS:
+                    # ignore Mention of post author from microblog apps
+                    # (direct replies will generate a different kind of Notification)
+                    if recipient.id == post.user_id:
+                        continue
+
                     # ignore Mentions in comments from MBIN if they're just mirroring a Mention made in a post body
                     notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
                                                                    Notification.notif_type == NOTIF_MENTION,
@@ -2319,7 +2326,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         reply.ap_updated = utcnow()
 
     # Check for Mentions of local users (that weren't in the original)
-    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
         for json_tag in request_json['object']['tag']:
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -2332,6 +2339,38 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                     if reply_parent and profile_id != reply_parent.author.ap_profile_id:
                         recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                         if recipient:
+                            if reply.instance.software == 'mbin' or reply.instance.software in MICROBLOG_APPS:
+                                # ignore Mention of post author
+                                if recipient.id == reply.post.user_id:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention made in a post body
+                                notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                               Notification.notif_type == NOTIF_MENTION,
+                                                                               Notification.subtype == "post_mention",
+                                                                               Notification.targets.op("->>")("post_id").cast(Integer) == reply.post_id).first()
+                                if notifs:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention someone else made in the comment chain
+                                ids = []
+                                for element in reply.path:
+                                    if element == 0 or element == reply.id:
+                                        continue
+                                    ids.append(element)
+                                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                                   Notification.subtype == "comment_mention",
+                                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                                    if notifs:
+                                        continue
+
+                                # ignore Mentions generated because a local user authored a comment further up in the comment chain
+                                ids = tuple(ids)
+                                user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                                if recipient.id in user_ids:
+                                    continue
+
                             blocked_senders = blocked_users(recipient.id)
                             if reply.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id,

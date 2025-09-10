@@ -5,7 +5,7 @@ from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view, user_view
 from app.constants import *
-from app.models import Notification, PostReply, Post, User
+from app.models import Notification, PostReply, Post, User, PostReplyVote
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
     edit_reply, \
     delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply, lock_post_reply
@@ -479,3 +479,35 @@ def post_reply_lock(auth, data):
 
     reply_json = reply_view(reply=reply, variant=4, user_id=user_id)
     return reply_json
+
+
+def get_reply_like_list(auth, data):
+    comment_id = data['comment_id']
+    page = data['page'] if 'page' in data else 1
+    limit = data['limit'] if 'limit' in data else 50
+
+    user = authorise_api_user(auth, return_type='model')
+    post_reply = PostReply.query.filter_by(id=comment_id).one()
+
+    if post_reply.community.is_moderator(user) or user.is_admin() or user.is_staff():
+        banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
+        banned_from_community_user_ids = list(db.session.execute(text
+            ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post_reply.community_id}).scalars())
+        likes = PostReplyVote.query.filter(
+            PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect != 0).order_by(
+            PostReplyVote.created_at).paginate(page=page, per_page=limit, error_out=False)
+        comment_likes = []
+        for like in likes:
+            comment_likes.append({
+                'score': like.effect,
+                'creator_banned_from_community': like.user_id in banned_from_community_user_ids,
+                'creator_banned': like.user_id in banned_from_site_user_ids,
+                'creator': user_view(user=like.user_id, variant=1, stub=True)
+            })
+        response_json = {
+            'next_page': str(likes.next_num) if likes.next_num is not None else None,
+            'comment_likes': comment_likes
+        }
+        return response_json
+    else:
+        raise Exception('Not a moderator')
