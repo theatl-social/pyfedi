@@ -306,7 +306,7 @@ class CommunityFlair(DefaultSchema):
                                      metadata={"example": "#DEDDDA", "description": "Hex color code for the background of the flair"})
     blur_images = fields.Boolean(required=True)
     ap_id = fields.Url(required=True, allow_none=True,
-                       metadata={"description": "Legacy tags that existed prior to 1.2 might not have a defined ap_id"})
+                       metadata={"description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id"})
 
 
 class PostView(DefaultSchema):
@@ -369,6 +369,26 @@ class CommunityFlairCreateRequest(DefaultSchema):
 
 
 class CommunityFlairCreateResponse(CommunityFlair):
+    pass
+
+
+class CommunityFlairEditRequest(DefaultSchema):
+    flair_id = fields.Integer(required=True)
+    flair_title = fields.String()
+    text_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#000 or #000000",
+            "description": "Hex color code for the text of the flair."})
+    background_color = fields.String(
+        validate=validate_color_code,
+        metadata={
+            "example": "#fff or #FFFFFF",
+            "description": "Hex color code for the background of the flair."})
+    blur_images = fields.Boolean()
+
+
+class CommunityFlairEditResponse(CommunityFlair):
     pass
 
 

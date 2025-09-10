@@ -19,8 +19,7 @@ from app.shared.community import join_community, leave_community, block_communit
 from app.shared.tasks import task_selector
 from app.utils import authorise_api_user
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
-    joined_communities, moderating_communities
-from app.activitypub.util import find_flair_or_create
+    joined_communities, moderating_communities, expand_hex_color
 
 
 def get_community_list(auth, data):
@@ -519,19 +518,13 @@ def post_community_flair_create(auth, data):
         data['text_color'] = "#000000"
     elif len(data['text_color']) == 4:
         # Go ahead and expand this out to the full notation for consistency
-        data['text_color'] = ("#" + 
-                              data['text_color'][1] * 2 +
-                              data['text_color'][2] * 2 +
-                              data['text_color'][3] * 2)
+        data['text_color'] = expand_hex_color(data['text_color'])
 
     if 'background_color' not in data:
         data['background_color'] = "#DEDDDA"
     elif len(data['background_color']) == 4:
         # Go ahead and expand this out to the full notation for consistency
-        data['background_color'] = ("#" +
-                                    data['background_color'][1] * 2 +
-                                    data['background_color'][2] * 2 +
-                                    data['background_color'][3] * 2)
+        data['background_color'] = expand_hex_color(data['background_color'])
 
     if 'blur_images' not in data:
         data['blur_images'] = False
@@ -558,3 +551,38 @@ def post_community_flair_create(auth, data):
             db.session.commit()
     
     return flair_view(new_flair)
+
+
+def put_community_flair_edit(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    flair = CommunityFlair.query.get(data['flair_id'])
+
+    if not flair:
+        raise Exception(f'No matching flair with id={data['flair_id']} found.')
+    
+    community = Community.query.get(flair.community_id)
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    if 'flair_title' in data:
+        flair.flair = data['flair_title']
+    
+    if 'text_color' in data:
+        if len(data['text_color']) == 4:
+            data['text_color'] = expand_hex_color(data['text_color'])
+        
+        flair.text_color = data['text_color']
+    
+    if 'background_color' in data:
+        if len(data['background_color']) == 4:
+            data['background_color'] = expand_hex_color(data['background_color'])
+        
+        flair.background_color = data['background_color']
+    
+    if 'blur_images' in data:
+        flair.blur_images = data['blur_images']
+    
+    db.session.commit()
+
+    return flair_view(flair)
