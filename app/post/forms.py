@@ -1,9 +1,13 @@
+from datetime import datetime
+
 from flask_wtf import FlaskForm
 from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField
 from wtforms.fields.choices import SelectField
 from wtforms.validators import DataRequired, Length, ValidationError
 from flask_babel import _, lazy_gettext as _l
 
+from app import get_locale
+from app.models import utcnow
 from app.utils import MultiCheckboxField
 
 
@@ -78,3 +82,23 @@ class FlairPostForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
     submit = SubmitField(_l('Save'))
+
+
+class NewReminderForm(FlaskForm):
+    remind_at = StringField(_l('When would you like to be reminded?'), validators=[DataRequired(), Length(max=512)],
+                            render_kw={'placeholder': _l("e.g. 'in 2 weeks'")})
+    referrer = HiddenField()
+    submit = SubmitField(_l('Save'))
+
+    def validate_remind_at(self, remind_at):
+        import dateparser
+        import arrow
+        try:
+            x = dateparser.parse(remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
+                                                           "RETURN_AS_TIMEZONE_AWARE": True,
+                                                           }, languages=[get_locale()])
+
+            if x is None or arrow.get(x).to('UTC').datetime < utcnow(naive=False):
+                raise ValidationError(_l('Invalid.'))
+        except Exception as e:
+            raise ValidationError(_l('Invalid.'))

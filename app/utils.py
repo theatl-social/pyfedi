@@ -2352,6 +2352,8 @@ def instance_software(domain: str):
 def referrer(default: str = None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
+    if request.form.get('referrer'):
+        return request.form.get('referrer')
     if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
         return request.referrer
     if default:
@@ -2983,11 +2985,11 @@ def get_recipient_language(user_id: int) -> str:
     lang_to_use = ''
 
     # look up the user in the db based on the id
-    recipient = User.query.get(user_id)
+    recipient = db.session.query(User).get(user_id)
 
     # if the user has language_id set, use that
     if recipient.language_id:
-        lang = Language.query.get(recipient.language_id)
+        lang = db.session.query(Language).get(recipient.language_id)
         lang_to_use = lang.code
 
     # else if the user has interface_language use that

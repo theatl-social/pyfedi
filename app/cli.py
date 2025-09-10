@@ -18,7 +18,7 @@ import click
 import flask
 import redis
 from flask import json, current_app
-from flask_babel import _
+from flask_babel import _, force_locale
 from sqlalchemy import or_, desc, text
 
 from app import db, cache
@@ -26,12 +26,12 @@ from app.activitypub.signature import RsaKeys, send_post_request, default_contex
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE
+    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
     InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
-    ActivityBatch
+    ActivityBatch, Reminder
 from app.shared.tasks import task_selector
 from app.shared.tasks.maintenance import add_remote_communities
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
@@ -39,7 +39,7 @@ from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_bl
     instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
     guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session, get_setting, set_setting
+    render_from_tpl, get_task_session, patch_db_session, get_setting, set_setting, get_recipient_language
 
 
 def register(app):
@@ -416,6 +416,8 @@ def register(app):
 
                             send_batched_activities()
 
+                            reminders()
+
                     except redis.exceptions.LockError:
                         print('Send queue is still running - stopping this process to avoid duplication.')
                         return
@@ -543,6 +545,37 @@ def register(app):
                 delete_payloads.append(payload.id)
             send_post_request(current_instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
             ActivityBatch.query.filter(ActivityBatch.id.in_(delete_payloads)).delete()
+            db.session.commit()
+
+    def reminders():
+        pending_reminders = Reminder.query.filter(Reminder.remind_at < utcnow()).all()
+        for pending_reminder in pending_reminders:
+            targets_data = {'gen': '0'}
+            with force_locale(get_recipient_language(pending_reminder.user_id)):
+                if pending_reminder.reminder_type == 1:
+                    post = db.session.query(Post).get(pending_reminder.reminder_destination)
+                    title = _('Reminder: %(title)s', title=post.title)
+                    url = f'/post/{post.id}'
+                    targets_data['post_id'] = post.id
+                elif pending_reminder.reminder_type == 2:
+                    post_reply = db.session.query(PostReply).get(pending_reminder.reminder_destination)
+                    title = _('Reminder: comment on %(title)s', title=post_reply.post.title, )
+                    url = f'/post/{post_reply.post.id}/comment/{post_reply.id}'
+                    targets_data['comment_id'] = post_reply.id
+                else:
+                    db.session.delete(pending_reminder)
+                    db.session.commit()
+                    continue
+            notify = Notification(title=title, url=url,
+                                  user_id=pending_reminder.user_id,
+                                  author_id=pending_reminder.user_id, notif_type=NOTIF_REMINDER,
+                                  subtype=None,
+                                  targets=targets_data)
+            db.session.add(notify)
+            db.session.execute(text('UPDATE "user" SET unread_notifications = unread_notifications + 1 WHERE id = :user_id'), {
+                'user_id': pending_reminder.user_id
+            })
+            db.session.delete(pending_reminder)
             db.session.commit()
 
 
