@@ -100,5 +100,5 @@ class NewReminderForm(FlaskForm):
 
             if x is None or arrow.get(x).to('UTC').datetime < utcnow(naive=False):
                 raise ValidationError(_l('Invalid.'))
-        except Exception as e:
+        except Exception:
             raise ValidationError(_l('Invalid.'))

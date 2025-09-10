@@ -558,7 +558,7 @@ def put_community_flair_edit(auth, data):
     flair = CommunityFlair.query.get(data['flair_id'])
 
     if not flair:
-        raise Exception(f'No matching flair with id={data['flair_id']} found.')
+        raise Exception(f"No matching flair with id={data['flair_id']} found.")
     
     community = Community.query.get(flair.community_id)
 
@@ -593,7 +593,7 @@ def post_community_flair_delete(auth, data):
     flair = CommunityFlair.query.get(data['flair_id'])
 
     if not flair:
-        raise Exception(f'No matching flair with id={data['flair_id']} found.')
+        raise Exception(f"No matching flair with id={data['flair_id']} found.")
     
     community = Community.query.get(flair.community_id)
 

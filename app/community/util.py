@@ -840,7 +840,7 @@ def publicize_community(community: Community):
         community = Community.query.filter(Community.ap_id == 'newcommunities@lemmy.world').first()
 
     if community:
-        post = make_post(form, community, POST_TYPE_LINK, SRC_WEB)
+        make_post(form, community, POST_TYPE_LINK, SRC_WEB)
 
         if current_app.debug:
             publicize_community_task(community.id)
