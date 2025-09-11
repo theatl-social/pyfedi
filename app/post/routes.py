@@ -54,7 +54,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country
+    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
+    instance_gone_forever
 
 
 @login_required_if_private_instance
@@ -283,9 +284,15 @@ def show_post(post_id: int):
         author_banned = False
         if post.author.banned or post.community_id in communities_banned_from(post.author.id):
             author_banned = True
+        
+        if not post.community.is_local():
+            is_dead = instance_gone_forever(post.community.ap_domain)
+            flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
+        else:
+            is_dead = False
 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
-                                   is_owner=community.is_owner(),
+                                   is_owner=community.is_owner(), is_dead=is_dead,
                                    community=post.community, community_flair=community_flair,
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
