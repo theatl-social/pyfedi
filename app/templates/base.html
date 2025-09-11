@@ -259,13 +259,17 @@
             <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PieFed app') }}</button></p>
             <div class="text-center">
                 <p>
-                    <a href="/about">{{ _("About") }}</a> | <a href="/donate">{{ _("Donate") }}</a> | <a href="/instances">{{ _("Instances") }}</a>
+                    <a href="/about">{{ _("About") }}</a> | <a href="/instances">{{ _("Instances") }}</a>
                 </p>
                 <p>
                     {% if g.site.tos_url -%}
                         <a href="{{ g.site.tos_url }}">{{ _('Terms of service') }}</a> | 
                     {% endif -%}
-                    <a href="/privacy">{{ _('Privacy policy') }}</a> | <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a>
+                    {% if g.site.privacy_url -%}
+                        <a href="{{ g.site.privacy_url }}">{{ _('Privacy policy') }}</a>
+                    {% else -%}
+                        <a href="/privacy">{{ _('Privacy policy') }}</a>
+                    {% endif %} | <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a>
                 </p>
             </div>
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
