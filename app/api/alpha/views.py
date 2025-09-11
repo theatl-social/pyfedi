@@ -24,6 +24,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
     if variant == 1:
         include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
+        
+        if not v1['nsfw']:
+            # For whatever reason, nsfw can sometimes be null
+            v1['nsfw'] = False
+        
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': post.profile_id(),
                    'local': post.is_local(),
@@ -482,7 +487,11 @@ def flair_view(flair: CommunityFlair | int):
     flair_item["flair_title"] = flair.flair
     flair_item["text_color"] = flair.text_color
     flair_item["background_color"] = flair.background_color
-    flair_item["blur_images"] = flair.blur_images
+
+    if flair.blur_images:
+        flair_item["blur_images"] = flair.blur_images
+    else:
+        flair_item["blur_images"] = False
     
     if flair.ap_id:
         flair_item["ap_id"] = flair.ap_id
