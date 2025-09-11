@@ -159,7 +159,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
               'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin,
-              'flair': get_post_flair_list(post)}
+              'flair_list': get_post_flair_list(post)}
 
         creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
         community = community_view(community=post.community, variant=1, stub=True)

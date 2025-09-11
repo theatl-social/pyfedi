@@ -325,7 +325,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
-    flair = fields.List(fields.Nested(CommunityFlair))
+    flair_list = fields.List(fields.Nested(CommunityFlair))
 
 
 class CommunityAggregates(DefaultSchema):
