@@ -851,3 +851,16 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
                 text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
                 {"user_id": user_id, "post_id": post_id})
         db.session.commit()
+
+
+def get_post_flair_list(post: Post | int) -> list:
+    if isinstance(post, int):
+        post = Post.query.filter_by(id=post).one()
+    
+    if not post.flair:
+        # In case flair is null
+        flair_list = []
+    else:
+        flair_list = post.flair
+    
+    return flair_list

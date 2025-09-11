@@ -12,7 +12,7 @@ from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
-    Community, Language, File
+    Community, Language, File, CommunityFlair
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
@@ -538,3 +538,28 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
 
     if src == SRC_API:
         return user.id
+
+
+def get_comm_flair_list(community: Community | int | str) -> list:
+    if isinstance(community, int):
+        community_id = community
+        community = Community.query.filter_by(id=community).one()
+    elif isinstance(community, Community):
+        community_id = community.id
+    elif isinstance(community, str):
+        name, ap_domain = community.strip().split('@')
+        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+        if community is None:
+            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
+        community_id = community.id
+    
+    # flair_list = []
+
+    # for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
+    #     flair_item = flair_view(flair)
+    #     flair_list.append(flair_item)
+
+    flair = CommunityFlair.query.filter_by(community_id=community_id).all()
+    
+    return flair

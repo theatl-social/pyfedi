@@ -43,6 +43,7 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
+from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -260,8 +261,9 @@ def show_post(post_id: int):
         else:
             user = None
 
-        community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
-            order_by(CommunityFlair.flair).all()
+        community_flair = get_comm_flair_list(community)
+        # community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
+        #     order_by(CommunityFlair.flair).all()
 
         # Get the language of the user being replied to
         recipient_language_id = post.language_id or post.author.language_id

@@ -42,7 +42,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
-    remove_mod_from_community
+    remove_mod_from_community, get_comm_flair_list
 from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
@@ -2192,7 +2192,7 @@ def community_flair(actor):
 
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-            flairs = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).order_by(CommunityFlair.flair)
+            flairs = get_comm_flair_list(community)
 
             return render_template('community/community_flair.html', flairs=flairs,
                                    title=_('Flair in %(community)s', community=community.display_name()),
@@ -2216,6 +2216,8 @@ def community_flair_edit(community_id, flair_id):
             if flair is None:
                 flair = CommunityFlair(community_id=community.id)
                 db.session.add(flair)
+                # Need to commit here so that an id is generated before we make the ap_id
+                db.session.commit()
                 flash(_('Flair added.'))
             else:
                 flash(_('Flair updated.'))
@@ -2223,6 +2225,7 @@ def community_flair_edit(community_id, flair_id):
             flair.text_color = form.text_color.data
             flair.background_color = form.background_color.data
             flair.blur_images = form.blur_images.data
+            flair.ap_id = community.public_url() + f"/tag/{flair.id}"
             db.session.commit()
 
             return redirect(url_for('community.community_flair', actor=community.link()))
