@@ -97,7 +97,7 @@ def create_private_user(user_data):
             email=email,
             title=display_name,
             about=bio,
-            password=generate_password_hash(password),
+            password_hash=generate_password_hash(password),
             verified=auto_activate,  # Skip email verification if auto_activate is True
             created=utcnow(),
             instance_id=1,  # Local user
