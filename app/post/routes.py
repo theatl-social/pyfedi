@@ -261,10 +261,6 @@ def show_post(post_id: int):
         else:
             user = None
 
-        community_flair = get_comm_flair_list(community)
-        # community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
-        #     order_by(CommunityFlair.flair).all()
-
         # Get the language of the user being replied to
         recipient_language_id = post.language_id or post.author.language_id
         recipient_language_code = None
@@ -288,7 +284,7 @@ def show_post(post_id: int):
 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
                                    is_owner=community.is_owner(),
-                                   community=post.community, community_flair=community_flair,
+                                   community=post.community,
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
