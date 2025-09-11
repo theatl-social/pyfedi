@@ -553,12 +553,6 @@ def get_comm_flair_list(community: Community | int | str) -> list:
             community = Community.query.filter(func.lower(Community.name) == name.lower(),
                                                func.lower(Community.ap_domain) == ap_domain.lower()).one()
         community_id = community.id
-    
-    # flair_list = []
-
-    # for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
-    #     flair_item = flair_view(flair)
-    #     flair_list.append(flair_item)
 
     flair = CommunityFlair.query.filter_by(community_id=community_id).all()
     
