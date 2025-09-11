@@ -1,4 +1,4 @@
-VERSION = '1.2.0-dev-20250911-theatlsocial'
+VERSION = '1.2.0-dev-20250911-fix3-theatlsocial'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
