@@ -7,7 +7,7 @@ from flask import current_app, json
 from app import celery, db
 from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
-from app.community.util import send_to_remote_instance
+from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
 from app.utils import gibberish, ap_datetime, instance_banned, get_request
 
@@ -62,7 +62,7 @@ def purge_user_then_delete_task(user_id, flush):
 
                         for instance in post.community.following_instances():
                             if instance.inbox and not instance_banned(instance.domain):
-                                send_to_remote_instance(instance.id, post.community.id, announce)
+                                send_to_remote_instance_fast(instance.inbox, post.community.private_key, post.community.ap_profile_id, announce)
 
             # unsubscribe
             communities = CommunityMember.query.filter_by(user_id=user_id).all()

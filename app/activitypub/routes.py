@@ -19,7 +19,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
     post_replies_for_ap
 from app.community.routes import show_community
-from app.community.util import send_to_remote_instance
+from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
 from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
@@ -1739,7 +1739,7 @@ def announce_activity_to_followers(community: Community, creator: User, activity
                                                  payload=activity))
                     db.session.commit()
                 else:
-                    send_to_remote_instance(instance.id, community.id, announce_activity)
+                    send_to_remote_instance_fast(instance.inbox, community.private_key, community.ap_profile_id, announce_activity)
 
 
 @bp.route('/c/<actor>/outbox', methods=['GET'])

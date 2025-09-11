@@ -766,6 +766,20 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
         session.close()
 
 
+def send_to_remote_instance_fast(inbox: str, community_private_key: str, community_ap_profile_id: str, payload):
+    # a faster version of send_to_remote_instance that does not use the DB
+    if current_app.debug:
+        send_to_remote_instance_fast_task(inbox, community_private_key, community_ap_profile_id, payload)
+    else:
+        send_to_remote_instance_fast_task.delay(inbox, community_private_key, community_ap_profile_id, payload)
+
+
+@celery.task
+def send_to_remote_instance_fast_task(inbox: str, community_private_key: str, community_ap_profile_id: str, payload):
+    send_post_request(inbox, payload, community_private_key, community_ap_profile_id + '#main-key',
+                      timeout=10, new_task=False)
+
+
 def community_in_list(community_id, community_list):
     for tup in community_list:
         if community_id == tup[0]:
