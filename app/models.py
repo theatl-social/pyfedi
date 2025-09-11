@@ -3021,6 +3021,7 @@ class Site(db.Model):
     legal_information = db.Column(db.Text, default='')
     legal_information_html = db.Column(db.Text, default='')
     tos_url = db.Column(db.String(256))
+    privacy_url = db.Column(db.String(256))
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
     enable_downvotes = db.Column(db.Boolean, default=True)
