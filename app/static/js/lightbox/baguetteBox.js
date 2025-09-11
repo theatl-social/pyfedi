@@ -109,14 +109,14 @@
         var touchEvent = event.touches[0] || event.changedTouches[0];
         var duration = new Date().getTime() - touch.startTime;
         // Move at least 40 pixels to trigger the action
-        if (touchEvent.pageX - touch.startX > 40 && duration < 300 && !touch.multitouch) {
+        if (touchEvent.pageX - touch.startX > 40 && duration < 400 && !touch.multitouch) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             showPreviousImage();
-        } else if (touchEvent.pageX - touch.startX < -40 && duration < 300 && !touch.multitouch) {
+        } else if (touchEvent.pageX - touch.startX < -40 && duration < 400 && !touch.multitouch) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             showNextImage();
         // Move 100 pixels up to close the overlay
-        } else if (touch.startY - touchEvent.pageY > 100 && duration < 300 && !touch.multitouch) {
+        } else if (touch.startY - touchEvent.pageY > 80 && duration < 400 && !touch.multitouch) {
             event.preventDefault ? event.preventDefault() : event.returnValue = false; // eslint-disable-line no-unused-expressions
             hideOverlay();
         }
@@ -323,7 +323,7 @@
         bind(slider, 'contextmenu', contextmenuHandler);
         bind(overlay, 'touchstart', touchstartHandler, nonPassiveEvent);
         bind(overlay, 'touchmove', touchmoveHandler, passiveEvent);
-        bind(overlay, 'touchend', touchendHandler);
+        bind(overlay, 'touchend', touchendHandler, passiveEvent);
         bind(document, 'focus', trapFocusInsideOverlay, true);
     }
 
@@ -338,7 +338,7 @@
         unbind(slider, 'contextmenu', contextmenuHandler);
         unbind(overlay, 'touchstart', touchstartHandler, nonPassiveEvent);
         unbind(overlay, 'touchmove', touchmoveHandler, passiveEvent);
-        unbind(overlay, 'touchend', touchendHandler);
+        unbind(overlay, 'touchend', touchendHandler, passiveEvent);
         unbind(document, 'focus', trapFocusInsideOverlay, true);
     }
 

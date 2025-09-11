@@ -34,7 +34,7 @@ def get_reply_list(auth, data, user_details=None):
     # LIKED_ONLY
     vote_effect = None
     by_liked_only = False
-    if data and 'liked_only' in data and data['liked_only'] == 'true':
+    if data and 'liked_only' in data and data['liked_only']:
         if not user_id:
             raise Exception('Login required for liked_only query')
         replies = PostReply.query.filter(PostReply.id.in_(user_details['upvoted_reply_ids']), PostReply.user_id != user_id)
@@ -44,7 +44,7 @@ def get_reply_list(auth, data, user_details=None):
     # SAVED_ONLY
     is_reply_bookmarked = None
     by_saved_only = False
-    if data and 'saved_only' in data and data['saved_only'] == 'true':
+    if data and 'saved_only' in data and data['saved_only']:
         if not user_id:
             raise Exception('Login required for saved_only query')
         if not replies:

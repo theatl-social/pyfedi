@@ -126,6 +126,8 @@ def after_request(response):
         if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/'):
             response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
     else:
+        if not current_app.config['ALLOW_AI_CRAWLERS']:
+            response.headers.add('Link', f'<https://{current_app.config["SERVER_NAME"]}/rsl.xml>; rel="license"; type="application/rsl+xml"')
         if 'auth/register' not in request.path:
             if hasattr(g, 'nonce') and "api/alpha/swagger" not in request.path:
                 response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'; object-src 'none'; base-uri 'none';"

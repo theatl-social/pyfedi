@@ -30,7 +30,7 @@ def upgrade():
     # This recreates the trigger with proper weight handling
     metadata = sa.MetaData()
     # Define the table structure for the search trigger
-    sa.Table('post', metadata,
+    post_table = sa.Table('post', metadata,                 # noqa F841
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('title', sa.String(255)),
         sa.Column('body', sa.Text),

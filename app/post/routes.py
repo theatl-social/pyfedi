@@ -15,7 +15,7 @@ import ics
 from markupsafe import escape
 from slugify import slugify
 
-from app import db, constants, cache, limiter
+from app import db, constants, cache, limiter, get_locale
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
@@ -30,10 +30,11 @@ from app.inoculation import inoculation
 from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event, \
+    Reminder
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
@@ -1193,6 +1194,58 @@ def post_reply_translate(post_reply_id: int):
                                        source=post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto',
                                        target=recipient_language)
         return f'<div class="col-12 pr-0" lang="{recipient_language}">' + result + "</div>"
+
+
+@bp.route('/post/<int:post_id>/reminder', methods=['GET', 'POST'])
+@login_required
+def post_reminder(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.community.id in communities_banned_from(current_user.id):
+        abort(403)
+    form = NewReminderForm()
+    if form.validate_on_submit():
+        import dateparser
+        import arrow
+        remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
+                                                                    "RETURN_AS_TIMEZONE_AWARE": True}, languages=[get_locale()])
+        remind_at_utc = arrow.get(remind_at).to('UTC')
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=1, reminder_destination=post.id)
+        db.session.add(reminder)
+        db.session.commit()
+        flash(_('Reminder added for %(when)s', when=str(remind_at)))
+        return redirect(referrer())
+    else:
+        form.referrer.data = request.referrer
+        return render_template('generic_form.html',
+                               title=_('Creating a reminder about "%(post_title)s"', post_title=post.title),
+                               form=form)
+
+
+@bp.route('/post_reply/<int:post_reply_id>/reminder', methods=['GET', 'POST'])
+@login_required
+def post_reply_reminder(post_reply_id: int):
+    post_reply = PostReply.query.get_or_404(post_reply_id)
+    if post_reply.community.id in communities_banned_from(current_user.id):
+        abort(403)
+    form = NewReminderForm()
+    if form.validate_on_submit():
+        import dateparser
+        import arrow
+        remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
+                                                                    "RETURN_AS_TIMEZONE_AWARE": True})
+        remind_at_utc = arrow.get(remind_at).to("UTC")
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=2, reminder_destination=post_reply.id)
+        db.session.add(reminder)
+        db.session.commit()
+        flash(_('Reminder added for %(when)s', when=str(remind_at)))
+        return redirect(referrer(form.referrer.data))
+    else:
+        form.referrer.data = request.referrer
+        return render_template('generic_form.html',
+                               title=_('Creating a reminder about comment by %(author)s on "%(post_title)s"',
+                                       author=post_reply.author.display_name(),
+                                       post_title=post_reply.post.title),
+                               form=form)
 
 
 @bp.route('/post/<int:post_id>/bookmark', methods=['POST'])

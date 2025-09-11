@@ -2352,6 +2352,8 @@ def instance_software(domain: str):
 def referrer(default: str = None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
+    if request.form.get('referrer'):
+        return request.form.get('referrer')
     if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
         return request.referrer
     if default:
@@ -2521,12 +2523,18 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
 
-    # filter out posts in communities where the community name is objectionable to them
+    # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
         filtered_out_community_ids = filtered_out_communities(current_user)
         if len(filtered_out_community_ids):
             post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
             params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
+
+        if bi := blocked_instances(current_user.id):
+            post_id_where.append('c.instance_id NOT IN :filtered_out_instance_ids ')
+            params['filtered_out_instance_ids'] = tuple(bi)
+            post_id_where.append('p.instance_id NOT IN :filtered_out_instance_ids2 ')
+            params['filtered_out_instance_ids2'] = tuple(bi)
 
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
@@ -2983,11 +2991,11 @@ def get_recipient_language(user_id: int) -> str:
     lang_to_use = ''
 
     # look up the user in the db based on the id
-    recipient = User.query.get(user_id)
+    recipient = db.session.query(User).get(user_id)
 
     # if the user has language_id set, use that
     if recipient.language_id:
-        lang = Language.query.get(recipient.language_id)
+        lang = db.session.query(Language).get(recipient.language_id)
         lang_to_use = lang.code
 
     # else if the user has interface_language use that
@@ -3419,3 +3427,11 @@ def should_log_private_registration_attempts():
 def should_require_verification():
     """Check if email verification should be required for private registration"""
     return get_setting('PRIVATE_REGISTRATION_REQUIRE_VERIFICATION', 'false').lower() == 'true'
+
+
+def expand_hex_color(text: str) -> str:
+    new_text = ("#" +
+                text[1] * 2 +
+                text[2] * 2 +
+                text[3] * 2)
+    return new_text

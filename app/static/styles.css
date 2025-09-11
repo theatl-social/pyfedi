@@ -160,6 +160,10 @@
   content: "\e986";
 }
 
+.fe-reminder::before {
+  content: "\e939";
+}
+
 .fe-activity::before {
   content: "\e900";
 }
@@ -2301,7 +2305,11 @@ h1 .warning_badge {
 }
 
 #baguetteBox-overlay {
-  overflow: scroll;
+  scroll-behavior: smooth;
+}
+
+.baguetteBox-open {
+  overflow: hidden;
 }
 
 .card-title {
