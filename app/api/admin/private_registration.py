@@ -101,7 +101,7 @@ def create_private_user(user_data):
             verified=auto_activate,  # Skip email verification if auto_activate is True
             created=utcnow(),
             instance_id=1,  # Local user
-            indexed=True,
+            indexable=True,
             banned=False,
             deleted=False,
             newsletter=False,
