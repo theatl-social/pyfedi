@@ -165,3 +165,5 @@ class Config(object):
 
     TRANSLATE_ENDPOINT = os.environ.get('TRANSLATE_ENDPOINT') or ''
     TRANSLATE_KEY = os.environ.get('TRANSLATE_KEY') or ''
+
+    ALLOW_AI_CRAWLERS = os.environ.get('ALLOW_AI_CRAWLERS') or False
