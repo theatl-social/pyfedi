@@ -69,3 +69,7 @@ User-agent: TikTokSpider
 User-agent: DuckAssistBot
 User-agent: anthropic-ai
 Disallow: /
+
+{% if use_rsl %}
+License: https://{{ instance_domain }}/rsl.xml
+{% endif %}

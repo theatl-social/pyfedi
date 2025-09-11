@@ -18,7 +18,7 @@ from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTIO
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
+from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file, abort
 from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
@@ -773,7 +773,7 @@ def login():
 
 @bp.route('/robots.txt')
 def robots():
-    resp = make_response(render_template('robots.txt'))
+    resp = make_response(render_template('robots.txt', use_rsl=not current_app.config['ALLOW_AI_CRAWLERS']))
     resp.mimetype = 'text/plain'
     return resp
 
@@ -786,6 +786,15 @@ def sitemap():
     posts = posts.order_by(desc(Post.posted_at)).limit(500)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
+    resp.mimetype = 'text/xml'
+    return resp
+
+
+@bp.route('/rsl.xml')
+def rsl():
+    if current_app.config['ALLOW_AI_CRAWLERS']:
+        abort(404)
+    resp = make_response(render_template('rsl.xml'))
     resp.mimetype = 'text/xml'
     return resp
 
