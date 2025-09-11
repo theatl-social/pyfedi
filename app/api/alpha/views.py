@@ -24,6 +24,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
     if variant == 1:
         include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
+        
+        if not v1['nsfw']:
+            # For whatever reason, nsfw can sometimes be null
+            v1['nsfw'] = False
+        
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': post.profile_id(),
                    'local': post.is_local(),
