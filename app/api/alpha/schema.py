@@ -1205,10 +1205,15 @@ class DeletePrivateMessageRequest(DefaultSchema):
 class ReportPrivateMessageRequest(DefaultSchema):
     private_message_id = fields.Integer(required=True)
     reason = fields.String(required=True)
-    limit = fields.Integer()
-    community_id = fields.Integer()
-    community_name = fields.String()
-    person_id = fields.Integer()
+
+
+# Upload Schemas
+class ImageUploadRequest(DefaultSchema):
+    file = fields.Raw(required=True, metadata={"type": "string", "format": "binary"})
+
+
+class ImageUploadResponse(DefaultSchema):
+    url = fields.Url(required=True)
     liked_only = fields.Boolean()
     saved_only = fields.Boolean()
     q = fields.String()

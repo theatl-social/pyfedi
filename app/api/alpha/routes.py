@@ -5,7 +5,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
 from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
-    reply_bp, post_bp, private_message_bp
+    reply_bp, post_bp, private_message_bp, upload_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -1440,52 +1440,70 @@ def post_alpha_user_set_flair(data):
 
 
 # Upload
-@bp.route('/api/alpha/upload/image', methods=['POST'])
-def post_alpha_upload_image():
+@upload_bp.route('/upload/image', methods=['POST'])
+@upload_bp.doc(summary="Upload a general image.")
+@upload_bp.arguments(ImageUploadRequest, location="files")
+@upload_bp.response(200, ImageUploadResponse)
+@upload_bp.alt_response(400, schema=DefaultError)
+@upload_bp.alt_response(429, schema=DefaultError)
+def post_alpha_upload_image(files_data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('15/hour'):
             auth = request.headers.get('Authorization')
-            image_file = request.files['file']
-            return jsonify(post_upload_image(auth, image_file))
+            image_file = files_data['file']
+            resp = post_upload_image(auth, image_file)
+            return ImageUploadResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/upload/community_image', methods=['POST'])
-def post_alpha_upload_community_image():
+@upload_bp.route('/upload/community_image', methods=['POST'])
+@upload_bp.doc(summary="Upload a community image.")
+@upload_bp.arguments(ImageUploadRequest, location="files")
+@upload_bp.response(200, ImageUploadResponse)
+@upload_bp.alt_response(400, schema=DefaultError)
+@upload_bp.alt_response(429, schema=DefaultError)
+def post_alpha_upload_community_image(files_data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('20/day'):
             auth = request.headers.get('Authorization')
-            image_file = request.files['file']
-            return jsonify(post_upload_community_image(auth, image_file))
+            image_file = files_data['file']
+            resp = post_upload_community_image(auth, image_file)
+            return ImageUploadResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/upload/user_image', methods=['POST'])
-def post_alpha_upload_user_image():
+@upload_bp.route('/upload/user_image', methods=['POST'])
+@upload_bp.doc(summary="Upload a user image.")
+@upload_bp.arguments(ImageUploadRequest, location="files")
+@upload_bp.response(200, ImageUploadResponse)
+@upload_bp.alt_response(400, schema=DefaultError)
+@upload_bp.alt_response(429, schema=DefaultError)
+def post_alpha_upload_user_image(files_data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('20/day'):
             auth = request.headers.get('Authorization')
-            image_file = request.files['file']
-            return jsonify(post_upload_user_image(auth, image_file))
+            image_file = files_data['file']
+            resp = post_upload_user_image(auth, image_file)
+            return ImageUploadResponse().load(resp)
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing

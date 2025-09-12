@@ -68,4 +68,11 @@ private_message_bp = ApiBlueprint(
     description=""
 )
 
+upload_bp = ApiBlueprint(
+    "Upload",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes
