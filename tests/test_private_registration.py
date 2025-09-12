@@ -532,5 +532,127 @@ class TestSecurityProtections:
             assert success_count >= 1  # At least one should work in test env
 
 
+class TestCaseConflictValidation:
+    """Test username case conflict detection and prevention"""
+    
+    def test_case_insensitive_username_conflict(self, app):
+        """Test that usernames with different cases are detected as conflicts"""
+        with app.app_context():
+            # Create existing user with mixed case
+            existing_user = User(
+                user_name='TestUser',
+                email='existing@example.com',
+                password_hash='hashed_password',
+                instance_id=1,
+                verified=True,
+                ap_profile_id='https://test.server/u/testuser'
+            )
+            db.session.add(existing_user)
+            db.session.commit()
+            
+            # Test validation with different cases
+            test_cases = ['testuser', 'TESTUSER', 'testUser', 'TestUSER']
+            
+            for test_username in test_cases:
+                result = validate_user_availability(test_username, 'new@example.com')
+                assert result['username_available'] == False
+                assert 'case difference' in result['validation_errors']['username']
+                assert 'TestUser' in result['validation_errors']['username']
+                assert len(result['username_suggestions']) > 0
+    
+    def test_activitypub_profile_conflict(self, app):
+        """Test ActivityPub profile ID conflict detection"""
+        with app.app_context():
+            # Create user with ActivityPub profile
+            existing_user = User(
+                user_name='ExistingUser',
+                email='existing@example.com', 
+                password_hash='hashed_password',
+                instance_id=1,
+                verified=True,
+                ap_profile_id='https://test.server/u/newuser'  # Profile for lowercase 'newuser'
+            )
+            db.session.add(existing_user)
+            db.session.commit()
+            
+            # Test that 'NewUser' conflicts due to ActivityPub URL collision
+            result = validate_user_availability('NewUser', 'new@example.com')
+            assert result['username_available'] == False
+            assert 'ActivityPub URL conflict' in result['validation_errors']['username']
+    
+    def test_exact_case_match_still_works(self, app):
+        """Test that exact case matches are still detected"""
+        with app.app_context():
+            # Create existing user
+            existing_user = User(
+                user_name='ExactMatch',
+                email='existing@example.com',
+                password_hash='hashed_password', 
+                instance_id=1,
+                verified=True
+            )
+            db.session.add(existing_user)
+            db.session.commit()
+            
+            # Test exact match detection
+            result = validate_user_availability('ExactMatch', 'new@example.com')
+            assert result['username_available'] == False
+            assert result['validation_errors']['username'] == "Username 'ExactMatch' is already taken"
+    
+    def test_case_preserved_in_suggestions(self, app):
+        """Test that username suggestions preserve original casing logic"""
+        with app.app_context():
+            # Create user to trigger conflict
+            existing_user = User(
+                user_name='ConflictUser',
+                email='existing@example.com',
+                password_hash='hashed_password',
+                instance_id=1,
+                verified=True
+            )
+            db.session.add(existing_user)
+            db.session.commit()
+            
+            # Test that suggestions are generated for case conflicts
+            result = validate_user_availability('conflictuser', 'new@example.com')
+            assert result['username_available'] == False
+            assert len(result['username_suggestions']) > 0
+            # Suggestions should be based on the requested username (conflictuser)
+            for suggestion in result['username_suggestions']:
+                assert suggestion.startswith('conflictuser')
+    
+    def test_no_false_positives_for_available_usernames(self, app):
+        """Test that available usernames are not flagged as conflicts"""
+        with app.app_context():
+            # Test completely unique username
+            result = validate_user_availability('UniqueUsername123', 'unique@example.com')
+            assert result['username_available'] == True
+            assert result['email_available'] == True
+            assert len(result['validation_errors']) == 0
+            assert len(result['username_suggestions']) == 0
+    
+    def test_deleted_user_case_conflict(self, app):
+        """Test case conflict with deleted users"""
+        with app.app_context():
+            # Create deleted user
+            deleted_user = User(
+                user_name='DeletedUser',
+                email='deleted_123@deleted.com',
+                password_hash='hashed_password',
+                instance_id=1,
+                verified=True,
+                deleted=True,
+                ap_profile_id='https://test.server/u/deleteduser'
+            )
+            db.session.add(deleted_user)
+            db.session.commit()
+            
+            # Test that case-different username still conflicts due to ActivityPub URL
+            result = validate_user_availability('deleteduser', 'new@example.com')
+            assert result['username_available'] == False
+            # Should detect ActivityPub conflict, not case conflict (since deleted users are included in AP check)
+            assert 'ActivityPub URL conflict' in result['validation_errors']['username']
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

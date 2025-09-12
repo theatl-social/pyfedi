@@ -27,14 +27,30 @@ def validate_user_availability(username, email):
     Returns:
         dict: Validation result with availability and suggestions
     """
+    from flask import current_app
+    
     result = {"username_available": True, "email_available": True, "username_suggestions": [], "validation_errors": {}}
 
-    # Check username availability
+    # Check exact case username match
     existing_user = User.query.filter_by(user_name=username).first()
-    if existing_user:
+    
+    # Check case-insensitive conflicts (different case, same username)
+    case_conflict = User.query.filter(User.user_name.ilike(username)).filter(User.user_name != username).first()
+    
+    # Check ActivityPub profile ID conflicts
+    ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{username.lower()}"
+    ap_conflict = User.query.filter_by(ap_profile_id=ap_profile_id).first()
+    
+    if existing_user or case_conflict or ap_conflict:
         result["username_available"] = False
         result["username_suggestions"] = generate_username_suggestions(username)
-        result["validation_errors"]["username"] = f"Username '{username}' is already taken"
+        
+        if existing_user:
+            result["validation_errors"]["username"] = f"Username '{username}' is already taken"
+        elif case_conflict:
+            result["validation_errors"]["username"] = f"Username '{username}' conflicts with existing user '{case_conflict.user_name}' (case difference)"
+        elif ap_conflict:
+            result["validation_errors"]["username"] = f"Username '{username}' would create ActivityPub URL conflict with existing user"
 
     # Check email availability
     existing_email = User.query.filter_by(email=email).first()
