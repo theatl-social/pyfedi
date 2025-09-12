@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 from flask import current_app, flash, render_template
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from slugify import slugify
-from sqlalchemy import text
+from sqlalchemy import text, func
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache
@@ -554,6 +556,4 @@ def get_comm_flair_list(community: Community | int | str) -> list:
                                                func.lower(Community.ap_domain) == ap_domain.lower()).one()
         community_id = community.id
 
-    flair = CommunityFlair.query.filter_by(community_id=community_id).all()
-    
-    return flair
+    return CommunityFlair.query.filter_by(community_id=community_id).order_by(CommunityFlair.flair).all()

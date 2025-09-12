@@ -478,9 +478,6 @@ def show_community(community: Community):
     community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).\
         filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
 
-    community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).\
-        order_by(CommunityFlair.flair).all()
-
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
                                                  INNER JOIN post p on e.post_id = p.id
@@ -584,8 +581,9 @@ def show_community(community: Community):
         recently_downvoted = []
     
     if not community.is_local():
-        is_dead = instance_gone_forever(community.ap_domain)
-        flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
+        is_dead = community.instance.gone_forever
+        if is_dead:
+            flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
     else:
         is_dead = False
 
@@ -602,7 +600,7 @@ def show_community(community: Community):
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}",
                            related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
-                           community_flair=community_flair,
+                           community_flair=get_comm_flair_list(community),
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community),

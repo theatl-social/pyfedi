@@ -284,16 +284,15 @@ def show_post(post_id: int):
             author_banned = True
 
         if not post.community.is_local():
-            is_dead = instance_gone_forever(post.community.ap_domain)
-            flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
+            is_dead = post.community.instance.gone_forever
+            if is_dead:
+                flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
         else:
             is_dead = False
 
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
                                    is_owner=community.is_owner(), is_dead=is_dead,
-                                   community=post.community, community_flair=community_flair,
-                                   is_owner=community.is_owner(),
-                                   community=post.community,
+                                   community=post.community, community_flair=get_comm_flair_list(community),
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
                                    poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
