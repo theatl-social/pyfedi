@@ -1842,11 +1842,19 @@ def post_reply_delete(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
 
-    form = ConfirmationMultiDeleteForm()
+    if community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
+        form = ConfirmationMultiDeleteForm()
+    else:
+        form = DeleteConfirmationForm()
 
     if post_reply.user_id == current_user.id or community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
         if form.validate_on_submit():
-            if form.also_delete_replies.data:
+            if not hasattr(form, 'also_delete_replies'):
+                multi_deletes = False
+            else:
+                multi_deletes = form.also_delete_replies.data
+
+            if multi_deletes:
                 num_deleted = 0
                 # Find all the post_replys that have the same IDs in the path. NB the @>
                 child_post_ids = db.session.execute(
