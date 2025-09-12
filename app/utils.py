@@ -1190,7 +1190,7 @@ def instance_gone_forever(domain: str) -> bool:
         domain = urlparse(domain).hostname
     session = get_task_session()
     try:
-        instance = Instance.query.filter_by(domain=domain).first()
+        instance = session.query(Instance).filter_by(domain=domain).first()
         if instance is not None:
             return instance.gone_forever
         else:
