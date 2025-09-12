@@ -546,9 +546,8 @@ def post_community_flair_create(auth, data):
         # Need a commit here or else the flair id is not defined for the ap_id
         db.session.commit()
         
-        if community.is_local():
-            new_flair.ap_id = community.public_url() + f"/tag/{new_flair.id}"
-            db.session.commit()
+        new_flair.ap_id = community.public_url() + f"/tag/{new_flair.id}"
+        db.session.commit()
     
     return flair_view(new_flair)
 
@@ -582,6 +581,9 @@ def put_community_flair_edit(auth, data):
     
     if 'blur_images' in data:
         flair.blur_images = data['blur_images']
+    
+    if not flair.ap_id:
+        flair.ap_id = community.public_url() + f"/tag/{flair.id}"
     
     db.session.commit()
 

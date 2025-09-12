@@ -2225,7 +2225,10 @@ def community_flair_edit(community_id, flair_id):
             flair.text_color = form.text_color.data
             flair.background_color = form.background_color.data
             flair.blur_images = form.blur_images.data
-            flair.ap_id = community.public_url() + f"/tag/{flair.id}"
+
+            if not flair.ap_id:
+                flair.ap_id = community.public_url() + f"/tag/{flair.id}"
+            
             db.session.commit()
 
             return redirect(url_for('community.community_flair', actor=community.link()))
