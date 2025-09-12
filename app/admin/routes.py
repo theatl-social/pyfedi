@@ -111,6 +111,7 @@ def admin_site():
             site.legal_information_html = markdown_to_html(form.legal_information.data)
 
         site.tos_url = form.tos_url.data
+        site.privacy_url = form.privacy_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
         if site.id is None:
@@ -217,6 +218,7 @@ def admin_site():
         form.sidebar.data = site.sidebar if site.sidebar is not None else ''
         form.legal_information.data = site.legal_information if site.legal_information is not None else ''
         form.tos_url.data = site.tos_url
+        form.privacy_url.data = site.privacy_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting('announcement', '')
     return render_template('admin/site.html', title=_('Site profile'), form=form)
