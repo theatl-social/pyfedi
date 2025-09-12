@@ -7,7 +7,6 @@
 import imaplib
 import os
 import re
-import time
 import uuid
 from datetime import datetime, timedelta
 from random import randint, uniform
@@ -21,25 +20,25 @@ from flask import json, current_app
 from flask_babel import _, force_locale
 from sqlalchemy import or_, desc, text
 
-from app import db, cache
+from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
-from app.activitypub.util import find_actor_or_create, extract_domain_and_actor, notify_about_post
+from app.activitypub.util import extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    NOTIF_UNBAN, POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
+    POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
 from app.email import send_email
 from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
     utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    InstanceRole, Community, DefederationSubscription, SendQueue, CommunityBan, _store_files_in_s3, PostVote, Poll, \
+    Community, SendQueue, _store_files_in_s3, PostVote, Poll, \
     ActivityBatch, Reminder
 from app.shared.tasks import task_selector
 from app.shared.tasks.maintenance import add_remote_communities
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, blocked_communities, gibberish, get_request_instance, \
-    instance_banned, recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, download_defeds, \
+    shorten_string, get_request, blocked_communities, gibberish, \
+    recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, \
     get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
-    guess_mime_type, communities_banned_from, joined_communities, moderating_communities, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session, get_setting, set_setting, get_recipient_language
+    guess_mime_type, ensure_directory_exists, \
+    render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language
 
 
 def register(app):
@@ -361,6 +360,8 @@ def register(app):
                 clean_up_tmp.delay()
                 print('All maintenance tasks scheduled successfully (production mode)')
 
+            plugins.fire_hook('cron_daily')
+
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
         daily_maintenance_celery()
@@ -417,6 +418,8 @@ def register(app):
                             send_batched_activities()
 
                             reminders()
+
+                            plugins.fire_hook('cron_often')
 
                     except redis.exceptions.LockError:
                         print('Send queue is still running - stopping this process to avoid duplication.')
