@@ -152,7 +152,7 @@ class TestUtilsSQLInjectionFix:
             
             # Should execute without error (even if no blocked_image table exists in test)
             try:
-                result = db.session.execute(text(sql), {'hash': normal_hash})
+                db.session.execute(text(sql), {'hash': normal_hash})
                 # Query should execute safely
                 assert True
             except Exception as e:
@@ -163,7 +163,7 @@ class TestUtilsSQLInjectionFix:
             malicious_hash = "1010'; DROP TABLE users; --"
             
             try:
-                result = db.session.execute(text(sql), {'hash': malicious_hash})
+                db.session.execute(text(sql), {'hash': malicious_hash})
                 # Should execute safely - malicious input treated as literal parameter
                 assert True
             except Exception as e:
