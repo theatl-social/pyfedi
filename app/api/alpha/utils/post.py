@@ -31,10 +31,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     else:
         page = 1
     limit = int(data['limit']) if data and 'limit' in data else 50
-    liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
-    liked_only = True if liked_only == 'true' else False
-    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    liked_only = data['liked_only'] if data and 'liked_only' in data else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else False
 
     query = data['q'] if data and 'q' in data else ''
 

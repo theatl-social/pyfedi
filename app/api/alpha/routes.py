@@ -486,12 +486,13 @@ def get_alpha_feed_list(data):
 @post_bp.arguments(ListPostsRequest, location="query")
 @post_bp.response(200, ListPostsResponse)
 @post_bp.alt_response(400, schema=DefaultError)
-def get_alpha_post_list(query_args):
+def get_alpha_post_list(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        return get_post_list(auth, query_args)
+        resp = get_post_list(auth, data)
+        return ListPostsResponse().load(resp)
     except Exception as ex:
         return abort(400, message=str(ex))
 

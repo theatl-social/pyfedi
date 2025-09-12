@@ -1133,10 +1133,18 @@ class GetPostRepliesResponse(DefaultSchema):
 
 
 class ListPostsRequest(Schema):
-    sort = fields.String(validate=validate.OneOf(post_sort_list))
-    type_ = fields.String(validate=validate.OneOf(community_listing_type_list))
-    page = fields.Integer()
-    page_cursor = fields.Integer()
+    q = fields.String()
+    sort = fields.String(validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"})
+    type_ = fields.String(validate=validate.OneOf(community_listing_type_list), metadata={"default": "All"})
+    community_name = fields.String()
+    community_id = fields.Integer()
+    saved_only = fields.Boolean(metadata={"default": False})
+    person_id = fields.Integer()
+    limit = fields.Integer(metadata={"default": 50})
+    page = fields.Integer(metadata={"default": 1})
+    liked_only = fields.Boolean(metadata={"default": False})
+    feed_id = fields.Integer()
+    topic_id = fields.Integer()
 
 
 # Private Message Schemas
@@ -1221,7 +1229,7 @@ class ImageUploadResponse(DefaultSchema):
 
 class ListPostsResponse(Schema):
     posts = fields.List(fields.Nested(PostView), required=True)
-    next_page = fields.String()
+    next_page = fields.String(allow_none=True)
 
 
 class PostSetFlairRequest(DefaultSchema):
