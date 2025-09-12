@@ -14,6 +14,7 @@ from ics import Calendar, DisplayAlarm
 import ics
 from markupsafe import escape
 from slugify import slugify
+from wtforms.fields import Label
 
 from app import db, constants, cache, limiter, get_locale
 from app.activitypub.signature import default_context, send_post_request
@@ -1842,10 +1843,11 @@ def post_reply_delete(post_id: int, comment_id: int):
     post_reply = PostReply.query.get_or_404(comment_id)
     community = post.community
 
-    if community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
-        form = ConfirmationMultiDeleteForm()
-    else:
-        form = DeleteConfirmationForm()
+    form = ConfirmationMultiDeleteForm()
+
+    if not (community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff()):
+        form.also_delete_replies.label = Label(field_id="also_delete_replies",
+                                               text=_("Delete all my comments in this chain"))
 
     if post_reply.user_id == current_user.id or community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
         if form.validate_on_submit():
