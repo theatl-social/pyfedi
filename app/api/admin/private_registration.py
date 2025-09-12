@@ -13,7 +13,8 @@ from app.api.admin.security import (
     log_registration_attempt,
     sanitize_user_input,
 )
-from app.models import User, utcnow
+from app.models import User, UserRegistration, utcnow
+from app.utils import finalize_user_setup
 
 
 def validate_user_availability(username, email):
@@ -116,6 +117,23 @@ def create_private_user(user_data):
         db.session.flush()  # Get the user ID
 
         user_id = new_user.id
+
+        # Handle registration approval workflow
+        # Private registration should bypass normal approval requirements
+        from flask import g
+        if hasattr(g, 'site') and g.site and g.site.registration_mode == 'RequireApplication':
+            # Create an auto-approved UserRegistration record for compliance with approval workflow
+            application = UserRegistration(
+                user_id=user_id,
+                answer='Private registration - auto-approved',
+                status=1,  # 1 = approved
+                approved_at=utcnow(),
+                approved_by=1  # System/admin approval
+            )
+            db.session.add(application)
+
+        # Finalize user setup - generates ActivityPub keys, sets verified status, etc.
+        finalize_user_setup(new_user)
 
         # Send welcome email if requested (implement this based on existing email system)
         if send_welcome_email:
