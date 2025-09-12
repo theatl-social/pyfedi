@@ -196,8 +196,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
 
-    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, posted_at=utcnow(),
-                ap_id=gibberish(), title=title, language_id=language_id)
+    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, from_bot=user.bot or user.bot_override,
+                posted_at=utcnow(), ap_id=gibberish(), title=title, language_id=language_id)
     db.session.add(post)
     db.session.commit()
 
