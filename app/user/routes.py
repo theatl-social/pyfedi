@@ -100,19 +100,23 @@ def _get_user_posts_and_replies(user, page):
 
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+        post_select = "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id"
+        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id"
+        query_params = {'user_id': user_id}
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        post_select = "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id AND (deleted = 'False' OR deleted_by = :user_id)"
+        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id AND (deleted = 'False' OR deleted_by = :user_id)"
+        query_params = {'user_id': user_id}
     else:
         # Everyone else sees only non-deleted posts/replies
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        post_select = "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id AND deleted = 'False' and status > :reviewing_status"
+        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id AND deleted = 'False'"
+        query_params = {'user_id': user_id, 'reviewing_status': POST_STATUS_REVIEWING}
 
-    full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
-    query_result = db.session.execute(text(full_query))
+    full_query = post_select + " UNION " + reply_select + " ORDER BY posted_at DESC LIMIT :limit OFFSET :offset"
+    query_params.update({'limit': per_page + 1, 'offset': offset_val})
+    query_result = db.session.execute(text(full_query), query_params)
 
     for row in query_result:
         if row.type == "post":

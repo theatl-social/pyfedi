@@ -2839,8 +2839,8 @@ def hash_matches_blocked_image(hash: str) -> bool:
         current_app.logger.warning(f"Invalid binary hash: {hash}")
         return False
 
-    sql = f"""SELECT id FROM blocked_image WHERE length(replace((hash # B'{hash}')::text, '0', '')) < 15;"""
-    blocked_images = db.session.execute(text(sql)).scalars().first()
+    sql = "SELECT id FROM blocked_image WHERE length(replace((hash # B:hash)::text, '0', '')) < 15"
+    blocked_images = db.session.execute(text(sql), {'hash': hash}).scalars().first()
     return blocked_images is not None
 
 

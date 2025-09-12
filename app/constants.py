@@ -1,4 +1,4 @@
-VERSION = '1.2.0-dev-20250911-ui-improvements-theatlsocial'
+VERSION = '1.2.0-dev-20250912-nightly'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
