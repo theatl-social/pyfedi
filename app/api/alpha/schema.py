@@ -1005,9 +1005,9 @@ class GetPostRequest(DefaultSchema):
 
 class GetPostResponse(DefaultSchema):
     post_view = fields.Nested(PostView, required=True)
-    community_view = fields.Nested(CommunityView, required=True)
-    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
-    cross_posts = fields.List(fields.Nested(PostView), required=True)
+    community_view = fields.Nested(CommunityView)
+    moderators = fields.List(fields.Nested(CommunityModeratorView))
+    cross_posts = fields.List(fields.Nested(PostView))
 
 
 class LikePostRequest(Schema):
@@ -1137,6 +1137,74 @@ class ListPostsRequest(Schema):
     type_ = fields.String(validate=validate.OneOf(community_listing_type_list))
     page = fields.Integer()
     page_cursor = fields.Integer()
+
+
+# Private Message Schemas
+class PrivateMessage(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    recipient_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+    deleted = fields.Boolean(required=True)
+    read = fields.Boolean(required=True)
+    published = fields.String(validate=validate_datetime_string, required=True, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    ap_id = fields.Url(required=True)
+    local = fields.Boolean(required=True)
+
+
+class PrivateMessageView(DefaultSchema):
+    private_message = fields.Nested(PrivateMessage, required=True)
+    creator = fields.Nested(Person, required=True)
+    recipient = fields.Nested(Person, required=True)
+
+
+class PrivateMessageResponse(DefaultSchema):
+    private_message_view = fields.Nested(PrivateMessageView, required=True)
+
+
+class ListPrivateMessagesRequest(DefaultSchema):
+    page = fields.Integer()
+    limit = fields.Integer()
+    unread_only = fields.Boolean()
+
+
+class ListPrivateMessagesResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class GetPrivateMessageConversationRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    page = fields.Integer()
+    limit = fields.Integer()
+
+
+class GetPrivateMessageConversationResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class CreatePrivateMessageRequest(DefaultSchema):
+    content = fields.String(required=True)
+    recipient_id = fields.Integer(required=True)
+
+
+class EditPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+
+
+class MarkPrivateMessageAsReadRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    read = fields.Boolean(required=True)
+
+
+class DeletePrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
     limit = fields.Integer()
     community_id = fields.Integer()
     community_name = fields.String()

@@ -5,7 +5,7 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
 from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
-    reply_bp, post_bp
+    reply_bp, post_bp, private_message_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -1018,110 +1018,139 @@ def get_alpha_comment_like_list(data):
 
 
 # Private Message
-@bp.route('/api/alpha/private_message/list', methods=['GET'])
-def get_alpha_private_message_list():
+@private_message_bp.route('/private_message/list', methods=['GET'])
+@private_message_bp.doc(summary="List private messages.")
+@private_message_bp.arguments(ListPrivateMessagesRequest, location="query")
+@private_message_bp.response(200, ListPrivateMessagesResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def get_alpha_private_message_list(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_private_message_list(auth, data))
+        resp = get_private_message_list(auth, data)
+        return ListPrivateMessagesResponse().load(resp)
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message/conversation', methods=['GET'])
-def get_alpha_private_message_conversation():
+@private_message_bp.route('/private_message/conversation', methods=['GET'])
+@private_message_bp.doc(summary="Get conversation with a specific person.")
+@private_message_bp.arguments(GetPrivateMessageConversationRequest, location="query")
+@private_message_bp.response(200, GetPrivateMessageConversationResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def get_alpha_private_message_conversation(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.args.to_dict() or None
-        return jsonify(get_private_message_conversation(auth, data))
+        resp = get_private_message_conversation(auth, data)
+        return GetPrivateMessageConversationResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Person not found"}), 400
+        return abort(400, message="Person not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message', methods=['POST'])
-def post_alpha_private_message():
+@private_message_bp.route('/private_message', methods=['POST'])
+@private_message_bp.doc(summary="Create a new private message.")
+@private_message_bp.arguments(CreatePrivateMessageRequest)
+@private_message_bp.response(200, PrivateMessageResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+@private_message_bp.alt_response(429, schema=DefaultError)
+def post_alpha_private_message(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         with limiter.limit('3/minute'):
             auth = request.headers.get('Authorization')
-            data = request.get_json(force=True) or {}
-            return jsonify(post_private_message(auth, data))
+            resp = post_private_message(auth, data)
+            return PrivateMessageResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Recipient not found"}), 400
+        return abort(400, message="Recipient not found")
     except RateLimitExceeded as ex:
-        return jsonify({"error": str(ex)}), 429
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message', methods=['PUT'])
-def put_alpha_private_message():
+@private_message_bp.route('/private_message', methods=['PUT'])
+@private_message_bp.doc(summary="Edit a private message.")
+@private_message_bp.arguments(EditPrivateMessageRequest)
+@private_message_bp.response(200, PrivateMessageResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def put_alpha_private_message(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(put_private_message(auth, data))
+        resp = put_private_message(auth, data)
+        return PrivateMessageResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Message not found"}), 400
+        return abort(400, message="Message not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message/mark_as_read', methods=['POST'])
-def post_alpha_private_message_mark_as_read():
+@private_message_bp.route('/private_message/mark_as_read', methods=['POST'])
+@private_message_bp.doc(summary="Mark a private message as read or unread.")
+@private_message_bp.arguments(MarkPrivateMessageAsReadRequest)
+@private_message_bp.response(200, PrivateMessageResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def post_alpha_private_message_mark_as_read(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_private_message_mark_as_read(auth, data))
+        resp = post_private_message_mark_as_read(auth, data)
+        return PrivateMessageResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Message not found"}), 400
+        return abort(400, message="Message not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message/delete', methods=['POST'])
-def post_alpha_private_message_delete():
+@private_message_bp.route('/private_message/delete', methods=['POST'])
+@private_message_bp.doc(summary="Delete or restore a private message.")
+@private_message_bp.arguments(DeletePrivateMessageRequest)
+@private_message_bp.response(200, PrivateMessageResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def post_alpha_private_message_delete(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_private_message_delete(auth, data))
+        resp = post_private_message_delete(auth, data)
+        return PrivateMessageResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Message not found"}), 400
+        return abort(400, message="Message not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
-@bp.route('/api/alpha/private_message/report', methods=['POST'])
-def post_alpha_private_message_report():
+@private_message_bp.route('/private_message/report', methods=['POST'])
+@private_message_bp.doc(summary="Report a private message.")
+@private_message_bp.arguments(ReportPrivateMessageRequest)
+@private_message_bp.response(200, PrivateMessageResponse)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def post_alpha_private_message_report(data):
     if not enable_api():
-        return jsonify({'error': 'alpha api is not enabled'}), 400
+        return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        data = request.get_json(force=True) or {}
-        return jsonify(post_private_message_report(auth, data))
+        resp = post_private_message_report(auth, data)
+        return PrivateMessageResponse().load(resp)
     except NoResultFound:
-        return jsonify({"error": "Message not found"}), 400
+        return abort(400, message="Message not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
-        return jsonify({"error": str(ex)}), 400
+        return abort(400, message=str(ex))
 
 
 # Topic
