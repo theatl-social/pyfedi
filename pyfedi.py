@@ -115,7 +115,7 @@ def after_request(response):
     # Add CORS headers to all responses
     response.headers['Access-Control-Allow-Origin'] = current_app.config.get('CORS_ALLOW_ORIGIN', '*')
     response.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, Accept, User-Agent'
     
     # Don't set cookies for static resources or ActivityPub responses to make them cachable
     if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
