@@ -168,7 +168,7 @@ def make_reply(input, post, parent_id, src, auth=None):
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
     reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
                           body_html=markdown_to_html(content), notify_author=notify_author,
-                          from_bot=user.bot or user.bot_override, language_id=language_id, distinguished=distinguished)
+                          language_id=language_id, distinguished=distinguished)
 
     user.language_id = language_id
     user.post_reply_count += 1
