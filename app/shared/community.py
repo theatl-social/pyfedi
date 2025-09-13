@@ -581,3 +581,5 @@ def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
     flair_dict["textColor"] = flair.text_color
     flair_dict["backgroundColor"] = flair.background_color
     flair_dict["blurImages"] = flair.blur_images
+
+    return flair_dict
