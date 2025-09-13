@@ -3344,7 +3344,7 @@ class CommunityFlair(db.Model):
         if self.ap_id:
             return self.ap_id
 
-        community = Community.query.get(self.community_id).first()
+        community = Community.query.get(self.community_id)
 
         if not community:
             return None
