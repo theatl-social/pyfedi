@@ -2,6 +2,7 @@ from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, User, utcnow
 from app.utils import gibberish, ap_datetime, get_task_session, patch_db_session
+from app.shared.community import get_comm_flair_list, comm_flair_ap_format
 
 from flask import current_app
 
@@ -111,6 +112,15 @@ def edit_community(send_async, user_id, community_id):
                 for community_language in community.languages:
                     language.append({'identifier': community_language.code, 'name': community_language.name})
                 group['language'] = language
+
+                flair_list = []
+                for flair in get_comm_flair_list(community):
+                    flair_item = comm_flair_ap_format(flair)
+
+                    if flair_item:
+                        flair_list.append(flair_item)
+                
+                group["tag"] = flair_list
 
                 to = ['https://www.w3.org/ns/activitystreams#Public']
                 cc = [community.public_url()]

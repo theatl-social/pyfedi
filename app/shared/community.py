@@ -557,3 +557,27 @@ def get_comm_flair_list(community: Community | int | str) -> list:
         community_id = community.id
 
     return CommunityFlair.query.filter_by(community_id=community_id).order_by(CommunityFlair.flair).all()
+
+
+def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
+    if isinstance(flair, int):
+        flair = CommunityFlair.query.get(flair)
+    elif isinstance(flair, str):
+        flair = CommunityFlair.query.filter_by(ap_id=flair).first()
+    
+    if not flair:
+        return
+    
+    flair_dict = {}
+    flair_dict["type"] = "CommunityPostTag"
+    
+    if not flair.ap_id:
+        ap_id = flair.get_ap_id()
+        if not ap_id:
+            return
+    
+    flair_dict["id"] = flair.ap_id
+    flair_dict["preferredUsername"] = flair.flair
+    flair_dict["textColor"] = flair.text_color
+    flair_dict["backgroundColor"] = flair.background_color
+    flair_dict["blurImages"] = flair.blur_images

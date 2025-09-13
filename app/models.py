@@ -3327,6 +3327,18 @@ class CommunityFlair(db.Model):
     blur_images = db.Column(db.Boolean, default=False)
     ap_id = db.Column(db.String(255), index=True, unique=True)
 
+    def get_ap_id(self):
+        if self.ap_id:
+            return self.ap_id
+
+        community = Community.query.get(self.id)
+        if community.is_local():
+            self.ap_id = community.public_url() + f"/tag/{self.id}"
+            db.session.commit()
+            return self.ap_id
+        
+        return None
+
 
 class UserFlair(db.Model):
     id = db.Column(db.Integer, primary_key=True)
