@@ -3343,7 +3343,7 @@ class SendQueue(db.Model):
     private_key = db.Column(db.String(2000))
     payload = db.Column(db.Text)
     retries = db.Column(db.Integer, default=0)
-    max_retries = db.Column(db.Integer, default=20)
+    max_retries = db.Column(db.Integer, default=40)
     retry_reason = db.Column(db.String(255))
     created = db.Column(db.DateTime, default=utcnow)
     send_after = db.Column(db.DateTime, default=utcnow, index=True)
