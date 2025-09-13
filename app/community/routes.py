@@ -2261,6 +2261,9 @@ def community_flair_delete(community_id, flair_id):
         db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair_id})
         db.session.query(CommunityFlair).filter(CommunityFlair.id == flair_id).delete()
         db.session.commit()
+
+        task_selector('edit_community', user_id=current_user.id, community_id=community.id)
+        
         flash(_('Flair deleted.'))
         return redirect(url_for('community.community_flair', actor=community.link()))
     else:
