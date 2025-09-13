@@ -773,16 +773,29 @@ class Community(db.Model):
         else:
             return 0
 
-    def flair_for_ap(self):
+    def flair_for_ap(self, version=1):
         result = []
-        for flair in self.flair:
-            result.append({'type': 'lemmy:CommunityTag',
-                           'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
-                           'display_name': flair.flair,
-                           'text_color': flair.text_color,
-                           'background_color': flair.background_color,
-                           'blur_images': flair.blur_images
-                           })
+        
+        if version == 1:
+            for flair in self.flair:
+                result.append({'type': 'lemmy:CommunityTag',
+                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                            'display_name': flair.flair,
+                            'text_color': flair.text_color,
+                            'background_color': flair.background_color,
+                            'blur_images': flair.blur_images
+                            })
+        elif version == 2:
+            for flair in self.flair:
+                result.append({
+                    "type": "CommunityPostTag",
+                    "id": flair.get_ap_id(),
+                    "preferredUsername": flair.flair,
+                    "textColor": flair.text_color,
+                    "backgroundColor": flair.background_color,
+                    "blurImages": flair.blur_images,
+                })
+        
         return result
 
     def delete_dependencies(self):

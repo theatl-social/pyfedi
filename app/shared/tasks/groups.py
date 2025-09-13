@@ -112,15 +112,8 @@ def edit_community(send_async, user_id, community_id):
                 for community_language in community.languages:
                     language.append({'identifier': community_language.code, 'name': community_language.name})
                 group['language'] = language
-
-                flair_list = []
-                for flair in get_comm_flair_list(community):
-                    flair_item = comm_flair_ap_format(flair)
-
-                    if flair_item:
-                        flair_list.append(flair_item)
                 
-                group["tag"] = flair_list
+                group["tag"] = community.flair_for_ap(version=2)
 
                 to = ['https://www.w3.org/ns/activitystreams#Public']
                 cc = [community.public_url()]
