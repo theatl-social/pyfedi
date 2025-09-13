@@ -1135,7 +1135,7 @@ class GetPostRepliesResponse(DefaultSchema):
 class ListPostsRequest(Schema):
     q = fields.String()
     sort = fields.String(validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"})
-    type_ = fields.String(validate=validate.OneOf(community_listing_type_list), metadata={"default": "All"})
+    type_ = fields.String(validate=validate.OneOf(listing_type_list), metadata={"default": "All"})
     community_name = fields.String()
     community_id = fields.Integer()
     saved_only = fields.Boolean(metadata={"default": False})
