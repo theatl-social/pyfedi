@@ -92,7 +92,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                                                user_id=user_id). \
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
-    elif type == "ModeratorView" and user_id is not None:
+    elif (type == "ModeratorView" or type == "Moderating") and user_id is not None:
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
