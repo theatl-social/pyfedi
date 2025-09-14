@@ -346,13 +346,32 @@ def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
         existing_flair = db.session.query(CommunityFlair).filter(CommunityFlair.flair == flair['display_name'].strip(),
                                                                  CommunityFlair.community_id == community_id).first()
     if existing_flair:
-        # Update colors and blur in case they have changed
-        existing_flair.text_color = flair['text_color']
-        existing_flair.background_color = flair['background_color']
-        existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        # Update flair properties
+        if "text_color" in flair:
+            existing_flair.text_color = flair['text_color']
+        elif "textColor" in flair:
+            existing_flair.text_color = flair["textColor"]
+        
+        if "background_color" in flair:
+            existing_flair.background_color = flair['background_color']
+        elif "backgroundColor" in flair:
+            existing_flair.background_color = flair["backgroundColor"]
+        
+        if "blur_images" in flair:
+            existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        elif "blurImages" in flair:
+            existing_flair.blur_images = flair["blurImages"]
+        
+        if "display_name" in flair:
+            existing_flair.flair = flair["display_name"]
+        elif "preferredUsername" in flair:
+            existing_flair.flair = flair['preferredUsername']
 
         if not existing_flair.ap_id:
-            existing_flair.ap_id = flair['id']
+            if flair['id']:
+                existing_flair.ap_id = flair['id']
+            else:
+                existing_flair.ap_id = existing_flair.get_ap_id()
 
         return existing_flair
     else:
@@ -623,7 +642,7 @@ def refresh_community_profile_task(community_id, activity_json):
                         community.restricted_to_mods = True
                     session.commit()
 
-                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list) and "tag" not in activity_json:
                         if len(community.flair) == 0:  # for now, all we do is populate community flair if there is not yet any. simpler.
                             for flair in activity_json['lemmy:tagsForPosts']:
                                 flair_dict = {'display_name': flair['display_name']}
@@ -635,6 +654,12 @@ def refresh_community_profile_task(community_id, activity_json):
                                     flair_dict['blur_images'] = flair['blur_images']
                                 community.flair.append(find_flair_or_create(flair_dict, community.id))
                             session.commit()
+                    
+                    if "tag" in activity_json and isinstance(activity_json["tag"], list):
+                        community.flair = []
+                        for flair in activity_json["tag"]:
+                            community.flair.append(find_flair_or_create(flair, community.id))
+                        session.commit()
 
                     if community.icon_id and icon_changed:
                         make_image_sizes(community.icon_id, 60, 250, 'communities')

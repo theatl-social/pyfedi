@@ -546,8 +546,10 @@ def post_community_flair_create(auth, data):
         # Need a commit here or else the flair id is not defined for the ap_id
         db.session.commit()
         
-        new_flair.ap_id = community.public_url() + f"/tag/{new_flair.id}"
+        new_flair.ap_id = new_flair.get_ap_id()
         db.session.commit()
+
+        task_selector('edit_community', user_id=user.id, community_id=community.id)
     
     return flair_view(new_flair)
 
@@ -583,9 +585,11 @@ def put_community_flair_edit(auth, data):
         flair.blur_images = data['blur_images']
     
     if not flair.ap_id:
-        flair.ap_id = community.public_url() + f"/tag/{flair.id}"
+        flair.ap_id = flair.get_ap_id()
     
     db.session.commit()
+
+    task_selector('edit_community', user_id=user.id, community_id=community.id)
 
     return flair_view(flair)
 
@@ -605,6 +609,8 @@ def post_community_flair_delete(auth, data):
     db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair.id})
     db.session.query(CommunityFlair).filter(CommunityFlair.id == flair.id).delete()
     db.session.commit()
+
+    task_selector('edit_community', user_id=user.id, community_id=community.id)
 
     # Return Community View that includes updated flair list
     community_json = community_view(community=community, variant=3, stub=False, user_id=user.id)

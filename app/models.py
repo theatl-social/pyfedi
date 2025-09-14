@@ -773,16 +773,29 @@ class Community(db.Model):
         else:
             return 0
 
-    def flair_for_ap(self):
+    def flair_for_ap(self, version=1):
         result = []
-        for flair in self.flair:
-            result.append({'type': 'lemmy:CommunityTag',
-                           'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
-                           'display_name': flair.flair,
-                           'text_color': flair.text_color,
-                           'background_color': flair.background_color,
-                           'blur_images': flair.blur_images
-                           })
+        
+        if version == 1:
+            for flair in self.flair:
+                result.append({'type': 'lemmy:CommunityTag',
+                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                            'display_name': flair.flair,
+                            'text_color': flair.text_color,
+                            'background_color': flair.background_color,
+                            'blur_images': flair.blur_images
+                            })
+        elif version == 2:
+            for flair in self.flair:
+                result.append({
+                    "type": "CommunityPostTag",
+                    "id": flair.get_ap_id(),
+                    "preferredUsername": flair.flair,
+                    "textColor": flair.text_color,
+                    "backgroundColor": flair.background_color,
+                    "blurImages": flair.blur_images,
+                })
+        
         return result
 
     def delete_dependencies(self):
@@ -3326,6 +3339,22 @@ class CommunityFlair(db.Model):
     background_color = db.Column(db.String(50))
     blur_images = db.Column(db.Boolean, default=False)
     ap_id = db.Column(db.String(255), index=True, unique=True)
+
+    def get_ap_id(self):
+        if self.ap_id:
+            return self.ap_id
+
+        community = Community.query.get(self.community_id)
+
+        if not community:
+            return None
+
+        if community.is_local():
+            self.ap_id = community.public_url() + f"/tag/{self.id}"
+            db.session.commit()
+            return self.ap_id
+        
+        return None
 
 
 class UserFlair(db.Model):
