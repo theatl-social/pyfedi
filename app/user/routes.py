@@ -482,6 +482,13 @@ def export_user_settings(user):
         blocked_instances.append(i.domain)
     user_dict['blocked_instances'] = blocked_instances
 
+    notes = []
+    for user_note in UserNote.query.filter(UserNote.user_id == user.id):
+        target = User.query.get(user_note.target_id)
+        if target:
+            notes.append({'target': target.profile_id(), 'note': user_note.body})
+    user_dict['user_notes'] = notes
+
     # piefed versions of (most of) the same settings
     # TO-DO: adjust the piefed side import method to just take the doubled
     # settings from the lemmy formatted output. Then remove the duplicate
@@ -1360,8 +1367,14 @@ def import_settings_task(user_id, filename):
                             if not blocked_user.is_local():
                                 ...  # todo: federate block
 
+                for user_note in contents_json['user_notes'] if 'user_notes' in contents_json else []:
+                    note_target = find_actor_or_create(user_note['target'])
+                    if note_target:
+                        session.add(UserNote(user_id=user.id, target_id=note_target.id, body=user_note['body']))
+
                 for instance_domain in contents_json['blocked_instances'] if 'blocked_instances' in contents_json else []:
-                    ...
+                    instance = Instance.query.filter(Instance.domain == instance_domain).first()
+                    session.add(InstanceBlock(user_id=user.id, instance_id=instance.id))
 
                 for ap_id in contents_json['saved_posts'] if 'saved_posts' in contents_json else []:
                     try:
