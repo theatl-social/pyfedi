@@ -211,6 +211,20 @@ And if you want to add your score to the database to help your fellow Bookworms 
         self.assertEqual(
             '<p><a href="https://piefed.social" rel="nofollow ugc" target="_blank">https://piefed.social</a></p>\n',
             result)
+    
+    def test_bracketed_links_inline_code(self):
+        """Test that bracketed links are ignored in inline code"""
+
+        markdown = "`<https://piefed.social>`"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p><code>&lt;https://piefed.social&gt;</code></p>\n', result)
+    
+    def test_bracketed_links_code_block(self):
+        """Test that bracketed links are ignored in code blocks"""
+
+        markdown = "```\n<https://piefed.social>\n```"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<pre><code>&lt;https://piefed.social&gt;\n</code></pre>\n', result)
 
 
 if __name__ == '__main__':
