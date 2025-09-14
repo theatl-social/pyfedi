@@ -84,7 +84,6 @@ And if you want to add your score to the database to help your fellow Bookworms 
 ><Book Title and Volume> Review Goes Here [5/10]
 """
         result = markdown_to_html(markdown)
-        # print("Result: " + result)
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
         self.assertTrue("<blockquote>" in result)
 
@@ -203,6 +202,15 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "```\nNo en--dash, nor em---dash, nor ellipsis... here.\n```"
         result = markdown_to_html(markdown)
         self.assertEqual("<pre><code>No en--dash, nor em---dash, nor ellipsis... here.\n</code></pre>\n", result)
+    
+    def test_bracketed_links(self):
+        """Test that urls in angle brackets are turned into links"""
+
+        markdown = "<https://piefed.social>"
+        result = markdown_to_html(markdown)
+        self.assertEqual(
+            '<p><a href="https://piefed.social" rel="nofollow ugc" target="_blank">https://piefed.social</a></p>\n',
+            result)
 
 
 if __name__ == '__main__':
