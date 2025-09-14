@@ -293,6 +293,21 @@ allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite'
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 
+LINK_PATTERN = re.compile(
+    r"""
+        \b
+        (
+            (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
+            \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
+            [^<>\s"']*                    # rest of url
+            (?<![?!.,:*_~);])             # exclude trailing punctuation
+            (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
+        )
+    """,
+    re.X
+)
+
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
     # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
@@ -430,7 +445,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
             tag_name = tag_content[1:].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        if tag_name in allowed_tags:
+        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content):
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
@@ -482,27 +497,12 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
-        # turn links into anchors
-        link_pattern = re.compile(
-            r"""
-                \b
-                (
-                    (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
-                    \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
-                    [^<>\s"']*                    # rest of url
-                    (?<![?!.,:*_~);])             # exclude trailing punctuation
-                    (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
-                )
-            """,
-            re.X
-        )
-
         try:
             raw_html = markdown2.markdown(markdown_text,
                                           extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                                                  'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                  'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
-                                                  'tag-friendly': True})
+                                                  'tag-friendly': True, 'smarty-pants': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
@@ -511,7 +511,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
                                                       'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
-                                                      'tag-friendly': True})
+                                                      'tag-friendly': True, 'smarty-pants': True})
             except:
                 raw_html = ''
         
