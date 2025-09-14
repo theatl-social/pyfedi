@@ -3007,6 +3007,65 @@ body.compact-min .form-control {
 body.compact-min .form-select {
   padding: 0.275rem 2rem 0.275rem 0.55rem;
 }
+body.compact-min div.post_teaser {
+  padding-top: 8px;
+  padding-bottom: 8px !important;
+}
+body.compact-min .col.post_teaser_body {
+  display: grid;
+  grid-template-columns: auto 170px;
+}
+body.compact-min .col.post_teaser_body h3 {
+  grid-column: 1;
+  grid-row: 1;
+}
+body.compact-min .col.post_teaser_body .author {
+  grid-column: 1;
+  grid-row: 2;
+}
+body.compact-min .col.post_teaser_body .post_teaser_image_preview {
+  margin-left: auto;
+  margin-top: 0;
+  grid-column: 2;
+  grid-row: 1/4;
+  height: 90px;
+  width: 170px;
+}
+body.compact-min .col.post_teaser_body .post_teaser_image_preview .post_link {
+  width: 100%;
+  height: 100%;
+}
+body.compact-min .col.post_teaser_body .post_teaser_image_preview .post_link img {
+  object-fit: cover;
+  object-position: center;
+  width: 170px;
+  height: 100%;
+  border-radius: 5px;
+}
+body.compact-min .post_list .post_teaser .thumbnail img, body.compact-min .post_teaser_image_preview img {
+  border-radius: 5px;
+}
+body.compact-min .col.post_teaser_body .col_thumbnail.thumbnail {
+  grid-column: 2;
+  grid-row: 1/4;
+  height: 100%;
+}
+body.compact-min .col.post_teaser_body .post_utilities_bar {
+  grid-row: 3;
+  grid-column: 1/2;
+}
+body.compact-min div.navbar {
+  min-height: 40px;
+}
+body.compact-min div.navbar a.navbar-brand {
+  line-height: 40px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+body.compact-min div.navbar .navbar-brand img {
+  width: 20px;
+  height: 20px;
+}
 
 body.compact-max .post_teaser {
   border-bottom-width: 1px;
