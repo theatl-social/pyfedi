@@ -263,10 +263,16 @@
 </div>
 {%- endmacro %}
 
-{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None, compact_thumbs=False) -%}
 <div class="col post_teaser_body {{ 'reported' if post.id in reported_posts }}">
+    {% if compact_thumbs and post.image_id -%}
+        <div class="col_thumbnail thumbnail">
+            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-image"></span><img src="{{ post.image.medium_url() }}"
+                    alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+        </div>
+    {% endif -%}
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-    {% if post.image_id and not low_bandwidth -%}
+    {% if post.image_id and not low_bandwidth and not compact_thumbs -%}
         <div class="post_teaser_image_preview">
             <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
