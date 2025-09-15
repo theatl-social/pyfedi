@@ -126,19 +126,22 @@ def edit_community(send_async, user_id, community_id):
                   'cc': cc,
                   'audience': community.public_url()
                 }
-                announce = {
-                  'id': announce_id,
-                  'type': 'Announce',
-                  'actor': community.public_url(),
-                  'object': update,
-                  'to': to,
-                  'cc': cc,
-                  '@context': default_context()
-                }
+                if community.is_local():
+                    announce = {
+                      'id': announce_id,
+                      'type': 'Announce',
+                      'actor': community.public_url(),
+                      'object': update,
+                      'to': to,
+                      'cc': cc,
+                      '@context': default_context()
+                    }
 
-                for instance in community.following_instances():
-                    if instance.inbox and instance.online():
-                        send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                    for instance in community.following_instances():
+                        if instance.inbox and instance.online():
+                            send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                else:
+                    send_post_request(community.ap_inbox_url, update, user.private_key, user.public_url() + '#main-key')
         except Exception:
             session.rollback()
             raise
