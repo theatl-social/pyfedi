@@ -1096,6 +1096,8 @@ def process_inbox_request(request_json, store_ap_json):
                             else:
                                 refresh_community_profile(community.id, core_activity['object'])
                                 log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                                if community.is_local():
+                                    announce_activity_to_followers(community, user, request_json)
                         else:
                             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
                     return

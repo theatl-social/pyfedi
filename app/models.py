@@ -3344,17 +3344,11 @@ class CommunityFlair(db.Model):
         if self.ap_id:
             return self.ap_id
 
-        community = Community.query.get(self.community_id)
+        community = db.session.query(Community).get(self.community_id)
 
-        if not community:
-            return None
-
-        if community.is_local():
-            self.ap_id = community.public_url() + f"/tag/{self.id}"
-            db.session.commit()
-            return self.ap_id
-        
-        return None
+        self.ap_id = community.public_url() + f"/tag/{self.id}"
+        db.session.commit()
+        return self.ap_id
 
 
 class UserFlair(db.Model):
