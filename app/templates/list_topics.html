@@ -7,7 +7,7 @@
 {% set active_child = 'list_topics' -%}
 
 {% block app_content -%}
-    {% if len(topics) > 0 -%}
+    {% if topics|length > 0 -%}
         {% macro render_topic(topic, depth) -%}
             <li>
                 {% if depth == 0 -%}<strong>{% endif -%}

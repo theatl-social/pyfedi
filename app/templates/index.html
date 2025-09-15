@@ -46,7 +46,7 @@
     </main>
 
     <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-        {% if new_communities and len(new_communities) > 0 -%}
+        {% if new_communities and new_communities|length > 0 -%}
         <div class="card mb-3">
             <div class="card-header">
                  <h2>{{ _('New communities') }}</h2>

@@ -135,10 +135,12 @@ jobs:
           CACHE_REDIS_URL: memory://
           TESTING: true
 
-  # Linting and code quality
-  code-quality:
-    name: 📊 Code Quality
+  # Python code quality
+  python-quality:
+    name: 🐍 Python Code Quality
     runs-on: ubuntu-latest
+    # Run in parallel with other jobs, only wait for startup validation
+    needs: startup-validation
     
     steps:
       - name: Checkout code
@@ -179,6 +181,93 @@ jobs:
           echo "🏷️ Running type checking with mypy"
           mypy app/ --ignore-missing-imports --follow-imports=silent
         continue-on-error: true
+
+  # Template linting
+  template-quality:
+    name: 📄 Template Quality
+    runs-on: ubuntu-latest
+    # Run in parallel with other jobs, only wait for startup validation
+    needs: startup-validation
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-djlint-${{ hashFiles('.djlintrc') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-djlint-
+      
+      - name: Install djlint
+        run: |
+          python -m pip install --upgrade pip
+          pip install djlint==1.36.1
+          echo "📦 djlint version:"
+          djlint --version
+      
+      - name: Check djlint configuration
+        run: |
+          if [ -f .djlintrc ]; then
+            echo "✅ Found .djlintrc configuration file"
+            cat .djlintrc
+          else
+            echo "⚠️ No .djlintrc file found, using defaults"
+          fi
+      
+      - name: Run template linting
+        run: |
+          echo "📄 Running template linting with djlint"
+          echo "Checking for common Jinja2 errors..."
+          # First check for any len() usage which is invalid in Jinja2
+          if grep -r "len(" app/templates --include="*.html" 2>/dev/null; then
+            echo "❌ ERROR: Found len() usage in templates. Use |length filter instead!"
+            exit 1
+          fi
+          # Run djlint checks (will fail on errors)
+          djlint app/templates --check --lint --profile=jinja || exit_code=$?
+          if [ "${exit_code:-0}" -ne 0 ]; then
+            echo "⚠️ Template formatting issues found. Run 'make lint-templates' locally to see details."
+            # For now, don't fail the build on formatting issues
+            # exit 1
+          fi
+      
+      - name: Template syntax validation
+        run: |
+          echo "🔍 Validating Jinja2 template syntax"
+          cat > check_templates.py << 'EOF'
+          import os
+          import sys
+          from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
+          
+          errors = []
+          env = Environment(loader=FileSystemLoader('app/templates'))
+          
+          for root, dirs, files in os.walk('app/templates'):
+              for file in files:
+                  if file.endswith('.html'):
+                      template_path = os.path.relpath(os.path.join(root, file), 'app/templates')
+                      try:
+                          env.get_template(template_path)
+                          print(f'✅ {template_path}')
+                      except TemplateSyntaxError as e:
+                          errors.append(f'❌ {template_path}: {e}')
+                          print(f'❌ {template_path}: {e}')
+          
+          if errors:
+              print(f'\n❌ Found {len(errors)} template syntax errors!')
+              sys.exit(1)
+          else:
+              print(f'\n✅ All templates have valid syntax!')
+          EOF
+          python check_templates.py
 
   # Docker build validation
   docker-validation:
@@ -248,6 +337,8 @@ jobs:
   security-scan:
     name: 🔐 Security Scan
     runs-on: ubuntu-latest
+    # Run in parallel with other quality checks
+    needs: startup-validation
     
     steps:
       - name: Checkout code
@@ -273,7 +364,7 @@ jobs:
   ci-summary:
     name: 📋 CI Summary
     runs-on: ubuntu-latest
-    needs: [startup-validation, core-tests, code-quality, docker-validation]
+    needs: [startup-validation, core-tests, python-quality, template-quality, docker-validation, security-scan]
     if: always()
     
     steps:
@@ -294,10 +385,16 @@ jobs:
             echo "❌ **Core Tests**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
           
-          if [[ "${{ needs.code-quality.result }}" == "success" ]]; then
-            echo "✅ **Code Quality**: Passed" >> $GITHUB_STEP_SUMMARY
+          if [[ "${{ needs.python-quality.result }}" == "success" ]]; then
+            echo "✅ **Python Code Quality**: Passed" >> $GITHUB_STEP_SUMMARY
           else
-            echo "⚠️ **Code Quality**: Issues found (not blocking)" >> $GITHUB_STEP_SUMMARY
+            echo "⚠️ **Python Code Quality**: Issues found (not blocking)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [[ "${{ needs.template-quality.result }}" == "success" ]]; then
+            echo "✅ **Template Quality**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Template Quality**: Issues found" >> $GITHUB_STEP_SUMMARY
           fi
           
           if [[ "${{ needs.docker-validation.result }}" == "success" ]]; then
@@ -306,11 +403,18 @@ jobs:
             echo "❌ **Docker Build**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
           
+          if [[ "${{ needs.security-scan.result }}" == "success" ]]; then
+            echo "✅ **Security Scan**: Passed" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **Security Scan**: Issues found (review recommended)" >> $GITHUB_STEP_SUMMARY
+          fi
+          
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔍 Test Coverage" >> $GITHUB_STEP_SUMMARY
           echo "- Flask app initialization and blueprint registration" >> $GITHUB_STEP_SUMMARY
           echo "- Celery worker initialization and task discovery" >> $GITHUB_STEP_SUMMARY
           echo "- Database schema immutability validation" >> $GITHUB_STEP_SUMMARY
           echo "- HTML sanitization and content processing" >> $GITHUB_STEP_SUMMARY
+          echo "- Jinja2 template syntax validation and linting" >> $GITHUB_STEP_SUMMARY
           echo "- Docker container startup validation" >> $GITHUB_STEP_SUMMARY
           echo "- Security scanning and code quality checks" >> $GITHUB_STEP_SUMMARY

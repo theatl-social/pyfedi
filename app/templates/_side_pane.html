@@ -38,19 +38,19 @@
                     <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">
                 </form>
-                {% if community_flair and len(community_flair) > 0 -%}
+                {% if community_flair and community_flair|length > 0 -%}
                     <div class="post_flair_sidepane">
                         {% for flair in community_flair -%}
                             <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
                         {% endfor -%}
                     </div>
                 {% endif %}
-                {% if tags and len(tags) > 0 -%}
+                {% if tags and tags|length > 0 -%}
                     <div class="post_tags_sidepane">
                         {% for tag in tags -%}
                             <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), tag=tag.name) }}">#{{ tag.display_as }}</a></span>
                         {% endfor -%}
-                        {% if len(tags) == 30 -%}
+                        {% if tags|length == 30 -%}
                             <br /><a href="{{ url_for('tag.tags_community', community_id=community.id) }}">All Community Tags</a>
                         {% endif%}
                     </div>
@@ -93,7 +93,7 @@
                 {% endif -%}
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
 
-                {% if current_user.is_authenticated or (community_flair and len(community_flair) > 0) -%}
+                {% if current_user.is_authenticated or (community_flair and community_flair|length > 0) -%}
                     <hr>
                     <h3>{{ _('Flair') }}</h3>
                 {% endif -%}
@@ -101,7 +101,7 @@
                     <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                     <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}
-                {% if len(mods) > 0 and not community.private_mods -%}
+                {% if mods|length > 0 and not community.private_mods -%}
                     <hr>
                     <h3>Moderators</h3>
                     <ul class="moderator_list">

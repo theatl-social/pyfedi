@@ -1,4 +1,4 @@
-{% if len(community.flair) -%}
+{% if community.flair|length -%}
 <div class="mb-3"><label class="form-label" for="flair">Flair</label>
     <ul class="form-control form-multicheck-columns" id="flair">
         {% for flair in community.flair -%}

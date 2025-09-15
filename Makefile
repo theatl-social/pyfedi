@@ -1,19 +1,22 @@
 # PieFed Development Makefile
 
-.PHONY: help venv install test openapi clean dev db-init db-migrate db-upgrade lint
+.PHONY: help venv install install-dev test openapi clean dev db-init db-migrate db-upgrade lint lint-python lint-templates
 
 # Default target
 help:
 	@echo "PieFed Development Commands:"
 	@echo "  make venv          - Create virtual environment"
 	@echo "  make install       - Install dependencies"
+	@echo "  make install-dev   - Install development dependencies"
 	@echo "  make dev           - Run development server"
 	@echo "  make test          - Run tests"
 	@echo "  make openapi       - Generate OpenAPI/Swagger JSON schema"
 	@echo "  make db-init       - Initialize database"
 	@echo "  make db-migrate    - Create database migration"
 	@echo "  make db-upgrade    - Apply database migrations"
-	@echo "  make lint          - Run code linting"
+	@echo "  make lint          - Run all linting (Python + templates)"
+	@echo "  make lint-python   - Run Python code linting only"
+	@echo "  make lint-templates - Run template linting only"
 	@echo "  make clean         - Clean temporary files"
 
 # Virtual environment setup
@@ -25,6 +28,11 @@ venv:
 install: venv
 	source .venv/bin/activate && uv pip install -r requirements.txt
 	@echo "✅ Dependencies installed"
+
+# Install development dependencies
+install-dev: install
+	source .venv/bin/activate && uv pip install -r requirements-dev.txt
+	@echo "✅ Development dependencies installed"
 
 # Development server
 dev:
@@ -62,10 +70,23 @@ db-upgrade:
 	@echo "⬆️  Applying database migrations..."
 	source .venv/bin/activate && flask db upgrade
 
-# Linting
-lint:
-	@echo "🔍 Running code linting..."
+# Linting - run both Python and template linting
+lint: lint-python lint-templates
+	@echo "✅ All linting completed"
+
+# Python linting
+lint-python:
+	@echo "🔍 Running Python code linting..."
 	source .venv/bin/activate && ruff check .
+
+# Template linting
+lint-templates:
+	@echo "🔍 Running template linting..."
+	@if [ ! -f .venv/bin/djlint ]; then \
+		echo "⚠️  djlint not found. Installing development dependencies..."; \
+		make install-dev; \
+	fi
+	source .venv/bin/activate && djlint app/templates --check --lint
 
 # Clean temporary files
 clean:

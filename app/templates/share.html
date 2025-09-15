@@ -14,7 +14,7 @@
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         <h1 class="mt-2">{{ _('Share %(title)s', title=title) }}</h1>
-        {% if len(communities) -%}
+        {% if communities|length -%}
             <p>{{ _('This link has already been shared in these communities:') }}<br>
             {% for community in communities -%}
                 {{ community.display_name() }}<br>

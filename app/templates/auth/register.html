@@ -50,7 +50,7 @@
                                     {% if form.question -%}
                                         <div class="mb-3 required">{{ form.question.label.text | safe }}
                                             {{ form.question(class_="form-control", maxlength=255) }}
-                                            {% if len(form.question.errors) -%}
+                                            {% if form.question.errors|length -%}
                                                 <br>
                                                 {% for error in form.question.errors %}
                                                     <span style="color: red;">[{{ error }}]</span>

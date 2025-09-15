@@ -108,7 +108,7 @@
             <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
                title="{{ _('Show cross-posts') }}" data-bs-toggle="dropdown" rel="nofollow">
                <span class="fe fe-layers"></span>
-               <span aria-label="{{ _('Number of cross-posts:') }}">{{ len(post.cross_posts) }}</span>
+               <span aria-label="{{ _('Number of cross-posts:') }}">{{ post.cross_posts|length }}</span>
             </a>
             <ul class="dropdown-menu" style="width: 380px; white-space: nowrap; overflow: hidden">
                 <div
@@ -121,7 +121,7 @@
         </div>
     </div>
     {% endif -%}
-    {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
+    {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or post.cross_posts|length == 0) -%}
         <div class="post_cross_post_link">
             <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
         </div>
