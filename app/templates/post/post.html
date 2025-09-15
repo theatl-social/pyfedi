@@ -20,7 +20,7 @@
     var toBeHidden = Array();   // this list of comment IDs will be iterated over in setupHideButtons() and the 'hide' button clicked
 </script>
 <div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
+    <main class="col-12 col-lg-8 position-relative main_pane {{ 'border border-warning bg-body-secondary' if is_dead }}">
         {% if post.type == POST_TYPE_EVENT and post.image_id and not low_bandwidth -%}
             <div class="event_banner" style="background-image: url({{ post.image.view_url() }});">
                 {% include 'post/_breadcrumb_nav.html' %}

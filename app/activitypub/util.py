@@ -339,24 +339,116 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
         return new_tag
 
 
-def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
-    existing_flair = db.session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair:
+    if session is None:
+        session = db.session
+    existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
 
     if existing_flair is None:
-        existing_flair = db.session.query(CommunityFlair).filter(CommunityFlair.flair == flair['display_name'].strip(),
-                                                                 CommunityFlair.community_id == community_id).first()
+        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
+                                                              CommunityFlair.community_id == community_id).first()
     if existing_flair:
-        # Update colors and blur in case they have changed
-        existing_flair.text_color = flair['text_color']
-        existing_flair.background_color = flair['background_color']
-        existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        # Update flair properties
+        if "text_color" in flair:
+            existing_flair.text_color = flair['text_color']
+        elif "textColor" in flair:
+            existing_flair.text_color = flair["textColor"]
+        
+        if "background_color" in flair:
+            existing_flair.background_color = flair['background_color']
+        elif "backgroundColor" in flair:
+            existing_flair.background_color = flair["backgroundColor"]
+        
+        if "blur_images" in flair:
+            existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        elif "blurImages" in flair:
+            existing_flair.blur_images = flair["blurImages"]
+        
+        if "display_name" in flair:
+            existing_flair.flair = flair["display_name"]
+        elif "preferredUsername" in flair:
+            existing_flair.flair = flair['preferredUsername']
+
+        if not existing_flair.ap_id:
+            if flair['id']:
+                existing_flair.ap_id = flair['id']
+            else:
+                existing_flair.ap_id = existing_flair.get_ap_id()
+
         return existing_flair
     else:
-        new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
-                                   text_color=flair['text_color'], background_color=flair['background_color'],
-                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False,
+        if "text_color" in flair:
+            text_color = flair['text_color']
+        elif "textColor" in flair:
+            text_color = flair["textColor"]
+
+        if "background_color" in flair:
+            background_color = flair['background_color']
+        elif "backgroundColor" in flair:
+            background_color = flair["backgroundColor"]
+
+        if "blur_images" in flair:
+            blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        elif "blurImages" in flair:
+            blur_images = flair["blurImages"]
+
+        if "display_name" in flair:
+            flair_text = flair["display_name"]
+        elif "preferredUsername" in flair:
+            flair_text = flair['preferredUsername']
+        new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
+                                   text_color=text_color, background_color=background_color,
+                                   blur_images=blur_images,
                                    ap_id=flair['id'])
+        session.add(new_flair)
         return new_flair
+
+
+def update_community_flair_from_tags(community: Community, flair_tags: list, session=None):
+    """Update community flair from activity_json tags, preserving existing post associations."""
+    if session is None:
+        session = db.session
+    
+    # Track which flair should be kept
+    updated_flair = []
+    processed_ap_ids = set()
+    processed_names = set()
+    
+    # Update existing flair or create new ones
+    for flair in flair_tags:
+        updated_flair_obj = find_flair_or_create(flair, community.id, session)
+        updated_flair.append(updated_flair_obj)
+        
+        # Track which flair should be kept.
+        if updated_flair_obj.ap_id:
+            processed_ap_ids.add(updated_flair_obj.ap_id)
+        if updated_flair_obj.flair:
+            processed_names.add(updated_flair_obj.flair)
+    
+    # Remove flair that's no longer in the activity_json (check processed_ap_ids and processed_names)
+    remove_outdated_community_flair(community, processed_ap_ids, processed_names, session)
+
+
+def remove_outdated_community_flair(community: Community, keep_ap_ids: set, keep_names: set, session=None):
+    """Remove community flair that's no longer present in the remote activity."""
+    if session is None:
+        session = db.session
+    
+    flair_to_remove = []
+    for existing_flair in community.flair:
+        should_remove = False
+        if existing_flair.ap_id and existing_flair.ap_id not in keep_ap_ids:
+            should_remove = True
+        elif not existing_flair.ap_id and existing_flair.flair not in keep_names:
+            should_remove = True
+        
+        if should_remove:
+            flair_to_remove.append(existing_flair)
+    
+    # Remove outdated flair
+    for flair in flair_to_remove:
+        community.flair.remove(flair)
+        session.delete(flair)
 
 
 def extract_domain_and_actor(url_string: str):
@@ -523,7 +615,7 @@ def refresh_community_profile_task(community_id, activity_json):
     try:
         with patch_db_session(session):
             community: Community = session.query(Community).get(community_id)
-            if community and community.instance.online() and not community.is_local():
+            if community and community.instance.online():
                 if not activity_json:
                     try:
                         actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
@@ -619,7 +711,7 @@ def refresh_community_profile_task(community_id, activity_json):
                         community.restricted_to_mods = True
                     session.commit()
 
-                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list) and "tag" not in activity_json:
                         if len(community.flair) == 0:  # for now, all we do is populate community flair if there is not yet any. simpler.
                             for flair in activity_json['lemmy:tagsForPosts']:
                                 flair_dict = {'display_name': flair['display_name']}
@@ -629,8 +721,12 @@ def refresh_community_profile_task(community_id, activity_json):
                                     flair_dict['background_color'] = flair['background_color']
                                 if 'blur_images' in flair:
                                     flair_dict['blur_images'] = flair['blur_images']
-                                community.flair.append(find_flair_or_create(flair_dict, community.id))
+                                community.flair.append(find_flair_or_create(flair_dict, community.id, session))
                             session.commit()
+                    
+                    if "tag" in activity_json and isinstance(activity_json["tag"], list):
+                        update_community_flair_from_tags(community, activity_json["tag"], session)
+                        session.commit()
 
                     if community.icon_id and icon_changed:
                         make_image_sizes(community.icon_id, 60, 250, 'communities')
@@ -2919,13 +3015,13 @@ def lemmy_site_data():
                 "id": 1,
                 "name": site.name,
                 "sidebar": site.sidebar,
-                "published": site.created_at.isoformat(),
-                "updated": site.updated.isoformat(),
+                "published": site.created_at.isoformat(timespec="microseconds"),
+                "updated": site.updated.isoformat(timespec="microseconds"),
                 "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
                 "banner": "",
                 "description": site.description,
                 "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
-                "last_refreshed_at": site.updated.isoformat(),
+                "last_refreshed_at": site.updated.isoformat(timespec="microseconds"),
                 "inbox_url": f"https://{current_app.config['SERVER_NAME']}/inbox",
                 "public_key": site.public_key,
                 "instance_id": 1
@@ -2949,8 +3045,8 @@ def lemmy_site_data():
                 "federation_enabled": True,
                 "captcha_enabled": get_setting('captcha_enabled', True),
                 "captcha_difficulty": "medium",
-                "published": site.created_at.isoformat(),
-                "updated": site.updated.isoformat(),
+                "published": site.created_at.isoformat(timespec="microseconds"),
+                "updated": site.updated.isoformat(timespec="microseconds"),
                 "registration_mode": site.registration_mode,
                 "reports_email_admins": site.reports_email_admins
             },
@@ -2969,7 +3065,7 @@ def lemmy_site_data():
                 "comment_per_second": 600,
                 "search": 999,
                 "search_per_second": 600,
-                "published": site.created_at.isoformat(),
+                "published": site.created_at.isoformat(timespec="microseconds"),
             },
             "counts": {
                 "id": 1,
@@ -3013,8 +3109,8 @@ def lemmy_site_data():
             "display_name": admin.display_name(),
             "avatar": 'https://' + current_app.config['SERVER_NAME'] + admin.avatar_image(),
             "banned": admin.banned,
-            "published": admin.created.isoformat() + 'Z',
-            "updated": admin.created.isoformat() + 'Z',
+            "published": admin.created.isoformat(timespec="microseconds") + 'Z',
+            "updated": admin.created.isoformat(timespec="microseconds") + 'Z',
             "actor_id": admin.public_url(),
             "local": True,
             "deleted": admin.deleted,

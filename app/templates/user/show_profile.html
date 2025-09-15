@@ -304,7 +304,7 @@
             </div>
         {% endif %}
         {% if current_user.is_authenticated and current_user.is_admin_or_staff() %}
-            {% if same_ip_address and len(same_ip_address) -%}
+            {% if same_ip_address and same_ip_address|length -%}
                 <div class="card mb-3">
                     <div class="card-header"><h2>{{ _("Same IP address") }}</h2></div>
                     <div class="card-body">
@@ -341,13 +341,13 @@
                 </div>
             </div>
         {% endif %}
-        {% if len(subscribed) > 0 or len(moderates) > 0 %}
+        {% if subscribed|length > 0 or moderates|length > 0 %}
             <div class="card mb-3">
                 <div class="card-header">
                      <h2>{{ _('Communities') }}</h2>
                 </div>
                 <div class="card-body">
-                    {% if len(subscribed) > 0 %}
+                    {% if subscribed|length > 0 %}
                         <h4>{{ _('Member of') }}</h4>
                         <ul class="list-group list-group-flush">
                             {% for community in subscribed %}
@@ -357,7 +357,7 @@
                             {% endfor %}
                         </ul>
                     {% endif %}
-                    {% if len(moderates) > 0 %}
+                    {% if moderates|length > 0 %}
                         <h4>Moderates</h4>
                         <ul class="list-group list-group-flush">
                             {% for community in moderates %}

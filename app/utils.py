@@ -293,6 +293,21 @@ allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite'
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 
+LINK_PATTERN = re.compile(
+    r"""
+        \b
+        (
+            (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
+            \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
+            [^<>\s"']*                    # rest of url
+            (?<![?!.,:*_~);])             # exclude trailing punctuation
+            (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
+        )
+    """,
+    re.X
+)
+
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
     # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
@@ -430,7 +445,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
             tag_name = tag_content[1:].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        if tag_name in allowed_tags:
+        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content):
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
@@ -482,27 +497,12 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
-        # turn links into anchors
-        link_pattern = re.compile(
-            r"""
-                \b
-                (
-                    (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
-                    \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
-                    [^<>\s"']*                    # rest of url
-                    (?<![?!.,:*_~);])             # exclude trailing punctuation
-                    (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
-                )
-            """,
-            re.X
-        )
-
         try:
             raw_html = markdown2.markdown(markdown_text,
                                           extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                                                  'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                  'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
-                                                  'tag-friendly': True})
+                                                  'tag-friendly': True, 'smarty-pants': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
@@ -511,7 +511,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
                                                       'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
-                                                      'tag-friendly': True})
+                                                      'tag-friendly': True, 'smarty-pants': True})
             except:
                 raw_html = ''
         
@@ -1104,7 +1104,7 @@ def back(default_url):
 
 # format a datetime in a way that is used in ActivityPub
 def ap_datetime(date_time: datetime) -> str:
-    return date_time.isoformat() + '+00:00'
+    return date_time.isoformat(timespec="microseconds") + '+00:00'
 
 
 class MultiCheckboxField(SelectMultipleField):
@@ -1190,7 +1190,7 @@ def instance_gone_forever(domain: str) -> bool:
         domain = urlparse(domain).hostname
     session = get_task_session()
     try:
-        instance = Instance.query.filter_by(domain=domain).first()
+        instance = session.query(Instance).filter_by(domain=domain).first()
         if instance is not None:
             return instance.gone_forever
         else:
@@ -3238,8 +3238,8 @@ def archive_post(post_id: int):
                                 'id': int(comment.id) if comment.id else None,
                                 'body': str(comment.body) if comment.body else '',
                                 'body_html': str(comment.body_html) if comment.body_html else '',
-                                'posted_at': comment.posted_at.isoformat() if comment.posted_at else None,
-                                'edited_at': comment.edited_at.isoformat() if comment.edited_at else None,
+                                'posted_at': comment.posted_at.isoformat(timespec="microseconds") if comment.posted_at else None,
+                                'edited_at': comment.edited_at.isoformat(timespec="microseconds") if comment.edited_at else None,
                                 'score': int(comment.score) if comment.score else 0,
                                 'ranking': float(comment.ranking) if comment.ranking else 0.0,
                                 'parent_id': int(comment.parent_id) if comment.parent_id else None,
@@ -3263,7 +3263,7 @@ def archive_post(post_id: int):
                                 'author_ap_id': comment.author.ap_id if comment.author else False,
                                 'author_ap_profile_id': comment.author.ap_profile_id if comment.author else False,
                                 'author_reputation': comment.author.reputation if comment.author else 0,
-                                'author_created': comment.author.created.isoformat() if comment.author else None,
+                                'author_created': comment.author.created.isoformat(timespec="microseconds") if comment.author else None,
                                 'author_ap_domain': comment.author.ap_domain if comment.author else '',
                                 'replies': serialize_tree(reply_dict['replies'])
                             }

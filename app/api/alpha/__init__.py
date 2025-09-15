@@ -68,6 +68,20 @@ post_bp = ApiBlueprint(
     description=""
 )
 
+private_message_bp = ApiBlueprint(
+    "Private Message",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+upload_bp = ApiBlueprint(
+    "Upload",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes
 from app.api.admin import routes as admin_routes
 from app.api.admin import monitoring_routes

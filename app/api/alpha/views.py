@@ -10,6 +10,8 @@ from app.models import ChatMessage, Community, CommunityMember, Language, Instan
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities
+from app.shared.community import get_comm_flair_list
+from app.shared.post import get_post_flair_list
 
 
 # 'stub' param: set to True to exclude optional fields
@@ -158,8 +160,15 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'blurred': post.blurred(g.user if hasattr(g, 'user') else None),
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
-              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin,
-              'flair': get_post_flair_list(post)}
+              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
+        
+        post_flair =[]
+        
+        flair_list = get_post_flair_list(post)
+        for flair in flair_list:
+            post_flair.append(flair_view(flair))
+        
+        v2['flair_list'] = post_flair
 
         creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
         community = community_view(community=post.community, variant=1, stub=True)
@@ -406,8 +415,16 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
         activity_alert = True if community_sub else False
         v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
-              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,
-              'flair_list': get_comm_flair_list(community)}
+              'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,}
+        
+        comm_flair = []
+        
+        flair_list = get_comm_flair_list(community)
+        for flair in flair_list:
+            comm_flair.append(flair_view(flair))
+        
+        v2['flair_list'] = comm_flair
+        
         return v2
 
     # Variant 3 - models/community/get_community_response.dart - /community api endpoint
@@ -439,42 +456,6 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if variant == 6:
         v6 = {'community': community_view(community=community, variant=2, stub=False, user_id=user_id)}
         return v6
-
-
-def get_comm_flair_list(community: Community | int | str) -> list:
-    if isinstance(community, int):
-        community_id = community
-        community = Community.query.filter_by(id=community).one()
-    elif isinstance(community, Community):
-        community_id = community.id
-    elif isinstance(community, str):
-        name, ap_domain = community.strip().split('@')
-        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
-        if community is None:
-            community = Community.query.filter(func.lower(Community.name) == name.lower(),
-                                               func.lower(Community.ap_domain) == ap_domain.lower()).one()
-        community_id = community.id
-    
-    flair_list = []
-
-    for flair in CommunityFlair.query.filter_by(community_id=community_id).all():
-        flair_item = flair_view(flair)
-        flair_list.append(flair_item)
-    
-    return flair_list
-
-
-def get_post_flair_list(post: Post | int) -> list:
-    if isinstance(post, int):
-        post = Post.query.filter_by(id=post).one()
-    
-    flair_list = []
-
-    for flair in post.flair:
-        flair_item = flair_view(flair)
-        flair_list.append(flair_item)
-    
-    return flair_list
 
 
 def flair_view(flair: CommunityFlair | int):

@@ -42,7 +42,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
-    remove_mod_from_community
+    remove_mod_from_community, get_comm_flair_list
 from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
@@ -53,7 +53,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required, markdown_to_text
+    approval_required, markdown_to_text, instance_gone_forever
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -478,9 +478,6 @@ def show_community(community: Community):
     community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).\
         filter(FeedItem.community_id == community.id).filter(Feed.public == True).all()
 
-    community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).\
-        order_by(CommunityFlair.flair).all()
-
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
                                                  INNER JOIN post p on e.post_id = p.id
@@ -582,9 +579,16 @@ def show_community(community: Community):
     else:
         recently_upvoted = []
         recently_downvoted = []
+    
+    if not community.is_local():
+        is_dead = community.instance.gone_forever
+        if is_dead:
+            flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
+    else:
+        is_dead = False
 
     return render_template('community/community.html', community=community, title=community.title,
-                           breadcrumbs=breadcrumbs,
+                           breadcrumbs=breadcrumbs, is_dead=is_dead,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
                            comments=comments, upcoming_events=upcoming_events, has_events=has_events,
                            description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
@@ -596,7 +600,7 @@ def show_community(community: Community):
                            etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}",
                            related_communities=related_communities,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
-                           community_flair=community_flair,
+                           community_flair=get_comm_flair_list(community),
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            community_feeds=community_feeds,
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community),
@@ -2192,7 +2196,7 @@ def community_flair(actor):
 
             low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-            flairs = CommunityFlair.query.filter(CommunityFlair.community_id == community.id).order_by(CommunityFlair.flair)
+            flairs = get_comm_flair_list(community)
 
             return render_template('community/community_flair.html', flairs=flairs,
                                    title=_('Flair in %(community)s', community=community.display_name()),
@@ -2216,6 +2220,8 @@ def community_flair_edit(community_id, flair_id):
             if flair is None:
                 flair = CommunityFlair(community_id=community.id)
                 db.session.add(flair)
+                # Need to commit here so that an id is generated before we make the ap_id
+                db.session.commit()
                 flash(_('Flair added.'))
             else:
                 flash(_('Flair updated.'))
@@ -2223,7 +2229,13 @@ def community_flair_edit(community_id, flair_id):
             flair.text_color = form.text_color.data
             flair.background_color = form.background_color.data
             flair.blur_images = form.blur_images.data
+
+            if not flair.ap_id:
+                flair.ap_id = flair.get_ap_id()
+            
             db.session.commit()
+
+            task_selector('edit_community', user_id=current_user.id, community_id=community.id)
 
             return redirect(url_for('community.community_flair', actor=community.link()))
         else:
@@ -2249,6 +2261,9 @@ def community_flair_delete(community_id, flair_id):
         db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair_id})
         db.session.query(CommunityFlair).filter(CommunityFlair.id == flair_id).delete()
         db.session.commit()
+
+        task_selector('edit_community', user_id=current_user.id, community_id=community.id)
+        
         flash(_('Flair deleted.'))
         return redirect(url_for('community.community_flair', actor=community.link()))
     else:

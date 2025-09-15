@@ -11,7 +11,7 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
         <form method="post">
             {{ form.csrf_token() }}
-            <input type="submit" class="btn btn-primary" value="{{ _('Delete %(count)s posts', count=len(posts)) }}" style="float: right;">
+            <input type="submit" class="btn btn-primary" value="{{ _('Delete %(count)s posts', count=posts|length) }}" style="float: right;">
             <h1>{{ _('Posts containing blocked images') }}</h1>
             <table class="communities_table table table-striped table-hover w-100">
                 <tr>

@@ -16,4 +16,8 @@ Plugins can have their code executed by adding a @hook decorator to a function. 
 
   - `after_post_create` - take a guess.
 
-More hooks will be added over time, presently the plugin engine is still experimental and undergoind heavy development.
+  - `cron_often` - is run at a periodic interval. The frequency is determined by how often the send_queue runs. The cron hooks are executed from a CLI task and do not run in a request context.
+
+  - `cron_daily` - is run once a day in the daily_maintenance_task.
+
+More hooks will be added over time, presently the plugin engine is still experimental and undergoing heavy development.

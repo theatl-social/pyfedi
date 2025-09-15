@@ -7,7 +7,7 @@
 {% from 'bootstrap5/form.html' import render_form %}
 
 {% macro conversation_members(conversation) %}
-    {% if len(conversation.members) == 2 %}
+    {% if conversation.members|length == 2 %}
         {% for member in conversation.members %}
             {% if member.id != current_user.id %}
                 <img src="{{ member.avatar_thumbnail() }}" loading="lazy" class="preview_avatar_image"/>

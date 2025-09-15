@@ -1,6 +1,6 @@
 <h2>{{ community.title }}</h2>
 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
-{% if len(mods) > 0 and not community.private_mods -%}
+{% if mods|length > 0 and not community.private_mods -%}
     <h3>Moderators</h3>
     <ul class="moderator_list">
         {% for mod in mods -%}

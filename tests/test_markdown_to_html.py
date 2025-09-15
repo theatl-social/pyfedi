@@ -84,7 +84,6 @@ And if you want to add your score to the database to help your fellow Bookworms 
 ><Book Title and Volume> Review Goes Here [5/10]
 """
         result = markdown_to_html(markdown)
-        # print("Result: " + result)
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
         self.assertTrue("<blockquote>" in result)
 
@@ -92,7 +91,7 @@ And if you want to add your score to the database to help your fellow Bookworms 
         """Test that disallowed tags are removed"""
         markdown = "Paragraph with <script>alert('xss')</script> script."
         result = markdown_to_html(markdown)
-        self.assertEqual(result, "<p>Paragraph with &lt;script&gt;alert('xss')&lt;/script&gt; script.</p>\n")
+        self.assertEqual(result, "<p>Paragraph with &lt;script&gt;alert(’xss’)&lt;/script&gt; script.</p>\n")
     
     def test_double_bold(self):
         """Test a variety of cases where bold markdown has caused problems in the past"""
@@ -160,6 +159,72 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "```\ncode block with link: https://example.com/ \n```"
         result = markdown_to_html(markdown)
         self.assertEqual("<pre><code>code block with link: https://example.com/ \n</code></pre>\n", result)
+    
+    def test_en_dash(self):
+        """Test converting -- to an en dash"""
+
+        markdown = "Using--an en dash."
+        result = markdown_to_html(markdown)
+        self.assertEqual("<p>Using–an en dash.</p>\n", result)
+    
+    def test_em_dash(self):
+        """Test converting --- to an em dash"""
+
+        markdown = "Em-dashes are fairly idiosyncratic---strange, really---to use regularly."
+        result = markdown_to_html(markdown)
+        self.assertEqual("<p>Em-dashes are fairly idiosyncratic—strange, really—to use regularly.</p>\n", result)
+    
+    def test_em_dash_hr(self):
+        """Test converting --- to an em dash while also having a horizontal rule"""
+
+        markdown = "Writing em---dashes is\n\n---\n\nkind of annoying"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p>Writing em—dashes is</p>\n<hr/>\n<p>kind of annoying</p>\n', result)
+    
+    def test_ellipsis(self):
+        """Test converting ... to an ellipsis character"""
+
+        markdown = "Thinking about an ellipsis..."
+        result = markdown_to_html(markdown)
+        self.assertEqual("<p>Thinking about an ellipsis…</p>\n", result)
+    
+    def test_ignore_smartypants_inline_code(self):
+        """Test that checks en- and em-dashes as well as ellipses are not in inline code"""
+
+        markdown = "No `en--dash`, nor `em---dash`, nor `ellipsis...` here."
+        result = markdown_to_html(markdown)
+        self.assertEqual(
+            '<p>No <code>en--dash</code>, nor <code>em---dash</code>, nor <code>ellipsis...</code> here.</p>\n', result)
+    
+    def test_ignore_smartypants_code_block(self):
+        """Test that checks en- and em-dashes as well as ellipses are not in code blocks"""
+
+        markdown = "```\nNo en--dash, nor em---dash, nor ellipsis... here.\n```"
+        result = markdown_to_html(markdown)
+        self.assertEqual("<pre><code>No en--dash, nor em---dash, nor ellipsis... here.\n</code></pre>\n", result)
+    
+    def test_bracketed_links(self):
+        """Test that urls in angle brackets are turned into links"""
+
+        markdown = "<https://piefed.social>"
+        result = markdown_to_html(markdown)
+        self.assertEqual(
+            '<p><a href="https://piefed.social" rel="nofollow ugc" target="_blank">https://piefed.social</a></p>\n',
+            result)
+    
+    def test_bracketed_links_inline_code(self):
+        """Test that bracketed links are ignored in inline code"""
+
+        markdown = "`<https://piefed.social>`"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p><code>&lt;https://piefed.social&gt;</code></p>\n', result)
+    
+    def test_bracketed_links_code_block(self):
+        """Test that bracketed links are ignored in code blocks"""
+
+        markdown = "```\n<https://piefed.social>\n```"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<pre><code>&lt;https://piefed.social&gt;\n</code></pre>\n', result)
 
 
 if __name__ == '__main__':

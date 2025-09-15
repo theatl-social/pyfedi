@@ -1,0 +1,41 @@
+# Pre-commit hooks for PieFed
+# Install with: pip install pre-commit && pre-commit install
+
+repos:
+  # Python formatting and linting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Template linting
+  - repo: https://github.com/Riverside-Healthcare/djLint
+    rev: v1.36.1
+    hooks:
+      - id: djlint-jinja
+        files: \.html$
+        args: [--profile=jinja]
+
+  # Check for common issues
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+
+  # Custom hook to check for len() in templates
+  - repo: local
+    hooks:
+      - id: check-jinja-len
+        name: Check for len() in Jinja2 templates
+        entry: bash -c 'if grep -r "len(" app/templates --include="*.html" 2>/dev/null; then echo "ERROR: Use |length filter instead of len() in templates"; exit 1; fi'
+        language: system
+        files: \.html$
+        pass_filenames: false

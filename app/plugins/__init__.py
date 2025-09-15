@@ -8,6 +8,7 @@ import inspect
 from pathlib import Path
 from typing import Dict, List, Any
 import logging
+import traceback
 
 from .hooks import fire_hook, get_registered_hooks, register_plugin_hook, get_plugin_hooks
 
@@ -77,7 +78,7 @@ def load_plugins(plugins_dir: str = None) -> Dict[str, Any]:
                 logger.info(f"Loaded plugin: {plugin_name}")
             
         except Exception as e:
-            logger.error(f"Failed to load plugin {plugin_name}: {e}")
+            logger.error(f"Failed to load plugin {plugin_name}: {e}\n{traceback.format_exc()}")
     if int(os.environ.get('FLASK_DEBUG', '0')):
         logger.info(f"Successfully loaded {loaded_count} plugins")
     return _loaded_plugins
@@ -152,7 +153,7 @@ def reload_plugin(plugin_name: str) -> bool:
         return True
         
     except Exception as e:
-        logger.error(f"Failed to reload plugin {plugin_name}: {e}")
+        logger.error(f"Failed to reload plugin {plugin_name}: {e}\n{traceback.format_exc()}")
         return False
 
 

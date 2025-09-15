@@ -1,0 +1,15 @@
+# Development dependencies
+# Install with: uv pip install -r requirements-dev.txt
+
+# Python linting
+ruff
+
+# Jinja2/HTML template linting
+djlint==1.36.1
+
+# Testing
+pytest
+pytest-cov
+
+# Type checking (optional)
+mypy

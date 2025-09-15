@@ -17,7 +17,7 @@
         </ul>
     <div class="tab-content">
         <div class="tab-pane border-0 active show fade" id="topics_tab" role="tabpanel" aria-labelledby="topics-pill">
-            {% if len(topics) > 0 -%}
+            {% if topics|length > 0 -%}
                 {% macro render_topic(topic, depth) -%}
                     <li>
                         {% if depth == 0 -%}<strong>{% endif -%}

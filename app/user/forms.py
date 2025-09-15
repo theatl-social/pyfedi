@@ -13,7 +13,7 @@ class ProfileForm(FlaskForm):
     email = EmailField(_l('Email address'), validators=[Email(), DataRequired(), Length(min=5, max=255)])
     password = PasswordField(_l('Set new password'), validators=[Optional(), Length(min=8, max=129)],
                              render_kw={'autocomplete': 'new-password', 'title': _l('Minimum length 8, maximum 128')})
-    about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=5000)], render_kw={'rows': 5, 'class': 'autoresize'})
+    about = TextAreaField(_l('Bio'), validators=[Optional(), Length(min=3, max=1000)], render_kw={'rows': 5, 'class': 'autoresize'})
     extra_label_1 = StringField(_l('Extra field 1 - label'), validators=[Optional(), Length(max=50)],
                                 render_kw={"placeholder": _l('e.g. Pronouns')})
     extra_text_1 = StringField(_l('Extra field 1 - text'), validators=[Optional(), Length(max=256)],
