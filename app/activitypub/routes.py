@@ -304,9 +304,8 @@ def lemmy_federated_instances():
     for instance in BannedInstances.query.all():
         blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain,
-                         "published": instance.created_at.isoformat(timespec="microseconds"),
-                         "updated": instance.updated_at.isoformat(timespec="microseconds")}
+        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(),
+                         "updated": instance.updated_at.isoformat()}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:

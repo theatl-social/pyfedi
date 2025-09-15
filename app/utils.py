@@ -1104,7 +1104,7 @@ def back(default_url):
 
 # format a datetime in a way that is used in ActivityPub
 def ap_datetime(date_time: datetime) -> str:
-    return date_time.isoformat(timespec="microseconds") + '+00:00'
+    return date_time.isoformat() + '+00:00'
 
 
 class MultiCheckboxField(SelectMultipleField):
@@ -3238,8 +3238,8 @@ def archive_post(post_id: int):
                                 'id': int(comment.id) if comment.id else None,
                                 'body': str(comment.body) if comment.body else '',
                                 'body_html': str(comment.body_html) if comment.body_html else '',
-                                'posted_at': comment.posted_at.isoformat(timespec="microseconds") if comment.posted_at else None,
-                                'edited_at': comment.edited_at.isoformat(timespec="microseconds") if comment.edited_at else None,
+                                'posted_at': comment.posted_at.isoformat() if comment.posted_at else None,
+                                'edited_at': comment.edited_at.isoformat() if comment.edited_at else None,
                                 'score': int(comment.score) if comment.score else 0,
                                 'ranking': float(comment.ranking) if comment.ranking else 0.0,
                                 'parent_id': int(comment.parent_id) if comment.parent_id else None,
@@ -3263,7 +3263,7 @@ def archive_post(post_id: int):
                                 'author_ap_id': comment.author.ap_id if comment.author else False,
                                 'author_ap_profile_id': comment.author.ap_profile_id if comment.author else False,
                                 'author_reputation': comment.author.reputation if comment.author else 0,
-                                'author_created': comment.author.created.isoformat(timespec="microseconds") if comment.author else None,
+                                'author_created': comment.author.created.isoformat() if comment.author else None,
                                 'author_ap_domain': comment.author.ap_domain if comment.author else '',
                                 'replies': serialize_tree(reply_dict['replies'])
                             }
