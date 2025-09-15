@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from typing import List
 from zoneinfo import ZoneInfo
@@ -194,8 +196,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
 
-    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, posted_at=utcnow(),
-                ap_id=gibberish(), title=title, language_id=language_id)
+    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, from_bot=user.bot or user.bot_override,
+                posted_at=utcnow(), ap_id=gibberish(), title=title, language_id=language_id)
     db.session.add(post)
     db.session.commit()
 
@@ -851,3 +853,16 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
                 text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
                 {"user_id": user_id, "post_id": post_id})
         db.session.commit()
+
+
+def get_post_flair_list(post: Post | int) -> list:
+    if isinstance(post, int):
+        post = Post.query.filter_by(id=post).one()
+    
+    if not post.flair:
+        # In case flair is null
+        flair_list = []
+    else:
+        flair_list = post.flair
+    
+    return flair_list

@@ -10,9 +10,11 @@ sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "
              "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled"]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
+post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopMonth", "TopThreeMonths",
+                  "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "New", "Old"]
 community_sort_list = ["Hot", "Top", "New"]
-listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating"]
+listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
@@ -325,7 +327,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
-    flair = fields.List(fields.Nested(CommunityFlair))
+    flair_list = fields.List(fields.Nested(CommunityFlair))
 
 
 class CommunityAggregates(DefaultSchema):
@@ -1221,9 +1223,231 @@ class GetPostRequest(DefaultSchema):
 
 class GetPostResponse(DefaultSchema):
     post_view = fields.Nested(PostView, required=True)
-    community_view = fields.Nested(CommunityView, required=True)
-    moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
-    cross_posts = fields.List(fields.Nested(PostView), required=True)
+    community_view = fields.Nested(CommunityView)
+    moderators = fields.List(fields.Nested(CommunityModeratorView))
+    cross_posts = fields.List(fields.Nested(PostView))
+
+
+class LikePostRequest(Schema):
+    post_id = fields.Integer(required=True)
+    score = fields.Integer(required=True)
+    private = fields.Boolean()
+
+
+class SavePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    save = fields.Boolean(required=True)
+
+
+class SubscribePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class CreatePostRequest(DefaultSchema):
+    title = fields.String(required=True)
+    community_id = fields.Integer(required=True)
+    body = fields.String()
+    url = fields.Url()
+    nsfw = fields.Boolean()
+    language_id = fields.Integer()
+
+
+class EditPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    title = fields.String()
+    body = fields.String()
+    url = fields.Url()
+    nsfw = fields.Boolean()
+    language_id = fields.Integer()
+
+
+class DeletePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+
+
+class PostReport(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    original_post_name = fields.String(required=True)
+    original_post_body = fields.String(required=True)
+    reason = fields.String(required=True)
+    resolved = fields.Boolean(required=True)
+    published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class PostReportView(DefaultSchema):
+    post_report = fields.Nested(PostReport, required=True)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+    creator = fields.Nested(Person, required=True)
+    post_creator = fields.Nested(Person, required=True)
+    counts = fields.Nested(PostAggregates, required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_is_moderator = fields.Boolean(required=True)
+    creator_is_admin = fields.Boolean(required=True)
+    creator_blocked = fields.Boolean(required=True)
+    subscribed = fields.String(validate=validate.OneOf(subscribed_type_list), required=True)
+    saved = fields.Boolean(required=True)
+
+
+class PostReportResponse(DefaultSchema):
+    post_report_view = fields.Nested(PostReportView, required=True)
+
+
+class LockPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    locked = fields.Boolean(required=True)
+
+
+class FeaturePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    featured = fields.Boolean(required=True)
+    feature_type = fields.String(required=True)
+
+
+class RemovePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    reason = fields.String()
+
+
+class MarkPostAsReadRequest(DefaultSchema):
+    read = fields.Boolean(required=True)
+    post_id = fields.Integer()
+    post_ids = fields.List(fields.Integer())
+
+
+class SuccessResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+
+
+class GetPostRepliesRequest(DefaultSchema):
+    post_id = fields.Integer()
+    parent_id = fields.Integer()
+    sort = fields.String(validate=validate.OneOf(comment_sort_list))
+    max_depth = fields.Integer()
+    page = fields.String()
+    limit = fields.Integer()
+    parent_id = fields.Integer()
+
+
+class PostReplyView(CommentView):
+    post = fields.Nested(Post)
+    community = fields.Nested(Community)
+    replies = fields.List(fields.Nested(lambda: PostReplyView))
+
+
+class GetPostRepliesResponse(DefaultSchema):
+    comments = fields.List(fields.Nested(PostReplyView))
+    next_page = fields.String(allow_none=True)
+
+
+class ListPostsRequest(Schema):
+    q = fields.String()
+    sort = fields.String(validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"})
+    type_ = fields.String(validate=validate.OneOf(listing_type_list), metadata={"default": "All"})
+    community_name = fields.String()
+    community_id = fields.Integer()
+    saved_only = fields.Boolean(metadata={"default": False})
+    person_id = fields.Integer()
+    limit = fields.Integer(metadata={"default": 50})
+    page = fields.Integer(metadata={"default": 1})
+    liked_only = fields.Boolean(metadata={"default": False})
+    feed_id = fields.Integer()
+    topic_id = fields.Integer()
+
+
+# Private Message Schemas
+class PrivateMessage(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    recipient_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+    deleted = fields.Boolean(required=True)
+    read = fields.Boolean(required=True)
+    published = fields.String(validate=validate_datetime_string, required=True, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    ap_id = fields.Url(required=True)
+    local = fields.Boolean(required=True)
+
+
+class PrivateMessageView(DefaultSchema):
+    private_message = fields.Nested(PrivateMessage, required=True)
+    creator = fields.Nested(Person, required=True)
+    recipient = fields.Nested(Person, required=True)
+
+
+class PrivateMessageResponse(DefaultSchema):
+    private_message_view = fields.Nested(PrivateMessageView, required=True)
+
+
+class ListPrivateMessagesRequest(DefaultSchema):
+    page = fields.Integer()
+    limit = fields.Integer()
+    unread_only = fields.Boolean()
+
+
+class ListPrivateMessagesResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class GetPrivateMessageConversationRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    page = fields.Integer()
+    limit = fields.Integer()
+
+
+class GetPrivateMessageConversationResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class CreatePrivateMessageRequest(DefaultSchema):
+    content = fields.String(required=True)
+    recipient_id = fields.Integer(required=True)
+
+
+class EditPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+
+
+class MarkPrivateMessageAsReadRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    read = fields.Boolean(required=True)
+
+
+class DeletePrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+
+
+# Upload Schemas
+class ImageUploadRequest(DefaultSchema):
+    file = fields.Raw(required=True, metadata={"type": "string", "format": "binary"})
+
+
+class ImageUploadResponse(DefaultSchema):
+    url = fields.Url(required=True)
+    liked_only = fields.Boolean()
+    saved_only = fields.Boolean()
+    q = fields.String()
+
+
+class ListPostsResponse(Schema):
+    posts = fields.List(fields.Nested(PostView), required=True)
+    next_page = fields.String(allow_none=True)
 
 
 class PostSetFlairRequest(DefaultSchema):

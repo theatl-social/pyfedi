@@ -19,7 +19,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
     post_replies_for_ap
 from app.community.routes import show_community
-from app.community.util import send_to_remote_instance
+from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
 from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
@@ -304,8 +304,9 @@ def lemmy_federated_instances():
     for instance in BannedInstances.query.all():
         blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(),
-                         "updated": instance.updated_at.isoformat()}
+        instance_data = {"id": instance.id, "domain": instance.domain,
+                         "published": instance.created_at.isoformat(timespec="microseconds"),
+                         "updated": instance.updated_at.isoformat(timespec="microseconds")}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
@@ -477,7 +478,8 @@ def community_profile(actor):
                           },
                           "published": ap_datetime(community.created_at),
                           "updated": ap_datetime(community.last_active),
-                          "lemmy:tagsForPosts": community.flair_for_ap()
+                          "lemmy:tagsForPosts": community.flair_for_ap(version=1),
+                          "tag": community.flair_for_ap(version=2)
                           }
             if community.description_html:
                 actor_data["summary"] = community.description_html
@@ -1090,8 +1092,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, saved_json, 'PeerTube post not found')
                                 return
                         elif object_type == 'Group' and core_activity['type'] == 'Update':  # update community/category info
-                            refresh_community_profile(community.id, core_activity['object'])
-                            log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                            if community.is_local() and not community.is_moderator(user):
+                                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Comm edit by non-moderator')
+                            else:
+                                refresh_community_profile(community.id, core_activity['object'])
+                                log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                         else:
                             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
                     return
@@ -1739,7 +1744,7 @@ def announce_activity_to_followers(community: Community, creator: User, activity
                                                  payload=activity))
                     db.session.commit()
                 else:
-                    send_to_remote_instance(instance.id, community.id, announce_activity)
+                    send_to_remote_instance_fast(instance.inbox, community.private_key, community.ap_profile_id, announce_activity)
 
 
 @bp.route('/c/<actor>/outbox', methods=['GET'])

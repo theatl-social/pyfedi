@@ -31,10 +31,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     else:
         page = 1
     limit = int(data['limit']) if data and 'limit' in data else 50
-    liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
-    liked_only = True if liked_only == 'true' else False
-    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    liked_only = data['liked_only'] if data and 'liked_only' in data else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else False
 
     query = data['q'] if data and 'q' in data else ''
 
@@ -94,7 +92,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                                                user_id=user_id). \
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
-    elif type == "ModeratorView" and user_id is not None:
+    elif (type == "ModeratorView" or type == "Moderating") and user_id is not None:
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
@@ -206,8 +204,12 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
                                                      {"user_id": user_id}).scalars())
             posts = posts.filter(Post.id.in_(bookmarked_post_ids))
-        # For API endpoints, don't filter out read posts server-side to allow client-side dimming
-        # The native UI will still respect user.hide_read_posts via app/utils.py filtering
+        else:
+            u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                                          {"user_id": user_id}).scalars())
+            # For API endpoints, don't filter out read posts server-side to allow client-side dimming
+            # The native UI will still respect user.hide_read_posts via app/utils.py filtering
+            # Note: u_rp_ids is still collected for the read_posts set used later in post_view()
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):

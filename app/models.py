@@ -773,16 +773,29 @@ class Community(db.Model):
         else:
             return 0
 
-    def flair_for_ap(self):
+    def flair_for_ap(self, version=1):
         result = []
-        for flair in self.flair:
-            result.append({'type': 'lemmy:CommunityTag',
-                           'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
-                           'display_name': flair.flair,
-                           'text_color': flair.text_color,
-                           'background_color': flair.background_color,
-                           'blur_images': flair.blur_images
-                           })
+        
+        if version == 1:
+            for flair in self.flair:
+                result.append({'type': 'lemmy:CommunityTag',
+                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                            'display_name': flair.flair,
+                            'text_color': flair.text_color,
+                            'background_color': flair.background_color,
+                            'blur_images': flair.blur_images
+                            })
+        elif version == 2:
+            for flair in self.flair:
+                result.append({
+                    "type": "CommunityPostTag",
+                    "id": flair.get_ap_id(),
+                    "preferredUsername": flair.flair,
+                    "textColor": flair.text_color,
+                    "backgroundColor": flair.background_color,
+                    "blurImages": flair.blur_images,
+                })
+        
         return result
 
     def delete_dependencies(self):
@@ -2606,6 +2619,10 @@ class CommunityMember(db.Model):
     joined_via_feed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
 
+    __table_args__ = (
+        db.Index('ix_community_member_community_banned', 'community_id', 'is_banned'),
+    )
+
 
 class CommunityWikiPage(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -3324,6 +3341,22 @@ class CommunityFlair(db.Model):
     blur_images = db.Column(db.Boolean, default=False)
     ap_id = db.Column(db.String(255), index=True, unique=True)
 
+    def get_ap_id(self):
+        if self.ap_id:
+            return self.ap_id
+
+        community = Community.query.get(self.community_id)
+
+        if not community:
+            return None
+
+        if community.is_local():
+            self.ap_id = community.public_url() + f"/tag/{self.id}"
+            db.session.commit()
+            return self.ap_id
+        
+        return None
+
 
 class UserFlair(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -3340,7 +3373,7 @@ class SendQueue(db.Model):
     private_key = db.Column(db.String(2000))
     payload = db.Column(db.Text)
     retries = db.Column(db.Integer, default=0)
-    max_retries = db.Column(db.Integer, default=20)
+    max_retries = db.Column(db.Integer, default=40)
     retry_reason = db.Column(db.String(255))
     created = db.Column(db.DateTime, default=utcnow)
     send_after = db.Column(db.DateTime, default=utcnow, index=True)

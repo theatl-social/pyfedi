@@ -5,6 +5,7 @@ import os
 from functools import wraps
 from typing import Dict, List, Callable, Any
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +78,7 @@ def fire_hook(hook_name: str, data: Any = None, **kwargs) -> Any:
         try:
             result = handler(result, **kwargs)
         except Exception as e:
-            logger.error(f"Error in hook handler {handler.__name__}: {e}")
+            logger.error(f"Error in hook handler {handler.__name__}: {e}\n{traceback.format_exc()}")
     
     return result
 

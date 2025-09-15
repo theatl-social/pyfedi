@@ -320,7 +320,7 @@
                 {{ _('Flair') }}
             </h3>
             {% for flair in post.flair -%}
-                <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}">
+                <span class="post_flair me-1" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}">
                     <a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), flair=flair.flair) }}" style="color: {{ flair.text_color}}">
                         {{ flair.flair }}
                     </a>

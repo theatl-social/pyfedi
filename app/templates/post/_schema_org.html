@@ -12,9 +12,9 @@
   {% if post.image and post.type == POST_TYPE_LINK -%}
   "image": {{ post.image.source_url|tojson }},
   {% endif -%}
-  "datePublished": {{ post.posted_at.isoformat()|tojson }},
+  "datePublished": {{ post.posted_at.isoformat(timespec="microseconds")|tojson }},
   {% if post.edited_at -%}
-  "dateModified": {{ post.edited_at.isoformat()|tojson }},
+  "dateModified": {{ post.edited_at.isoformat(timespec="microseconds")|tojson }},
   {% endif -%}
   "author": {
     "@type": "Person",

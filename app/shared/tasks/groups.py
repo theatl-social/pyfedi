@@ -2,6 +2,7 @@ from app import celery
 from app.activitypub.signature import default_context, post_request, send_post_request
 from app.models import Community, User, utcnow
 from app.utils import gibberish, ap_datetime, get_task_session, patch_db_session
+from app.shared.community import get_comm_flair_list, comm_flair_ap_format
 
 from flask import current_app
 
@@ -58,7 +59,7 @@ def edit_community(send_async, user_id, community_id):
                 if community.local_only:
                     return
 
-                if not community.is_local():
+                if not community.is_moderator(user):
                     return
 
                 announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
@@ -111,6 +112,8 @@ def edit_community(send_async, user_id, community_id):
                 for community_language in community.languages:
                     language.append({'identifier': community_language.code, 'name': community_language.name})
                 group['language'] = language
+                
+                group["tag"] = community.flair_for_ap(version=2)
 
                 to = ['https://www.w3.org/ns/activitystreams#Public']
                 cc = [community.public_url()]
@@ -123,19 +126,22 @@ def edit_community(send_async, user_id, community_id):
                   'cc': cc,
                   'audience': community.public_url()
                 }
-                announce = {
-                  'id': announce_id,
-                  'type': 'Announce',
-                  'actor': community.public_url(),
-                  'object': update,
-                  'to': to,
-                  'cc': cc,
-                  '@context': default_context()
-                }
+                if community.is_local():
+                    announce = {
+                      'id': announce_id,
+                      'type': 'Announce',
+                      'actor': community.public_url(),
+                      'object': update,
+                      'to': to,
+                      'cc': cc,
+                      '@context': default_context()
+                    }
 
-                for instance in community.following_instances():
-                    if instance.inbox and instance.online():
-                        send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                    for instance in community.following_instances():
+                        if instance.inbox and instance.online():
+                            send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+                else:
+                    send_post_request(community.ap_inbox_url, update, user.private_key, user.public_url() + '#main-key')
         except Exception:
             session.rollback()
             raise
