@@ -59,7 +59,7 @@ def edit_community(send_async, user_id, community_id):
                 if community.local_only:
                     return
 
-                if not community.is_local():
+                if not community.is_moderator(user):
                     return
 
                 announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"

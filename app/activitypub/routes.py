@@ -1092,8 +1092,11 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_UPDATE, APLOG_FAILURE, saved_json, 'PeerTube post not found')
                                 return
                         elif object_type == 'Group' and core_activity['type'] == 'Update':  # update community/category info
-                            refresh_community_profile(community.id, core_activity['object'])
-                            log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                            if community.is_local() and not community.is_moderator(user):
+                                log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Comm edit by non-moderator')
+                            else:
+                                refresh_community_profile(community.id, core_activity['object'])
+                                log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
                         else:
                             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
                     return
