@@ -80,8 +80,11 @@ jobs:
           
           # Register known custom filters as mocks
           env.filters['shorten'] = mock_filter
+          env.filters['shorten_url'] = mock_filter
           env.filters['community_links'] = mock_filter
           env.filters['feed_links'] = mock_filter
+          env.filters['person_links'] = mock_filter
+          env.filters['remove_images'] = mock_filter
           
           errors = []
           warnings = []
