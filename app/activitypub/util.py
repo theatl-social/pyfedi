@@ -615,7 +615,7 @@ def refresh_community_profile_task(community_id, activity_json):
     try:
         with patch_db_session(session):
             community: Community = session.query(Community).get(community_id)
-            if community and community.instance.online() and not community.is_local():
+            if community and community.instance.online():
                 if not activity_json:
                     try:
                         actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
