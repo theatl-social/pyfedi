@@ -121,6 +121,19 @@ jobs:
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
           TESTING: true
+      
+      - name: Run migration consistency tests
+        run: |
+          echo "🗄️ Testing database migration consistency"
+          python -m pytest tests/test_migration_heads.py -v
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          CELERY_BROKER_URL: memory://localhost/
+          TESTING: true
           
       - name: Run additional core tests
         run: |
