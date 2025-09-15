@@ -138,7 +138,7 @@ jobs:
       - name: Run explore page functionality tests
         run: |
           echo "🔍 Testing explore page rendering and content"
-          python -m pytest tests/test_explore_page.py -v
+          python tests/test_explore_ci_real_world.py
         env:
           SERVER_NAME: test.localhost
           SECRET_KEY: test-secret-key-for-ci
