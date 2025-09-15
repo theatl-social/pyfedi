@@ -1894,18 +1894,21 @@ def post_ap2(post_id):
 @bp.route('/post/<int:post_id>', methods=['GET', 'HEAD', 'POST'])
 def post_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
-        post = Post.query.get_or_404(post_id)
-        if request.method == 'GET':
-            post_data = post_to_page(post)
-            post_data['@context'] = default_context()
-        else:  # HEAD request
-            post_data = []
-        resp = jsonify(post_data)
-        resp.content_type = 'application/activity+json'
-        resp.headers.set('Vary', 'Accept')
-        resp.headers.set('Link',
-                         f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
-        return resp
+        post: Post = Post.query.get_or_404(post_id)
+        if post.is_local():
+            if request.method == 'GET':
+                post_data = post_to_page(post)
+                post_data['@context'] = default_context()
+            else:  # HEAD request
+                post_data = []
+            resp = jsonify(post_data)
+            resp.content_type = 'application/activity+json'
+            resp.headers.set('Vary', 'Accept')
+            resp.headers.set('Link',
+                             f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
+            return resp
+        else:
+            return redirect(post.ap_id)
     else:
         return show_post(post_id)
 
