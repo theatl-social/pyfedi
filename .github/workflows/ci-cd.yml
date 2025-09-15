@@ -206,12 +206,13 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-djlint-
       
-      - name: Install djlint
+      - name: Install template validation tools
         run: |
           python -m pip install --upgrade pip
-          pip install djlint==1.36.1
+          pip install djlint==1.36.1 jinja2
           echo "📦 djlint version:"
           djlint --version
+          echo "📦 jinja2 installed"
       
       - name: Check djlint configuration
         run: |
