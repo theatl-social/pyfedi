@@ -2222,7 +2222,7 @@ def community_flair_edit(community_id, flair_id):
                 db.session.add(flair)
                 # Need to commit here so that an id is generated before we make the ap_id
                 db.session.commit()
-                flair.ap_id = community.public_url() + f"/tag/{flair.id}"
+                flair.ap_id = community.local_url() + f"/tag/{flair.id}"
                 db.session.commit()
                 flash(_('Flair added.'))
             else:

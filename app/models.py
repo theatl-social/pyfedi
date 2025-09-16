@@ -3346,7 +3346,7 @@ class CommunityFlair(db.Model):
 
         community = db.session.query(Community).get(self.community_id)
 
-        self.ap_id = community.public_url() + f"/tag/{self.id}"
+        self.ap_id = community.local_url() + f"/tag/{self.id}"
         db.session.commit()
         return self.ap_id
 

@@ -474,14 +474,7 @@ def flair_view(flair: CommunityFlair | int):
     else:
         flair_item["blur_images"] = False
     
-    if flair.ap_id:
-        flair_item["ap_id"] = flair.ap_id
-    else:
-        community = Community.query.filter_by(id=flair.community_id).one()
-        if community.is_local():
-            flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
-        else:
-            flair_item["ap_id"] = None
+    flair_item["ap_id"] = flair.get_ap_id()
     
     return flair_item
 
