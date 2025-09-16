@@ -1,0 +1,422 @@
+// Tag Cloud Configuration
+const tagCloudContainer = document.getElementById('tagCloud');
+const maxFontSize = 24;
+const minFontSize = 12;
+const cloudRadius = 180;
+
+// Calculate max/min posts for font scaling
+const maxPosts = Math.max(...tags.map(tag => tag.numPosts));
+const minPosts = Math.min(...tags.map(tag => tag.numPosts));
+
+// Calculate semantic distances between tags
+function getTagDistance(tag1Id, tag2Id) {
+    const relationships1 = tagRelationships[tag1Id] || {};
+    const relationships2 = tagRelationships[tag2Id] || {};
+
+    // Get co-occurrence frequency (bidirectional)
+    const cooccurrence = Math.max(
+        relationships1[tag2Id] || 0,
+        relationships2[tag1Id] || 0
+    );
+
+    // Convert co-occurrence to distance (inverse relationship)
+    // High co-occurrence = small distance, low co-occurrence = large distance
+    const maxCooccurrence = 52; // Highest value in our data
+    const minDistance = 30;
+    const maxDistance = 200;
+
+    if (cooccurrence === 0) {
+        return maxDistance;
+    }
+
+    // Inverse exponential scaling for more dramatic clustering
+    const normalizedCooccurrence = cooccurrence / maxCooccurrence;
+    return minDistance + (maxDistance - minDistance) * Math.pow(1 - normalizedCooccurrence, 2);
+}
+
+// Initialize tag positions using force-directed layout
+let tagElements = [];
+let tagData = tags.map((tag, index) => {
+    const tagEl = document.createElement('a');
+    tagEl.href = `#tag-${tag.id}`;
+    tagEl.textContent = tag.text;
+    tagEl.className = 'tag-cloud-item';
+
+    // Calculate font size based on numPosts
+    const fontSizeRatio = (tag.numPosts - minPosts) / (maxPosts - minPosts);
+    const fontSize = minFontSize + (maxFontSize - minFontSize) * fontSizeRatio;
+
+    tagEl.style.position = 'absolute';
+    tagEl.style.fontSize = fontSize + 'px';
+    tagEl.style.textDecoration = 'none';
+    tagEl.style.color = '#007bff';
+    tagEl.style.fontWeight = 'bold';
+    tagEl.style.cursor = 'pointer';
+    tagEl.style.transition = 'opacity 0.3s ease';
+    tagEl.style.userSelect = 'none';
+    tagEl.style.transformOrigin = 'center center';
+    tagEl.style.whiteSpace = 'nowrap';
+
+    // Store tag data on element for click detection
+    tagEl.dataset.tagId = tag.id;
+    tagEl.dataset.tagText = tag.text;
+
+    tagElements.push(tagEl);
+    tagCloudContainer.appendChild(tagEl);
+
+    // Start with random position for force simulation
+    return {
+        id: tag.id,
+        element: tagEl,
+        x: (Math.random() - 0.5) * cloudRadius,
+        y: (Math.random() - 0.5) * cloudRadius,
+        z: (Math.random() - 0.5) * cloudRadius,
+        vx: 0,
+        vy: 0,
+        vz: 0
+    };
+});
+
+// Force-directed positioning simulation
+function runForceSimulation(iterations = 300) {
+    const damping = 0.9;
+    const repulsionStrength = 1000;
+    const attractionStrength = 0.1;
+
+    for (let iter = 0; iter < iterations; iter++) {
+        // Reset forces
+        tagData.forEach(tag => {
+            tag.fx = 0;
+            tag.fy = 0;
+            tag.fz = 0;
+        });
+
+        // Calculate forces between all tag pairs
+        for (let i = 0; i < tagData.length; i++) {
+            for (let j = i + 1; j < tagData.length; j++) {
+                const tag1 = tagData[i];
+                const tag2 = tagData[j];
+
+                const dx = tag2.x - tag1.x;
+                const dy = tag2.y - tag1.y;
+                const dz = tag2.z - tag1.z;
+                const distance = Math.sqrt(dx*dx + dy*dy + dz*dz);
+
+                if (distance === 0) continue;
+
+                const idealDistance = getTagDistance(tag1.id, tag2.id);
+                const force = attractionStrength * (distance - idealDistance);
+
+                // Repulsion force to prevent overlap
+                const repulsion = repulsionStrength / (distance * distance);
+
+                const totalForce = force - repulsion;
+                const fx = (dx / distance) * totalForce;
+                const fy = (dy / distance) * totalForce;
+                const fz = (dz / distance) * totalForce;
+
+                tag1.fx += fx;
+                tag1.fy += fy;
+                tag1.fz += fz;
+                tag2.fx -= fx;
+                tag2.fy -= fy;
+                tag2.fz -= fz;
+            }
+        }
+
+        // Apply forces and update positions
+        tagData.forEach(tag => {
+            tag.vx = (tag.vx + tag.fx * 0.01) * damping;
+            tag.vy = (tag.vy + tag.fy * 0.01) * damping;
+            tag.vz = (tag.vz + tag.fz * 0.01) * damping;
+
+            tag.x += tag.vx;
+            tag.y += tag.vy;
+            tag.z += tag.vz;
+        });
+    }
+}
+
+// Run initial force simulation
+runForceSimulation();
+
+// Tag selection and post loading
+let selectedTagId = null;
+const tagPostsDiv = document.getElementById('tagPosts');
+
+async function loadTagPosts(tagId, tagText) {
+    // Visual feedback - highlight selected tag
+    tagData.forEach(tag => {
+        if (tag.id === tagId) {
+            tag.element.style.color = '#ff6b35';
+            tag.element.style.textShadow = '0 0 10px rgba(255, 107, 53, 0.5)';
+            selectedTagId = tagId;
+        } else {
+            tag.element.style.color = '#007bff';
+            tag.element.style.textShadow = 'none';
+        }
+    });
+
+    // Show loading state
+    tagPostsDiv.innerHTML = `
+        <div class="text-center p-4">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2">Loading posts for "${tagText}"...</p>
+        </div>
+    `;
+
+    try {
+        // Construct the fetch URL - adjust this to match your route structure
+        const url = `/tags/posts/${encodeURIComponent(tagId)}`;
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'text/html',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const html = await response.text();
+        tagPostsDiv.innerHTML = html;
+
+        // Scroll to posts section on mobile
+        if (window.innerWidth < 768) {
+            tagPostsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+    } catch (error) {
+        console.error('Failed to load tag posts:', error);
+        tagPostsDiv.innerHTML = `
+            <div class="alert alert-warning" role="alert">
+                <strong>Failed to load posts for "${tagText}"</strong><br>
+                ${error.message}
+                <button class="btn btn-sm btn-outline-secondary ms-2" onclick="loadTagPosts(${tagId}, '${tagText}')">
+                    Try Again
+                </button>
+            </div>
+        `;
+    }
+}
+
+// Set responsive container styles
+function updateContainerSize() {
+    const containerHeight = Math.min(window.innerHeight * 0.6, 500); // Max height of 500px
+
+    tagCloudContainer.style.position = 'relative';
+    tagCloudContainer.style.width = '100%';
+    tagCloudContainer.style.height = containerHeight + 'px';
+    tagCloudContainer.style.margin = '20px 0';
+    tagCloudContainer.style.overflow = 'hidden';
+    tagCloudContainer.style.border = '1px solid #ddd';
+    tagCloudContainer.style.borderRadius = '8px';
+    tagCloudContainer.style.touchAction = 'none'; // Prevent scrolling on mobile
+}
+
+updateContainerSize();
+
+// Camera control
+let camera = {
+    angleX: 0.2,
+    angleY: 0.5,
+    distance: 325,
+    targetAngleX: 0.2,
+    targetAngleY: 0.5,
+    targetDistance: 325
+};
+
+let isDragging = false;
+let lastPointerX = 0;
+let lastPointerY = 0;
+let touchStartDistance = 0;
+let initialDistance = 0;
+let pointerStartX = 0;
+let pointerStartY = 0;
+let hasMoved = false;
+let clickStartTarget = null;
+
+// Unified pointer controls (mouse + touch)
+tagCloudContainer.addEventListener('pointerdown', (e) => {
+    isDragging = true;
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+    pointerStartX = e.clientX;
+    pointerStartY = e.clientY;
+    hasMoved = false;
+    clickStartTarget = e.target; // Remember what was originally clicked
+    tagCloudContainer.style.cursor = 'grabbing';
+    tagCloudContainer.setPointerCapture(e.pointerId);
+
+    // Only prevent default for non-tag elements to allow click events on tags
+    if (!e.target.classList.contains('tag-cloud-item')) {
+        e.preventDefault();
+    }
+});
+
+tagCloudContainer.addEventListener('pointerup', (e) => {
+    // Handle tag clicks if we haven't dragged and started on a tag
+    if (!hasMoved && clickStartTarget && clickStartTarget.classList.contains('tag-cloud-item')) {
+        const tagId = parseInt(clickStartTarget.dataset.tagId);
+        const tagText = clickStartTarget.dataset.tagText;
+        loadTagPosts(tagId, tagText);
+    }
+
+    isDragging = false;
+    clickStartTarget = null;
+    tagCloudContainer.style.cursor = 'grab';
+    tagCloudContainer.releasePointerCapture(e.pointerId);
+});
+
+tagCloudContainer.addEventListener('pointermove', (e) => {
+    if (isDragging) {
+        const deltaX = e.clientX - lastPointerX;
+        const deltaY = e.clientY - lastPointerY;
+
+        // Check if pointer has moved significantly (more than 5px)
+        const totalMovement = Math.sqrt(
+            Math.pow(e.clientX - pointerStartX, 2) +
+            Math.pow(e.clientY - pointerStartY, 2)
+        );
+        if (totalMovement > 5) {
+            hasMoved = true;
+        }
+
+        // Scale sensitivity based on screen size
+        const sensitivity = Math.min(window.innerWidth, window.innerHeight) / 500 * 0.01;
+
+        camera.targetAngleY += deltaX * sensitivity;
+        camera.targetAngleX += deltaY * sensitivity;
+
+        // Allow unlimited vertical rotation
+
+        lastPointerX = e.clientX;
+        lastPointerY = e.clientY;
+    }
+});
+
+// Touch gestures for pinch-to-zoom
+tagCloudContainer.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        touchStartDistance = Math.sqrt(
+            Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+        initialDistance = camera.targetDistance;
+    }
+});
+
+tagCloudContainer.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2) {
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const currentDistance = Math.sqrt(
+            Math.pow(touch2.clientX - touch1.clientX, 2) +
+            Math.pow(touch2.clientY - touch1.clientY, 2)
+        );
+
+        const scale = currentDistance / touchStartDistance;
+        camera.targetDistance = Math.max(150, Math.min(600, initialDistance / scale));
+        e.preventDefault();
+    }
+});
+
+// Mouse wheel zoom (desktop only)
+tagCloudContainer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
+    camera.targetDistance = Math.max(150, Math.min(600, camera.targetDistance * zoomFactor));
+}, { passive: false });
+
+tagCloudContainer.style.cursor = 'grab';
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    updateContainerSize();
+    // Adjust camera distance for smaller screens
+    const screenSize = Math.min(window.innerWidth, window.innerHeight);
+    if (screenSize < 600) {
+        camera.targetDistance = Math.max(camera.targetDistance, 200);
+    }
+});
+
+// Update tag positions with camera view
+function updateTagCloud() {
+    const centerX = tagCloudContainer.offsetWidth / 2;
+    const centerY = tagCloudContainer.offsetHeight / 2;
+
+    // Smooth camera movement
+    camera.angleX += (camera.targetAngleX - camera.angleX) * 0.1;
+    camera.angleY += (camera.targetAngleY - camera.angleY) * 0.1;
+    camera.distance += (camera.targetDistance - camera.distance) * 0.1;
+
+    // Camera rotation matrices
+    const cosX = Math.cos(camera.angleX);
+    const sinX = Math.sin(camera.angleX);
+    const cosY = Math.cos(camera.angleY);
+    const sinY = Math.sin(camera.angleY);
+
+    tagData.forEach(tag => {
+        // Apply camera rotation to tag position
+        const x1 = tag.x * cosY - tag.z * sinY;
+        const z1 = tag.x * sinY + tag.z * cosY;
+        const y1 = tag.y * cosX - z1 * sinX;
+        const z2 = tag.y * sinX + z1 * cosX + camera.distance;
+
+        // Perspective projection
+        if (z2 > 0) {
+            const scale = 300 / z2;
+            const x2d = x1 * scale + centerX;
+            const y2d = y1 * scale + centerY;
+
+            // Position element with CSS transforms for proper centering
+            tag.element.style.left = x2d + 'px';
+            tag.element.style.top = y2d + 'px';
+            tag.element.style.transform = `translate(-50%, -50%) scale(${Math.min(scale, 2)})`;
+            tag.element.style.zIndex = Math.round(1000 - z2);
+
+            // Adjust opacity based on distance and z-position
+            const depthOpacity = Math.max(0.3, Math.min(1, (1000 - z2) / 800));
+            const distanceOpacity = Math.max(0.4, Math.min(1, 500 / camera.distance));
+            tag.element.style.opacity = depthOpacity * distanceOpacity;
+            tag.element.style.display = 'block';
+        } else {
+            tag.element.style.display = 'none';
+        }
+    });
+}
+
+// Gentle auto-rotation when not interacting
+let lastInteraction = Date.now();
+function autoRotate() {
+    const timeSinceInteraction = Date.now() - lastInteraction;
+    if (timeSinceInteraction > 3000 && !isDragging) { // 3 second delay
+        camera.targetAngleY += 0.003;
+    }
+}
+
+// Track interactions (pointer events work for both mouse and touch)
+tagCloudContainer.addEventListener('pointerenter', () => {
+    lastInteraction = Date.now();
+});
+
+tagCloudContainer.addEventListener('pointermove', () => {
+    lastInteraction = Date.now();
+});
+
+// Animation loop
+function animate() {
+    autoRotate();
+    updateTagCloud();
+    requestAnimationFrame(animate);
+}
+
+// Start animation
+animate();

@@ -223,7 +223,7 @@ def tags_community(community_id: int):
     # Calculate tag relationships (co-occurrence in posts)
     relationships = {}
     if tag_ids:
-        # Simpler approach: find all posts with multiple tags and count co-occurrences
+        # Find all posts with multiple tags and count co-occurrences
         for tag1_id in tag_ids:
             # Find posts that contain this tag
             posts_with_tag1 = db.session.query(post_tag.c.post_id).filter(
