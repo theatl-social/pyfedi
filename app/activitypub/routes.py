@@ -1909,7 +1909,7 @@ def post_ap(post_id):
                              f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
             return resp
         else:
-            return redirect(post.ap_id)
+            return redirect(post.ap_id, code=301)
     else:
         return show_post(post_id)
 
