@@ -1,6 +1,7 @@
 from datetime import timezone
 from random import randint
 
+import flask
 from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, current_app, abort, g
 from flask_babel import _
@@ -197,13 +198,69 @@ def tags_community(community_id: int):
     except Exception:
         abort(404)
 
-    search = request.args.get('search', '')
-
-    tags = Tag.query.filter_by(banned=False).join(post_tag, post_tag.c.tag_id == Tag.id).join(
-              Post, Post.id == post_tag.c.post_id).filter_by(community_id=community_id, deleted=False)
-    if search != '':
-        tags = tags.filter(Tag.name.ilike(f'%{search}%'))
-    tags = tags.order_by(Tag.name)
+    # Get tags with post counts
+    tags_query = db.session.query(Tag, db.func.count(Post.id).label('num_posts')). \
+        filter(Tag.banned == False). \
+        join(post_tag, post_tag.c.tag_id == Tag.id). \
+        join(Post, Post.id == post_tag.c.post_id). \
+        filter(Post.community_id == community_id, Post.deleted == False). \
+        group_by(Tag.id)
+    
+    # Limit to top 50 tags by usage for performance
+    tag_results = tags_query.order_by(db.desc('num_posts')).limit(50).all()
+    
+    # Prepare tag data for JavaScript
+    tags_data = []
+    tag_ids = []
+    for tag, num_posts in tag_results:
+        tags_data.append({
+            'id': tag.id,
+            'text': tag.name,
+            'numPosts': num_posts
+        })
+        tag_ids.append(tag.id)
+    
+    # Calculate tag relationships (co-occurrence in posts)
+    relationships = {}
+    if tag_ids:
+        # Simpler approach: find all posts with multiple tags and count co-occurrences
+        for tag1_id in tag_ids:
+            # Find posts that contain this tag
+            posts_with_tag1 = db.session.query(post_tag.c.post_id).filter(
+                post_tag.c.tag_id == tag1_id
+            ).join(Post, Post.id == post_tag.c.post_id).filter(
+                Post.community_id == community_id,
+                Post.deleted == False
+            ).subquery()
+            
+            # Find other tags that appear in the same posts
+            cooccurrence_counts = db.session.query(
+                post_tag.c.tag_id.label('tag2_id'),
+                db.func.count().label('count')
+            ).filter(
+                post_tag.c.post_id.in_(db.select(posts_with_tag1.c.post_id)),
+                post_tag.c.tag_id.in_(tag_ids),
+                post_tag.c.tag_id != tag1_id
+            ).group_by(post_tag.c.tag_id).all()
+            
+            if cooccurrence_counts:
+                relationships[tag1_id] = {
+                    tag2_id: count for tag2_id, count in cooccurrence_counts
+                }
 
     return render_template('tag/tags_community.html', title='Community tags',
-                           community=community, tags=tags, search=search)
+                           community=community, tags_data=tags_data, 
+                           tag_relationships=relationships)
+
+
+@bp.route('/tags/posts/<int:tag_id>')
+def tag_posts(tag_id):
+    posts = Post.query.join(Community, Community.id == Post.community_id). \
+        join(post_tag, post_tag.c.post_id == Post.id).filter(post_tag.c.tag_id == tag_id). \
+        filter(Community.banned == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
+
+    if current_user.is_anonymous or current_user.ignore_bots == 1:
+        posts = posts.filter(Post.from_bot == False)
+    posts = posts.order_by(desc(Post.posted_at)).limit(20).all()
+
+    return flask.render_template('tag/tag_posts.html', posts=posts)
