@@ -2487,7 +2487,6 @@ def fixup_from_remote(actor: str):
     community = Community.query.filter_by(ap_id=actor).first()
 
     if community:
-        community.ap_fetched_at = None
         schedule_actor_refresh(community, override=True)
     
     return redirect(url_for('activitypub.community_profile', actor=actor))    
