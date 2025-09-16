@@ -123,8 +123,10 @@
                         <li><p><a href="/community/{{ community.link() }}/move">{{ _('Move community to %(instance_domain)s', instance_domain=instance_domain) }}</a></p></li>
                         {% endif -%}
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
+                    </ul>
                 {% endif -%}
                 {% if not community.is_local() and not current_user.is_anonymous and current_user.is_admin() -%}
+                    <ul>
                         <li><p><a href="{{ url_for('community.fixup_from_remote', actor=community.ap_id) }}">{{ _("Refresh community information from remote") }}</a></p></li>
                     </ul>
                 {% endif -%}
