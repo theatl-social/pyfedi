@@ -296,6 +296,7 @@ class PostAggregates(DefaultSchema):
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
+    cross_posts = fields.Integer(required=True)
 
 
 class CommunityFlair(DefaultSchema):

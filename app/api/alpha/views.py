@@ -92,7 +92,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes,
                   'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
-                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z'}
+                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z',
+                  'cross_posts': len(post.cross_posts) if post.cross_posts else 0}
         if user_id:
             if bookmarked_posts is None:
                 bookmarked = db.session.execute(
