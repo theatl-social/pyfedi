@@ -831,7 +831,7 @@ def unsubscribe(actor):
                 if '@' in actor:  # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if community.instance.domain == 'a.gup.pe':
+                        if community.instance.domain == 'ovo.st':
                             join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id,
                                                                                 community_id=community.id).first()
                             if join_request:
@@ -2296,7 +2296,7 @@ def community_leave_all():
                 if not community.is_local():
                     if not community.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if community.instance.domain == 'a.gup.pe':
+                        if community.instance.domain == 'ovo.st':
                             join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id,
                                                                                 community_id=community.id).first()
                             if join_request:

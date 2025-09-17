@@ -3226,7 +3226,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor = community.ap_profile_id
     parsed_url = urlparse(announce_actor)
     announce_actor_domain = parsed_url.netloc
-    if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
+    if announce_actor_domain != 'ovo.st' and not nodebb and announce_actor_domain != uri_domain:
         return None
 
     post_data = remote_object_to_json(uri)
