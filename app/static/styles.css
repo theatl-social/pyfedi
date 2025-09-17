@@ -3012,6 +3012,9 @@ body.compact-min .form-control {
 body.compact-min .form-select {
   padding: 0.275rem 2rem 0.275rem 0.55rem;
 }
+body.compact-min .ts-wrapper {
+  padding: 0;
+}
 
 body.compact-max .post_teaser {
   border-bottom-width: 1px;
