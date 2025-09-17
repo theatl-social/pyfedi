@@ -83,7 +83,7 @@ def get_community_list(auth, data):
         communitylist.append(community_view(community=community, variant=2, stub=False, user_id=user_id))
     list_json = {
         "communities": communitylist,
-        'next_page': communities.next_num if communities.next_num else None
+        'next_page': str(communities.next_num) if communities.next_num else None
     }
 
     return list_json
@@ -289,7 +289,7 @@ def get_community_moderate_bans(auth, data):
     # return that info as json
     res = {}
     res['items'] = items
-    res['next_page'] = community_bans.next_num if community_bans.next_num is not None else None
+    res['next_page'] = str(community_bans.next_num) if community_bans.next_num is not None else None
 
     return res
 

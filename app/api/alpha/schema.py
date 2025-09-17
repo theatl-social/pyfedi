@@ -561,7 +561,7 @@ class ListCommunitiesRequest(DefaultSchema):
 
 class ListCommunitiesResponse(DefaultSchema):
     communities = fields.List(fields.Nested(CommunityView), required=True)
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class FollowCommunityRequest(DefaultSchema):
@@ -612,7 +612,7 @@ class CommunityModerationBanItem(DefaultSchema):
 
 class CommunityModerationBansListResponse(DefaultSchema):
     items = fields.List(fields.Nested(CommunityModerationBanItem))
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class CommunityModerationBanRequest(DefaultSchema):
@@ -889,7 +889,7 @@ class ListCommentsRequest(DefaultSchema):
 
 class ListCommentsResponse(DefaultSchema):
     comments = fields.List(fields.Nested(CommentView), required=True)
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class GetCommentRequest(DefaultSchema):
@@ -981,7 +981,7 @@ class CommentLikeView(DefaultSchema):
 
 class ListCommentLikesResponse(DefaultSchema):
     comment_likes = fields.List(fields.Nested(CommentLikeView, required=True))
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class ListPostLikesRequest(DefaultSchema):
@@ -1129,7 +1129,7 @@ class PostReplyView(CommentView):
 
 class GetPostRepliesResponse(DefaultSchema):
     comments = fields.List(fields.Nested(PostReplyView))
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class ListPostsRequest(Schema):
@@ -1229,7 +1229,7 @@ class ImageUploadResponse(DefaultSchema):
 
 class ListPostsResponse(Schema):
     posts = fields.List(fields.Nested(PostView), required=True)
-    next_page = fields.Integer(allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class PostSetFlairRequest(DefaultSchema):

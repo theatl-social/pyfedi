@@ -222,7 +222,7 @@ def get_reply_list(auth, data, user_details=None):
 
         if depth_first == False:
             replies = replies.paginate(page=page, per_page=limit, error_out=False)
-            next_page = replies.next_num if replies.next_num is not None else None
+            next_page = str(replies.next_num) if replies.next_num is not None else None
     else:
         replies = [] # shouldn't happen
 
@@ -505,7 +505,7 @@ def get_reply_like_list(auth, data):
                 'creator': user_view(user=like.user_id, variant=1, stub=True)
             })
         response_json = {
-            'next_page': likes.next_num if likes.next_num is not None else None,
+            'next_page': str(likes.next_num) if likes.next_num is not None else None,
             'comment_likes': comment_likes
         }
         return response_json

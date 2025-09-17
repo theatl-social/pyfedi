@@ -296,7 +296,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     list_json = {
         "posts": postlist,
-        "next_page": posts.next_num if posts.next_num is not None else None
+        "next_page": str(posts.next_num) if posts.next_num is not None else None
     }
 
     return list_json
@@ -489,7 +489,7 @@ def get_post_replies(auth, data):
 
     list_json = {
         "comments": replylist,
-        "next_page": next_cursor if next_cursor is not None else None
+        "next_page": str(next_cursor) if next_cursor is not None else None
     }
 
     return list_json
