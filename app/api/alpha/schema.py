@@ -763,7 +763,7 @@ class CommentReplyView(DefaultSchema):
 
 
 class UserRepliesResponse(DefaultSchema):
-    next_page = fields.String(allow_none=True)
+    next_page = fields.Integer(required=True, allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
@@ -775,7 +775,7 @@ class UserMentionsRequest(DefaultSchema):
 
 
 class UserMentionsResponse(DefaultSchema):
-    next_page = fields.String(allow_none=True)
+    next_page = fields.Integer(required=True, allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
@@ -857,7 +857,7 @@ class UserNotificationsResponse(DefaultSchema):
     items = fields.List(fields.Nested(UserNotificationItemView), required=True)
     status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
     username = fields.String(required=True)
-    next_page = fields.String(allow_none=True)
+    next_page = fields.Integer(required=True, allow_none=True)
 
 
 class UserNotificationStateRequest(DefaultSchema):
