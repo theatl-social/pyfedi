@@ -17,6 +17,7 @@ from ics import Calendar, Event, DisplayAlarm
 from app import db, cache, celery, httpx_client, limiter, plugins
 from app.activitypub.signature import RsaKeys, send_post_request
 from app.activitypub.util import extract_domain_and_actor, find_actor_or_create
+from app.activitypub.actor import schedule_actor_refresh
 from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, CreateImageForm, CreateLinkForm, \
     ReportCommunityForm, \
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
@@ -53,7 +54,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required, markdown_to_text, instance_gone_forever
+    approval_required, markdown_to_text, instance_gone_forever, permission_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -2467,3 +2468,25 @@ def retrieve_title_of_url(url):
             return ""
     except Exception:
         return ""
+
+
+@bp.route('/c/<actor>/fixup_from_remote')
+@login_required
+@permission_required('change instance settings')
+def fixup_from_remote(actor: str):
+    if not current_user.is_admin():
+        flash(_("This function is only for admins"), "warning")
+        return redirect(url_for('activitypub.community_profile', actor=actor))
+    
+    actor = actor.strip()
+    
+    if "@" not in actor:
+        flash(_("This is a local community"))
+        return redirect(url_for('activitypub.community_profile', actor=actor))
+    
+    community = Community.query.filter_by(ap_id=actor).first()
+
+    if community:
+        schedule_actor_refresh(community, override=True)
+    
+    return redirect(url_for('activitypub.community_profile', actor=actor))    
