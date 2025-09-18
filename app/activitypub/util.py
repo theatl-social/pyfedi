@@ -339,7 +339,7 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
         return new_tag
 
 
-def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair:
+def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair | None:
     if session is None:
         session = db.session
     if 'id' in flair:
@@ -348,6 +348,8 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
         existing_flair = None
 
     if existing_flair is None:
+        if 'preferredUsername' not in flair:
+            return None
         existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
                                                               CommunityFlair.community_id == community_id).first()
     if existing_flair:
@@ -420,6 +422,8 @@ def update_community_flair_from_tags(community: Community, flair_tags: list, ses
     # Update existing flair or create new ones
     for flair in flair_tags:
         updated_flair_obj = find_flair_or_create(flair, community.id, session)
+        if updated_flair_obj is None:
+            return
         updated_flair.append(updated_flair_obj)
         
         # Track which flair should be kept.
