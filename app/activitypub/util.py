@@ -342,7 +342,10 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
 def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair:
     if session is None:
         session = db.session
-    existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+    if 'id' in flair:
+        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+    else:
+        existing_flair = None
 
     if existing_flair is None:
         existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
