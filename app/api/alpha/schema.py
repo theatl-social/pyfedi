@@ -148,7 +148,7 @@ class InstanceBlockView(DefaultSchema):
 class LocalUser(DefaultSchema):
     default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
     default_listing_type = fields.String(required=True, validate=validate.OneOf(listing_type_list))
-    default_sort_type = fields.String(required=True, validate=validate.OneOf(sort_list))
+    default_sort_type = fields.String(validate=validate.OneOf(sort_list))
     show_bot_accounts = fields.Boolean(required=True)
     show_nsfl = fields.Boolean(required=True)
     show_nsfw = fields.Boolean(required=True)
