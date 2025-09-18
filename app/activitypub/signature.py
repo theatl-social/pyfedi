@@ -103,7 +103,6 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
         log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
         log.activity_json = json.dumps(body)
         session.add(log)
-        session.commit()
 
         http_status_code = None
 
