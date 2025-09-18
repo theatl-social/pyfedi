@@ -856,7 +856,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
             'creator_id': cm.sender_id,
             'recipient_id': cm.recipient_id,
             'content': cm.body if not cm.deleted else 'Deleted by author',
-            'deleted': cm.deleted,
+            'deleted': cm.deleted if cm.deleted is not None else False,
             'read': cm.read,
             'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
             'ap_id': cm.ap_id,
