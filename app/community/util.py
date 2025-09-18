@@ -99,7 +99,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                 is_peertube = is_guppe = is_wordpress = False
                 if community.ap_profile_id == f"https://{server}/video-channels/{name}":
                     is_peertube = True
-                elif community.ap_profile_id.startswith('https://a.gup.pe/u'):
+                elif community.ap_profile_id.startswith('https://ovo.st/club'):
                     is_guppe = True
 
                 # get mods

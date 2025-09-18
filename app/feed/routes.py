@@ -590,7 +590,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
             if not community.is_local():  # this is a remote community, so activitypub is needed
                 if not community.instance.gone_forever:
                     follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                    if community.instance.domain == 'a.gup.pe':
+                    if community.instance.domain == 'ovo.st':
                         join_request = CommunityJoinRequest.query.filter_by(user_id=user.id,
                                                                             community_id=community.id).first()
                         if join_request:
@@ -949,7 +949,7 @@ def feed_unsubscribe(actor):
                 if '@' in actor:  # this is a remote feed, so activitypub is needed
                     if not feed.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if feed.instance.domain == 'a.gup.pe':
+                        if feed.instance.domain == 'ovo.st':
                             join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id,
                                                                            feed_id=feed.id).first()
                             if join_request:
