@@ -980,7 +980,7 @@ class CommentLikeView(DefaultSchema):
 
 
 class ListCommentLikesResponse(DefaultSchema):
-    comment_likes = fields.List(fields.Nested(CommentLikeView, required=True))
+    comment_likes = fields.List(fields.Nested(CommentLikeView), required=True)
     next_page = fields.String(allow_none=True)
 
 
@@ -995,7 +995,7 @@ class PostLikeView(CommentLikeView):
 
 
 class ListPostLikesResponse(DefaultSchema):
-    post_likes = fields.List(fields.Nested(PostLikeView, required=True))
+    post_likes = fields.List(fields.Nested(PostLikeView), required=True)
     next_page = fields.String(allow_none=True)
 
 
