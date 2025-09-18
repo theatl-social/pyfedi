@@ -18,9 +18,11 @@ from app.shared.post import get_post_flair_list
 
 
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, communities_moderating=None, banned_from=None,
-              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict:
+              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict | None:
     if isinstance(post, int):
-        post = Post.query.filter_by(id=post, deleted=False).one()
+        post = Post.query.filter_by(id=post, deleted=False).first()
+        if post is None:
+            return None
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
@@ -192,8 +194,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         xplist = []
         if post.cross_posts:
             for xp_id in post.cross_posts:
-                entry = post_view(post=xp_id, variant=2, stub=True)
-                xplist.append(entry)
+                if entry := post_view(post=xp_id, variant=2, stub=True):
+                    xplist.append(entry)
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
               'community_view': community_view(community=post.community, variant=2),
