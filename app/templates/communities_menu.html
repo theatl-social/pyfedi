@@ -8,7 +8,7 @@
             <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0;"></span>
         </div>
         <ul class="text-end text-lg-start">
-            <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
+            <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="{{ url_for("main.list_communities", home_select="local") }}">{{ _('Local communities') }}</a></li>
             <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
             <li><a class="dropdown-item" href="/community/add_remote">{{ _('Add remote community') }}</a></li>
           {% if moderating_communities %}
