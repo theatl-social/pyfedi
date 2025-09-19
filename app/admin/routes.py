@@ -324,7 +324,7 @@ def admin_instance_chooser():
         set_setting('number_of_admins', form.number_of_admins.data)
         set_setting('financial_stability', form.financial_stability.data)
         set_setting('daily_backups', form.daily_backups.data)
-        flash(_('Settings saved.'))
+        flash(_('Settings saved. It might take up to 24 hours before other instances show your changes.'))
     elif request.method == 'GET':
         form.enable_instance_chooser.data = get_setting('enable_instance_chooser', False)
         form.elevator_pitch.data = get_setting('elevator_pitch', '')
