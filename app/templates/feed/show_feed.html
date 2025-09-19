@@ -239,12 +239,12 @@
             {% if tags %}
                 <div class="card mt-3">
                     <div class="card-body">
-                        {% if tags and len(tags) > 0 -%}
+                        {% if tags and tags|length > 0 -%}
                             <div class="post_tags_sidepane">
                                 {% for tag in tags -%}
                                     <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not none else feed.name, tag=tag.name) }}">#{{ tag.display_as }}</a></span>
                                 {% endfor -%}
-                                {% if len(tags) > 1 -%}
+                                {% if tags|length > 1 -%}
                                     <br />
                                     <a href="{{ url_for('tag.tag_cloud', type='feed', category_id=feed.id) }}">{{ _("Explore Tag Cloud") }}</a>
                                 {% endif %}
