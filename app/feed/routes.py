@@ -13,7 +13,7 @@ from sqlalchemy import desc
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
-from app.community.util import save_icon_file, save_banner_file
+from app.community.util import save_icon_file, save_banner_file, hashtags_used_in_communities
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER
 from app.feed import bp
@@ -764,16 +764,18 @@ def show_feed(feed):
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
             communities_banned_from_list = communities_banned_from(current_user.id)
+            content_filters = user_filters_posts(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
             communities_banned_from_list = []
+            content_filters = {}
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
                                sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
-                               feed_communities=feed_communities, content_filters=user_filters_posts(
-                current_user.id) if current_user.is_authenticated else {},
+                               feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
+                               tags=hashtags_used_in_communities(feed_community_ids, content_filters),
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",

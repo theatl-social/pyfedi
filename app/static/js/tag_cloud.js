@@ -168,8 +168,8 @@ async function loadTagPosts(tagId, tagText) {
     `;
 
     try {
-        // Construct the fetch URL - adjust this to match your route structure
-        const url = `/tags/posts/${encodeURIComponent(tagId)}`;
+        // fetch posts
+        const url = `/tags/posts/${encodeURIComponent(tagId)}${linkSuffix}`;
 
         const response = await fetch(url, {
             method: 'GET',

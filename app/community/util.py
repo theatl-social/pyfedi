@@ -822,6 +822,29 @@ def hashtags_used_in_community(community_id: int, content_filters):
     return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
+def hashtags_used_in_communities(community_ids: List[int], content_filters):
+    if community_ids is None or len(list(community_ids)) == 0:
+        return None
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+    FROM "tag" AS t
+    INNER JOIN post_tag pt ON t.id = pt.tag_id
+    INNER JOIN "post" ON pt.post_id = post.id
+    WHERE post.community_id IN :community_ids
+      AND t.banned IS FALSE AND post.deleted IS FALSE
+    GROUP BY t.id
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_ids': tuple(community_ids)}).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
 def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
     # Add a font size to each dict, based on the number of times each tag is used (the post count aka 'pc')
     if len(tags) == 0:

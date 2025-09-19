@@ -10,7 +10,13 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
         <div class="row justify-content-between">
             <div class="col-8">
-                <h1>{{ _('Tags in %(community)s', community=community.name) }}</h1>
+                {% if community -%}
+                    <h1>{{ _('Tags in %(community)s', community=community.display_name()) }}</h1>
+                {% elif topic -%}
+                    <h1>{{ _('Tags in %(community)s', community=topic.name) }}</h1>
+                {% elif feed -%}
+                    <h1>{{ _('Tags in %(community)s', community=feed.title) }}</h1>
+                {% endif -%}
             </div>
         </div>
 
@@ -33,6 +39,14 @@
             // Co-occurrence matrix: how often tags appear together in posts
             // Higher values = more frequently used together = closer in 3D space
             var tagRelationships = {{ tag_relationships | tojson }};
+
+            {% if community %}
+                var linkSuffix = '?community_id={{ community.id }}';
+            {% elif feed %}
+                var linkSuffix = '?feed_id={{ feed.id }}';
+            {% elif topic %}
+                var linkSuffix = '?topic_id={{ topic.id }}';
+            {% endif %}
 
         </script>
         <script src="{{ url_for('static', filename='js/tag_cloud.js', changed=getmtime('js/tag_cloud.js')) }}" nonce="{{ nonce }}"></script>
