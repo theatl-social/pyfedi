@@ -266,6 +266,17 @@ class SearchInstanceChooser(DefaultSchema):
     newbie = fields.String()
 
 
+class WidthHeight(DefaultSchema):
+    width = fields.Integer()
+    height = fields.Integer()
+
+
+class MiniCrossPosts(DefaultSchema):
+    post_id = fields.Integer()
+    reply_count = fields.Integer()
+    community_name = fields.String()
+
+
 class Post(DefaultSchema):
     ap_id = fields.Url(required=True)
     community_id = fields.Integer(required=True)
@@ -286,6 +297,8 @@ class Post(DefaultSchema):
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     url = fields.Url()
+    image_details = fields.Nested(WidthHeight)
+    cross_posts = fields.Nested(MiniCrossPosts)
 
 
 class PostAggregates(DefaultSchema):
