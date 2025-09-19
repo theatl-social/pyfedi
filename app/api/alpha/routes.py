@@ -508,9 +508,9 @@ def get_alpha_post(data):
     try:
         auth = request.headers.get('Authorization')
         resp = get_post(auth, data)
-        if resp is None:
-            raise Exception('Post not found')
         return GetPostResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
