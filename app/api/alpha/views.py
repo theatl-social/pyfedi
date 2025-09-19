@@ -924,7 +924,7 @@ def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_
         v1["title"] = v1.pop("name")
         v1["name"] = v1.pop("machine_name")
         v1["communities_count"] = v1.pop("num_communities")
-        v1["show_posts_from_children"] = v1.pop("show_posts_in_children")
+        v1["show_posts_from_children"] = v1.pop("show_posts_in_children") or False
         v1["parent_topic_id"] = v1.pop("parent_id")
 
         v1['communities'] = []
