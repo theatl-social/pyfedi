@@ -49,7 +49,7 @@ def test_explore_template_compiles_correctly():
         })
         
         # Try to compile the template
-        template = env.get_template('explore.html')
+        env.get_template('explore.html')
         
         # Get template source to verify the fix
         source, _, _ = env.loader.get_source(env, 'explore.html')

@@ -5,6 +5,7 @@ This test verifies that the explore template renders correctly with different
 data scenarios without requiring full application context.
 """
 import os
+import pytest
 from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
 
 

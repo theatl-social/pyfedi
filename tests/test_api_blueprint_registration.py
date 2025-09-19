@@ -82,7 +82,7 @@ def test_api_routes_accessible():
             else:
                 print(f"✅ {method} {route}: {response.status_code} (route exists)")
         
-        assert not failed_routes, f"Routes returning 404:\n" + "\n".join(failed_routes)
+        assert not failed_routes, "Routes returning 404:\n" + "\n".join(failed_routes)
     
     print(f"✅ All {len(test_routes)} tested API routes are accessible (not 404)")
     return True
@@ -118,9 +118,9 @@ def test_blueprint_route_coverage():
         if not any(re.search(pattern, route) for route in routes):
             missing_routes.append(f"{bp_name}: no routes matching {pattern}")
     
-    assert not missing_routes, f"Blueprints without routes:\n" + "\n".join(missing_routes)
+    assert not missing_routes, "Blueprints without routes:\n" + "\n".join(missing_routes)
     
-    print(f"✅ All blueprints have routes defined")
+    print("✅ All blueprints have routes defined")
     return True
 
 
