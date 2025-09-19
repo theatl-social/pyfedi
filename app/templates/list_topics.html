@@ -4,37 +4,44 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
-{% set active_child = 'list_topics' -%}
-
+{% set active_child = "list_topics" -%}
 {% block app_content -%}
     {% if topics|length > 0 -%}
         {% macro render_topic(topic, depth) -%}
             <li>
-                {% if depth == 0 -%}<strong>{% endif -%}
+                {% if depth == 0 -%}
+                    <strong>
+                    {% endif -%}
                     <a href="/topic/{{ topic['topic'].path() }}">{{ topic['topic'].name }}</a>
-                {% if depth == 0 -%}</strong>{% endif -%}
+                    {% if depth == 0 -%}
+                    </strong>
+                {% endif -%}
                 {% if topic['children'] -%}
                     <ul>
-                    {% for topic in topic['children'] -%}
-                        {{ render_topic(topic, depth + 1)|safe }}
-                    {% endfor -%}
+                        {% for topic in topic['children'] -%}
+                            {{ render_topic(topic, depth + 1) |safe }}
+                        {% endfor -%}
                     </ul>
                 {% endif -%}
             </li>
         {% endmacro -%}
-        <h1>{{ _('Choose a topic') }}</h1>
+        <h1>{{ _("Choose a topic") }}</h1>
         <div class="table-responsive-md mt-4">
             <ul class="topics_list">
                 {% for topic in topics -%}
-                    {{ render_topic(topic, 0)|safe }}
+                    {{ render_topic(topic, 0) |safe }}
                 {% endfor -%}
             </ul>
         </div>
     {% else -%}
-        <p>{{ _('There are no communities yet.') }}</p>
+        <p>{{ _("There are no communities yet.") }}</p>
     {% endif -%}
-        <p><a href="/communities" class="btn btn-primary">{{ _('More communities') }}</a></p>
+    <p>
+        <a href="/communities" class="btn btn-primary">{{ _("More communities") }}</a>
+    </p>
     {% if current_user.is_authenticated and current_user.trustworthy() -%}
-        <p><a href="/topics/new" class="btn btn-primary">{{ _('Suggest a topic') }}</a></p>
+        <p>
+            <a href="/topics/new" class="btn btn-primary">{{ _("Suggest a topic") }}</a>
+        </p>
     {% endif -%}
 {% endblock -%}

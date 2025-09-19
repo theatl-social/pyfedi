@@ -226,22 +226,18 @@ def show_post(post_id: int):
             reply_collapse_threshold = -10
 
         # Polls
-        poll_form = False
         poll_results = False
         poll_choices = []
         poll_data = None
         poll_total_votes = 0
+        has_voted = False
         if post.type == POST_TYPE_POLL:
             poll_data = Poll.query.get(post.id)
             if poll_data:
                 poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
                 poll_total_votes = poll_data.total_votes()
-                # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
-                if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                        or poll_data.end_poll < datetime.utcnow():
-                    poll_results = True
-                else:
-                    poll_form = True
+                if current_user.is_authenticated:
+                    has_voted = poll_data.has_voted(current_user.id)
 
         # Events
         event = None
@@ -295,7 +291,7 @@ def show_post(post_id: int):
                                    is_owner=community.is_owner(), is_dead=is_dead,
                                    community=post.community, community_flair=get_comm_flair_list(community),
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
-                                   poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
+                                   has_voted=has_voted, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
                                    event=event,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,

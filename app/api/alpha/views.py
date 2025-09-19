@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import cache, db
 from app.activitypub.util import active_month
@@ -24,19 +25,16 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
-        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
+        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
-        
-        if not v1['nsfw']:
-            # For whatever reason, nsfw can sometimes be null
-            v1['nsfw'] = False
-        
+
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': post.profile_id(),
                    'local': post.is_local(),
                    'language_id': post.language_id if post.language_id else 0,
                    'removed': False,
-                   'locked': not post.comments_enabled})
+                   'locked': not post.comments_enabled,
+                   'nsfw': post.nsfw if post.nsfw is not None else False})
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
@@ -77,7 +75,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             for cross_post in cross_post_data:
                 v1['cross_posts'].append({'post_id': cross_post[0], 'reply_count': cross_post[1], 'community_name': cross_post[2]})
         else:
-            v1['cross_posts'] = None
+            v1['cross_posts'] = []
         if post.image_id and post.image.width and post.image.height:
             v1['image_details'] = {
                 'width': post.image.width,
@@ -92,7 +90,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes,
                   'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
-                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z'}
+                  'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z',
+                  'cross_posts': len(post.cross_posts) if post.cross_posts else 0}
         if user_id:
             if bookmarked_posts is None:
                 bookmarked = db.session.execute(
@@ -191,8 +190,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         xplist = []
         if post.cross_posts:
             for xp_id in post.cross_posts:
-                entry = post_view(post=xp_id, variant=2, stub=True)
-                xplist.append(entry)
+                try:
+                    entry = post_view(post=xp_id, variant=2, stub=True)
+                    xplist.append(entry)
+                except NoResultFound:
+                    continue
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
               'community_view': community_view(community=post.community, variant=2),
@@ -474,14 +476,7 @@ def flair_view(flair: CommunityFlair | int):
     else:
         flair_item["blur_images"] = False
     
-    if flair.ap_id:
-        flair_item["ap_id"] = flair.ap_id
-    else:
-        community = Community.query.filter_by(id=flair.community_id).one()
-        if community.is_local():
-            flair_item["ap_id"] = community.public_url() + f"/tag/{flair.id}"
-        else:
-            flair_item["ap_id"] = None
+    flair_item["ap_id"] = flair.get_ap_id()
     
     return flair_item
 
@@ -862,7 +857,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
             'creator_id': cm.sender_id,
             'recipient_id': cm.recipient_id,
             'content': cm.body if not cm.deleted else 'Deleted by author',
-            'deleted': cm.deleted,
+            'deleted': cm.deleted if cm.deleted is not None else False,
             'read': cm.read,
             'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
             'ap_id': cm.ap_id,
@@ -928,7 +923,7 @@ def topic_view(topic: Topic | int, variant: int, communities_moderating, banned_
         v1["title"] = v1.pop("name")
         v1["name"] = v1.pop("machine_name")
         v1["communities_count"] = v1.pop("num_communities")
-        v1["show_posts_from_children"] = v1.pop("show_posts_in_children")
+        v1["show_posts_from_children"] = v1.pop("show_posts_in_children") or False
         v1["parent_topic_id"] = v1.pop("parent_id")
 
         v1['communities'] = []

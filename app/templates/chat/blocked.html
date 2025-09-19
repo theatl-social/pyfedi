@@ -3,16 +3,15 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'chats' %}
-
+{% set active_child = "chats" %}
 {% block app_content %}
-<div class="row">
+    <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('Sorry') }}</div>
+                    <div class="card-title">{{ _("Sorry") }}</div>
                     <div class="card-body">
-                        <p>{{ _('You have blocked this person or they have blocked you.') }}</p>
+                        <p>{{ _("You have blocked this person or they have blocked you.") }}</p>
                     </div>
                 </div>
             </div>

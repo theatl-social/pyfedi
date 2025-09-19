@@ -1,5 +1,9 @@
-<a href="/user/{{ user.id }}/notification" rel="nofollow" aria-live="assertive"
+<a href="/user/{{ user.id }}/notification"
+   rel="nofollow"
+   aria-live="assertive"
    aria-label="{{ 'Notify about new posts by this person' if user.notify_new_posts(current_user.id) else 'Do not notify about new posts' }}"
-class="fe {{ 'fe-bell' if user.notify_new_posts(current_user.id) else 'fe-no-bell' }} no-underline"
-hx-post="/user/{{ user.id }}/notification" hx-trigger="click throttle:1s" hx-swap="outerHTML"
-title="{{ _('Notify about every new post by this person.') }}"></a>
+   class="fe {{ 'fe-bell' if user.notify_new_posts(current_user.id) else 'fe-no-bell' }} no-underline"
+   hx-post="/user/{{ user.id }}/notification"
+   hx-trigger="click throttle:1s"
+   hx-swap="outerHTML"
+   title="{{ _('Notify about every new post by this person.') }}"></a>

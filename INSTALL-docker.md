@@ -119,6 +119,8 @@ cd pyfedi/
 ```
 NOTE: Major version updates may require extra steps. Check [PieFed Meta](https://piefed.social/c/piefed_meta) for announcements and further instructions.
 
+Run `git update-index --assume-unchanged compose.yaml` to make git ignore your custom compose.yaml and not try to update it if anything changes upstream.
+
 #### VIEW LOGS
 ```bash
 sudo docker logs -f piefed_app1

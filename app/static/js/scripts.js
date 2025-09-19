@@ -33,7 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupTopicChooser();
     setupConversationChooser();
     setupMarkdownEditorEnabler();
-    setupAddPollChoice();
+    setupPolls();
     setupShowElementLinks();
     if (!low_bandwidth) {
       setupLightboxTeaser();
@@ -966,7 +966,27 @@ function setupMarkdownEditorEnabler() {
     });
 }
 
-function setupAddPollChoice() {
+function setupPolls() {
+    // Show results link
+    const viewPollResults = document.getElementById('viewPollResults');
+    const showVotingForm = document.getElementById('showVotingForm');
+    const pollResults = document.getElementById('pollResults');
+    const pollVotingForm = document.getElementById('pollVotingForm');
+    if(viewPollResults) {
+        viewPollResults.addEventListener('click', function(event) {
+           event.preventDefault();
+           pollResults.classList.remove('d-none');
+           pollVotingForm.classList.add('d-none');
+        });
+
+        showVotingForm.addEventListener('click', function(event) {
+           event.preventDefault();
+           pollVotingForm.classList.remove('d-none');
+           pollResults.classList.add('d-none');
+        });
+
+    }
+
     const addChoiceButton = document.getElementById('addPollChoice');
     const pollChoicesFieldset = document.getElementById('pollChoicesFieldset');
     if(pollChoicesFieldset == null) {

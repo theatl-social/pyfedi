@@ -2,35 +2,72 @@
 {% if moderating_communities or joined_communities %}
     {% set something_displayed = true -%}
     <div class="communities_menu_body" id="communities_mega_menu">
-        <h4 class="dropdown-header">{{ _('Communities') }}</h4>
+        <h4 class="dropdown-header">{{ _("Communities") }}</h4>
         <div class="community_filter">
-            <input type="search" class="form-control" id="community-filter" placeholder="{{ _('Filter communities...') }}" autofocus>
-            <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0;"></span>
+            <input type="search"
+                   class="form-control"
+                   id="community-filter"
+                   placeholder="{{ _('Filter communities...') }}"
+                   autofocus>
+            <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0"></span>
         </div>
         <ul class="text-end text-lg-start">
-            <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
-            <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-            <li><a class="dropdown-item" href="/community/add_remote">{{ _('Add remote community') }}</a></li>
-          {% if moderating_communities %}
-            <li class="community-section" data-community-section="moderating"><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
-            {% for community_menu_item in moderating_communities -%}
-                <li class="community-item" data-community-name="{{ community_menu_item.title.lower() }}"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
-                       href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
-            {% endfor -%}
-          {% endif %}
-          {% if joined_communities %}
-            <li class="community-section" data-community-section="joined"><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
-            {% for community_menu_item in joined_communities -%}
-                <li class="community-item" data-community-name="{{ community_menu_item.title.lower() }}"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}"
-                       href="/c/{{ community_menu_item.link() }}">{% if community_menu_item.is_duplicate %}{{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>{% else %}{{ community_menu_item.title }}{% endif %}</a></li>
-            {% endfor -%}
-          {% endif %}
+            <li>
+                <a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}"
+                   href="{{ url_for('main.list_communities', home_select='local') }}">{{ _("Local communities") }}</a>
+            </li>
+            <li>
+                <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}"
+                   href="/communities">{{ _("All communities") }}</a>
+            </li>
+            <li>
+                <a class="dropdown-item" href="/community/add_remote">{{ _("Add remote community") }}</a>
+            </li>
+            {% if moderating_communities %}
+                <li class="community-section" data-community-section="moderating">
+                    <h6 class="dropdown-header">{{ _("Moderating") }}</h6>
+                </li>
+                {% for community_menu_item in moderating_communities -%}
+                    <li class="community-item"
+                        data-community-name="{{ community_menu_item.title.lower() }}">
+                        <a class="dropdown-item{% if community and community.id == community_menu_item.id %} active{% endif %}"
+                           href="/c/{{ community_menu_item.link() }}">
+                            {% if community_menu_item.is_duplicate %}
+                                {{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>
+                            {% else %}
+                                {{ community_menu_item.title }}
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor -%}
+            {% endif %}
+            {% if joined_communities %}
+                <li class="community-section" data-community-section="joined">
+                    <h6 class="dropdown-header">{{ _("Joined communities") }}</h6>
+                </li>
+                {% for community_menu_item in joined_communities -%}
+                    <li class="community-item"
+                        data-community-name="{{ community_menu_item.title.lower() }}">
+                        <a class="dropdown-item{% if community and community.id == community_menu_item.id %} active{% endif %}"
+                           href="/c/{{ community_menu_item.link() }}">
+                            {% if community_menu_item.is_duplicate %}
+                                {{ community_menu_item.title }}<span class="text-muted small">@{{ community_menu_item.ap_domain | shorten(13) }}</span>
+                            {% else %}
+                                {{ community_menu_item.title }}
+                            {% endif %}
+                        </a>
+                    </li>
+                {% endfor -%}
+            {% endif %}
         </ul>
     </div>
     <hr>
 {% endif -%}
 {% if current_user.is_anonymous or not something_displayed -%}
-    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a>
-    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
-    <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Feeds') }}</a>
+    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}"
+       href="/communities/local">{{ _("Local communities") }}</a>
+    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}"
+       href="/communities">{{ _("All communities") }}</a>
+    <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}"
+       href="/feeds">{{ _("Feeds") }}</a>
 {% endif %}

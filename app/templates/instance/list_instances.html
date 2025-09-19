@@ -4,194 +4,175 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% if search == '' %}
-            <h1>
-                {{ title }}
-            </h1>
-        {% else %}
-            <h1>
-                {{ title }}
-            </h1>
-        {% endif %}
-        <form method="get">
-            <input type="search" name="search" value="{{ search }}">
-            <input class="btn btn-primary btn-sm" type="submit" name="submit" value="{{ _('Search') }}">
-            <a class="btn btn-sm btn-warning" href="{{ url_for('instance.list_instances') }}" aria-label="{{ _('Clear filters') }}" rel="nofollow noindex">
-                {{ _("Clear filters") }}
-            </a>
-        </form>
-        <div class="d-flex d-md-none flex-row justify-content-between my-2">
-            <div class="dropdown">
-                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Online Status') }}
-                </button>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a class="dropdown-item{{ " active" if filter == "online" }}" href="{{ url_for('instance.list_instances', filter='online') }}" aria-label="{{ _('Online instances') }}" rel="nofollow noindex">
-                            {{ _('Online') }}
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item{{ " active" if filter == "dormant" }}" href="{{ url_for('instance.list_instances', filter='dormant') }}" aria-label="{{ _('Dormant instances') }}" rel="nofollow noindex">
-                            {{ _('Dormant') }}
-                        </a>
-                    </li>
-                    <li>
-                        <a class="dropdown-item{{ " active" if filter == "gone_forever" }}" href="{{ url_for('instance.list_instances', filter='gone_forever') }}" aria-label="{{ _('Gone forever instances') }}" rel="nofollow noindex">
-                            {{ _('Gone Forever') }}
-                        </a>
-                    </li>
-                </ul>
-            </div>
-            <div class="dropdown">
-                <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Federation Status') }}
-                </button>
-                <ul class="dropdown-menu">
-                    {% if allowed -%}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if search == '' %}
+                <h1>{{ title }}</h1>
+            {% else %}
+                <h1>{{ title }}</h1>
+            {% endif %}
+            <form method="get">
+                <input type="search" name="search" value="{{ search }}">
+                <input class="btn btn-primary btn-sm"
+                       type="submit"
+                       name="submit"
+                       value="{{ _('Search') }}">
+                <a class="btn btn-sm btn-warning"
+                   href="{{ url_for('instance.list_instances') }}"
+                   aria-label="{{ _('Clear filters') }}"
+                   rel="nofollow noindex">{{ _('Clear filters') }}</a>
+            </form>
+            <div class="d-flex d-md-none flex-row justify-content-between my-2">
+                <div class="dropdown">
+                    <button class="btn btn-primary btn-sm dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">{{ _("Online Status") }}</button>
+                    <ul class="dropdown-menu">
                         <li>
-                            <a class="dropdown-item{{ " active" if filter == "allowed" }}" href="{{ url_for('instance.list_instances', filter='allowed') }}" aria-label="{{ _('Allowed instances') }}" rel="nofollow noindex">
-                                {{ _('Allowed') }}
-                            </a>
+                            <a class="dropdown-item{{ " active" if filter == "online" }}"
+                               href="{{ url_for('instance.list_instances', filter='online') }}"
+                               aria-label="{{ _('Online instances') }}"
+                               rel="nofollow noindex">{{ _("Online") }}</a>
                         </li>
+                        <li>
+                            <a class="dropdown-item{{ " active" if filter == "dormant" }}"
+                               href="{{ url_for('instance.list_instances', filter='dormant') }}"
+                               aria-label="{{ _('Dormant instances') }}"
+                               rel="nofollow noindex">{{ _("Dormant") }}</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item{{ " active" if filter == "gone_forever" }}"
+                               href="{{ url_for('instance.list_instances', filter='gone_forever') }}"
+                               aria-label="{{ _('Gone forever instances') }}"
+                               rel="nofollow noindex">{{ _("Gone Forever") }}</a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="dropdown">
+                    <button class="btn btn-primary btn-sm dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false">{{ _("Federation Status") }}</button>
+                    <ul class="dropdown-menu">
+                        {% if allowed -%}
+                            <li>
+                                <a class="dropdown-item{{ " active" if filter == "allowed" }}"
+                                   href="{{ url_for('instance.list_instances', filter='allowed') }}"
+                                   aria-label="{{ _('Allowed instances') }}"
+                                   rel="nofollow noindex">{{ _("Allowed") }}</a>
+                            </li>
+                        {% endif -%}
+                        {% if blocked -%}
+                            <li>
+                                <a class="dropdown-item{{ " active" if filter == "blocked" }}"
+                                   href="{{ url_for('instance.list_instances', filter='blocked') }}"
+                                   aria-label="{{ _('Blocked instances') }}"
+                                   rel="nofollow noindex">{{ _("Blocked") }}</a>
+                            </li>
+                        {% endif -%}
+                        <li>
+                            <a class="dropdown-item{{ " active" if filter == "federated" }}"
+                               href="{{ url_for('instance.list_instances', filter='federated') }}"
+                               aria-label="{{ _('Federated instances') }}"
+                               rel="nofollow noindex">{{ _("Federated") }}</a>
+                        </li>
+                        {% if trusted -%}
+                            <li>
+                                <a class="dropdown-item{{ " active" if filter == "trusted" }}"
+                                   href="{{ url_for('instance.list_instances', filter='trusted') }}"
+                                   aria-label="{{ _('Trusted instances') }}"
+                                   rel="nofollow noindex">{{ _("Trusted") }}</a>
+                            </li>
+                        {% endif -%}
+                    </ul>
+                </div>
+            </div>
+            <div class="d-none d-md-flex flex-row justify-content-between my-2">
+                <div class="btn-group btn-group-sm" role="group">
+                    <a class="btn btn-outline-primary{{ " active" if filter == "online" else "" }}"
+                       href="{{ url_for('instance.list_instances', filter='online') }}"
+                       rel="nofollow noindex">{{ _("Online") }}</a>
+                    <a class="btn btn-outline-primary{{ " active" if filter == "dormant" else "" }}"
+                       href="{{ url_for('instance.list_instances', filter='dormant') }}"
+                       rel="nofollow noindex">{{ _("Dormant") }}</a>
+                    <a class="btn btn-outline-primary{{ " active" if filter == "gone_forever" else "" }}"
+                       href="{{ url_for('instance.list_instances', filter='gone_forever') }}"
+                       rel="nofollow noindex">{{ _("Gone Forever") }}</a>
+                </div>
+                <div class="btn-group btn-group-sm" role="group">
+                    {% if allowed -%}
+                        <a class="btn btn-outline-primary{{ " active" if filter == "allowed" else "" }}"
+                           href="{{ url_for('instance.list_instances', filter='allowed') }}"
+                           rel="nofollow noindex">{{ _("Allowed") }}</a>
                     {% endif -%}
                     {% if blocked -%}
-                        <li>
-                            <a class="dropdown-item{{ " active" if filter == "blocked" }}" href="{{ url_for('instance.list_instances', filter='blocked') }}" aria-label="{{ _('Blocked instances') }}" rel="nofollow noindex">
-                                {{ _('Blocked') }}
-                            </a>
-                        </li>
+                        <a class="btn btn-outline-primary{{ " active" if filter == "blocked" else "" }}"
+                           href="{{ url_for('instance.list_instances', filter='blocked') }}"
+                           rel="nofollow noindex">{{ _("Blocked") }}</a>
                     {% endif -%}
-                    <li>
-                        <a class="dropdown-item{{ " active" if filter == "federated" }}" href="{{ url_for('instance.list_instances', filter='federated') }}" aria-label="{{ _('Federated instances') }}" rel="nofollow noindex">
-                            {{ _('Federated') }}
-                        </a>
-                    </li>
+                    <a class="btn btn-outline-primary{{ " active" if filter == "federated" else "" }}"
+                       href="{{ url_for('instance.list_instances', filter='federated') }}"
+                       rel="nofollow noindex">{{ _("Federated") }}</a>
                     {% if trusted -%}
-                        <li>
-                            <a class="dropdown-item{{ " active" if filter == "trusted" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" aria-label="{{ _('Trusted instances') }}" rel="nofollow noindex">
-                                {{ _('Trusted') }}
-                            </a>
-                        </li>
+                        <a class="btn btn-outline-primary{{ " active" if filter == "trusted" else "" }}"
+                           href="{{ url_for('instance.list_instances', filter='trusted') }}"
+                           rel="nofollow noindex">{{ _("Trusted") }}</a>
                     {% endif -%}
-                </ul>
+                </div>
             </div>
-        </div>
-        <div class="d-none d-md-flex flex-row justify-content-between my-2">
-            <div class="btn-group btn-group-sm" role="group">
-                <a class="btn btn-outline-primary{{ " active" if filter == "online" else "" }}" href="{{ url_for('instance.list_instances', filter='online') }}" rel="nofollow noindex">
-                    {{ _('Online') }}
-                </a>
-                <a class="btn btn-outline-primary{{ " active" if filter == "dormant" else "" }}" href="{{ url_for('instance.list_instances', filter='dormant') }}" rel="nofollow noindex">
-                    {{ _('Dormant') }}
-                </a>
-                <a class="btn btn-outline-primary{{ " active" if filter == "gone_forever" else "" }}" href="{{ url_for('instance.list_instances', filter='gone_forever') }}" rel="nofollow noindex">
-                    {{ _('Gone Forever') }}
-                </a>
-            </div>
-            <div class="btn-group btn-group-sm" role="group">
-                {% if allowed -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "allowed" else "" }}" href="{{ url_for('instance.list_instances', filter='allowed') }}" rel="nofollow noindex">
-                        {{ _('Allowed') }}
-                    </a>
-                {% endif -%}
-                {% if blocked -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "blocked" else "" }}" href="{{ url_for('instance.list_instances', filter='blocked') }}" rel="nofollow noindex">
-                        {{ _('Blocked') }}
-                    </a>
-                {% endif -%}
-                <a class="btn btn-outline-primary{{ " active" if filter == "federated" else "" }}" href="{{ url_for('instance.list_instances', filter='federated') }}" rel="nofollow noindex">
-                    {{ _('Federated') }}
-                </a>
-                {% if trusted -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "trusted" else "" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" rel="nofollow noindex">
-                        {{ _('Trusted') }}
-                    </a>
-                {% endif -%}
-            </div>
-        </div>
-        {% if instances -%}
-            <div class="table-responsive-sm pt-2">
-                <table class="table table-striped">
-                    <tr>
-                        <th>
-                            {{ _('Instance') }}
-                        </th>
-                        <th>
-                            {{ _('More details') }}
-                        </th>
-                        <th>
-                            {{ _('Software') }}
-                        </th>
-                        <th>
-                            {{ _('Version') }}
-                        </th>
-                        <th>
-                            {{ _('Heard from') }}
-                        </th>
-                        <th>
-                            {{ _('Status') }}
-                        </th>
-                    </tr>
-                    {% for instance in instances %}
+            {% if instances -%}
+                <div class="table-responsive-sm pt-2">
+                    <table class="table table-striped">
                         <tr>
-                            <td>
-                                <a href="{{ url_for('instance.instance_overview', instance_domain=instance.domain) }}">
-                                    {{ instance.domain }}
-                                </a>
-                            </td>
-                            <td>
-                                <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">
-                                    {{ _('People') }}
-                                </a>
-                                <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">
-                                    {{ _('Posts') }}
-                                </a>
-                            </td>
-                            <td>
-                                {{ instance.software  }}
-                            </td>
-                            <td>
-                                {{ instance.version if instance.version }}
-                            </td>
-                            <td>
-                                {{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}
-                            </td>
-                            <td>
-                                {% if instance.dormant and instance.gone_forever -%}
-                                    {{ _('Gone') }}
-                                {% elif instance.dormant -%}
-                                    {{ _('Dormant') }}
-                                {% else -%}
-                                    {{ _('Online') }}
-                                {% endif -%}
-                            </td>
+                            <th>{{ _("Instance") }}</th>
+                            <th>{{ _("More details") }}</th>
+                            <th>{{ _("Software") }}</th>
+                            <th>{{ _("Version") }}</th>
+                            <th>{{ _("Heard from") }}</th>
+                            <th>{{ _("Status") }}</th>
                         </tr>
-                    {% endfor %}
-                </table>
-            </div>
-            <nav aria-label="Pagination" class="mt-4" role="navigation">
-                {% if prev_url %}
-                    <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                    </a>
-                {% endif %}
-                {% if next_url %}
-                    <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                    </a>
-                {% endif %}
-            </nav>
-        {% else -%}
-            <p>
-                {{ _('No results to show.') }}
-            </p>
-        {% endif %}
-    </main>
-</div>
+                        {% for instance in instances %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('instance.instance_overview', instance_domain=instance.domain) }}">{{ instance.domain }}</a>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">{{ _("People") }}</a>
+                                    <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">{{ _("Posts") }}</a>
+                                </td>
+                                <td>{{ instance.software }}</td>
+                                <td>{{ instance.version if instance.version }}</td>
+                                <td>{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</td>
+                                <td>
+                                    {% if instance.dormant and instance.gone_forever -%}
+                                        {{ _("Gone") }}
+                                    {% elif instance.dormant -%}
+                                        {{ _("Dormant") }}
+                                    {% else -%}
+                                        {{ _("Online") }}
+                                    {% endif -%}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <nav aria-label="Pagination" class="mt-4" role="navigation">
+                    {% if prev_url %}
+                        <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                            <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                        </a>
+                    {% endif %}
+                    {% if next_url %}
+                        <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                            {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    {% endif %}
+                </nav>
+            {% else -%}
+                <p>{{ _("No results to show.") }}</p>
+            {% endif %}
+        </main>
+    </div>
 {% endblock %}
-

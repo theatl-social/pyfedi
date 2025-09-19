@@ -1,4 +1,8 @@
-<a href="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}" rel="nofollow"
-class="fe {{ 'fe-bell' if comment['comment'].notify_new_replies(current_user.id) else 'fe-no-bell' }}"
-hx-post="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}" hx-trigger="click throttle:1s" hx-swap="outerHTML"
-title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies') }}"></a>
+<a href="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}"
+   rel="nofollow"
+   class="fe {{ 'fe-bell' if comment['comment'].notify_new_replies(current_user.id) else 'fe-no-bell' }}"
+   hx-post="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}"
+   hx-trigger="click throttle:1s"
+   hx-swap="outerHTML"
+   title="{{ _('Notify about replies') }}"
+   aria-label="{{ _('Notify about replies') }}"></a>

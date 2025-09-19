@@ -6,122 +6,117 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
-{% set active_child = 'home' %}
-
+{% set active_child = "home" %}
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% if announcement -%}
-            <div id="home_announcement">{{ announcement|safe }}</div>
-        {% endif -%}
-        <div class="row">
-            <div class="col-6 pe-1">
-                {% include "_home_nav.html" %}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if announcement -%}
+                <div id="home_announcement">{{ announcement|safe }}</div>
+            {% endif -%}
+            <div class="row">
+                <div class="col-6 pe-1">{% include "_home_nav.html" %}</div>
+                <div class="col-6 ps-1">{% include "_view_filter_nav.html" %}</div>
             </div>
-            <div class="col-6 ps-1">
-                {% include "_view_filter_nav.html" %}
+            <div class="post_list h-feed">
+                {% for post in posts -%}
+                    {% include 'post/_post_teaser.html' %}
+                {% else -%}
+                    <p>{{ _("No posts yet. Join some communities to see more.") }}</p>
+                    <p>
+                        <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a>
+                    </p>
+                {% endfor -%}
             </div>
-        </div>
-        <div class="post_list h-feed">
-            {% for post in posts -%}
-                {% include 'post/_post_teaser.html' %}
-            {% else -%}
-                <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
-                <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
-            {% endfor -%}
-        </div>
-
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-        </nav>
-    </main>
-
-    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-        {% if new_communities and new_communities|length > 0 -%}
-        <div class="card mb-3">
-            <div class="card-header">
-                 <h2>{{ _('New communities') }}</h2>
+            </nav>
+        </main>
+        <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+            {% if new_communities and new_communities|length > 0 -%}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h2>{{ _("New communities") }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for community in new_communities %}
+                                <li class="list-group-item">{{ render_communityname(community, low_bandwidth=low_bandwidth) }}</li>
+                            {% endfor %}
+                        </ul>
+                        <p class="mb-0 mt-2">
+                            <a href="/communities?sort_by=created_at desc"
+                               class="btn btn-outline-secondary">{{ _("More new communities") }}</a>
+                        </p>
+                    </div>
+                </div>
+            {% endif -%}
+            <div class="card">
+                <div class="card-header">
+                    <h2>{{ _("Active communities") }}</h2>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        {% for community in active_communities %}
+                            <li class="list-group-item">{{ render_communityname(community, low_bandwidth=low_bandwidth) }}</li>
+                        {% endfor %}
+                    </ul>
+                    <p class="mt-4">
+                        <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a>
+                        {% if has_topics -%}
+                            <a class="btn btn-primary" href="/topics">{{ _("Browse topics") }}</a>
+                        {% endif -%}
+                    </p>
+                </div>
             </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for community in new_communities %}
-                        <li class="list-group-item">
-                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
-                        </li>
-                    {% endfor %}
-                </ul>
-                <p class="mb-0 mt-2"><a href="/communities?sort_by=created_at desc" class="btn btn-outline-secondary">{{ _('More new communities') }}</a></p>
-            </div>
-        </div>
-        {% endif -%}
-
-        <div class="card">
-            <div class="card-header">
-                 <h2>{{ _('Active communities') }}</h2>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for community in active_communities %}
-                        <li class="list-group-item">
-                            {{ render_communityname(community, low_bandwidth=low_bandwidth) }}
-                        </li>
-                    {% endfor %}
-                </ul>
-                <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a>
-                    {% if has_topics -%}
-                        <a class="btn btn-primary" href="/topics">{{ _('Browse topics') }}</a>
+            {% if upcoming_events -%}
+                <div class="card mt-3" id="upcoming_events">
+                    <div class="card-header">
+                        <h2>
+                            <span class="fe fe-event"></span> {{ _("Upcoming events") }}
+                        </h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for upcoming_event in upcoming_events -%}
+                                <li class="list-group-item">
+                                    <a href="/post/{{ upcoming_event[2] }}">{{ upcoming_event[1] }}</a> -
+                                    <time class="convert_to_local small">{{ upcoming_event[0].strftime("%Y-%m-%dT%H:%M:%SZ") }}</time>
+                                </li>
+                            {% endfor -%}
+                        </ul>
+                    </div>
+                </div>
+            {% endif -%}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
+                </div>
+                <div class="card-body">
+                    {% if g.site.description -%}
+                        <p>
+                            <strong>{{ g.site.description|safe }}</strong>
+                        </p>
                     {% endif -%}
-                </p>
+                    {% if g.site.sidebar_html -%}
+                        <p>{{ g.site.sidebar_html|safe }}</p>
+                    {% endif -%}
+                    {% if rss_feed %}
+                        <p class="mt-4">
+                            <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                        </p>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-
-        {% if upcoming_events -%}
-        <div class="card mt-3" id="upcoming_events">
-            <div class="card-header">
-                <h2><span class="fe fe-event"></span> {{ _('Upcoming events') }}</h2>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for upcoming_event in upcoming_events -%}
-                        <li class="list-group-item">
-                            <a href="/post/{{ upcoming_event[2] }}">{{ upcoming_event[1] }}</a> -
-                            <time class="convert_to_local small">{{ upcoming_event[0].strftime('%Y-%m-%dT%H:%M:%SZ') }}</time>
-                        </li>
-                    {% endfor -%}
-                </ul>
-            </div>
-        </div>
-        {% endif -%}
-
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
-            </div>
-            <div class="card-body">
-                {% if g.site.description -%}
-                    <p><strong>{{ g.site.description|safe }}</strong></p>
-                {% endif -%}
-                {% if g.site.sidebar_html -%}
-                    <p>{{ g.site.sidebar_html|safe }}</p>
-                {% endif -%}
-                {% if rss_feed %}
-                <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
-                </p>
-                {% endif %}
-            </div>
-        </div>
-
-        {% include "_inoculation_links.html" %}
-    </aside>
-</div>
+            {% include "_inoculation_links.html" %}
+        </aside>
+    </div>
 {% endblock %}

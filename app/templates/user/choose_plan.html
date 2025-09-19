@@ -3,69 +3,83 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <h1 class="mb-4">{{ _('Donate to %(instance_name)s', instance_name=instance_name) }}</h1>
-        {% if current_user.stripe_subscription_id == None %}
-            <p>{{ _("By supporting %(instance_name)s financially you will be helping to build a better internet for everyone.",
-                    instance_name=instance_name) }}</p>
-            <p>{{ _("Please choose from one of the plans below.") }}</p>
-        {% endif %}
-        <div class="row">
-            {% if (current_user.stripe_subscription_id != None) %}
-                <div class="col col-4-md">
-                    <div class="card">
-                        <div class="card-header">
-                            <h3 class="card-title">{{ _('Manage existing donation plan') }}</h3>
-                        </div>
-                        <div class="card-body">
-                            {% if current_user.stripe_subscription_id != None %}
-                            <a href="{{ url_for('user.plan_unsubscribe', account_id=current_user.id, subscription=current_user.stripe_subscription_id) }}" class="btn btn-primary">{{ _('Cancel regular donation') }}</a>
-                            {% endif %}
-                            {% if current_user.stripe_customer_id != None %}<p class="text-muted mt-4"><br>
-                                {{ _('When your credit card expires you will need to add a new one to continue your donations.')  }}</p>
-                                <a href="{{ url_for('user.stripe_redirect', plan='billing') }}" class="btn btn-primary">{{ _('Update credit card details') }}</a><br />
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <h1 class="mb-4">{{ _('Donate to %(instance_name)s', instance_name=instance_name) }}</h1>
+            {% if current_user.stripe_subscription_id == None %}
+                <p>
+                    {{ _("By supporting %(instance_name)s financially you will be helping to build a better internet for everyone.",
+                                        instance_name=instance_name) }}
+                </p>
+                <p>{{ _("Please choose from one of the plans below.") }}</p>
             {% endif %}
-            {% if monthly_small -%}
-            <div class="col col-4-md pl-0">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">{{ _('Donation') }}</h3>
+            <div class="row">
+                {% if (current_user.stripe_subscription_id != None) %}
+                    <div class="col col-4-md">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">{{ _("Manage existing donation plan") }}</h3>
+                            </div>
+                            <div class="card-body">
+                                {% if current_user.stripe_subscription_id != None %}
+                                    <a href="{{ url_for('user.plan_unsubscribe', account_id=current_user.id, subscription=current_user.stripe_subscription_id) }}"
+                                       class="btn btn-primary">{{ _("Cancel regular donation") }}</a>
+                                {% endif %}
+                                {% if current_user.stripe_customer_id != None %}
+                                    <p class="text-muted mt-4">
+                                        <br>
+                                        {{ _("When your credit card expires you will need to add a new one to continue your donations.") }}
+                                    </p>
+                                    <a href="{{ url_for('user.stripe_redirect', plan='billing') }}"
+                                       class="btn btn-primary">{{ _("Update credit card details") }}</a>
+                                    <br />
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <a href="{{ url_for('user.stripe_redirect', plan='monthly_small') }}" class="btn btn-primary">{{ monthly_small_text }}</a>
+                {% endif %}
+                {% if monthly_small -%}
+                    <div class="col col-4-md pl-0">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">{{ _("Donation") }}</h3>
+                            </div>
+                            <div class="card-body">
+                                <a href="{{ url_for('user.stripe_redirect', plan='monthly_small') }}"
+                                   class="btn btn-primary">{{ monthly_small_text }}</a>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                {% endif -%}
+                {% if monthly_big %}
+                    <div class="col col-4-md pr-0">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">{{ _("Generous donation") }}</h3>
+                            </div>
+                            <div class="card-body">
+                                <a href="{{ url_for('user.stripe_redirect', plan='monthly_big') }}"
+                                   class="btn btn-primary">{{ monthly_big_text }}</a>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-            {% endif -%}
-            {% if monthly_big %}
-            <div class="col col-4-md pr-0">
-                <div class="card">
-                    <div class="card-header">
-                        <h3 class="card-title">{{ _('Generous donation') }}</h3>
-                    </div>
-                    <div class="card-body">
-                        <a href="{{ url_for('user.stripe_redirect', plan='monthly_big') }}" class="btn btn-primary">{{ monthly_big_text }}</a>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-        <p class="mt-4">{{ _('Prices are in US dollars.') }}</p>
-
-        <h3>Support PieFed development</h3>
-        <p>{{ _('PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.') }}</p>
-
-        <p><a type="button" class="btn btn-primary" href="https://www.patreon.com/PieFed">{{ _('Donate using Patreon') }}</a>
-        or
-        <a type="button" class="btn btn-primary" href="https://liberapay.com/PieFed/">{{ _('Donate using Liberapay') }}</a></p>
-
-    </main>
-</div>
+            <p class="mt-4">{{ _("Prices are in US dollars.") }}</p>
+            <h3>Support PieFed development</h3>
+            <p>
+                {{ _("PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.") }}
+            </p>
+            <p>
+                <a type="button"
+                   class="btn btn-primary"
+                   href="https://www.patreon.com/PieFed">{{ _("Donate using Patreon") }}</a>
+                or
+                <a type="button"
+                   class="btn btn-primary"
+                   href="https://liberapay.com/PieFed/">{{ _("Donate using Liberapay") }}</a>
+            </p>
+        </main>
+    </div>
 {% endblock %}

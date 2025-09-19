@@ -1,15 +1,19 @@
 <div class="btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
-    {{ _('Sorting methods: ') }}
-    <a href="/home/hot/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending now') }}">
-        {{ _('Hot') }}
-    </a> |
-    <a href="/home/top/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Most upvotes in the last 24h') }}">
-        {{ _('Top') }}
-    </a> |
-    <a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">
-        {{ _('New') }}
-    </a> |
-    <a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
-        {{ _('Active') }}
-    </a>
+    {{ _("Sorting methods: ") }}
+    <a href="/home/hot/{{ view_filter }}"
+       class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Trending now') }}">{{ _("Hot") }}</a> |
+    <a href="/home/top/{{ view_filter }}"
+       class="btn {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Most upvotes in the last 24h') }}">{{ _("Top") }}</a> |
+    <a href="/home/new/{{ view_filter }}"
+       class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Latest posts') }}">{{ _("New") }}</a> |
+    <a href="/home/active/{{ view_filter }}"
+       class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Recently commented on') }}">{{ _("Active") }}</a>
 </div>

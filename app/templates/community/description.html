@@ -4,10 +4,12 @@
     <h3>Moderators</h3>
     <ul class="moderator_list">
         {% for mod in mods -%}
-            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
+            <li>
+                {{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+            </li>
         {% endfor -%}
     </ul>
     {% if un_moderated -%}
-    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
+        <p class="red small">{{ _("Moderators have not been active recently.") }}</p>
     {% endif -%}
 {% endif -%}

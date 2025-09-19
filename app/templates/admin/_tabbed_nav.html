@@ -2,35 +2,110 @@
     <nav id="block_chooser">
         <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist">
             {% if user_access('change instance settings', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_site' %} active{% endif %}" id="site-profile-tab" type="button" role="tab" href="/admin/site" style="view-transition-name: site">{{ _('Site') }}</a>
-                <a class="nav-link{% if active_child == 'admin_misc' %} active{% endif %}" id="misc-tab" type="button" role="tab" href="/admin/misc" style="view-transition-name: misc">{{ _('Misc') }}</a>
-                <a class="nav-link{% if active_child == 'admin_instance_chooser' %} active{% endif %}" id="instance-chooser-tab" type="button" role="tab" href="/admin/instance_chooser" style="view-transition-name: misc">{{ _('Chooser') }}</a>
+                <a class="nav-link{% if active_child == 'admin_site' %} active{% endif %}"
+                   id="site-profile-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/site"
+                   style="view-transition-name: site">{{ _("Site") }}</a>
+                <a class="nav-link{% if active_child == 'admin_misc' %} active{% endif %}"
+                   id="misc-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/misc"
+                   style="view-transition-name: misc">{{ _("Misc") }}</a>
+                <a class="nav-link{% if active_child == 'admin_instance_chooser' %} active{% endif %}"
+                   id="instance-chooser-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/instance_chooser"
+                   style="view-transition-name: misc">{{ _("Chooser") }}</a>
             {% endif -%}
             {% if user_access('administer all communities', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_communities' %} active{% endif %}" id="communities-tab" type="button" role="tab" href="/admin/communities" style="view-transition-name: communities">{{ _('Communities') }}</a>
-                <a class="nav-link{% if active_child == 'admin_topics' %} active{% endif %}" id="topics-tab" type="button" role="tab" href="/admin/topics" style="view-transition-name: topics">{{ _('Topics') }}</a>
+                <a class="nav-link{% if active_child == 'admin_communities' %} active{% endif %}"
+                   id="communities-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/communities"
+                   style="view-transition-name: communities">{{ _("Communities") }}</a>
+                <a class="nav-link{% if active_child == 'admin_topics' %} active{% endif %}"
+                   id="topics-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/topics"
+                   style="view-transition-name: topics">{{ _("Topics") }}</a>
             {% endif -%}
             {% if user_access('administer all users', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_users' %} active{% endif %}" id="users-tab" type="button" role="tab" href="/admin/users" style="view-transition-name: users">{{ _('Users') }}</a>
+                <a class="nav-link{% if active_child == 'admin_users' %} active{% endif %}"
+                   id="users-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/users"
+                   style="view-transition-name: users">{{ _("Users") }}</a>
             {% endif -%}
             {% if g.site.registration_mode == 'RequireApplication' and user_access('approve registrations', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_approve_registrations' %} active{% endif %}" id="users-tab" type="button" role="tab" href="/admin/approve_registrations" style="view-transition-name: approve">{{ _('Registration') }}</a>
+                <a class="nav-link{% if active_child == 'admin_approve_registrations' %} active{% endif %}"
+                   id="users-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/approve_registrations"
+                   style="view-transition-name: approve">{{ _("Registration") }}</a>
             {% endif -%}
             {% if user_access('administer all communities', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_content' %} active{% endif %}" id="content-tab" type="button" role="tab" href="/admin/content" style="view-transition-name: content">{{ _('Content') }}</a>
-                <a class="nav-link{% if active_child == 'admin_reports' %} active{% endif %}" id="moderation-tab" type="button" role="tab" href="/admin/reports" style="view-transition-name: reports">{{ _('Moderation') }}</a>
+                <a class="nav-link{% if active_child == 'admin_content' %} active{% endif %}"
+                   id="content-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/content"
+                   style="view-transition-name: content">{{ _("Content") }}</a>
+                <a class="nav-link{% if active_child == 'admin_reports' %} active{% endif %}"
+                   id="moderation-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/reports"
+                   style="view-transition-name: reports">{{ _("Moderation") }}</a>
             {% endif -%}
             {% if user_access('edit cms pages', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_cms_pages' %} active{% endif %}" id="cms-pages-tab" type="button" role="tab" href="/admin/pages" style="view-transition-name: cms-pages">{{ _('Pages') }}</a>
+                <a class="nav-link{% if active_child == 'admin_cms_pages' %} active{% endif %}"
+                   id="cms-pages-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/pages"
+                   style="view-transition-name: cms-pages">{{ _("Pages") }}</a>
             {% endif %}
             {% if user_access('change instance settings', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_federation' %} active{% endif %}" id="federation-tab" type="button" role="tab" href="/admin/federation" style="view-transition-name: federation">{{ _('Federation') }}</a>
-                <a class="nav-link{% if active_child == 'admin_instances' %} active{% endif %}" id="instances-tab" type="button" role="tab" href="/admin/instances" style="view-transition-name: instances">{{ _('Instances') }}</a>
-                <a class="nav-link{% if active_child == 'admin_newsletter' %} active{% endif %}" id="newsletter-tab" type="button" role="tab" href="/admin/newsletter" style="view-transition-name: newsletter">{{ _('Newsletter') }}</a>
-                <a class="nav-link{% if active_child == 'admin_activities' %} active{% endif %}" id="activities-tab" type="button" role="tab" href="/admin/activities" style="view-transition-name: activities">{{ _('Activities') }}</a>
+                <a class="nav-link{% if active_child == 'admin_federation' %} active{% endif %}"
+                   id="federation-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/federation"
+                   style="view-transition-name: federation">{{ _("Federation") }}</a>
+                <a class="nav-link{% if active_child == 'admin_instances' %} active{% endif %}"
+                   id="instances-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/instances"
+                   style="view-transition-name: instances">{{ _("Instances") }}</a>
+                <a class="nav-link{% if active_child == 'admin_newsletter' %} active{% endif %}"
+                   id="newsletter-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/newsletter"
+                   style="view-transition-name: newsletter">{{ _("Newsletter") }}</a>
+                <a class="nav-link{% if active_child == 'admin_activities' %} active{% endif %}"
+                   id="activities-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/activities"
+                   style="view-transition-name: activities">{{ _("Activities") }}</a>
             {% endif -%}
             {% if user_access('change user roles', current_user.id) %}
-                <a class="nav-link{% if active_child == 'admin_permissions' %} active{% endif %}" id="permissions-tab" type="button" role="tab" href="/admin/permissions" style="view-transition-name: permissions">{{ _('Permissions') }}</a>
+                <a class="nav-link{% if active_child == 'admin_permissions' %} active{% endif %}"
+                   id="permissions-tab"
+                   type="button"
+                   role="tab"
+                   href="/admin/permissions"
+                   style="view-transition-name: permissions">{{ _("Permissions") }}</a>
             {% endif -%}
         </div>
     </nav>

@@ -4,113 +4,123 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<script src="/static/js/coolfieldset.js?v=3"></script>
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-            <li class="breadcrumb-item active">{{ user.user_name|shorten }}</li>
-          </ol>
-        </nav>
-        <a href="{{ url_for('user.notifications_all_read', type=current_filter) }}" class="btn btn-primary btn-sm" style="float: right;">{{ _('Mark all as read') }}</a>
-        <h1 class="mt-2">{{ _('Notifications') }}</h1>
-
-        {% if has_notifications %}
-            <div class="nav nav-tabs nav-justified" id="typeTab" role="tablist" aria-label="{{ _('Filter notifications') }}">
-                <a class="nav-link{% if current_filter == ''%} active{% endif %}" type="button" role="tab" href='/notifications'>{{ _('All') }}</a>
-                {% for notification_type, new_notifications in notification_types.items() %}
-                    <a class="nav-link{% if current_filter == str(notification_links[notification_type]) %} active{% endif %}"
-                       id="notif_type_{{ notification_type }}" type="button" role="tab" href="?type={{ notification_links[notification_type] }}"
-                       style="view-transition-name: site">{{ notification_type }} {% if new_notifications %}({{ new_notifications }}){% endif %}</a>
-                {% endfor -%}
-            </div>
-            <table class="table table-striped notification-table">
-                {% for notification in notifications %}
-                    {% if notification.targets.gen == "0" %}
-                        {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
-                    {% else %}
-                        <tr class="align-middle">
-                            <td width="*">
-                                <div class="overflow-ellipses-parent text-truncate">
-                                    <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                                        <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                                            {{ notification.title }}
-                                        </a>
+    <script src="/static/js/coolfieldset.js?v=3"></script>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/people">{{ _("People") }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ user.user_name|shorten }}</li>
+                </ol>
+            </nav>
+            <a href="{{ url_for('user.notifications_all_read', type=current_filter) }}"
+               class="btn btn-primary btn-sm"
+               style="float: right">{{ _("Mark all as read") }}</a>
+            <h1 class="mt-2">{{ _("Notifications") }}</h1>
+            {% if has_notifications %}
+                <div class="nav nav-tabs nav-justified"
+                     id="typeTab"
+                     role="tablist"
+                     aria-label="{{ _('Filter notifications') }}">
+                    <a class="nav-link{% if current_filter == '' %} active{% endif %}"
+                       type="button"
+                       role="tab"
+                       href='/notifications'>{{ _("All") }}</a>
+                    {% for notification_type, new_notifications in notification_types.items() %}
+                        <a class="nav-link{% if current_filter == str(notification_links[notification_type]) %} active{% endif %}"
+                           id="notif_type_{{ notification_type }}"
+                           type="button"
+                           role="tab"
+                           href="?type={{ notification_links[notification_type] }}"
+                           style="view-transition-name: site">{{ notification_type }}
+                            {% if new_notifications %}({{ new_notifications }}){% endif %}
+                        </a>
+                    {% endfor -%}
+                </div>
+                <table class="table table-striped notification-table">
+                    {% for notification in notifications %}
+                        {% if notification.targets.gen == "0" %}
+                            {% include "user/notifs/" + str(notification.notif_type) + ".html" %}
+                        {% else %}
+                            <tr class="align-middle">
+                                <td width="*">
+                                    <div class="overflow-ellipses-parent text-truncate">
+                                        <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+                                            <a class="border border-0"
+                                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                                                {{ notification.title }}
+                                            </a>
+                                        </div>
                                     </div>
-                                </div>
-                            </td>
-                            {% include "user/notifs/_time_and_buttons.html" %}
-                        </tr>
-                    {% endif %}
-                {% endfor %}
-            </table>
-        {% else %}
-            <p>{{ _('No notifications to show.') }}</p>
-        {% endif %}
-    </main>
-
-    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('Manage') }}</h2>
-            </div>
-            <div class="card-body">
-                <div id="enableNotificationWrapper">
-                    <button id="enableNotifications" class="btn btn-primary" id="">{{ _('Enable popup notifications') }}</button>
-                    <p class="text-sm text-muted">{{ _('These notifications only include replies, mentions, and posts <a href="/alerts">you subscribe to</a>.') }}</p>
-                </div>
-            </div>
-        </div>
-
-        {% if subscribed|length > 0 or moderates|length > 0 %}
+                                </td>
+                                {% include "user/notifs/_time_and_buttons.html" %}
+                            </tr>
+                        {% endif %}
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>{{ _("No notifications to show.") }}</p>
+            {% endif %}
+        </main>
+        <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
             <div class="card mt-3">
                 <div class="card-header">
-                     <h2>{{ _('Communities') }}</h2>
+                    <h2>{{ _("Manage") }}</h2>
                 </div>
                 <div class="card-body">
-                    {% if subscribed|length > 0 %}
-                        <h4>Member of</h4>
-                        <ul>
-                            {% for community in subscribed %}
-                                <li>
-                                    {{ render_communityname(community) }}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
-                    {% if moderates|length > 0 %}
-                        <h4>Moderates</h4>
-                        <ul>
-                            {% for community in moderates %}
-                                <li>
-                                    {{ render_communityname(community) }}
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
+                    <div id="enableNotificationWrapper">
+                        <button id="enableNotifications" class="btn btn-primary" id="">{{ _("Enable popup notifications") }}</button>
+                        <p class="text-sm text-muted">
+                            {{ _("These notifications only include replies, mentions, and posts <a href=\"/alerts\">you subscribe to</a>.") }}
+                        </p>
+                    </div>
                 </div>
             </div>
-        {% endif %}
-        {% if upvoted %}
-            <div class="card mt-3">
-                <div class="card-header">
-                     <h2>{{ _('Upvoted') }}</h2>
+            {% if subscribed|length > 0 or moderates|length > 0 %}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h2>{{ _("Communities") }}</h2>
+                    </div>
+                    <div class="card-body">
+                        {% if subscribed|length > 0 %}
+                            <h4>Member of</h4>
+                            <ul>
+                                {% for community in subscribed %}<li>{{ render_communityname(community) }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                        {% if moderates|length > 0 %}
+                            <h4>Moderates</h4>
+                            <ul>
+                                {% for community in moderates %}<li>{{ render_communityname(community) }}</li>{% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
                 </div>
-                <div class="card-body">
+            {% endif %}
+            {% if upvoted %}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h2>{{ _("Upvoted") }}</h2>
+                    </div>
+                    <div class="card-body">
                         <ul>
                             {% for post in upvoted %}
-                                <li><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a></li>
+                                <li>
+                                    <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a>
+                                </li>
                             {% endfor %}
                         </ul>
-
+                    </div>
                 </div>
-            </div>
-        {% endif %}
-    </aside>
-</div>
+            {% endif %}
+        </aside>
+    </div>
 {% endblock %}

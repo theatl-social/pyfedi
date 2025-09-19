@@ -134,6 +134,19 @@ jobs:
           CACHE_REDIS_URL: memory://
           CELERY_BROKER_URL: memory://localhost/
           TESTING: true
+      
+      - name: Run explore page functionality tests
+        run: |
+          echo "🔍 Testing explore page rendering and content"
+          python tests/test_explore_ci_real_world.py
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          CELERY_BROKER_URL: memory://localhost/
+          TESTING: true
           
       - name: Run additional core tests
         run: |

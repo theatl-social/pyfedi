@@ -1,25 +1,17 @@
 {% extends "post/post_edit.html" %}
-
-{% block title %}<h1>{{ _('Create post') }}</h1>{% endblock %}
-
+{% block title %}<h1>{{ _("Create post") }}</h1>{% endblock %}
 {% block post_type %}
     <div class="form-group">
-        <label class="form-control-label" for="type_of_post">
-            {{ _('Type of post') }}
-        </label>
-
+        <label class="form-control-label" for="type_of_post">{{ _("Type of post") }}</label>
         <div id="type_of_post" class="btn-group flex-wrap" role="navigation">
-            <a href="{{ url_for('community.add_post', actor=actor, type='discussion') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/discussion') or request.path.endswith('submit') else 'btn-outline-secondary' }}" aria-label="{{ _('Start a discussion') }}">{{ _('Discussion') }}</a>
-            <a href="{{ url_for('community.add_post', actor=actor, type='link') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/link') else 'btn-outline-secondary' }}" aria-label="{{ _('Share a link') }}">{{ _('Link') }}</a>
-            <a href="{{ url_for('community.add_post', actor=actor, type='image') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/image') else 'btn-outline-secondary' }}" aria-label="{{ _('Share an image') }}">{{ _('Image') }}</a>
-            <a href="{{ url_for('community.add_post', actor=actor, type='video') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/video') else 'btn-outline-secondary' }}" aria-label="{{ _('Share a video') }}">{{ _('Video') }}</a>
-            <a href="{{ url_for('community.add_post', actor=actor, type='poll') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/poll') else 'btn-outline-secondary' }}" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>
-            <a href="{{ url_for('community.add_post', actor=actor, type='event') }}" class="btn {{ 'btn-primary' if request.path.endswith('submit/event') else 'btn-outline-secondary' }}" aria-label="{{ _('Create an event') }}">{{ _('Event') }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='discussion') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/discussion") or request.path.endswith('submit') else 'btn-outline-secondary' }}" aria-label="{{ _('Start a discussion') }}">{{ _("Discussion") }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='link') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/link") else 'btn-outline-secondary' }}" aria-label="{{ _('Share a link') }}">{{ _("Link") }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='image') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/image") else 'btn-outline-secondary' }}" aria-label="{{ _('Share an image') }}">{{ _("Image") }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='video') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/video") else 'btn-outline-secondary' }}" aria-label="{{ _('Share a video') }}">{{ _("Video") }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='poll') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/poll") else 'btn-outline-secondary' }}" aria-label="{{ _('Create a poll') }}">{{ _("Poll") }}</a>
+            <a href="{{ url_for('community.add_post', actor=actor, type='event') }}" class="btn {{ 'btn-primary' if request.path.endswith("submit/event") else 'btn-outline-secondary' }}" aria-label="{{ _('Create an event') }}">{{ _("Event") }}</a>
         </div>
-
     </div>
-
     {{ render_field(form.communities) }}
 {% endblock %}
-
 {# wondering where the rest of the form is? See line 1 #}

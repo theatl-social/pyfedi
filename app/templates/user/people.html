@@ -4,45 +4,46 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item active">{{ _('People') }}</li>
-          </ol>
-        </nav>
-        <h1 class="mt-2">{{ _('People') }}</h1>
-        {% if people %}
-            <table class="table table-striped">
-                <tr>
-                    <th>Name</th>
-                    <th>About</th>
-                </tr>
-                {% for person in people %}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("People") }}</li>
+                </ol>
+            </nav>
+            <h1 class="mt-2">{{ _("People") }}</h1>
+            {% if people %}
+                <table class="table table-striped">
                     <tr>
-                        <td>{{ render_username(person, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
-                        <td>{{ person.about_html | safe if person.about_html }}</td>
+                        <th>Name</th>
+                        <th>About</th>
                     </tr>
-                {% endfor %}
-            </table>
-        {% else %}
-            <p>{{ _('No people to show') }}</p>
-        {% endif %}
-    </main>
-
-    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-
-        <div class="card">
-            <div class="card-header">
-                 <h2> </h2>
+                    {% for person in people %}
+                        <tr>
+                            <td>
+                                {{ render_username(person, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                            </td>
+                            <td>{{ person.about_html | safe if person.about_html }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>{{ _("No people to show") }}</p>
+            {% endif %}
+        </main>
+        <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+            <div class="card">
+                <div class="card-header">
+                    <h2></h2>
+                </div>
+                <div class="card-body"></div>
             </div>
-            <div class="card-body">
-
-            </div>
-        </div>
-    </aside>
-</div>
+        </aside>
+    </div>
 {% endblock %}

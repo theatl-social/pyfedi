@@ -1,183 +1,189 @@
 <div class="d-flex flex-row justify-content-between mt-1">
     <div class="d-block d-sm-none">
         <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('Sort') }}
-            </button>
+            <button class="btn btn-primary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">{{ _("Sort") }}</button>
             <ul class="dropdown-menu">
                 <li>
-                    <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="dropdown-item {{ 'active' if sort == '' or sort == 'hot' }}" rel="nofollow noindex">
-                        {{ _('Hot') }}
-                    </a>
+                    <a href="?sort=hot&layout={{ post_layout }}"
+                       aria-label="{{ _('Sort by hot') }}"
+                       class="dropdown-item {{ 'active' if sort == '' or sort == 'hot' }}"
+                       rel="nofollow noindex">{{ _("Hot") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="dropdown-item {{ 'active' if sort == 'new' }}" rel="nofollow noindex">
-                        {{ _('New') }}
-                    </a>
+                    <a href="?sort=new&layout={{ post_layout }}"
+                       aria-label="{{ _('Sort by new') }}"
+                       class="dropdown-item {{ 'active' if sort == 'new' }}"
+                       rel="nofollow noindex">{{ _("New") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=old&layout={{ post_layout }}" aria-label="{{ _('Sort by old') }}" class="dropdown-item {{ 'active' if sort == 'old'  }}" rel="nofollow noindex">
-                        {{ _('Old') }}
-                    </a>
+                    <a href="?sort=old&layout={{ post_layout }}"
+                       aria-label="{{ _('Sort by old') }}"
+                       class="dropdown-item {{ 'active' if sort == 'old'  }}"
+                       rel="nofollow noindex">{{ _("Old") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="dropdown-item {{ 'active' if sort == 'active' }}" rel="nofollow noindex">
-                        {{ _('Active') }}
-                    </a>
+                    <a href="?sort=active&layout={{ post_layout }}"
+                       aria-label="{{ _('Sort by active') }}"
+                       class="dropdown-item {{ 'active' if sort == 'active' }}"
+                       rel="nofollow noindex">{{ _("Active") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top_12h&layout={{ post_layout }}" aria-label="{{ _('Most upvotes in the last 12 hours') }}" class="dropdown-item {{ 'active' if sort == 'top_12h' }}" rel="nofollow noindex">
-                        {{ _('Top 12 hours') }}
-                    </a>
+                    <a href="?sort=top_12h&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes in the last 12 hours') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top_12h' }}"
+                       rel="nofollow noindex">{{ _("Top 12 hours") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top&layout={{ post_layout }}" aria-label="{{ _('Most upvotes in the last day') }}" class="dropdown-item {{ 'active' if sort == 'top' }}" rel="nofollow noindex">  
-                        {{ _('Top Day') }}
-                    </a>
+                    <a href="?sort=top&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes in the last day') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top' }}"
+                       rel="nofollow noindex">{{ _("Top Day") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top_1w&layout={{ post_layout }}" aria-label="{{ _('Most upvotes in the last week') }}" class="dropdown-item {{ 'active' if sort == 'top_1w' }}" rel="nofollow noindex">  
-                        {{ _('Top Week') }}
-                    </a>
+                    <a href="?sort=top_1w&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes in the last week') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top_1w' }}"
+                       rel="nofollow noindex">{{ _("Top Week") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top_1m&layout={{ post_layout }}" aria-label="{{ _('Most upvotes in the last month') }}" class="dropdown-item {{ 'active' if sort == 'top_1m' }}" rel="nofollow noindex">  
-                        {{ _('Top Month') }}
-                    </a>
+                    <a href="?sort=top_1m&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes in the last month') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top_1m' }}"
+                       rel="nofollow noindex">{{ _("Top Month") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top_1y&layout={{ post_layout }}" aria-label="{{ _('Most upvotes in the last year') }}" class="dropdown-item {{ 'active' if sort == 'top_1y' }}" rel="nofollow noindex">  
-                        {{ _('Top Year') }}
-                    </a>
+                    <a href="?sort=top_1y&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes in the last year') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top_1y' }}"
+                       rel="nofollow noindex">{{ _("Top Year") }}</a>
                 </li>
                 <li>
-                    <a href="?sort=top_all&layout={{ post_layout }}" aria-label="{{ _('Most upvotes all time') }}" class="dropdown-item {{ 'active' if sort == 'top_all' }}" rel="nofollow noindex">  
-                        {{ _('Top All Time') }}
-                    </a>
+                    <a href="?sort=top_all&layout={{ post_layout }}"
+                       aria-label="{{ _('Most upvotes all time') }}"
+                       class="dropdown-item {{ 'active' if sort == 'top_all' }}"
+                       rel="nofollow noindex">{{ _("Top All Time") }}</a>
                 </li>
             </ul>
         </div>
     </div>
     <div class="d-none d-sm-block">
         <div class="btn-group">
-            <a href="?sort=hot&layout={{ post_layout }}" aria-label="{{ _('Sort by hot') }}" class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Hot') }}
-            </a>
+            <a href="?sort=hot&layout={{ post_layout }}"
+               aria-label="{{ _('Sort by hot') }}"
+               class="btn {{ 'btn-primary' if sort == '' or sort == 'hot' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("Hot") }}</a>
             <div class="btn-group" role="group">
-                <button id="top_sort_button" type="button" class="btn {{ 'btn-primary' if sort.startswith('top') else 'btn-outline-secondary' }} dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                    {{ _('Top') }}
-                </button>
+                <button id="top_sort_button"
+                        type="button"
+                        class="btn {{ 'btn-primary' if sort.startswith("top") else 'btn-outline-secondary' }} dropdown-toggle"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false">{{ _("Top") }}</button>
                 <ul class="dropdown-menu" aria-labelledby="top_sort_button">
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="?sort=top_12h&layout={{ post_layout }}">
-                            {{ _('12 hours') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}"
+                           href="?sort=top_12h&layout={{ post_layout }}">{{ _("12 hours") }}</a>
                     </li>
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="?sort=top&layout={{ post_layout }}">
-                            {{ _('Day') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}"
+                           href="?sort=top&layout={{ post_layout }}">{{ _("Day") }}</a>
                     </li>
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="?sort=top_1w&layout={{ post_layout }}">
-                            {{ _('Week') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}"
+                           href="?sort=top_1w&layout={{ post_layout }}">{{ _("Week") }}</a>
                     </li>
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="?sort=top_1m&layout={{ post_layout }}">
-                            {{ _('Month') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}"
+                           href="?sort=top_1m&layout={{ post_layout }}">{{ _("Month") }}</a>
                     </li>
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="?sort=top_1y&layout={{ post_layout }}">
-                            {{ _('Year') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}"
+                           href="?sort=top_1y&layout={{ post_layout }}">{{ _("Year") }}</a>
                     </li>
                     <li>
-                        <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="?sort=top_all&layout={{ post_layout }}">
-                            {{ _('All Time') }}
-                        </a>
+                        <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}"
+                           href="?sort=top_all&layout={{ post_layout }}">{{ _("All Time") }}</a>
                     </li>
                 </ul>
             </div>
-            <a href="?sort=new&layout={{ post_layout }}" aria-label="{{ _('Sort by new') }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('New') }}
-            </a>
-            <a href="?sort=old&layout={{ post_layout }}" aria-label="{{ _('Sort by old') }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Old') }}
-            </a>
-            <a href="?sort=active&layout={{ post_layout }}" aria-label="{{ _('Sort by active') }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Active') }}
-            </a>
+            <a href="?sort=new&layout={{ post_layout }}"
+               aria-label="{{ _('Sort by new') }}"
+               class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("New") }}</a>
+            <a href="?sort=old&layout={{ post_layout }}"
+               aria-label="{{ _('Sort by old') }}"
+               class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("Old") }}</a>
+            <a href="?sort=active&layout={{ post_layout }}"
+               aria-label="{{ _('Sort by active') }}"
+               class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("Active") }}</a>
         </div>
     </div>
     <div class="mobile_create_post d-block d-lg-none">
         <div class="dropdown">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                {{ _('Options') }}
-            </button>
+            <button class="btn btn-primary dropdown-toggle"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">{{ _("Options") }}</button>
             <ul class="dropdown-menu">
-                <li class="dropdown-header">
-                    {{ _('Layout') }}
+                <li class="dropdown-header">{{ _("Layout") }}</li>
+                <li>
+                    <a href="?layout=list&sort={{ sort }}"
+                       class="dropdown-item {{ 'active' if post_layout == '' or post_layout == 'list' }}"
+                       rel="nofollow noindex">{{ _("List") }}</a>
                 </li>
                 <li>
-                    <a href="?layout=list&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == '' or post_layout == 'list' }}" rel="nofollow noindex">
-                        {{ _('List') }}
-                    </a>
+                    <a href="?layout=masonry&sort={{ sort }}"
+                       class="dropdown-item {{ 'active' if post_layout == 'masonry' }}"
+                       rel="nofollow noindex">{{ _("Tile") }}</a>
                 </li>
                 <li>
-                    <a href="?layout=masonry&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == 'masonry' }}" rel="nofollow noindex">
-                        {{ _('Tile') }}
-                    </a>
-                </li>
-                <li>
-                    <a href="?layout=masonry_wide&sort={{ sort }}" class="dropdown-item {{ 'active' if post_layout == 'masonry_wide' }}" rel="nofollow noindex">
-                        {{ _('Wide tile') }}
-                    </a>
+                    <a href="?layout=masonry_wide&sort={{ sort }}"
+                       class="dropdown-item {{ 'active' if post_layout == 'masonry_wide' }}"
+                       rel="nofollow noindex">{{ _("Wide tile") }}</a>
                 </li>
                 {% if current_user.is_authenticated %}
                     <div class="dropdown-divider"></div>
                     <li>
-                        <a class="dropdown-item" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}">
-                            {{ _('Create post') }}
+                        <a class="dropdown-item"
+                           href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}">
+                            {{ _("Create post") }}
                         </a>
                     </li>
                     <div class="dropdown-divider"></div>
                     {% if current_user.is_authenticated and feed_membership(current_user, feed) in [SUBSCRIPTION_MEMBER] and current_user.id != feed.user_id -%}
                         <li>
-                            <a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">
-                                {{ _('Leave') }}
-                            </a>
+                            <a class="dropdown-item"
+                               href="/feed/{{ feed.link() }}/unsubscribe"
+                               rel="nofollow">{{ _("Leave") }}</a>
                         </li>
                         <div class="dropdown-divider"></div>
                         <li>
-                            <a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">
-                                {{ _('Copy') }}
-                            </a>
+                            <a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _("Copy") }}</a>
                         </li>
                     {% elif current_user.is_authenticated and feed_membership(current_user, feed) == SUBSCRIPTION_PENDING and current_user.id != feed.user_id -%}
                         <li>
-                            <a class="dropdown-item" href="/feed/{{ feed.link() }}/unsubscribe" rel="nofollow">
-                                {{ _('Pending') }}
-                            </a>
+                            <a class="dropdown-item"
+                               href="/feed/{{ feed.link() }}/unsubscribe"
+                               rel="nofollow">{{ _("Pending") }}</a>
                         </li>
                     {% elif current_user.is_authenticated and current_user.id == feed.user_id -%}
                         <li>
-                            <a class="dropdown-item" href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}">
-                                {{ _('Settings') }}
-                            </a>
+                            <a class="dropdown-item"
+                               href="{{ url_for('feed.feed_edit', feed_id=feed.id) }}">{{ _("Settings") }}</a>
                         </li>
                     {% else -%}
                         <li>
-                            <a class="dropdown-item" href="/feed/{{ feed.link() }}/subscribe" rel="nofollow">
-                                {{ _('Subscribe') }}
-                            </a>
+                            <a class="dropdown-item"
+                               href="/feed/{{ feed.link() }}/subscribe"
+                               rel="nofollow">{{ _("Subscribe") }}</a>
                         </li>
                         <div class="dropdown-divider"></div>
                         <li>
-                            <a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">
-                                {{ _('Copy') }}
-                            </a>
+                            <a class="dropdown-item" href="/feed/{{ feed.id }}/copy" rel="nofollow">{{ _("Copy") }}</a>
                         </li>
                     {% endif -%}
                 {% endif %}
@@ -186,15 +192,15 @@
     </div>
     <div class="d-none d-lg-block">
         <div class="btn-group layout_switcher">
-            <a href="?layout=list&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('List') }}
-            </a>
-            <a href="?layout=masonry&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Tile') }}
-            </a>
-            <a href="?layout=masonry_wide&sort={{ sort }}" class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}" rel="nofollow noindex">
-                {{ _('Wide tile') }}
-            </a>
+            <a href="?layout=list&sort={{ sort }}"
+               class="btn {{ 'btn-primary' if post_layout == '' or post_layout == 'list' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("List") }}</a>
+            <a href="?layout=masonry&sort={{ sort }}"
+               class="btn {{ 'btn-primary' if post_layout == 'masonry' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("Tile") }}</a>
+            <a href="?layout=masonry_wide&sort={{ sort }}"
+               class="btn {{ 'btn-primary' if post_layout == 'masonry_wide' else 'btn-outline-secondary' }}"
+               rel="nofollow noindex">{{ _("Wide tile") }}</a>
         </div>
     </div>
 </div>

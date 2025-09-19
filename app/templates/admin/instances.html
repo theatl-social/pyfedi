@@ -4,131 +4,197 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_instances' %}
-
+{% set active_child = "admin_instances" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-<div class="row">
-    <div class="col">
-        <h1>{{ title }}</h1>
-        <form id="searchInstances" method="get">
-            <input type="search" name="search" placeholder="{{ _('Search') }}" value="{{ search }}"> 
-            <input type="submit" name="submit" value="{{ _('Search') }}">
-            <a class="btn btn-primary btn-sm" href="{{ url_for("admin.admin_instance_create_offline") }}">
-                {{ _("Create offline instance") }}
-            </a>
-        </form>
-        Status Filter:
-        <a href="{{ url_for('admin.admin_instances', filter='online') }}">{{ _('Online') }}</a> |
-        <a href="{{ url_for('admin.admin_instances', filter='dormant') }}">{{ _('Dormant') }}</a> |
-        <a href="{{ url_for('admin.admin_instances', filter='gone_forever') }}">{{ _('Gone forever') }}</a> |
-        <a href="{{ url_for('admin.admin_instances', filter='trusted') }}">{{ _('Trusted') }}</a> |
-        <a href="{{ url_for('admin.admin_instances', filter='blocked') }}">{{ _('Blocked') }}</a>
-        <table class="table table-striped">
-            <tr>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="domain{{' DESC' if sort_by == 'domain ASC' else ' ASC' }}" class="btn" title="{{ _('Domain') }}">
-                       {{ _('Domain') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'domain DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'domain ASC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="software{{' DESC' if sort_by == 'software ASC' else ' ASC' }}" class="btn" title="{{ _('Software') }}">
-                       {{ _('Software') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'software DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'software ASC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="version{{' DESC' if sort_by == 'version ASC' else ' ASC' }}" class="btn" title="{{ _('Version') }}">
-                       {{ _('Version') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'version DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'version ASC' }}"></span>
-                   </button>
-               </th>
-               <th title="{{ _('Known Communities') }}">{{ _('Communities') }}</th>
-               <th title="{{ _('Known Users') }}">{{ _('Users') }}</th>
-               <th>{{ _('Posts') }}</th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="vote_weight{{' ASC' if sort_by == 'vote_weight DESC' else ' DESC' }}" class="btn" title="{{ _('Vote Weight') }}">
-                       {{ _('Vote Weight') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'vote_weight ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'vote_weight DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="trusted{{' ASC' if sort_by == 'trusted DESC' else ' DESC' }}" class="btn" title="{{ _('Trusted') }}">
-                       {{ _('Trusted') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'trusted ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'trusted DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}" class="btn" title="{{ _('When an Activity was received from them') }}">
-                       {{ _('Seen') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="last_successful_send{{' ASC' if sort_by == 'last_successful_send DESC' else ' DESC' }}" class="btn" title="{{ _('When we successfully sent them an Activity') }}">
-                       {{ _('Sent') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_successful_send ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_successful_send DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="failures{{' ASC' if sort_by == 'failures DESC' else ' DESC' }}" class="btn" title="{{ _('How many times we failed to send (reset to 0 after every successful send)') }}">
-                       {{ _('Failed') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'failures ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'failures DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
-                   <button form="searchInstances" name="sort_by" value="{{'gone_forever ASC, dormant ASC' if sort_by == 'gone_forever DESC, dormant DESC' else 'gone_forever DESC, dormant DESC' }}" class="btn" title="{{ _('Instance Status - Online/Dormant/Gone Forever') }}">
-                       {{ _('Status') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'gone_forever ASC, dormant ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'gone_forever DESC, dormant DESC' }}"></span>
-                   </button>
-               </th>
-               <th> </th>
-            </tr>
-            {% for instance in instances.items %}
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ title }}</h1>
+            <form id="searchInstances" method="get">
+                <input type="search"
+                       name="search"
+                       placeholder="{{ _('Search') }}"
+                       value="{{ search }}">
+                <input type="submit" name="submit" value="{{ _('Search') }}">
+                <a class="btn btn-primary btn-sm"
+                   href="{{ url_for('admin.admin_instance_create_offline') }}">{{ _("Create offline instance") }}</a>
+            </form>
+            Status Filter:
+            <a href="{{ url_for('admin.admin_instances', filter='online') }}">{{ _("Online") }}</a> |
+            <a href="{{ url_for('admin.admin_instances', filter='dormant') }}">{{ _("Dormant") }}</a> |
+            <a href="{{ url_for('admin.admin_instances', filter='gone_forever') }}">{{ _("Gone forever") }}</a> |
+            <a href="{{ url_for('admin.admin_instances', filter='trusted') }}">{{ _('Trusted') }}</a> |
+            <a href="{{ url_for('admin.admin_instances', filter='blocked') }}">{{ _("Blocked") }}</a>
+            <table class="table table-striped">
                 <tr>
-                    <td><span title="{{ _('Domain') }}"><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></span></td>
-                    <td><span title="{{ _('Software') }}">{{ instance.software  }}</span></td>
-                    <td><span title="{{ _('Version') }}">{{ instance.version if instance.version }}</span></td>
-                    <td><span title="{{ _('Known Communities') }}">{{ instance.known_communities_count()  }}</span></td>
-                    <td><span title="{{ _('Known Users') }}">{{ instance.known_users_count()  }}</span></td>
-                    <td><span title="{{ _('Posts') }}">{{ instance.post_count()  }}</span></td>
-                    <td><span title="{{ _('Vote Weight') }}">{{ instance.vote_weight  }}</span></td>
-                    <td><span title="{{ _('Trusted') }}">{{ _('Yes') if instance.trusted }}</span></td>
-                    <td><span title="{{ _('Last Seen') }}: {{ instance.last_seen }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span></td>
-                    <td><span title="{{ _('Sent') }}">{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</span></td>
-                    <td><span title="{{ _('Failed') }}">{{ instance.failures  }}</span></td>
-                    {% if instance.gone_forever %}
-                        <td><span title="{{ _('Status') }}">{{ _('Gone forever') }}</span></td>
-                    {% elif instance.dormant %}
-                        <td><span title="{{ _('Status') }}">{{ _('Dormant') }}</span></td>
-                    {% else %}
-                        <td><span title="{{ _('Status') }}">{{ _('Online') }}</span></td>
-                    {% endif %}
-                    <td><a href="{{ url_for('admin.admin_instance_edit', instance_id=instance.id) }}">{{ _('Edit') }}</a></td>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="domain{{' DESC' if sort_by == 'domain ASC' else ' ASC' }}"
+                                class="btn"
+                                title="{{ _('Domain') }}">
+                            {{ _("Domain") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'domain DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'domain ASC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="software{{' DESC' if sort_by == 'software ASC' else ' ASC' }}"
+                                class="btn"
+                                title="{{ _('Software') }}">
+                            {{ _("Software") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'software DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'software ASC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="version{{' DESC' if sort_by == 'version ASC' else ' ASC' }}"
+                                class="btn"
+                                title="{{ _('Version') }}">
+                            {{ _("Version") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'version DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'version ASC' }}"></span>
+                        </button>
+                    </th>
+                    <th title="{{ _('Known Communities') }}">{{ _("Communities") }}</th>
+                    <th title="{{ _('Known Users') }}">{{ _("Users") }}</th>
+                    <th>{{ _("Posts") }}</th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="vote_weight{{' ASC' if sort_by == 'vote_weight DESC' else ' DESC' }}"
+                                class="btn"
+                                title="{{ _('Vote Weight') }}">
+                            {{ _("Vote Weight") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'vote_weight ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'vote_weight DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="trusted{{' ASC' if sort_by == 'trusted DESC' else ' DESC' }}"
+                                class="btn"
+                                title="{{ _('Trusted') }}">
+                            {{ _("Trusted") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'trusted ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'trusted DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}"
+                                class="btn"
+                                title="{{ _('When an Activity was received from them') }}">
+                            {{ _("Seen") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="last_successful_send{{' ASC' if sort_by == 'last_successful_send DESC' else ' DESC' }}"
+                                class="btn"
+                                title="{{ _('When we successfully sent them an Activity') }}">
+                            {{ _("Sent") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_successful_send ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_successful_send DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="failures{{' ASC' if sort_by == 'failures DESC' else ' DESC' }}"
+                                class="btn"
+                                title="{{ _('How many times we failed to send (reset to 0 after every successful send)') }}">
+                            {{ _("Failed") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'failures ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'failures DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th>
+                        <button form="searchInstances"
+                                name="sort_by"
+                                value="{{'gone_forever ASC, dormant ASC' if sort_by == 'gone_forever DESC, dormant DESC' else 'gone_forever DESC, dormant DESC' }}"
+                                class="btn"
+                                title="{{ _('Instance Status - Online/Dormant/Gone Forever') }}">
+                            {{ _("Status") }}
+                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'gone_forever ASC, dormant ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'gone_forever DESC, dormant DESC' }}"></span>
+                        </button>
+                    </th>
+                    <th></th>
                 </tr>
-            {% endfor %}
-        </table>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% for instance in instances.items %}
+                    <tr>
+                        <td>
+                            <span title="{{ _('Domain') }}"><a href="https://{{ instance.domain }}"
+   rel="noopener nofollow noindex noreferrer">{{ instance.domain }}</a></span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Software') }}">{{ instance.software }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Version') }}">{{ instance.version if instance.version }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Known Communities') }}">{{ instance.known_communities_count() }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Known Users') }}">{{ instance.known_users_count() }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Posts') }}">{{ instance.post_count() }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Vote Weight') }}">{{ instance.vote_weight }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Trusted') }}">{{ _("Yes") if instance.trusted }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _("Last Seen") }}: {{ instance.last_seen }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Sent') }}">{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</span>
+                        </td>
+                        <td>
+                            <span title="{{ _('Failed') }}">{{ instance.failures }}</span>
+                        </td>
+                        {% if instance.gone_forever %}
+                            <td>
+                                <span title="{{ _('Status') }}">{{ _("Gone forever") }}</span>
+                            </td>
+                        {% elif instance.dormant %}
+                            <td>
+                                <span title="{{ _('Status') }}">{{ _("Dormant") }}</span>
+                            </td>
+                        {% else %}
+                            <td>
+                                <span title="{{ _('Status') }}">{{ _("Online") }}</span>
+                            </td>
+                        {% endif %}
+                        <td>
+                            <a href="{{ url_for('admin.admin_instance_edit', instance_id=instance.id) }}">{{ _("Edit") }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </table>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-        </nav>
+            </nav>
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

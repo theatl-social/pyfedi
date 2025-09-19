@@ -5,19 +5,18 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block extra_css %}
-    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}"
+          type="text/css"
+          rel="stylesheet" />
 {% endblock %}
-
 {% block app_content %}
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% include "post/_breadcrumb_nav.html" %}
-        <h1 class="mt-2">{{ _('Cross-post %(post_name)s', post_name=post.title) }}</h1>
-        {{ render_form(form) }}
-    </main>
-</div>
-
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% include "post/_breadcrumb_nav.html" %}
+            <h1 class="mt-2">{{ _('Cross-post %(post_name)s', post_name=post.title) }}</h1>
+            {{ render_form(form) }}
+        </main>
+    </div>
 {% endblock %}

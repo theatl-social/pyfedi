@@ -4,23 +4,19 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_newsletter' %}
-
+{% set active_child = "admin_newsletter" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Newsletter') }}</h1>
-        {{ render_form(form) }}
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Newsletter") }}</h1>
+            {{ render_form(form) }}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

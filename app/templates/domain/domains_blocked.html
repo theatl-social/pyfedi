@@ -4,66 +4,78 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% if search == '' %}
-            <h1>{{ _('Banned domains') }}</h1>
-        {% else %}
-            <h1>{{ _('Banned domains containing "%(search)s"', search=search) }}</h1>
-        {% endif %}
-        {% if not current_user.is_anonymous and current_user.trustworthy() %}
-        <div class="row">
-            <div class="col-auto">
-                <div class="btn-group">
-                    <a href="/domains" class="btn {{ 'btn-primary' if request.path == '/domains' else 'btn-outline-secondary' }}">
-                        {{ _('Domains') }}
-                    </a>
-                    <a href="/domains/banned" class="btn {{ 'btn-primary' if request.path == '/domains/banned' else 'btn-outline-secondary' }}">
-                        {{ _('Banned domains') }}
-                    </a>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if search == '' %}
+                <h1>{{ _("Banned domains") }}</h1>
+            {% else %}
+                <h1>{{ _('Banned domains containing "%(search)s"', search=search) }}</h1>
+            {% endif %}
+            {% if not current_user.is_anonymous and current_user.trustworthy() %}
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="btn-group">
+                            <a href="/domains"
+                               class="btn {{ 'btn-primary' if request.path == '/domains' else 'btn-outline-secondary' }}">
+                                {{ _("Domains") }}
+                            </a>
+                            <a href="/domains/banned"
+                               class="btn {{ 'btn-primary' if request.path == '/domains/banned' else 'btn-outline-secondary' }}">
+                                {{ _("Banned domains") }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <form method="get">
+                            <input type="search"
+                                   name="search"
+                                   value="{{ search }}"
+                                   placeholder="{{ _('Search') }}"
+                                   autofocus>
+                        </form>
+                    </div>
                 </div>
-            </div>
-            <div class="col-auto">
-                <form method="get"><input type="search" name="search" value="{{ search }}" placeholder="{{ _('Search') }}" autofocus></form>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="table-responsive-sm pt-4">
-            <table class="table table-striped">
-                <tr>
-                   <th>Domain</th>
-                   {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}<th>Actions</th>{% endif %}
-                </tr>
-                {% for domain in domains %}
+            {% endif %}
+            <div class="table-responsive-sm pt-4">
+                <table class="table table-striped">
                     <tr>
-                        <td><a href="{{ url_for('domain.show_domain', domain_id=domain.id) }}">{{ domain.name }}</a></td>
-                        <td>
-                            {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
-                                {% if domain.banned %}
-                                        <a class="btn btn-primary confirm_first send_post" title="{{ _('Unbanning this domain allows future posts linking to that domain.') }}" href="#" data-url="/d/{{ domain.id }}/unban">{{ _('Unban') }}</a>
-                                {% endif %}
-                            {% endif %}
-                        </td>
+                        <th>Domain</th>
+                        {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
+                            <th>Actions</th>
+                        {% endif %}
                     </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
-        {% if prev_url %}
-            <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-            </a>
-        {% endif %}
-        {% if next_url %}
-            <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-            </a>
-        {% endif %}
-        </nav>
-    </main>
-</div>
+                    {% for domain in domains %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('domain.show_domain', domain_id=domain.id) }}">{{ domain.name }}</a>
+                            </td>
+                            <td>
+                                {% if user_access('ban users', current_user.id) or user_access('manage users', current_user.id) %}
+                                    {% if domain.banned %}
+                                        <a class="btn btn-primary confirm_first send_post"
+                                           title="{{ _('Unbanning this domain allows future posts linking to that domain.') }}"
+                                           href="#"
+                                           data-url="/d/{{ domain.id }}/unban">{{ _("Unban") }}</a>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                    </a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif %}
+            </nav>
+        </main>
+    </div>
 {% endblock %}
-

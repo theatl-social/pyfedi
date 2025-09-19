@@ -4,29 +4,24 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'user_public_feeds' %}
-
-
+{% set active_child = "user_public_feeds" %}
 {% block app_content %}
-
-<h1>{{ creator_name }} Public Feeds</h1>
-{% if user_has_public_feeds %}
-    <table class="communities_table table table-striped mt-1">
-        <thead>
-        <tr>
-            <th>Name</th>
-            <th># Communities</th>
-            <th>Creator</th>
-            {% if current_user.is_authenticated %}
-            <th>Actions</th>
-            {% endif %}
-        </tr>
-        </thead>
-        {% for feed in user_feeds_list -%}
-            {% include 'feed/_feed_table_row.html' -%}
-        {% endfor -%}
-    </table>
-{% else -%}
-    <p>{{ _('User has no Public Feeds yet..') }}</p>
-{% endif -%}
+    <h1>{{ creator_name }} Public Feeds</h1>
+    {% if user_has_public_feeds %}
+        <table class="communities_table table table-striped mt-1">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th># Communities</th>
+                    <th>Creator</th>
+                    {% if current_user.is_authenticated %}<th>Actions</th>{% endif %}
+                </tr>
+            </thead>
+            {% for feed in user_feeds_list -%}
+                {% include 'feed/_feed_table_row.html' -%}
+            {% endfor -%}
+        </table>
+    {% else -%}
+        <p>{{ _("User has no Public Feeds yet..") }}</p>
+    {% endif -%}
 {% endblock %}

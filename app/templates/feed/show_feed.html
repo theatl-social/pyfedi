@@ -6,99 +6,160 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-      {% if feed.header_image() != '' and not low_bandwidth -%}
-        <div class="community_header" style="background-image: url({{ feed.header_image() }});">
-          <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-            <ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-              <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
-              {% for breadcrumb in breadcrumbs -%}
-                <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-              {% endfor -%}
-            </ol>
-          </nav>
-        </div>
-        <img class="community_icon_big bump_up rounded-circle" src="{{ feed.icon_image() }}" alt="Feed icon" />
-        <h1 class="mt-2"  aria-live="assertive">{{ feed.title }}
-          {% if current_user.is_authenticated -%}
-            {% include 'feed/_notification_toggle.html' -%}
-          {% endif -%}
-        </h1>
-        <p class="text-muted">{{ feed.lemmy_link() }}</p>
-        {% if sub_feeds %}
-          <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
-          <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
-            {% for sub_feed in sub_feeds %}
-              <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
-            {% endfor %}
-          </ul>
-        {% endif %}
-      {% elif feed.icon_id and not low_bandwidth -%}
-        <div class="row mb-3">
-          <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-            <ol class="breadcrumb">
-              <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-              <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
-              {% for breadcrumb in breadcrumbs -%}
-                <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-              {% endfor -%}
-            </ol>
-          </nav>
-          <div class="col-3 col-md-2">
-            <img class="community_icon_big rounded-circle" src="{{ feed.icon_image() }}" alt="Feed icon" />
-          </div>
-          <div class="col-9 col-md-10">
-            <h1 class="mt-3">{{ feed.title }}
-              {% if current_user.is_authenticated -%}
-                {% include 'feed/_notification_toggle.html' -%}
-              {% endif -%}
-            </h1>
-            <p class="text-muted">{{ feed.lemmy_link() }}</p>
-            {% if sub_feeds %}
-              <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
-              <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
-              {% for sub_feed in sub_feeds %}
-                <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
-              {% endfor %}
-              </ul>
-            {% endif %}
-          </div>
-        </div>
-      {% else -%}
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
-            {% for breadcrumb in breadcrumbs %}
-              <li class="breadcrumb-item">{% if breadcrumb.url %}<a href="{{ breadcrumb.url }}">{% endif %}{{ breadcrumb.text }}{% if breadcrumb.url %}</a>{% endif %}</li>
-            {% endfor %}
-          </ol>
-        </nav>
-        <h1 class="mt-2">{{ feed.title }}
-            {% if current_user.is_authenticated %}
-                {% include 'feed/_notification_toggle.html' %}
-            {% endif %}
-        </h1>
-        <p class="text-muted">{{ feed.lemmy_link() }}</p>
-        {% if sub_feeds %}
-        <h5 class="mb-0" id="sub-feeds">{{ _('Sub-feeds') }}</h5>
-        <ul id="subfeed_nav" class="nav" role="listbox" aria-labelledby="sub-feeds">
-        {% for sub_feed in sub_feeds %}
-            <li class="nav-item" role="option"><a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a></li>
-        {% endfor %}
-        </ul>
-        {% endif %}
-      {% endif -%}
-        {% include "feed/_feed_nav.html" %}
-        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
-             <div class="masonry" id="masonry">
-              <!-- Masonry columns will be added here -->
-            </div>
-            <script nonce="{{ nonce }}">
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if feed.header_image() != '' and not low_bandwidth -%}
+                <div class="community_header"
+                     style="background-image: url({{ feed.header_image() }})">
+                    <nav aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         aria-label="{{ _('Navigation') }}">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="/">{{ _("Home") }}</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="/feeds">{{ _("Feeds") }}</a>
+                            </li>
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                        </ol>
+                    </nav>
+                </div>
+                <img class="community_icon_big bump_up rounded-circle"
+                     src="{{ feed.icon_image() }}"
+                     alt="Feed icon" />
+                <h1 class="mt-2"  aria-live="assertive">
+                    {{ feed.title }}
+                    {% if current_user.is_authenticated -%}
+                        {% include 'feed/_notification_toggle.html' -%}
+                    {% endif -%}
+                </h1>
+                <p class="text-muted">{{ feed.lemmy_link() }}</p>
+                {% if sub_feeds %}
+                    <h5 class="mb-0" id="sub-feeds">{{ _("Sub-feeds") }}</h5>
+                    <ul id="subfeed_nav"
+                        class="nav"
+                        role="listbox"
+                        aria-labelledby="sub-feeds">
+                        {% for sub_feed in sub_feeds %}
+                            <li class="nav-item" role="option">
+                                <a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% elif feed.icon_id and not low_bandwidth -%}
+                <div class="row mb-3">
+                    <nav class="mb-3"
+                         aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         title="Navigation">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="/">{{ _("Home") }}</a>
+                            </li>
+                            <li class="breadcrumb-item">
+                                <a href="/feeds">{{ _("Feeds") }}</a>
+                            </li>
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                        </ol>
+                    </nav>
+                    <div class="col-3 col-md-2">
+                        <img class="community_icon_big rounded-circle"
+                             src="{{ feed.icon_image() }}"
+                             alt="Feed icon" />
+                    </div>
+                    <div class="col-9 col-md-10">
+                        <h1 class="mt-3">
+                            {{ feed.title }}
+                            {% if current_user.is_authenticated -%}
+                                {% include 'feed/_notification_toggle.html' -%}
+                            {% endif -%}
+                        </h1>
+                        <p class="text-muted">{{ feed.lemmy_link() }}</p>
+                        {% if sub_feeds %}
+                            <h5 class="mb-0" id="sub-feeds">{{ _("Sub-feeds") }}</h5>
+                            <ul id="subfeed_nav"
+                                class="nav"
+                                role="listbox"
+                                aria-labelledby="sub-feeds">
+                                {% for sub_feed in sub_feeds %}
+                                    <li class="nav-item" role="option">
+                                        <a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else -%}
+                <nav aria-label="breadcrumb"
+                     id="breadcrumb_nav"
+                     aria-label="{{ _('Navigation') }}">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item">
+                            <a href="/">{{ _("Home") }}</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="/feeds">{{ _("Feeds") }}</a>
+                        </li>
+                        {% for breadcrumb in breadcrumbs %}
+                            <li class="breadcrumb-item">
+                                {% if breadcrumb.url %}<a href="{{ breadcrumb.url }}">{% endif %}
+                                    {{ breadcrumb.text }}
+                                    {% if breadcrumb.url %}</a>{% endif %}
+                            </li>
+                        {% endfor %}
+                    </ol>
+                </nav>
+                <h1 class="mt-2">
+                    {{ feed.title }}
+                    {% if current_user.is_authenticated %}
+                        {% include 'feed/_notification_toggle.html' %}
+                    {% endif %}
+                </h1>
+                <p class="text-muted">{{ feed.lemmy_link() }}</p>
+                {% if sub_feeds %}
+                    <h5 class="mb-0" id="sub-feeds">{{ _("Sub-feeds") }}</h5>
+                    <ul id="subfeed_nav"
+                        class="nav"
+                        role="listbox"
+                        aria-labelledby="sub-feeds">
+                        {% for sub_feed in sub_feeds %}
+                            <li class="nav-item" role="option">
+                                <a class="nav-link" href="/f/{{ sub_feed.link() }}">{{ sub_feed.title }}</a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+            {% endif -%}
+            {% include "feed/_feed_nav.html" %}
+            {% if post_layout == 'masonry' or post_layout == 'masonry_wide' %}
+                <div class="masonry" id="masonry">
+                    <!-- Masonry columns will be added here -->
+                </div>
+                <script nonce="{{ nonce }}">
               document.addEventListener("DOMContentLoaded", function() {
                   const masonry = document.getElementById('masonry');
                   const htmlSnippets = [
@@ -108,86 +169,112 @@
                   ];
                   renderMasonry(masonry, htmlSnippets);
               });
-            </script>
-        {% else %}
-            <div class="post_list">
-                {% for post in posts %}
-                    {% include 'post/_post_teaser.html' %}
-                {% else %}
-                    <p>{{ _('No posts in this feed yet.') }}</p>
-                {% endfor %}
-            </div>
-        {% endif %}
-
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+                </script>
+            {% else %}
+                <div class="post_list">
+                    {% for post in posts %}
+                        {% include 'post/_post_teaser.html' %}
+                    {% else %}
+                        <p>{{ _("No posts in this feed yet.") }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-        </nav>
-    </main>
-
-    <aside id="side_pane" class="col-12 col-lg-4 side_pane mt-3 mt-lg-0" role="complementary">
-        <div class="card">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-6">
-                        {% if current_user.id == feed.user_id %}
-                            <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/f/' + feed.name) }}" rel="nofollow">{{ _('Edit Feed') }}</a>
-                        {% else %}
-                            <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}" rel="nofollow">{{ _('Copy Feed') }}</a>
-                            {% if current_user.is_authenticated and feed.subscribed(current_user.id) == 1 %}
-                                <a class="w-100 btn btn-warning mb-2" href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Unsubscribe') }}</a>
-                            {% else %}
-                                <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}" rel="nofollow">{{ _('Subscribe') }}</a>
-                            {% endif %}
-                        {% endif %}
-                    </div>
-                    <div class="col-6">
-                        <a class="w-100 btn btn-primary mb-2" href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}" rel="nofollow">{{ _('Create post') }}</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% if feed.description_html -%}
-            <div class="card mt-3">
-                <div class="card-header">
-                     <h2>{{ feed.title }}</h2>
-                </div>
+            </nav>
+        </main>
+        <aside id="side_pane"
+               class="col-12 col-lg-4 side_pane mt-3 mt-lg-0"
+               role="complementary">
+            <div class="card">
                 <div class="card-body">
-                    <p>{{ feed.description_html|community_links|feed_links|safe if feed.description_html else '' }}</p>
+                    <div class="row">
+                        <div class="col-6">
+                            {% if current_user.id == feed.user_id %}
+                                <a class="w-100 btn btn-primary mb-2"
+                                   href="{{ url_for('feed.feed_edit', feed_id=feed.id, next='/f/' + feed.name) }}"
+                                   rel="nofollow">{{ _("Edit Feed") }}</a>
+                            {% else %}
+                                <a class="w-100 btn btn-primary mb-2"
+                                   href="{{ url_for('feed.feed_copy', feed_id=feed.id) }}"
+                                   rel="nofollow">{{ _("Copy Feed") }}</a>
+                                {% if current_user.is_authenticated and feed.subscribed(current_user.id) == 1 %}
+                                    <a class="w-100 btn btn-warning mb-2"
+                                       href="{{ url_for('feed.feed_unsubscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}"
+                                       rel="nofollow">{{ _("Unsubscribe") }}</a>
+                                {% else %}
+                                    <a class="w-100 btn btn-primary mb-2"
+                                       href="{{ url_for('feed.subscribe', actor=feed.ap_id if feed.ap_id else feed.name) }}"
+                                       rel="nofollow">{{ _("Subscribe") }}</a>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-6">
+                            <a class="w-100 btn btn-primary mb-2"
+                               href="{{ url_for('feed.feed_create_post', feed_name=feed.machine_name) }}"
+                               rel="nofollow">{{ _("Create post") }}</a>
+                        </div>
+                    </div>
                 </div>
             </div>
-        {% endif %}
-        {% if feed_communities %}
-        <div id="feed_communities" class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('Feed communities') }}</h2>
-            </div>
-            <div class="card-body">
-                <ul class="list-group list-group-flush">
-                    {% for community in feed_communities %}
-                        <li class="list-group-item">
-                            {{ render_communityname(community) }}
-                            <span class="text-muted" title="{{ _('Number of subscribers') }}"> - {{ community.humanize_subscribers() }}</span>
-                        </li>
-                    {% endfor %}
-                </ul>
-                <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
-            </div>
-        </div>
-        {% endif %}
-        {% include "_inoculation_links.html" %}
-    </aside>
-</div>
-<div class="row">
-
-
-</div>
+            {% if feed.description_html -%}
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h2>{{ feed.title }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>{{ feed.description_html|community_links|feed_links|safe if feed.description_html else '' }}</p>
+                    </div>
+                </div>
+            {% endif %}
+            {% if tags %}
+                <div class="card mt-3">
+                    <div class="card-body">
+                        {% if tags and tags|length > 0 -%}
+                            <div class="post_tags_sidepane">
+                                {% for tag in tags -%}
+                                    <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not none else feed.name, tag=tag.name) }}">#{{ tag.display_as }}</a></span>
+                                {% endfor -%}
+                                {% if tags|length > 1 -%}
+                                    <br />
+                                    <a href="{{ url_for('tag.tag_cloud', type='feed', category_id=feed.id) }}">{{ _("Explore Tag Cloud") }}</a>
+                                {% endif %}
+                            </div>
+                        {% endif -%}
+                    </div>
+                </div>
+            {% endif %}
+            {% if feed_communities %}
+                <div id="feed_communities" class="card mt-3">
+                    <div class="card-header">
+                        <h2>{{ _("Feed communities") }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for community in feed_communities %}
+                                <li class="list-group-item">
+                                    {{ render_communityname(community) }}
+                                    <span class="text-muted" title="{{ _('Number of subscribers') }}">- {{ community.humanize_subscribers() }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <p class="mt-4">
+                            <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a>
+                        </p>
+                    </div>
+                </div>
+            {% endif %}
+            {% include "_inoculation_links.html" %}
+        </aside>
+    </div>
+    <div class="row"></div>
 {% endblock %}

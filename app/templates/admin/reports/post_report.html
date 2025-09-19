@@ -9,41 +9,43 @@
             <div class="container text-start">
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Original Post Title:  </p>
+                        <p>Original Post Title:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
                         <a class="text-start" href="/post/{{ report.targets.suspect_post_id }}">{{ report.targets.orig_post_title }}</a>
                     </div>
-                </div>                
+                </div>
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Original Post Body:  </p>
+                        <p>Original Post Body:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
-                        <p class="text-start">{{ report.targets.orig_post_body }}</a>
+                        <p class="text-start">
+                        {{ report.targets.orig_post_body }}</a>
                     </div>
-                </div>                      
+                </div>
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Suspect User:  </p>
+                        <p>Suspect User:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
-                        <a class="text-start" href="/u/{{ report.targets.suspect_user_user_name }}">{{ report.targets.suspect_user_user_name }}</a>
+                        <a class="text-start"
+                           href="/u/{{ report.targets.suspect_user_user_name }}">{{ report.targets.suspect_user_user_name }}</a>
                     </div>
                 </div>
                 {% if report.targets.source_instance_domain %}
-                <div class="d-flex">
-                    <div class="p-start flex-column flex-grow-0">
-                        <p>Suspect User Instance:  </p>
+                    <div class="d-flex">
+                        <div class="p-start flex-column flex-grow-0">
+                            <p>Suspect User Instance:</p>
+                        </div>
+                        <div class="flex-column flex-grow-1 pl-1">
+                            <a href="/instance/{{ report.targets.source_instance_domain }}">{{ report.targets.source_instance_domain }}</a>
+                        </div>
                     </div>
-                    <div class="flex-column flex-grow-1 pl-1">
-                        <a href="/instance/{{ report.targets.source_instance_domain }}">{{ report.targets.source_instance_domain }}</a>
-                    </div>
-                </div>  
                 {% endif %}
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Reported By:  </p>
+                        <p>Reported By:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
                         <a href="/u/{{ report.targets.reporter_user_name }}">{{ report.targets.reporter_user_name }}</a>
@@ -51,20 +53,20 @@
                 </div>
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Reasons:  </p>
+                        <p>Reasons:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
-                        <p>  {{ report.reasons }}</p>
+                        <p>{{ report.reasons }}</p>
                     </div>
                 </div>
                 <div class="d-flex">
                     <div class="p-start flex-column flex-grow-0">
-                        <p>Description:  </p>
+                        <p>Description:</p>
                     </div>
                     <div class="flex-column flex-grow-1 pl-1">
-                        <p>  {{ report.description }}</p>
+                        <p>{{ report.description }}</p>
                     </div>
-                </div>                
+                </div>
             </div>
         </div>
     </td>

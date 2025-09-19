@@ -1,84 +1,101 @@
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
-<div class="render_username">
-    {% if user.deleted -%}
-        [deleted]
-    {% else -%}
-        <a href="{{ url_for('activitypub.user_profile', actor=user.link(), _external=embed) }}" target="_blank" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
-            {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
+    <div class="render_username">
+        {% if user.deleted -%}
+            [deleted]
+        {% else -%}
+            <a href="{{ url_for('activitypub.user_profile', actor=user.link() , _external=embed) }}"
+               target="_blank"
+               aria-label="{{ _('Author') }}"
+               class="author_link {{ 'donor' if user.stripe_subscription_id }}"
+               title=""
+               rel="author">
+                {% if user.avatar_id and not low_bandwidth and not collapsed -%}
+                    <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
+                {% endif -%}
+                {{ user.display_name() }}
+                {% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+            </a>
+            {% if user.created_recently() -%}
+                <span class="fe fe-new-account" title="New account"></span>
             {% endif -%}
-            {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
-        </a>
-        {% if user.created_recently() -%}
-            <span class="fe fe-new-account" title="New account"> </span>
-        {% endif -%}
-        {% if user.bot -%}
-            <span class="fe fe-bot-account" title="Bot account"> </span>
-        {% endif -%}
-        {% if user_flair and user.id in user_flair %}
-            <span class="user_flair">{{ user_flair[user.id] }}</span>
-        {% endif %}
-        {% if user.id != current_user.id -%}
-            {% if user.reputation < -12 -%}
-                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware.') }}"> </span>
-                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware!') }}"> </span>
-            {% elif user.reputation < -3 -%}
-                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
+            {% if user.bot -%}
+                <span class="fe fe-bot-account" title="Bot account"></span>
+            {% endif -%}
+            {% if user_flair and user.id in user_flair %}<span class="user_flair">{{ user_flair[user.id] }}</span>{% endif %}
+            {% if user.id != current_user.id -%}
+                {% if user.reputation < -12 -%}
+                    <span class="fe fe-warning red"
+                          title="{{ _('Very low reputation. Beware.') }}"></span>
+                    <span class="fe fe-warning red"
+                          title="{{ _('Very low reputation. Beware!') }}"></span>
+                {% elif user.reputation < -3 -%}
+                    <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"></span>
+                {% endif -%}
             {% endif -%}
         {% endif -%}
-    {% endif -%}
-</div>
+    </div>
 {% endmacro -%}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
-  <head>
-    {% block head -%}
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
-        <meta http-equiv="Content-Language" content="en" />
-        <meta name="msapplication-TileColor" content="#007BBF">
-        <meta name="theme-color" content="#007BBF">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="HandheldFriendly" content="True">
-        <meta name="MobileOptimized" content="320">
-        {% block styles -%}
-            {{ bootstrap.load_css() }}
-            <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
-            <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
+    <head>
+        {% block head -%}
+            <meta charset="utf-8">
+            <meta name="viewport"
+                  content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
+            <meta http-equiv="Content-Language" content="en" />
+            <meta name="msapplication-TileColor" content="#007BBF">
+            <meta name="theme-color" content="#007BBF">
+            <meta name="apple-mobile-web-app-status-bar-style"
+                  content="black-translucent" />
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="HandheldFriendly" content="True">
+            <meta name="MobileOptimized" content="320">
+            {% block styles -%}
+                {{ bootstrap.load_css() }}
+                <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css') ) }}"
+                      type="text/css"
+                      rel="stylesheet" />
+                <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}"
+                      type="text/css"
+                      rel="alternate stylesheet"
+                      title="High contrast" />
+            {% endblock -%}
+            <title>
+                {% if title %}
+                    {{ title }}
+                {% else %}
+                    {{ _("PieFed") }}
+                {% endif %}
+            </title>
+            <meta name="msapplication-TileColor" content="#da532c">
+            <meta name="msapplication-config" content="/static/browserconfig.xml">
+            <meta name="theme-color" content="#ffffff">
+            {% if canonical -%}
+                <link rel="canonical" href="{{ canonical }}" />
+            {% endif -%}
+            {% if description -%}
+                <meta name="description" content="{{ description }}" />
+            {% else -%}
+                <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
+            {% endif -%}
+            <meta name="robots" content="noindex">
+            {% if g.site.additional_css -%}
+                <style>{{ g.site.additional_css }}</style>
+            {% endif -%}
         {% endblock -%}
-        <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <meta name="msapplication-TileColor" content="#da532c">
-        <meta name="msapplication-config" content="/static/browserconfig.xml">
-        <meta name="theme-color" content="#ffffff">
-        {% if canonical -%}
-            <link rel="canonical" href="{{ canonical }}" />
-        {% endif -%}
-        {% if description -%}
-            <meta name="description" content="{{ description }}" />
-        {% else -%}
-            <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
-        {% endif -%}
-        <meta name="robots" content="noindex">
-      {% if g.site.additional_css -%}
-      <style>
-          {{ g.site.additional_css }}
-      </style>
-      {% endif -%}
-    {% endblock -%}
-    <script src="/static/js/set_theme.js" type="text/javascript"></script>
-    <script src="{{ url_for('static', filename='js/embed_listener.js', changed=getmtime('js/embed_listener.js')) }}" type="text/javascript"></script>
-  </head>
-  <body class="embed">
-    {% block app_content -%}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane border-0 w-100">
-            {% include 'post/_post_teaser.html' -%}
-        </main>
-    </div>
-    {% endblock -%}
-
-  </body>
+        <script src="/static/js/set_theme.js" type="text/javascript"></script>
+        <script src="{{ url_for('static', filename='js/embed_listener.js', changed=getmtime('js/embed_listener.js')) }}"
+                type="text/javascript"></script>
+    </head>
+    <body class="embed">
+        {% block app_content -%}
+            <div class="row">
+                <main class="col-12 col-lg-8 position-relative main_pane border-0 w-100">
+                    {% include 'post/_post_teaser.html' -%}
+                </main>
+            </div>
+        {% endblock -%}
+    </body>
 </html>

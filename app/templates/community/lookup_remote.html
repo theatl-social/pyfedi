@@ -5,30 +5,30 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
-
 {% block app_content %}
-        {% if new_community and not new_community.banned %}
-            <div class="row">
-                <div class="col mx-auto">
-                    <div class="card mt-5">
-                        <div class="card-body p-6">
-                            <div class="card-title">{{ _('Found a community:') }}</div>
-                            <div class="card-body">
-                                <p>
-                                    {{ render_communityname(new_community) }}
-                                </p>
-                                <p> {% if subscribed %}
-                                        <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/unsubscribe">{{ _('Leave') }}</a>
-                                    {% else %}
-                                        {% if not new_community.instance.gone_forever %}
-                                           <a class="btn btn-primary mt-4" href="/community/{{ new_community.link() }}/subscribe">{{ _('Join') }}</a> 
-                                        {% endif %}
+    {% if new_community and not new_community.banned %}
+        <div class="row">
+            <div class="col mx-auto">
+                <div class="card mt-5">
+                    <div class="card-body p-6">
+                        <div class="card-title">{{ _("Found a community:") }}</div>
+                        <div class="card-body">
+                            <p>{{ render_communityname(new_community) }}</p>
+                            <p>
+                                {% if subscribed %}
+                                    <a class="btn btn-primary mt-4"
+                                       href="/community/{{ new_community.link() }}/unsubscribe">{{ _("Leave") }}</a>
+                                {% else %}
+                                    {% if not new_community.instance.gone_forever %}
+                                        <a class="btn btn-primary mt-4"
+                                           href="/community/{{ new_community.link() }}/subscribe">{{ _("Join") }}</a>
                                     {% endif %}
-                                </p>
-                            </div>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
-        {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}

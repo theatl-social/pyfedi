@@ -5,57 +5,70 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _('Settings') }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Modlog') }}</li>
-          </ol>
-        </nav>
-        {% include "community/_community_moderation_nav.html" %}
-        <div class="row">
-            <div class="col-12 col-md-10">
-                <h1 class="mt-2">{{ _('Moderation actions in %(community)s', community=community.display_name()) }}</h1>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/communities">{{ _("Communities") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _("Settings") }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Modlog") }}</li>
+                </ol>
+            </nav>
+            {% include "community/_community_moderation_nav.html" %}
+            <div class="row">
+                <div class="col-12 col-md-10">
+                    <h1 class="mt-2">{{ _('Moderation actions in %(community)s', community=community.display_name() ) }}</h1>
+                </div>
+                <p>{{ _("See things moderators have done in this community.") }}</p>
             </div>
-            <p>{{ _('See things moderators have done in this community.') }}</p>
-        </div>
-        {% if modlog_entries.items %}
-        <table class="table table-responsive">
-            <thead>
-                <tr>
-                    <th>{{ _('When') }}</th>
-                    <th>{{ _('Moderator') }}</th>
-                    <th>{{ _('Action') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for modlog_entry in modlog_entries.items %}
-                    <tr>
-                        <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
-                        <td>{{ render_username(modlog_entry.author, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
-                        <td>{{ modlog_entry.action_to_str() }}
-                            {% if modlog_entry.link and modlog_entry.link_text -%}
-                                <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text}}</a>
-                            {% elif modlog_entry.link_text -%}
-                                {{ modlog_entry.link_text }}
-                            {% endif -%}
-                            {% if modlog_entry.reason -%}
-                               <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
-                            {% endif -%}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        {% else -%}
-            <p>{{ _('This community has had no moderation actions yet.') }}</p>
-        {% endif -%}
-    </main>
-</div>
+            {% if modlog_entries.items %}
+                <table class="table table-responsive">
+                    <thead>
+                        <tr>
+                            <th>{{ _("When") }}</th>
+                            <th>{{ _("Moderator") }}</th>
+                            <th>{{ _("Action") }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for modlog_entry in modlog_entries.items %}
+                            <tr>
+                                <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
+                                <td>
+                                    {{ render_username(modlog_entry.author, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                                </td>
+                                <td>
+                                    {{ modlog_entry.action_to_str() }}
+                                    {% if modlog_entry.link and modlog_entry.link_text -%}
+                                        <a href="/{{ modlog_entry.link }}">{{ modlog_entry.link_text }}</a>
+                                    {% elif modlog_entry.link_text -%}
+                                        {{ modlog_entry.link_text }}
+                                    {% endif -%}
+                                    {% if modlog_entry.reason -%}
+                                        <br>
+                                        {{ _("Reason:") }} {{ modlog_entry.reason }}
+                                    {% endif -%}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else -%}
+                <p>{{ _("This community has had no moderation actions yet.") }}</p>
+            {% endif -%}
+        </main>
+    </div>
 {% endblock %}

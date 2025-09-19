@@ -49,7 +49,7 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
                         "id": reply.ap_id,
                         "inReplyTo": conversation.last_ap_id(recipient.id),
                         "mediaType": "text/html",
-                        "published": utcnow().isoformat(timespec="microseconds") + 'Z',  # Lemmy is inconsistent with the date format they use
+                        "published": utcnow().isoformat() + 'Z',  # Lemmy is inconsistent with the date format they use
                         "to": [
                             recipient.public_url()
                         ],
@@ -107,8 +107,8 @@ def update_message(reply: ChatMessage):
                 "content": reply.body_html,
                 "id": reply.ap_id,
                 "mediaType": "text/html",
-                "published": reply.created_at.isoformat(timespec="microseconds") + 'Z',
-                "updated": reply.edited_at.isoformat(timespec="microseconds") + 'Z',
+                "published": reply.created_at.isoformat() + 'Z',
+                "updated": reply.edited_at.isoformat() + 'Z',
                 "to": [recipient.public_url()],
                 "type": ap_type
             },

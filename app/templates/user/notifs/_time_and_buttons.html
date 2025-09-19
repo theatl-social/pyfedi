@@ -1,35 +1,45 @@
 <td width="80" class="text-center p-0">
     <div class="row my-2">
-        <div class="col">
-            {{ arrow.get(notification.created_at).humanize(locale=locale) }}
-        </div>
+        <div class="col">{{ arrow.get(notification.created_at).humanize(locale=locale) }}</div>
     </div>
     <div class="row my-2 ">
         <div class="col">
             {% if not notification.read -%}
-                <a class="no-underline border border-0" role="button" aria-label="{{ _('Mark as read') }}" tabindex="0" title="{{ _('Mark as read') }}" 
-                        hx-post="/notification/{{ notification.id }}/read" 
-                        hx-trigger="click throttle:1s" 
-                        hx-target="closest tr" 
-                        hx-swap="outerHTML">
+                <a class="no-underline border border-0"
+                   role="button"
+                   aria-label="{{ _('Mark as read') }}"
+                   tabindex="0"
+                   title="{{ _('Mark as read') }}"
+                   hx-post="/notification/{{ notification.id }}/read"
+                   hx-trigger="click throttle:1s"
+                   hx-target="closest tr"
+                   hx-swap="outerHTML">
                     <span class="fe fe-read"></span>
                 </a>
             {% else -%}
-                <a class="no-underline border border-0" role="button" aria-label="{{ _('Mark as unread') }}" tabindex="0" title="{{ _('Mark as unread') }}" 
-                        hx-post="/notification/{{ notification.id }}/unread" 
-                        hx-trigger="click throttle:1s" 
-                        hx-target="closest tr" 
-                        hx-swap="outerHTML">
+                <a class="no-underline border border-0"
+                   role="button"
+                   aria-label="{{ _('Mark as unread') }}"
+                   tabindex="0"
+                   title="{{ _('Mark as unread') }}"
+                   hx-post="/notification/{{ notification.id }}/unread"
+                   hx-trigger="click throttle:1s"
+                   hx-target="closest tr"
+                   hx-swap="outerHTML">
                     <span class="fe fe-circle"></span>
                 </a>
             {% endif -%}
         </div>
         <div class="col">
-            <a class="no-underline border border-0" role="button" aria-label="{{ _('Delete') }}" tabindex="0" title="{{ _('Delete') }}" 
-                    hx-post="/notification/{{ notification.id }}/delete" 
-                    hx-trigger="click throttle:1s" 
-                    hx-target="closest tr" 
-                    hx-swap="outerHTML">
+            <a class="no-underline border border-0"
+               role="button"
+               aria-label="{{ _('Delete') }}"
+               tabindex="0"
+               title="{{ _('Delete') }}"
+               hx-post="/notification/{{ notification.id }}/delete"
+               hx-trigger="click throttle:1s"
+               hx-target="closest tr"
+               hx-swap="outerHTML">
                 <span class="fe fe-delete"></span>
             </a>
         </div>

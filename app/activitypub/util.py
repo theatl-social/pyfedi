@@ -339,12 +339,17 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
         return new_tag
 
 
-def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair:
+def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair | None:
     if session is None:
         session = db.session
-    existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+    if 'id' in flair:
+        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+    else:
+        existing_flair = None
 
     if existing_flair is None:
+        if 'preferredUsername' not in flair:
+            return None
         existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
                                                               CommunityFlair.community_id == community_id).first()
     if existing_flair:
@@ -417,6 +422,8 @@ def update_community_flair_from_tags(community: Community, flair_tags: list, ses
     # Update existing flair or create new ones
     for flair in flair_tags:
         updated_flair_obj = find_flair_or_create(flair, community.id, session)
+        if updated_flair_obj is None:
+            return
         updated_flair.append(updated_flair_obj)
         
         # Track which flair should be kept.
@@ -3015,13 +3022,13 @@ def lemmy_site_data():
                 "id": 1,
                 "name": site.name,
                 "sidebar": site.sidebar,
-                "published": site.created_at.isoformat(timespec="microseconds"),
-                "updated": site.updated.isoformat(timespec="microseconds"),
+                "published": site.created_at.isoformat(),
+                "updated": site.updated.isoformat(),
                 "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
                 "banner": "",
                 "description": site.description,
                 "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
-                "last_refreshed_at": site.updated.isoformat(timespec="microseconds"),
+                "last_refreshed_at": site.updated.isoformat(),
                 "inbox_url": f"https://{current_app.config['SERVER_NAME']}/inbox",
                 "public_key": site.public_key,
                 "instance_id": 1
@@ -3045,8 +3052,8 @@ def lemmy_site_data():
                 "federation_enabled": True,
                 "captcha_enabled": get_setting('captcha_enabled', True),
                 "captcha_difficulty": "medium",
-                "published": site.created_at.isoformat(timespec="microseconds"),
-                "updated": site.updated.isoformat(timespec="microseconds"),
+                "published": site.created_at.isoformat(),
+                "updated": site.updated.isoformat(),
                 "registration_mode": site.registration_mode,
                 "reports_email_admins": site.reports_email_admins
             },
@@ -3065,7 +3072,7 @@ def lemmy_site_data():
                 "comment_per_second": 600,
                 "search": 999,
                 "search_per_second": 600,
-                "published": site.created_at.isoformat(timespec="microseconds"),
+                "published": site.created_at.isoformat(),
             },
             "counts": {
                 "id": 1,
@@ -3109,8 +3116,8 @@ def lemmy_site_data():
             "display_name": admin.display_name(),
             "avatar": 'https://' + current_app.config['SERVER_NAME'] + admin.avatar_image(),
             "banned": admin.banned,
-            "published": admin.created.isoformat(timespec="microseconds") + 'Z',
-            "updated": admin.created.isoformat(timespec="microseconds") + 'Z',
+            "published": admin.created.isoformat() + 'Z',
+            "updated": admin.created.isoformat() + 'Z',
             "actor_id": admin.public_url(),
             "local": True,
             "deleted": admin.deleted,
@@ -3226,7 +3233,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor = community.ap_profile_id
     parsed_url = urlparse(announce_actor)
     announce_actor_domain = parsed_url.netloc
-    if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
+    if announce_actor_domain != 'ovo.st' and not nodebb and announce_actor_domain != uri_domain:
         return None
 
     post_data = remote_object_to_json(uri)

@@ -4,30 +4,31 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-
 {% block app_content %}
-    <h1>{{ _('Ban %(name)s', name=user.display_name()) }}</h1>
-    <form method="post" enctype="multipart/form-data" id="add_local_community_form">
+    <h1>{{ _('Ban %(name)s', name=user.display_name() ) }}</h1>
+    <form method="post"
+          enctype="multipart/form-data"
+          id="add_local_community_form">
         {{ form.csrf_token() }}
         {{ render_field(form.reason) }}
         <datalist id="reasons">
-              <option value="{{ _('Spam') }}">
-              <option value="{{ _('Harassment') }}">
-              <option value="{{ _('Threatening violence') }}">
-              <option value="{{ _('Promoting hate / genocide') }}">
-              <option value="{{ _('Misinformation / disinformation') }}">
-              <option value="{{ _('Racism, sexism, transphobia') }}">
-              <option value="{{ _('Minor abuse or sexualization') }}">
-              <option value="{{ _('Non-consensual intimate media') }}">
-              <option value="{{ _('Prohibited transaction') }}">
-              <option value="{{ _('Impersonation') }}">
-              <option value="{{ _('Copyright violation') }}">
-              <option value="{{ _('Trademark violation') }}">
-              <option value="{{ _('Self-harm or suicide') }}">
-        </datalist>
-        {{ render_field(form.ip_address) }}
-        {{ render_field(form.purge) }}
-        {{ render_field(form.flush) }}
-        {{ render_field(form.submit) }}
-    </form>
-{% endblock %}
+            <option value="{{ _('Spam') }}">
+                <option value="{{ _('Harassment') }}">
+                    <option value="{{ _('Threatening violence') }}">
+                        <option value="{{ _('Promoting hate / genocide') }}">
+                            <option value="{{ _('Misinformation / disinformation') }}">
+                                <option value="{{ _('Racism, sexism, transphobia') }}">
+                                    <option value="{{ _('Minor abuse or sexualization') }}">
+                                        <option value="{{ _('Non-consensual intimate media') }}">
+                                            <option value="{{ _('Prohibited transaction') }}">
+                                                <option value="{{ _('Impersonation') }}">
+                                                    <option value="{{ _('Copyright violation') }}">
+                                                        <option value="{{ _('Trademark violation') }}">
+                                                            <option value="{{ _('Self-harm or suicide') }}">
+                                                            </datalist>
+                                                            {{ render_field(form.ip_address) }}
+                                                            {{ render_field(form.purge) }}
+                                                            {{ render_field(form.flush) }}
+                                                            {{ render_field(form.submit) }}
+                                                        </form>
+                                                    {% endblock %}

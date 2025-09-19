@@ -1,40 +1,38 @@
 <nav class="mb-1">
-    <h2 class="visually-hidden">{{ _('Admin navigation') }}</h2>
-    <a href="{{ url_for('admin.admin_home') }}">{{ _('Admin home') }}</a> |
+    <h2 class="visually-hidden">{{ _("Admin navigation") }}</h2>
+    <a href="{{ url_for('admin.admin_home') }}">{{ _("Admin home") }}</a> |
     {% if user_access('change instance settings', current_user.id) %}
-        <a href="{{ url_for('admin.admin_site') }}">{{ _('Site profile') }}</a> |
-        <a href="{{ url_for('admin.admin_misc') }}">{{ _('Misc settings') }}</a> |
+        <a href="{{ url_for('admin.admin_site') }}">{{ _("Site profile") }}</a> |
+        <a href="{{ url_for('admin.admin_misc') }}">{{ _("Misc settings") }}</a> |
     {% endif %}
     {% if user_access('administer all communities', current_user.id) %}
-        <a href="{{ url_for('admin.admin_communities') }}">{{ _('Communities') }}</a> |
-        <a href="{{ url_for('admin.admin_topics') }}">{{ _('Topics') }}</a> |
+        <a href="{{ url_for('admin.admin_communities') }}">{{ _("Communities") }}</a> |
+        <a href="{{ url_for('admin.admin_topics') }}">{{ _("Topics") }}</a> |
     {% endif %}
     {% if user_access('administer all users', current_user.id) %}
-        <a href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _('Users') }}</a> |
+        <a href="{{ url_for('admin.admin_users', local_remote='local') }}">{{ _("Users") }}</a> |
     {% endif %}
     {% if user_access('administer all communities', current_user.id) %}
-        <a href="{{ url_for('admin.admin_content') }}">{{ _('Content') }}</a> |
+        <a href="{{ url_for('admin.admin_content') }}">{{ _("Content") }}</a> |
     {% endif %}
     {% if g.site.registration_mode == 'RequireApplication' and user_access('approve registrations', current_user.id) %}
-        <a href="{{ url_for('admin.admin_approve_registrations') }}">{{ _('Registration applications') }}</a> |
+        <a href="{{ url_for('admin.admin_approve_registrations') }}">{{ _("Registration applications") }}</a> |
     {% endif %}
     {% if user_access('administer all communities', current_user.id) %}
-        <a href="{{ url_for('admin.admin_reports') }}">{{ _('Moderation') }}</a> |
+        <a href="{{ url_for('admin.admin_reports') }}">{{ _("Moderation") }}</a> |
     {% endif %}
     {% if user_access('change instance settings', current_user.id) %}
-        <a href="{{ url_for('admin.admin_federation') }}">{{ _('Federation') }}</a> |
-        <a href="{{ url_for('admin.admin_instances') }}">{{ _('Instances') }}</a> |
-        <a href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a> |
-        <a href="{{ url_for('admin.admin_activities') }}">{{ _('Activities') }}</a> |
+        <a href="{{ url_for('admin.admin_federation') }}">{{ _("Federation") }}</a> |
+        <a href="{{ url_for('admin.admin_instances') }}">{{ _("Instances") }}</a> |
+        <a href="{{ url_for('admin.newsletter') }}">{{ _("Newsletter") }}</a> |
+        <a href="{{ url_for('admin.admin_activities') }}">{{ _("Activities") }}</a> |
     {% endif %}
     {% if user_access('change user roles', current_user.id) %}
-        <a href="{{ url_for('admin.admin_permissions') }}">{{ _('Permissions') }}</a> |
+        <a href="{{ url_for('admin.admin_permissions') }}">{{ _("Permissions") }}</a> |
     {% endif %}
     {% if user_access('administer all communities', current_user.id) %}
-        <a href="{{ url_for('admin.admin_blocked_images') }}">{{ _('Blocked images') }}</a> |
+        <a href="{{ url_for('admin.admin_blocked_images') }}">{{ _("Blocked images") }}</a> |
     {% endif %}
-    <a href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a>
-    {% if debug_mode %}
-        | <a href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a>
-    {% endif %}    
+    <a href="{{ url_for('main.modlog') }}">{{ _("Modlog") }}</a>
+    {% if debug_mode %}| <a href="{{ url_for('dev.tools') }}">{{ _("Dev Tools") }}</a>{% endif %}
 </nav>

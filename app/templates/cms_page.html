@@ -3,14 +3,13 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="row position-relative main_pane">
-        <div class="col-12 col-lg-8">
-        <h1>{{ page.title }}</h1>
-        {{ page.body_html | safe }}
-        </div>
-    </main>
-</div>
+    <div class="row">
+        <main class="row position-relative main_pane">
+            <div class="col-12 col-lg-8">
+                <h1>{{ page.title }}</h1>
+                {{ page.body_html | safe }}
+            </div>
+        </main>
+    </div>
 {% endblock %}

@@ -3,16 +3,17 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'chats' %}
-
+{% set active_child = "chats" %}
 {% block app_content %}
-<div class="row">
+    <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('No chats') }}</div>
+                    <div class="card-title">{{ _("No chats") }}</div>
                     <div class="card-body">
-                        <p>{{ _("There are no chats involving you, yet. Start a conversation using the \"Send message\" button on someone's profile.") }}</p>
+                        <p>
+                            {{ _("There are no chats involving you, yet. Start a conversation using the \"Send message\" button on someone's profile.") }}
+                        </p>
                     </div>
                 </div>
             </div>

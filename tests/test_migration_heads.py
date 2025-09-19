@@ -112,7 +112,7 @@ def test_migration_history_linear():
                 else:
                     raise AssertionError(f"Migration current check failed: {result.stderr}")
             
-            print(f"✅ Migration history is linear")
+            print("✅ Migration history is linear")
             
         except subprocess.TimeoutExpired:
             raise AssertionError("Migration history check timed out after 30 seconds")

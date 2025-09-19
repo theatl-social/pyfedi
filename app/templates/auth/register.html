@@ -4,81 +4,98 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-
 {% block app_content %}
-
-        <div class="row">
-            <div class="col col-login mx-auto">
-                <div class="card mt-5">
-                    <div class="card-body p-6" id="registration_form">
-                        {% if site.registration_mode != 'Closed' %}
-                            <div class="card-title text-center">{{ _('Create new account') }}</div>
-                            {% if google_oauth -%}
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6" id="registration_form">
+                    {% if site.registration_mode != 'Closed' %}
+                        <div class="card-title text-center">{{ _("Create new account") }}</div>
+                        {% if google_oauth -%}
                             <p align="center">
-                                <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
-                                    <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
-
+                                <a href="/auth/google_login" class="btn btn-outline-primary">{{ _("Log in with Google") }}
+                                    <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo">
+                                </a>
                             </p>
-                            {% endif -%}
-                            {% if mastodon_oauth -%}
-                            <p align="center">OR<br><br>
-                                <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Log in with Mastodon') }}
-                                    <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"></a>
-
+                        {% endif -%}
+                        {% if mastodon_oauth -%}
+                            <p align="center">
+                                OR
+                                <br>
+                                <br>
+                                <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _("Log in with Mastodon") }}
+                                    <img src="/static/images/mastodon_ico.png" width="16" alt="Logo">
+                                </a>
                             </p>
-                            {% endif -%}
-                            {% if discord_oauth -%}
-                            <p align="center">OR<br><br>
-                                <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _('Log in with Discord') }}
-                                    <img src="/static/images/discord_ico.png" width="16" alt="Logo"></a>
-
+                        {% endif -%}
+                        {% if discord_oauth -%}
+                            <p align="center">
+                                OR
+                                <br>
+                                <br>
+                                <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _("Log in with Discord") }}
+                                    <img src="/static/images/discord_ico.png" width="16" alt="Logo">
+                                </a>
                             </p>
+                        {% endif -%}
+                        <p align="center">{{ _("or use a username and password:") }}</p>
+                        <form method="post">
+                            {{ form.csrf_token() }}
+                            {{ render_field(form.user_name) }}
+                            {{ render_field(form.email) }}
+                            {{ render_field(form.real_email) }}
+                            <div class="password-container">
+                                {{ render_field(form.password) }}
+                                <a href="#" class="hidePassword" title="{{ _('Show password') }}">
+                                    <img src="/static/images/eye-password-show.svg"
+                                         alt="{{ _('Show password') }}">
+                                </a>
+                                <a href="#" class="showPassword" title="{{ _('Hide password') }}">
+                                    <img src="/static/images/eye-password-hide.svg"
+                                         alt="{{ _('Hide password') }}">
+                                </a>
+                            </div>
+                            {{ render_field(form.password2) }}
+                            {% if site.registration_mode != "Open" %}
+                                {% if form.question -%}
+                                    <div class="mb-3 required">
+                                        {{ form.question.label.text | safe }}
+                                        {{ form.question(class_="form-control", maxlength=255) }}
+                                        {% if form.question.errors|length -%}
+                                            <br>
+                                            {% for error in form.question.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
+                                        {% endif -%}
+                                    </div>
+                                {% endif -%}
                             {% endif -%}
-                            <p align="center">{{ _('or use a username and password:') }}</p>
-                            <form method="post">
-                                {{ form.csrf_token() }}
-                                {{ render_field(form.user_name) }}
-                                {{ render_field(form.email) }}
-                                {{ render_field(form.real_email) }}
-                                <div class="password-container">
-                                    {{ render_field(form.password) }}
-                                    <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
-                                    <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
-                                </div>
-                                {{ render_field(form.password2) }}
-                                {% if site.registration_mode != "Open"%}
-                                    {% if form.question -%}
-                                        <div class="mb-3 required">{{ form.question.label.text | safe }}
-                                            {{ form.question(class_="form-control", maxlength=255) }}
-                                            {% if form.question.errors|length -%}
-                                                <br>
-                                                {% for error in form.question.errors %}
-                                                    <span style="color: red;">[{{ error }}]</span>
-                                                {% endfor %}
-                                            {% endif -%}
-                                        </div>
-                                    {% endif -%}
-                                {% endif -%}
-                                {% if form.terms -%}
-                                    {{ render_field(form.terms) }}
-                                {% endif -%}
-                                {% if form.captcha %}
-                                    {{ render_field(form.captcha) }}
-                                {% endif -%}
-                                {{ render_field(form.timezone) }}
-                                {{ render_field(form.submit) }}
-                            </form>
-                        {% else %}
-                            <p>{{ _('Registration is closed. Only admins can create accounts.') }}</p>
-                            <p>{{ _('If you would like to sign up for PieFed, choose one of the other instances in our network:') }}</p>
-                            {% if instance_chooser_enabled -%}
-                                <p class="text-center"><a class="btn btn-primary" href="/auth/instance_chooser" title="{{ _('List of open PieFed instances') }}">{{ _('Try PieFed') }}</a></p>
-                            {% else -%}
-                                <p class="text-center"><a class="btn btn-primary" href="https://join.piefed.social/try/" title="{{ _('List of open PieFed instances') }}">{{ _('Try PieFed') }}</a></p>
+                            {% if form.terms -%}
+                                {{ render_field(form.terms) }}
                             {% endif -%}
-                        {% endif %}
-                    </div>
+                            {% if form.captcha %}
+                                {{ render_field(form.captcha) }}
+                            {% endif -%}
+                            {{ render_field(form.timezone) }}
+                            {{ render_field(form.submit) }}
+                        </form>
+                    {% else %}
+                        <p>{{ _("Registration is closed. Only admins can create accounts.") }}</p>
+                        <p>{{ _("If you would like to sign up for PieFed, choose one of the other instances in our network:") }}</p>
+                        {% if instance_chooser_enabled -%}
+                            <p class="text-center">
+                                <a class="btn btn-primary"
+                                   href="/auth/instance_chooser"
+                                   title="{{ _('List of open PieFed instances') }}">{{ _("Try PieFed") }}</a>
+                            </p>
+                        {% else -%}
+                            <p class="text-center">
+                                <a class="btn btn-primary"
+                                   href="https://join.piefed.social/try/"
+                                   title="{{ _('List of open PieFed instances') }}">{{ _("Try PieFed") }}</a>
+                            </p>
+                        {% endif -%}
+                    {% endif %}
                 </div>
             </div>
         </div>
+    </div>
 {% endblock %}

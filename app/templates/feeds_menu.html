@@ -1,26 +1,51 @@
 <ul class="text-end text-lg-start">
     {% if menu_instance_feeds -%}
         {% for feed_menu_item in menu_instance_feeds -%}
-            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+            <li>
+                <a class="dropdown-item{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                   href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+            </li>
         {% endfor -%}
-        <li><hr class="dropdown-divider"></li>
+        <li>
+            <hr class="dropdown-divider">
+        </li>
     {% endif -%}
     {% if menu_my_feeds or menu_subscribed_feeds -%}
         {% if not current_user.is_anonymous -%}
-            <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></li>
+            <li>
+                <a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}"
+                   href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+            </li>
         {% endif -%}
         {% for feed_menu_item in menu_my_feeds -%}
-            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+            <li>
+                <a class="dropdown-item{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                   href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+            </li>
         {% endfor -%}
         {% for feed_menu_item in menu_subscribed_feeds -%}
-            <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+            <li>
+                <a class="dropdown-item{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                   href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+            </li>
         {% endfor -%}
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li>
+            <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}"
+               href="/feeds">{{ _("Public Feeds") }}</a>
+        </li>
     {% else -%}
         {% if not current_user.is_anonymous -%}
-            <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></li>
+            <li>
+                <a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}"
+                   href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+            </li>
         {% endif -%}
-        <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+        <li>
+            <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}"
+               href="/feeds">{{ _("Public Feeds") }}</a>
+        </li>
     {% endif -%}
 </ul>

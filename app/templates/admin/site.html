@@ -4,47 +4,47 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = 'admin_site' %}
-
-
+{% set active_child = "admin_site" %}
 {% block app_content %}
-
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Site profile') }}</h1>
-        <form method="post" enctype="multipart/form-data">
-            {{ form.csrf_token() }}
-            <p>{{ _('Configure the flair the instance, by giving it a name, a short slogan, basic info for the sidebar and a logo. This information appears in link previews in social media.') }}</p>
-            {{ render_field(form.name) }}
-            {{ render_field(form.description) }}
-            {{ render_field(form.sidebar) }}
-            <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
-            {{ render_field(form.announcement) }}
-            <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
-            {{ render_field(form.icon) }}
-            <p class="small field_hint">{{ _('Provide a square image, minimum 50 pixels wide but ideally 152+ pixels.') }}
-            {{ _('It is best to use the PNG file format as that is most widely compatible for PWA icons.') }}
-            <h2>{{ _('About this instance') }}</h2>
-            <p>{{ _('Provide a more extensive description of the instance, set a contact address and provide legal information. This information appears on the <a href="/about">about</a> page.') }}</p>
-            {{ render_field(form.about) }}
-            <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
-            {{ render_field(form.legal_information) }}
-            <p class="small field_hint">{{ _('You can use markdown here.') }}</p>
-            {{ render_field(form.contact_email) }}
-            {{ render_field(form.tos_url) }}
-            {{ render_field(form.privacy_url) }}
-            <p class="small field_hint">{{ _('Create a page in the "Pages" area then put it\'s address in here.') }}</p>
-            {{ render_field(form.submit) }}
-        </form>
-    </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
-    </div>
-</div>
-<hr />
-{% endblock %}
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Site profile") }}</h1>
+            <form method="post" enctype="multipart/form-data">
+                {{ form.csrf_token() }}
+                <p>
+                    {{ _("Configure the flair the instance, by giving it a name, a short slogan, basic info for the sidebar and a logo. This information appears in link previews in social media.") }}
+                </p>
+                {{ render_field(form.name) }}
+                {{ render_field(form.description) }}
+                {{ render_field(form.sidebar) }}
+                <p class="small field_hint">{{ _("You can use markdown here.") }}</p>
+                {{ render_field(form.announcement) }}
+                <p class="small field_hint">{{ _("You can use markdown here.") }}</p>
+                {{ render_field(form.icon) }}
+                <p class="small field_hint">
+                    {{ _("Provide a square image, minimum 50 pixels wide but ideally 152+ pixels.") }}
+                    {{ _("It is best to use the PNG file format as that is most widely compatible for PWA icons.") }}
+                    <h2>{{ _("About this instance") }}</h2>
+                    <p>
+                        {{ _("Provide a more extensive description of the instance, set a contact address and provide legal information. This information appears on the <a href=\"/about\">about</a> page.") }}
+                    </p>
+                    {{ render_field(form.about) }}
+                    <p class="small field_hint">{{ _("You can use markdown here.") }}</p>
+                    {{ render_field(form.legal_information) }}
+                    <p class="small field_hint">{{ _("You can use markdown here.") }}</p>
+                    {{ render_field(form.contact_email) }}
+                    {{ render_field(form.tos_url) }}
+                    {{ render_field(form.privacy_url) }}
+                    <p class="small field_hint">{{ _("Create a page in the \"Pages\" area then put it's address in here.") }}</p>
+                    {{ render_field(form.submit) }}
+                </form>
+            </div>
+        </div>
+        <hr />
+        <div class="row">
+            <div class="col">{% include 'admin/_nav.html' %}</div>
+        </div>
+        <hr />
+    {% endblock %}

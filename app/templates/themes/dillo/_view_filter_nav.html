@@ -1,17 +1,22 @@
-<div class="view_filter btn-group mt-1 mb-2" aria-label="{{ _('Post filters: ') }}">
-    {{ _('Post filters: ') }}
+<div class="view_filter btn-group mt-1 mb-2"
+     aria-label="{{ _('Post filters: ') }}">
+    {{ _("Post filters: ") }}
     {% if not current_user.is_anonymous %}
-        <a href="/home/{{ sort }}/subscribed" class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from joined communities') }}">
-            {{ _('Subscribed') }}
-        </a> |
+        <a href="/home/{{ sort }}/subscribed"
+           class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}"
+           rel="nofollow noindex"
+           title="{{ _('Posts from joined communities') }}">{{ _("Subscribed") }}</a> |
     {% endif %}
-    <a href="/home/{{ sort }}/local" class="btn {{ 'btn-primary' if view_filter == 'local' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts on this instance') }}">
-        {{ _('Local') }}
-    </a> |
-    <a href="/home/{{ sort }}/popular" class="btn {{ 'btn-primary' if view_filter == 'popular' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from popular communities') }}">
-        {{ _('Popular') }}
-    </a> |
-    <a href="/home/{{ sort }}/all" class="btn {{ 'btn-primary' if view_filter == 'all' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('No filter') }}">
-        {{ _('All') }}
-    </a>
+    <a href="/home/{{ sort }}/local"
+       class="btn {{ 'btn-primary' if view_filter == 'local' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Posts on this instance') }}">{{ _("Local") }}</a> |
+    <a href="/home/{{ sort }}/popular"
+       class="btn {{ 'btn-primary' if view_filter == 'popular' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Posts from popular communities') }}">{{ _("Popular") }}</a> |
+    <a href="/home/{{ sort }}/all"
+       class="btn {{ 'btn-primary' if view_filter == 'all' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('No filter') }}">{{ _("All") }}</a>
 </div>

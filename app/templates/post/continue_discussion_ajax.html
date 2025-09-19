@@ -1,9 +1,9 @@
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
 {% if replies -%}
-{% for reply in replies -%}
-  {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
-      {% include 'post/_post_reply_teaser.html' %}
-  {% endwith %}
-{% endfor -%}
+    {% for reply in replies -%}
+        {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
+            {% include 'post/_post_reply_teaser.html' %}
+        {% endwith %}
+    {% endfor -%}
 {% endif -%}

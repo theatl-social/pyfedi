@@ -4,79 +4,82 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_activities' %}
-
+{% set active_child = "admin_activities" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Activities') }}</h1>
-        Result Filter: 
-        <a href="{{ url_for('admin.admin_activities', direction=request.args.get('direction')) }}">All</a> |
-        <a href="{{ url_for('admin.admin_activities', result='failure', direction=request.args.get('direction')) }}">Failure</a> |
-        <a href="{{ url_for('admin.admin_activities', result='success', direction=request.args.get('direction')) }}">Success</a> |
-        <a href="{{ url_for('admin.admin_activities', result='ignored', direction=request.args.get('direction')) }}">Ignored</a> |
-        <a href="{{ url_for('admin.admin_activities', result='processing', direction=request.args.get('direction')) }}">Processing</a> ---
-        Direction Filter:
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result')) }}">Both</a> |
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='in') }}">In</a> |
-        <a href="{{ url_for('admin.admin_activities', result=request.args.get('result'), direction='out') }}">Out</a>
-        <div>
-            <table class="table">
-                <tr>
-                <th>When</th>
-                <th>Direction</th>
-                <th>ID</th>
-                <th>Type</th>
-                <th>Result</th>
-                <th>Message</th>
-                <th>JSON</th>
-                </tr>
-                {% for activity in activities.items %}
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Activities") }}</h1>
+            Result Filter:
+            <a href="{{ url_for('admin.admin_activities', direction=request.args.get('direction') ) }}">All</a> |
+            <a href="{{ url_for('admin.admin_activities', result='failure', direction=request.args.get('direction') ) }}">Failure</a> |
+            <a href="{{ url_for('admin.admin_activities', result='success', direction=request.args.get('direction') ) }}">Success</a> |
+            <a href="{{ url_for('admin.admin_activities', result='ignored', direction=request.args.get('direction') ) }}">Ignored</a> |
+            <a href="{{ url_for('admin.admin_activities', result='processing', direction=request.args.get('direction') ) }}">Processing</a> ---
+            Direction Filter:
+            <a href="{{ url_for('admin.admin_activities', result=request.args.get('result') ) }}">Both</a> |
+            <a href="{{ url_for('admin.admin_activities', result=request.args.get('result') , direction='in') }}">In</a> |
+            <a href="{{ url_for('admin.admin_activities', result=request.args.get('result') , direction='out') }}">Out</a>
+            <div>
+                <table class="table">
                     <tr>
-                        <td>{{ arrow.get(activity.created_at).humanize(locale=locale) }}</td>
-                        <td>{{ activity.direction }}</td>
-                        <td>{{ activity.activity_id }}</td>
-                        <td>{{ activity.activity_type if activity.activity_type else ''  }}</td>
-                        {% if activity.result == 'success' %}
-                            <td><span style="color: green;">{{ activity.result }}</span></td>
-                        {% elif activity.result == 'ignored' %}
-                            <td><span style="color: orange;">{{ activity.result }}</span></td>
-                        {% else %}
-                            <td><span style="color: red;">{{ activity.result }}</span></td>
-                        {% endif %}
-                        <td>{{ activity.exception_message if activity.exception_message else '' }}</td>
-                        <td>
-                        {% if activity.activity_json is none %}
-                            None
-                        {% else %}
-                            <a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">View</a>
-                        {% endif %}
-                        </td>
+                        <th>When</th>
+                        <th>Direction</th>
+                        <th>ID</th>
+                        <th>Type</th>
+                        <th>Result</th>
+                        <th>Message</th>
+                        <th>JSON</th>
                     </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+                    {% for activity in activities.items %}
+                        <tr>
+                            <td>{{ arrow.get(activity.created_at).humanize(locale=locale) }}</td>
+                            <td>{{ activity.direction }}</td>
+                            <td>{{ activity.activity_id }}</td>
+                            <td>{{ activity.activity_type if activity.activity_type else '' }}</td>
+                            {% if activity.result == 'success' %}
+                                <td>
+                                    <span style="color: green;">{{ activity.result }}</span>
+                                </td>
+                            {% elif activity.result == 'ignored' %}
+                                <td>
+                                    <span style="color: orange;">{{ activity.result }}</span>
+                                </td>
+                            {% else %}
+                                <td>
+                                    <span style="color: red;">{{ activity.result }}</span>
+                                </td>
+                            {% endif %}
+                            <td>{{ activity.exception_message if activity.exception_message else '' }}</td>
+                            <td>
+                                {% if activity.activity_json is none %}
+                                    None
+                                {% else %}
+                                    <a href="{{ url_for('admin.activity_json', activity_id=activity.id) }}">View</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-        </nav>
+            </nav>
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

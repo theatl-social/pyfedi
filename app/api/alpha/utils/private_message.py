@@ -13,8 +13,7 @@ from app.shared.tasks import task_selector
 def get_private_message_list(auth, data):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
-    unread_only = data['unread_only'] if data and 'unread_only' in data else 'true'
-    unread_only = True if unread_only == 'true' else False
+    unread_only = data['unread_only'] if data and 'unread_only' in data else False
 
     user_id = authorise_api_user(auth)
 

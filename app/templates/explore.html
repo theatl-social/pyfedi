@@ -4,30 +4,51 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
-{% set active_child = 'list_topics' -%}
-
+{% set active_child = "list_topics" -%}
 {% block app_content -%}
     <ul class="nav nav-tabs nav-justified mt-4">
-          <li class="nav-item">
-            <a href="#topics_tab" data-bs-target="#topics_tab" class="active nav-link" id="topics-pill" data-bs-toggle="pill" role="tab" aria-current="page" aria-selected="true">{{ _('Topics') }}</a>
-          </li>
-          <li class="nav-item">
-            <a href="#feeds_tab" data-bs-target="#feeds_tab" class="nav-link" id="feeds-pill" data-bs-toggle="pill" role="tab" aria-current="page" aria-selected="false">{{ _('Feeds') }}</a>
-          </li>
-        </ul>
+        <li class="nav-item">
+            <a href="#topics_tab"
+               data-bs-target="#topics_tab"
+               class="active nav-link"
+               id="topics-pill"
+               data-bs-toggle="pill"
+               role="tab"
+               aria-current="page"
+               aria-selected="true">{{ _("Topics") }}</a>
+        </li>
+        <li class="nav-item">
+            <a href="#feeds_tab"
+               data-bs-target="#feeds_tab"
+               class="nav-link"
+               id="feeds-pill"
+               data-bs-toggle="pill"
+               role="tab"
+               aria-current="page"
+               aria-selected="false">{{ _("Feeds") }}</a>
+        </li>
+    </ul>
     <div class="tab-content">
-        <div class="tab-pane border-0 active show fade" id="topics_tab" role="tabpanel" aria-labelledby="topics-pill">
+        <div class="tab-pane border-0 active show fade"
+             id="topics_tab"
+             role="tabpanel"
+             aria-labelledby="topics-pill">
             {% if topics|length > 0 -%}
                 {% macro render_topic(topic, depth) -%}
                     <li>
-                        {% if depth == 0 -%}<strong>{% endif -%}
-                            <a href="/topic/{{ topic['topic'].path() }}" class="d-inline-block pt-1 pb-1">{{ topic['topic'].name }}</a>
-                        {% if depth == 0 -%}</strong>{% endif -%}
+                        {% if depth == 0 -%}
+                            <strong>
+                            {% endif -%}
+                            <a href="/topic/{{ topic['topic'].path() }}"
+                               class="d-inline-block pt-1 pb-1">{{ topic['topic'].name }}</a>
+                            {% if depth == 0 -%}
+                            </strong>
+                        {% endif -%}
                         {% if topic['children'] -%}
                             <ul>
-                            {% for topic in topic['children'] -%}
-                                {{ render_topic(topic, depth + 1)|safe }}
-                            {% endfor -%}
+                                {% for topic in topic['children'] -%}
+                                    {{ render_topic(topic, depth + 1) |safe }}
+                                {% endfor -%}
                             </ul>
                         {% endif -%}
                     </li>
@@ -35,40 +56,62 @@
                 <div class="table-responsive-md mt-4">
                     <ul class="topics_list">
                         {% for topic in topics -%}
-                            {{ render_topic(topic, 0)|safe }}
+                            {{ render_topic(topic, 0) |safe }}
                         {% endfor -%}
                     </ul>
                 </div>
             {% else -%}
-                <p>{{ _('There are no communities yet.') }}</p>
+                <p>{{ _("There are no communities yet.") }}</p>
             {% endif -%}
         </div>
-        <div class="tab-pane border-0 fade" id="feeds_tab" role="tabpanel" aria-labelledby="feeds-pill">
+        <div class="tab-pane border-0 fade"
+             id="feeds_tab"
+             role="tabpanel"
+             aria-labelledby="feeds-pill">
             <ul class="list-group mb-4 mt-4">
                 {% if menu_instance_feeds -%}
                     {% for feed_menu_item in menu_instance_feeds -%}
-                        <li class="list-group-item"><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                        <li class="list-group-item">
+                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                        </li>
                     {% endfor -%}
                 {% endif -%}
                 {% if menu_my_feeds or menu_subscribed_feeds -%}
                     {% if not current_user.is_anonymous -%}
-                        <li class="list-group-item"><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></li>
+                        <li class="list-group-item">
+                            <a class="{% if active_child == 'user_feeds' %} active{% endif %}"
+                               href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+                        </li>
                     {% endif -%}
                     {% for feed_menu_item in menu_my_feeds -%}
-                        <li class="list-group-item"><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                        <li class="list-group-item">
+                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                        </li>
                     {% endfor -%}
                     {% for feed_menu_item in menu_subscribed_feeds -%}
-                        <li class="list-group-item"><a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
+                        <li class="list-group-item">
+                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                        </li>
                     {% endfor -%}
                 {% else -%}
                     {% if not current_user.is_anonymous -%}
-                        <li class="list-group-item"><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></li>
+                        <li class="list-group-item">
+                            <a class="{% if active_child == 'user_feeds' %} active{% endif %}"
+                               href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+                        </li>
                     {% endif -%}
                 {% endif -%}
-                <li class="list-group-item"><a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
+                <li class="list-group-item">
+                    <a class="{% if active_child == 'public_feeds' %} active{% endif %}"
+                       href="/feeds">{{ _("Public Feeds") }}</a>
+                </li>
             </ul>
         </div>
     </div>
-
-    <p align="center"><a href="/communities" class="btn btn-primary">{{ _('More communities') }}</a></p>
+    <p align="center">
+        <a href="/communities" class="btn btn-primary">{{ _("More communities") }}</a>
+    </p>
 {% endblock -%}
