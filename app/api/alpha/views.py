@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from flask import current_app, g
 from sqlalchemy import text, func, or_
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import cache, db
 from app.activitypub.util import active_month
@@ -18,27 +19,22 @@ from app.shared.post import get_post_flair_list
 
 
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, communities_moderating=None, banned_from=None,
-              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict | None:
+              bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict:
     if isinstance(post, int):
-        post = Post.query.filter_by(id=post, deleted=False).first()
-        if post is None:
-            return None
+        post = Post.query.filter_by(id=post, deleted=False).one()
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
-        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'nsfw', 'sticky']
+        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
-        
-        if not v1['nsfw']:
-            # For whatever reason, nsfw can sometimes be null
-            v1['nsfw'] = False
-        
+
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                    'ap_id': post.profile_id(),
                    'local': post.is_local(),
                    'language_id': post.language_id if post.language_id else 0,
                    'removed': False,
-                   'locked': not post.comments_enabled})
+                   'locked': not post.comments_enabled,
+                   'nsfw': post.nsfw if post.nsfw is not None else False})
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
@@ -194,8 +190,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         xplist = []
         if post.cross_posts:
             for xp_id in post.cross_posts:
-                if entry := post_view(post=xp_id, variant=2, stub=True):
+                try:
+                    entry = post_view(post=xp_id, variant=2, stub=True)
                     xplist.append(entry)
+                except NoResultFound:
+                    continue
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
               'community_view': community_view(community=post.community, variant=2),
