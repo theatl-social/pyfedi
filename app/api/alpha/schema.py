@@ -7,7 +7,7 @@ from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, vali
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
 sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
-             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled"]
+             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old"]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopMonth", "TopThreeMonths",
@@ -148,7 +148,7 @@ class InstanceBlockView(DefaultSchema):
 class LocalUser(DefaultSchema):
     default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
     default_listing_type = fields.String(required=True, validate=validate.OneOf(listing_type_list))
-    default_sort_type = fields.String(required=True, validate=validate.OneOf(sort_list))
+    default_sort_type = fields.String(validate=validate.OneOf(sort_list))
     show_bot_accounts = fields.Boolean(required=True)
     show_nsfl = fields.Boolean(required=True)
     show_nsfw = fields.Boolean(required=True)
@@ -266,6 +266,17 @@ class SearchInstanceChooser(DefaultSchema):
     newbie = fields.String()
 
 
+class WidthHeight(DefaultSchema):
+    width = fields.Integer()
+    height = fields.Integer()
+
+
+class MiniCrossPosts(DefaultSchema):
+    post_id = fields.Integer()
+    reply_count = fields.Integer()
+    community_name = fields.String()
+
+
 class Post(DefaultSchema):
     ap_id = fields.Url(required=True)
     community_id = fields.Integer(required=True)
@@ -286,6 +297,8 @@ class Post(DefaultSchema):
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     url = fields.Url()
+    image_details = fields.Nested(WidthHeight)
+    cross_posts = fields.List(fields.Nested(MiniCrossPosts))
 
 
 class PostAggregates(DefaultSchema):
@@ -296,6 +309,7 @@ class PostAggregates(DefaultSchema):
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
+    cross_posts = fields.Integer(required=True)
 
 
 class CommunityFlair(DefaultSchema):
@@ -762,7 +776,7 @@ class CommentReplyView(DefaultSchema):
 
 
 class UserRepliesResponse(DefaultSchema):
-    next_page = fields.Integer(required=True, allow_none=True)
+    next_page = fields.String(allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
@@ -774,7 +788,7 @@ class UserMentionsRequest(DefaultSchema):
 
 
 class UserMentionsResponse(DefaultSchema):
-    next_page = fields.Integer(required=True, allow_none=True)
+    next_page = fields.String(allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
@@ -856,7 +870,7 @@ class UserNotificationsResponse(DefaultSchema):
     items = fields.List(fields.Nested(UserNotificationItemView), required=True)
     status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
     username = fields.String(required=True)
-    next_page = fields.Integer(required=True, allow_none=True)
+    next_page = fields.String(allow_none=True)
 
 
 class UserNotificationStateRequest(DefaultSchema):
@@ -980,7 +994,7 @@ class CommentLikeView(DefaultSchema):
 
 
 class ListCommentLikesResponse(DefaultSchema):
-    comment_likes = fields.List(fields.Nested(CommentLikeView, required=True))
+    comment_likes = fields.List(fields.Nested(CommentLikeView), required=True)
     next_page = fields.String(allow_none=True)
 
 
@@ -995,7 +1009,7 @@ class PostLikeView(CommentLikeView):
 
 
 class ListPostLikesResponse(DefaultSchema):
-    post_likes = fields.List(fields.Nested(PostLikeView, required=True))
+    post_likes = fields.List(fields.Nested(PostLikeView), required=True)
     next_page = fields.String(allow_none=True)
 
 
@@ -1232,6 +1246,7 @@ class LikePostRequest(Schema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)
     private = fields.Boolean()
+    auth = fields.String()      # Some apps include their bearer token here when they really should just have it in the http header
 
 
 class SavePostRequest(DefaultSchema):

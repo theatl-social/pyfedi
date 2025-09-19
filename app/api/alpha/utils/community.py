@@ -27,8 +27,7 @@ def get_community_list(auth, data):
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
-    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else 'false'
-    show_nsfw = True if show_nsfw == 'true' else False
+    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else False
     show_nsfl = show_nsfw
 
     user = authorise_api_user(auth, return_type='model') if auth else None

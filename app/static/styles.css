@@ -2094,12 +2094,12 @@ a.unread:before, div.unread:before {
 }
 .post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
   padding: 0.2em 5px;
-  font-style: italic;
   font-family: "Open Sans", "Segoe UI", Tahoma, Arial, sans-serif;
   margin: 0 3% 6px 3%;
   font-size: 95%;
   border-left-style: solid;
   border-left-width: 4px;
+  background-color: var(--bs-secondary-bg-subtle);
 }
 .post_body blockquote p, .comment_body blockquote p, #preview blockquote p, .reply_preview blockquote p, .accordion-body blockquote p, .post_col blockquote p {
   margin-bottom: 0px;
@@ -2846,6 +2846,11 @@ form h5 {
   overflow-y: auto;
 }
 
+#typeTab .nav-link {
+  padding-left: 3px;
+  padding-right: 3px;
+}
+
 .accordion-button {
   padding: 7px 12px;
 }
@@ -3006,6 +3011,9 @@ body.compact-min .form-control {
 }
 body.compact-min .form-select {
   padding: 0.275rem 2rem 0.275rem 0.55rem;
+}
+body.compact-min .ts-wrapper {
+  padding: 0;
 }
 
 body.compact-max .post_teaser {

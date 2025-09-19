@@ -494,7 +494,7 @@ def get_reply_like_list(auth, data):
         banned_from_community_user_ids = list(db.session.execute(text
             ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post_reply.community_id}).scalars())
         likes = PostReplyVote.query.filter(
-            PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect != 0).order_by(
+            PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect != 0).order_by(PostReplyVote.effect).order_by(
             PostReplyVote.created_at).paginate(page=page, per_page=limit, error_out=False)
         comment_likes = []
         for like in likes:

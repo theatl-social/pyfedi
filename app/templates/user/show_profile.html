@@ -153,9 +153,11 @@
                 {% if user.stripe_subscription_id %}<strong>{{ _('Donor') }}</strong><br />{% endif %}
             {% endif -%}
         </p>
-        <div class="profile_bio">
-            {{ user.about_html|safe }}
-        </div>
+        {% if user.about_html -%}
+            <div class="profile_bio">
+                {{ user.about_html|safe }}
+            </div>
+        {% endif -%}
         {% if user.extra_fields -%}
             <ul class="list-group">
                 {% for field in user.extra_fields -%}

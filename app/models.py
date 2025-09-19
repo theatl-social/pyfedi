@@ -1900,7 +1900,7 @@ class Post(db.Model):
         db.session.query(Event).filter(Event.post_id == self.id).delete()
         db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
-        db.session.query(Reminder).filter(Report.reminder_destination == self.id, Report.reminder_type == 1).delete()
+        db.session.query(Reminder).filter(Reminder.reminder_destination == self.id, Reminder.reminder_type == 1).delete()
         db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
 
         reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE post_id = :post_id'),
@@ -2442,7 +2442,7 @@ class PostReply(db.Model):
         """
 
         db.session.query(PostReplyBookmark).filter(PostReplyBookmark.post_reply_id == self.id).delete()
-        db.session.query(Reminder).filter(Report.reminder_destination == self.id, Report.reminder_type == 2).delete()
+        db.session.query(Reminder).filter(Reminder.reminder_destination == self.id, Reminder.reminder_type == 2).delete()
         db.session.query(ModLog).filter(ModLog.reply_id == self.id).update({ModLog.reply_id: None})
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
         db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
@@ -3345,17 +3345,11 @@ class CommunityFlair(db.Model):
         if self.ap_id:
             return self.ap_id
 
-        community = Community.query.get(self.community_id)
+        community = db.session.query(Community).get(self.community_id)
 
-        if not community:
-            return None
-
-        if community.is_local():
-            self.ap_id = community.public_url() + f"/tag/{self.id}"
-            db.session.commit()
-            return self.ap_id
-        
-        return None
+        self.ap_id = community.local_url() + f"/tag/{self.id}"
+        db.session.commit()
+        return self.ap_id
 
 
 class UserFlair(db.Model):

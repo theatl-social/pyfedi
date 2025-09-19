@@ -50,6 +50,8 @@ def get_site_instance_chooser_search(query_params):
         if instance.hide or instance_banned(instance.domain):
             continue
         instance_data = instance.data
+        if instance_data['registration_mode'] == 'Closed':
+            continue
         instance_data['domain'] = instance.domain
         instance_data['id'] = instance.id
         instance_data['language'] = instance_data['language']['name']

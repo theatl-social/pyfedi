@@ -233,6 +233,80 @@
         </div>
         {% if post.type == POST_TYPE_POLL -%}
             <div class="post_poll" lang="{{ post.language_code() }}">
+                {% if poll_finished and poll_total_votes == 0 -%}
+                    <p>
+                        {{ _('The poll has finished, yet no votes were cast.') }}
+                    </p>
+                {% else -%}
+                    {% if has_voted -%}
+                        <ul>
+                            {% for choice in poll_choices -%}
+                                <li>
+                                    <div class="vote_bar">
+                                        <p class="mb-0 mt-3">
+                                            {{ choice.choice_text }}
+                                        </p>
+                                        <div class="vote_score" style="width: {{ choice.percentage(poll_total_votes) }}%">
+                                            {{ choice.percentage(poll_total_votes) }}%
+                                        </div>
+                                    </div>
+                                </li>
+                            {% endfor -%}
+                        </ul>
+                    {% else -%}
+                        <div id="pollResults" class="d-none mb-4">
+                            {% if poll_total_votes > 0 %}
+                            <ul>
+                                {% for choice in poll_choices -%}
+                                    <li>
+                                        <div class="vote_bar">
+                                            <p class="mb-0 mt-3">
+                                                {{ choice.choice_text }}
+                                            </p>
+                                            <div class="vote_score" style="width: {{ choice.percentage(poll_total_votes) }}%">
+                                                {{ choice.percentage(poll_total_votes) }}%
+                                            </div>
+                                        </div>
+                                    </li>
+                                {% endfor -%}
+                            </ul>
+                            {% else -%}
+                                <p>{{ _('No votes have been cast yet.') }}</p>
+                            {% endif -%}
+                            <p class="small"><a href="#" id="showVotingForm">{{ _('Show voting form') }}</a></p>
+                        </div>
+                        <div id="pollVotingForm" class="mb-4">
+                            {% if current_user.is_authenticated -%}
+                                <form action='/poll/{{ post.id }}/vote' method="post">
+                            {% else -%}
+                                <form action='/auth/login' method="get">
+                                    <input type="hidden" name="next" value="/post/{{ post.id }}">
+                            {% endif -%}
+                            <ul>
+                                {% for choice in poll_choices -%}
+                                    {% if poll_data.mode == 'single' -%}
+                                        <li>
+                                            <label for="choice_{{ choice.id }}">
+                                                <input type="radio" name="poll_choice" id="choice_{{ choice.id }}" required value="{{ choice.id }}"> {{ choice.choice_text }}
+                                            </label>
+                                        </li>
+                                    {% else -%}
+                                        <li>
+                                            <label for="choice_{{ choice.id }}">
+                                                <input type="checkbox" name="poll_choice[]" id="choice_{{ choice.id }}" value="{{ choice.id }}"> {{ choice.choice_text }}
+                                            </label>
+                                        </li>
+                                    {% endif -%}
+                                {% endfor -%}
+                            </ul>
+                            {{ form.csrf_token() }}
+                            <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}"> <a href="#" id="viewPollResults" class="small">{{ _('View results') }}</a>
+                            </form>
+                        </div>
+                    {% endif -%}
+                    <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
+                    <p>{{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.</p>
+                {% endif -%}
                 {% if poll_results and poll_total_votes == 0 -%}
                     <p>
                         {{ _('The poll has finished, yet no votes were cast.') }}

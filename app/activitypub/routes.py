@@ -304,9 +304,8 @@ def lemmy_federated_instances():
     for instance in BannedInstances.query.all():
         blocked.append({"id": instance.id, "domain": instance.domain, "published": utcnow(), "updated": utcnow()})
     for instance in instances:
-        instance_data = {"id": instance.id, "domain": instance.domain,
-                         "published": instance.created_at.isoformat(timespec="microseconds"),
-                         "updated": instance.updated_at.isoformat(timespec="microseconds")}
+        instance_data = {"id": instance.id, "domain": instance.domain, "published": instance.created_at.isoformat(),
+                         "updated": instance.updated_at.isoformat()}
         if instance.software:
             instance_data['software'] = instance.software
         if instance.version:
@@ -1097,6 +1096,8 @@ def process_inbox_request(request_json, store_ap_json):
                             else:
                                 refresh_community_profile(community.id, core_activity['object'])
                                 log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                                if community.is_local():
+                                    announce_activity_to_followers(community, user, request_json)
                         else:
                             log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'Unacceptable type (create): ' + object_type)
                     return
@@ -1328,7 +1329,7 @@ def process_inbox_request(request_json, store_ap_json):
                                         if not community_to_remove.is_local():  # this is a remote community, so activitypub is needed
                                             if not community_to_remove.instance.gone_forever:
                                                 follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                                                if community_to_remove.instance.domain == 'a.gup.pe':
+                                                if community_to_remove.instance.domain == 'ovo.st':
                                                     join_request = session.query(CommunityJoinRequest).filter_by(user_id=fm_user.id,
                                                                                                         community_id=community_to_remove.id).first()
                                                     if join_request:
@@ -1894,18 +1895,21 @@ def post_ap2(post_id):
 @bp.route('/post/<int:post_id>', methods=['GET', 'HEAD', 'POST'])
 def post_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
-        post = Post.query.get_or_404(post_id)
-        if request.method == 'GET':
-            post_data = post_to_page(post)
-            post_data['@context'] = default_context()
-        else:  # HEAD request
-            post_data = []
-        resp = jsonify(post_data)
-        resp.content_type = 'application/activity+json'
-        resp.headers.set('Vary', 'Accept')
-        resp.headers.set('Link',
-                         f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
-        return resp
+        post: Post = Post.query.get_or_404(post_id)
+        if post.is_local():
+            if request.method == 'GET':
+                post_data = post_to_page(post)
+                post_data['@context'] = default_context()
+            else:  # HEAD request
+                post_data = []
+            resp = jsonify(post_data)
+            resp.content_type = 'application/activity+json'
+            resp.headers.set('Vary', 'Accept')
+            resp.headers.set('Link',
+                             f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
+            return resp
+        else:
+            return redirect(post.ap_id, code=301)
     else:
         return show_post(post_id)
 

@@ -99,7 +99,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                 is_peertube = is_guppe = is_wordpress = False
                 if community.ap_profile_id == f"https://{server}/video-channels/{name}":
                     is_peertube = True
-                elif community.ap_profile_id.startswith('https://a.gup.pe/u'):
+                elif community.ap_profile_id.startswith('https://ovo.st/club'):
                     is_guppe = True
 
                 # get mods
@@ -811,6 +811,29 @@ def hashtags_used_in_community(community_id: int, content_filters):
     GROUP BY t.id
     ORDER BY pc DESC
     LIMIT 30;"""), {'community_id': community_id}).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
+def hashtags_used_in_communities(community_ids: List[int], content_filters):
+    if community_ids is None or len(list(community_ids)) == 0:
+        return None
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+    FROM "tag" AS t
+    INNER JOIN post_tag pt ON t.id = pt.tag_id
+    INNER JOIN "post" ON pt.post_id = post.id
+    WHERE post.community_id IN :community_ids
+      AND t.banned IS FALSE AND post.deleted IS FALSE
+    GROUP BY t.id
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_ids': tuple(community_ids)}).mappings().all()
 
     def tag_blocked(tag):
         for name, keywords in content_filters.items() if content_filters else {}:

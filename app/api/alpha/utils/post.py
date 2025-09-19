@@ -712,7 +712,7 @@ def get_post_like_list(auth, data):
         banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
         banned_from_community_user_ids = list(db.session.execute(text
             ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post.community_id}).scalars())
-        likes = PostVote.query.filter(PostVote.post_id == post_id, PostVote.effect != 0).order_by(
+        likes = PostVote.query.filter(PostVote.post_id == post_id, PostVote.effect != 0).order_by(PostVote.effect).order_by(
                   PostVote.created_at).paginate(page=page, per_page=limit, error_out=False)
         post_likes = []
         for like in likes:
