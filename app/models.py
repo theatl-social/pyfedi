@@ -1097,7 +1097,7 @@ class User(UserMixin, db.Model):
     def trustworthy(self):
         if self.is_admin():
             return True
-        if self.created_recently() or self.reputation < 100:
+        if self.created_recently() and self.reputation < 100:
             return False
         return True
 
