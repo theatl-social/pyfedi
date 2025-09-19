@@ -298,7 +298,7 @@ class Post(DefaultSchema):
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     url = fields.Url()
     image_details = fields.Nested(WidthHeight)
-    cross_posts = fields.Nested(MiniCrossPosts)
+    cross_posts = fields.List(fields.Nested(MiniCrossPosts))
 
 
 class PostAggregates(DefaultSchema):

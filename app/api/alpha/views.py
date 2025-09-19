@@ -75,7 +75,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             for cross_post in cross_post_data:
                 v1['cross_posts'].append({'post_id': cross_post[0], 'reply_count': cross_post[1], 'community_name': cross_post[2]})
         else:
-            v1['cross_posts'] = None
+            v1['cross_posts'] = []
         if post.image_id and post.image.width and post.image.height:
             v1['image_details'] = {
                 'width': post.image.width,
