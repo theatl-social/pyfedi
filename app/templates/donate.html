@@ -3,39 +3,45 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-
-        {% if cms_page -%}
-            <h1>{{ cms_page.title | safe }}</h1>
-            {{ cms_page.body_html | safe }}
-        {% else %}
-            <h1>{{ _('Donate') }}</h1>
-            <p>{{ _('PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.') }}</p>
-
-            <div class="btn-group btn-group-lg" role="group" aria-label="Donation options">
-              <a type="button" class="btn btn-primary" href="https://www.patreon.com/PieFed">{{ _('Donate using Patreon') }}</a>
-              <a type="button" class="btn btn-primary" href="https://liberapay.com/PieFed/">{{ _('Donate using Liberapay') }}</a>
-              <a type="button" class="btn btn-primary" href="https://ko-fi.com/piefed">{{ _('Donate using Ko-fi') }}</a>
-            </div>
-        {% endif -%}
-    </main>
-
-    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-        <div class="card mt-3">
-            <div class="card-header">
-                 <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
-            </div>
-            <div class="card-body">
-                <p><strong>{{ g.site.description|safe }}</strong></p>
-                <p>{{ g.site.sidebar|safe }}</p>
-                <p class="mt-4">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if cms_page -%}
+                <h1>{{ cms_page.title | safe }}</h1>
+                {{ cms_page.body_html | safe }}
+            {% else %}
+                <h1>{{ _("Donate") }}</h1>
+                <p>
+                    {{ _("PieFed is free and open-source software while operating without any advertising, monetization, or reliance on venture capital. Your donations are vital in supporting the PieFed development effort, allowing us to expand and enhance PieFed with new features.") }}
                 </p>
+                <div class="btn-group btn-group-lg"
+                     role="group"
+                     aria-label="Donation options">
+                    <a type="button"
+                       class="btn btn-primary"
+                       href="https://www.patreon.com/PieFed">{{ _("Donate using Patreon") }}</a>
+                    <a type="button"
+                       class="btn btn-primary"
+                       href="https://liberapay.com/PieFed/">{{ _("Donate using Liberapay") }}</a>
+                    <a type="button" class="btn btn-primary" href="https://ko-fi.com/piefed">{{ _("Donate using Ko-fi") }}</a>
+                </div>
+            {% endif -%}
+        </main>
+        <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h2>{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>{{ g.site.description|safe }}</strong>
+                    </p>
+                    <p>{{ g.site.sidebar|safe }}</p>
+                    <p class="mt-4">
+                        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    </p>
+                </div>
             </div>
-        </div>
-    </aside>
-</div>
+        </aside>
+    </div>
 {% endblock %}

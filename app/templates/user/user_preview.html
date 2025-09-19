@@ -2,47 +2,83 @@
     <div class="card-body">
         <div class="row">
             {% if user.avatar_id -%}
-            <div class="col-6 preview_avatar_image">
-                <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
+                <div class="col-6 preview_avatar_image">
+                    <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
+                </div>
+                <div class="col-6">
+                {% else -%}
+                    <div class="col">
+                    {% endif -%}
+                    <h4 class="mb-0">
+                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
+                    </h4>
+                    <p>
+                        {{ _("Instance") }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain() ) }}">{{ user.instance_domain() }}</a>
+                        <br>
+                        {% if user.is_instance_admin() or (user.is_local() and user.get_id() in admin_ids) %}
+                            <span class="red">({{ _("Admin") }})</span>
+                            <br>
+                        {% endif %}
+                        {% if user.get_id() in admin_ids or user.is_staff() %}
+                            {{ _("Roles") }}:
+                            {% if user.get_id() in admin_ids %}{{ _("Admin") }}{% endif %}
+                            {% if user.is_staff() %}{{ _("Staff") }}{% endif %}
+                            <br />
+                        {% endif %}
+                    </p>
+                </div>
             </div>
-            <div class="col-6">
-            {% else -%}
-            <div class="col">
-            {% endif -%}
-                <h4 class="mb-0"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></h4>
-                <p>{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a><br>
-                {% if user.is_instance_admin() or (user.is_local() and user.get_id() in admin_ids) %}<span class="red">({{ _('Admin') }})</span><br>{% endif %}
-                {% if user.get_id() in admin_ids or user.is_staff() %}{{ _('Roles') }}: {% if user.get_id() in admin_ids %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
-                </p>
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-auto">
-                <p>{% if user.bot %}{{ _('Bot Account') }}<br />{% endif %}
-                    {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
-                    {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
-                    {% if current_user.is_authenticated %}{{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />{% endif %}
-                    {% if current_user.is_authenticated and current_user.get_id() in admin_ids and user.reputation %}{{ _('Reputation') }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span><br />{% endif %}
-                    {{ _('Posts') }}: {{ user.post_count }}<br />
-                    {{ _('Comments') }}: {{ user.post_reply_count }}<br />
+            <div class="row">
+                <div class="col-auto">
+                    <p>
+                        {% if user.bot %}
+                            {{ _("Bot Account") }}
+                            <br />
+                        {% endif %}
+                        {% if current_user.is_authenticated %}
+                            {{ _("Note") }}: {{ user.get_note(current_user) }}
+                            <br />
+                        {% endif %}
+                        {{ _("Joined") }}: {{ arrow.get(user.created).humanize(locale=locale) }}
+                        <br />
+                        {% if current_user.is_authenticated %}
+                            {{ _("Attitude") }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">
+                            {% if user.attitude %}
+                                {{ (user.attitude * 100) | round | int }}%
+                            {% endif %}
+                        </span>
+                        <br />
+                    {% endif %}
+                    {% if current_user.is_authenticated and current_user.get_id() in admin_ids and user.reputation %}
+                        {{ _("Reputation") }}: <span title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">{{ user.reputation | round | int }}</span>
+                        <br />
+                    {% endif %}
+                    {{ _("Posts") }}: {{ user.post_count }}
+                    <br />
+                    {{ _("Comments") }}: {{ user.post_reply_count }}
+                    <br />
                     {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-                        {{ _('Votes') }}: {{ user.get_num_upvotes() }} / {{ user.get_num_downvotes() }}<br />
-                        {% if user.last_seen %}{{ _('Active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}<br />{% endif %}
+                        {{ _("Votes") }}: {{ user.get_num_upvotes() }} / {{ user.get_num_downvotes() }}
+                        <br />
+                        {% if user.last_seen %}
+                            {{ _("Active") }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}
+                            <br />
+                        {% endif %}
                     {% endif -%}
                 </p>
-                <div class="profile_bio">
-                    {{ user.about_html|safe }}
-                </div>
+                <div class="profile_bio">{{ user.about_html|safe }}</div>
                 {% if user.extra_fields -%}
                     <ul class="list-group mb-3">
                         {% for field in user.extra_fields -%}
                             <li class="list-group-item">
-                                <p class="mb-0"><strong>{{ field.label }}</strong><br>
-                                   {% if field.text.startswith('http') -%}
+                                <p class="mb-0">
+                                    <strong>{{ field.label }}</strong>
+                                    <br>
+                                    {% if field.text.startswith('http') -%}
                                         <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
-                                   {% else -%}
+                                    {% else -%}
                                         {{ field.text }}
-                                   {% endif -%}
+                                    {% endif -%}
                                 </p>
                             </li>
                         {% endfor -%}
@@ -52,11 +88,12 @@
         </div>
         <div class="row">
             <div class="col-auto text-center">
-                <a href="/u/{{ user.link() }}" class="btn btn-primary btn-sm">{{ _('View profile') }}</a>
+                <a href="/u/{{ user.link() }}" class="btn btn-primary btn-sm">{{ _("View profile") }}</a>
             </div>
             {% if current_user.is_authenticated -%}
                 <div class="col-auto text-center">
-                    <a href="{{ url_for('user.edit_user_note', actor=user.link(), return_to=return_to) }}" class="btn btn-primary btn-sm">{{ _('Edit note') }}</a>
+                    <a href="{{ url_for('user.edit_user_note', actor=user.link() , return_to=return_to) }}"
+                       class="btn btn-primary btn-sm">{{ _("Edit note") }}</a>
                 </div>
             {% endif -%}
         </div>

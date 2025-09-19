@@ -5,116 +5,98 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item">
-                    <a href="/">
-                        {{ _('Home') }}
-                    </a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="/communities">
-                        {{ _('Communities') }}
-                    </a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">
-                        {{ (community.title + '@' + community.ap_domain)|shorten }}
-                    </a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{{ url_for('community.community_edit', community_id=community.id) }}">
-                        {{ _('Settings') }}
-                    </a>
-                </li>
-                <li class="breadcrumb-item active">
-                    {{ _('Moderators') }}
-                </li>
-            </ol>
-        </nav>
-        {% include "community/_community_moderation_nav.html" %}
-        <div class="row">
-            <div class="col-12 col-md-10">
-                <h1 class="mt-2">
-                    {{ _('Moderators for %(community)s', community=community.display_name()) }}
-                </h1>
-            </div>
-            <p>
-                {{ _('See and change who moderates this community') }}
-            </p>
-            {% if is_owner or (current_user.is_admin_or_staff() and community.is_local()) -%}
-                <div class="col-12 text-right">
-                    <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">
-                        {{ _('Add moderator') }}
-                    </a>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/communities">{{ _("Communities") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">
+                            {{ (community.title + '@' + community.ap_domain)|shorten }}
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _("Settings") }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Moderators") }}</li>
+                </ol>
+            </nav>
+            {% include "community/_community_moderation_nav.html" %}
+            <div class="row">
+                <div class="col-12 col-md-10">
+                    <h1 class="mt-2">{{ _('Moderators for %(community)s', community=community.display_name() ) }}</h1>
                 </div>
-            {% endif -%}
-        </div>
-        <table class="table table-responsive align-middle">
-            <thead>
-                <tr>
-                    <th>
-                        {{ _('Name') }}
-                    </th>
-                    <th>
-                        {{ _('Action') }}
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for moderator in moderators %}
+                <p>{{ _("See and change who moderates this community") }}</p>
+                {% if is_owner or (current_user.is_admin_or_staff() and community.is_local()) -%}
+                    <div class="col-12 text-right">
+                        <a class="btn btn-primary"
+                           href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">
+                            {{ _("Add moderator") }}
+                        </a>
+                    </div>
+                {% endif -%}
+            </div>
+            <table class="table table-responsive align-middle">
+                <thead>
                     <tr>
-                        <td>
-                            {% if community.is_owner(moderator) %}
-                                <strong>
-                            {% endif %}
-                            {{ render_username(moderator, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
-                            {% if community.is_owner(moderator) %}
-                                </strong>
-                            {% endif %}
-                        </td>
-                        <td>
-                            <ul class="list-unstyled my-0">
-                                {% if (is_owner and not community.is_owner(moderator)) or (current_user.is_admin_or_staff() and not community.is_owner(moderator)) %}
-                                    <li>
-                                        <a class="no-underline confirm_first send_post" 
-                                                href="#"
-                                                data-url="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
-                                                rel="nofollow">
-                                            <span class="fe fe-delete"></span> {{ _('Remove mod') }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% if not community.is_owner(moderator) and ((is_owner and moderator.id != current_user.id) or current_user.is_admin_or_staff()) %}
-                                    <li>
-                                        <a class="no-underline confirm_first send_post"
-                                                href="#"
-                                                data-url="{{ url_for('community.community_make_owner', community_id=community.id, user_id=moderator.id)}}"
-                                                rel="nofollow">
-                                            <span class="fe fe-add-person"></span> {{ _('Make owner') }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                {% if (current_user.is_admin_or_staff() and community.is_owner(moderator)) or (is_owner and moderator.id == current_user.id) %}
-                                    <li>
-                                        <a class="no-underline confirm_first send_post"
-                                                href="#"
-                                                data-url="{{ url_for('community.community_remove_owner', community_id=community.id, user_id=moderator.id)}}"
-                                                rel="nofollow">
-                                            <span class="fe fe-remove-person"></span> {{ _('Remove owner') }}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                            </ul>
-                        </td>
+                        <th>{{ _("Name") }}</th>
+                        <th>{{ _("Action") }}</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </main>
-</div>
+                </thead>
+                <tbody>
+                    {% for moderator in moderators %}
+                        <tr>
+                            <td>
+                                {% if community.is_owner(moderator) %}<strong>{% endif %}
+                                    {{ render_username(moderator, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                                    {% if community.is_owner(moderator) %}</strong>{% endif %}
+                            </td>
+                            <td>
+                                <ul class="list-unstyled my-0">
+                                    {% if (is_owner and not community.is_owner(moderator)) or (current_user.is_admin_or_staff() and not community.is_owner(moderator)) %}
+                                        <li>
+                                            <a class="no-underline confirm_first send_post"
+                                               href="#"
+                                               data-url="{{ url_for('community.community_remove_moderator', community_id=community.id, user_id=moderator.id) }}"
+                                               rel="nofollow">
+                                                <span class="fe fe-delete"></span> {{ _("Remove mod") }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    {% if not community.is_owner(moderator) and ((is_owner and moderator.id != current_user.id) or current_user.is_admin_or_staff()) %}
+                                        <li>
+                                            <a class="no-underline confirm_first send_post"
+                                               href="#"
+                                               data-url="{{ url_for('community.community_make_owner', community_id=community.id, user_id=moderator.id) }}"
+                                               rel="nofollow">
+                                                <span class="fe fe-add-person"></span> {{ _("Make owner") }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                    {% if (current_user.is_admin_or_staff() and community.is_owner(moderator)) or (is_owner and moderator.id == current_user.id) %}
+                                        <li>
+                                            <a class="no-underline confirm_first send_post"
+                                               href="#"
+                                               data-url="{{ url_for('community.community_remove_owner', community_id=community.id, user_id=moderator.id) }}"
+                                               rel="nofollow">
+                                                <span class="fe fe-remove-person"></span> {{ _("Remove owner") }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </main>
+    </div>
 {% endblock %}

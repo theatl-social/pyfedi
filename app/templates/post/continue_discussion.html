@@ -6,28 +6,27 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname %}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% include 'post/_post_full.html' %}
-        <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id, _anchor='replies') }}">Back to main discussion</a></p>
-        <div class="row post_replies">
-            <div class="col">
-                <div id="replies" class="comments" role="tree">
-                    {% for reply in replies %}
-                      {% with post_reply=reply['comment'], children=reply['replies'] %}
-                          {% include 'post/_post_reply_teaser.html' %}
-                      {% endwith %}
-                    {% endfor %}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% include 'post/_post_full.html' %}
+            <p>
+                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, _anchor='replies') }}">Back to main discussion</a>
+            </p>
+            <div class="row post_replies">
+                <div class="col">
+                    <div id="replies" class="comments" role="tree">
+                        {% for reply in replies %}
+                            {% with post_reply=reply['comment'], children=reply['replies'] %}
+                                {% include 'post/_post_reply_teaser.html' %}
+                            {% endwith %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
-
-    {% with community = post.community -%}
-        {% include "_side_pane.html" %}
-    {% endwith -%}
-</div>
-
+        </main>
+        {% with community = post.community -%}
+            {% include "_side_pane.html" %}
+        {% endwith -%}
+    </div>
 {% endblock %}

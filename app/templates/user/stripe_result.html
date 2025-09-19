@@ -3,18 +3,18 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <h1>{{ _('Payment result') }} - {{ result }}</h1>
-        {% if result == 'success' %}
-            <p>{{ _('Thank you for your donation!') }}</p>
-        {% else %}
-            <p>{{ _('Something went wrong during the payment process. No changes have been made to your account.') }}</p>
-        {% endif %}
-        <p><a href="/" class="btn btn-primary">{{ _('Continue') }}</a></p>
-
-    </main>
-</div>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <h1>{{ _("Payment result") }} - {{ result }}</h1>
+            {% if result == 'success' %}
+                <p>{{ _("Thank you for your donation!") }}</p>
+            {% else %}
+                <p>{{ _("Something went wrong during the payment process. No changes have been made to your account.") }}</p>
+            {% endif %}
+            <p>
+                <a href="/" class="btn btn-primary">{{ _("Continue") }}</a>
+            </p>
+        </main>
+    </div>
 {% endblock %}

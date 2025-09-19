@@ -5,13 +5,12 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('Add moderator to %(community)s', community=community.display_name()) }}</div>
+                    <div class="card-title">{{ _('Add moderator to %(community)s', community=community.display_name() ) }}</div>
                     {{ render_form(form) }}
                 </div>
             </div>
@@ -23,29 +22,31 @@
                 <div class="card mt-5">
                     <div class="card-body p-6">
                         {% if potential_moderators -%}
-                            <div class="card-title">{{ _('Found some people:') }}</div>
-                                <table class="table table-striped">
-                                    {% for user in potential_moderators -%}
-                                        <tr>
-                                            <td class="align-middle">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
-                                            <td class="text-right">
-                                                {% if community_membership(user, community) != SUBSCRIPTION_MODERATOR %}
-                                                    <a class="btn btn-primary" href="{{ url_for('community.community_add_moderator', community_id=community.id, user_id=user.id) }}">{{ _('Add') }}</a>
-                                                {% else %}
-                                                    {{ _('Already a moderator') }}
-                                                {% endif %}
-                                            </td>
-                                        </tr>
-                                    {% endfor -%}
-                                </table>
-                            </div>
-                        {% else -%}
-                            <div class="card-title">{{ _('No people found') }}</div>
-                        {% endif -%}
-                    </div>
+                            <div class="card-title">{{ _("Found some people:") }}</div>
+                            <table class="table table-striped">
+                                {% for user in potential_moderators -%}
+                                    <tr>
+                                        <td class="align-middle">
+                                            {{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                                        </td>
+                                        <td class="text-right">
+                                            {% if community_membership(user, community) != SUBSCRIPTION_MODERATOR %}
+                                                <a class="btn btn-primary"
+                                                   href="{{ url_for('community.community_add_moderator', community_id=community.id, user_id=user.id) }}">{{ _("Add") }}</a>
+                                            {% else %}
+                                                {{ _("Already a moderator") }}
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor -%}
+                            </table>
+                        </div>
+                    {% else -%}
+                        <div class="card-title">{{ _("No people found") }}</div>
+                    {% endif -%}
                 </div>
             </div>
         </div>
-    {% endif %}
-
+    </div>
+{% endif %}
 {% endblock %}

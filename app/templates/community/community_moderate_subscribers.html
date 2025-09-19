@@ -5,171 +5,230 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field, render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
-            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Moderation') }}</li>
-          </ol>
-        </nav>
-        {% include "community/_community_moderation_nav.html" %}
-        <div class="row">
-            <div class="col-12 col-md-10">
-                <h1 class="mt-2">{{ _('Subscribers') }}</h1>
-            </div>
-            <div class="col-12 col-md-2 text-right">
-                <!-- <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
-            </div>
-        </div>
-        <p>{{ _('See who is subscribed to %(community)s', community=community.display_name()) }}</p>
-        
-        <form method="get" class="mb-3">
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/communities">{{ _("Communities") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Moderation") }}</li>
+                </ol>
+            </nav>
+            {% include "community/_community_moderation_nav.html" %}
             <div class="row">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <input type="search" name="search" value="{{ search }}" class="form-control" placeholder="{{ _('Search subscribers...') }}">
-                        <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                        <button type="submit" class="btn btn-primary">{{ _('Search') }}</button>
-                    </div>
+                <div class="col-12 col-md-10">
+                    <h1 class="mt-2">{{ _("Subscribers") }}</h1>
+                </div>
+                <div class="col-12 col-md-2 text-right">
+                    <!-- <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
                 </div>
             </div>
-        </form>
-        
-        <h2></h2>
-        {% if subscribers %}
-        <div class="table-responsive-lg">
-            <table class="table table-striped mt-1">
-                <tr>
-                   <th>Name</th>
-                   <th>
-                       <form method="get" style="display: inline;">
-                           <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                           <input type="hidden" name="search" value="{{ search }}">
-                           <button name="sort_by_btn" value="local_remote{{' DESC' if sort_by == 'local_remote ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Local/Remote
-                               <span class="{{ 'fe fe-chevron-up' if sort_by == 'local_remote DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'local_remote ASC' }}"></span>
-                           </button>
-                       </form>
-                   </th>
-                   <th>
-                       <form method="get" style="display: inline;">
-                           <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                           <input type="hidden" name="search" value="{{ search }}">
-                           <button name="sort_by_btn" value="joined{{' DESC' if sort_by == 'joined ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Joined
-                               <span class="{{ 'fe fe-chevron-up' if sort_by == 'joined DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'joined ASC' }}"></span>
-                           </button>
-                       </form>
-                   </th>
-                   <th>
-                       <form method="get" style="display: inline;">
-                           <input type="hidden" name="sort_by" value="{{ sort_by }}">
-                           <input type="hidden" name="search" value="{{ search }}">
-                           <button name="sort_by_btn" value="last_seen{{' DESC' if sort_by == 'last_seen ASC' else ' ASC' }}" class="btn btn-link p-0 text-decoration-none">
-                               Last Seen
-                               <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen ASC' }}"></span>
-                           </button>
-                       </form>
-                   </th>
-                   <th>Actions</th>
-                </tr>
-                {% for user, joined_date in subscribers.items %}
-                    <tr>
-                        <td>
-                            {{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
-                        </td>
-                        <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
-                        <td>{{ arrow.get(joined_date).humanize(locale=locale) }} </td>
-                        <td>{{ arrow.get(user.last_seen).humanize(locale=locale) }} </td>
-                        <td>
-                            <div class="dropdown">
-                              <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {{ _('Actions') }}
-                              </button>
-                              <ul class="dropdown-menu">
-                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>{% endif %}
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a></li>
-                                <div class="dropdown-divider"></div>
-                                <li><a class="dropdown-item" href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Ban') }}</a></li>
-                                {% if current_user.get_id() in admin_ids and community.is_local() and not user.is_local() %}
-                                    <li><a class="dropdown-item confirm_first" href="{{ url_for('community.community_kick_user', community_id=community.id, user_id=user.id) }}">{{ _('Kick') }}</a></li>
-                                {% endif %}
-                              </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
-            {% if prev_url %}
-                <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                </a>
-            {% endif %}
-            {% if next_url %}
-                <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                </a>
-            {% endif %}
-        </nav>
-        {% else %}
-            <p>{{ _('This community has no subscribers') }}</p>
-        {% endif %}
-        <h1 class="mt-2">{{ _('Banned People') }}</h1>
-        <p>{{ _('See and manage who is banned from %(community)s', community=community.display_name()) }}</p>
-        {% if banned_people %}
-            <form method="get">
-                <input type="search" name="search" value="{{ search }}">
-                <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
-                <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
-                <input type="submit" name="submit" value="Search" class="btn btn-primary">
+            <p>{{ _('See who is subscribed to %(community)s', community=community.display_name() ) }}</p>
+            <form method="get" class="mb-3">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="search"
+                                   name="search"
+                                   value="{{ search }}"
+                                   class="form-control"
+                                   placeholder="{{ _('Search subscribers...') }}">
+                            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                            <button type="submit" class="btn btn-primary">{{ _("Search") }}</button>
+                        </div>
+                    </div>
+                </div>
             </form>
-            <div class="table-responsive-lg">
-            <table class="table table-striped mt-1">
-                <tr>
-                   <th>{{ _('Name') }}</th>
-                   <th>{{ _('Local/Remote') }}</th>
-                   <th>{{ _('Reports') }}</th>
-                   <th>{{ _('Actions') }}</th>
-                </tr>
-                {% for user in banned_people %}
-                    <tr>
-                        <td>{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</td>
-                        <td>{% if user.is_local() %} Local {% else %} <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>{% endif %}</td>
-                        <td>{{ user.reports if user.reports > 0 }} </td>
-                        <td>
-                            <div class="dropdown">
-                              <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Actions
-                              </button>
-                              <ul class="dropdown-menu">
-                                {% if user.is_local() %}<li><a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a></li>
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View</a></li>
-                            {% else %}
-                                <li><a class="dropdown-item" href="/u/{{ user.link() }}">View local</a> </li>
-                                <li><a class="dropdown-item"href="{{ user.ap_profile_id }}">View remote</a></li>
-                            {% endif %}
-                                <div class="dropdown-divider"></div>
-                                <li><a class="dropdown-item" href="{{ url_for('community.community_unban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Unban') }}</a></li>
-                              </ul>
-                            </div>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-        </div>
-        {% else %}
-            <p>{{ _('No banned people yet') }}</p>
-        {% endif %}
-        <h1 class="mt-2">{{ _('Ban a user') }}</h1>
-        <p>{{ _('Create a ban from %(community)s', community=community.display_name()) }}</p>
-        {{ render_form(ban_user_form)  }}
-    </main>
-</div>
+            <h2></h2>
+            {% if subscribers %}
+                <div class="table-responsive-lg">
+                    <table class="table table-striped mt-1">
+                        <tr>
+                            <th>Name</th>
+                            <th>
+                                <form method="get" style="display: inline;">
+                                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                                    <input type="hidden" name="search" value="{{ search }}">
+                                    <button name="sort_by_btn"
+                                            value="local_remote{{' DESC' if sort_by == 'local_remote ASC' else ' ASC' }}"
+                                            class="btn btn-link p-0 text-decoration-none">
+                                        Local/Remote
+                                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'local_remote DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'local_remote ASC' }}"></span>
+                                    </button>
+                                </form>
+                            </th>
+                            <th>
+                                <form method="get" style="display: inline;">
+                                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                                    <input type="hidden" name="search" value="{{ search }}">
+                                    <button name="sort_by_btn"
+                                            value="joined{{' DESC' if sort_by == 'joined ASC' else ' ASC' }}"
+                                            class="btn btn-link p-0 text-decoration-none">
+                                        Joined
+                                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'joined DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'joined ASC' }}"></span>
+                                    </button>
+                                </form>
+                            </th>
+                            <th>
+                                <form method="get" style="display: inline;">
+                                    <input type="hidden" name="sort_by" value="{{ sort_by }}">
+                                    <input type="hidden" name="search" value="{{ search }}">
+                                    <button name="sort_by_btn"
+                                            value="last_seen{{' DESC' if sort_by == 'last_seen ASC' else ' ASC' }}"
+                                            class="btn btn-link p-0 text-decoration-none">
+                                        Last Seen
+                                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen ASC' }}"></span>
+                                    </button>
+                                </form>
+                            </th>
+                            <th>Actions</th>
+                        </tr>
+                        {% for user, joined_date in subscribers.items %}
+                            <tr>
+                                <td>
+                                    {{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                                </td>
+                                <td>
+                                    {% if user.is_local() %}
+                                        Local
+                                    {% else %}
+                                        <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>
+                                    {% endif %}
+                                </td>
+                                <td>{{ arrow.get(joined_date).humanize(locale=locale) }}</td>
+                                <td>{{ arrow.get(user.last_seen).humanize(locale=locale) }}</td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-primary btn-sm dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false">{{ _("Actions") }}</button>
+                                        <ul class="dropdown-menu">
+                                            {% if user.is_local() %}
+                                                <li>
+                                                    <a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a>
+                                                </li>
+                                            {% endif %}
+                                            <li>
+                                                <a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a>
+                                            </li>
+                                            <div class="dropdown-divider"></div>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}"
+                                                   class="confirm_first">{{ _("Ban") }}</a>
+                                            </li>
+                                            {% if current_user.get_id() in admin_ids and community.is_local() and not user.is_local() %}
+                                                <li>
+                                                    <a class="dropdown-item confirm_first"
+                                                       href="{{ url_for('community.community_kick_user', community_id=community.id, user_id=user.id) }}">{{ _("Kick") }}</a>
+                                                </li>
+                                            {% endif %}
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+                <nav aria-label="Pagination" class="mt-4" role="navigation">
+                    {% if prev_url %}
+                        <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                            <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                        </a>
+                    {% endif %}
+                    {% if next_url %}
+                        <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                            {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                        </a>
+                    {% endif %}
+                </nav>
+            {% else %}
+                <p>{{ _("This community has no subscribers") }}</p>
+            {% endif %}
+            <h1 class="mt-2">{{ _("Banned People") }}</h1>
+            <p>{{ _('See and manage who is banned from %(community)s', community=community.display_name() ) }}</p>
+            {% if banned_people %}
+                <form method="get">
+                    <input type="search" name="search" value="{{ search }}">
+                    <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}>
+                    <label for="local_remote_local">Local</label>
+                    <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}>
+                    <label for="local_remote_remote">Remote</label>
+                    <input type="submit" name="submit" value="Search" class="btn btn-primary">
+                </form>
+                <div class="table-responsive-lg">
+                    <table class="table table-striped mt-1">
+                        <tr>
+                            <th>{{ _("Name") }}</th>
+                            <th>{{ _("Local/Remote") }}</th>
+                            <th>{{ _("Reports") }}</th>
+                            <th>{{ _("Actions") }}</th>
+                        </tr>
+                        {% for user in banned_people %}
+                            <tr>
+                                <td>
+                                    {{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                                </td>
+                                <td>
+                                    {% if user.is_local() %}
+                                        Local
+                                    {% else %}
+                                        <a href="{{ user.ap_profile_id }}">{{ user.ap_domain }}</a>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.reports if user.reports > 0 }}</td>
+                                <td>
+                                    <div class="dropdown">
+                                        <button class="btn btn-primary btn-sm dropdown-toggle"
+                                                type="button"
+                                                data-bs-toggle="dropdown"
+                                                aria-expanded="false">Actions</button>
+                                        <ul class="dropdown-menu">
+                                            {% if user.is_local() %}
+                                                <li>
+                                                    <a class="dropdown-item" href="/chat/{{ user.id }}/new">Send Message</a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item" href="/u/{{ user.link() }}">View</a>
+                                                </li>
+                                            {% else %}
+                                                <li>
+                                                    <a class="dropdown-item" href="/u/{{ user.link() }}">View local</a>
+                                                </li>
+                                                <li>
+                                                    <a class="dropdown-item"href="{{ user.ap_profile_id }}">View remote</a>
+                                                </li>
+                                            {% endif %}
+                                            <div class="dropdown-divider"></div>
+                                            <li>
+                                                <a class="dropdown-item"
+                                                   href="{{ url_for('community.community_unban_user', community_id=community.id, user_id=user.id) }}"
+                                                   class="confirm_first">{{ _("Unban") }}</a>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            {% else %}
+                <p>{{ _("No banned people yet") }}</p>
+            {% endif %}
+            <h1 class="mt-2">{{ _("Ban a user") }}</h1>
+            <p>{{ _('Create a ban from %(community)s', community=community.display_name() ) }}</p>
+            {{ render_form(ban_user_form) }}
+        </main>
+    </div>
 {% endblock %}

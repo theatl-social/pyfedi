@@ -4,21 +4,19 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_topics' %}
-
+{% set active_child = "admin_topics" %}
 {% block app_content %}
-<div class="row">
-    <div class="col col-login mx-auto">
-        <h1>{{ _('Move %(community)s to %(instance_domain)s', community=community.display_name(), instance_domain=instance_domain) }}</h1>
-
-        {{ render_form(form) }}
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <h1>
+                {{ _('Move %(community)s to %(instance_domain)s', community=community.display_name() , instance_domain=instance_domain) }}
+            </h1>
+            {{ render_form(form) }}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

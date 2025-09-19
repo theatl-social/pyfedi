@@ -1,215 +1,363 @@
 {% from "themes/dillo/_macros.html" import render_communityname %}
-<!doctype html>
+<!DOCTYPE html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
-  <head>
-    {% block head -%}
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
-        <meta http-equiv="Content-Language" content="en" />
-        <meta name="msapplication-TileColor" content="#007BBF">
-        <meta name="theme-color" content="#007BBF">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="HandheldFriendly" content="True">
-        <meta name="MobileOptimized" content="320">
-        <link rel="expect" blocking="render" href="#navbarSupportedContent">
-        {% block styles -%}
-            <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" />
-            <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
-            {% if not low_bandwidth -%}
-                <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
-                <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
+    <head>
+        {% block head -%}
+            <meta charset="utf-8">
+            <meta name="viewport"
+                  content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
+            <meta http-equiv="Content-Language" content="en" />
+            <meta name="msapplication-TileColor" content="#007BBF">
+            <meta name="theme-color" content="#007BBF">
+            <meta name="apple-mobile-web-app-status-bar-style"
+                  content="black-translucent" />
+            <meta name="apple-mobile-web-app-capable" content="yes">
+            <meta name="mobile-web-app-capable" content="yes">
+            <meta name="HandheldFriendly" content="True">
+            <meta name="MobileOptimized" content="320">
+            <link rel="expect" blocking="render" href="#navbarSupportedContent">
+            {% block styles -%}
+                <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css') ) }}"
+                      type="text/css"
+                      rel="stylesheet" />
+                <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}"
+                      type="text/css"
+                      rel="alternate stylesheet"
+                      title="High contrast" />
+                {% if not low_bandwidth -%}
+                    <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}"
+                          type="text/css"
+                          rel="stylesheet" />
+                    <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}"
+                          type="text/css"
+                          rel="stylesheet" />
+                {% endif -%}
+                {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
+                    <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}"
+                          type="text/css"
+                          rel="stylesheet" />
+                {% endif -%}
+            {% endblock -%}
+            <title>
+                {% if title %}
+                    {{ title }}
+                {% else %}
+                    {{ _("PieFed") }}
+                {% endif %}
+            </title>
+            <link rel="apple-touch-icon"
+                  sizes="152x152"
+                  href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
+            <link rel="icon"
+                  type="image/png"
+                  sizes="32x32"
+                  href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+            <link rel="icon"
+                  type="image/png"
+                  sizes="16x16"
+                  href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
+            <link rel="manifest" href="/static/manifest.json">
+            <link rel="shortcut icon"
+                  type="image/png"
+                  href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+            <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}"
+                  rel='icon'
+                  type='image/x-icon'>
+            <meta name="msapplication-TileColor" content="#da532c">
+            <meta name="msapplication-config" content="/static/browserconfig.xml">
+            <meta name="theme-color" content="#ffffff">
+            {% if canonical -%}
+                <link rel="canonical" href="{{ canonical }}" />
             {% endif -%}
-            {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
-                <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css') }}" type="text/css" rel="stylesheet" />
+            {% if description -%}
+                <meta name="description" content="{{ description }}" />
+            {% endif -%}
+            {% if og_image -%}
+                <meta property="og:image" content="{{ og_image }}" />
+            {% endif -%}
+            {% if rss_feed -%}
+                <link rel="alternate"
+                      type="application/rss+xml"
+                      title="{{ rss_feed_name }}"
+                      href="{{ rss_feed }}" />
+            {% endif -%}
+            {% if noindex -%}
+                <meta name="robots" content="noindex">
             {% endif -%}
         {% endblock -%}
-        <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png' }}">
-        <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-        <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
-        <link rel="manifest" href="/static/manifest.json">
-        <link rel="shortcut icon" type="image/png" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-        <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}" rel='icon' type='image/x-icon'>
-        <meta name="msapplication-TileColor" content="#da532c">
-        <meta name="msapplication-config" content="/static/browserconfig.xml">
-        <meta name="theme-color" content="#ffffff">
-        {% if canonical -%}
-            <link rel="canonical" href="{{ canonical }}" />
-        {% endif -%}
-        {% if description -%}
-            <meta name="description" content="{{ description }}" />
-        {% endif -%}
-        {% if og_image -%}
-            <meta property="og:image" content="{{ og_image }}" />
-        {% endif -%}
-        {% if rss_feed -%}
-            <link rel="alternate" type="application/rss+xml" title="{{ rss_feed_name }}" href="{{ rss_feed }}" />
-        {% endif -%}
-        {% if noindex -%}
-            <meta name="robots" content="noindex">
-        {% endif -%}
-    {% endblock -%}
-  </head>
-  <body class="{{ ' low_bandwidth' if low_bandwidth }}" bgcolor="#f8f8ff">
-    <a href="#middle_column" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
-    <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
-    <!-- Page content -->
-    <table width="100%" border="0">
-        <thead>
-            <tr>
-                <td valign="middle">
-                    <a href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="50" height="50" align="absmiddle" /> {% endif %}
-                </td>
-                <td align="center">
-                    <a href="/"><h2 class="mb-1 mt-0" style="border: none; padding-left: 0; margin-top: 0; margin-bottom: 0;">{{ g.site.name }}</h2></a>
-                </td>
-                <td valign="middle" align="center">
-                    <p><a id="search" href="/search" tabindex="" title="{{ _('Search') }}">{{ _('Search') }}</a> |
-                        <a href="/user/settings" tabindex="" title="{{ _('Settings') }}">{{ _('Settings') }}</a></p>
-                </td>
-            </tr>
-        </thead>
-        <tr><!-- left column - nav -->
-            <td valign="top" align="left" width="20%">
-                {% block navbar -%}
-                    {% if current_user.is_authenticated -%}
-                        {% if current_user.unread_notifications -%}
-                        <p><a class="nav-link d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
-                            <span class="fe fe-bell red"></span>Unread notifications: <span class="red">{{ current_user.unread_notifications }}</span>
-                        </a></p>
-                        {% endif -%}
-                    {% endif -%}
-
-                    {% if current_user.is_anonymous -%}
-                        <p><strong><a href="/topics">{{ _('Topics') }}</a></strong><br>
-                              {% if menu_topics %}
-                                   {% for topic_menu_item in menu_topics -%}
-                                        <a class="{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a><br>
-                                   {% endfor -%}
-                                   <a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a><br>
-                              {% else %}
-                                <a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a><br>
-                              {% endif %}
-                              <a class="{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a><br>
-                        </p>
-                        <p><strong><a class="" data-bs-toggle="dropdown" href="/feeds"  aria-haspopup="true" aria-expanded="false">{{ _('Feeds') }}</a></strong><br>
-                              {% if menu_instance_feeds -%}
-                                   {% for feed_menu_item in menu_instance_feeds -%}
-                                        <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
-                                   {% endfor -%}
-                                <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a><br>
-                              {% else -%}
-                                <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a><br>
-                              {% endif -%}
-                        </p>
-                        <p><a href="/auth/login">{{ _('Log in') }}</a></p>
-                        <p><a href="/auth/register">{{ _('Register') }}</a></p>
-                    {% else %}
-                        <h4 style="margin-top: 0;" class="mb-0"><a href="/topics">{{ _('Topics') }}</a></h4>
-                        <p>
-                              {% if menu_topics -%}
-                                   {% for topic_menu_item in menu_topics -%}
-                                        <a class="{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a><br>
-                                   {% endfor -%}
-                                   <a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a><br>
-                              {% else -%}
-                                <a class="{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a><br>
-                              {% endif -%}
-                              <a class="{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
-                        </p>
-
-                            {% if menu_instance_feeds -%}
-                                <h4 class="mb-0"><a href="/u/{{ current_user.link() }}/myfeeds">{{ _('Feeds') }}</a></h4>
-                                <p>
-                                {% for feed_menu_item in menu_instance_feeds -%}
-                                    <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
-                                {% endfor -%}
-                                </p>
-                           {% endif -%}
-
-                              {% if menu_my_feeds or menu_subscribed_feeds -%}
-                                <h4 class="mb-0"><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a></h4>
-                                <p>
-                                   {% for feed_menu_item in menu_my_feeds -%}
-                                        <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
-                                   {% endfor -%}
-                                   {% for feed_menu_item in menu_subscribed_feeds -%}
-                                        <a class="{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a><br>
-                                   {% endfor -%}
-                                    <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></p>
-                              {% else -%}
-                                <p><a class="{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/{{ current_user.link() }}/myfeeds">{{ _('My Feeds') }}</a><br>
-                                <a class="{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></p>
-                              {% endif -%}
-
-
-                        <h4 class="mb-0"><a href="/u/{{ current_user.link() }}">{{ _('Account') }}</a></h4>
-                        <p>
-                              <a class="{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a><br>
-                              <a class="{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a><br>
-                              <a class="{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a><br>
-                              <a class="{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a><br>
-                              <a class="{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a><br>
-                              {% if current_user.is_authenticated -%}
-                                {% if current_user.hide_read_posts -%}
-                                    <a class="{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a><br>
-                                {% endif -%}
-                                <a class="" href="/auth/logout">{{ _('Log out') }}</a><br>
-                              {% endif -%}
-                        </p>
-                        {% if user_access('change instance settings', current_user.id) %}
-                            <h4 class="mb-0"><a href="/admin/">{{ _('Admin') }}</a></h4>
-                                <p>
-                                <a class="{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_site') }}">{{ _('Home') }}</a><br>
-                                <a class="{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a><br>
-                                <a class="{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a><br>
-                                    {% if debug_mode %}
-                                        <a class="{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a><br>
-                                    {% endif %}
-                            </p>
-                        {% endif %}
-                    {% endif %}
-
-                {% endblock %}
-            </td>
-            <!-- main content -->
-            <td valign="top" id="#middle_column" width="*">
-                    {% block content %}
-                        <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} flex-shrink-0" role="main">
-                            {% with messages = get_flashed_messages(with_categories=True) %}
-                            {% if messages %}
-                                {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
-                                {% endfor %}
+    </head>
+    <body class="{{ ' low_bandwidth' if low_bandwidth }}" bgcolor="#f8f8ff">
+        <a href="#middle_column"
+           class="skip-link"
+           role="navigation"
+           aria-label="Skip main navigation"
+           tabindex="">Skip to main content</a>
+        <a href="#side_pane"
+           class="skip-link"
+           role="navigation"
+           aria-label="Go to side pane"
+           tabindex="">Go to side pane</a>
+        <!-- Page content -->
+        <table width="100%" border="0">
+            <thead>
+                <tr>
+                    <td valign="middle">
+                        <a href="/" aria-label="{{ _('To home page') }}">
+                            {% if not low_bandwidth %}
+                                <img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}"
+                                     alt="Logo"
+                                     width="50"
+                                     height="50"
+                                     align="absmiddle" />
                             {% endif %}
-                            {% endwith %}
-
-                            {# application content needs to be provided in the app_content block #}
-                            {% block app_content %}{% endblock %}
-                        </div>
-                    {% endblock -%}
-            </td>
-            <!-- right column - sidebar -->
-            <td valign="top" width="10%">
-                {% include "themes/dillo/_side_pane.html" %}
-            </td>
-        </tr>
-        <tr>
-            <td> </td>
-            <td align="middle">
-                <footer class="footer mt-auto" role="contentinfo">
-                    <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
-                    <p class="text-center"><a href="/donate">{{ _('Donate') }}</a></p>
-                    <p class="text-center"><a href="/about">{{ _('About') }}</a></p>
-                    <p class="text-center"><a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a></p>
-                    <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
-                    <p class="text-center"><a href="/privacy">Privacy policy</a></p>
-                </footer>
-            </td>
-            <td> </td>
-        </tr>
-    </table>
-  </body>
-</html>
+                        </td>
+                        <td align="center">
+                            <a href="/">
+                                <h2 class="mb-1 mt-0"
+                                    style="border: none;
+                                           padding-left: 0;
+                                           margin-top: 0;
+                                           margin-bottom: 0">{{ g.site.name }}</h2>
+                            </a>
+                        </td>
+                        <td valign="middle" align="center">
+                            <p>
+                                <a id="search" href="/search" tabindex="" title="{{ _('Search') }}">{{ _('Search') }}</a> |
+                                <a href="/user/settings" tabindex="" title="{{ _('Settings') }}">{{ _('Settings') }}</a>
+                            </p>
+                        </td>
+                    </tr>
+                </thead>
+                <tr>
+                    <!-- left column - nav -->
+                    <td valign="top" align="left" width="20%">
+                        {% block navbar -%}
+                            {% if current_user.is_authenticated -%}
+                                {% if current_user.unread_notifications -%}
+                                    <p>
+                                        <a class="nav-link d-lg-none"
+                                           href="/notifications"
+                                           aria-label="{{ _('Notifications') }}">
+                                            <span class="fe fe-bell red"></span>Unread notifications: <span class="red">{{ current_user.unread_notifications }}</span>
+                                        </a>
+                                    </p>
+                                {% endif -%}
+                            {% endif -%}
+                            {% if current_user.is_anonymous -%}
+                                <p>
+                                    <strong><a href="/topics">{{ _("Topics") }}</a></strong>
+                                    <br>
+                                    {% if menu_topics %}
+                                        {% for topic_menu_item in menu_topics -%}
+                                            <a class="{% if topic and topic.id == topic_menu_item.id %} active{% endif %}"
+                                               href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                        <a class="{% if active_child == 'list_topics' %} active{% endif %}"
+                                           href="/topics">{{ _("More topics") }}</a>
+                                        <br>
+                                    {% else %}
+                                        <a class="{% if active_child == 'list_topics' %} active{% endif %}"
+                                           href="/topics">{{ _("Browse by topic") }}</a>
+                                        <br>
+                                    {% endif %}
+                                    <a class="{% if active_child == 'list_communities' %} active{% endif %}"
+                                       href="/communities">{{ _("All communities") }}</a>
+                                    <br>
+                                </p>
+                                <p>
+                                    <strong><a class=""
+   data-bs-toggle="dropdown"
+   href="/feeds"
+   aria-haspopup="true"
+   aria-expanded="false">{{ _("Feeds") }}</a></strong>
+                                    <br>
+                                    {% if menu_instance_feeds -%}
+                                        {% for feed_menu_item in menu_instance_feeds -%}
+                                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                        <a class="{% if active_child == 'public_feeds' %} active{% endif %}"
+                                           href="/feeds">{{ _("Public Feeds") }}</a>
+                                        <br>
+                                    {% else -%}
+                                        <a class="{% if active_child == 'public_feeds' %} active{% endif %}"
+                                           href="/feeds">{{ _("Public Feeds") }}</a>
+                                        <br>
+                                    {% endif -%}
+                                </p>
+                                <p>
+                                    <a href="/auth/login">{{ _("Log in") }}</a>
+                                </p>
+                                <p>
+                                    <a href="/auth/register">{{ _("Register") }}</a>
+                                </p>
+                            {% else %}
+                                <h4 style="margin-top: 0;" class="mb-0">
+                                    <a href="/topics">{{ _("Topics") }}</a>
+                                </h4>
+                                <p>
+                                    {% if menu_topics -%}
+                                        {% for topic_menu_item in menu_topics -%}
+                                            <a class="{% if topic and topic.id == topic_menu_item.id %} active{% endif %}"
+                                               href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                        <a class="{% if active_child == 'list_topics' %} active{% endif %}"
+                                           href="/topics">{{ _("More topics") }}</a>
+                                        <br>
+                                    {% else -%}
+                                        <a class="{% if active_child == 'list_topics' %} active{% endif %}"
+                                           href="/topics">{{ _("Browse by topic") }}</a>
+                                        <br>
+                                    {% endif -%}
+                                    <a class="{% if active_child == 'list_communities' %} active{% endif %}"
+                                       href="/communities">{{ _("All communities") }}</a>
+                                </p>
+                                {% if menu_instance_feeds -%}
+                                    <h4 class="mb-0">
+                                        <a href="/u/{{ current_user.link() }}/myfeeds">{{ _("Feeds") }}</a>
+                                    </h4>
+                                    <p>
+                                        {% for feed_menu_item in menu_instance_feeds -%}
+                                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                    </p>
+                                {% endif -%}
+                                {% if menu_my_feeds or menu_subscribed_feeds -%}
+                                    <h4 class="mb-0">
+                                        <a class="{% if active_child == 'user_feeds' %} active{% endif %}"
+                                           href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+                                    </h4>
+                                    <p>
+                                        {% for feed_menu_item in menu_my_feeds -%}
+                                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                        {% for feed_menu_item in menu_subscribed_feeds -%}
+                                            <a class="{% if feed and feed.id == feed_menu_item.id %} active{% endif %}"
+                                               href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a>
+                                            <br>
+                                        {% endfor -%}
+                                        <a class="{% if active_child == 'public_feeds' %} active{% endif %}"
+                                           href="/feeds">{{ _("Public Feeds") }}</a>
+                                    </p>
+                                {% else -%}
+                                    <p>
+                                        <a class="{% if active_child == 'user_feeds' %} active{% endif %}"
+                                           href="/u/{{ current_user.link() }}/myfeeds">{{ _("My Feeds") }}</a>
+                                        <br>
+                                        <a class="{% if active_child == 'public_feeds' %} active{% endif %}"
+                                           href="/feeds">{{ _("Public Feeds") }}</a>
+                                    </p>
+                                {% endif -%}
+                                <h4 class="mb-0">
+                                    <a href="/u/{{ current_user.link() }}">{{ _("Account") }}</a>
+                                </h4>
+                                <p>
+                                    <a class="{% if active_child == 'view_profile' %} active{% endif %}"
+                                       href="/u/{{ current_user.link() }}">{{ _("View profile") }}</a>
+                                    <br>
+                                    <a class="{% if active_child == 'edit_profile' %} active{% endif %}"
+                                       href="/u/{{ current_user.link() }}/profile">{{ _("Edit profile") }}</a>
+                                    <br>
+                                    <a class="{% if active_child == 'chats' %} active{% endif %}"
+                                       href="/chat">{{ _("Chats") }}</a>
+                                    <br>
+                                    <a class="{% if active_child == 'bookmarks' %} active{% endif %}"
+                                       href="/bookmarks">{{ _("Bookmarks") }}</a>
+                                    <br>
+                                    <a class="{% if active_child == 'alerts' %} active{% endif %}"
+                                       href="/alerts">{{ _("Activity Alerts") }}</a>
+                                    <br>
+                                    {% if current_user.is_authenticated -%}
+                                        {% if current_user.hide_read_posts -%}
+                                            <a class="{% if active_child == 'read_posts' %} active{% endif %}"
+                                               href="/read-posts">{{ _("Read Posts") }}</a>
+                                            <br>
+                                        {% endif -%}
+                                        <a class="" href="/auth/logout">{{ _("Log out") }}</a>
+                                        <br>
+                                    {% endif -%}
+                                </p>
+                                {% if user_access('change instance settings', current_user.id) %}
+                                    <h4 class="mb-0">
+                                        <a href="/admin/">{{ _("Admin") }}</a>
+                                    </h4>
+                                    <p>
+                                        <a class="{{ ' active' if active_child == 'admin_site' }}"
+                                           href="{{ url_for('admin.admin_site') }}">{{ _("Home") }}</a>
+                                        <br>
+                                        <a class="{{ ' active' if active_child == 'admin_content' }}"
+                                           href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _("Spam") }}</a>
+                                        <br>
+                                        <a class="{{ ' active' if active_child == 'modlog' }}"
+                                           href="{{ url_for('main.modlog') }}">{{ _("Modlog") }}</a>
+                                        <br>
+                                        {% if debug_mode %}
+                                            <a class="{{ ' active' if active_child == 'dev_tools' }}"
+                                               href="{{ url_for('dev.tools') }}">{{ _("Dev Tools") }}</a>
+                                            <br>
+                                        {% endif %}
+                                    </p>
+                                {% endif %}
+                            {% endif %}
+                        {% endblock %}
+                    </td>
+                    <!-- main content -->
+                    <td valign="top" id="#middle_column" width="*">
+                        {% block content %}
+                            <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} flex-shrink-0"
+                                 role="main">
+                                {% with messages = get_flashed_messages(with_categories=True) %}
+                                    {% if messages %}
+                                        {% for category, message in messages %}
+                                            <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endwith %}
+                                {# application content needs to be provided in the app_content block #}
+                                {% block app_content %}{% endblock %}
+                            </div>
+                        {% endblock -%}
+                    </td>
+                    <!-- right column - sidebar -->
+                    <td valign="top" width="10%">{% include "themes/dillo/_side_pane.html" %}</td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td align="middle">
+                        <footer class="footer mt-auto" role="contentinfo">
+                            <p role="timer"
+                               id="timeSpent"
+                               class="text-center mt-4"
+                               title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values.">
+                            </p>
+                            <p class="text-center">
+                                <a href="/donate">{{ _("Donate") }}</a>
+                            </p>
+                            <p class="text-center">
+                                <a href="/about">{{ _("About") }}</a>
+                            </p>
+                            <p class="text-center">
+                                <a href="/keyboard_shortcuts">{{ _("Keyboard shortcuts") }}</a>
+                            </p>
+                            <p class="text-center">
+                                <a href="https://codeberg.org/rimu/pyfedi">PieFed is free and open source</a>.
+                                <br />
+                                Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.
+                            </p>
+                            <p class="text-center">
+                                <a href="/privacy">Privacy policy</a>
+                            </p>
+                        </footer>
+                    </td>
+                    <td></td>
+                </tr>
+            </table>
+        </body>
+    </html>

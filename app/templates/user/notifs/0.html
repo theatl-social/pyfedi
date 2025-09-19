@@ -2,20 +2,17 @@
     <td width="*">
         <div class="overflow-ellipses-parent text-truncate">
             <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                <a class="border border-0"
+                   href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                     {{ notification.title }}
                 </a>
             </div>
         </div>
         <div class="child">
-            {{ _('New post by followed user ') }}
-            <a href="/u/{{ notification.targets.author_user_name }}">
-                {{ notification.targets.author_user_name }}
-            </a>
-            {{ _('in') }} 
-            <a href="/c/{{ notification.targets.community_name }}">
-                {{ notification.targets.community_name }}
-            </a>
+            {{ _("New post by followed user ") }}
+            <a href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
+            {{ _("in") }}
+            <a href="/c/{{ notification.targets.community_name }}">{{ notification.targets.community_name }}</a>
         </div>
     </td>
     {% include "user/notifs/_time_and_buttons.html" %}

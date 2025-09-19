@@ -3,17 +3,14 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <h1>{{ _('Please wait...') }}</h1>
-        <p>{{ _('You are being sent to our payment system, please wait a moment.') }}</p>
-
-    </main>
-</div>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <h1>{{ _("Please wait...") }}</h1>
+            <p>{{ _("You are being sent to our payment system, please wait a moment.") }}</p>
+        </main>
+    </div>
 {% endblock %}
-
 {% block end_scripts %}
     <script src="https://js.stripe.com/v3/" nonce="{{ nonce }}"></script>
     <script nonce="{{ nonce }}">

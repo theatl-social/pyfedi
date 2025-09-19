@@ -1,35 +1,45 @@
-
 <div class="d-block d-md-none w-100 mb-4">
-    <label for="user_nav">{{ _('More settings:') }}</label>
+    <label for="user_nav">{{ _("More settings:") }}</label>
     <select class="form-control form-select navigate_on_change" id="user_nav">
-        <option value="/user/settings" aria-label="{{ _('Trending now') }}" {{ 'selected'  if request.path == '/user/settings' }}>{{ _('Settings') }}</option>
-        <option value="/u/{{ current_user.link() }}/profile" aria-label="{{ _('Latest posts') }}" {{ 'selected' if request.path.endswith('/profile') }}>{{ _('Profile') }}</option>
-        <option value="/user/settings/filters" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if request.path == '/user/settings/filters' }}>{{ _('Blocks & Filters') }}</option>
-        <option value="/user/settings/import_export" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/settings/import_export' }}>{{ _('Import & Export') }}</option>
-        <option value="{{ url_for('user.user_passkey_list') }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/passkeys' }}>{{ _('Passkeys') }}</option>
-        <option value="{{ url_for('user.connect_oauth') }}" aria-label="{{ _('Connect OAuth') }}" {{ 'selected'  if request.path == '/user/connect_oauth' }}>{{ _('Connect OAuth') }}</option>
+        <option value="/user/settings" aria-label="{{ _('Trending now') }}" {{ 'selected'  if request.path == '/user/settings' }}>{{ _("Settings") }}
+        </option>
+        <option value="/u/{{ current_user.link() }}/profile" aria-label="{{ _('Latest posts') }}" {{ 'selected' if request.path.endswith("/profile") }}>{{ _("Profile") }}
+        </option>
+        <option value="/user/settings/filters" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if request.path == '/user/settings/filters' }}>{{ _("Blocks & Filters") }}
+        </option>
+        <option value="/user/settings/import_export" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/settings/import_export' }}>{{ _("Import & Export") }}
+        </option>
+        <option value="{{ url_for('user.user_passkey_list') }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if request.path == '/user/passkeys' }}>{{ _("Passkeys") }}
+        </option>
+        <option value="{{ url_for('user.connect_oauth') }}" aria-label="{{ _('Connect OAuth') }}" {{ 'selected'  if request.path == '/user/connect_oauth' }}>{{ _('Connect OAuth') }}
+        </option>
     </select>
     <hr>
 </div>
 <div class="d-none d-md-block">
     <div class="btn-group">
-        <a href="/user/settings" class="btn {{ 'btn-primary' if request.path == '/user/settings' else 'btn-outline-secondary' }}">
-            {{ _('Settings') }}
+        <a href="/user/settings"
+           class="btn {{ 'btn-primary' if request.path == '/user/settings' else 'btn-outline-secondary' }}">
+            {{ _("Settings") }}
         </a>
-        <a href="/u/{{ current_user.link() }}/profile" class="btn {{ 'btn-primary' if request.path.endswith('/profile') else 'btn-outline-secondary' }}">
-            {{ _('Profile') }}
+        <a href="/u/{{ current_user.link() }}/profile" class="btn {{ 'btn-primary' if request.path.endswith("/profile") else 'btn-outline-secondary' }}">
+            {{ _("Profile") }}
         </a>
-        <a href="/user/settings/filters" class="btn {{ 'btn-primary' if request.path == '/user/settings/filters' else 'btn-outline-secondary' }}">
-            {{ _('Blocks & Filters') }}
+        <a href="/user/settings/filters"
+           class="btn {{ 'btn-primary' if request.path == '/user/settings/filters' else 'btn-outline-secondary' }}">
+            {{ _("Blocks & Filters") }}
         </a>
-        <a href="/user/settings/import_export" class="btn {{ 'btn-primary' if request.path == '/user/settings/import_export' else 'btn-outline-secondary' }}">
-            {{ _('Import & Export') }}
+        <a href="/user/settings/import_export"
+           class="btn {{ 'btn-primary' if request.path == '/user/settings/import_export' else 'btn-outline-secondary' }}">
+            {{ _("Import & Export") }}
         </a>
-        <a href="{{ url_for('user.user_passkey_list') }}" class="btn {{ 'btn-primary' if request.path == '/user/passkeys' else 'btn-outline-secondary' }}">
-            {{ _('Passkeys') }}
+        <a href="{{ url_for('user.user_passkey_list') }}"
+           class="btn {{ 'btn-primary' if request.path == '/user/passkeys' else 'btn-outline-secondary' }}">
+            {{ _("Passkeys") }}
         </a>
-        <a href="{{ url_for('user.connect_oauth') }}" class="btn {{ 'btn-primary' if request.path == '/user/connect_oauth' else 'btn-outline-secondary' }}">
-            {{ _('Connect OAuth') }}
+        <a href="{{ url_for('user.connect_oauth') }}"
+           class="btn {{ 'btn-primary' if request.path == '/user/connect_oauth' else 'btn-outline-secondary' }}">
+            {{ _("Connect OAuth") }}
         </a>
     </div>
 </div>

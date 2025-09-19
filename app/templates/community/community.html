@@ -7,123 +7,128 @@
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
-
 {% block app_content -%}
-<div class="row">
-    <main class="col-12 {{ 'col-lg-10' if post_layout == 'masonry_wide' else 'col-lg-8' }} position-relative main_pane {{ 'border border-warning bg-body-secondary' if is_dead }}">
-        {% if community.header_image() != '' and not low_bandwidth -%}
-            <div class="community_header" style="background-image: url({{ community.header_image() }});">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+    <div class="row">
+        <main class="col-12 {{ 'col-lg-10' if post_layout == 'masonry_wide' else 'col-lg-8' }} position-relative main_pane {{ 'border border-warning bg-body-secondary' if is_dead }}">
+            {% if community.header_image() != '' and not low_bandwidth -%}
+                <div class="community_header"
+                     style="background-image: url({{ community.header_image() }})">
+                    <nav aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         aria-label="{{ _('Navigation') }}">
+                        <ol class="breadcrumb">
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                            <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <img class="community_icon_big bump_up rounded-circle"
+                     src="{{ community.icon_image() }}"
+                     alt="Community icon" />
+                <h1 class="mt-2"  aria-live="assertive">
+                    {{ community.title }}
+                    {% if community.nsfw -%}
+                        <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
+                    {% endif -%}
+                    {% if community.nsfl -%}
+                        <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
+                    {% endif -%}
+                    {% if current_user.is_authenticated -%}
+                        {% include 'community/_notification_toggle.html' -%}
+                    {% endif -%}
+                </h1>
+                <p class="text-muted">{{ community.lemmy_link() }}</p>
+            {% elif community.icon_id and not low_bandwidth -%}
+                <div class="row mb-3">
+                    <nav class="mb-3"
+                         aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         title="Navigation">
+                        <ol class="breadcrumb">
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                            <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
+                        </ol>
+                    </nav>
+                    <div class="col-3 col-md-2">
+                        <img class="community_icon_big rounded-circle"
+                             src="{{ community.icon_image() }}"
+                             alt="Community icon" />
+                    </div>
+                    <div class="col-9 col-md-10">
+                        <h1 class="mt-3">
+                            {{ community.title }}
+                            {% if community.nsfw -%}
+                                <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
+                            {% endif -%}
+                            {% if community.nsfl -%}
+                                <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
+                            {% endif -%}
+                            {% if current_user.is_authenticated -%}
+                                {% include 'community/_notification_toggle.html' -%}
+                            {% endif -%}
+                        </h1>
+                        <p class="text-muted">{{ community.lemmy_link() }}</p>
+                    </div>
+                </div>
+            {% else -%}
+                <nav aria-label="breadcrumb"
+                     id="breadcrumb_nav"
+                     aria-label="{{ _('Navigation') }}">
                     <ol class="breadcrumb">
                         {% for breadcrumb in breadcrumbs -%}
                             <li class="breadcrumb-item">
                                 {% if breadcrumb.url -%}
                                     <a href="{{ breadcrumb.url }}">
-                                {% endif -%}
-                                {{ breadcrumb.text }}
-                                {% if breadcrumb.url -%}
+                                    {% endif -%}
+                                    {{ breadcrumb.text }}
+                                    {% if breadcrumb.url -%}
                                     </a>
                                 {% endif -%}
                             </li>
                         {% endfor -%}
-                        <li class="breadcrumb-item active">
-                            {{ (community.title + '@' + community.ap_domain)|shorten }}
-                        </li>
+                        <li class="breadcrumb-item active">{{ (community.title + '@' + community.ap_domain)|shorten }}</li>
                     </ol>
                 </nav>
-            </div>
-            <img class="community_icon_big bump_up rounded-circle" src="{{ community.icon_image() }}" alt="Community icon" />
-            <h1 class="mt-2"  aria-live="assertive">
-                {{ community.title }}
-                {% if community.nsfw -%}
-                    <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
-                {% endif -%}
-                {% if community.nsfl -%}
-                    <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
-                {% endif -%}
-                {% if current_user.is_authenticated -%}
-                    {% include 'community/_notification_toggle.html' -%}
-                {% endif -%}
-            </h1>
-            <p class="text-muted">{{ community.lemmy_link() }}</p>
-        {% elif community.icon_id and not low_bandwidth -%}
-            <div class="row mb-3">
-                <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-                    <ol class="breadcrumb">
-                        {% for breadcrumb in breadcrumbs -%}
-                            <li class="breadcrumb-item">
-                                {% if breadcrumb.url -%}
-                                    <a href="{{ breadcrumb.url }}">
-                                {% endif -%}
-                                {{ breadcrumb.text }}
-                                {% if breadcrumb.url -%}
-                                    </a>
-                                {% endif -%}
-                            </li>
-                        {% endfor -%}
-                        <li class="breadcrumb-item active">
-                            {{ (community.title + '@' + community.ap_domain)|shorten }}
-                        </li>
-                    </ol>
-                </nav>
-                <div class="col-3 col-md-2">
-                    <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" alt="Community icon" />
+                <h1 class="mt-2">
+                    {{ community.title }}
+                    {% if community.nsfw -%}
+                        <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
+                    {% endif -%}
+                    {% if community.nsfl -%}
+                        <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
+                    {% endif -%}
+                    {% if current_user.is_authenticated -%}
+                        {% include 'community/_notification_toggle.html' -%}
+                    {% endif -%}
+                </h1>
+                <p class="text-muted">{{ community.lemmy_link() }}</p>
+            {% endif -%}
+            {% include "community/_community_nav.html" -%}
+            {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
+                <div class="masonry" id="masonry">
+                    <!-- Masonry columns will be added here -->
                 </div>
-                <div class="col-9 col-md-10">
-                    <h1 class="mt-3">
-                        {{ community.title }}
-                        {% if community.nsfw -%}
-                            <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
-                        {% endif -%}
-                        {% if community.nsfl -%}
-                            <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
-                        {% endif -%}
-                        {% if current_user.is_authenticated -%}
-                            {% include 'community/_notification_toggle.html' -%}
-                        {% endif -%}
-                    </h1>
-                    <p class="text-muted">{{ community.lemmy_link() }}</p>
-                </div>
-            </div>
-        {% else -%}
-            <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-                <ol class="breadcrumb">
-                    {% for breadcrumb in breadcrumbs -%}
-                        <li class="breadcrumb-item">
-                            {% if breadcrumb.url -%}
-                                <a href="{{ breadcrumb.url }}">
-                            {% endif -%}
-                            {{ breadcrumb.text }}
-                            {% if breadcrumb.url -%}
-                                </a>
-                            {% endif -%}
-                        </li>
-                    {% endfor -%}
-                    <li class="breadcrumb-item active">
-                        {{ (community.title + '@' + community.ap_domain)|shorten }}
-                    </li>
-                </ol>
-            </nav>
-            <h1 class="mt-2">
-                {{ community.title }}
-                {% if community.nsfw -%}
-                    <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
-                {% endif -%}
-                {% if community.nsfl -%}
-                    <span class="warning_badge nsfl" title="{{ _('Not safe for life') }}">nsfl</span>
-                {% endif -%}
-                {% if current_user.is_authenticated -%}
-                    {% include 'community/_notification_toggle.html' -%}
-                {% endif -%}
-            </h1>
-            <p class="text-muted">{{ community.lemmy_link() }}</p>
-        {% endif -%}
-        {% include "community/_community_nav.html" -%}
-        {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
-            <div class="masonry" id="masonry">
-                <!-- Masonry columns will be added here -->
-            </div>
-            <script nonce="{{ nonce }}">
+                <script nonce="{{ nonce }}">
                 document.addEventListener("DOMContentLoaded", function() {
                     const masonry = document.getElementById('masonry');
                     const htmlSnippets = [
@@ -138,56 +143,51 @@
                     ];
                     renderMasonry(masonry, htmlSnippets);
                 });
-            </script>
-        {% else -%}
-            {% if content_type == "posts" or content_type == 'events' -%}
-                {% if posts or sticky_posts %}
-                    <div class="post_list">
-                        {% if sticky_posts -%}
-                            {% for post in sticky_posts -%}
+                </script>
+            {% else -%}
+                {% if content_type == "posts" or content_type == 'events' -%}
+                    {% if posts or sticky_posts %}
+                        <div class="post_list">
+                            {% if sticky_posts -%}
+                                {% for post in sticky_posts -%}
+                                    {% include 'post/_post_teaser.html' -%}
+                                {% endfor -%}
+                            {% endif -%}
+                            {% for post in posts.items -%}
                                 {% include 'post/_post_teaser.html' -%}
                             {% endfor -%}
-                        {% endif -%}
-                        {% for post in posts.items -%}
-                            {% include 'post/_post_teaser.html' -%}
-                        {% endfor -%}
-                    </div>
-                {% else -%}
-                    <p>{{ _('No posts in this community yet.') }}</p>
-                {% endif -%}
-            {% elif content_type == "comments" %}
-                {% if comments -%}
-                    <div class="post_list comments">
-                        {% for post_reply in comments.items %}
-                            {% with teaser=True %}
-                                {% include 'post/_post_reply_teaser.html' %}
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
-                {% else -%}
-                    <p>{{ _("No comments in this community yet.") }}</p>
+                        </div>
+                    {% else -%}
+                        <p>{{ _("No posts in this community yet.") }}</p>
+                    {% endif -%}
+                {% elif content_type == "comments" %}
+                    {% if comments -%}
+                        <div class="post_list comments">
+                            {% for post_reply in comments.items %}
+                                {% with teaser=True %}
+                                    {% include 'post/_post_reply_teaser.html' %}
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
+                    {% else -%}
+                        <p>{{ _("No comments in this community yet.") }}</p>
+                    {% endif -%}
                 {% endif -%}
             {% endif -%}
-        {% endif -%}
-
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
-            {% if prev_url -%}
-                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
-                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                </a>
-            {% endif -%}
-            {% if next_url -%}
-                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
-                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                </a>
-            {% endif -%}
-        </nav>
-    </main>
-
-    {% include "_side_pane.html" %}
-</div>
-<div class="row">
-
-
-</div>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url -%}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                    </a>
+                {% endif -%}
+                {% if next_url -%}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif -%}
+            </nav>
+        </main>
+        {% include "_side_pane.html" %}
+    </div>
+    <div class="row"></div>
 {% endblock -%}

@@ -5,21 +5,27 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field -%}
-
 {% block app_content -%}
-<script src="/static/js/simplewebauthn13.umd.min.js" nonce="{{ session.nonce }}"></script>
+    <script src="/static/js/simplewebauthn13.umd.min.js"
+            nonce="{{ session.nonce }}"></script>
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title text-center">{{ _('Log in') }}</div>
+                    <div class="card-title text-center">{{ _("Log in") }}</div>
                     <form method="post">
                         {{ form.csrf_token() }}
                         {{ render_field(form.user_name) }}
                         <div class="password-container">
                             {{ render_field(form.password) }}
-                            <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
-						    <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
+                            <a href="#" class="hidePassword" title="{{ _('Show password') }}">
+                                <img src="/static/images/eye-password-show.svg"
+                                     alt="{{ _('Show password') }}">
+                            </a>
+                            <a href="#" class="showPassword" title="{{ _('Hide password') }}">
+                                <img src="/static/images/eye-password-hide.svg"
+                                     alt="{{ _('Hide password') }}">
+                            </a>
                         </div>
                         {{ render_field(form.low_bandwidth_mode) }}
                         {{ render_field(form.timezone) }}
@@ -27,40 +33,43 @@
                     </form>
                     <hr />
                     <p align="center">
-                        <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _('Log in with a passkey') }}</button>
+                        <button class="btn btn-outline-primary mt-4 mb-3" id="log_in_with_passkey">{{ _("Log in with a passkey") }}</button>
                     </p>
                     {% if google_oauth -%}
-                    <hr />
-                    <p align="center">
-                        <a href="/auth/google_login" class="btn btn-outline-primary">{{ _('Log in with Google') }}
-                            <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"></a>
-                    </p>
+                        <hr />
+                        <p align="center">
+                            <a href="/auth/google_login" class="btn btn-outline-primary">{{ _("Log in with Google") }}
+                                <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo">
+                            </a>
+                        </p>
                     {% endif -%}
                     {% if mastodon_oauth -%}
-                    <hr />
-                    <p align="center">
-                        <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _('Log in with Mastodon') }}
-                            <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"></a>
-                    </p>
+                        <hr />
+                        <p align="center">
+                            <a href="/auth/mastodon_login" class="btn btn-outline-primary">{{ _("Log in with Mastodon") }}
+                                <img src="/static/images/mastodon_ico.png" width="16" alt="Logo">
+                            </a>
+                        </p>
                     {% endif -%}
                     {% if discord_oauth -%}
-                    <hr />
-                    <p align="center">
-                        <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _('Log in with Discord') }}
-                            <img src="/static/images/discord_ico.png" width="16" alt="Logo"></a>
+                        <hr />
+                        <p align="center">
+                            <a href="/auth/discord_login" class="btn btn-outline-primary">{{ _("Log in with Discord") }}
+                                <img src="/static/images/discord_ico.png" width="16" alt="Logo">
+                            </a>
                         </a>
-
                     </p>
-                    {% endif -%}
-                    <hr />
-                    <p>{{ _('New User?') }} <a href="{{ url_for('auth.register') }}">{{ _('Register new account') }}</a></p>
-                    <p class="mb-0">
-                        {{ _('Forgot Your Password?') }}
-                        <a href="{{ url_for('auth.reset_password_request') }}">{{ _('Reset it') }}</a>
-                    </p>
-                </div>
+                {% endif -%}
+                <hr />
+                <p>
+                    {{ _("New User?") }} <a href="{{ url_for('auth.register') }}">{{ _("Register new account") }}</a>
+                </p>
+                <p class="mb-0">
+                    {{ _("Forgot Your Password?") }}
+                    <a href="{{ url_for('auth.reset_password_request') }}">{{ _("Reset it") }}</a>
+                </p>
             </div>
         </div>
     </div>
-
+</div>
 {% endblock -%}

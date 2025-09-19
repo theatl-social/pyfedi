@@ -1,36 +1,55 @@
 {# Macros for post reply components. We used to use include for this but import is much faster when deeply nested, as these are. #}
 {% from "_macros.html" import render_username, render_communityname %}
-
 {% macro render_comment_voting_buttons(comment, community, current_user=None, can_upvote_here=None, can_downvote_here=None, communities_banned_from_list=None, disable_voting=False, recently_upvoted_replies=None, recently_downvoted_replies=None, upvoted_class='', downvoted_class='') -%}
-{% if current_user and current_user.is_authenticated and current_user.verified %}
+    {% if current_user and current_user.is_authenticated and current_user.verified %}
         {% if disable_voting %}&nbsp;{% endif %}
         {% if (can_upvote_here or can_upvote(current_user, community, communities_banned_from_list)) and not disable_voting %}
-                <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted_replies, comment.id) }}" role="button" aria-label="{{ _('UpVote button.') }}" aria-live="assertive"
-                 hx-post="/comment/{{ comment.id }}/upvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
-                        <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted_replies, comment.id) else 'fe-arrow-up' }}"></span>
-                </div>
+            <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted_replies, comment.id) }}"
+                 role="button"
+                 aria-label="{{ _('UpVote button.') }}"
+                 aria-live="assertive"
+                 hx-post="/comment/{{ comment.id }}/upvote/default"
+                 hx-trigger="click throttle:1s"
+                 hx-target="closest .voting_buttons_new"
+                 tabindex="0">
+                <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted_replies, comment.id) else 'fe-arrow-up' }}"></span>
+            </div>
         {% endif %}
-        <span class="score" title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
+        <span class="score"
+              title="{{ comment.up_votes }}, {{ comment.down_votes }}"
+              aria-live="assertive"
+              aria-label="{{ _("Score: ") }}{{ comment.up_votes - comment.down_votes }}.">{{ comment.up_votes - comment.down_votes }}</span>
         {% if (can_downvote_here or can_downvote(current_user, community, communities_banned_from_list)) and not disable_voting %}
-                <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted_replies, comment.id) }}" role="button" aria-label="{{ _('DownVote button.') }}" aria-live="assertive"
-                 hx-post="/comment/{{ comment.id }}/downvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
-                        <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted_replies, comment.id) else 'fe-arrow-down' }}"></span>
-                </div>
+            <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted_replies, comment.id) }}"
+                 role="button"
+                 aria-label="{{ _('DownVote button.') }}"
+                 aria-live="assertive"
+                 hx-post="/comment/{{ comment.id }}/downvote/default"
+                 hx-trigger="click throttle:1s"
+                 hx-target="closest .voting_buttons_new"
+                 tabindex="0">
+                <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted_replies, comment.id) else 'fe-arrow-down' }}"></span>
+            </div>
         {% endif %}
-{% else %}
-<div class="upvote_button digits_{{ digits(comment.up_votes) }} {{ upvoted_class }} redirect_login">
-        <span class="fe fe-arrow-up"></span>
-</div>
-<span title="{{ comment.up_votes }}, {{ comment.down_votes }}" aria-live="assertive" aria-label="{{ _('Score:') }}">{{ comment.up_votes - comment.down_votes }}</span>
-<div class="downvote_button digits_{{ digits(comment.down_votes) }} {{ downvoted_class }} redirect_login">
-        <span class="fe fe-arrow-down"></span>
-</div>
-{% endif %}
+    {% else %}
+        <div class="upvote_button digits_{{ digits(comment.up_votes) }} {{ upvoted_class }} redirect_login">
+            <span class="fe fe-arrow-up"></span>
+        </div>
+        <span title="{{ comment.up_votes }}, {{ comment.down_votes }}"
+              aria-live="assertive"
+              aria-label="{{ _('Score:') }}">{{ comment.up_votes - comment.down_votes }}</span>
+        <div class="downvote_button digits_{{ digits(comment.down_votes) }} {{ downvoted_class }} redirect_login">
+            <span class="fe fe-arrow-down"></span>
+        </div>
+    {% endif %}
 {%- endmacro %}
-
 {% macro render_reply_notification_toggle(comment, current_user=None) -%}
-<a href="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}" rel="nofollow"
-class="fe {{ 'fe-bell' if comment['comment'].notify_new_replies(current_user.id) else 'fe-no-bell' }}"
-hx-post="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}" hx-trigger="click throttle:1s" hx-swap="outerHTML"
-title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies') }}"></a>
+    <a href="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}"
+       rel="nofollow"
+       class="fe {{ 'fe-bell' if comment['comment'].notify_new_replies(current_user.id) else 'fe-no-bell' }}"
+       hx-post="{{ url_for('post.post_reply_notification', post_reply_id=comment['comment'].id) }}"
+       hx-trigger="click throttle:1s"
+       hx-swap="outerHTML"
+       title="{{ _('Notify about replies') }}"
+       aria-label="{{ _('Notify about replies') }}"></a>
 {%- endmacro %}

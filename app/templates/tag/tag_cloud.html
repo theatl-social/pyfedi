@@ -4,35 +4,31 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <div class="row justify-content-between">
-            <div class="col-8">
-                {% if community -%}
-                    <h1>{{ _('Tags in %(community)s', community=community.display_name()) }}</h1>
-                {% elif topic -%}
-                    <h1>{{ _('Tags in %(community)s', community=topic.name) }}</h1>
-                {% elif feed -%}
-                    <h1>{{ _('Tags in %(community)s', community=feed.title) }}</h1>
-                {% endif -%}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <div class="row justify-content-between">
+                <div class="col-8">
+                    {% if community -%}
+                        <h1>{{ _('Tags in %(community)s', community=community.display_name() ) }}</h1>
+                    {% elif topic -%}
+                        <h1>{{ _('Tags in %(community)s', community=topic.name) }}</h1>
+                    {% elif feed -%}
+                        <h1>{{ _('Tags in %(community)s', community=feed.title) }}</h1>
+                    {% endif -%}
+                </div>
             </div>
-        </div>
-
-        <div class="row">
-            <div class="col d-flex justify-content-center">   
-                <div id="tagCloud"></div>
+            <div class="row">
+                <div class="col d-flex justify-content-center">
+                    <div id="tagCloud"></div>
+                </div>
             </div>
-        </div>
-
-        <div class="row">
-            <div class="col">
-                <div id="tagPosts"></div>
+            <div class="row">
+                <div class="col">
+                    <div id="tagPosts"></div>
+                </div>
             </div>
-        </div>
-
-        <script type="text/javascript" nonce="{{ nonce }}">
+            <script type="text/javascript" nonce="{{ nonce }}">
             // Tag data from backend
             var tags = {{ tags_data | tojson }};
             
@@ -48,13 +44,9 @@
                 var linkSuffix = '?topic_id={{ topic.id }}';
             {% endif %}
 
-        </script>
-        <script src="{{ url_for('static', filename='js/tag_cloud.js', changed=getmtime('js/tag_cloud.js')) }}" nonce="{{ nonce }}"></script>
-
-    </main>
-</div>
-
-
-
+            </script>
+            <script src="{{ url_for('static', filename='js/tag_cloud.js', changed=getmtime('js/tag_cloud.js')) }}"
+                    nonce="{{ nonce }}"></script>
+        </main>
+    </div>
 {% endblock %}
-

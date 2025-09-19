@@ -10,59 +10,73 @@
 #}
 {% if current_user.is_authenticated -%}
     {% set collapsed = ((post_reply.score <= current_user.reply_collapse_threshold) or post_reply.deleted)
-                       and not no_collapse -%}
+        and not no_collapse -%}
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
-    {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}"
+     id="comment_{{ post_reply.id }}"
+     {% if post_reply.language_id and post_reply.language.code != 'en' %}lang="{{ post_reply.language.code }}"{% endif %}
+     aria-level="{{ post_reply.depth+1 }}"
+     role="treeitem">
+    {% if not post_reply.author.indexable -%}
+        <!--googleoff: all-->
+    {% endif -%}
     {% if teaser -%}
-    <div class="row">
-        <div class="col-12 hidable">
-            {% if post_reply.post.deleted: -%}
-                reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">[deleted post]</a>
-            {% else -%}
-                reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id)) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
-            {% endif -%}
-            <span class="comment_community">in {{ render_communityname(post_reply.post.community, low_bandwidth=low_bandwidth, collapsed=collapsed) }}</span>
+        <div class="row">
+            <div class="col-12 hidable">
+                {% if post_reply.post.deleted: -%}
+                    reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id) ) }}">[deleted post]</a>
+                {% else -%}
+                    reply to: <a href="{{ url_for('activitypub.post_ap', post_id=post_reply.post.id, _anchor='comment_' + str(post_reply.id) ) }}">{{ post_reply.post.title | truncate(80, True) }}</a>
+                {% endif -%}
+                <span class="comment_community">in {{ render_communityname(post_reply.post.community, low_bandwidth=low_bandwidth, collapsed=collapsed) }}</span>
+            </div>
         </div>
-    </div>
     {% endif -%}
     <div class="row">
         <div class="col-auto comment_author">
             <span class="visually-hidden">by</span>
-            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
-            {% if user_flair and post_reply.author.id in user_flair %}<span class="user_flair">{{ user_flair[post_reply.author.id] }}</span>{% endif %}
-            {% if post_reply.distinguished -%}<span class="fe fe-distinguished orangered" title="{{ _('Moderator') }}"></span>{% endif -%}
+            {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id) , current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+            {% if user_flair and post_reply.author.id in user_flair %}
+                <span class="user_flair">{{ user_flair[post_reply.author.id] }}</span>
+            {% endif %}
+            {% if post_reply.distinguished -%}
+                <span class="fe fe-distinguished orangered" title="{{ _('Moderator') }}"></span>
+            {% endif -%}
             {% if post_reply.author.id == post_reply.post.author.id -%}
-                <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
+                <span title="Submitter of original post"
+                      aria-label="{{ _('Post creator') }}"
+                      class="user_flair original_poster">OP</span>
             {% endif -%}
             <span class="comment_time"><a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">
                 {% if post_reply.edited_at -%}
-                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
+                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}"
+       title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
                 {% else -%}
-                    <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
+                    <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}"
+                          title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
                 {% endif -%}
             </a></span>
             {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
-                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+                <span class="red fe fe-report"
+                      title="{{ _('Reported. Check comment for issues.') }}"></span>
             {% endif -%}
             {% if post_reply.deleted -%}
-                    <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
+                <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
             {% endif -%}
         </div>
         <div class="col-auto">
             <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
         </div>
     </div>
-
     <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
         <div class="col-12 pr-0" lang="{{ post_reply.language_code() }}">
             {% if post_reply.deleted and not show_deleted -%}
                 {% if post_reply.deleted_by is none or post_reply.deleted_by != post_reply.user_id -%}
-                    <p>{{ _('Deleted by moderator') }}</p>
+                    <p>{{ _("Deleted by moderator") }}</p>
                 {% else -%}
-                    <p>{{ _('Deleted by author') }}</p>
+                    <p>{{ _("Deleted by author") }}</p>
                 {% endif -%}
             {% else -%}
                 {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
@@ -70,87 +84,91 @@
         </div>
     </div>
     {% if not banned_from_community %}
-    <div class="comment_actions hidable">
-        <div class="post_replies_link">
-            {% if post_reply.post.comments_enabled and post_reply.replies_enabled -%}
-                {% if not post_reply.post.deleted and not post_reply.deleted -%}
-                    {% if current_user.is_authenticated -%}
-                        <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                           hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
-                           hx-target="#reply_to_{{ post_reply.id }}"
-                           hx-swap="innerHTML focus-scroll:true"
-                           rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
+        <div class="comment_actions hidable">
+            <div class="post_replies_link">
+                {% if post_reply.post.comments_enabled and post_reply.replies_enabled -%}
+                    {% if not post_reply.post.deleted and not post_reply.deleted -%}
+                        {% if current_user.is_authenticated -%}
+                            <a href="{{ url_for('post.add_reply', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                               hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
+                               hx-target="#reply_to_{{ post_reply.id }}"
+                               hx-swap="innerHTML focus-scroll:true"
+                               rel="nofollow noindex"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _("reply") }}</span></a>
+                        {% else -%}
+                            <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id) ) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _("reply") }}</span></a>
+                        {% endif -%}
                     {% else -%}
-                        <a href="{{ url_for('auth.login', next='/post/' + str(post_reply.post.id)) }}"><span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span></a>
+                        <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _("reply") }}</span>
                     {% endif -%}
                 {% else -%}
-                    <span class="fe fe-reply"></span><span class="hide_skinny_mobile">&nbsp;{{ _('reply') }}</span>
+                    <span class="fe fe-lock text-muted" title="{{ _('locked') }}"></span><span class="hide_skinny_mobile">&nbsp;</span>
                 {% endif -%}
-            {% else -%}
-                <span class="fe fe-lock text-muted" title="{{ _('locked') }}"></span><span class="hide_skinny_mobile">&nbsp;</span>
-            {% endif -%}
-        </div>
-        <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
-            {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
-        </div>
-        <div class="hide_button">
-            {% if collapsed -%}
-                <a href='#' class="" title="{{ _('Un-collapse') }}"><span class="fe fe-expand"></span></a>
-            {% else -%}
-                <a href='#' class="" title="{{ _('Collapse') }}"><span class="fe fe-collapse"></span></a>
-            {% endif -%}
-        </div>
-        <div class="notify_toggle pull-right">
-            {% if current_user.is_authenticated and current_user.verified -%}
-                {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
-            {% endif -%}
-        </div>
-        {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and current_user.language_id != post_reply.language_id -%}
-            <div class="post_translate_icon">
-                <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
-                   hx-post="{{ url_for('post.post_reply_translate', post_reply_id=post_reply.id) }}"
-                   hx-trigger="click throttle:1s" hx-target="previous .comment_body" hx-swap="innerHTML"><span class="fe fe-translate"></span></a>
             </div>
-        {% endif -%}
-        <div class="comment_actions_link">
-            <div class="dropdown">
-                <a 
-                    href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                    data-bs-toggle="dropdown" rel="nofollow noindex" 
-                    aria-label="{{ _('Comment options') }}">
-                    <span class="fe fe-options" title="Options"> </span>
-                </a>
-                <ul class="dropdown-menu" style="width: 320px">
-                    <div 
-                        hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                        hx-trigger="intersect once"
-                        hx-target="this"
-                        hx-swap="outerHTML"
-                    ></div>
-                </ul>
+            <div class="voting_buttons_new"
+                 data-base-url="/comment/{{ post_reply.id }}">
+                {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+            </div>
+            <div class="hide_button">
+                {% if collapsed -%}
+                    <a href='#' class="" title="{{ _('Un-collapse') }}"><span class="fe fe-expand"></span></a>
+                {% else -%}
+                    <a href='#' class="" title="{{ _('Collapse') }}"><span class="fe fe-collapse"></span></a>
+                {% endif -%}
+            </div>
+            <div class="notify_toggle pull-right">
+                {% if current_user.is_authenticated and current_user.verified -%}
+                    {{ render_reply_notification_toggle(dict(comment=post_reply) , current_user=current_user) }}
+                {% endif -%}
+            </div>
+            {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and current_user.language_id != post_reply.language_id -%}
+                <div class="post_translate_icon">
+                    <a rel="nofollow noindex"
+                       title="{{ _('Translate') }}"
+                       href="#"
+                       hx-post="{{ url_for('post.post_reply_translate', post_reply_id=post_reply.id) }}"
+                       hx-trigger="click throttle:1s"
+                       hx-target="previous .comment_body"
+                       hx-swap="innerHTML"><span class="fe fe-translate"></span></a>
+                </div>
+            {% endif -%}
+            <div class="comment_actions_link">
+                <div class="dropdown">
+                    <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
+                       data-bs-toggle="dropdown"
+                       rel="nofollow noindex"
+                       aria-label="{{ _('Comment options') }}">
+                        <span class="fe fe-options" title="Options"></span>
+                    </a>
+                    <ul class="dropdown-menu" style="width: 320px">
+                        <div hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                             hx-trigger="intersect once"
+                             hx-target="this"
+                             hx-swap="outerHTML"></div>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
     {% endif -%}
     <div id="reply_to_{{ post_reply.id }}" class="hidable"></div>
-    {% if not post_reply.author.indexable -%}<!--googleon all-->{% endif -%}
-
+    {% if not post_reply.author.indexable -%}
+        <!--googleon all-->
+    {% endif -%}
     {% if children -%}
         <div class="replies hidable depth_{{ post_reply.depth }}" role="group">
             {% if not THREAD_CUTOFF_DEPTH or post_reply.depth <= THREAD_CUTOFF_DEPTH -%}
-                    {% for reply in children -%}
-                        {% with post_reply=reply['comment'], children=reply['replies'] %}
-                            {% include 'post/_post_reply_teaser.html' %}
-                        {% endwith %}
-                    {% endfor -%}
+                {% for reply in children -%}
+                    {% with post_reply=reply['comment'], children=reply['replies'] %}
+                        {% include 'post/_post_reply_teaser.html' %}
+                    {% endwith %}
+                {% endfor -%}
             {% else -%}
                 <a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id, _anchor='replies') }}"
                    hx-post="{{ url_for('post.continue_discussion_ajax', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
-                   hx-target="#comment_{{ post_reply.id }}" hx-swap="outerHTML">{{ _('Continue thread') }}</a>
+                   hx-target="#comment_{{ post_reply.id }}"
+                   hx-swap="outerHTML">{{ _("Continue thread") }}</a>
             {% endif -%}
         </div>
     {% endif -%}
-
     {% if collapsed -%}
         <script nonce="{{ nonce }}" type="text/javascript">
             if (typeof(toBeHidden) === 'undefined') {

@@ -1,9 +1,14 @@
 <select class="form-control form-select navigate_on_change" name="alert_type">
-  <option value="/alerts/posts/{{ filter }}" aria-label="{{ _('Posts') }}" {{ 'selected' if type == 'posts' }}>{{ _('Posts') }}</option>
-  <option value="/alerts/comments/{{ filter }}" aria-label="{{ _('Comments') }}" {{ 'selected' if type == 'comments' }}>{{ _('Comments') }}</option>
-  <option value="/alerts/communities/{{ filter }}" aria-label="{{ _('Communities') }}" {{ 'selected' if type == 'communities' }}>{{ _('Communities') }}</option>
-  <option value="/alerts/topics/{{ filter }}" aria-label="{{ _('Topics') }}" {{ 'selected' if type == 'topics' }}>{{ _('Topics') }}</option>
-  <option value="/alerts/feeds/{{ filter }}" aria-label="{{ _('Feeds') }}" {{ 'selected' if type == 'feeds' }}>{{ _('Feeds') }}</option>
-  <option value="/alerts/users/{{ filter }}" aria-label="{{ _('Users') }}" {{ 'selected' if type == 'users' }}>{{ _('Users') }}</option>
+    <option value="/alerts/posts/{{ filter }}" aria-label="{{ _('Posts') }}" {{ 'selected' if type == 'posts' }}>{{ _('Posts') }}
+    </option>
+    <option value="/alerts/comments/{{ filter }}" aria-label="{{ _('Comments') }}" {{ 'selected' if type == 'comments' }}>{{ _('Comments') }}
+    </option>
+    <option value="/alerts/communities/{{ filter }}" aria-label="{{ _('Communities') }}" {{ 'selected' if type == 'communities' }}>{{ _('Communities') }}
+    </option>
+    <option value="/alerts/topics/{{ filter }}" aria-label="{{ _('Topics') }}" {{ 'selected' if type == 'topics' }}>{{ _('Topics') }}
+    </option>
+    <option value="/alerts/feeds/{{ filter }}" aria-label="{{ _('Feeds') }}" {{ 'selected' if type == 'feeds' }}>{{ _('Feeds') }}
+    </option>
+    <option value="/alerts/users/{{ filter }}" aria-label="{{ _('Users') }}" {{ 'selected' if type == 'users' }}>{{ _('Users') }}
+    </option>
 </select>
-

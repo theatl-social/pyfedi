@@ -3,51 +3,56 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'admin_cms_pages' %}
-
+{% set active_child = "admin_cms_pages" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-
-<div class="row">
-    <div class="col-md-8">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>{{ _('Delete CMS Page') }}</h2>
-            <a href="{{ url_for('admin.admin_cms_pages') }}" class="btn btn-secondary">{{ _('Back to Pages') }}</a>
-        </div>
-
-        <div class="alert alert-warning">
-            <h4>{{ _('Are you sure you want to delete this page?') }}</h4>
-            <p>{{ _('This action cannot be undone.') }}</p>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h5>{{ _('Page Details') }}</h5>
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>{{ _("Delete CMS Page") }}</h2>
+                <a href="{{ url_for('admin.admin_cms_pages') }}"
+                   class="btn btn-secondary">{{ _("Back to Pages") }}</a>
             </div>
-            <div class="card-body">
-                <p><strong>{{ _('Title:') }}</strong> {{ page.title }}</p>
-                <p><strong>{{ _('URL:') }}</strong> <code>{{ page.url }}</code></p>
-                <p><strong>{{ _('Last edited by:') }}</strong> {{ page.last_edited_by }}</p>
-                <p><strong>{{ _('Last edited:') }}</strong> {{ moment(page.edited_at).fromNow() }}</p>
-                <p><strong>{{ _('Created:') }}</strong> {{ moment(page.created_at).fromNow() }}</p>
-                
-                <div class="mt-3">
-                    <strong>{{ _('Content preview:') }}</strong>
-                    <div class="border p-2 mt-2 bg-light" style="max-height: 200px; overflow-y: auto;">
-                        {{ page.body_html|safe }}
+            <div class="alert alert-warning">
+                <h4>{{ _("Are you sure you want to delete this page?") }}</h4>
+                <p>{{ _("This action cannot be undone.") }}</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5>{{ _("Page Details") }}</h5>
+                </div>
+                <div class="card-body">
+                    <p>
+                        <strong>{{ _("Title:") }}</strong> {{ page.title }}
+                    </p>
+                    <p>
+                        <strong>{{ _("URL:") }}</strong> <code>{{ page.url }}</code>
+                    </p>
+                    <p>
+                        <strong>{{ _("Last edited by:") }}</strong> {{ page.last_edited_by }}
+                    </p>
+                    <p>
+                        <strong>{{ _("Last edited:") }}</strong> {{ moment(page.edited_at).fromNow() }}
+                    </p>
+                    <p>
+                        <strong>{{ _("Created:") }}</strong> {{ moment(page.created_at).fromNow() }}
+                    </p>
+                    <div class="mt-3">
+                        <strong>{{ _("Content preview:") }}</strong>
+                        <div class="border p-2 mt-2 bg-light"
+                             style="max-height: 200px;
+                                    overflow-y: auto">{{ page.body_html|safe }}</div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="mt-4">
-            <form method="POST">
-                <button type="submit" class="btn btn-danger">{{ _('Yes, Delete This Page') }}</button>
-                <a href="{{ url_for('admin.admin_cms_pages') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
-            </form>
+            <div class="mt-4">
+                <form method="POST">
+                    <button type="submit" class="btn btn-danger">{{ _("Yes, Delete This Page") }}</button>
+                    <a href="{{ url_for('admin.admin_cms_pages') }}"
+                       class="btn btn-secondary">{{ _("Cancel") }}</a>
+                </form>
+            </div>
         </div>
     </div>
-</div>
-
 {% endblock %}

@@ -1,18 +1,18 @@
 <div class="post_list">
-  <h2>{{ _('You will be notified of new posts by these users') }}</h2>
-  {% for user in entities.items %}
-    <div class="h-entry post_teaser tabindex="0">
-      <div class="row">
-        <div class="col">
-          <a href="{{ url_for('user.show_profile_by_id', user_id=user.id) }}" aria-label="{{ _('Visit User') }}">{{ user.title if user.title else user.user_name }}</a>
+    <h2>{{ _("You will be notified of new posts by these users") }}</h2>
+    {% for user in entities.items %}
+        <div class="h-entry post_teaser tabindex="0">
+            <div class="row">
+                <div class="col">
+                    <a href="{{ url_for('user.show_profile_by_id', user_id=user.id) }}"
+                       aria-label="{{ _('Visit User') }}">{{ user.title if user.title else user.user_name }}</a>
+                </div>
+                <div class="col col-1">{% include 'user/_notification_toggle.html' %}</div>
+            </div>
         </div>
-      <div class="col col-1">
-        {% include 'user/_notification_toggle.html' %}
-      </div>
-    </div>
-  </div>
-  {% else %}
-    <p>{{ _('You have not subscribed to an alert for new content from any users. Use the bell icon on each person to do so.') }}</p>
-  {% endfor %}
+    {% else %}
+        <p>
+            {{ _("You have not subscribed to an alert for new content from any users. Use the bell icon on each person to do so.") }}
+        </p>
+    {% endfor %}
 </div>
-

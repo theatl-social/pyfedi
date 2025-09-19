@@ -3,51 +3,54 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'admin_cms_pages' %}
-
+{% set active_child = "admin_cms_pages" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-
-<div class="row">
-    <div class="col-12">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>{{ _('Pages') }}</h2>
-            <a href="{{ url_for('admin.admin_cms_page_add') }}" class="btn btn-primary">{{ _('Add new page') }}</a>
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h2>{{ _("Pages") }}</h2>
+                <a href="{{ url_for('admin.admin_cms_page_add') }}"
+                   class="btn btn-primary">{{ _("Add new page") }}</a>
+            </div>
+            {% if pages %}
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>{{ _("Title") }}</th>
+                                <th>{{ _("URL") }}</th>
+                                <th>{{ _("Last Edited By") }}</th>
+                                <th>{{ _("Last Edited") }}</th>
+                                <th>{{ _("Actions") }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for page in pages %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ page.title }}</strong>
+                                    </td>
+                                    <td>
+                                        <code>{{ page.url }}</code>
+                                    </td>
+                                    <td>{{ page.last_edited_by }}</td>
+                                    <td>{{ arrow.get(page.edited_at).humanize(locale=locale) }}</td>
+                                    <td>
+                                        <a href="{{ url_for('admin.admin_cms_page_edit', page_id=page.id) }}">{{ _("Edit") }}</a>
+                                        <a href='#'
+                                           data-url="{{ url_for('admin.admin_cms_page_delete', page_id=page.id) }}"
+                                           class="confirm_first send_post">{{ _("Delete") }}</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p>{{ _("No pages have been created yet.") }}</p>
+            {% endif %}
         </div>
-
-        {% if pages %}
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>{{ _('Title') }}</th>
-                        <th>{{ _('URL') }}</th>
-                        <th>{{ _('Last Edited By') }}</th>
-                        <th>{{ _('Last Edited') }}</th>
-                        <th>{{ _('Actions') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for page in pages %}
-                    <tr>
-                        <td><strong>{{ page.title }}</strong></td>
-                        <td><code>{{ page.url }}</code></td>
-                        <td>{{ page.last_edited_by }}</td>
-                        <td>{{ arrow.get(page.edited_at).humanize(locale=locale) }}</td>
-                        <td>
-                            <a href="{{ url_for('admin.admin_cms_page_edit', page_id=page.id) }}">{{ _('Edit') }}</a>
-                            <a href='#' data-url="{{ url_for('admin.admin_cms_page_delete', page_id=page.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-            <p>{{ _('No pages have been created yet.') }}</p>
-        {% endif %}
     </div>
-</div>
-
 {% endblock %}

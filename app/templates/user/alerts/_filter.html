@@ -1,8 +1,10 @@
 <div class="col-6">
-  <select class="form-control form-select navigate_on_change" name="filter_by">
-    <option value="/alerts/{{ type }}/all" aria-label="{{ _('All') }}" {{ 'selected' if filter == 'all' }}>{{ _('All') }}</option>
-    <option value="/alerts/{{ type }}/mine" aria-label="{{ _('Mine') }}" {{ 'selected' if filter == 'mine' }}>{{ _('Mine') }}</option>
-    <option value="/alerts/{{ type }}/others" aria-label="{{ _('Others') }}" {{ 'selected' if filter == 'others' }}>{{ _('Others') }}</option>
-  </select>
+    <select class="form-control form-select navigate_on_change" name="filter_by">
+        <option value="/alerts/{{ type }}/all" aria-label="{{ _('All') }}" {{ 'selected' if filter == 'all' }}>{{ _('All') }}
+        </option>
+        <option value="/alerts/{{ type }}/mine" aria-label="{{ _('Mine') }}" {{ 'selected' if filter == 'mine' }}>{{ _('Mine') }}
+        </option>
+        <option value="/alerts/{{ type }}/others" aria-label="{{ _('Others') }}" {{ 'selected' if filter == 'others' }}>{{ _('Others') }}
+        </option>
+    </select>
 </div>
-

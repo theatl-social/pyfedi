@@ -4,96 +4,101 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_content' %}
+{% set active_child = "admin_content" %}
 {% from "_macros.html" import render_username, render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
-
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Content') }}</h1>
-        <form method="get">
-            <div>
-                <input type="radio" class="form-check-input submit_on_change" name="show" value="trash" id="show_trash" {{ 'checked' if show == 'trash' }}><label for="show_trash" class="form-check-label">&nbsp;Trash</label>
-                <input type="radio" class="form-check-input submit_on_change" name="show" value="spammy" id="show_spammy" {{ 'checked' if show == 'spammy' }}><label for="show_spammy" class="form-check-label">&nbsp;Spammy</label>
-                <input type="radio" class="form-check-input submit_on_change" name="show" value="deleted" id="show_deleted" {{ 'checked' if show == 'deleted' }}><label for="show_deleted" class="form-check-label">&nbsp;Deleted</label>
-            </div>
-            <br />
-            <div>
-                <label for="posts_replies" class="form-label">Posts/Comments:</label>
-                <select name="posts_replies" class="form-select-sm submit_on_change">
-                    <option value="">All</option>
-                    <option value="posts" {{ 'selected' if posts_replies == 'posts' }}>Posts</option>
-                    <option value="replies" {{ 'selected' if posts_replies == 'replies' }}>Comments</option>
-                </select>
-                <label for="days" class="form-label">Days:</label>
-                <select name="days" class="form-select-sm submit_on_change">
-                    <option value="3" {{ 'selected' if days == 3 }}>3 days</option>
-                    <option value="7" {{ 'selected' if days == 7 }}>7 days</option>
-                    <option value="14" {{ 'selected' if days == 14 }}>14 days</option>
-                </select>
-            </div>
-        </form>
-        <h2>{{ title }}</h2>
-        {% if posts_replies != 'replies' %}
-            {% if post_replies %}<h3 class="mt-4" id="comments">Posts</h3>{% endif %}
-            <div class="post_list">
-                {% for post in posts.items %}
-                    {% with disable_voting=True %}
-                        {% include 'post/_post_teaser.html' %}
-                    {% endwith %}
-                {% else %}
-                    <p>{{ _('No posts.') }}</p>
-                {% endfor %}
-            </div>
-            <nav aria-label="Pagination" class="mt-4" role="navigation">
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Content") }}</h1>
+            <form method="get">
+                <div>
+                    <input type="radio" class="form-check-input submit_on_change" name="show" value="trash" id="show_trash" {{ 'checked' if show == 'trash' }}>
+                    <label for="show_trash" class="form-check-label">&nbsp;Trash</label>
+                    <input type="radio" class="form-check-input submit_on_change" name="show" value="spammy" id="show_spammy" {{ 'checked' if show == 'spammy' }}>
+                    <label for="show_spammy" class="form-check-label">&nbsp;Spammy</label>
+                    <input type="radio" class="form-check-input submit_on_change" name="show" value="deleted" id="show_deleted" {{ 'checked' if show == 'deleted' }}>
+                    <label for="show_deleted" class="form-check-label">&nbsp;Deleted</label>
+                </div>
+                <br />
+                <div>
+                    <label for="posts_replies" class="form-label">Posts/Comments:</label>
+                    <select name="posts_replies" class="form-select-sm submit_on_change">
+                        <option value="">All</option>
+                        <option value="posts" {{ 'selected' if posts_replies == 'posts' }}>Posts
+                        </option>
+                        <option value="replies" {{ 'selected' if posts_replies == 'replies' }}>Comments
+                        </option>
+                    </select>
+                    <label for="days" class="form-label">Days:</label>
+                    <select name="days" class="form-select-sm submit_on_change">
+                        <option value="3" {{ 'selected' if days == 3 }}>3 days
+                        </option>
+                        <option value="7" {{ 'selected' if days == 7 }}>7 days
+                        </option>
+                        <option value="14" {{ 'selected' if days == 14 }}>14 days
+                        </option>
+                    </select>
+                </div>
+            </form>
+            <h2>{{ title }}</h2>
+            {% if posts_replies != 'replies' %}
+                {% if post_replies %}<h3 class="mt-4" id="comments">Posts</h3>{% endif %}
+                <div class="post_list">
+                    {% for post in posts.items %}
+                        {% with disable_voting=True %}
+                            {% include 'post/_post_teaser.html' %}
+                        {% endwith %}
+                    {% else %}
+                        <p>{{ _("No posts.") }}</p>
+                    {% endfor %}
+                </div>
+                <nav aria-label="Pagination" class="mt-4" role="navigation">
                     {% if prev_url %}
                         <a href="{{ prev_url }}" class="btn btn-primary">
-                            <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                            <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                         </a>
                     {% endif %}
                     {% if next_url %}
                         <a href="{{ next_url }}" class="btn btn-primary">
-                            {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                            {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                         </a>
                     {% endif %}
-            </nav>
-        {% endif %}
-        {% if posts_replies != 'posts' %}
-            {% if posts %}<h3 class="mt-4" id="comments">Comments</h3>{% endif %}
-            <div class="post_list">
-                {% for post_reply in post_replies.items %}
-                    {% with teaser=True, disable_voting=True, no_collapse=True, show_deleted=True %}
-                        {% include 'post/_post_reply_teaser.html' %}
-                    {% endwith %}
-                    <hr />
-                {% else %}
-                    <p>{{ _('No comments.') }}</p>
-                {% endfor %}
-            </div>
-            <nav aria-label="Pagination" class="mt-4" role="navigation">
+                </nav>
+            {% endif %}
+            {% if posts_replies != 'posts' %}
+                {% if posts %}<h3 class="mt-4" id="comments">Comments</h3>{% endif %}
+                <div class="post_list">
+                    {% for post_reply in post_replies.items %}
+                        {% with teaser=True, disable_voting=True, no_collapse=True, show_deleted=True %}
+                            {% include 'post/_post_reply_teaser.html' %}
+                        {% endwith %}
+                        <hr />
+                    {% else %}
+                        <p>{{ _("No comments.") }}</p>
+                    {% endfor %}
+                </div>
+                <nav aria-label="Pagination" class="mt-4" role="navigation">
                     {% if prev_url_replies %}
                         <a href="{{ prev_url_replies }}" class="btn btn-primary">
-                            <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                            <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                         </a>
                     {% endif %}
                     {% if next_url_replies %}
                         <a href="{{ next_url_replies }}" class="btn btn-primary">
-                            {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                            {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                         </a>
                     {% endif %}
-            </nav>
-        {% endif %}
+                </nav>
+            {% endif %}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

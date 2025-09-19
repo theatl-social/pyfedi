@@ -5,35 +5,44 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
-
 {% block app_content %}
-<script src="/static/js/embed_listener.js" type="text/javascript"></script>
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <div class="row position-relative post_full">
-            <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-                  <ol class="breadcrumb">
-                    {% for breadcrumb in breadcrumbs -%}
-                      <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-                    {% endfor -%}
-                  </ol>
-                </nav>
-
-                <h1 class="mt-2 mb-4 post_title">{{ _('Embed code for %(post_title)s', post_title=post.title) }}</h1>
-                <p>
-                    <textarea id="embedCode" class="form-control" rows="5" cols="50"><p><iframe src="{{ url_for('post.post_embed', post_id=post.id, _external=True) }}" class="piefed-embed" style="max-width: 100%; border: 0" width="400" allowfullscreen="allowfullscreen"></iframe></p><script src="https://{{ instance_domain }}/static/js/embed.js" async="async"></script></textarea>
-                </p>
-                <p>
-                    <input type="button" class="btn btn-primary" value="{{ _('Copy to clipboard') }}" id="copyToClipboardButton">
-                </p>
+    <script src="/static/js/embed_listener.js" type="text/javascript"></script>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <div class="row position-relative post_full">
+                <div class="col post_col {% if post.type == POST_TYPE_IMAGE %}post_col post_type_image{% else %}post_type_normal{% endif %} {{ 'reported' if post.has_been_reported() }}">
+                    <nav aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         aria-label="{{ _('Navigation') }}">
+                        <ol class="breadcrumb">
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                        </ol>
+                    </nav>
+                    <h1 class="mt-2 mb-4 post_title">{{ _('Embed code for %(post_title)s', post_title=post.title) }}</h1>
+                    <p>
+                        <textarea id="embedCode" class="form-control" rows="5" cols="50"><p><iframe src="{{ url_for('post.post_embed', post_id=post.id, _external=True) }}" class="piefed-embed" style="max-width: 100%; border: 0" width="400" allowfullscreen="allowfullscreen"></iframe></p><script src="https://{{ instance_domain }}/static/js/embed.js" async="async"></script></textarea>
+                    </p>
+                    <p>
+                        <input type="button"
+                               class="btn btn-primary"
+                               value="{{ _('Copy to clipboard') }}"
+                               id="copyToClipboardButton">
+                    </p>
+                </div>
             </div>
-        </div>
-    </main>
-
-    {% with community = post.community -%}
-        {% include "_side_pane.html" %}
-    {% endwith -%}
-</div>
-
+        </main>
+        {% with community = post.community -%}
+            {% include "_side_pane.html" %}
+        {% endwith -%}
+    </div>
 {% endblock %}

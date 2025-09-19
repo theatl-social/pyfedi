@@ -1,60 +1,65 @@
 <tr class="align-middle">
     <td width="*">
         <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-            {{ _('You have been mentioned by') }} 
-            <a class="border border-0" href="/u/{{ notification.targets.author_user_name }}">
-                {{ notification.targets.author_user_name }}
-            </a>
+            {{ _("You have been mentioned by") }}
+            <a class="border border-0"
+               href="/u/{{ notification.targets.author_user_name }}">{{ notification.targets.author_user_name }}</a>
             :
         </div>
         {% if notification.subtype == "comment_mention" %}
-            <div class="accordion accordion-preview" id="accordion-{{ notification.id }}">
+            <div class="accordion accordion-preview"
+                 id="accordion-{{ notification.id }}">
                 <div class="accordion-item">
                     <div class="accordion-header d-flex align-items-center bg-body-secondary">
-                        <button class="accordion-button collapsed bg-body-secondary p-1" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
-                            {{ _("Comment Details") }}
-                        </button>
-                        <a class="badge text-bg-primary mx-1" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                        <button class="accordion-button collapsed bg-body-secondary p-1"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#notification-{{ notification.id }}"
+                                aria-expanded="false"
+                                aria-controls="notification-{{ notification.id }}">{{ _("Comment Details") }}</button>
+                        <a class="badge text-bg-primary mx-1"
+                           href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                             {{ _("Go to...") }} <span class="fe fe-external"></span>
                         </a>
                     </div>
-                <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                    <div class="accordion-body p-1">
-                        {{ markdown_to_html(notification.targets.comment_body, allow_img=False) | safe }}
+                    <div id="notification-{{ notification.id }}"
+                         class="accordion-collapse collapse"
+                         data-bs-parent="#accordion-{{ notification.id }}">
+                        <div class="accordion-body p-1">{{ markdown_to_html(notification.targets.comment_body, allow_img=False) | safe }}</div>
                     </div>
                 </div>
-            </div>
-        {% elif notification.subtype == "post_mention" %}
-            <div class="overflow-ellipses-parent text-truncate">
-                {{ _('Post title: ') }}
-                <a href="/post/{{ notification.targets.post_id }}">
-                    {{ notification.targets.post_title }}
-                </a>
-            </div>
-            <div class="accordion accordion-preview" id="accordion-{{ notification.id }}">
-                <div class="accordion-item">
-                    <div class="accordion-header d-flex align-items-center bg-body-secondary">
-                        <button class="accordion-button collapsed bg-body-secondary p-1" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
-                            {{ _("Post Details") }}
-                        </button>
-                        <a class="badge text-bg-primary mx-1" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                            {{ _("Go to...") }} <span class="fe fe-external"></span>
-                        </a>
-                    </div>
-                <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
-                    <div class="accordion-body p-1">
-                        {{ markdown_to_html(notification.targets.post_body, allow_img=False) | safe }}
-                    </div>
+            {% elif notification.subtype == "post_mention" %}
+                <div class="overflow-ellipses-parent text-truncate">
+                    {{ _("Post title: ") }}
+                    <a href="/post/{{ notification.targets.post_id }}">{{ notification.targets.post_title }}</a>
                 </div>
-            </div>
-        {% elif notification.subtype == "community_move_request" %}
-            <div class="overflow-ellipses-parent text-truncate">
-                {{ _("This is a request to move the community") }}
-            </div>
-            <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                {{ _("Go to...") }} <span class="fe fe-external"></span>
-            </a>
-        {% endif %}
-    </td>
-    {% include "user/notifs/_time_and_buttons.html" %}
-</tr>
+                <div class="accordion accordion-preview"
+                     id="accordion-{{ notification.id }}">
+                    <div class="accordion-item">
+                        <div class="accordion-header d-flex align-items-center bg-body-secondary">
+                            <button class="accordion-button collapsed bg-body-secondary p-1"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#notification-{{ notification.id }}"
+                                    aria-expanded="false"
+                                    aria-controls="notification-{{ notification.id }}">{{ _("Post Details") }}</button>
+                            <a class="badge text-bg-primary mx-1"
+                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                                {{ _("Go to...") }} <span class="fe fe-external"></span>
+                            </a>
+                        </div>
+                        <div id="notification-{{ notification.id }}"
+                             class="accordion-collapse collapse"
+                             data-bs-parent="#accordion-{{ notification.id }}">
+                            <div class="accordion-body p-1">{{ markdown_to_html(notification.targets.post_body, allow_img=False) | safe }}</div>
+                        </div>
+                    </div>
+                {% elif notification.subtype == "community_move_request" %}
+                    <div class="overflow-ellipses-parent text-truncate">{{ _("This is a request to move the community") }}</div>
+                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                        {{ _("Go to...") }} <span class="fe fe-external"></span>
+                    </a>
+                {% endif %}
+            </td>
+            {% include "user/notifs/_time_and_buttons.html" %}
+        </tr>

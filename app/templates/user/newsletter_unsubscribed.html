@@ -4,18 +4,18 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title text-center">{{ _('Unsubscribed') }}</div>
-                    <p>{{ _('You have unsubscribed from the email newsletter. We might email you for other reasons, though.') }}</p>
-                    <p><a href="{{ url_for('user.user_settings') }}">{{ _('More email settings') }}</a></p>
+                    <div class="card-title text-center">{{ _("Unsubscribed") }}</div>
+                    <p>{{ _("You have unsubscribed from the email newsletter. We might email you for other reasons, though.") }}</p>
+                    <p>
+                        <a href="{{ url_for('user.user_settings') }}">{{ _("More email settings") }}</a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
-
 {% endblock %}

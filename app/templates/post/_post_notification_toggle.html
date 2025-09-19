@@ -1,5 +1,10 @@
-<a href="{{ url_for('post.post_notification', post_id=post.id) }}" rel="nofollow" aria-live="assertive"
+<a href="{{ url_for('post.post_notification', post_id=post.id) }}"
+   rel="nofollow"
+   aria-live="assertive"
    aria-label="{{ 'Notify about replies to this post.' if post.notify_new_replies(current_user.id) else 'Do not notify about new replies to this post.' }}"
-class="small fe {{ 'fe-bell' if post.notify_new_replies(current_user.id) else 'fe-no-bell' }} no-underline"
-hx-post="{{ url_for('post.post_notification', post_id=post.id) }}" hx-trigger="click throttle:1s" hx-swap="outerHTML"
-title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies') }}"></a>
+   class="small fe {{ 'fe-bell' if post.notify_new_replies(current_user.id) else 'fe-no-bell' }} no-underline"
+   hx-post="{{ url_for('post.post_notification', post_id=post.id) }}"
+   hx-trigger="click throttle:1s"
+   hx-swap="outerHTML"
+   title="{{ _('Notify about replies') }}"
+   aria-label="{{ _('Notify about replies') }}"></a>

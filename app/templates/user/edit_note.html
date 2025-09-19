@@ -4,15 +4,14 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('Edit note for "%(user_name)s"', user_name=user.display_name()) }}</div>
+                    <div class="card-title">{{ _('Edit note for "%(user_name)s"', user_name=user.display_name() ) }}</div>
                     <div class="card-body">
-                        <strong>{{ _('Emoji quick access') }}</strong>
+                        <strong>{{ _("Emoji quick access") }}</strong>
                         <div>
                             <button id="thumbsup" class="emojitoggle">👍</button>
                             <button id="thumbsdown" class="emojitoggle">👎</button>
@@ -22,7 +21,8 @@
                             <button id="red-heart" class="emojitoggle">❤️</button>
                             <button id="rocket" class="emojitoggle">🚀</button>
                             <button id="eyes" class="emojitoggle">👀</button>
-                        </div><div>
+                        </div>
+                        <div>
                             <button id="star" class="emojitoggle">⭐</button>
                             <button id="medal" class="emojitoggle">🥇</button>
                             <button id="check" class="emojitoggle">☑️</button>
@@ -31,7 +31,8 @@
                             <button id="ghost" class="emojitoggle">👻</button>
                             <button id="clown" class="emojitoggle">🤡</button>
                             <button id="poo" class="emojitoggle">💩</button>
-                        </div><div>
+                        </div>
+                        <div>
                             <button id="speech-bubble" class="emojitoggle">💬</button>
                             <button id="anger-bubble" class="emojitoggle">🗯️</button>
                             <button id="hundred" class="emojitoggle">💯</button>
@@ -44,9 +45,11 @@
                         {{ render_form(form) }}
                         {% if return_to -%}
                             <p></p>
-                            <a href="{{ return_to }}" class="go_back">{{ _('Back') }}</a>
+                            <a href="{{ return_to }}" class="go_back">{{ _("Back") }}</a>
                         {% endif -%}
-                        <div class="row mt-5"><small class="field_hint">{{ _('This note appears next to their username. It\'s meant just for you and not displayed to anyone else.') }}</small></div>
+                        <div class="row mt-5">
+                            <small class="field_hint">{{ _("This note appears next to their username. It's meant just for you and not displayed to anyone else.") }}</small>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -4,80 +4,78 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = 'admin_communities' %}
-
+{% set active_child = "admin_communities" %}
 {% block extra_css %}
-    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}"
+          type="text/css"
+          rel="stylesheet" />
 {% endblock %}
-
 {% block app_content %}
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
-<div class="row">
-    <div class="col col-login mx-auto">
-        <h1>{{ _('Edit %(community_name)s', community_name=community.display_name()) }}</h1>
-        <form method="post" enctype="multipart/form-data" id="add_local_community_form">
-            {{ form.csrf_token() }}
-            {{ render_field(form.title) }}
-            <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
-                /c/{{ form.url(class_="form-control", maxlength=255) }}
-                {% for error in form.url.errors %}
-                <span style="color: red;">[{{ error }}]</span>
-                {% endfor %}
-            </div>
-            {{ render_field(form.description) }}
-            {{ render_field(form.posting_warning) }}
-            {% if community.icon_id %}
-                <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" />
-            {% endif %}
-            {{ render_field(form.icon_file) }}
-            <small class="field_hint">Provide a square image that looks good when small.</small>
-            {% if community.image_id %}
-                <a href="{{ community.header_image() }}"><img class="community_icon_big" src="{{ community.header_image() }}" /></a>
-            {% endif %}
-            {{ render_field(form.banner_file) }}
-            <small class="field_hint">Provide a wide image - letterbox orientation.</small>
-            {{ render_field(form.rules) }}
-            {{ render_field(form.nsfw) }}
-            {{ render_field(form.restricted_to_mods) }}
-            <div id="tom_select">
-                {{ render_field(form.languages) }}
-            </div>
-            {% if not community.is_local() %}
-            <fieldset class="border pl-2 pt-2 mb-4">
-                <legend>{{ _('Will not be overwritten by remote server') }}</legend>
-            {% endif %}
-                {{ render_field(form.banned) }}
-                {{ render_field(form.local_only) }}
-                {{ render_field(form.new_mods_wanted) }}
-                {{ render_field(form.show_popular) }}
-                {{ render_field(form.show_all) }}
-                {{ render_field(form.low_quality) }}
-                {{ render_field(form.content_retention) }}
-                {{ render_field(form.topic) }}
-                {{ render_field(form.default_layout) }}
-                {{ render_field(form.ignore_remote_language) }}
-                {{ render_field(form.can_be_archived) }}
-            {% if not community.is_local() %}
-            </fieldset>
-            {% endif %}
-            <div class="row">
-                <div class="col-auto">
-                    {{ render_field(form.submit) }}
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <h1>{{ _('Edit %(community_name)s', community_name=community.display_name() ) }}</h1>
+            <form method="post"
+                  enctype="multipart/form-data"
+                  id="add_local_community_form">
+                {{ form.csrf_token() }}
+                {{ render_field(form.title) }}
+                <div class="form-group">
+                    {{ form.url.label(class_="form-control-label required") }}
+                    /c/{{ form.url(class_="form-control", maxlength=255) }}
+                    {% for error in form.url.errors %}<span style="color: red;">[{{ error }}]</span>{% endfor %}
                 </div>
-                {% if not community.is_local() -%}
-                <div class="col-auto">
-                    <p class="mt-2"><a href="{{ url_for('admin.admin_community_move', community_id=community.id, new_owner=current_user.id) }}">{{ _('Convert to local community') }}</a></p>
+                {{ render_field(form.description) }}
+                {{ render_field(form.posting_warning) }}
+                {% if community.icon_id %}
+                    <img class="community_icon_big rounded-circle"
+                         src="{{ community.icon_image() }}" />
+                {% endif %}
+                {{ render_field(form.icon_file) }}
+                <small class="field_hint">Provide a square image that looks good when small.</small>
+                {% if community.image_id %}
+                    <a href="{{ community.header_image() }}">
+                        <img class="community_icon_big" src="{{ community.header_image() }}" />
+                    </a>
+                {% endif %}
+                {{ render_field(form.banner_file) }}
+                <small class="field_hint">Provide a wide image - letterbox orientation.</small>
+                {{ render_field(form.rules) }}
+                {{ render_field(form.nsfw) }}
+                {{ render_field(form.restricted_to_mods) }}
+                <div id="tom_select">{{ render_field(form.languages) }}</div>
+                {% if not community.is_local() %}
+                    <fieldset class="border pl-2 pt-2 mb-4">
+                        <legend>{{ _("Will not be overwritten by remote server") }}</legend>
+                    {% endif %}
+                    {{ render_field(form.banned) }}
+                    {{ render_field(form.local_only) }}
+                    {{ render_field(form.new_mods_wanted) }}
+                    {{ render_field(form.show_popular) }}
+                    {{ render_field(form.show_all) }}
+                    {{ render_field(form.low_quality) }}
+                    {{ render_field(form.content_retention) }}
+                    {{ render_field(form.topic) }}
+                    {{ render_field(form.default_layout) }}
+                    {{ render_field(form.ignore_remote_language) }}
+                    {{ render_field(form.can_be_archived) }}
+                    {% if not community.is_local() %}</fieldset>{% endif %}
+                <div class="row">
+                    <div class="col-auto">{{ render_field(form.submit) }}</div>
+                    {% if not community.is_local() -%}
+                        <div class="col-auto">
+                            <p class="mt-2">
+                                <a href="{{ url_for('admin.admin_community_move', community_id=community.id, new_owner=current_user.id) }}">{{ _("Convert to local community") }}</a>
+                            </p>
+                        </div>
+                    {% endif -%}
                 </div>
-                {% endif -%}
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

@@ -4,42 +4,43 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title">{{ _('Edit Feed') }}</div>
-                    <form method="post" enctype="multipart/form-data" id="new_feed_form" role="form">
+                    <div class="card-title">{{ _("Edit Feed") }}</div>
+                    <form method="post"
+                          enctype="multipart/form-data"
+                          id="new_feed_form"
+                          role="form">
                         {{ form.csrf_token() }}
                         {{ render_field(form.title) }}
-                        <div class="form-group">{{ form.url.label(class_="form-control-label required") }}
+                        <div class="form-group">
+                            {{ form.url.label(class_="form-control-label required") }}
                             {% if form.url.render_kw %}
                                 /f/{{ form.url(class_="form-control opacity-50", maxlength=255) }}
-                                <span style="color: orange">{{ _('Feed has subscribers, cannot change Url.') }}</span><br>
-                            {%  else %}
-                                <span>/f/{{ form.url(class_="form-control", maxlength=255) }}</span><br>
-                            {%  endif %}
-                            {% for error in form.url.errors %}
-                            <span style="color: red;">{{ error }}</span>
-                            {% endfor %}
+                                <span style="color: orange">{{ _("Feed has subscribers, cannot change Url.") }}</span>
+                                <br>
+                            {% else %}
+                                <span>/f/{{ form.url(class_="form-control", maxlength=255) }}</span>
+                                <br>
+                            {% endif %}
+                            {% for error in form.url.errors %}<span style="color: red;">{{ error }}</span>{% endfor %}
                         </div>
                         {{ render_field(form.description) }}
                         {{ render_field(form.communities) }}
-                        <small class="field_hint">{{ _('Format example: news@lemmy.world. One per line.') }}</small>
+                        <small class="field_hint">{{ _("Format example: news@lemmy.world. One per line.") }}</small>
                         {{ render_field(form.parent_feed_id) }}
                         {{ render_field(form.show_child_posts) }}
                         {{ render_field(form.icon_file) }}
-                        <small class="field_hint">{{ _('Provide a square image that looks good when small. SVG is allowed.') }}</small>
+                        <small class="field_hint">{{ _("Provide a square image that looks good when small. SVG is allowed.") }}</small>
                         {{ render_field(form.banner_file) }}
-                        <small class="field_hint">{{ _('Provide a wide image - letterbox orientation.') }}</small>
+                        <small class="field_hint">{{ _("Provide a wide image - letterbox orientation.") }}</small>
                         {{ render_field(form.nsfw) }}
                         {{ render_field(form.nsfl) }}
                         {{ render_field(form.public) }}
-                        {% if current_user.get_id() in admin_ids %}
-                            {{ render_field(form.is_instance_feed) }}
-                        {% endif %}
+                        {% if current_user.get_id() in admin_ids %}{{ render_field(form.is_instance_feed) }}{% endif %}
                         {{ render_field(form.submit) }}
                     </form>
                 </div>

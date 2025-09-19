@@ -4,91 +4,110 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'public_feeds' %}
-
-
+{% set active_child = "public_feeds" %}
 {% block app_content %}
-<h1>{{ _('Public Feeds') }}</h1>
-<div class="row g-2 justify-content-between mt-2 mb-2">
-    <div class="col-auto">
-        <div class="btn-group">
-            <a href="{{ url_for('feed.feed_new') }}" class="btn btn-outline-secondary" aria-label="{{ _('Create a Feed') }}">{{ _('Create a Feed') }}</a>
-            <a href="{{ url_for('feed.feed_add_remote') }}" class="btn btn-outline-secondary" aria-label="{{ _('Add a Feed from another instance') }}">{{ _('Add remote Feed') }}</a>
+    <h1>{{ _("Public Feeds") }}</h1>
+    <div class="row g-2 justify-content-between mt-2 mb-2">
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('feed.feed_new') }}"
+                   class="btn btn-outline-secondary"
+                   aria-label="{{ _('Create a Feed') }}">{{ _('Create a Feed') }}</a>
+                <a href="{{ url_for('feed.feed_add_remote') }}"
+                   class="btn btn-outline-secondary"
+                   aria-label="{{ _('Add a Feed from another instance') }}">{{ _("Add remote Feed") }}</a>
+            </div>
         </div>
-    </div>    
-    <div class="col-auto">
-        <form id="searchFeeds" method="get">
-            <input id="search_text" class="form-control" type="search"
-                   name="search"
-                   placeholder="{{ '' if search_hint != '' else _('Search') }}"
-                   value="{{ search_hint if search_hint != '' }}">
-        </form>
+        <div class="col-auto">
+            <form id="searchFeeds" method="get">
+                <input id="search_text"
+                       class="form-control"
+                       type="search"
+                       name="search"
+                       placeholder="{{ '' if search_hint != '' else _('Search') }}"
+                       value="{{ search_hint if search_hint != '' }}">
+            </form>
+        </div>
     </div>
-</div>
-{% if server_has_feeds %}
-    {% macro render_feed(feed, depth) %}
-        <tr>
-            <td>
+    {% if server_has_feeds %}
+        {% macro render_feed(feed, depth) %}
+            <tr>
+                <td>
+                    {% if current_user.is_authenticated %}
+                        {% if feed['feed'].id in subscribed_feeds %}
+                            <a class="btn btn-warning btn-sm"
+                               href="{{ url_for('feed.feed_unsubscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}"
+                               rel="nofollow"
+                               aria-label="{{ _('Unsubscribe %(name)s', name=feed['feed'].title) }}">{{ _("Unsubscribe") }}</a>
+                        {% else %}
+                            <a class="btn btn-primary btn-sm"
+                               href="{{ url_for('feed.subscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}"
+                               rel="nofollow"
+                               aria-label="{{ _('Join %(name)s', name=feed['feed'].title) }}">{{ _("Subscribe") }}</a>
+                        {% endif %}
+                    {% else %}
+                        <a class="btn btn-primary btn-sm"
+                           href="{{ url_for('auth.login') }}"
+                           rel="nofollow"
+                           aria-label="{{ _('Join %(name)s', name=feed['feed'].title) }}">{{ _("Subscribe") }}</a>
+                    {% endif %}
+                </td>
+                <td nowrap="nowrap">
+                    {{ '--' * depth }}
+                    {% if depth == 0 %}<strong>{% endif %}
+                        <a href="/f/{{ feed['feed'].link() }}">{{ feed['feed'].display_name() }}</a>
+                        {% if depth == 0 %}</strong>{% endif %}
+                </td>
+                <td>{{ feed['feed'].num_communities }}</td>
+                <td>{{ feed['feed'].subscriptions_count }}</td>
+                <td>
+                    <a href="/u/{{ feed['feed'].creator() }}">{{ feed['feed'].creator() }}</a>
+                </td>
                 {% if current_user.is_authenticated %}
-                    {% if feed['feed'].id in subscribed_feeds %}
-                        <a class="btn btn-warning btn-sm" href="{{ url_for('feed.feed_unsubscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}" rel="nofollow" aria-label="{{ _('Unsubscribe %(name)s', name=feed['feed'].title) }}">{{ _('Unsubscribe') }}</a>
+                    {% if current_user.id == feed['feed'].user_id %}
+                        <td>
+                            <a href="{{ url_for('feed.feed_edit', feed_id=feed['feed'].id, next='/feeds') }}"
+                               rel="nofollow noindex">{{ _("Edit Feed") }}</a>
+                        </td>
                     {% else %}
-                        <a class="btn btn-primary btn-sm" href="{{ url_for('feed.subscribe', actor=feed['feed'].ap_id if feed['feed'].ap_id else feed['feed'].name) }}" rel="nofollow" aria-label="{{ _('Join %(name)s', name=feed['feed'].title) }}">{{ _('Subscribe') }}</a>
+                        {% if feed['feed'].id in subscribed_feeds %}
+                            <td>
+                                <a href="/feed/{{ feed['feed'].id }}/copy">{{ _("Copy") }}</a>
+                            </td>
+                        {% else %}
+                            <td>
+                                <a href="/feed/{{ feed['feed'].id }}/copy">{{ _("Copy") }}</a>
+                            </td>
+                        {% endif %}
                     {% endif %}
                 {% else %}
-                    <a class="btn btn-primary btn-sm" href="{{ url_for('auth.login') }}" rel="nofollow" aria-label="{{ _('Join %(name)s', name=feed['feed'].title) }}">{{ _('Subscribe') }}</a>
+                    <td>
+                        <a href="/feed/{{ feed['feed'].id }}/copy">{{ _("Copy") }}</a>
+                    </td>
                 {% endif %}
-            </td>
-            <td nowrap="nowrap">{{ '--' * depth }}
-                {% if depth == 0 %}<strong>{% endif %}
-                    <a href="/f/{{ feed['feed'].link() }}">{{ feed['feed'].display_name() }}</a>
-                {% if depth == 0 %}</strong>{% endif %}
-            </td>
-            <td>{{ feed['feed'].num_communities }}</td>
-            <td>{{ feed['feed'].subscriptions_count }}</td>
-            <td><a href="/u/{{ feed['feed'].creator() }}">{{ feed['feed'].creator() }}</a></td>
-            {% if current_user.is_authenticated %}
-                {% if current_user.id == feed['feed'].user_id %}
-                    <td><a href="{{ url_for('feed.feed_edit', feed_id=feed['feed'].id, next='/feeds') }}" rel="nofollow noindex">{{ _('Edit Feed') }}</a></td>
-                {% else %}
-                    {% if feed['feed'].id in subscribed_feeds %}
-                        <td><a href="/feed/{{ feed['feed'].id }}/copy">{{ _('Copy') }}</a></td>
-                    {% else %}
-                        <td><a href="/feed/{{ feed['feed'].id }}/copy">{{ _('Copy') }}</a></td>
-                    {% endif %}
-                {% endif %}
-            {% else %}
-                <td><a href="/feed/{{ feed['feed'].id }}/copy">{{ _('Copy') }}</a></td>
+            </tr>
+            {% if feed['children'] %}
+                {% for feed in feed['children'] %}{{ render_feed(feed, depth + 1) |safe }}{% endfor %}
             {% endif %}
-        </tr>
-        {% if feed['children'] %}
-            {% for feed in feed['children'] %}
-                {{ render_feed(feed, depth + 1)|safe }}
-            {% endfor %}
-        {% endif %}
-    {% endmacro %}
-
-    <div class="table-responsive-md mt-4">
-        <table class="communities_table table table-striped table-hover w-100">
-            <thead>
-                <tr>
-                    <th> </th>
-                    <th>{{ _('Name') }}</th>
-                    <th>{{ _('Communities') }}</th>
-                    <th>{{ _('Subscribers') }}</th>
-                    <th>{{ _('Creator') }}</th>
-                    <th>{{ _('Actions') }}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for feed in public_feeds_list %}
-                    {{ render_feed(feed, 0)|safe }}
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-
-{% else -%}
-    <p>{{ _('No Public Feeds yet...') }}</p>
-{% endif -%}
+        {% endmacro %}
+        <div class="table-responsive-md mt-4">
+            <table class="communities_table table table-striped table-hover w-100">
+                <thead>
+                    <tr>
+                        <th></th>
+                        <th>{{ _("Name") }}</th>
+                        <th>{{ _("Communities") }}</th>
+                        <th>{{ _("Subscribers") }}</th>
+                        <th>{{ _("Creator") }}</th>
+                        <th>{{ _("Actions") }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for feed in public_feeds_list %}{{ render_feed(feed, 0) |safe }}{% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else -%}
+        <p>{{ _("No Public Feeds yet...") }}</p>
+    {% endif -%}
 {% endblock %}

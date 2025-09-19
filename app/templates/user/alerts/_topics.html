@@ -1,18 +1,16 @@
 <div class="post_list">
-  <h2>{{ _('You will be notified of new posts in communities covered by these topics') }}</h2>
-  {% for topic in entities.items -%}
-    <div class="h-entry post_teaser tabindex="0">
-      <div class="row">
-        <div class="col">
-          <a href="{{ url_for('topic.show_topic', topic_path=topic.machine_name) }}" aria-label="{{ _('Visit Topic') }}">{{ topic.name }}</a>
+    <h2>{{ _("You will be notified of new posts in communities covered by these topics") }}</h2>
+    {% for topic in entities.items -%}
+        <div class="h-entry post_teaser tabindex="0">
+            <div class="row">
+                <div class="col">
+                    <a href="{{ url_for('topic.show_topic', topic_path=topic.machine_name) }}"
+                       aria-label="{{ _('Visit Topic') }}">{{ topic.name }}</a>
+                </div>
+                <div class="col col-1">{% include 'topic/_notification_toggle.html' -%}</div>
+            </div>
         </div>
-      <div class="col col-1">
-        {% include 'topic/_notification_toggle.html' -%}
-      </div>
-    </div>
-  </div>
-  {% else -%}
-    <p>{{ _('You have not subscribed to any topics. Use the bell icon on each topic to do so.') }}</p>
-  {% endfor -%}
+    {% else -%}
+        <p>{{ _("You have not subscribed to any topics. Use the bell icon on each topic to do so.") }}</p>
+    {% endfor -%}
 </div>
-

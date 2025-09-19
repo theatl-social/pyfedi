@@ -1,26 +1,54 @@
 <ul class="text-end text-lg-start">
-  {% if menu_topics -%}
-       {% for topic_menu_item in menu_topics -%}
-            <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
-       {% endfor -%}
-       <li><hr class="dropdown-divider"></li>
-       <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
-  {% else -%}
-    <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-  {% endif -%}
-  <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
-  {% if moderating_communities %}
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header">{{ _('Moderating') }}</h6></li>
-    {% for community_menu_item in moderating_communities -%}
-        <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-    {% endfor -%}
-  {% endif %}
-  {% if joined_communities %}
-    <li><hr class="dropdown-divider"></li>
-    <li><h6 class="dropdown-header">{{ _('Joined communities') }}</h6></li>
-    {% for community_menu_item in joined_communities -%}
-        <li class="pl-2"><a class="dropdown-item{% if community and community.id == community_menu_item.id%} active{% endif %}" href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a></li>
-    {% endfor -%}
-  {% endif %}
+    {% if menu_topics -%}
+        {% for topic_menu_item in menu_topics -%}
+            <li>
+                <a class="dropdown-item{% if topic and topic.id == topic_menu_item.id %} active{% endif %}"
+                   href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a>
+            </li>
+        {% endfor -%}
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li>
+            <a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}"
+               href="/topics">{{ _("More topics") }}</a>
+        </li>
+    {% else -%}
+        <li>
+            <a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}"
+               href="/topics">{{ _("Browse by topic") }}</a>
+        </li>
+    {% endif -%}
+    <li>
+        <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}"
+           href="/communities">{{ _("All communities") }}</a>
+    </li>
+    {% if moderating_communities %}
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li>
+            <h6 class="dropdown-header">{{ _("Moderating") }}</h6>
+        </li>
+        {% for community_menu_item in moderating_communities -%}
+            <li class="pl-2">
+                <a class="dropdown-item{% if community and community.id == community_menu_item.id %} active{% endif %}"
+                   href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a>
+            </li>
+        {% endfor -%}
+    {% endif %}
+    {% if joined_communities %}
+        <li>
+            <hr class="dropdown-divider">
+        </li>
+        <li>
+            <h6 class="dropdown-header">{{ _("Joined communities") }}</h6>
+        </li>
+        {% for community_menu_item in joined_communities -%}
+            <li class="pl-2">
+                <a class="dropdown-item{% if community and community.id == community_menu_item.id %} active{% endif %}"
+                   href="/c/{{ community_menu_item.link() }}">{{ community_menu_item.title }}</a>
+            </li>
+        {% endfor -%}
+    {% endif %}
 </ul>

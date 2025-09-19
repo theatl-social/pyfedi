@@ -5,28 +5,28 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_feedname %}
-
 {% block app_content %}
-        {% if new_feed and not new_feed.banned %}
-            <div class="row">
-                <div class="col mx-auto">
-                    <div class="card mt-5">
-                        <div class="card-body p-6">
-                            <div class="card-title">{{ _('Found a feed:') }}</div>
-                            <div class="card-body">
-                                <p>
-                                    {{ render_feedname(new_feed) }}
-                                </p>
-                                <p> {% if subscribed %}
-                                        <a class="btn btn-primary mt-4" href="/feed/{{ new_feed.link() }}/unsubscribe">{{ _('Unsubscribe') }}</a>
-                                    {% else %}
-                                        <a class="btn btn-primary mt-4" href="/feed/{{ new_feed.link() }}/subscribe">{{ _('Subscribe') }}</a>
-                                    {% endif %}
-                                </p>
-                            </div>
+    {% if new_feed and not new_feed.banned %}
+        <div class="row">
+            <div class="col mx-auto">
+                <div class="card mt-5">
+                    <div class="card-body p-6">
+                        <div class="card-title">{{ _("Found a feed:") }}</div>
+                        <div class="card-body">
+                            <p>{{ render_feedname(new_feed) }}</p>
+                            <p>
+                                {% if subscribed %}
+                                    <a class="btn btn-primary mt-4"
+                                       href="/feed/{{ new_feed.link() }}/unsubscribe">{{ _("Unsubscribe") }}</a>
+                                {% else %}
+                                    <a class="btn btn-primary mt-4"
+                                       href="/feed/{{ new_feed.link() }}/subscribe">{{ _("Subscribe") }}</a>
+                                {% endif %}
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
-        {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}

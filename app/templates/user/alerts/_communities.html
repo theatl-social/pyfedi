@@ -1,19 +1,19 @@
 {% include 'user/alerts/_filter.html' %}
 <div class="post_list">
-  <h2>{{ _('You will be notified of new posts in these communities') }}</h2>
-  {% for community in entities.items %}
-    <div class="h-entry post_teaser tabindex="0">
-      <div class="row">
-        <div class="col">
-          <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}" aria-label="{{ _('Visit Community') }}">{{ community.title }}</a>
+    <h2>{{ _("You will be notified of new posts in these communities") }}</h2>
+    {% for community in entities.items %}
+        <div class="h-entry post_teaser tabindex="0">
+            <div class="row">
+                <div class="col">
+                    <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}"
+                       aria-label="{{ _('Visit Community') }}">{{ community.title }}</a>
+                </div>
+                <div class="col col-1">{% include 'community/_notification_toggle.html' %}</div>
+            </div>
         </div>
-        <div class="col col-1">
-          {% include 'community/_notification_toggle.html' %}
-        </div>
-      </div>
-    </div>
-  {% else %}
-    <p>{{ _('You have not subscribed to an alert for new content in any communities. Use the bell icon in each community to do so.') }}</p>
-  {% endfor %}
+    {% else %}
+        <p>
+            {{ _("You have not subscribed to an alert for new content in any communities. Use the bell icon in each community to do so.") }}
+        </p>
+    {% endfor %}
 </div>
-

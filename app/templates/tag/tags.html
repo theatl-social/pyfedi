@@ -4,63 +4,69 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        {% if search == '' %}
-            <h1>{{ _('Tags') }}</h1>
-        {% else %}
-            <h1>{{ _('Tags containing "%(search)s"', search=search) }}</h1>
-        {% endif %}
-        {% if not current_user.is_anonymous and current_user.trustworthy() %}
-        <div class="row">
-            <div class="col-auto">
-                <div class="btn-group">
-                    <a href="/tags" class="btn {{ 'btn-primary' if request.path == '/tags' else 'btn-outline-secondary' }}">
-                        {{ _('Tags') }}
-                    </a>
-                    <a href="/tags/banned" class="btn {{ 'btn-primary' if request.path == '/tags/banned' else 'btn-outline-secondary' }}">
-                        {{ _('Banned tags') }}
-                    </a>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            {% if search == '' %}
+                <h1>{{ _("Tags") }}</h1>
+            {% else %}
+                <h1>{{ _('Tags containing "%(search)s"', search=search) }}</h1>
+            {% endif %}
+            {% if not current_user.is_anonymous and current_user.trustworthy() %}
+                <div class="row">
+                    <div class="col-auto">
+                        <div class="btn-group">
+                            <a href="/tags"
+                               class="btn {{ 'btn-primary' if request.path == '/tags' else 'btn-outline-secondary' }}">
+                                {{ _("Tags") }}
+                            </a>
+                            <a href="/tags/banned"
+                               class="btn {{ 'btn-primary' if request.path == '/tags/banned' else 'btn-outline-secondary' }}">
+                                {{ _("Banned tags") }}
+                            </a>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <form method="get">
+                            <input type="search"
+                                   name="search"
+                                   value="{{ search }}"
+                                   placeholder="{{ _('Search') }}"
+                                   autofocus>
+                        </form>
+                    </div>
                 </div>
+            {% endif %}
+            <div class="table-responsive-sm pt-4">
+                <table class="table table-striped">
+                    <tr>
+                        <th>Tag</th>
+                        <th>
+                            <span title="{{ _('How many times has something using this tag been posted') }}"># Posts</span>
+                        </th>
+                    </tr>
+                    {% for tag in tags %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('tag.show_tag', tag=tag.name) }}">{{ tag.display_as }}</a>
+                            </td>
+                            <td>{{ tag.post_count }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
             </div>
-            <div class="col-auto">
-                <form method="get"><input type="search" name="search" value="{{ search }}" placeholder="{{ _('Search') }}" autofocus></form>
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="table-responsive-sm pt-4">
-        <table class="table table-striped">
-            <tr>
-               <th>Tag</th>
-               <th><span title="{{ _('How many times has something using this tag been posted') }}"># Posts</span></th>
-            </tr>
-            {% for tag in tags %}
-                <tr>
-                    <td><a href="{{ url_for('tag.show_tag', tag=tag.name) }}">{{ tag.display_as }}</a></td>
-                    <td>{{ tag.post_count  }}</td>
-                </tr>
-            {% endfor %}
-        </table>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                    </a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif %}
+            </nav>
+        </main>
     </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
-        {% if prev_url %}
-            <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-            </a>
-        {% endif %}
-        {% if next_url %}
-            <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-            </a>
-        {% endif %}
-        </nav>
-    </main>
-</div>
-
-
-
 {% endblock %}
-

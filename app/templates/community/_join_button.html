@@ -1,3 +1,7 @@
-<a class="btn btn-primary btn-sm" href="/community/{{ community.link() }}/subscribe" rel="nofollow"
-   aria-label="{{ _('Join %(name)s', name=community.display_name()) }}"
-   hx-post="/community/{{ community.link() }}/subscribe" hx-trigger="click throttle:1s" hx-swap="outerHTML"><span class="fe fe-join"></span> {{ _('Join') }}</a>
+<a class="btn btn-primary btn-sm"
+   href="/community/{{ community.link() }}/subscribe"
+   rel="nofollow"
+   aria-label="{{ _('Join %(name)s', name=community.display_name() ) }}"
+   hx-post="/community/{{ community.link() }}/subscribe"
+   hx-trigger="click throttle:1s"
+   hx-swap="outerHTML"><span class="fe fe-join"></span> {{ _("Join") }}</a>

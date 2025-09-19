@@ -4,37 +4,34 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'user_feeds' %}
-
-
+{% set active_child = "user_feeds" %}
 {% block app_content %}
-
-<h1>{{ _('My Feeds') }}</h1>
-<a class="btn btn-primary" href="{{ url_for('feed.feed_new') }}" style="float: right;">{{ _('New Feed') }}</a>
-{% if user_has_feeds or user_has_feed_subscriptions %}
-    <table class="communities_table table table-striped mt-1">
-        <thead>
-        <tr>
-            <th> </th>
-            <th>Name</th>
-            <th>Parent Feed</th>
-            <th># Communities</th>
-            <th>Creator</th>
-            <th>Public</th>
-            {% if current_user.get_id() in admin_ids %}
-                <th>Instance</th>
-            {% endif %}
-            <th>Actions</th>
-        </tr>
-        </thead>
-        {% for feed in user_feeds_list -%}
-            {% include 'feed/_feed_table_row.html' -%}
-        {% endfor -%}
-        {% for feed in subbed_feeds -%}
-            {% include 'feed/_feed_table_row.html' -%}
-        {% endfor -%}
-    </table>
-{% else -%}
-    <p>{{ _('You do not have any Feeds yet..') }}</p>
-{% endif -%}
+    <h1>{{ _("My Feeds") }}</h1>
+    <a class="btn btn-primary"
+       href="{{ url_for('feed.feed_new') }}"
+       style="float: right">{{ _("New Feed") }}</a>
+    {% if user_has_feeds or user_has_feed_subscriptions %}
+        <table class="communities_table table table-striped mt-1">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Parent Feed</th>
+                    <th># Communities</th>
+                    <th>Creator</th>
+                    <th>Public</th>
+                    {% if current_user.get_id() in admin_ids %}<th>Instance</th>{% endif %}
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            {% for feed in user_feeds_list -%}
+                {% include 'feed/_feed_table_row.html' -%}
+            {% endfor -%}
+            {% for feed in subbed_feeds -%}
+                {% include 'feed/_feed_table_row.html' -%}
+            {% endfor -%}
+        </table>
+    {% else -%}
+        <p>{{ _("You do not have any Feeds yet..") }}</p>
+    {% endif -%}
 {% endblock %}

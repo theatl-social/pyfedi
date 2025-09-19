@@ -3,17 +3,20 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-
 {% block app_content %}
     <div class="row">
         <div class="col">
             <div class="card">
                 <div class="card-header">
-                    <h3 class="card-title">{{ _('An unexpected error has occurred') }}</h3>
+                    <h3 class="card-title">{{ _("An unexpected error has occurred") }}</h3>
                 </div>
                 <div class="card-body">
-                    <p>{{ _('Sorry for the inconvenience! Please let us know about this, so we can repair it and make PieFed better for everyone.') }}</p>
-                    <p><a href="#" class="go_back">{{ _('Back') }}</a></p>
+                    <p>
+                        {{ _("Sorry for the inconvenience! Please let us know about this, so we can repair it and make PieFed better for everyone.") }}
+                    </p>
+                    <p>
+                        <a href="#" class="go_back">{{ _("Back") }}</a>
+                    </p>
                 </div>
             </div>
         </div>

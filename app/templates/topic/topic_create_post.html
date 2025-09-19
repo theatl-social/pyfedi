@@ -4,7 +4,6 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
@@ -20,13 +19,35 @@
                                     {% if not community.user_is_banned(current_user) %}
                                         {% if not community.restricted_to_mods or (community.restricted_to_mods and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
                                             <tr>
-                                                <th class="pl-2"><a class="choose_topic_for_post" data-id="{{ community.id }}" href="/community/{{ community.link() }}/submit" rel="nofollow" aria-label="{{ _('Post in %(name)s', name=community.display_name()) }}"><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                                {{ community.display_name() }}</a></th><th></th>
+                                                <th class="pl-2">
+                                                    <a class="choose_topic_for_post"
+                                                       data-id="{{ community.id }}"
+                                                       href="/community/{{ community.link() }}/submit"
+                                                       rel="nofollow"
+                                                       aria-label="{{ _('Post in %(name)s', name=community.display_name() ) }}">
+                                                        <img src="{{ community.icon_image('tiny') }}"
+                                                             class="community_icon rounded-circle"
+                                                             loading="lazy"
+                                                             alt="" />
+                                                    {{ community.display_name() }}</a>
+                                                </th>
+                                                <th></th>
                                             </tr>
                                         {% else %}
                                             <tr>
-                                                <th class="pl-2"><a class="choose_topic" data-id="{{ community.id }}" href="/c/{{ community.link() }}" rel="nofollow" aria-label="{{ _('View %(name)s', name=community.display_name()) }}"><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                                {{ community.display_name() }}</a></th><th>(Posts are restricted to Mods)</th>
+                                                <th class="pl-2">
+                                                    <a class="choose_topic"
+                                                       data-id="{{ community.id }}"
+                                                       href="/c/{{ community.link() }}"
+                                                       rel="nofollow"
+                                                       aria-label="{{ _('View %(name)s', name=community.display_name() ) }}">
+                                                        <img src="{{ community.icon_image('tiny') }}"
+                                                             class="community_icon rounded-circle"
+                                                             loading="lazy"
+                                                             alt="" />
+                                                    {{ community.display_name() }}</a>
+                                                </th>
+                                                <th>(Posts are restricted to Mods)</th>
                                             </tr>
                                         {% endif %}
                                     {% endif %}
@@ -35,13 +56,35 @@
                                     {% if not community.user_is_banned(current_user) %}
                                         {% if not community.restricted_to_mods or (community.restricted_to_mods and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) %}
                                             <tr>
-                                                <th class="pl-2"><a class="choose_topic_for_post" data-id="{{ community.id }}" href="/community/{{ community.link() }}/submit" rel="nofollow" aria-label="{{ _('Post in %(name)s', name=community.display_name()) }}"><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                                {{ community.display_name() }}</a></th><th></th>
+                                                <th class="pl-2">
+                                                    <a class="choose_topic_for_post"
+                                                       data-id="{{ community.id }}"
+                                                       href="/community/{{ community.link() }}/submit"
+                                                       rel="nofollow"
+                                                       aria-label="{{ _('Post in %(name)s', name=community.display_name() ) }}">
+                                                        <img src="{{ community.icon_image('tiny') }}"
+                                                             class="community_icon rounded-circle"
+                                                             loading="lazy"
+                                                             alt="" />
+                                                    {{ community.display_name() }}</a>
+                                                </th>
+                                                <th></th>
                                             </tr>
                                         {% else %}
                                             <tr>
-                                                <th class="pl-2"><a class="choose_topic" data-id="{{ community.id }}" href="/c/{{ community.link() }}" rel="nofollow" aria-label="{{ _('View %(name)s', name=community.display_name()) }}"><img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" loading="lazy" alt="" />
-                                                {{ community.display_name() }}</a></th><th>(Posts are restricted to Mods)</th>
+                                                <th class="pl-2">
+                                                    <a class="choose_topic"
+                                                       data-id="{{ community.id }}"
+                                                       href="/c/{{ community.link() }}"
+                                                       rel="nofollow"
+                                                       aria-label="{{ _('View %(name)s', name=community.display_name() ) }}">
+                                                        <img src="{{ community.icon_image('tiny') }}"
+                                                             class="community_icon rounded-circle"
+                                                             loading="lazy"
+                                                             alt="" />
+                                                    {{ community.display_name() }}</a>
+                                                </th>
+                                                <th>(Posts are restricted to Mods)</th>
                                             </tr>
                                         {% endif %}
                                     {% endif %}
@@ -53,5 +96,4 @@
             </div>
         </div>
     </div>
-
 {% endblock %}

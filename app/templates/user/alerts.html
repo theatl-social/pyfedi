@@ -3,37 +3,40 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'alerts' %}
-
+{% set active_child = "alerts" %}
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Alerts') }}</li>
-          </ol>
-        </nav>
-        <div class="row">
-          <div class="col-6">
-            {% include 'user/alerts/_type.html' %}
-          </div>
-          {% include 'user/alerts/_' + type + '.html' %}
-        </div>
-
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav class="mb-2"
+                 aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 title="Navigation">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Alerts") }}</li>
+                </ol>
+            </nav>
+            <div class="row">
+                <div class="col-6">{% include 'user/alerts/_type.html' %}</div>
+                {% include 'user/alerts/_' + type + '.html' %}
+            </div>
+            <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-        </nav>
-    </main>
-</div>
+            </nav>
+        </main>
+    </div>
 {% endblock %}

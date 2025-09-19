@@ -1,14 +1,20 @@
 {% if community.flair|length -%}
-<div class="mb-3"><label class="form-label" for="flair">Flair</label>
-    <ul class="form-control form-multicheck-columns" id="flair">
-        {% for flair in community.flair -%}
-            <li><input class="form-multicheck-columns" id="flair-{{ loop.index }}" name="flair" type="checkbox" value="{{ flair.id }}">
+    <div class="mb-3">
+        <label class="form-label" for="flair">Flair</label>
+        <ul class="form-control form-multicheck-columns" id="flair">
+            {% for flair in community.flair -%}
+                <li>
+                    <input class="form-multicheck-columns"
+                           id="flair-{{ loop.index }}"
+                           name="flair"
+                           type="checkbox"
+                           value="{{ flair.id }}">
                     <label for="flair-{{ loop.index }}">{{ flair.flair }}</label>
-            </li>
-        {% endfor -%}
-    </ul>
-</div>
+                </li>
+            {% endfor -%}
+        </ul>
+    </div>
 {% endif -%}
-{% set oob = 'hx-swap-oob="true"' -%}
+{% set oob = "hx-swap-oob=\"true\"" -%}
 {% set hide_community_actions = true -%}
 {% include "_side_pane.html" %}

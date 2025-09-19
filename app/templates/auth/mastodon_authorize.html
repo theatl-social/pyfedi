@@ -1,23 +1,21 @@
-
 {% if theme() and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
     {% extends 'themes/' + theme() + '/base.html' -%}
 {% else -%}
     {% extends "base.html" -%}
-{% endif -%} -%}
+{% endif -%}
+-%}
 {% from 'bootstrap5/form.html' import render_form -%}
-
 {% block app_content -%}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title text-center">{{ _('Fill Mastodon data') }}</div>
-                        <form method="post">
-                            {{ render_form(form) }}
-                        </form>
+                    <div class="card-title text-center">{{ _("Fill Mastodon data") }}</div>
+                    <form method="post">
+                        {{ render_form(form) }}
+                    </form>
                 </div>
             </div>
         </div>
     </div>
-
 {% endblock -%}

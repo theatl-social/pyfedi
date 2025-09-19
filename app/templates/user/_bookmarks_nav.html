@@ -1,11 +1,12 @@
 <div class="row mb-4">
     <div class="col-auto">
         <div class="btn-group">
-            <a href="/bookmarks" class="btn {{ 'btn-primary' if request.path == '/bookmarks' else 'btn-outline-secondary' }}">
-                {{ _('Posts') }}
+            <a href="/bookmarks"
+               class="btn {{ 'btn-primary' if request.path == '/bookmarks' else 'btn-outline-secondary' }}">
+                {{ _("Posts") }}
             </a>
-            <a href="/bookmarks/comments" class="btn {{ 'btn-primary' if request.path.endswith('/comments') else 'btn-outline-secondary' }}">
-                {{ _('Comments') }}
+            <a href="/bookmarks/comments" class="btn {{ 'btn-primary' if request.path.endswith("/comments") else 'btn-outline-secondary' }}">
+                {{ _("Comments") }}
             </a>
         </div>
     </div>

@@ -3,40 +3,39 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = 'chats' %}
-
+{% set active_child = "chats" %}
 {% block app_content %}
-<div class="row">
-{% if active_ban %}
-  <h5> Active Ban</h5> 
-  <table class="table">
-    <tr>
-      <th>Reason</th>
-      <th>From</th>
-      <th>Until</th>
-    </tr>
-    <tr>
-      <td>{{ active_ban.reason }}</td>
-      <td>{{ active_ban.created_at.strftime('%Y-%m-%d') }}</td>
-      <td>{{ active_ban.ban_until.strftime('%Y-%m-%d') if active_ban.ban_until else '' }}</td>
-  </table>
-{% endif %}
-{% if past_bans.count() > 0 %}
-  <h5> Ban History</h5>
-  <table class="table">
-    <tr>
-      <th>Reason</th>
-      <th>From</th>
-      <th>Type</th>
-    </tr>
-    {% for past_ban in past_bans %}
-    <tr>
-      <td>{{ past_ban.reason }}</td>
-      <td>{{ past_ban.created_at.strftime('%Y-%m-%d') }}</td>
-      <td>{{ past_ban.action }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-{% endif %}
-</div>
-{% endblock %}
+    <div class="row">
+        {% if active_ban %}
+            <h5>Active Ban</h5>
+            <table class="table">
+                <tr>
+                    <th>Reason</th>
+                    <th>From</th>
+                    <th>Until</th>
+                </tr>
+                <tr>
+                    <td>{{ active_ban.reason }}</td>
+                    <td>{{ active_ban.created_at.strftime("%Y-%m-%d") }}</td>
+                    <td>{{ active_ban.ban_until.strftime("%Y-%m-%d") if active_ban.ban_until else '' }}</td>
+                </table>
+            {% endif %}
+            {% if past_bans.count() > 0 %}
+                <h5>Ban History</h5>
+                <table class="table">
+                    <tr>
+                        <th>Reason</th>
+                        <th>From</th>
+                        <th>Type</th>
+                    </tr>
+                    {% for past_ban in past_bans %}
+                        <tr>
+                            <td>{{ past_ban.reason }}</td>
+                            <td>{{ past_ban.created_at.strftime("%Y-%m-%d") }}</td>
+                            <td>{{ past_ban.action }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% endif %}
+        </div>
+    {% endblock %}

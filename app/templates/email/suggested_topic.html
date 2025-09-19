@@ -1,15 +1,21 @@
-<p style="margin-bottom: 0;"><a href="https://{{ domain }}/"><img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png' }}" style="max-width: 100%;" width="50" height="50"></a></p>
+<p style="margin-bottom: 0;">
+    <a href="https://{{ domain }}/">
+        <img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_icon_t_75.png' }}"
+             style="max-width: 100%"
+             width="50"
+             height="50">
+    </a>
+</p>
 <p>Hi {{ site_name }} Admin,</p>
 <p>The user {{ current_user_name }} has suggested the following new Topic:</p>
 <table>
     <tr>
-        <td>Topic Name: </td>
+        <td>Topic Name:</td>
         <td>{{ topic_name }}</td>
     </tr>
     <tr>
-        <td>Communities: </td>
+        <td>Communities:</td>
         <td>{{ communities_for_topic }}</td>
     </tr>
 </table>
-
 <p>Thank you for your time and attention.</p>

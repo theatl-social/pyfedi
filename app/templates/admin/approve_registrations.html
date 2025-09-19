@@ -5,112 +5,137 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username %}
-{% set active_child = 'admin_approve_registrations' %}
-
+{% set active_child = "admin_approve_registrations" %}
 {% block app_content %}
-{% include 'admin/_tabbed_nav.html' %}
-<br>
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Registrations') }}</h1>
-        {% if registrations %}
-        <p>{{ _('When registering, people are asked "%(question)s".', question=site.application_question) }} </p>
-        <form method="get">
-            <input type="search" name="search" value="{{ search }}">
-        </form>
-        <table class="table table-striped">
-            <tr>
-                <th>{{ _('Name') }}</th>
-                <th>{{ _('Email') }}</th>
-                <th>{{ _('Email verifed') }}</th>
-                <th>{{ _('Answer') }}</th>
-                <th>{{ _('Applied') }}</th>
-                <th>{{ _('IP and country code') }}</th>
-                <th>{{ _('Source') }}</th>
-                <th>{{ _('Similar usernames') }}</th>
-                <th>{{ _('Actions') }}</th>
-            </tr>
-            {% for registration in registrations %}
-                <tr>
-                    <td>
-                        <img src="{{ registration.user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
-                        <a href="/u/{{ registration.user.link() }}">{{ registration.user.display_name() }}</a>
-                    </td>
-                    <td>
-                        <a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a>
-                        {% if registration.user.email_domain() in disposable_domains %}<span class="fe fe-warning red" title="{{ _('Throwaway email account, the kind spammers and trolls use.') }}"></span>{% endif %}
-                        {% if registration.warning %}<span class="fe fe-warning red" title="{{ registration.warning }}"></span><span class="fe fe-warning red" title="{{ registration.warning }}"></span>{% endif %}
-                    </td>
-                    <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
-                    <td>{{ registration.answer }}</td>
-                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
-                    <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
-                    <td>{{ registration.user.referrer if registration.user.referrer }} </td>
-                    <td>
-                        {% for similar_user in registration.search_similar_names() -%}
-                            {{ render_username(similar_user) }}
-                            {% if similar_user.reputation < -3 -%}
-                                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
-                            {% endif -%}
-                            {% if similar_user.banned %}
-                                <span class="fe fe-warning red" title="{{ _('Banned') }}"> </span>
-                            {% endif %}<br />
-                        {% endfor -%}
-                    </td>
-                    <td>
-                        <a href="#" data-url="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}" class="btn btn-sm btn-primary send_post">{{ _('Approve') }}</a>
-                        <a href="#" data-url="{{ url_for('admin.admin_approve_registrations_denied', user_id=registration.user.id) }}" class="btn btn-sm btn-danger confirm_first send_post">{{ _('Deny') }}</a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-            <p>{{ _('No one is waiting to be approved.') }}</p>
-        {% endif %}
+    {% include 'admin/_tabbed_nav.html' %}
+    <br>
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Registrations") }}</h1>
+            {% if registrations %}
+                <p>{{ _('When registering, people are asked "%(question)s".', question=site.application_question) }}</p>
+                <form method="get">
+                    <input type="search" name="search" value="{{ search }}">
+                </form>
+                <table class="table table-striped">
+                    <tr>
+                        <th>{{ _("Name") }}</th>
+                        <th>{{ _("Email") }}</th>
+                        <th>{{ _("Email verifed") }}</th>
+                        <th>{{ _("Answer") }}</th>
+                        <th>{{ _("Applied") }}</th>
+                        <th>{{ _("IP and country code") }}</th>
+                        <th>{{ _("Source") }}</th>
+                        <th>{{ _("Similar usernames") }}</th>
+                        <th>{{ _("Actions") }}</th>
+                    </tr>
+                    {% for registration in registrations %}
+                        <tr>
+                            <td>
+                                <img src="{{ registration.user.avatar_thumbnail() }}"
+                                     class="community_icon rounded-circle"
+                                     loading="lazy" />
+                                <a href="/u/{{ registration.user.link() }}">{{ registration.user.display_name() }}</a>
+                            </td>
+                            <td>
+                                <a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a>
+                                {% if registration.user.email_domain() in disposable_domains %}
+                                    <span class="fe fe-warning red"
+                                          title="{{ _('Throwaway email account, the kind spammers and trolls use.') }}"></span>
+                                {% endif %}
+                                {% if registration.warning %}
+                                    <span class="fe fe-warning red" title="{{ registration.warning }}"></span><span class="fe fe-warning red" title="{{ registration.warning }}"></span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}
+                            </td>
+                            <td>{{ registration.answer }}</td>
+                            <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
+                            <td>
+                                {{ registration.user.ip_address if registration.user.ip_address }}
+                                <br />
+                                {{ registration.user.ip_address_country if registration.user.ip_address_country }}
+                            </td>
+                            <td>{{ registration.user.referrer if registration.user.referrer }}</td>
+                            <td>
+                                {% for similar_user in registration.search_similar_names() -%}
+                                    {{ render_username(similar_user) }}
+                                    {% if similar_user.reputation < -3 -%}
+                                        <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"></span>
+                                    {% endif -%}
+                                    {% if similar_user.banned %}<span class="fe fe-warning red" title="{{ _('Banned') }}"></span>{% endif %}
+                                    <br />
+                                {% endfor -%}
+                            </td>
+                            <td>
+                                <a href="#"
+                                   data-url="{{ url_for('admin.admin_approve_registrations_approve', user_id=registration.user.id) }}"
+                                   class="btn btn-sm btn-primary send_post">{{ _("Approve") }}</a>
+                                <a href="#"
+                                   data-url="{{ url_for('admin.admin_approve_registrations_denied', user_id=registration.user.id) }}"
+                                   class="btn btn-sm btn-danger confirm_first send_post">{{ _("Deny") }}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>{{ _("No one is waiting to be approved.") }}</p>
+            {% endif %}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Recently approved') }}</h1>
-        {% if recently_approved %}
-        <table class="table table-striped">
-            <tr>
-               <th>{{ _('Name') }}</th>
-                <th>{{ _('Email') }}</th>
-                <th>{{ _('Email verifed') }}</th>
-                <th>{{ _('Answer') }}</th>
-                <th>{{ _('Applied') }}</th>
-                <th>{{ _('IP and country code') }}</th>
-                <th>{{ _('Source') }}</th>
-               <th>{{ _('Actions') }}</th>
-            </tr>
-            {% for registration in recently_approved %}
-                <tr>
-                    <td><img src="{{ registration.user.avatar_thumbnail() }}" class="community_icon rounded-circle" loading="lazy" />
-                        {{ registration.user.display_name() }}</td>
-                    <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a></td>
-                    <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
-                    <td>{{ registration.answer }}</td>
-                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
-                    <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
-                    <td>{{ registration.user.referrer if registration.user.referrer }} </td>
-                    <td>
-                        <a href="/u/{{ registration.user.link() }}">{{ _('View') }}</a>
-                    </td>
-                </tr>
-            {% endfor %}
-        </table>
-        {% else %}
-            <p>{{ _('No one is waiting to be approved.') }}</p>
-        {% endif %}
+    <hr />
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Recently approved") }}</h1>
+            {% if recently_approved %}
+                <table class="table table-striped">
+                    <tr>
+                        <th>{{ _("Name") }}</th>
+                        <th>{{ _("Email") }}</th>
+                        <th>{{ _("Email verifed") }}</th>
+                        <th>{{ _("Answer") }}</th>
+                        <th>{{ _("Applied") }}</th>
+                        <th>{{ _("IP and country code") }}</th>
+                        <th>{{ _("Source") }}</th>
+                        <th>{{ _("Actions") }}</th>
+                    </tr>
+                    {% for registration in recently_approved %}
+                        <tr>
+                            <td>
+                                <img src="{{ registration.user.avatar_thumbnail() }}"
+                                     class="community_icon rounded-circle"
+                                     loading="lazy" />
+                                {{ registration.user.display_name() }}
+                            </td>
+                            <td>
+                                <a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a>
+                            </td>
+                            <td>
+                                {{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}
+                            </td>
+                            <td>{{ registration.answer }}</td>
+                            <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
+                            <td>
+                                {{ registration.user.ip_address if registration.user.ip_address }}
+                                <br />
+                                {{ registration.user.ip_address_country if registration.user.ip_address_country }}
+                            </td>
+                            <td>{{ registration.user.referrer if registration.user.referrer }}</td>
+                            <td>
+                                <a href="/u/{{ registration.user.link() }}">{{ _("View") }}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>{{ _("No one is waiting to be approved.") }}</p>
+            {% endif %}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

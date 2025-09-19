@@ -4,38 +4,39 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
+    <div class="row">
+        <div class="col mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6">
+                    <div class="card-title">{{ _("Retrieve Remote Post") }}</div>
+                    {% if community %}
+                        <p>Enter the full URL of the post submitted to {{ community.ap_id }}</p>
+                    {% else %}
+                        <p>Enter the full URL of the post</p>
+                    {% endif %}
+                    <p>
+                        Note: URL needs to match the one from the post author's instance (which may be different than the community's instance)
+                    </p>
+                    {{ render_form(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% if new_post %}
         <div class="row">
             <div class="col mx-auto">
                 <div class="card mt-5">
                     <div class="card-body p-6">
-                        <div class="card-title">{{ _('Retrieve Remote Post') }}</div>
-                        {% if community %}
-                            <p>Enter the full URL of the post submitted to {{ community.ap_id }}</p>
-                        {% else %}
-                            <p>Enter the full URL of the post</p>
-                        {% endif %}
-                        <p>Note: URL needs to match the one from the post author's instance (which may be different than the community's instance)</p>
-                        {{ render_form(form) }}
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% if new_post %}
-            <div class="row">
-                <div class="col mx-auto">
-                    <div class="card mt-5">
-                        <div class="card-body p-6">
-                            <div class="card-title">{{ _('Found a post:') }}</div>
-                            <div class="card-body">
-                                <p>
-                                    <a href="/post/{{ new_post.id }}">{{ new_post.title }}</a>
-                                </p>
-                            </div>
+                        <div class="card-title">{{ _("Found a post:") }}</div>
+                        <div class="card-body">
+                            <p>
+                                <a href="/post/{{ new_post.id }}">{{ new_post.title }}</a>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
-        {% endif %}
+        </div>
+    {% endif %}
 {% endblock %}

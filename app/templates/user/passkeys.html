@@ -4,45 +4,63 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = 'passkeys' %}
-
+{% set active_child = "passkeys" %}
 {% block app_content %}
-<script src="/static/js/simplewebauthn13.umd.min.js" nonce="{{ session.nonce }}"></script>
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
-          <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Passkeys') }}</li>
-          </ol>
-        </nav>
-        <h1>{{ _('Passkeys') }}</h1>
-        {% include "user/_user_nav.html" %}
-
-        <div class="rh_action_buttons">
-            <button class="btn btn-primary" href="#" id="add_passkey_button">{{ _('Add passkey') }}</button>
-        </div>
-        {% if passkeys.count() %}
-            <table class="table table-striped" role="table">
-                <tr>
-                    <th>Device</th>
-                    <th>Last used</th>
-                    <th>Times used</th>
-                    <th>Delete</th>
-                </tr>
-                {% for passkey in passkeys %}
-                <tr>
-                    <td class="nowrap"><p>{{ passkey.device }}</p></td>
-                    <td class="nowrap"><p>{{ passkey.used.strftime('%e %b %Y') if passkey.used else '' }}</p></td>
-                    <td class="nowrap"><p>{{ passkey.counter }}</p></td>
-                    <td class="nowrap text-center"><p><a href="#" data-url="{{ url_for('user.user_passkey_delete', passkey_id=passkey.id) }}" class="confirm_first send_post"><span class="fe fe-delete"></span></a></p></td>
-                </tr>
-                {% endfor %}
-            </table>
-        {% else %}
-            <p>{{ _('No passkeys created yet.') }}</p>
-        {% endif %}
-    </main>
-</div>
+    <script src="/static/js/simplewebauthn13.umd.min.js"
+            nonce="{{ session.nonce }}"></script>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav class="mb-2"
+                 aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 title="Navigation">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Passkeys") }}</li>
+                </ol>
+            </nav>
+            <h1>{{ _("Passkeys") }}</h1>
+            {% include "user/_user_nav.html" %}
+            <div class="rh_action_buttons">
+                <button class="btn btn-primary" href="#" id="add_passkey_button">{{ _("Add passkey") }}</button>
+            </div>
+            {% if passkeys.count() %}
+                <table class="table table-striped" role="table">
+                    <tr>
+                        <th>Device</th>
+                        <th>Last used</th>
+                        <th>Times used</th>
+                        <th>Delete</th>
+                    </tr>
+                    {% for passkey in passkeys %}
+                        <tr>
+                            <td class="nowrap">
+                                <p>{{ passkey.device }}</p>
+                            </td>
+                            <td class="nowrap">
+                                <p>{{ passkey.used.strftime("%e %b %Y") if passkey.used else '' }}</p>
+                            </td>
+                            <td class="nowrap">
+                                <p>{{ passkey.counter }}</p>
+                            </td>
+                            <td class="nowrap text-center">
+                                <p>
+                                    <a href="#"
+                                       data-url="{{ url_for('user.user_passkey_delete', passkey_id=passkey.id) }}"
+                                       class="confirm_first send_post"><span class="fe fe-delete"></span></a>
+                                </p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            {% else %}
+                <p>{{ _("No passkeys created yet.") }}</p>
+            {% endif %}
+        </main>
+    </div>
 {% endblock %}

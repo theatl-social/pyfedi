@@ -4,32 +4,34 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_reports' %}
-
+{% set active_child = "admin_reports" %}
 {% block app_content %}
     <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
     {% include 'admin/_tabbed_nav.html' %}
     <br>
     <div class="row">
         <div class="col">
-            <h1>{{ _('Reports') }}</h1>
+            <h1>{{ _("Reports") }}</h1>
             <form method="get" class="mb-3 d-flex gap-3 align-items-center">
-                <input type="search" name="search" placeholder="{{ _('Query') }}" value="{{ search }}">
+                <input type="search"
+                       name="search"
+                       placeholder="{{ _('Query') }}"
+                       value="{{ search }}">
                 <label for="local_remote_local">
-                    <input type="radio" name="local_remote" value="local"
-                           id="local_remote_local" {{ 'checked' if local_remote == 'local' }} /> Local</label>
+                    <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }} /> Local
+                </label>
                 <label for="local_remote_remote">
-                    <input type="radio" name="local_remote" value="remote"
-                           id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> Remote</label>
-                <select name="report_types" id="report_types" class="form-select" style="width: 200px">
+                    <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }} /> Remote
+                </label>
+                <select name="report_types"
+                        id="report_types"
+                        class="form-select"
+                        style="width: 200px">
                     {% for value, label in report_types_list %}
-                        <option value="{{ value }}" {% if value in report_types %}selected{% endif %}>
-                            {{ label }}
-                        </option>
+                        <option value="{{ value }}" {% if value in report_types %}selected{% endif %}>{{ label }}</option>
                     {% endfor %}
                 </select>
-
-                <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
+                <input type="submit" name="submit" value="Search" class="btn btn-primary" />
             </form>
             <table class="table table-striped">
                 {% for report in reports.items %}
@@ -39,22 +41,20 @@
             <nav aria-label="Pagination" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary">
-                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary">
-                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
             </nav>
         </div>
     </div>
-    <hr/>
+    <hr />
     <div class="row">
-        <div class="col">
-            {% include 'admin/_nav.html' %}
-        </div>
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-    <hr/>
+    <hr />
 {% endblock %}

@@ -1,104 +1,101 @@
 <div class="d-xl-none">
     <select class="form-control form-select navigate_on_change" name="sort_by">
         <option value="/home/hot/{{ view_filter }}" aria-label="{{ _('Trending now') }}" {{ 'selected'  if sort == 'hot' }}>
-            {{ _('Hot') }}
+            {{ _("Hot") }}
         </option>
         <option value="/home/new/{{ view_filter }}" aria-label="{{ _('Latest posts') }}" {{ 'selected'  if sort == 'new' }}>
-            {{ _('New') }}
+            {{ _("New") }}
         </option>
         <option value="/home/old/{{ view_filter }}" aria-label="{{ _('Oldest posts') }}" {{ 'selected'  if sort == 'old' }}>
-            {{ _('Old') }}
+            {{ _("Old") }}
         </option>
         <option value="/home/active/{{ view_filter }}" aria-label="{{ _('Recently commented on') }}" {{ 'selected'  if sort == 'active' }}>
-            {{ _('Active') }}
+            {{ _("Active") }}
         </option>
         <option value="/home/scaled/{{ view_filter }}" aria-label="{{ _('Trending in niche communities') }}" {{ 'selected'  if sort == 'scaled' }}>
-            {{ _('Scaled') }}
+            {{ _("Scaled") }}
         </option>
         <optgroup label="{{ _('Top') }}">
             <option value="/home/top_1h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last hour') }}" {{ 'selected'  if sort == 'top_1h' }}>
-                {{ _('1 hour') }}
+                {{ _("1 hour") }}
             </option>
             <option value="/home/top_6h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 6 hours') }}" {{ 'selected'  if sort == 'top_6h' }}>
-                {{ _('6 hours') }}
+                {{ _("6 hours") }}
             </option>
             <option value="/home/top_12h/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last 12 hours') }}" {{ 'selected'  if sort == 'top_12h' }}>
-                {{ _('12 hours') }}
+                {{ _("12 hours") }}
             </option>
             <option value="/home/top/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last day') }}" {{ 'selected'  if sort == 'top' }}>
-                {{ _('Day') }}
+                {{ _("Day") }}
             </option>
             <option value="/home/top_1w/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last week') }}" {{ 'selected'  if sort == 'top_1w' }}>
-                {{ _('Week') }}
+                {{ _("Week") }}
             </option>
             <option value="/home/top_1m/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last month') }}" {{ 'selected'  if sort == 'top_1m' }}>
-                {{ _('Month') }}
+                {{ _("Month") }}
             </option>
             <option value="/home/top_1y/{{ view_filter }}" aria-label="{{ _('Most upvotes in the last year') }}" {{ 'selected'  if sort == 'top_1y' }}>
-                {{ _('Year') }}
+                {{ _("Year") }}
             </option>
             <option value="/home/top_all/{{ view_filter }}" aria-label="{{ _('Most upvotes all time') }}" {{ 'selected'  if sort == 'top_all' }}>
-                {{ _('All Time') }}
+                {{ _("All Time") }}
             </option>
         </optgroup>
     </select>
 </div>
-<div class="d-none sort_methods d-xl-inline-block btn-group mt-1 mb-2" aria-label="{{ _('Sorting methods: ') }}">
-    <a href="/home/hot/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending now') }}">
-        {{ _('Hot') }}
-    </a><div class="btn-group" role="group">
-        <button id="btnGroupDrop1" type="button" class="btn {{ 'btn-primary' if sort.startswith('top') else 'btn-outline-secondary' }} dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            {{ _('Top') }}
-        </button>
+<div class="d-none sort_methods d-xl-inline-block btn-group mt-1 mb-2"
+     aria-label="{{ _('Sorting methods: ') }}">
+    <a href="/home/hot/{{ view_filter }}"
+       class="btn {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}"
+       rel="nofollow noindex"
+       title="{{ _('Trending now') }}">{{ _("Hot") }}</a>
+    <div class="btn-group" role="group">
+        <button id="btnGroupDrop1"
+                type="button"
+                class="btn {{ 'btn-primary' if sort.startswith("top") else 'btn-outline-secondary' }} dropdown-toggle"
+                data-bs-toggle="dropdown"
+                aria-expanded="false">{{ _("Top") }}</button>
         <ul class="dropdown-menu" aria-labelledby="btnGroupDrop1">
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_1h' else '' }}" href="/home/top_1h/{{ view_filter }}">
-                    {{ _('1 hour') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_1h' else '' }}"
+                   href="/home/top_1h/{{ view_filter }}">{{ _("1 hour") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_6h' else '' }}" href="/home/top_6h/{{ view_filter }}">
-                    {{ _('6 hours') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_6h' else '' }}"
+                   href="/home/top_6h/{{ view_filter }}">{{ _("6 hours") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}" href="/home/top_12h/{{ view_filter }}">
-                    {{ _('12 hours') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_12h' else '' }}"
+                   href="/home/top_12h/{{ view_filter }}">{{ _("12 hours") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}" href="/home/top/{{ view_filter }}">
-                    {{ _('Day') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top' else '' }}"
+                   href="/home/top/{{ view_filter }}">{{ _("Day") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}" href="/home/top_1w/{{ view_filter }}">
-                    {{ _('Week') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_1w' else '' }}"
+                   href="/home/top_1w/{{ view_filter }}">{{ _("Week") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}" href="/home/top_1m/{{ view_filter }}">
-                    {{ _('Month') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_1m' else '' }}"
+                   href="/home/top_1m/{{ view_filter }}">{{ _("Month") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}" href="/home/top_1y/{{ view_filter }}">
-                    {{ _('Year') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_1y' else '' }}"
+                   href="/home/top_1y/{{ view_filter }}">{{ _("Year") }}</a>
             </li>
             <li>
-                <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}" href="/home/top_all/{{ view_filter }}">
-                    {{ _('All Time') }}
-                </a>
+                <a class="dropdown-item {{ 'active' if sort == 'top_all' else '' }}"
+                   href="/home/top_all/{{ view_filter }}">{{ _("All Time") }}</a>
             </li>
         </ul>
-    </div><a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">
-        {{ _('New') }}
-    </a><!--<a href="/home/old/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Oldest posts') }}">
+    </div>
+    <a href="/home/new/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Latest posts') }}">{{ _("New") }}</a><!--<a href="/home/old/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Oldest posts') }}">
         {{ _('Old') }}
-    </a>--><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
-        {{ _('Active') }}
-    </a><a href="/home/scaled/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'scaled' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Trending in niche communities') }}">
-        {{ _('Scaled') }}
-    </a>
+</a>--><a href="/home/active/{{ view_filter }}" class="btn {{ 'btn-primary' if sort == 'active' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Recently commented on') }}">
+    {{ _("Active") }}
+</a><a href="/home/scaled/{{ view_filter }}"
+   class="btn {{ 'btn-primary' if sort == 'scaled' else 'btn-outline-secondary' }}"
+   rel="nofollow noindex"
+   title="{{ _('Trending in niche communities') }}">{{ _("Scaled") }}</a>
 </div>

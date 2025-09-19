@@ -4,34 +4,60 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-
 {% block app_content %}
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
-                <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
-                <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
-                <li class="breadcrumb-item active">{{ _('Move') }}</li>
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <nav aria-label="breadcrumb"
+                 id="breadcrumb_nav"
+                 aria-label="{{ _('Navigation') }}">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="/">{{ _("Home") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="/communities">{{ _("Communities") }}</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ _("Move") }}</li>
+                </ol>
+            </nav>
+            <h1 class="mt-2">
+                {{ _('Move %(community)s to %(instance_domain)s', community=community.display_name() , instance_domain=instance_domain) }}
+            </h1>
+            <p>{{ _("The process to move a community to this instance is:") }}</p>
+            <ol>
+                <li>
+                    <p>
+                        {{ _('Ensure the copy of the community on this instance has been active long enough to receive a decent amount of posts. The move process
+                                                will not copy posts so having an account on this instance subscribed to it for a while is the only way to get old posts here.') }}
+                    </p>
+                </li>
+                <li>
+                    <p>{{ _("Lock the old community to by setting it to 'moderators only' so no one else can post in it.") }}</p>
+                </li>
+                <li>
+                    <p>
+                        {{ _('Create a post in the old community announcing the impending move to %(instance_domain)s. Paste the url of that post into the field below.', instance_domain=instance_domain) }}
+                    </p>
+                </li>
+                <li>
+                    <p>{{ _('Submit the form to send the request to %(instance_domain)s admins.', instance_domain=instance_domain) }}</p>
+                </li>
+                <li>
+                    <p>
+                        {{ _('%(instance_domain)s admins will review your request, turn this community into a local one and contact you.', instance_domain=instance_domain) }}
+                    </p>
+                </li>
+                <li>
+                    <p>
+                        {{ _('Update your announcement post in the old community to encourage people to join the new community at<br>!%(community_name)s@%(instance_domain)s.', community_name=community.name, instance_domain=instance_domain) }}
+                    </p>
+                </li>
             </ol>
-        </nav>
-        <h1 class="mt-2">
-                {{ _('Move %(community)s to %(instance_domain)s', community=community.display_name(), instance_domain=instance_domain) }}
-        </h1>
-        <p>{{ _('The process to move a community to this instance is:') }}</p>
-        <ol>
-            <li><p>{{ _('Ensure the copy of the community on this instance has been active long enough to receive a decent amount of posts. The move process
-            will not copy posts so having an account on this instance subscribed to it for a while is the only way to get old posts here.') }}</p></li>
-            <li><p>{{ _('Lock the old community to by setting it to \'moderators only\' so no one else can post in it.') }}</p></li>
-            <li><p>{{ _('Create a post in the old community announcing the impending move to %(instance_domain)s. Paste the url of that post into the field below.', instance_domain=instance_domain) }}</p></li>
-            <li><p>{{ _('Submit the form to send the request to %(instance_domain)s admins.', instance_domain=instance_domain) }}</p></li>
-            <li><p>{{ _('%(instance_domain)s admins will review your request, turn this community into a local one and contact you.', instance_domain=instance_domain) }}</p></li>
-            <li><p>{{ _('Update your announcement post in the old community to encourage people to join the new community at<br>!%(community_name)s@%(instance_domain)s.', community_name=community.name, instance_domain=instance_domain) }}</p></li>
-        </ol>
-        <hr>
-        {{ render_form(form) }}
-
-    </main>
-</div>
+            <hr>
+            {{ render_form(form) }}
+        </main>
+    </div>
 {% endblock %}

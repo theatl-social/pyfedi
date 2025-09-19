@@ -1,15 +1,35 @@
-<li><a href="{{ url_for('chat.chat_delete', conversation_id=conversation.id) }}" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
-    {{ _('Delete conversation') }}</a></li>
+<li>
+<a href="{{ url_for('chat.chat_delete', conversation_id=conversation.id) }}"
+   class="dropdown-item no-underline confirm_first"
+   rel="nofollow"><span class="fe fe-delete"></span>
+{{ _("Delete conversation") }}</a>
+</li>
 {% for member in conversation.members %}
     {% if member.id != current_user.id %}
-      <li><a class="dropdown-item no-underline text-wrap" role="button" aria-label="{{ _('Block @%(author_name)s', author_name=member.display_name()) }}"
-        hx-post="/u/{{ member.link() }}/block" hx-trigger="click throttle:1s"><span class="fe fe-block"></span> {{ _('Block @%(author_name)s', author_name=member.display_name()) }}</a></li>
+        <li>
+            <a class="dropdown-item no-underline text-wrap"
+               role="button"
+               aria-label="{{ _('Block @%(author_name)s', author_name=member.display_name() ) }}"
+               hx-post="/u/{{ member.link() }}/block"
+               hx-trigger="click throttle:1s"><span class="fe fe-block"></span> {{ _('Block @%(author_name)s', author_name=member.display_name() ) }}</a>
+        </li>
     {% endif %}
 {% endfor %}
 {% for instance in conversation.instances() %}
-    <li><a class="dropdown-item no-underline text-wrap" role="button" aria-label="{{ _("Block chats and posts from instance: %(name)s", name=instance.domain) }}"
-      hx-post="/chat/{{ instance.id }}/block_instance" hx-trigger="click throttle:1s"><span class="fe fe-block"></span> {{ _("Block chats and posts from instance: %(name)s", name=instance.domain) }}</a></li>
+    <li>
+        <a class="dropdown-item no-underline text-wrap"
+           role="button"
+           aria-label="{{ _('Block chats and posts from instance: %(name)s', name=instance.domain) }}"
+           hx-post="/chat/{{ instance.id }}/block_instance"
+           hx-trigger="click throttle:1s"><span class="fe fe-block"></span> {{ _("Block chats and posts from instance: %(name)s", name=instance.domain) }}</a>
+    </li>
 {% endfor %}
-<li><a href="{{ url_for('chat.chat_report', conversation_id=conversation.id) }}" class="dropdown-item no-underline text-wrap" rel="nofollow"><span class="fe fe-report"></span>
-        {{ _('Report to moderators') }}</a></li>
-<p class="p-2" style="max-width: 200px;">{{ _('If you are reporting abuse then do not delete the conversation - moderators will not be able to read it if you delete it.') }}</p>
+<li>
+<a href="{{ url_for('chat.chat_report', conversation_id=conversation.id) }}"
+   class="dropdown-item no-underline text-wrap"
+   rel="nofollow"><span class="fe fe-report"></span>
+{{ _("Report to moderators") }}</a>
+</li>
+<p class="p-2" style="max-width: 200px;">
+    {{ _("If you are reporting abuse then do not delete the conversation - moderators will not be able to read it if you delete it.") }}
+</p>

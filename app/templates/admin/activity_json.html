@@ -4,24 +4,25 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = 'admin_activities' %}
-
+{% set active_child = "admin_activities" %}
 {% block app_content %}
-
-<div class="row">
-    <div class="col">
-        <h1>{{ _('Activity JSON') }}</h1>
-        <code><p>{{ activity_json_data }}</p></code>
-        {% if current_app.debug %}
-        <p><a class="btn btn-warning" href="{{ url_for('admin.activity_replay', activity_id=activity.id) }}">Re-submit this activity</a></p>
-        {% endif %}
+    <div class="row">
+        <div class="col">
+            <h1>{{ _("Activity JSON") }}</h1>
+            <code>
+                <p>{{ activity_json_data }}</p>
+            </code>
+            {% if current_app.debug %}
+                <p>
+                    <a class="btn btn-warning"
+                       href="{{ url_for('admin.activity_replay', activity_id=activity.id) }}">Re-submit this activity</a>
+                </p>
+            {% endif %}
+        </div>
     </div>
-</div>
-<hr />
-<div class="row">
-    <div class="col">
-        {% include 'admin/_nav.html' %}
+    <hr />
+    <div class="row">
+        <div class="col">{% include 'admin/_nav.html' %}</div>
     </div>
-</div>
-<hr />
+    <hr />
 {% endblock %}

@@ -5,28 +5,37 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
 {% from "_macros.html" import render_username -%}
-
 {% block app_content -%}
     <div class="row">
         <h3>{{ _('Voting Activity for "%(post_title)s"', post_title=post_title) }}</h3>
-        <p>{{ _('This is sensitive information and should only be used for detecting vote manipulation, brigading and support for harmful content.') }}</p>
-        <p>{{ _('Do not share screenshots of this information publicly or use it for personal vendettas.') }}</p>
-            <p><details open>
+        <p>
+            {{ _("This is sensitive information and should only be used for detecting vote manipulation, brigading and support for harmful content.") }}
+        </p>
+        <p>{{ _("Do not share screenshots of this information publicly or use it for personal vendettas.") }}</p>
+        <p>
+            <details open>
                 <summary>Upvoters</summary>
                 <ul>
                     {% for upvoter in upvoters -%}
-                        <li>{{ render_username(upvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
+                        <li>
+                            {{ render_username(upvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                        </li>
                     {% endfor -%}
                 </ul>
             </details>
-            </p><p><hr></p>
-            <details open>
-                <summary>Downvoters</summary>    
-                <ul>
-                    {% for downvoter in downvoters -%}
-                        <li>{{ render_username(downvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
-                    {% endfor -%}
-                </ul>
-            </details>
+        </p>
+        <p>
+            <hr>
+        </p>
+        <details open>
+            <summary>Downvoters</summary>
+            <ul>
+                {% for downvoter in downvoters -%}
+                    <li>
+                        {{ render_username(downvoter, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+                    </li>
+                {% endfor -%}
+            </ul>
+        </details>
     </div>
 {% endblock -%}
