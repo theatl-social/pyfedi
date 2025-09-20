@@ -445,7 +445,12 @@ def escape_non_html_angle_brackets(text: str) -> str:
             tag_name = tag_content[1:].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content):
+        emoticons = ['3', # heart
+                     '\\3', # broken heart
+                     '|:‑)', # santa claus *<|:‑)
+                     ':‑|' # dumb, dunce-like
+                     ]
+        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content) or tag_content in emoticons:
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
