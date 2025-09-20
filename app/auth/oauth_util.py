@@ -65,6 +65,8 @@ def initialize_new_user(email, username, oauth_id_key, user_info, ip, country):
         banned=user_ip_banned() or user_cookie_banned(),
         alt_user_name=gibberish(randint(8, 20)),
     )
+    if user.title is None or user.title.strip() == '':  # ensure user has a display name. Sometimes OAuth doesn't give us one
+        user.title = user.user_name
     if current_app.config['CONTENT_WARNING']:
         user.hide_nsfw = 0
     setattr(user, oauth_id_key, user_info['id'])  # Assign OAuth provider ID
