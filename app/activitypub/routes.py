@@ -326,6 +326,9 @@ def user_profile(actor):
     """ Requests to this endpoint can be for a JSON representation of the user, or a HTML rendering of their profile.
     The two types of requests are differentiated by the header """
     actor = actor.strip()
+    if actor.isdigit():
+        user = User.query.get(actor)
+        return redirect(url_for('activitypub.user_profile', actor=user.link()))
     # admins can view deleted accounts
     if current_user.is_authenticated and current_user.is_admin():
         if '@' in actor:
@@ -445,8 +448,12 @@ def community_profile(actor):
             abort(400)
         community: Community = Community.query.filter_by(ap_id=actor.lower(), banned=False).first()
     else:
-        profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
-        community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+        if actor.isdigit():
+            community: Community = Community.query.get(actor)
+            return redirect(url_for('activitypub.community_profile', actor=community.link()))
+        else:
+            profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
+            community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
     if community is not None:
         if is_activitypub_request():
             server = current_app.config['SERVER_NAME']
