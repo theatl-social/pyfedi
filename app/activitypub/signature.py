@@ -81,8 +81,8 @@ def parse_ld_date(value: str | None) -> datetime | None:
 
 def send_post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                       content_type: str = "application/activity+json",
-                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0):
-    if current_app.debug:
+                      method: Literal["get", "post"] = "post", timeout: int = 10, retries: int = 0, new_task=True):
+    if current_app.debug or new_task is False:
         return post_request(uri=uri, body=body, private_key=private_key, key_id=key_id, content_type=content_type,
                             method=method, timeout=timeout, retries=retries)
     else:
@@ -103,7 +103,6 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
         log = ActivityPubLog(direction='out', activity_type=type, result='processing', activity_id=body['id'], exception_message='')
         log.activity_json = json.dumps(body)
         session.add(log)
-        session.commit()
 
         http_status_code = None
 
@@ -123,6 +122,14 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                         # log.activity_json += result.text[]
                     elif 'community_has_no_followers' in result.text:
                         fix_local_community_membership(uri, private_key, session)
+                    elif result.status_code == 400 and 'person_is_banned_from_site' in result.text:
+                        from app.activitypub.util import process_banned_message
+                        process_banned_message(result.json(), furl(uri).host, session)
+                    elif result.status_code == 410 or result.status_code == 418:    # When an instance returns 410, never send to it again.
+                        existing_instance = session.query(Instance).filter_by(domain=furl(uri).host).first()
+                        if existing_instance:
+                            existing_instance.gone_forever = True
+                        session.query(SendQueue).filter_by(destination_domain=furl(uri).host).delete()
                     else:
                         if current_app.debug:
                             current_app.logger.error(f'Response code for post attempt to {uri} was ' +
@@ -132,6 +139,7 @@ def post_request(uri: str, body: dict | None, private_key: str, key_id: str,
                     log.exception_message += ' 202'
                 if result.status_code == 204:
                     log.exception_message += ' 204'
+                result.close()
             except Exception as e:
                 log.result = 'failure'
                 log.exception_message = 'could not send:' + str(e)

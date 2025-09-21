@@ -11,7 +11,7 @@ from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.utils import authorise_api_user, communities_banned_from
+from app.utils import authorise_api_user, communities_banned_from, blocked_users, in_sorted_list, user_in_restricted_country
 
 
 def get_user(auth, data):
@@ -34,14 +34,18 @@ def get_user(auth, data):
         person = User.query.filter(func.lower(User.user_name) == name, func.lower(User.ap_domain) == ap_domain,
                                    User.deleted == False).one()
         data['person_id'] = person.id
-    include_content = data['include_content'] if 'include_content' in data else 'false'
-    include_content = True if include_content == 'true' else False
-    saved_only = data['saved_only'] if 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    include_content = data['include_content'] if 'include_content' in data else False
+    # include_content = True if include_content == 'true' else False
+    saved_only = data['saved_only'] if 'saved_only' in data else False
+    # saved_only = True if saved_only == 'true' else False
+    data["limit"] = data["limit"] if data and "limit" in data else 20
 
+    user_details = None
     user_id = None
     if auth:
-        user_id = authorise_api_user(auth)
+        user_details = authorise_api_user(auth, return_type='dict')
+        if user_details:
+            user_id = user_details['id']
         auth = None  # avoid authenticating user again in get_post_list and get_reply_list
 
     # bit unusual. have to help construct the json here rather than in views, to avoid circular dependencies
@@ -49,7 +53,7 @@ def get_user(auth, data):
         if saved_only:
             del data['person_id']
         post_list = get_post_list(auth, data, user_id)
-        reply_list = get_reply_list(auth, data, user_id)
+        reply_list = get_reply_list(auth, data, user_details)
     else:
         post_list = {'posts': []}
         reply_list = {'comments': []}
@@ -135,13 +139,16 @@ def get_user_unread_count(auth):
             "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
                 AND notif_type = :notif_type AND subtype = 'comment_mention'"),
             {'user_id': user.id, 'notif_type': NOTIF_MENTION}).scalar()
-        unread_mentions = unread_comment_mentions
+        unread_post_mentions = db.session.execute(text(
+            "SELECT COUNT(id) as c FROM notification WHERE user_id = :user_id AND read = false \
+                AND notif_type = :notif_type AND subtype = 'post_mention'"),
+            {"user_id": user.id, "notif_type": NOTIF_MENTION}).scalar()
+        unread_mentions = unread_comment_mentions + unread_post_mentions
         unread_messages = db.session.execute(
             text("SELECT COUNT(id) as c FROM chat_message WHERE recipient_id = :user_id AND read = false"),
             {'user_id': user.id}).scalar()
 
     # "other" is things like reports and activity alerts that this endpoint isn't really intended to support
-    # "mentions" are just comment mentions as /user/mentions endpoint will only deliver a CommentView
 
     unread_count = {
         "replies": unread_replies,
@@ -157,10 +164,10 @@ def get_user_replies(auth, data, mentions=False):
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
     sort = data['sort'] if data and 'sort' in data else "New"
-    unread_only = data['unread_only'] if data and 'unread_only' in data else 'true'
-    unread_only = True if unread_only == 'true' else False
+    unread_only = data['unread_only'] if data and 'unread_only' in data else True
 
-    user_id = authorise_api_user(auth)
+    user_details = authorise_api_user(auth, return_type='dict')
+    user_id = user_details['id']
 
     all_comment_ids = []
     read_comment_ids = []
@@ -203,24 +210,25 @@ def get_user_replies(auth, data, mentions=False):
         replies = replies.order_by(desc(PostReply.posted_at))
     replies = replies.paginate(page=page, per_page=limit, error_out=False)
 
-    banned_from = communities_banned_from(user_id)
-    bookmarked_replies = list(db.session.execute(text(
-        'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
-        {'user_id': user_id}).scalars())
-    if bookmarked_replies is None:
-        bookmarked_replies = []
-    reply_subscriptions = list(db.session.execute(text(
-        'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
-        {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
-    if reply_subscriptions is None:
-        reply_subscriptions = []
-
     reply_list = []
+    recipient = user_view(user=user_id, variant=1)
     for reply in replies:
-        read = True if reply.id in read_comment_ids else False
-        reply_list.append(reply_view(reply=reply, variant=5, user_id=user_id, read=read,
-                                     bookmarked_replies=bookmarked_replies, banned_from=banned_from,
-                                     reply_subscriptions=reply_subscriptions))
+        vote_effect = 0
+        if in_sorted_list(user_details['upvoted_reply_ids'], reply.id):
+            vote_effect = 1
+        elif in_sorted_list(user_details['downvoted_reply_ids'], reply.id):
+            vote_effect = -1
+        reply_json = reply_view(reply=reply, variant=3, user_id=user_id,
+            is_user_banned_from_community=reply.community_id in user_details['user_ban_community_ids'],
+            is_user_following_community=reply.community_id in user_details['followed_community_ids'],
+            is_reply_bookmarked=reply.id in user_details['bookmarked_reply_ids'],
+            is_creator_blocked=reply.user_id in user_details['blocked_creator_ids'],
+            vote_effect=vote_effect,
+            is_reply_subscribed=reply.id in user_details['subscribed_reply_ids'],
+            is_user_moderator=reply.community_id in user_details['moderated_community_ids'])
+        reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=read_comment_ids)
+        reply_json['recipient'] = recipient
+        reply_list.append(reply_json)
     list_json = {
         "replies": reply_list,
         'next_page': str(replies.next_num) if replies.next_num else None
@@ -263,6 +271,7 @@ def put_user_subscribe(auth, data):
 
     user_id = subscribe_user(person_id, subscribe, SRC_API, auth)
     user_json = user_view(user=person_id, variant=5, user_id=user_id)
+    user_json["subscribed"] = subscribe
     return user_json
 
 
@@ -272,10 +281,36 @@ def put_user_save_user_settings(auth, data):
     show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
-    avatar = data['avatar'] if 'avatar' in data else None
+    # avatar = data['avatar'] if 'avatar' in data else None
     cover = data['cover'] if 'cover' in data else None
     default_sort = data['default_sort_type'] if 'default_sort' in data else None
     default_comment_sort = data['default_comment_sort_type'] if 'default_comment_sort' in data else None
+
+    if "avatar" in data:
+        if not data["avatar"]:
+            # null value passed, remove avatar image
+            avatar = None
+            remove_avatar = True
+        else:
+            # valid url passed, set avatar image
+            avatar = data["avatar"]
+            remove_avatar = False
+    else:
+        avatar = None
+        remove_avatar = False
+    
+    if "cover" in data:
+        if not data["cover"]:
+            # null value passed, remove avatar image
+            cover = None
+            remove_cover = True
+        else:
+            # valid url passed, set avatar image
+            cover = data["cover"]
+            remove_cover = False
+    else:
+        cover = None
+        remove_cover = False
 
     # english is fun, so lets do the reversing and update the user settings
     if show_nsfw == True:
@@ -285,6 +320,10 @@ def put_user_save_user_settings(auth, data):
     if show_nsfl == True:
         user.hide_nsfl = 0
     elif show_nsfl == False:
+        user.hide_nsfl = 1
+
+    if user_in_restricted_country(user):
+        user.hide_nsfw = 1  # Hide nsfw
         user.hide_nsfl = 1
 
     if show_read_posts == True:
@@ -308,6 +347,13 @@ def put_user_save_user_settings(auth, data):
         db.session.commit()
         user.avatar_id = file.id
         make_image_sizes(user.avatar_id, 40, 250, 'users')
+    elif remove_avatar:
+        if user.avatar_id:
+            remove_file = File.query.get(user.avatar_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.avatar_id = None
+        db.session.commit()
 
     if cover:
         if user.cover_id:
@@ -320,6 +366,14 @@ def put_user_save_user_settings(auth, data):
         db.session.commit()
         user.cover_id = file.id
         make_image_sizes(user.cover_id, 700, 1600, 'users')
+        cache.delete_memoized(User.cover_image, user)
+    elif remove_cover:
+        if user.cover_id:
+            remove_file = File.query.get(user.cover_id)
+            if remove_file:
+                remove_file.delete_from_disk()
+            user.cover_id = None
+        db.session.commit()
         cache.delete_memoized(User.cover_image, user)
 
     if default_sort is not None:
@@ -338,8 +392,8 @@ def get_user_notifications(auth, data):
     # get the user from data.user_id
     user = authorise_api_user(auth, return_type='model')
 
-    # get the status from data.status_request
-    status = data['status_request']
+    # get the status from data.status
+    status = data['status']
 
     # get the page for pagination from the data.page
     page = int(data['page']) if data and 'page' in data else 1
@@ -364,35 +418,47 @@ def get_user_notifications(auth, data):
     ]
 
     # new
-    if status == 'New':
+    if status == 'Unread':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
     # all
     elif status == 'All':
         for item in user_notifications:
             if isinstance(item.subtype, str) and item.notif_type in supported_notif_types:
-                notif = _process_notification_item(item)
-                items.append(notif)
+                try:
+                    notif = _process_notification_item(item)
+                    items.append(notif)
+                except AttributeError:
+                    # Something couldn't be fetched from the db, just skip
+                    continue
     # read
     elif status == 'Read':
         for item in user_notifications:
             if item.read == True and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
-                    notif = _process_notification_item(item)
-                    items.append(notif)
+                    try:
+                        notif = _process_notification_item(item)
+                        items.append(notif)
+                    except AttributeError:
+                        # Something couldn't be fetched from the db, just skip
+                        continue
 
     # get counts for new/read/all
     counts = {}
-    counts['total_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
-    counts['new_notifications'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
-    counts['read_notifications'] = counts['total_notifications'] - counts['new_notifications']
+    counts['total'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).scalar()
+    counts['unread'] = Notification.query.with_entities(func.count()).where(Notification.user_id == user.id).where(Notification.read == False).scalar()
+    counts['read'] = counts['total'] - counts['unread']
 
     # make dicts of that and pass back
     res = {}
-    res['user'] = user.user_name
+    res['username'] = user.user_name
     res['status'] = status
     res['counts'] = counts
     res['items'] = items
@@ -462,7 +528,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_REPLY
+    # for the NOTIF_REPLY
     elif item.notif_type == NOTIF_REPLY:
         author = User.query.get(item.author_id)
         post = Post.query.get(item.targets['post_id'])
@@ -493,7 +559,7 @@ def _process_notification_item(item):
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
-        # for the NOTIF_MENTION
+    # for the NOTIF_MENTION
     elif item.notif_type == NOTIF_MENTION:
         notification_json = {}
         if item.subtype == 'post_mention':
@@ -520,6 +586,8 @@ def _process_notification_item(item):
             notification_json['notif_body'] = comment.body if comment.body else ''
             notification_json['status'] = 'Read' if item.read else 'Unread'
             return notification_json
+    
+    return False
 
 
 def put_user_notification_state(auth, data):
@@ -534,14 +602,23 @@ def put_user_notification_state(auth, data):
     # get the notification from the data.notif_id
     notif = Notification.query.filter_by(id=notif_id, user_id=user_id).one()
 
+    try:
+        # make a json for the specific notification and return that one item
+        res = _process_notification_item(notif)
+    except AttributeError:
+        # Problems looking something up in the db
+        raise Exception("There was a problem processing that notification")
+    
+    if not res:
+        # Unsupported notification type
+        raise Exception("This notification type is currently unsupported in the api")
+
     # set the read state for the notification
     notif.read = read_state
 
     # commit that change to the db
     db.session.commit()
 
-    # make a json for the specific notification and return that one item
-    res = _process_notification_item(notif)
     return res
 
 
@@ -577,9 +654,9 @@ def post_user_verify_credentials(data):
     password = data['password']
 
     if '@' in username:
-        user = User.query.filter(func.lower(User.email) == username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).one()
     else:
-        user = User.query.filter(func.lower(User.user_name) == username, ap_id=None, deleted=False).one()
+        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).one()
 
     if user is None or not user.check_password(password):
         raise NoResultFound
@@ -588,23 +665,30 @@ def post_user_verify_credentials(data):
 
 
 def post_user_set_flair(auth, data):
-    required(['community_id', 'flair_text'], data)
+    required(['community_id'], data)
     integer_expected(['community_id'], data)
-    string_expected(['flair_text'], data)
-    if len(data['flair_text']) > 50:
+
+    flair_text = data['flair_text'] if data and 'flair_text' in data else None
+
+    if flair_text is not None and len(flair_text) > 50:
         raise Exception('Flair text is too long (50 chars max)')
 
     user = authorise_api_user(auth, return_type='model')
     community_id = data['community_id']
-    flair_text = data['flair_text']
 
     try:
-        user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
-        user_flair.flair = flair_text
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            user_flair.flair = flair_text
+            db.session.commit()
+        else:
+            user_flair = UserFlair.query.filter_by(user_id=user.id, community_id=community_id).one()
+            db.session.delete(user_flair)
+            db.session.commit()
     except NoResultFound:
-        user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
-        db.session.add(user_flair)
-        db.session.commit()
+        if flair_text is not None:
+            user_flair = UserFlair(user_id=user.id, community_id=community_id, flair=flair_text)
+            db.session.add(user_flair)
+            db.session.commit()
 
     return user_view(user=user, variant=5, flair_community_id=community_id)

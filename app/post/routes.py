@@ -10,13 +10,20 @@ from flask_login import current_user
 from furl import furl
 from sqlalchemy import text, desc, Integer
 from sqlalchemy.orm.exc import NoResultFound
+from ics import Calendar, DisplayAlarm
+import ics
+from markupsafe import escape
+from slugify import slugify
+from wtforms.fields import Label
 
-from app import db, constants, cache, limiter
+from app import db, constants, cache, limiter, get_locale
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
-from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm
+from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
+    CreateEventForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
-from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED
+from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
+    POST_TYPE_EVENT
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -24,10 +31,11 @@ from app.inoculation import inoculation
 from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
-    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language
+    PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event, \
+    Reminder
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
@@ -36,6 +44,7 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
 from app.shared.site import block_remote_instance
+from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
@@ -47,7 +56,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     referrer, can_create_post_reply, communities_banned_from, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
-    total_comments_on_post_and_cross_posts, approval_required
+    total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
+    instance_gone_forever
 
 
 @login_required_if_private_instance
@@ -66,9 +76,18 @@ def show_post(post_id: int):
                 else:
                     flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
         
-        if current_user.is_anonymous and (post.nsfw or post.nsfl):
-            flash(_('This post is only visible to logged in users.'))
-            return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+        if current_user.is_anonymous:
+            if current_app.config['CONTENT_WARNING']:
+                if post.nsfl:
+                    flash(_('This post is only visible to logged in users.'))
+                    return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+            else:
+                if post.nsfw or post.nsfl:
+                    flash(_('This post is only visible to logged in users.'))
+                    return redirect(url_for("auth.login", next=f"/post/{post_id}"))
+        else:
+            if (post.nsfw or post.nsfl) and user_in_restricted_country(current_user):
+                abort(403)
 
         sort = request.args.get('sort', 'hot' if current_user.is_anonymous else current_user.default_comment_sort or 'hot')
 
@@ -207,22 +226,23 @@ def show_post(post_id: int):
             reply_collapse_threshold = -10
 
         # Polls
-        poll_form = False
         poll_results = False
         poll_choices = []
         poll_data = None
         poll_total_votes = 0
+        has_voted = False
         if post.type == POST_TYPE_POLL:
             poll_data = Poll.query.get(post.id)
             if poll_data:
                 poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
                 poll_total_votes = poll_data.total_votes()
-                # Show poll results to everyone after the poll finishes, to the poll creator and to those who have voted
-                if (current_user.is_authenticated and (poll_data.has_voted(current_user.id))) \
-                        or poll_data.end_poll < datetime.utcnow():
-                    poll_results = True
-                else:
-                    poll_form = True
+                if current_user.is_authenticated:
+                    has_voted = poll_data.has_voted(current_user.id)
+
+        # Events
+        event = None
+        if post.type == POST_TYPE_EVENT:
+            event = Event.query.filter_by(post_id=post.id).first()
 
         # Archive.ph link
         archive_link = None
@@ -234,12 +254,10 @@ def show_post(post_id: int):
         if current_user.is_authenticated:
             user = current_user
             if current_user.hide_read_posts:
-                mark_post_read([post.id], True, current_user.id)
+                main_post_id = [post.id] + post.cross_posts if post.cross_posts is not None else []
+                mark_post_read(main_post_id, True, current_user.id)
         else:
             user = None
-
-        community_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
-            order_by(CommunityFlair.flair).all()
 
         # Get the language of the user being replied to
         recipient_language_id = post.language_id or post.author.language_id
@@ -258,12 +276,24 @@ def show_post(post_id: int):
             archived_post = retrieve_archived_post(post.archived)
             post.body_html = archived_post['body_html']     # do this last to avoid the db.session.commit() in mark_post_read(). We don't want to save data in .body_html to the DB, just have it there for display in the jinja template
 
+        author_banned = False
+        if post.author.banned or post.community_id in communities_banned_from(post.author.id):
+            author_banned = True
+
+        if not post.community.is_local():
+            is_dead = post.community.instance.gone_forever
+            if is_dead:
+                flash(_("This instance no longer online, so posts and comments will only be visible locally"), "warning")
+        else:
+            is_dead = False
+
         response = render_template('post/post.html', title=post.title, post=post, is_moderator=is_moderator,
-                                   is_owner=community.is_owner(),
-                                   community=post.community, community_flair=community_flair,
+                                   is_owner=community.is_owner(), is_dead=is_dead,
+                                   community=post.community, community_flair=get_comm_flair_list(community),
                                    breadcrumbs=breadcrumbs, related_communities=related_communities, mods=mod_list,
-                                   poll_form=poll_form, poll_results=poll_results, poll_data=poll_data,
+                                   has_voted=has_voted, poll_results=poll_results, poll_data=poll_data,
                                    poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                                   event=event,
                                    canonical=post.ap_id, form=form, replies=replies, more_replies=more_replies,
                                    user_flair=user_flair, lazy_load_replies=lazy_load_replies,
                                    THREAD_CUTOFF_DEPTH=constants.THREAD_CUTOFF_DEPTH,
@@ -288,6 +318,7 @@ def show_post(post_id: int):
                                    recipient_language_id=recipient_language_id,
                                    recipient_language_code=recipient_language_code,
                                    recipient_language_name=recipient_language_name,
+                                   author_banned=author_banned
                                    )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link',
@@ -512,12 +543,14 @@ def poll_vote(post_id):
 
     post = Post.query.get(post_id)
     if post:
-        poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
-            PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
-        for pv in poll_votes:
-            if post.author.is_local():
-                task_selector('edit_post', post_id=post.id)
-            else:
+        if post.author.is_local():
+            post.edited_at = utcnow()
+            db.session.commit()
+            task_selector('edit_post', post_id=post.id)
+        else:
+            poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
+                PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
+            for pv in poll_votes:
                 pollvote_json = {
                     '@context': default_context(),
                     'actor': current_user.public_url(),
@@ -729,12 +762,16 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                 recipient_language_code = lang.code
                 recipient_language_name = lang.name
 
+        author_banned = False
+        if in_reply_to.author.banned or in_reply_to.community_id in communities_banned_from(in_reply_to.author.id):
+            author_banned = True
+
         return render_template('post/add_reply_inline.html', post_id=post_id, comment_id=comment_id, nonce=nonce,
                                languages=languages_for_form(), markdown_editor=current_user.markdown_editor,
                                recipient_language_id=recipient_language_id,
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
-                               in_reply_to=in_reply_to)
+                               in_reply_to=in_reply_to, author_banned=author_banned)
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -827,8 +864,9 @@ def post_edit(post_id: int):
             post_type = POST_TYPE_LINK
     elif post.type == POST_TYPE_POLL:
         form = CreatePollForm()
-        poll = Poll.query.filter_by(post_id=post_id).first()
         del form.finish_in
+    elif post.type == POST_TYPE_EVENT:
+        form = CreateEventForm()
     else:
         abort(404)
 
@@ -865,7 +903,7 @@ def post_edit(post_id: int):
 
         if form.validate_on_submit():
             try:
-                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE else None
+                uploaded_file = request.files['image_file'] if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT else None
                 edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
@@ -874,6 +912,7 @@ def post_edit(post_id: int):
 
             return redirect(url_for('activitypub.post_ap', post_id=post.id))
         else:
+            event_online = None
             form.title.data = post.title
             form.body.data = post.body
             form.notify_author.data = post.notify_author
@@ -913,12 +952,27 @@ def post_edit(post_id: int):
                     form_field = getattr(form, f"choice_{i}")
                     form_field.data = choice.choice_text
                     i += 1
+            elif post_type == POST_TYPE_EVENT:
+                event = Event.query.filter_by(post_id=post.id).first()
+                form.start_datetime.data = event.start
+                form.end_datetime.data = event.end
+                form.event_timezone.data = event.timezone
+                form.max_attendees.data = event.max_attendees
+                form.online.data = event.online
+                if event.online:
+                    form.online_link.data = event.online_link
+                else:
+                    form.irl_address.data = event.location['address']
+                    form.irl_city.data = event.location['city']
+                    form.irl_country.data = event.location['country']
+                event_online = event.online
 
             if not (post.community.is_moderator() or post.community.is_owner() or current_user.is_admin()):
                 form.sticky.render_kw = {'disabled': True}
             return render_template('post/post_edit.html', title=_('Edit post'), form=form,
                                    post_type=post_type, community=post.community, post=post,
                                    markdown_editor=current_user.markdown_editor, mods=mod_list,
+                                   event_online=event_online,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    )
     else:
@@ -1028,7 +1082,6 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
     db.session.commit()
 
 
-
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
 @login_required
 def post_restore(post_id: int):
@@ -1117,6 +1170,85 @@ def post_purge(post_id: int):
         abort(401)
 
     return redirect(url_for('user.show_profile_by_id', user_id=post.user_id))
+
+
+@bp.route('/post/<int:post_id>/translate', methods=['POST'])
+@login_required
+def post_translate(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        recipient_language = get_recipient_language(current_user.id)
+        result = libretranslate_string(post.body_html,
+                                       source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                       target=recipient_language)
+        result_title = libretranslate_string(post.title,
+                                             source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                             target=recipient_language)
+        return f'<div class="post_body">{result}</div><h1 class="mt-2 post_title" hx-swap-oob="outerHTML:h1.post_title">{result_title}</h1>'
+
+
+@bp.route('/post_reply/<int:post_reply_id>/translate', methods=['POST'])
+@login_required
+def post_reply_translate(post_reply_id: int):
+    post_reply = PostReply.query.get_or_404(post_reply_id)
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        recipient_language = get_recipient_language(current_user.id)
+        result = libretranslate_string(post_reply.body_html,
+                                       source=post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto',
+                                       target=recipient_language)
+        return f'<div class="col-12 pr-0" lang="{recipient_language}">' + result + "</div>"
+
+
+@bp.route('/post/<int:post_id>/reminder', methods=['GET', 'POST'])
+@login_required
+def post_reminder(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if post.community.id in communities_banned_from(current_user.id):
+        abort(403)
+    form = NewReminderForm()
+    if form.validate_on_submit():
+        import dateparser
+        import arrow
+        remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
+                                                                    "RETURN_AS_TIMEZONE_AWARE": True}, languages=[get_locale()])
+        remind_at_utc = arrow.get(remind_at).to('UTC')
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=1, reminder_destination=post.id)
+        db.session.add(reminder)
+        db.session.commit()
+        flash(_('Reminder added for %(when)s', when=str(remind_at)))
+        return redirect(referrer())
+    else:
+        form.referrer.data = request.referrer
+        return render_template('generic_form.html',
+                               title=_('Creating a reminder about "%(post_title)s"', post_title=post.title),
+                               form=form)
+
+
+@bp.route('/post_reply/<int:post_reply_id>/reminder', methods=['GET', 'POST'])
+@login_required
+def post_reply_reminder(post_reply_id: int):
+    post_reply = PostReply.query.get_or_404(post_reply_id)
+    if post_reply.community.id in communities_banned_from(current_user.id):
+        abort(403)
+    form = NewReminderForm()
+    if form.validate_on_submit():
+        import dateparser
+        import arrow
+        remind_at = dateparser.parse(form.remind_at.data, settings={'RELATIVE_BASE': datetime.now(),
+                                                                    "RETURN_AS_TIMEZONE_AWARE": True})
+        remind_at_utc = arrow.get(remind_at).to("UTC")
+        reminder = Reminder(user_id=current_user.id, remind_at=remind_at_utc.naive, reminder_type=2, reminder_destination=post_reply.id)
+        db.session.add(reminder)
+        db.session.commit()
+        flash(_('Reminder added for %(when)s', when=str(remind_at)))
+        return redirect(referrer(form.referrer.data))
+    else:
+        form.referrer.data = request.referrer
+        return render_template('generic_form.html',
+                               title=_('Creating a reminder about comment by %(author)s on "%(post_title)s"',
+                                       author=post_reply.author.display_name(),
+                                       post_title=post_reply.post.title),
+                               form=form)
 
 
 @bp.route('/post/<int:post_id>/bookmark', methods=['POST'])
@@ -1406,6 +1538,9 @@ def post_set_flair(post_id):
             comm_flair = CommunityFlair.query.filter(CommunityFlair.community_id == post.community_id).\
                 order_by(CommunityFlair.flair).all()
 
+            post.nsfw = request.form.get('nsfw') == '1'
+            post.nsfl = request.form.get('nsfl') == '1'
+
             # Reset flair for the post
             post.flair = []
 
@@ -1441,12 +1576,16 @@ def post_set_flair(post_id):
         if form.validate_on_submit():
             post.flair.clear()
             post.flair = flair_from_form(form.flair.data)
+            post.nsfw = form.nsfw.data
+            post.nsfl = form.nsfl.data
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector('edit_post', post_id=post.id)
             return redirect(url_for('activitypub.community_profile', actor=post.community.link()))
         form.referrer.data = referrer()
         form.flair.data = [flair.id for flair in post.flair]
+        form.nsfw.data = post.nsfw
+        form.nsfl.data = post.nsfl
         return render_template('generic_form.html', form=form,
                                title=_('Set flair for %(post_title)s', post_title=post.title))
     else:
@@ -1472,7 +1611,7 @@ def post_flair_list(post_id):
         post_flair = [flair.id for flair in post.flair]
 
         return render_template('post/_flair_choices.html', post_id=post.id, post_preview=post_preview,
-                               flair_objs=flair_objs, post_flair=post_flair)
+                               flair_objs=flair_objs, post_flair=post_flair, post=post)
     else:
         abort(401)
 
@@ -1701,6 +1840,10 @@ def post_reply_delete(post_id: int, comment_id: int):
     community = post.community
 
     form = ConfirmationMultiDeleteForm()
+
+    if not (community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff()):
+        form.also_delete_replies.label = Label(field_id="also_delete_replies",
+                                               text=_("Delete all my comments in this chain"))
 
     if post_reply.user_id == current_user.id or community.is_moderator() or community.is_owner() or current_user.is_admin_or_staff():
         if form.validate_on_submit():
@@ -2048,3 +2191,28 @@ def post_cross_post(post_id: int):
 @login_required
 def preview():
     return markdown_to_html(request.form.get('body'))
+
+
+@bp.route('/post/<int:post_id>/ical', methods=['GET'])
+def show_post_ical(post_id: int):
+    with limiter.limit('30/minute'):
+        post = Post.query.get_or_404(post_id)
+        if post.type != POST_TYPE_EVENT:
+            abort(404)
+        ical = Calendar(creator='PieFed')
+        evt = ics.Event(uid=post.ap_id)
+        evt.name = post.title
+        evt.description = f'For more information see {post.ap_id}'
+        evt.begin = post.event.start
+        evt.end = post.event.end
+        alarm = DisplayAlarm(display_text=str(escape(post.title)), trigger=timedelta(minutes=30))
+        evt.alarms += [alarm]
+        ical.events.add(evt)
+        ical_data = ical.serialize()
+        ical_data = ical_data.replace("BEGIN:VCALENDAR",
+                                      f"BEGIN:VCALENDAR\nX-WR-CALNAME:{escape(post.title)}\nX-WR-TIMEZONE:UTC")
+        resp = make_response(ical_data)
+        resp.headers['Content-Disposition'] = 'inline; filename="' + slugify(post.title) + '.ics"'
+        resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
+        resp.mimetype = 'text/calendar'
+        return resp

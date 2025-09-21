@@ -259,7 +259,7 @@ def body_has_no_archive_link(body):
 
 def url_needs_archive(url) -> bool:
     paywalled_sites = ['washingtonpost.com', 'nytimes.com', 'wsj.com', 'economist.com', 'ft.com', 'telegraph.co.uk',
-                       'bild.de', 'theatlantic.com', 'lemonde.fr', 'nzherald.co.nz']
+                       'bild.de', 'theatlantic.com', 'lemonde.fr', 'nzherald.co.nz', 'theverge.com', 'reuters.com']
     if url:
         try:
             parsed_url = urlparse(url.replace('www.', ''))

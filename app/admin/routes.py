@@ -23,24 +23,26 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
 from app.community.util import save_icon_file, save_banner_file, search_for_community
 from app.community.routes import do_subscribe
-from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING
+from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
     Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
 from app.shared.tasks import task_selector
+from app.translation import LibreTranslateAPI
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
     moderating_communities, joined_communities, finalize_user_setup, theme_list, blocked_phrases, blocked_referrers, \
     topic_tree, languages_for_form, menu_topics, ensure_directory_exists, add_to_modlog, get_request, file_get_contents, \
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
-    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, instance_allowed
+    safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
+    instance_allowed, trusted_instance_ids
 from app.admin import bp
 
 
@@ -68,12 +70,20 @@ def admin_home():
     from app.plugins import get_loaded_plugins, get_plugin_hooks
     plugins = get_loaded_plugins()
     plugin_hooks = get_plugin_hooks()
+
+    translation_languages = None
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        try:
+            lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'],
+                                   api_key=current_app.config['TRANSLATE_KEY'])
+            translation_languages = lt.languages()
+        except Exception:
+            pass
     
     return render_template('admin/home.html', title=_('Admin'), load1=load1, load5=load5, load15=load15,
-                           num_cores=num_cores,
-                           disk_usage=disk_usage,
-                           plugins=plugins,
-                           plugin_hooks=plugin_hooks)
+                           num_cores=num_cores, disk_usage=disk_usage,
+                           plugins=plugins, plugin_hooks=plugin_hooks,
+                           translation_languages=translation_languages)
 
 
 @bp.route('/site', methods=['GET', 'POST'])
@@ -126,44 +136,72 @@ def admin_site():
                 os.unlink(f'app{site.logo_32}')
             if os.path.isfile(f'app{site.logo_16}'):
                 os.unlink(f'app{site.logo_16}')
+            # Remove existing 512x512 and 192x192 logo files
+            logo_512 = get_setting('logo_512', '')
+            logo_192 = get_setting('logo_192', '')
+            if logo_512 and os.path.isfile(f'app{logo_512}'):
+                os.unlink(f'app{logo_512}')
+            if logo_192 and os.path.isfile(f'app{logo_192}'):
+                os.unlink(f'app{logo_192}')
 
             # Save logo file
             base_filename = f'logo_{gibberish(5)}'
             uploaded_icon.save(f'{directory}/{base_filename}{file_ext}')
+            
             if file_ext == '.svg':
+                # For SVG uploads, clear all logo fields and settings
+                site.logo = f'/static/media/{base_filename}{file_ext}'
+                site.logo_180 = ''
+                site.logo_152 = ''
+                site.logo_32 = ''
+                site.logo_16 = ''
+                set_setting('logo_512', '')
+                set_setting('logo_192', '')
                 delete_original = False
-                site.logo = site.logo_180 = site.logo_152 = site.logo_32 = site.logo_16 = f'/static/media/{base_filename}{file_ext}'
             else:
+                # For non-SVG uploads, create PNG thumbnails for PWA compatibility
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 if img.width > 100:
                     img.thumbnail((100, 100))
-                    img.save(f'{directory}/{base_filename}_100{file_ext}')
-                    site.logo = f'/static/media/{base_filename}_100{file_ext}'
+                    img.save(f'{directory}/{base_filename}_100.png')
+                    site.logo = f'/static/media/{base_filename}_100.png'
                     delete_original = True
                 else:
-                    site.logo = f'/static/media/{base_filename}{file_ext}'
-                    delete_original = False
+                    img.save(f'{directory}/{base_filename}.png')
+                    site.logo = f'/static/media/{base_filename}.png'
+                    delete_original = True
 
-                # Save multiple copies of the logo - different sizes
+                # Save multiple copies of the logo - different sizes, all as PNG
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((180, 180))
-                img.save(f'{directory}/{base_filename}_180{file_ext}')
-                site.logo_180 = f'/static/media/{base_filename}_180{file_ext}'
+                img.save(f'{directory}/{base_filename}_180.png')
+                site.logo_180 = f'/static/media/{base_filename}_180.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((152, 152))
-                img.save(f'{directory}/{base_filename}_152{file_ext}')
-                site.logo_152 = f'/static/media/{base_filename}_152{file_ext}'
+                img.save(f'{directory}/{base_filename}_152.png')
+                site.logo_152 = f'/static/media/{base_filename}_152.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((32, 32))
-                img.save(f'{directory}/{base_filename}_32{file_ext}')
-                site.logo_32 = f'/static/media/{base_filename}_32{file_ext}'
+                img.save(f'{directory}/{base_filename}_32.png')
+                site.logo_32 = f'/static/media/{base_filename}_32.png'
 
                 img = Image.open(f'{directory}/{base_filename}{file_ext}')
                 img.thumbnail((16, 16))
-                img.save(f'{directory}/{base_filename}_16{file_ext}')
-                site.logo_16 = f'/static/media/{base_filename}_16{file_ext}'
+                img.save(f'{directory}/{base_filename}_16.png')
+                site.logo_16 = f'/static/media/{base_filename}_16.png'
+
+                # Create 512x512 and 192x192 versions using settings
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((512, 512))
+                img.save(f'{directory}/{base_filename}_512.png')
+                set_setting('logo_512', f'/static/media/{base_filename}_512.png')
+
+                img = Image.open(f'{directory}/{base_filename}{file_ext}')
+                img.thumbnail((192, 192))
+                img.save(f'{directory}/{base_filename}_192.png')
+                set_setting('logo_192', f'/static/media/{base_filename}_192.png')
 
             if delete_original:
                 os.unlink(f'app/static/media/{base_filename}{file_ext}')
@@ -189,12 +227,22 @@ def admin_site():
 @login_required
 def admin_misc():
     form = SiteMiscForm()
+    close_form = CloseInstanceForm()
     site = Site.query.get(1)
     if site is None:
         site = Site()
     form.default_theme.choices = theme_list()
     form.language_id.choices = languages_for_form(all_languages=True)
-    if form.validate_on_submit():
+    if close_form.submit.data and close_form.validate():
+        from app import redis_client
+        redis_client.set('pause_federation', '666', ex=86400 * 365 * 10)
+        site.registration_mode = 'Closed'
+        if close_form.announcement.data:
+            set_setting('announcement', close_form.announcement.data)
+            set_setting('announcement_html', markdown_to_html(close_form.announcement.data, anchors_new_tab=False))
+        db.session.commit()
+        flash(_('Settings saved.'))
+    elif form.validate_on_submit():
         site.enable_downvotes = form.enable_downvotes.data
         site.enable_gif_reply_rep_decrease = form.enable_gif_reply_rep_decrease.data
         site.enable_chan_image_filter = form.enable_chan_image_filter.data
@@ -207,7 +255,6 @@ def admin_misc():
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
         site.auto_decline_referrers = form.auto_decline_referrers.data
-        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         site.log_activitypub_json = form.log_activitypub_json.data
         site.show_inoculation_block = form.show_inoculation_block.data
         site.updated = utcnow()
@@ -229,6 +276,8 @@ def admin_misc():
         set_setting('filter_selection', form.filter_selection.data)
         set_setting('registration_approved_email', form.registration_approved_email.data)
         set_setting('ban_check_servers', form.ban_check_servers.data)
+        set_setting('nsfw_country_restriction', form.nsfw_country_restriction.data.strip())
+        set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -239,12 +288,13 @@ def admin_misc():
         form.allow_local_image_posts.data = site.allow_local_image_posts
         form.enable_nsfw.data = site.enable_nsfw
         form.enable_nsfl.data = site.enable_nsfl
+        form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
         form.auto_decline_referrers.data = site.auto_decline_referrers
-        form.auto_decline_countries.data = get_setting('auto_decline_countries', '')
+        form.auto_decline_countries.data = get_setting('auto_decline_countries', '').upper()
         form.log_activitypub_json.data = site.log_activitypub_json
         form.language_id.data = site.language_id
         form.show_inoculation_block.data = site.show_inoculation_block
@@ -260,7 +310,29 @@ def admin_misc():
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
-    return render_template('admin/misc.html', title=_('Misc settings'), form=form)
+    return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
+
+
+@bp.route('/instance_chooser', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_instance_chooser():
+    form = InstanceChooserForm()
+    if form.validate_on_submit():
+        set_setting('enable_instance_chooser', form.enable_instance_chooser.data)
+        set_setting('elevator_pitch', form.elevator_pitch.data or '')
+        set_setting('number_of_admins', form.number_of_admins.data)
+        set_setting('financial_stability', form.financial_stability.data)
+        set_setting('daily_backups', form.daily_backups.data)
+        flash(_('Settings saved. It might take up to 24 hours before other instances show your changes.'))
+    elif request.method == 'GET':
+        form.enable_instance_chooser.data = get_setting('enable_instance_chooser', False)
+        form.elevator_pitch.data = get_setting('elevator_pitch', '')
+        form.number_of_admins.data = get_setting('number_of_admins', 0)
+        form.financial_stability.data = get_setting('financial_stability', False)
+        form.daily_backups.data = get_setting('daily_backups', False)
+
+    return render_template('admin/instance_chooser.html', title=_('Misc settings'), form=form)
 
 
 @bp.route('/federation', methods=['GET', 'POST'])
@@ -834,6 +906,7 @@ def admin_federation():
         g.site.blocked_phrases = form.blocked_phrases.data
         set_setting('actor_blocked_words', form.blocked_actors.data)
         set_setting('actor_bio_blocked_words', form.blocked_bio.data)
+        set_setting('auto_add_remote_communities', form.auto_add_remote_communities.data)
         cache.delete_memoized(blocked_phrases)
         cache.delete_memoized(get_setting, 'actor_blocked_words')
         db.session.commit()
@@ -852,6 +925,7 @@ def admin_federation():
         form.blocked_phrases.data = g.site.blocked_phrases
         form.blocked_actors.data = get_setting('actor_blocked_words', '88')
         form.blocked_bio.data = get_setting('actor_bio_blocked_words', '')
+        form.auto_add_remote_communities.data = get_setting('auto_add_remote_communities', False)
 
     return render_template('admin/federation.html', title=_('Federation settings'),
                            form=form, preload_form=preload_form, ban_lists_form=ban_lists_form,
@@ -1543,6 +1617,15 @@ def admin_user_edit(user_id):
 
         db.session.commit()
         cache.delete_memoized(low_value_reposters)
+        g.admin_ids = list(db.session.execute(
+            text("""SELECT u.id FROM "user" u WHERE u.id = 1
+                                UNION
+                                SELECT u.id
+                                FROM "user" u
+                                JOIN user_role ur ON u.id = ur.user_id AND ur.role_id = :role_admin AND u.deleted = false AND u.banned = false
+                                ORDER BY id"""),
+            {'role_admin': ROLE_ADMIN}).scalars())
+        set_setting('admin_ids', g.admin_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_users', local_remote='local' if user.is_local() else 'remote'))
@@ -1775,6 +1858,8 @@ def admin_instances():
 def admin_instance_edit(instance_id):
     form = EditInstanceForm()
     instance = Instance.query.get_or_404(instance_id)
+    if instance.software != 'piefed':
+        del form.hide
     if form.validate_on_submit():
         instance.vote_weight = form.vote_weight.data
         instance.dormant = form.dormant.data
@@ -1783,7 +1868,13 @@ def admin_instance_edit(instance_id):
         instance.posting_warning = form.posting_warning.data
         instance.inbox = form.inbox.data
 
+        if instance.software == 'piefed':
+            db.session.execute(text('UPDATE "instance_chooser" SET hide = :hide WHERE domain = :domain'),
+                               {'hide': form.hide.data, 'domain': instance.domain})
+
         db.session.commit()
+
+        cache.delete_memoized(trusted_instance_ids)
 
         flash(_('Saved'))
         return redirect(url_for('admin.admin_instances'))
@@ -1794,6 +1885,10 @@ def admin_instance_edit(instance_id):
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
         form.inbox.data = instance.inbox
+        if instance.software == 'piefed':
+            hide = db.session.execute(text('SELECT hide FROM "instance_chooser" WHERE domain = :domain'),
+                                      {'domain': instance.domain}).scalar_one_or_none()
+            form.hide.data = hide
 
     return render_template('admin/edit_instance.html', title=_('Edit instance'), form=form, instance=instance)
 

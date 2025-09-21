@@ -13,7 +13,7 @@ from sqlalchemy import desc
 from app import db, cache, celery
 from app.activitypub.signature import RsaKeys, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
-from app.community.util import save_icon_file, save_banner_file
+from app.community.util import save_icon_file, save_banner_file, hashtags_used_in_communities
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER
 from app.feed import bp
@@ -28,7 +28,8 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     gibberish, get_task_session, instance_banned, menu_subscribed_feeds, referrer, community_membership, \
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
-    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required
+    communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
+    blocked_instances, blocked_communities
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -95,7 +96,7 @@ def feed_new():
             _feed_add_community(added_community, 0, feed.id, current_user.id)
 
         flash(_('Your new Feed has been created.'))
-        return redirect(url_for('user.user_myfeeds'))
+        return redirect(url_for('user.user_myfeeds', actor=current_user.link()))
 
     # Create Feed from a topic
     if request.args.get('topic_id'):
@@ -145,6 +146,8 @@ def feed_add_remote():
             else:
                 flash(_('Feed not found. If you are searching for a nsfw feed it is blocked by this instance.'),
                       'warning')
+        else:
+            cache.delete_memoized(feed_membership, current_user, new_feed)
 
     return render_template('feed/add_remote.html',
                            title=_('Add remote feed'), form=form, new_feed=new_feed,
@@ -587,7 +590,7 @@ def _feed_remove_community(community_id: int, current_feed_id: int, user_id: int
             if not community.is_local():  # this is a remote community, so activitypub is needed
                 if not community.instance.gone_forever:
                     follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                    if community.instance.domain == 'a.gup.pe':
+                    if community.instance.domain == 'ovo.st':
                         join_request = CommunityJoinRequest.query.filter_by(user_id=user.id,
                                                                             community_id=community.id).first()
                         if join_request:
@@ -676,10 +679,17 @@ def show_feed(feed):
             flash(_('Could not find that feed or it is not public. Try one of these instead...'))
             return redirect(url_for('main.list_feeds'))
     
-    if current_user.is_anonymous and (feed.nsfw or feed.nsfl):
-        flash(_("This feed is only visible to logged in users."))
-        next_url = "/f/" + (feed.ap_id if feed.ap_id else feed.machine_name)
-        return redirect(url_for("auth.login", next=next_url))
+    if current_user.is_anonymous:
+        if current_app.config['CONTENT_WARNING']:
+            if feed.nsfl:
+                flash(_("This feed is only visible to logged in users."))
+                next_url = "/f/" + (feed.ap_id if feed.ap_id else feed.machine_name)
+                return redirect(url_for("auth.login", next=next_url))
+        else:
+            if feed.nsfw or feed.nsfl:
+                flash(_("This feed is only visible to logged in users."))
+                next_url = "/f/" + (feed.ap_id if feed.ap_id else feed.machine_name)
+                return redirect(url_for("auth.login", next=next_url))
 
     page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
@@ -737,6 +747,8 @@ def show_feed(feed):
 
         feed_communities = Community.query.filter(
             Community.id.in_(feed_community_ids), Community.banned == False, Community.total_subscriptions_count > 0).\
+            filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         next_url = url_for('activitypub.feed_profile', actor=feed.ap_id if feed.ap_id is not None else feed.name,
@@ -752,16 +764,18 @@ def show_feed(feed):
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
             communities_banned_from_list = communities_banned_from(current_user.id)
+            content_filters = user_filters_posts(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
             communities_banned_from_list = []
+            content_filters = {}
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
                                sort=sort,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
-                               feed_communities=feed_communities, content_filters=user_filters_posts(
-                current_user.id) if current_user.is_authenticated else {},
+                               feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
+                               tags=hashtags_used_in_communities(feed_community_ids, content_filters),
                                sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
                                rss_feed_name=f"{current_feed.name} on {g.site.name}",
@@ -836,7 +850,6 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-@celery.task
 def do_feed_subscribe(actor, user_id):
     try:
         remote = False
@@ -938,7 +951,7 @@ def feed_unsubscribe(actor):
                 if '@' in actor:  # this is a remote feed, so activitypub is needed
                     if not feed.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if feed.instance.domain == 'a.gup.pe':
+                        if feed.instance.domain == 'ovo.st':
                             join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id,
                                                                            feed_id=feed.id).first()
                             if join_request:

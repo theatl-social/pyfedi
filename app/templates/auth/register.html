@@ -71,7 +71,11 @@
                         {% else %}
                             <p>{{ _('Registration is closed. Only admins can create accounts.') }}</p>
                             <p>{{ _('If you would like to sign up for PieFed, choose one of the other instances in our network:') }}</p>
-                            <p class="text-center"><a class="btn btn-primary" href="https://join.piefed.social/try/" title="{{ _('List of open PieFed instances') }}">{{ _('Try PieFed') }}</a></p>
+                            {% if instance_chooser_enabled -%}
+                                <p class="text-center"><a class="btn btn-primary" href="/auth/instance_chooser" title="{{ _('List of open PieFed instances') }}">{{ _('Try PieFed') }}</a></p>
+                            {% else -%}
+                                <p class="text-center"><a class="btn btn-primary" href="https://join.piefed.social/try/" title="{{ _('List of open PieFed instances') }}">{{ _('Try PieFed') }}</a></p>
+                            {% endif -%}
                         {% endif %}
                     </div>
                 </div>

@@ -30,6 +30,8 @@
                         {{ render_field(form.nsfw) }}
                         {{ render_field(form.local_only) }}
                         <small class="field_hint">{{ _('Only people using %(name)s can post or reply', name=current_app.config['SERVER_NAME']) }}.</small>
+                        {{ render_field(form.publicize) }}
+                        <small class="field_hint">{{ _('Do not publicize test communities.') }}</small>
                         {{ render_field(form.languages) }}
                         {{ render_field(form.submit) }}
                     </form>

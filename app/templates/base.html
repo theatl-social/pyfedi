@@ -45,8 +45,8 @@
         {% block extra_css -%}
         {% endblock -%}
         <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
-        <link rel="apple-touch-icon" sizes="180x180" href="/static/images/piefed_logo_icon_t_180.png">
-        <link rel="apple-touch-icon" sizes="152x152" href="/static/images/piefed_logo_icon_t_152.png">
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ g.site.logo_180 if g.site.logo_180 else '/static/images/piefed_logo_icon_t_180.png' }}">
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/piefed_logo_icon_t_152.png' }}">
         <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
         <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
         <link rel="manifest" href="/manifest.json">
@@ -123,7 +123,16 @@
     {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-lg-top">
         <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
-            <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">{% if not low_bandwidth %}<img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="50" height="50" />{% endif %}{{ g.site.name }}</a>
+            <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">
+                {% if not low_bandwidth -%}
+                    <img src="{% if g.site.logo and g.site.logo.endswith('.svg') -%}
+                                    {{ g.site.logo }}
+                                {%- elif g.site.logo_152 -%}
+                                    {{ g.site.logo_152 }}
+                                {%- else -%}
+                                    /static/images/piefed_logo_full_t_300x300.svg
+                                {%- endif %}" alt="Logo" width="50" height="50" />
+                {%- endif %}{{ g.site.name }}</a>
             {% if current_user.is_authenticated -%}
                 <a class="nav-link ms-auto d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
                     {% if current_user.unread_notifications -%}
@@ -157,14 +166,26 @@
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                </li>
+                            {% endif -%}
                             <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/auth/register">{{ _('Register') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
                                 <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                             </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                </li>
+                            {% endif -%}
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
                                 <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
                                 <ul class="dropdown-menu text-end text-lg-start">
@@ -200,7 +221,7 @@
                                     </ul>
                                 </li>
                             {% endif %}
-                            <li class="nav-item"><a class="nav-link" href="/donate" title="{{ _('Please') }}">{{ _('Donate') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                             <li class="nav-item right d-none d-md-inline-block">
                                 <a class="nav-link" href="/notifications" title="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
                                     {% if current_user.unread_notifications %}
@@ -250,6 +271,19 @@
             <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
             <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
         </footer>
+        <nav class="d-lg-none mobilenav nav nav-pills nav-fill border-top">
+            <a class="nav-link py-2 small" href="/"><span class="fe fe-home"></span><br>{{ _('Home') }}</a>
+            {% if show_explore() -%}
+            <a class="nav-link py-2 small" href="/explore"><span class="fe fe-explore"></span><br>{{ _('Explore') }}</a>
+            {% endif -%}
+            <a class="nav-link py-2 small" href="/communities"><span class="fe fe-communities"></span><br>{{ _('Communities') }}</a>
+            <a class="nav-link py-2 small" href="/search" id="search-link"><span class="fe fe-search"></span><br>{{ _('Search') }}</a>
+            {% if current_user.is_authenticated -%}
+                <a class="nav-link py-2 small" href="/user/settings"><span class="fe fe-settings"></span><br>{{ _('Settings') }}</a>
+            {% else -%}
+                <a class="nav-link py-2 small" href="/auth/login"><span class="fe fe-join"></span><br>{{ _('Login') }}</a>
+            {% endif -%}
+        </nav>
         <dialog id="voting_dialog">
             <div class="p-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">

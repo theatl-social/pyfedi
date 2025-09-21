@@ -1,10 +1,11 @@
-VERSION = '1.1.0-dev'
+VERSION = '1.3.0-dev'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
 POST_TYPE_IMAGE = 3
 POST_TYPE_VIDEO = 4
 POST_TYPE_POLL = 5
+POST_TYPE_EVENT = 6
 
 POST_STATUS_SCHEDULED = -2
 POST_STATUS_DRAFT = -1
@@ -46,6 +47,7 @@ NOTIF_MESSAGE = 7  # I have a new chat message
 NOTIF_BAN = 8  # I have been banned from a community
 NOTIF_UNBAN = 9  # I have been un-banned from a community
 NOTIF_NEW_MOD = 10  # I have been made a moderator for a community
+NOTIF_REMINDER = 11  # A reminder that the user set before
 
 # --- mod/admin level ---
 NOTIF_REPORT = 20  # a user, post, comment, or community have been reported

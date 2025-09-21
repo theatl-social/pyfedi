@@ -5,25 +5,27 @@ from random import randint
 
 import flask
 from pyld import jsonld
-from sqlalchemy.sql.operators import or_, and_
+from sqlalchemy import or_, and_
 from ua_parser import parse as uaparse
 
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
-from app.community.util import retrieve_mods_and_backfill
+from app.admin.util import topics_for_form
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
-    POST_STATUS_REVIEWING, POST_TYPE_LINK
+    POST_STATUS_REVIEWING
 from app.email import send_email, send_registration_approved_email
 from app.inoculation import inoculation
 from app.main import bp
-from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file
+from flask import g, flash, request, current_app, url_for, redirect, make_response, jsonify, send_file, abort
 from flask_login import current_user
 from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.shared.tasks.maintenance import add_remote_communities
+from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
@@ -37,7 +39,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     num_topics, referrer
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
-from app.ldap_utils import test_ldap_connection, sync_user_to_ldap
+from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, test_login_ldap_connection, login_with_ldap
 
 
 @bp.route('/', methods=['HEAD', 'GET', 'POST'])
@@ -128,6 +130,8 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             active_communities = active_communities.filter(Community.id.not_in(community_ids))
+        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
+
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
     # New Communities
@@ -140,7 +144,16 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
+        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
+
+    # Upcoming events
+    upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
+                                                 INNER JOIN post p on e.post_id = p.id
+                                                 WHERE e.start > now() AND p.deleted is false 
+                                                 AND p.status > :reviewing
+                                                 ORDER BY e.start LIMIT 5"""),
+                                         {'reviewing': POST_STATUS_REVIEWING}).all()
 
     # Voting history and ban status
     if current_user.is_authenticated:
@@ -153,7 +166,7 @@ def home_page(sort, view_filter):
         communities_banned_from_list = []
 
     return render_template('index.html', posts=posts, active_communities=active_communities,
-                           new_communities=new_communities,
+                           new_communities=new_communities, upcoming_events=upcoming_events,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
                            recently_downvoted=recently_downvoted,
                            communities_banned_from_list=communities_banned_from_list,
@@ -189,17 +202,27 @@ def list_topics():
 def list_communities():
     verification_warning()
     search_param = request.args.get('search', '')
+    home_select = request.args.get('home_select', 'any')
+    subscribe_select = request.args.get('subscribe_select', 'any')
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
+    nsfw = request.args.get('nsfw', None)
     page = request.args.get('page', 1, type=int)
+    instance = request.args.get('instance', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
 
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
 
-    topics = Topic.query.order_by(Topic.name).all()
+    topics = topics_for_form(0)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
     if search_param == '':
@@ -212,6 +235,29 @@ def list_communities():
 
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+    
+    if home_select == "local":
+        communities = communities.filter(Community.ap_id == None)
+    elif home_select == "remote":
+        communities = communities.filter(Community.ap_id != None)
+    
+    if subscribe_select != "any":
+        # get the user's joined communities
+        user_joined_communities = joined_communities(current_user.id)
+        user_moderating_communities = moderating_communities(current_user.id)
+        # get the joined community ids list
+        joined_ids = []
+        for jc in user_joined_communities:
+            joined_ids.append(jc.id)
+        for mc in user_moderating_communities:
+            joined_ids.append(mc.id)
+        
+        if subscribe_select == "subscribed":
+            # filter down to just the joined communities
+            communities = communities.filter(Community.id.in_(joined_ids))
+        elif subscribe_select == "not_subscribed":
+            # filter out the joined communities from all communities
+            communities = communities.filter(Community.id.not_in(joined_ids))
 
     # default to no public feeds
     server_has_feeds = False
@@ -220,11 +266,7 @@ def list_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    try:
-        site = g.site
-    except:
-        site = Site.query.get(1)
-    create_admin_only = site.community_creation_admin_only
+    create_admin_only = g.site.community_creation_admin_only
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
 
@@ -237,6 +279,10 @@ def list_communities():
         for item in feed_items:
             feed_community_ids.append(item.community_id)
         communities = communities.filter(Community.id.in_(feed_community_ids))
+    
+    # if filtering by home instance
+    if instance:
+        communities = communities.filter(Community.ap_domain == instance)
 
     if current_user.is_authenticated:
         if current_user.hide_low_quality:
@@ -245,7 +291,13 @@ def list_communities():
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
         if current_user.hide_nsfw == 1:
+            nsfw = None
             communities = communities.filter(Community.nsfw == False)
+        else:
+            if nsfw == 'no':
+                communities = communities.filter(Community.nsfw == False)
+            elif nsfw == 'yes':
+                communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
         instance_ids = blocked_instances(current_user.id)
@@ -256,9 +308,15 @@ def list_communities():
             communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
 
     else:
-        communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
+        communities = communities.filter(Community.nsfl == False)
+        if nsfw == 'no':
+            communities = communities.filter(and_(Community.nsfw == False))
+        elif nsfw == 'yes':
+            communities = communities.filter(and_(Community.nsfw == True))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -270,13 +328,13 @@ def list_communities():
                        language_id=language_id) if communities.has_prev and page != 1 else None
 
     return render_template('list_communities.html', communities=communities, search=search_param,
-                           title=_('Communities'),
+                           title=_('Communities'), instance=instance, home_select=home_select,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by,
+                           sort_by=sort_by, nsfw=nsfw, subscribe_select=subscribe_select,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
@@ -292,12 +350,20 @@ def list_local_communities():
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
+    nsfw = request.args.get('nsfw', None)
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(ap_id=None, banned=False)
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
+
     if search_param == '':
         pass
     else:
@@ -316,11 +382,7 @@ def list_local_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    try:
-        site = g.site
-    except:
-        site = Site.query.get(1)
-    create_admin_only = site.community_creation_admin_only
+    create_admin_only = g.site.community_creation_admin_only
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
 
@@ -339,16 +401,28 @@ def list_local_communities():
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
         if current_user.hide_nsfw == 1:
+            nsfw = None
             communities = communities.filter(Community.nsfw == False)
+        else:
+            if nsfw == 'no':
+                communities = communities.filter(Community.nsfw == False)
+            elif nsfw == 'yes':
+                communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
         filtered_out_community_ids = filtered_out_communities(current_user)
         if len(filtered_out_community_ids):
             communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
     else:
-        communities = communities.filter(and_(Community.nsfw == False, Community.nsfl == False))
+        communities = communities.filter(Community.nsfl == False)
+        if nsfw == 'no':
+            communities = communities.filter(and_(Community.nsfw == False))
+        elif nsfw == 'yes':
+            communities = communities.filter(and_(Community.nsfw == True))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -366,7 +440,7 @@ def list_local_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by,
+                           sort_by=sort_by, nsfw=nsfw,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
@@ -385,9 +459,17 @@ def list_subscribed_communities():
     language_id = int(request.args.get('language_id', 0))
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    nsfw = request.args.get('nsfw', None)
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
+
     # get all the communities
     all_communities = Community.query.filter_by(banned=False)
     # get the user's joined communities
@@ -420,11 +502,7 @@ def list_subscribed_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    try:
-        site = g.site
-    except:
-        site = Site.query.get(1)
-    create_admin_only = site.community_creation_admin_only
+    create_admin_only = g.site.community_creation_admin_only
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
 
@@ -442,7 +520,18 @@ def list_subscribed_communities():
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    if current_user.hide_nsfw == 1:
+        nsfw = None
+        communities = communities.filter(Community.nsfw == False)
+    else:
+        if nsfw == 'no':
+            communities = communities.filter(Community.nsfw == False)
+        elif nsfw == 'yes':
+            communities = communities.filter(Community.nsfw == True)
+
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -460,7 +549,7 @@ def list_subscribed_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by,
+                           sort_by=sort_by, nsfw=nsfw,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
@@ -477,9 +566,17 @@ def list_not_subscribed_communities():
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
+    nsfw = request.args.get('nsfw', None)
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
+
     topics = Topic.query.order_by(Topic.name).all()
     languages = Language.query.order_by(Language.name).all()
     # get all communities
@@ -511,11 +608,7 @@ def list_not_subscribed_communities():
     if len(public_feeds) > 0:
         server_has_feeds = True
 
-    try:
-        site = g.site
-    except:
-        site = Site.query.get(1)
-    create_admin_only = site.community_creation_admin_only
+    create_admin_only = g.site.community_creation_admin_only
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
 
@@ -533,11 +626,19 @@ def list_not_subscribed_communities():
     if banned_from:
         communities = communities.filter(Community.id.not_in(banned_from))
     if current_user.hide_nsfw == 1:
+        nsfw = None
         communities = communities.filter(Community.nsfw == False)
+    else:
+        if nsfw == 'no':
+            communities = communities.filter(Community.nsfw == False)
+        elif nsfw == 'yes':
+            communities = communities.filter(Community.nsfw == True)
     if current_user.hide_nsfl == 1:
         communities = communities.filter(Community.nsfl == False)
 
-    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count', 'post_reply_count', 'last_active', 'created_at'}))
+    communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
+                                                                          'post_reply_count', 'last_active', 'created_at',
+                                                                          'active_weekly'}))
 
     # Pagination
     communities = communities.paginate(page=page,
@@ -555,7 +656,7 @@ def list_not_subscribed_communities():
                            next_url=next_url, prev_url=prev_url, current_user=current_user,
                            create_admin_only=create_admin_only, is_admin=is_admin,
                            topics=topics, languages=languages, topic_id=topic_id, language_id=language_id,
-                           sort_by=sort_by,
+                           sort_by=sort_by, nsfw=nsfw,
                            joined_communities=joined_or_modding_communities(current_user.get_id()),
                            pending_communities=pending_communities(current_user.get_id()),
                            low_bandwidth=low_bandwidth,
@@ -566,15 +667,44 @@ def list_not_subscribed_communities():
 def modlog():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    mod_action = request.args.get('mod_action', '')
+    suspect_user_name = request.args.get('suspect_user_name', '')
+    community_id = request.args.get('communities', '0')
+    community_id = int(community_id) if community_id != '' else 0
+    user_name = request.args.get('user_name', '')
     can_see_names = False
+    is_admin = False
 
     # Admins can see all of the modlog, everyone else can only see public entries
+    modlog_entries = ModLog.query
+    if mod_action:
+        modlog_entries = modlog_entries.filter(ModLog.action == mod_action)
+    if suspect_user_name:
+        if f"@{current_app.config['SERVER_NAME']}" in suspect_user_name:
+            suspect_user_name = suspect_user_name.split('@')[0]
+        user = User.query.filter_by(user_name=suspect_user_name, ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_id=suspect_user_name).first()
+        if user:
+            modlog_entries = modlog_entries.filter(ModLog.target_user_id == user.id)
+    if user_name:
+        if f"@{current_app.config['SERVER_NAME']}" in user_name:
+            user_name = user_name.split('@')[0]
+        user = User.query.filter_by(user_name=user_name, ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_id=user_name).first()
+        if user:
+            modlog_entries = modlog_entries.filter(ModLog.user_id == user.id)
+    if community_id:
+        modlog_entries = modlog_entries.filter(ModLog.community_id == community_id)
+
     if current_user.is_authenticated:
         if current_user.is_admin() or current_user.is_staff():
-            modlog_entries = ModLog.query.order_by(desc(ModLog.created_at))
+            is_admin = True
+            modlog_entries = modlog_entries.order_by(desc(ModLog.created_at))
             can_see_names = True
         else:
-            modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+            modlog_entries = modlog_entries.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
     else:
         modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
 
@@ -583,16 +713,30 @@ def modlog():
     next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
     prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
 
-    instances = {}
-    for instance in Instance.query.all():
-        instances[instance.id] = instance.domain
+    instances = {instance.id: instance.domain for instance in Instance.query.all()}
+    communities = {community.id: community.display_name() for community in Community.query.filter(Community.banned == False).all()}
 
     return render_template('modlog.html',
                            title=_('Moderation Log'), modlog_entries=modlog_entries, can_see_names=can_see_names,
                            next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           instances=instances,
+                           instances=instances, is_admin=is_admin, communities=communities,
+                           mod_action=mod_action, suspect_user_name=suspect_user_name, community_id=community_id,
+                           user_name=user_name,
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            )
+
+
+@bp.route("/modlog/search_suggestions", methods=['POST'])
+def modlog_search_suggestions():
+    q = request.form.get("suspect_user_name", "").lower()
+    if q == '':
+        q = request.form.get("user_name", "").lower()
+    results = User.query.filter(or_(User.ap_id.ilike(f"%{q}%"),
+                                    User.user_name.ilike(f"%{q}%"),
+                                    User.ap_profile_id.ilike(f"%{q}%"))
+                                ).limit(5).all()
+    html = "".join(f"<option value='{m.ap_id or m.user_name}'>" for m in results)
+    return html
 
 
 @bp.route('/about')
@@ -629,7 +773,7 @@ def login():
 
 @bp.route('/robots.txt')
 def robots():
-    resp = make_response(render_template('robots.txt'))
+    resp = make_response(render_template('robots.txt', use_rsl=not current_app.config['ALLOW_AI_CRAWLERS']))
     resp.mimetype = 'text/plain'
     return resp
 
@@ -642,6 +786,15 @@ def sitemap():
     posts = posts.order_by(desc(Post.posted_at)).limit(500)
 
     resp = make_response(render_template('sitemap.xml', posts=posts, current_app=current_app))
+    resp.mimetype = 'text/xml'
+    return resp
+
+
+@bp.route('/rsl.xml')
+def rsl():
+    if current_app.config['ALLOW_AI_CRAWLERS']:
+        abort(404)
+    resp = make_response(render_template('rsl.xml'))
     resp.mimetype = 'text/xml'
     return resp
 
@@ -681,7 +834,9 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    archive_post(70976)
+    #community = Community.query.get(33)
+    #publicize_community(community)
+    add_remote_communities()
     return 'Done'
     import json
     user_id = 1
@@ -780,9 +935,15 @@ And if you want to add your score to the database to help your fellow Bookworms 
 
 @bp.route('/communities_menu')
 def communities_menu():
-    return render_template('communities_menu.html', menu_topics=menu_topics(),
+    return render_template('communities_menu.html',
                            moderating_communities=moderating_communities(current_user.get_id()),
                            joined_communities=joined_communities(current_user.get_id()),
+                           )
+
+
+@bp.route('/explore_menu')
+def explore_menu():
+    return render_template('explore_menu.html', menu_topics=menu_topics(),
                            menu_instance_feeds=menu_instance_feeds(),
                            menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,
@@ -903,6 +1064,30 @@ def test_ldap():
         return f'LDAP test successful. Connection: {connection_result}, Sync: {sync_result}'
     except Exception as e:
         return f'LDAP test failed: {str(e)}'
+
+
+@bp.route('/test_ldap_login')
+@debug_mode_only
+def test_ldap_login():
+    try:
+        # Test LDAP connection
+        connection_result = test_login_ldap_connection()
+        if not connection_result:
+            return 'LDAP test failed: Could not connect to LDAP server. Check configuration.'
+
+        # Test user sync with dummy data using random password
+        login_result = login_with_ldap(request.args.get('user_name'), request.args.get('password'))
+
+        return f'LDAP test results: Connection: {connection_result}, Login: {str(login_result is not False)}'
+    except Exception as e:
+        return f'LDAP test failed: {str(e)}'
+
+
+@bp.route('/test_libretranslate')
+@debug_mode_only
+def test_libretranslate():
+    lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'], api_key=current_app.config['TRANSLATE_KEY'])
+    return lt.translate('<p>Si vous lisez cela en anglais, alors la traduction a fonctionné!</p>', source='auto', target='en')
 
 
 @bp.route('/find_voters')
@@ -1030,6 +1215,17 @@ def static_manifest():
     manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
     manifest['name'] = g.site.name if g.site.name else 'PieFed'
     manifest['description'] = g.site.description if g.site.description else ''
+    
+    # Update icons to use custom logos with fallbacks
+    logo_512 = get_setting('logo_512', '')
+    logo_192 = get_setting('logo_192', '')
+    
+    # Update the icons array
+    for icon in manifest.get('icons', []):
+        if icon.get('sizes') == '192x192':
+            icon['src'] = logo_192 if logo_192 else '/static/images/piefed_logo_icon_t_192.png'
+        elif icon.get('sizes') == '512x512':
+            icon['src'] = logo_512 if logo_512 else '/static/images/piefed_logo_icon_t_512.png'
 
     # Build response with cache headers
     response = make_response(jsonify(manifest))
@@ -1044,9 +1240,15 @@ def static_manifest():
 def list_feeds():
     # default to no public feeds
     server_has_feeds = False
+    search_param = request.args.get('search', '')
 
-    # find all the feeds marked as public
-    public_feeds = feed_tree_public()
+    if search_param == '':
+        # find all the feeds marked as public
+        public_feeds = feed_tree_public()
+        
+    else:
+        # find all the feeds marked as public that match the search param
+        public_feeds = feed_tree_public(search_param)
 
     if len(public_feeds) > 0:
         server_has_feeds = True
@@ -1067,7 +1269,17 @@ def list_feeds():
         # render the page
         return render_template('feed/public_feeds.html', server_has_feeds=server_has_feeds,
                                public_feeds_list=public_feeds,
-                               subscribed_feeds=subscribed_feeds(current_user.get_id()))
+                               subscribed_feeds=subscribed_feeds(current_user.get_id()),
+                               search_hint=search_param)
+
+
+@bp.route('/explore')
+@login_required_if_private_instance
+def explore():
+    topics = topic_tree()
+    return render_template('explore.html', topics=topics, menu_instance_feeds=menu_instance_feeds(),
+                           menu_my_feeds=menu_my_feeds(current_user.id) if current_user.is_authenticated else None,
+                           menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
 
 
 @bp.route('/content_warning', methods=['GET', 'POST'])
@@ -1090,3 +1302,92 @@ def content_warning():
 @bp.route('/health', methods=['HEAD', 'GET'])
 def health():
     return 'Ok'
+
+
+@bp.route('/health2', methods=['GET', 'HEAD'])
+def health2():
+    # Do some DB access to provide a picture of the performance of the instance
+    # This is all busy-work to give an indication to the caller of the instance performance so there is a lot of # noqa comments to silence ruff.
+
+    search_param = request.args.get('search', '')
+    topic_id = int(request.args.get('topic_id', 0))
+    feed_id = int(request.args.get('feed_id', 0))
+    language_id = int(request.args.get('language_id', 0))
+    nsfw = request.args.get('nsfw', None)
+    sort_by = request.args.get('sort_by', 'post_reply_count desc')
+
+    if not g.site.enable_nsfw:
+        nsfw = None
+    else:
+        if nsfw is None:
+            nsfw = 'all'
+
+    if request.args.get('prompt'):
+        flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
+
+    topics = Topic.query.order_by(Topic.name).all()              # noqa f841
+    languages = Language.query.order_by(Language.name).all()     # noqa f841
+    communities = Community.query.filter_by(banned=False)
+    if search_param == '':
+        pass
+    else:
+        communities = communities.filter(
+            or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
+
+    if topic_id != 0:
+        communities = communities.filter_by(topic_id=topic_id)
+
+    if language_id != 0:
+        communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
+
+    # find all the feeds marked as public
+    public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all() # noqa f841
+
+    # if filtering by public feed
+    # get all the ids of the communities
+    # then filter the communites to ones whose ids match the feed
+    if feed_id != 0:
+        feed_community_ids = []
+        feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == feed_id).all()
+        for item in feed_items:
+            feed_community_ids.append(item.community_id)
+        communities = communities.filter(Community.id.in_(feed_community_ids))
+
+    if current_user.is_authenticated:
+        if current_user.hide_low_quality:
+            communities = communities.filter(Community.low_quality == False)
+        banned_from = communities_banned_from(current_user.id)
+        if banned_from:
+            communities = communities.filter(Community.id.not_in(banned_from))
+        if current_user.hide_nsfw == 1:
+            nsfw = None
+            communities = communities.filter(Community.nsfw == False)
+        else:
+            if nsfw == 'no':
+                communities = communities.filter(Community.nsfw == False)
+            elif nsfw == 'yes':
+                communities = communities.filter(Community.nsfw == True)
+        if current_user.hide_nsfl == 1:
+            communities = communities.filter(Community.nsfl == False)
+        instance_ids = blocked_instances(current_user.id)
+        if instance_ids:
+            communities = communities.filter(
+                or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
+        filtered_out_community_ids = filtered_out_communities(current_user)
+        if len(filtered_out_community_ids):
+            communities = communities.filter(Community.id.not_in(filtered_out_community_ids))
+
+    else:
+        communities = communities.filter(Community.nsfl == False)
+        if nsfw == 'no':
+            communities = communities.filter(and_(Community.nsfw == False))
+        elif nsfw == 'yes':
+            communities = communities.filter(and_(Community.nsfw == True))
+
+    communities = communities.order_by(safe_order_by(sort_by, Community,
+                                                     {'title', 'subscriptions_count', 'post_count', 'post_reply_count',
+                                                      'last_active', 'created_at'})).limit(100)
+
+    c = communities.all()   # noqa f841
+
+    return ''

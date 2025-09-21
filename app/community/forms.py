@@ -10,8 +10,8 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField
-from wtforms.fields import DateTimeLocalField
+    DateField, IntegerField, DateTimeLocalField
+
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional
 
 from app import db
@@ -24,12 +24,13 @@ from app.utils import domain_from_url, MultiCheckboxField, get_timezones
 class AddCommunityForm(FlaskForm):
     community_name = StringField(_l('Name'), validators=[DataRequired()])
     url = StringField(_l('Url'), validators=[Length(max=50)])
-    description = TextAreaField(_l('Description'))
+    description = TextAreaField(_l('Description'), validators=[Length(max=10000)])
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
+    publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))
@@ -72,7 +73,7 @@ class AddCommunityForm(FlaskForm):
 
 class EditCommunityForm(FlaskForm):
     title = StringField(_l('Title'), validators=[DataRequired()])
-    description = TextAreaField(_l('Description'))
+    description = TextAreaField(_l('Description'), validators=[Length(max=10000)])
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
@@ -245,8 +246,7 @@ class CreateImageForm(CreatePostForm):
         super().validate(extra_validators)
 
         uploaded_file = request.files['image_file']
-        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith(
-                '.svg') and not uploaded_file.filename.endswith('.gif'):
+        if uploaded_file and uploaded_file.filename != '' and not uploaded_file.filename.endswith('.svg') and not uploaded_file.filename.endswith('.gif'):
             Image.MAX_IMAGE_PIXELS = 89478485
 
             site = Site.query.get(1)
@@ -300,6 +300,93 @@ class EditImageForm(CreateImageForm):
             community = Community.query.get(self.communities.data)
             if community.is_local() and g.site.allow_local_image_posts is False:
                 self.communities.errors.append(_l('Images cannot be posted to local communities.'))
+
+        return True
+
+
+class CreateEventForm(CreatePostForm):
+    start_datetime = DateTimeLocalField(_l('Start'), validators=[DataRequired()], format="%Y-%m-%dT%H:%M")
+    end_datetime = DateTimeLocalField(_l('End'), validators=[DataRequired()], format="%Y-%m-%dT%H:%M")
+    image_file = FileField(_l('Banner'), validators=[Optional()], render_kw={'accept': 'image/*'})
+    more_info_url = StringField(_l('More information link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
+    event_timezone = SelectField(_('Timezone'), validators=[Optional()],
+                           render_kw={'id': 'timezone', "class": "form-control tom-select"})
+    join_mode = SelectField(_('Cost'), validators=[Optional()])
+    max_attendees = IntegerField(_l('Maximum number of attendees'))
+    online = BooleanField(_l('Online'))
+    online_link = StringField(_l('Online link'), validators=[Optional(), Regexp(r'^https?://', message='URLs need to start with "http://"" or "https://"')])
+    irl_address = StringField(_l('Address'))
+    irl_city = StringField(_l('City'))
+    irl_country = StringField(_l('Country'))
+
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.event_timezone.choices = get_timezones()
+        self.join_mode.choices = [('free', _('Free')), ('donation', _('Donation')), ('paid', _('Paid'))]
+
+    def validate_link_url(self, field):
+        if 'blogspot.com' in field.data:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain='blogspot.com'))
+            return False
+        domain = domain_from_url(field.data, create=False)
+        if domain and domain.banned:
+            self.link_url.errors.append(_l("Links to %(domain)s are not allowed.", domain=domain.name))
+            return False
+        return True
+
+    def validate(self, extra_validators=None) -> bool:
+        super().validate(extra_validators)
+
+        local_tz = ZoneInfo(self.event_timezone.data)
+        local_start = self.start_datetime.data.replace(tzinfo=local_tz)
+        local_end = self.end_datetime.data.replace(tzinfo=local_tz)
+
+        # Convert to UTC for comparison with utcnow()
+        utc_start = local_start.astimezone(ZoneInfo('UTC'))
+        utc_end = local_end.astimezone(ZoneInfo('UTC'))
+
+        if utc_start < utcnow(naive=False):
+            self.start_datetime.errors.append(_('This time is in the past.'))
+        if utc_end < utcnow(naive=False):
+            self.end_datetime.errors.append(_('This time is in the past.'))
+
+        if self.start_datetime.data > self.end_datetime.data:
+            self.start_datetime.errors.append(_('Start must be less than end.'))
+
+        # Validate online vs physical event requirements
+        if self.online.data:
+            # Online event - online_link is required
+            if not self.online_link.data or not self.online_link.data.strip():
+                self.online_link.errors.append(_l('Online link is required for online events.'))
+                return False
+        else:
+            # Physical event - address, city, and country are required
+            if not self.irl_address.data or not self.irl_address.data.strip():
+                self.irl_address.errors.append(_l('Address is required for physical events.'))
+                return False
+            if not self.irl_city.data or not self.irl_city.data.strip():
+                self.irl_city.errors.append(_l('City is required for physical events.'))
+                return False
+            if not self.irl_country.data or not self.irl_country.data.strip():
+                self.irl_country.errors.append(_l('Country is required for physical events.'))
+                return False
+
+        if 'image_file' in request.files:
+            uploaded_file = request.files['image_file']
+            max_size_in_mb = 10 * 1024 * 1024  # 10 MB
+            if len(uploaded_file.read()) > max_size_in_mb:
+                error_message = "This image filesize is too large."
+                if not isinstance(self.image_file.errors, list):
+                    self.image_file.errors = [error_message]
+                else:
+                    self.image_file.errors.append(error_message)
+                return False
+            uploaded_file.seek(0)
+            if self.communities:
+                community = Community.query.get(self.communities.data)
+                if community.is_local() and g.site.allow_local_image_posts is False:
+                    self.communities.errors.append(_l('Images cannot be posted to local communities.'))
 
         return True
 

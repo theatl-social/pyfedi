@@ -1,4 +1,4 @@
-from flask import redirect, url_for, flash, current_app
+from flask import redirect, url_for, flash, current_app, abort
 from flask_babel import _
 from flask_login import current_user, login_required
 
@@ -7,8 +7,22 @@ from app.activitypub.signature import send_post_request
 from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
-from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter
+from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter, InstanceChooser, Language
 from app.utils import render_template, joined_communities, community_membership, get_setting
+
+
+@bp.route('/instance_chooser')
+def onboarding_instance_chooser():
+    if get_setting('enable_instance_chooser', False):
+        instances = InstanceChooser.query.all()
+        language_ids = set()
+        for instance in instances:
+            language_ids.add(instance.language_id)
+        languages = Language.query.filter(Language.id.in_(language_ids)).all()
+        return render_template('auth/instance_chooser.html', title=_('Which server do you want to join?'),
+                               instances=instances, languages=languages)
+    else:
+        return redirect(url_for('auth.register'))
 
 
 @bp.route('/trump_musk', methods=['GET', 'POST'])
@@ -65,7 +79,7 @@ def join_topic(topic_id):
                 join_request = CommunityJoinRequest(user_id=current_user.id, community_id=community.id)
                 db.session.add(join_request)
                 db.session.commit()
-                send_community_follow(community.id, join_request.id, current_user.id)
+                send_community_follow(community.id, join_request.uuid, current_user.id)
 
             existing_member = CommunityMember.query.filter(CommunityMember.community_id == community.id, CommunityMember.user_id == current_user.id).first()
             if not existing_member:

@@ -10,6 +10,7 @@ from flask_login import current_user
 from sqlalchemy import text, desc, asc, or_
 
 from app import db, cache
+from app.community.util import hashtags_used_in_communities
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
     POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_TOPIC
 from app.email import send_topic_suggestion
@@ -18,7 +19,7 @@ from app.models import Topic, Community, NotificationSubscription, PostReply, ut
 from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
-    gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, \
+    gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, blocked_communities, \
     recently_upvoted_posts, recently_downvoted_posts, blocked_instances, blocked_users, joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
     approval_required
@@ -67,14 +68,18 @@ def show_topic(topic_path):
             text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
             {'topic_ids': tuple(topic_ids)}).scalars()
 
+        community_ids = list(community_ids)
+
         topic_communities = Community.query.filter(
             Community.topic_id == current_topic.id, Community.banned == False, Community.total_subscriptions_count > 0).\
+            filter(Community.instance_id.not_in(blocked_instances(current_user.get_id()))).\
+            filter(Community.id.not_in(blocked_communities(current_user.get_id()))).\
             order_by(desc(Community.total_subscriptions_count))
 
         posts = None
         comments = None
         if content_type == 'posts':
-            post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+            post_ids = get_deduped_post_ids(result_id, community_ids, sort)
             has_next_page = len(post_ids) > page + 1 * page_length
             post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
             posts = post_ids_to_models(post_ids, sort)
@@ -84,12 +89,15 @@ def show_topic(topic_path):
             prev_url = url_for('topic.show_topic', topic_path=topic_path, result_id=result_id,
                                page=page - 1, sort=sort, layout=post_layout) if page > 0 else None
         elif content_type == 'comments':
-            comments = PostReply.query.filter(PostReply.community_id.in_(list(community_ids)))
+            comments = PostReply.query.filter(PostReply.community_id.in_(community_ids))
 
             # filter out nsfw and nsfl if desired
             if current_user.is_anonymous:
-                comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
-                                           PostReply.deleted == False)
+                if current_app.config['CONTENT_WARNING']:
+                    comments = comments.filter(PostReply.from_bot == False, PostReply.deleted == False)
+                else:
+                    comments = comments.filter(PostReply.from_bot == False, PostReply.nsfw == False,
+                                               PostReply.deleted == False)
             else:
                 if current_user.ignore_bots == 1:
                     comments = comments.filter(PostReply.from_bot == False)
@@ -148,10 +156,12 @@ def show_topic(topic_path):
             recently_upvoted = recently_upvoted_posts(current_user.id)
             recently_downvoted = recently_downvoted_posts(current_user.id)
             communities_banned_from_list = communities_banned_from(current_user.id)
+            content_filters = user_filters_posts(current_user.id)
         else:
             recently_upvoted = []
             recently_downvoted = []
             communities_banned_from_list = []
+            content_filters = {}
 
         return render_template('topic/show_topic.html', title=_(current_topic.name), posts=posts, topic=current_topic,
                                sort=sort,
@@ -159,6 +169,7 @@ def show_topic(topic_path):
                                comments=comments,
                                topic_communities=topic_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
+                               tags=hashtags_used_in_communities(community_ids, content_filters),
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,

@@ -2,23 +2,24 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import desc, or_
+from sqlalchemy import desc, or_, text
+from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
     array_of_integers_expected
-from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community
+from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community, flair_view
 from app.community.util import search_for_community
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
-    NotificationSubscription, Post
+    NotificationSubscription, Post, CommunityFlair, utcnow
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
 from app.shared.tasks import task_selector
 from app.utils import authorise_api_user
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
-    joined_communities, moderating_communities
+    joined_communities, moderating_communities, expand_hex_color
 
 
 def get_community_list(auth, data):
@@ -26,8 +27,7 @@ def get_community_list(auth, data):
     sort = data['sort'] if data and 'sort' in data else "Hot"
     page = int(data['page']) if data and 'page' in data else 1
     limit = int(data['limit']) if data and 'limit' in data else 10
-    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else 'false'
-    show_nsfw = True if show_nsfw == 'true' else False
+    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else False
     show_nsfl = show_nsfw
 
     user = authorise_api_user(auth, return_type='model') if auth else None
@@ -269,11 +269,21 @@ def get_community_moderate_bans(auth, data):
     for cb in community_bans:
         ban_json = {}
         ban_json['reason'] = cb.reason
-        ban_json['expired_at'] = cb.ban_until
         ban_json['community'] = community_view(community, variant=1)
         ban_json['banned_user'] = user_view(user=cb.user_id, variant=1)
         ban_json['banned_by'] = user_view(user=cb.banned_by, variant=1)
-        ban_json['expired'] = True if cb.ban_until < datetime.now() else False
+        if not cb.ban_until:
+            # Permanent ban
+            ban_json['expired'] = False
+            ban_json['expires_at'] = None
+            ban_json['expired_at'] = None
+        elif cb.ban_until < datetime.now():
+            ban_json['expired'] = True
+            ban_json['expired_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z"
+        else:
+            ban_json['expired'] = False
+            ban_json['expires_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z"
+
         items.append(ban_json)
 
     # return that info as json
@@ -308,10 +318,13 @@ def put_community_moderate_unban(auth, data):
     # find the ban record
     cb = CommunityBan.query.filter_by(community_id=community.id, user_id=blocked.id).first()
 
+    if not cb:
+        raise Exception("Specified ban does not exist")
+
     # build the response before deleting the record in the db
     res = {}
     res['reason'] = cb.reason
-    res['expired_at'] = cb.ban_until
+    res['expired_at'] = utcnow().isoformat(timespec="microseconds") + "Z"
     res['community'] = community_view(community, variant=1)
     res['banned_user'] = user_view(user=cb.user_id, variant=1)
     res['banned_by'] = user_view(user=cb.banned_by, variant=1)
@@ -353,11 +366,12 @@ def put_community_moderate_unban(auth, data):
 
 
 def post_community_moderate_ban(auth, data):
-    required(['community_id', 'user_id', 'reason', 'expired_at'], data)
+    required(['community_id', 'user_id', 'reason'], data)
     integer_expected(['community_id'], data)
     integer_expected(['user_id'], data)
     string_expected(['reason'], data)
-    string_expected(['expired_at'], data)
+    string_expected(['expires_at'], data)
+    boolean_expected(['permanent'], data)
 
     # get the user to ban
     user_id = data['user_id']
@@ -375,9 +389,15 @@ def post_community_moderate_ban(auth, data):
     if not community.is_local():
         raise Exception('Community not local to this instance.')
 
-    # get the ban_until time if it exists, if not default to one year
-    if isinstance(data['expired_at'], str):
-        ban_until = datetime.strptime(data['expired_at'], '%Y-%m-%dT%H:%M:%S')
+    # check if ban is permanent or get the ban_until time if it exists, fall back to default of one year
+    if data.get('permanent', False):
+        ban_until = None
+    elif isinstance(data.get('expires_at', None), str):
+        ban_until = datetime.strptime(data['expires_at'], '%Y-%m-%dT%H:%M:%S.%fZ')
+        if ban_until < datetime.now():
+            raise Exception("expires_at must be a time in the future. - "
+                            f"Current time: {utcnow().isoformat(timespec='microseconds') +  'Z'} - "
+                            f"Time provided: {ban_until.isoformat(timespec='microseconds') + 'Z'}")
     else:
         ban_until = datetime.now() + relativedelta(years=1)
 
@@ -387,6 +407,8 @@ def post_community_moderate_ban(auth, data):
         cb = CommunityBan(user_id=blocked.id, community_id=community.id, banned_by=blocker.id,
                           reason=data['reason'], ban_until=ban_until)
         db.session.add(cb)
+    elif cb.ban_until != ban_until:
+        cb.ban_until = ban_until
     community_membership_record = CommunityMember.query.filter_by(community_id=community.id, user_id=blocked.id).first()
     if community_membership_record:
         community_membership_record.is_banned = True
@@ -423,7 +445,7 @@ def post_community_moderate_ban(auth, data):
     # build the response
     res = {}
     res['reason'] = cb.reason
-    res['expired_at'] = cb.ban_until
+    res['expires_at'] = cb.ban_until.isoformat(timespec="microseconds") + "Z" if cb.ban_until else None
     res['community'] = community_view(community, variant=1)
     res['banned_user'] = user_view(user=cb.user_id, variant=1)
     res['banned_by'] = user_view(user=cb.banned_by, variant=1)
@@ -481,4 +503,114 @@ def post_community_mod(auth, data):
     community_json = {
         'moderators': cached_modlist_for_community(community_id)
     }
+    return community_json
+
+
+def post_community_flair_create(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    community = Community.query.get(data['community_id'])
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    if 'text_color' not in data:
+        data['text_color'] = "#000000"
+    elif len(data['text_color']) == 4:
+        # Go ahead and expand this out to the full notation for consistency
+        data['text_color'] = expand_hex_color(data['text_color'])
+
+    if 'background_color' not in data:
+        data['background_color'] = "#DEDDDA"
+    elif len(data['background_color']) == 4:
+        # Go ahead and expand this out to the full notation for consistency
+        data['background_color'] = expand_hex_color(data['background_color'])
+
+    if 'blur_images' not in data:
+        data['blur_images'] = False
+    
+    try:
+        CommunityFlair.query.filter_by(community_id=community.id, flair=data['flair_title'],
+                                       text_color=data['text_color'], background_color=data['background_color'],
+                                       blur_images=data['blur_images']).one()
+        raise Exception("Flair already exists")
+    except NoResultFound:
+        # Flair is new, create it
+        new_flair = CommunityFlair(community_id = community.id)
+        db.session.add(new_flair)
+        new_flair.flair = data['flair_title'].strip()
+        new_flair.text_color = data['text_color']
+        new_flair.background_color = data['background_color']
+        new_flair.blur_images = data['blur_images']
+
+        # Need a commit here or else the flair id is not defined for the ap_id
+        db.session.commit()
+        
+        new_flair.ap_id = new_flair.get_ap_id()
+        db.session.commit()
+
+        task_selector('edit_community', user_id=user.id, community_id=community.id)
+    
+    return flair_view(new_flair)
+
+
+def put_community_flair_edit(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    flair = CommunityFlair.query.get(data['flair_id'])
+
+    if not flair:
+        raise Exception(f"No matching flair with id={data['flair_id']} found.")
+    
+    community = Community.query.get(flair.community_id)
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    if 'flair_title' in data:
+        flair.flair = data['flair_title']
+    
+    if 'text_color' in data:
+        if len(data['text_color']) == 4:
+            data['text_color'] = expand_hex_color(data['text_color'])
+        
+        flair.text_color = data['text_color']
+    
+    if 'background_color' in data:
+        if len(data['background_color']) == 4:
+            data['background_color'] = expand_hex_color(data['background_color'])
+        
+        flair.background_color = data['background_color']
+    
+    if 'blur_images' in data:
+        flair.blur_images = data['blur_images']
+    
+    if not flair.ap_id:
+        flair.ap_id = flair.get_ap_id()
+    
+    db.session.commit()
+
+    task_selector('edit_community', user_id=user.id, community_id=community.id)
+
+    return flair_view(flair)
+
+
+def post_community_flair_delete(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    flair = CommunityFlair.query.get(data['flair_id'])
+
+    if not flair:
+        raise Exception(f"No matching flair with id={data['flair_id']} found.")
+    
+    community = Community.query.get(flair.community_id)
+
+    if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
+        raise Exception('insufficient permissions')
+    
+    db.session.execute(text('DELETE FROM "post_flair" WHERE flair_id = :flair_id'), {'flair_id': flair.id})
+    db.session.query(CommunityFlair).filter(CommunityFlair.id == flair.id).delete()
+    db.session.commit()
+
+    task_selector('edit_community', user_id=user.id, community_id=community.id)
+
+    # Return Community View that includes updated flair list
+    community_json = community_view(community=community, variant=3, stub=False, user_id=user.id)
     return community_json

@@ -49,6 +49,9 @@ class AddCopyFeedForm(FlaskForm):
 
         input_communities = self.communities.data.strip().split('\n')
         for community_ap_id in input_communities:
+            if not community_ap_id.strip():
+                continue
+
             if not '@' in community_ap_id:
                 self.communities.errors.append(
                     _l('Please make sure each community is formatted as "community_name@instance.tld"'))
@@ -85,7 +88,11 @@ class EditFeedForm(FlaskForm):
                     return False
 
         input_communities = self.communities.data.strip().split('\n')
+        print(f"input_communities: {input_communities}")
         for community_ap_id in input_communities:
+            if not community_ap_id.strip():
+                continue
+
             if not '@' in community_ap_id:
                 self.communities.errors.append(_l('Please make sure each community is formatted as "community_name@instance.tld"'))
                 return False

@@ -1,5 +1,8 @@
 # Development Notes
 
+This is an opinionated project where choices have been made which could surprise you. Contributions are welcome,
+but please respect the established formatting and structural choices unless otherwise discussed.
+
 A git pre-commit hook can be used to automatically run [ruff](https://docs.astral.sh/ruff/) before committing code:
 
 Save this as .git/hooks/pre-commit and make sure it's executable with chmod +x .git/hooks/pre-commit:
@@ -80,6 +83,8 @@ flask run
 ## Translations
 
 See [The Flask Mega-Tutorial Part XIII: I18n and L10n](https://blog.miguelgrinberg.com/post/the-flask-mega-tutorial-part-xiii-i18n-and-l10n-2018)
+
+Before doing any of the below, run `export FLASK_APP=pyfedi.py`
 
 To add a new language:
 ```bash

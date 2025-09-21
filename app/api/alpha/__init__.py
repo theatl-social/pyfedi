@@ -26,4 +26,53 @@ comm_bp = ApiBlueprint(
     description="",
 )
 
+feed_bp = ApiBlueprint(
+    "Feed",
+    __name__,
+    url_prefix="/api/alpha",
+    description="",
+)
+
+topic_bp = ApiBlueprint(
+    "Topic",
+    __name__,
+    url_prefix="/api/alpha",
+    description="",
+)
+
+user_bp = ApiBlueprint(
+    "User",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+reply_bp = ApiBlueprint(
+    "Comment",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+post_bp = ApiBlueprint(
+    "Post",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+private_message_bp = ApiBlueprint(
+    "Private Message",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
+upload_bp = ApiBlueprint(
+    "Upload",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 from app.api.alpha import routes

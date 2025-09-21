@@ -16,10 +16,12 @@ from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
     find_hashtag_or_create, create_post, remote_object_to_json
+from app.community.forms import CreateLinkForm
+from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
     Instance, User, Tag, CommunityFlair
 from app.utils import get_request, gibberish, ensure_directory_exists, ap_datetime, instance_banned, get_task_session, \
-    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed
+    store_files_in_s3, guess_mime_type, patch_db_session, instance_allowed, get_setting
 from sqlalchemy import func, desc, text
 import os
 
@@ -31,14 +33,14 @@ def search_for_community(address: str) -> Community | None:
     if address.startswith('!'):
         name, server = address[1:].split('@')
 
-        if not instance_allowed(server):
-                return None
-        else:
-            if instance_banned(server):
-                return None
+        if get_setting('use_allowlist') and not instance_allowed(server):
+            return None
+        if instance_banned(server):
+            return None
 
         if current_app.config['SERVER_NAME'] == server:
-            already_exists = Community.query.filter_by(name=name, ap_id=None).first()
+            profile_id = f"https://{server}/c/{name.lower()}"
+            already_exists = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
             return already_exists
 
         already_exists = Community.query.filter_by(ap_id=address[1:]).first()
@@ -97,7 +99,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                 is_peertube = is_guppe = is_wordpress = False
                 if community.ap_profile_id == f"https://{server}/video-channels/{name}":
                     is_peertube = True
-                elif community.ap_profile_id.startswith('https://a.gup.pe/u'):
+                elif community.ap_profile_id.startswith('https://ovo.st/club'):
                     is_guppe = True
 
                 # get mods
@@ -339,6 +341,8 @@ def tags_from_string(tags: str) -> List[dict]:
 
 def tags_from_string_old(tags: str) -> List[Tag]:
     return_value = []
+    if tags is None:
+        return []
     tags = tags.strip()
     if tags == '':
         return []
@@ -356,6 +360,8 @@ def tags_from_string_old(tags: str) -> List[Tag]:
 
 
 def flair_from_form(tag_ids) -> List[CommunityFlair]:
+    if tag_ids is None:
+        return []
     return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
 
 
@@ -751,12 +757,27 @@ def send_to_remote_instance_task(instance_id: int, community_id: int, payload):
         if community:
             instance: Instance = session.query(Instance).get(instance_id)
             if instance.inbox and instance.online() and not instance_banned(instance.domain):
-                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key', timeout=10)
+                send_post_request(instance.inbox, payload, community.private_key, community.ap_profile_id + '#main-key',
+                                  timeout=10, new_task=False)
     except Exception:
         session.rollback()
         raise
     finally:
         session.close()
+
+
+def send_to_remote_instance_fast(inbox: str, community_private_key: str, community_ap_profile_id: str, payload):
+    # a faster version of send_to_remote_instance that does not use the DB
+    if current_app.debug:
+        send_to_remote_instance_fast_task(inbox, community_private_key, community_ap_profile_id, payload)
+    else:
+        send_to_remote_instance_fast_task.delay(inbox, community_private_key, community_ap_profile_id, payload)
+
+
+@celery.task
+def send_to_remote_instance_fast_task(inbox: str, community_private_key: str, community_ap_profile_id: str, payload):
+    send_post_request(inbox, payload, community_private_key, community_ap_profile_id + '#main-key',
+                      timeout=10, new_task=False)
 
 
 def community_in_list(community_id, community_list):
@@ -801,6 +822,29 @@ def hashtags_used_in_community(community_id: int, content_filters):
     return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
 
 
+def hashtags_used_in_communities(community_ids: List[int], content_filters):
+    if community_ids is None or len(list(community_ids)) == 0:
+        return None
+    tags = db.session.execute(text("""SELECT t.*, COUNT(post.id) AS pc
+    FROM "tag" AS t
+    INNER JOIN post_tag pt ON t.id = pt.tag_id
+    INNER JOIN "post" ON pt.post_id = post.id
+    WHERE post.community_id IN :community_ids
+      AND t.banned IS FALSE AND post.deleted IS FALSE
+    GROUP BY t.id
+    ORDER BY pc DESC
+    LIMIT 30;"""), {'community_ids': tuple(community_ids)}).mappings().all()
+
+    def tag_blocked(tag):
+        for name, keywords in content_filters.items() if content_filters else {}:
+            for keyword in keywords:
+                if keyword in tag['name'].lower():
+                    return True
+        return False
+
+    return normalize_font_size([dict(row) for row in tags if not tag_blocked(row)])
+
+
 def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
     # Add a font size to each dict, based on the number of times each tag is used (the post count aka 'pc')
     if len(tags) == 0:
@@ -817,3 +861,52 @@ def normalize_font_size(tags: List[dict], min_size=12, max_size=24):
         tag['font_size'] = round(scale(tag['pc']), 1)   # add a font size based on its post count
 
     return tags
+
+
+def publicize_community(community: Community):
+    from app.shared.post import make_post
+    form = CreateLinkForm()
+    form.title.data = community.title
+    form.link_url.data = community.public_url()
+    form.body.data = f'{community.lemmy_link()}\n\n'
+    form.body.data += community.description if community.description else ''
+    form.language_id.data = current_user.language_id or g.site.language_id
+    if current_app.debug:
+        community = Community.query.filter(Community.ap_id == 'playground@piefed.social').first()
+    else:
+        community = Community.query.filter(Community.ap_id == 'newcommunities@lemmy.world').first()
+
+    if community:
+        make_post(form, community, POST_TYPE_LINK, SRC_WEB)
+
+        """
+        Have this removed for now, due to several problems:
+
+        1. 'community' has been over-ridden, and is now 'playground@piefed.social' or 'newcommunities@lemmy.world'
+
+        2. Lemmy's v3/resolve_object endpoint doesn't accept queries in '!community@domain' format,
+           it needs to be 'q={community.public_url()}'
+
+        3. None of those instances will add data to their DBs based on an anonymous query, so will just respond 400
+           to any communities they don't already know about
+
+        if current_app.debug:
+            publicize_community_task(community.id)
+        else:
+            publicize_community_task.delay(community.id)
+        """
+
+
+@celery.task
+def publicize_community_task(community_id: int):
+    session = get_task_session()
+    community = session.query(Community).get(community_id)
+    get_request(f'https://lemmy.world/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://sh.itjust.works/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.zip/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://feddit.org/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.dbzer0.com/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.ca/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://lemmy.blahaj.zone/api/v3/resolve_object?q={community.lemmy_link()}')
+    get_request(f'https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}')
+    session.close()

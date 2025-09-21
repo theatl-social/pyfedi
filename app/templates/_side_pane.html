@@ -50,8 +50,8 @@
                         {% for tag in tags -%}
                             <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('activitypub.community_profile', actor=community.link(), tag=tag.name) }}">#{{ tag.display_as }}</a></span>
                         {% endfor -%}
-                        {% if len(tags) == 30 -%}
-                            <br /><a href="{{ url_for('tag.tags_community', community_id=community.id) }}">All Community Tags</a>
+                        {% if len(tags) > 1 -%}
+                            <br /><a href="{{ url_for('tag.tag_cloud', type='community', category_id=community.id) }}">{{ _('Explore Tag Cloud') }}</a>
                         {% endif%}
                     </div>
                 {% endif -%}
@@ -60,6 +60,27 @@
         {% endif -%}
     {% endblock %}
     {% block about_community %}
+        {% if upcoming_events -%}
+        <div class="card mt-3" id="upcoming_events">
+            <div class="card-header">
+                <h2><span class="fe fe-event"></span> {{ _('Upcoming events') }}</h2>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for upcoming_event in upcoming_events -%}
+                        <li class="list-group-item">
+                            <a href="/post/{{ upcoming_event[2] }}">{{ upcoming_event[1] }}</a> -
+                            <time class="convert_to_local small">{{ upcoming_event[0].strftime('%Y-%m-%dT%H:%M:%SZ') }}</time>
+                        </li>
+                    {% endfor -%}
+                </ul>
+                <p class="mt-2 mb-0"><a class="no-underline" rel="nofollow"
+                                        href="{{ url_for('community.show_community_ical', actor=community.link()) }}">
+                    <span class="fe fe-rss"></span> {{ _('iCal feed') }}</a>
+                </p>
+            </div>
+        </div>
+        {% endif -%}
         <div class="card {% if not hide_community_actions -%}mt-3{% endif %}" id="about_community">
             <div class="card-header">
                  <h2>{{ community.title }}</h2>
@@ -104,6 +125,11 @@
                         <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
                 {% endif -%}
+                {% if not community.is_local() and not current_user.is_anonymous and current_user.is_admin() -%}
+                    <ul>
+                        <li><p><a href="{{ url_for('community.fixup_from_remote', actor=community.ap_id) }}">{{ _("Refresh community information from remote") }}</a></p></li>
+                    </ul>
+                {% endif -%}
                 <hr>
                 <div>
                     <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
@@ -120,7 +146,7 @@
                     <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
                 </div>
                 {% if rss_feed -%}
-                <p class="mt-4">
+                <p class="mt-2 mb-0">
                     <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
                 </p>
                 {% endif -%}

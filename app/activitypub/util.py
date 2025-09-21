@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from io import BytesIO
 from json import JSONDecodeError
 from random import randint
@@ -23,10 +23,10 @@ from sqlalchemy.exc import IntegrityError
 from app import db, cache, celery
 from app.activitypub.signature import signed_get_request
 from app.constants import *
-from app.models import User, Post, Community, File, PostReply, AllowedInstances, Instance, utcnow, \
+from app.models import User, Post, Community, File, PostReply, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic
+    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic, Event
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
     shorten_string, fixup_url, \
@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session
+    patch_db_session, to_srgb
 
 
 def public_key():
@@ -130,6 +130,7 @@ def post_to_page(post: Post):
     activity_data = {
         "type": "Page",
         "id": post.ap_id,
+        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/context',
         "attributedTo": post.author.ap_public_url,
         "to": [
             post.community.public_url(),
@@ -155,7 +156,7 @@ def post_to_page(post: Post):
     }
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
-    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO) and post.url is not None:
+    if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO or post.type == POST_TYPE_EVENT) and post.url is not None:
         activity_data["attachment"] = [{"href": post.url, "type": "Link"}]
     if post.image_id is not None:
         activity_data["image"] = {"url": post.image.view_url(), "type": "Image"}
@@ -166,6 +167,8 @@ def post_to_page(post: Post):
     if post.type == POST_TYPE_POLL:
         poll = Poll.query.filter_by(post_id=post.id).first()
         activity_data['type'] = 'Question'
+        del activity_data['name']
+        activity_data['content'] = f"<p>{post.title}</p>{post.body_html if post.body_html else ''}"
         mode = 'oneOf' if poll.mode == 'single' else 'anyOf'
         choices = []
         for choice in PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all():
@@ -180,6 +183,23 @@ def post_to_page(post: Post):
         activity_data[mode] = choices
         activity_data['endTime'] = ap_datetime(poll.end_poll)
         activity_data['votersCount'] = poll.total_votes()
+    elif post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+        activity_data['type'] = 'Event'
+        activity_data['startTime'] = ap_datetime(event.start)
+        activity_data['endTime'] = ap_datetime(event.end)
+        activity_data['timezone'] = event.timezone
+        activity_data['maximumAttendeeCapacity'] = event.max_attendees
+        activity_data['participantCount'] = event.participant_count
+        activity_data['onlineLink'] = event.online_link
+        activity_data['joinMode'] = event.join_mode
+        activity_data['externalParticipationUrl'] = event.external_participation_url
+        activity_data['anonymousParticipation'] = event.anonymous_participation
+        activity_data['isOnline'] = event.online
+        activity_data['buyTicketsLink'] = event.buy_tickets_link
+        activity_data['feeCurrency'] = event.event_fee_currency
+        activity_data['feeAmount'] = event.event_fee_amount
+
     if post.indexable:
         activity_data['searchableBy'] = 'https://www.w3.org/ns/activitystreams#Public'
     return activity_data
@@ -198,6 +218,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         ],
         "type": "Note",
         "id": reply.ap_id,
+        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{reply.post_id}/context',
         "attributedTo": reply.author.public_url(),
         "inReplyTo": reply.in_reply_to(),
         "to": [
@@ -318,20 +339,123 @@ def find_hashtag_or_create(hashtag: str) -> Tag:
         return new_tag
 
 
-def find_flair_or_create(flair: dict, community_id: int) -> CommunityFlair:
-    existing_flair = CommunityFlair.query.filter(CommunityFlair.flair == flair['display_name'].strip(),
-                                                 CommunityFlair.community_id == community_id).first()
+def find_flair_or_create(flair: dict, community_id: int, session=None) -> CommunityFlair | None:
+    if session is None:
+        session = db.session
+    if 'id' in flair:
+        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.ap_id == flair['id']).first()
+    else:
+        existing_flair = None
+
+    if existing_flair is None:
+        if 'preferredUsername' not in flair:
+            return None
+        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
+                                                              CommunityFlair.community_id == community_id).first()
     if existing_flair:
-        # Update colors and blur in case they have changed
-        existing_flair.text_color = flair['text_color']
-        existing_flair.background_color = flair['background_color']
-        existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        # Update flair properties
+        if "text_color" in flair:
+            existing_flair.text_color = flair['text_color']
+        elif "textColor" in flair:
+            existing_flair.text_color = flair["textColor"]
+        
+        if "background_color" in flair:
+            existing_flair.background_color = flair['background_color']
+        elif "backgroundColor" in flair:
+            existing_flair.background_color = flair["backgroundColor"]
+        
+        if "blur_images" in flair:
+            existing_flair.blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        elif "blurImages" in flair:
+            existing_flair.blur_images = flair["blurImages"]
+        
+        if "display_name" in flair:
+            existing_flair.flair = flair["display_name"]
+        elif "preferredUsername" in flair:
+            existing_flair.flair = flair['preferredUsername']
+
+        if not existing_flair.ap_id:
+            if flair['id']:
+                existing_flair.ap_id = flair['id']
+            else:
+                existing_flair.ap_id = existing_flair.get_ap_id()
+
         return existing_flair
     else:
-        new_flair = CommunityFlair(flair=flair['display_name'].strip(), community_id=community_id,
-                                   text_color=flair['text_color'], background_color=flair['background_color'],
-                                   blur_images=flair['blur_images'] if 'blur_images' in flair else False)
+        if "text_color" in flair:
+            text_color = flair['text_color']
+        elif "textColor" in flair:
+            text_color = flair["textColor"]
+
+        if "background_color" in flair:
+            background_color = flair['background_color']
+        elif "backgroundColor" in flair:
+            background_color = flair["backgroundColor"]
+
+        if "blur_images" in flair:
+            blur_images = flair['blur_images'] if 'blur_images' in flair else False
+        elif "blurImages" in flair:
+            blur_images = flair["blurImages"]
+
+        if "display_name" in flair:
+            flair_text = flair["display_name"]
+        elif "preferredUsername" in flair:
+            flair_text = flair['preferredUsername']
+        new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
+                                   text_color=text_color, background_color=background_color,
+                                   blur_images=blur_images,
+                                   ap_id=flair['id'])
+        session.add(new_flair)
         return new_flair
+
+
+def update_community_flair_from_tags(community: Community, flair_tags: list, session=None):
+    """Update community flair from activity_json tags, preserving existing post associations."""
+    if session is None:
+        session = db.session
+    
+    # Track which flair should be kept
+    updated_flair = []
+    processed_ap_ids = set()
+    processed_names = set()
+    
+    # Update existing flair or create new ones
+    for flair in flair_tags:
+        updated_flair_obj = find_flair_or_create(flair, community.id, session)
+        if updated_flair_obj is None:
+            return
+        updated_flair.append(updated_flair_obj)
+        
+        # Track which flair should be kept.
+        if updated_flair_obj.ap_id:
+            processed_ap_ids.add(updated_flair_obj.ap_id)
+        if updated_flair_obj.flair:
+            processed_names.add(updated_flair_obj.flair)
+    
+    # Remove flair that's no longer in the activity_json (check processed_ap_ids and processed_names)
+    remove_outdated_community_flair(community, processed_ap_ids, processed_names, session)
+
+
+def remove_outdated_community_flair(community: Community, keep_ap_ids: set, keep_names: set, session=None):
+    """Remove community flair that's no longer present in the remote activity."""
+    if session is None:
+        session = db.session
+    
+    flair_to_remove = []
+    for existing_flair in community.flair:
+        should_remove = False
+        if existing_flair.ap_id and existing_flair.ap_id not in keep_ap_ids:
+            should_remove = True
+        elif not existing_flair.ap_id and existing_flair.flair not in keep_names:
+            should_remove = True
+        
+        if should_remove:
+            flair_to_remove.append(existing_flair)
+    
+    # Remove outdated flair
+    for flair in flair_to_remove:
+        community.flair.remove(flair)
+        session.delete(flair)
 
 
 def extract_domain_and_actor(url_string: str):
@@ -498,7 +622,7 @@ def refresh_community_profile_task(community_id, activity_json):
     try:
         with patch_db_session(session):
             community: Community = session.query(Community).get(community_id)
-            if community and community.instance.online() and not community.is_local():
+            if community and community.instance.online():
                 if not activity_json:
                     try:
                         actor_data = get_request(community.ap_public_url, headers={'Accept': 'application/activity+json'})
@@ -594,7 +718,7 @@ def refresh_community_profile_task(community_id, activity_json):
                         community.restricted_to_mods = True
                     session.commit()
 
-                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+                    if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list) and "tag" not in activity_json:
                         if len(community.flair) == 0:  # for now, all we do is populate community flair if there is not yet any. simpler.
                             for flair in activity_json['lemmy:tagsForPosts']:
                                 flair_dict = {'display_name': flair['display_name']}
@@ -604,8 +728,12 @@ def refresh_community_profile_task(community_id, activity_json):
                                     flair_dict['background_color'] = flair['background_color']
                                 if 'blur_images' in flair:
                                     flair_dict['blur_images'] = flair['blur_images']
-                                community.flair.append(find_flair_or_create(flair_dict, community.id))
+                                community.flair.append(find_flair_or_create(flair_dict, community.id, session))
                             session.commit()
+                    
+                    if "tag" in activity_json and isinstance(activity_json["tag"], list):
+                        update_community_flair_from_tags(community, activity_json["tag"], session)
+                        session.commit()
 
                     if community.icon_id and icon_changed:
                         make_image_sizes(community.icon_id, 60, 250, 'communities')
@@ -1183,6 +1311,8 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
             with patch_db_session(session):
                 file: File = session.query(File).get(file_id)
                 if file and file.source_url:
+                    if file.source_url.endswith('.gif'):    # don't resize gifs, it breaks their animation
+                        return
                     try:
                         source_image_response = get_request(file.source_url)
                     except:
@@ -1214,7 +1344,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         main_part = content_type.split(';')[0]
 
                                         # Split the main part on the '/' character and take the second part
-                                        file_ext = '.' + main_part.split('/')[1]
+                                        file_ext = '.' + main_part.split('/')[1].lower()
                                         file_ext = file_ext.strip()  # just to be sure
 
                                         if file_ext == '.jpeg':
@@ -1224,7 +1354,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         elif file_ext == '.octet-stream':
                                             file_ext = '.avif'
                                     else:
-                                        file_ext = os.path.splitext(file.source_url)[1]
+                                        file_ext = os.path.splitext(file.source_url)[1].lower()
                                         file_ext = file_ext.replace('%3f', '?')  # sometimes urls are not decoded properly
                                         if '?' in file_ext:
                                             file_ext = file_ext.split('?')[0]
@@ -1254,15 +1384,34 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     boto3_session = None
                                     s3 = None
 
-                                    # Use environment variables to determine medium and thumbnail format and quality
-
-                                    medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                                    # Use environment variables to determine medium and thumbnail format and quality.
+                                    # But for communities and users directories, preserve original file type.
+                                    if original_directory in ['communities', 'users']:
+                                        # Preserve original format by using the file extension
+                                        if file_ext.lower() in ['.jpg', '.jpeg']:
+                                            medium_image_format = 'JPEG'
+                                            thumbnail_image_format = 'JPEG'
+                                        elif file_ext.lower() == '.png':
+                                            medium_image_format = 'PNG'
+                                            thumbnail_image_format = 'PNG'
+                                        elif file_ext.lower() == '.webp':
+                                            medium_image_format = 'WEBP'
+                                            thumbnail_image_format = 'WEBP'
+                                        elif file_ext.lower() == '.avif':
+                                            medium_image_format = 'AVIF'
+                                            thumbnail_image_format = 'AVIF'
+                                        else:
+                                            # Default to PNG for other formats
+                                            medium_image_format = 'PNG'
+                                            thumbnail_image_format = 'PNG'
+                                    else:
+                                        medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
+                                        thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
                                     medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
-                                    thumbnail_image_format = current_app.config['MEDIA_IMAGE_THUMBNAIL_FORMAT']
                                     thumbnail_image_quality = current_app.config['MEDIA_IMAGE_THUMBNAIL_QUALITY']
 
-                                    final_ext = file_ext  # track file extension for conversion
-                                    thumbnail_ext = file_ext
+                                    final_ext = file_ext.lower()  # track file extension for conversion
+                                    thumbnail_ext = file_ext.lower()
 
                                     if medium_image_format == 'AVIF' or thumbnail_image_format == 'AVIF':
                                         import pillow_avif  # NOQA
@@ -1270,10 +1419,12 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                     # Resize the image to medium
                                     if medium_width:
                                         if img_width > medium_width or medium_image_format:
-                                            image = image.convert('RGB' if (
-                                                        medium_image_format == 'JPEG' or final_ext in ['.jpg',
-                                                                                                       '.jpeg']) else 'RGBA')
-                                            image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
+                                            medium_image = image.copy()
+                                            if (medium_image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                                                medium_image = to_srgb(medium_image)
+                                            else:
+                                                medium_image = medium_image.convert('RGBA')
+                                            medium_image.thumbnail((medium_width, sys.maxsize), resample=Image.LANCZOS)
 
                                         kwargs = {}
                                         if medium_image_format:
@@ -1283,7 +1434,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         if medium_image_quality:
                                             kwargs['quality'] = int(medium_image_quality)
 
-                                        image.save(final_place, optimize=True, **kwargs)
+                                        medium_image.save(final_place, optimize=True, **kwargs)
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place)
@@ -1304,14 +1455,18 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                           '/' + new_filename + final_ext
 
                                         file.file_path = final_place
-                                        file.width = image.width
-                                        file.height = image.height
+                                        file.width = medium_image.width
+                                        file.height = medium_image.height
 
                                     # Resize the image to a thumbnail (webp)
                                     if thumbnail_width:
+                                        thumbnail_image = image.copy()
+                                        if thumbnail_image_format == 'JPEG':
+                                            thumbnail_image = to_srgb(thumbnail_image)
+                                        else:
+                                            thumbnail_image = thumbnail_image.convert('RGBA')
                                         if img_width > thumbnail_width:
-                                            image = image.convert('RGB' if thumbnail_image_format == 'JPEG' else 'RGBA')
-                                            image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
+                                            thumbnail_image.thumbnail((thumbnail_width, thumbnail_width), resample=Image.LANCZOS)
 
                                         kwargs = {}
                                         if thumbnail_image_format:
@@ -1321,7 +1476,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         if thumbnail_image_quality:
                                             kwargs['quality'] = int(thumbnail_image_quality)
 
-                                        image.save(final_place_thumbnail, optimize=True, **kwargs)
+                                        thumbnail_image.save(final_place_thumbnail, optimize=True, **kwargs)
 
                                         if store_files_in_s3():
                                             content_type = guess_mime_type(final_place_thumbnail)
@@ -1772,8 +1927,12 @@ def ban_user(blocker, blocked, community, core_activity):
             except ValueError:
                 ban_until = arrow.get(core_activity['endTime']).datetime
 
-        if ban_until and ban_until > datetime.now(timezone.utc):
-            new_ban.ban_until = ban_until
+        if ban_until:
+            # Ensure ban_until is timezone-aware for comparison
+            if ban_until.tzinfo is None:
+                ban_until = ban_until.replace(tzinfo=timezone.utc)
+            if ban_until > datetime.now(timezone.utc):
+                new_ban.ban_until = ban_until
 
         db.session.add(new_ban)
 
@@ -1928,7 +2087,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
         # Check for Mentions of local users
         reply_parent = parent_comment if parent_comment else post
         local_users_to_notify = []
-        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
             for json_tag in request_json['object']['tag']:
                 if 'type' in json_tag and json_tag['type'] == 'Mention':
                     profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -1952,26 +2111,64 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                        announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
-                if recipient:
-                    blocked_senders = blocked_users(recipient.id)
-                    if post_reply.user_id not in blocked_senders:
-                        author = User.query.get(post_reply.user_id)
-                        targets_data = {'gen': '0',
-                                        'post_id': post_reply.post_id,
-                                        'comment_id': post_reply.id,
-                                        'comment_body': post_reply.body,
-                                        'author_user_name': author.ap_id if author.ap_id else author.user_name
-                                        }
-                        with force_locale(get_recipient_language(recipient.id)):
-                            notification = Notification(user_id=recipient.id, title=gettext(
-                                f"You have been mentioned in comment {post_reply.id}"),
-                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                                        author_id=user.id, notif_type=NOTIF_MENTION,
-                                                        subtype='comment_mention',
-                                                        targets=targets_data)
-                            recipient.unread_notifications += 1
-                            db.session.add(notification)
-                            db.session.commit()
+                if not recipient:
+                    continue
+                if post_reply.instance.software == 'mbin' or post_reply.instance.software in MICROBLOG_APPS:
+                    # ignore Mention of post author from microblog apps
+                    # (direct replies will generate a different kind of Notification)
+                    if recipient.id == post.user_id:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention made in a post body
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "post_mention",
+                                                                   Notification.targets.op("->>")("post_id").cast(Integer) == post_reply.post_id).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just mirroring a Mention someone else made in the comment chain
+                    ids = []
+                    for element in post_reply.path:
+                        if element == 0 or element == post_reply.id:
+                            continue
+                        ids.append(element)
+                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                   Notification.subtype == "comment_mention",
+                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                    if notifs:
+                        continue
+
+                    # ignore Mentions in comments from MBIN if they're just there because a local user authored a comment further up in the comment chain
+                    # (direct replies will generate a different kind of Notification)
+                    # note: can't just check for any Notifications (reply or mention) 'cos local users could conceivably have turned inbox replies off
+                    ids = tuple(ids)
+                    user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                    if recipient.id in user_ids:
+                        continue
+
+                    # if checking for previous comments seems overly-involved, a cheaper solution is perhaps to just be to reject Mentions from MBIN in comments with a depth > 0
+
+                blocked_senders = blocked_users(recipient.id)
+                if post_reply.user_id not in blocked_senders:
+                    author = User.query.get(post_reply.user_id)
+                    targets_data = {'gen': '0',
+                                    'post_id': post_reply.post_id,
+                                    'comment_id': post_reply.id,
+                                    'comment_body': post_reply.body,
+                                    'author_user_name': author.ap_id if author.ap_id else author.user_name
+                                    }
+                    with force_locale(get_recipient_language(recipient.id)):
+                        notification = Notification(user_id=recipient.id, title=gettext(
+                            f"You have been mentioned in comment {post_reply.id}"),
+                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                            author_id=user.id, notif_type=NOTIF_MENTION,
+                            subtype='comment_mention',
+                            targets=targets_data)
+                        recipient.unread_notifications += 1
+                        db.session.add(notification)
+                        db.session.commit()
 
             return post_reply
         except Exception as ex:
@@ -2135,7 +2332,7 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                                 'comment_body': new_reply.body}
                 new_notification = Notification(title=shorten_string(_('Reply to %(post_title)s',
                                                                        post_title=new_reply.post.title), 150),
-                                                url=f"/post/{new_reply.post.id}#comment_{new_reply.id}",
+                                                url=f"/post/{new_reply.post.id}/comment/{new_reply.id}#comment_{new_reply.id}",
                                                 user_id=notify_id, author_id=new_reply.user_id,
                                                 notif_type=NOTIF_POST,
                                                 subtype='top_level_comment_on_followed_post',
@@ -2150,41 +2347,23 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
         for notify_id in send_notifs_to:
             if new_reply.user_id != notify_id:
                 author = User.query.get(new_reply.user_id)
-                if new_reply.depth <= THREAD_CUTOFF_DEPTH:
-                    targets_data = {'gen': '0',
-                                    'post_id': parent_reply.post.id,
-                                    'parent_reply_body': parent_reply.body,
-                                    'comment_id': new_reply.id,
-                                    'comment_body': new_reply.body,
-                                    'author_id': new_reply.user_id,
-                                    'author_user_name': author.ap_id if author.ap_id else author.user_name, }
-                    with force_locale(get_recipient_language(notify_id)):
-                        new_notification = Notification(
-                            title=shorten_string(gettext('Reply to comment on %(post_title)s',
-                                                         post_title=parent_reply.post.title), 150),
-                            url=f"/post/{parent_reply.post.id}#comment_{new_reply.id}",
-                            user_id=notify_id, author_id=new_reply.user_id,
-                            notif_type=NOTIF_REPLY,
-                            subtype='new_reply_on_followed_comment',
-                            targets=targets_data)
-                else:
-                    targets_data = {'gen': '0',
-                                    'post_id': parent_reply.post.id,
-                                    'parent_comment_id': parent_reply.id,
-                                    'parent_reply_body': parent_reply.body,
-                                    'comment_id': new_reply.id,
-                                    'comment_body': new_reply.body,
-                                    'author_id': new_reply.user_id,
-                                    'author_user_name': author.ap_id if author.ap_id else author.user_name, }
-                    with force_locale(get_recipient_language(notify_id)):
-                        new_notification = Notification(
-                            title=shorten_string(gettext('Reply to comment on %(post_title)s',
-                                                         post_title=parent_reply.post.title), 150),
-                            url=f"/post/{parent_reply.post.id}/comment/{parent_reply.id}#comment_{new_reply.id}",
-                            user_id=notify_id, author_id=new_reply.user_id,
-                            notif_type=NOTIF_REPLY,
-                            subtype='new_reply_on_followed_comment',
-                            targets=targets_data)
+                targets_data = {'gen': '0',
+                                'post_id': parent_reply.post.id,
+                                'parent_comment_id': new_reply.parent_id,
+                                'parent_reply_body': parent_reply.body,
+                                'comment_id': new_reply.id,
+                                'comment_body': new_reply.body,
+                                'author_id': new_reply.user_id,
+                                'author_user_name': author.ap_id if author.ap_id else author.user_name, }
+                with force_locale(get_recipient_language(notify_id)):
+                    new_notification = Notification(
+                        title=shorten_string(gettext('Reply to comment on %(post_title)s',
+                                                     post_title=parent_reply.post.title), 150),
+                        url=f"/post/{parent_reply.post.id}/comment/{new_reply.parent_id}#comment_{new_reply.id}",
+                        user_id=notify_id, author_id=new_reply.user_id,
+                        notif_type=NOTIF_REPLY,
+                        subtype='new_reply_on_followed_comment',
+                        targets=targets_data)
                 db.session.add(new_notification)
                 user = User.query.get(notify_id)
                 user.unread_notifications += 1
@@ -2250,7 +2429,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
         reply.ap_updated = utcnow()
 
     # Check for Mentions of local users (that weren't in the original)
-    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
         for json_tag in request_json['object']['tag']:
             if 'type' in json_tag and json_tag['type'] == 'Mention':
                 profile_id = json_tag['href'] if 'href' in json_tag else None
@@ -2263,6 +2442,38 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                     if reply_parent and profile_id != reply_parent.author.ap_profile_id:
                         recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                         if recipient:
+                            if reply.instance.software == 'mbin' or reply.instance.software in MICROBLOG_APPS:
+                                # ignore Mention of post author
+                                if recipient.id == reply.post.user_id:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention made in a post body
+                                notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                               Notification.notif_type == NOTIF_MENTION,
+                                                                               Notification.subtype == "post_mention",
+                                                                               Notification.targets.op("->>")("post_id").cast(Integer) == reply.post_id).first()
+                                if notifs:
+                                    continue
+
+                                # ignore Mentions mirroring a Mention someone else made in the comment chain
+                                ids = []
+                                for element in reply.path:
+                                    if element == 0 or element == reply.id:
+                                        continue
+                                    ids.append(element)
+                                    notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                                   Notification.notif_type == NOTIF_MENTION,
+                                                                                   Notification.subtype == "comment_mention",
+                                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                                    if notifs:
+                                        continue
+
+                                # ignore Mentions generated because a local user authored a comment further up in the comment chain
+                                ids = tuple(ids)
+                                user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                                if recipient.id in user_ids:
+                                    continue
+
                             blocked_senders = blocked_users(recipient.id)
                             if reply.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
@@ -2331,7 +2542,7 @@ def update_post_from_activity(post: Post, request_json: dict):
 
     if old_title != new_title:
         post.title = new_title
-        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper():
+        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper() or '[COMBAT]' in new_title.upper():
             post.nsfl = True
         if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
             post.nsfw = True
@@ -2504,9 +2715,40 @@ def update_post_from_activity(post: Post, request_json: dict):
         # no URLs in Polls to worry about, so return now
         return
 
+    old_db_entry_to_delete = None
+
+    if request_json['object']['type'] == 'Event':
+        event = Event.query.filter_by(post_id=post.id).first()
+        if event:
+            event.start = datetime.fromisoformat(request_json['object']['startTime'])
+            event.end = datetime.fromisoformat(request_json['object']['endTime'])
+            event.timezone = request_json['object']['timezone']
+            event.max_attendees = request_json['object']['maximumAttendeeCapacity']
+            event.participant_count = request_json['object']['participantCount']
+            event.online_link = request_json['object']['onlineLink']
+            event.join_mode = request_json['object']['joinMode']
+            event.external_participation_url = request_json['object']['externalParticipationUrl']
+            event.anonymous_participation = request_json['object']['anonymousParticipation']
+            event.online = request_json['object']['isOnline']
+            event.buy_tickets_link = request_json['object']['buyTicketsLink']
+            event.event_fee_currency = request_json['object']['feeCurrency']
+            event.event_fee_amount = request_json['object']['feeAmount']
+            if post.image:
+                post.image.delete_from_disk()
+                old_db_entry_to_delete = post.image_id
+            if 'image' in request_json['object']:
+                image = File(source_url=request_json['object']['image']['url'])
+                db.session.add(image)
+                db.session.commit()
+                post.image = image
+                make_image_sizes(image.id, 170, 512, 'posts')
+            else:
+                post.image_id = None
+            db.session.commit()
+
     # Links
     old_url = post.url
-    new_url = None
+    new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
     if ('attachment' in request_json['object'] and
             isinstance(request_json['object']['attachment'], list) and
             len(request_json['object']['attachment']) > 0 and
@@ -2537,7 +2779,6 @@ def update_post_from_activity(post: Post, request_json: dict):
         if new_domain.banned:
             db.session.commit()
             return  # reject change to url if new domain is banned
-    old_db_entry_to_delete = None
     if old_url != new_url:
         if post.image:
             post.image.delete_from_disk()
@@ -3004,7 +3245,7 @@ def resolve_remote_post(uri: str, community, announce_id, store_ap_json, nodebb=
     announce_actor = community.ap_profile_id
     parsed_url = urlparse(announce_actor)
     announce_actor_domain = parsed_url.netloc
-    if announce_actor_domain != 'a.gup.pe' and not nodebb and announce_actor_domain != uri_domain:
+    if announce_actor_domain != 'ovo.st' and not nodebb and announce_actor_domain != uri_domain:
         return None
 
     post_data = remote_object_to_json(uri)
@@ -3328,13 +3569,13 @@ def find_community(request_json):
                 potential_id = rj[location]
                 if isinstance(potential_id, str):
                     if not potential_id.startswith('https://www.w3.org') and not potential_id.endswith('/followers'):
-                        potential_community = Community.query.filter_by(ap_profile_id=potential_id.lower()).first()
+                        potential_community = db.session.query(Community).filter_by(ap_profile_id=potential_id.lower()).first()
                         if potential_community:
                             return potential_community
                 if isinstance(potential_id, list):
                     for c in potential_id:
                         if not c.startswith('https://www.w3.org') and not c.endswith('/followers'):
-                            potential_community = Community.query.filter_by(ap_profile_id=c.lower()).first()
+                            potential_community = db.session.query(Community).filter_by(ap_profile_id=c.lower()).first()
                             if potential_community:
                                 return potential_community
 
@@ -3354,8 +3595,12 @@ def find_community(request_json):
     if rj['type'] == 'Video':
         if 'attributedTo' in rj and isinstance(rj['attributedTo'], list):
             for a in rj['attributedTo']:
-                if a['type'] == 'Group':
-                    potential_community = Community.query.filter_by(ap_profile_id=a['id'].lower()).first()
+                if isinstance(a, str):
+                    potential_community = Community.query.filter_by(ap_profile_id=a.lower()).first()
+                    if potential_community:
+                        return potential_community
+                elif a['type'] == 'Group':
+                    potential_community = db.session.query(Community).filter_by(ap_profile_id=a['id'].lower()).first()
                     if potential_community:
                         return potential_community
 
@@ -3371,3 +3616,22 @@ def normalise_actor_string(actor: str) -> Tuple[str, str]:
     if '@' in actor:
         parts = actor.split('@')
         return parts[0].lower(), parts[1].lower()
+
+
+def process_banned_message(banned_json, instance_domain: str, session):
+    if banned_person := find_actor_or_create(banned_json['message'], create_if_not_found=False):
+        instance = session.query(Instance).filter(Instance.domain == instance_domain.lower()).first()
+        if instance:
+            session.execute(text(
+                '''
+                INSERT INTO "instance_ban" (user_id, instance_id, banned_until)
+                VALUES (:user_id, :instance_id, :banned_until)
+                ON CONFLICT (user_id, instance_id)
+                DO UPDATE SET banned_until = EXCLUDED.banned_until
+                '''
+            ), {
+                "user_id": banned_person.id,
+                "instance_id": instance.id,
+                "banned_until": utcnow() + timedelta(days=1)
+            })
+            session.commit()

@@ -1,4 +1,4 @@
-# This file is part of PieFed, which is licensed under the GNU General Public License (GPL) version 3.0.
+# This file is part of PieFed, which is licensed under the GNU Affero General Public License (AGPL) version 3.0.
 # You should have received a copy of the GPL along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import logging
@@ -14,6 +14,7 @@ from flask_babel import Babel, lazy_gettext as _l
 from flask_caching import Cache
 from flask_limiter import Limiter
 from flask_smorest import Api
+from flask_bcrypt import Bcrypt
 from werkzeug.middleware.proxy_fix import ProxyFix
 from celery import Celery
 from sqlalchemy_searchable import make_searchable
@@ -44,6 +45,7 @@ def get_ip_address() -> str:
 
 
 db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
+make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
 login.login_view = 'auth.login'
@@ -58,6 +60,7 @@ httpx_client = httpx.Client(http2=True)
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
 rest_api = Api()
+app_bcrypt = Bcrypt()
 
 
 def create_app(config_class=Config):
@@ -73,14 +76,59 @@ def create_app(config_class=Config):
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
-    app.config["API_TITLE"] = "PieFed Alpha API"
-    app.config["API_VERSION"] = "alpha"
-    app.config["OPENAPI_VERSION"] = "3.0.2"
+    app.config["API_TITLE"] = "PieFed 1.2 Alpha API"
+    app.config["API_VERSION"] = "alpha 1.2"
+    app.config["OPENAPI_VERSION"] = "3.1.1"
     if app.config["SERVE_API_DOCS"]:
         app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
         app.config["OPENAPI_JSON_PATH"] = "/swagger.json"
         app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger"
         app.config["OPENAPI_SWAGGER_UI_URL"] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+        app.config["API_SPEC_OPTIONS"] = {
+            "security": [{"bearerAuth": []}],
+            "components": {
+                "securitySchemes": {
+                    "bearerAuth": {
+                        "type": "http",
+                        "scheme": "bearer",
+                        "bearerFormat": "JWT"
+                    }
+                }
+            },
+            "servers": [
+                {
+                    "url": f"{app.config['HTTP_PROTOCOL']}://{app.config['SERVER_NAME']}",
+                    "description": "This instance"
+                },
+                {
+                    "url": "https://crust.piefed.social",
+                    "description": "Development instance",
+                },
+                {
+                    "url": "https://piefed.social",
+                },
+                {
+                    "url": "https://preferred.social"
+                },
+                {
+                    "url": "https://feddit.online"
+                },
+                {
+                    "url": "https://piefed.world"
+                }
+            ],
+            "info": {
+                "title": "PieFed 1.2 Alpha API",
+                "contact": {
+                    "name": "Developer",
+                    "url": "https://codeberg.org/rimu/pyfedi"
+                },
+                "license": {
+                    "name": "AGPLv3",
+                    "url": "https://www.gnu.org/licenses/agpl-3.0.en.html#license-text"
+                }
+            }
+        }
     rest_api.init_app(app)
     rest_api.DEFAULT_ERROR_RESPONSE_NAME = None  # Don't include default errors, define them ourselves
 
@@ -89,20 +137,22 @@ def create_app(config_class=Config):
     login.init_app(app)
     mail.init_app(app)
     bootstrap.init_app(app)
-    make_searchable(db.metadata)
     babel.init_app(app, locale_selector=get_locale)
     cache.init_app(app)
     limiter.init_app(app)
+    app_bcrypt.init_app(app)
     celery.conf.update(app.config)
 
     celery.conf.update(CELERY_ROUTES={
         'app.shared.tasks.users.check_user_application': {'queue': 'background'},
         'app.user.utils.purge_user_then_delete_task': {'queue': 'background'},
         'app.community.util.retrieve_mods_and_backfill': {'queue': 'background'},
+        'app.community.util.send_to_remote_instance_task': {'queue': 'send'},
         'app.activitypub.signature.post_request': {'queue': 'send'},
         # Maintenance tasks - all go to background queue
         'app.shared.tasks.maintenance.*': {'queue': 'background'},
-        'app.admin.*': {'queue': 'background'},
+        'app.admin.routes.*': {'queue': 'background'},
+        'app.admin.util.*': {'queue': 'background'},
         'app.utils.archive_post': {'queue': 'background'},
     })
 
@@ -196,10 +246,18 @@ def create_app(config_class=Config):
     app.register_blueprint(app_api_bp)
 
     # API Namespaces
-    from app.api.alpha import site_bp, misc_bp, comm_bp
+    from app.api.alpha import site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
+                              reply_bp, post_bp, upload_bp, private_message_bp
     rest_api.register_blueprint(site_bp)
     rest_api.register_blueprint(misc_bp)
     rest_api.register_blueprint(comm_bp)
+    rest_api.register_blueprint(feed_bp)
+    rest_api.register_blueprint(topic_bp)
+    rest_api.register_blueprint(user_bp)
+    rest_api.register_blueprint(reply_bp)
+    rest_api.register_blueprint(post_bp)
+    rest_api.register_blueprint(upload_bp)
+    rest_api.register_blueprint(private_message_bp)
 
     # send error reports via email
     if app.config['MAIL_SERVER'] and app.config['ERRORS_TO']:

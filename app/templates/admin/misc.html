@@ -3,7 +3,7 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% from 'bootstrap5/form.html' import render_field %}
+{% from 'bootstrap5/form.html' import render_field, render_form %}
 {% set active_child = 'admin_misc' %}
 
 {% block extra_css %}
@@ -32,9 +32,10 @@
             {{ render_field(form.enable_this_comment_filter) }}
             {{ render_field(form.meme_comms_low_quality) }}
             {{ render_field(form.allow_local_image_posts) }}
-            {{ render_field(form.remote_image_cache_days) }}
             {{ render_field(form.enable_nsfw) }}
             {{ render_field(form.enable_nsfl) }}
+            {{ render_field(form.nsfw_country_restriction) }}
+            <p class="small field_hint">{{ _('Use 2-letter country codes, one per line, e.g. GB. Probably not necessary if NSFW communities is off.') }}</p>
             {{ render_field(form.community_creation_admin_only) }}
             {{ render_field(form.reports_email_admins) }}
             <div id="tom_select">
@@ -64,6 +65,29 @@
 
             {{ render_field(form.submit) }}
         </form>
+        {% if current_user.id == 1 %}
+        <hr class="bg-danger border-4 border-top border-danger" />
+        <div class="accordion" id="deleteAccordion">
+          <div class="accordion-item">
+            <h2 class="accordion-header">
+              <button class="accordion-button bg-danger text-light collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDelete" aria-expanded="false" aria-controls="collapseDelete">
+                {{ _('Danger Zone! - Instance Deletion') }}
+              </button>
+            </h2>
+            <div id="collapseDelete" class="accordion-collapse collapse bg-danger text-light" data-bs-parent="#deleteAccordion">
+              <div class="accordion-body">
+                <form method="post" role="form">
+                  <p>{{ _('You are about to close the instance "<strong>%(domain)s</strong>."', domain=instance_domain) }}</p>
+                  <p>{{ _('Once you hit close all other instances will stop sending content to here, new user registration will be closed and an announcement added to the home page.') }}</p>
+                  <p>{{ _('This action should be taken a few days before going offline and only after plenty of earlier warning, so communities have time to move, etc.') }}</p>
+                    <p>{{ _("Remember, once you do this, there's no going back. Are you sure you want to continue?") }}</p>
+                  {{ render_form(close_form) }}
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif -%}
     </div>
 </div>
 <hr />

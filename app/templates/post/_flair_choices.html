@@ -1,5 +1,5 @@
 {% if flair_objs %}
-  <form class="p-1">
+  <form class="p-1 pt-0">
     <ul class="form-control form-multicheck-columns row-gap-1" id="flair-post-{{ post_id }}">
       {% for flair in flair_objs %}
         <li>
@@ -8,7 +8,11 @@
         </li>
       {% endfor %}
     </ul>
-    <button type="submit" class="btn btn-primary" hx-post="{{ url_for("post.post_set_flair", post_id=post_id) }}" hx-trigger="click throttle:1s" 
+    <ul class="form-control form-multicheck-columns row-gap-1 mt-2">
+        <li><label><input type="checkbox" name="nsfw" value="1" {{ 'checked' if post.nsfw else '' }}> {{ _('NSFW') }}</label></li>
+        <li><label><input type="checkbox" name="nsfl" value="1" {{ 'checked' if post.nsfl else '' }}> {{ _('NSFL') }}</label></li>
+    </ul>
+    <button type="submit" class="btn btn-primary" hx-post="{{ url_for("post.post_set_flair", post_id=post_id) }}" hx-trigger="click throttle:1s"
       {% if post_preview %}hx-target="#post_{{ post_id }}" {% endif %}hx-swap="outerHTML">{{ _('Submit') }}</button>
   </form>
 {% endif %}

@@ -11,6 +11,7 @@
 * [Database Management](#database-management)
 * [Keeping your local instance up to date](#keeping-your-local-instance-up-to=date)
 * [Running PieFed in production](#running-piefed-in-production)
+* [Push notifications](#push-notifications)
 * [Accepting donations through Stripe](#stripe)
 * [Testing and debugging](#testing)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
@@ -60,16 +61,13 @@ PieFed is quite frugal with storage usage but it will grow over time. After 18 m
 
 #### Install postgresql
 
-PieFed should work on version 13.x or newer. If you have errors running `flask init-db`, check your postrgesql version.
+PieFed should work on version 13.x or newer. If you have errors running `flask init-db` (don't run it now, later on), check your postrgesql version.
 
 ##### Install postgresql 16:
 
 For installation environments that use `apt` as a package manager:
 
 ```bash
-sudo apt install ca-certificates pkg-config
-wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" >> /etc/apt/sources.list.d/pgdg.list'
 sudo apt update
 sudo apt install libpq-dev postgresql
 ```
@@ -494,6 +492,18 @@ server {
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
 
+Recommended anti-scraper (they use fake user agent strings) config:
+
+```
+    # Scrapers often use old user-agents
+    if ($http_user_agent ~* "(Chrome/[0-9]{1,2}(?![0-9])|Firefox/[0-9]{1,2}(?![0-9])|Safari/([0-9]|1[0-4])(?![0-9]))") {
+        return 403;
+    }
+    if ($http_user_agent ~* "(Opera/[0-9]|Presto/|MSIE|Trident/)") {
+        return 403;
+    }
+```
+
 #### Caddy
 
 ```
@@ -620,12 +630,67 @@ The values for them are found by registering your instance with Google as 'an ap
 to begin. Create a new project, enable the People API, go to APIs & Services > Credentials and create a new OAuth client ID.
 Under "Authorized Redirect URIs", use `https://yourdomain.tld/auth/google_authorize`.
 
+#### Log in with LDAP
+
+PieFed can connect to a LDAP server and use that to verify people's login details. You need to set the following environment variables:
+
+```
+LDAP_SERVER_LOGIN = 'ip address'
+LDAP_PORT_LOGIN = 389
+LDAP_USE_SSL_LOGIN = 0
+LDAP_USE_TLS_LOGIN = 0
+LDAP_BIND_DN_LOGIN = 'cn=admin,dc=piefed,dc=social'
+LDAP_BIND_PASSWORD_LOGIN = ''
+LDAP_BASE_DN_LOGIN = 'ou=users,dc=piefed,dc=social'
+LDAP_USER_FILTER_LOGIN = '(uid={username})'
+LDAP_ATTR_USERNAME_LOGIN = 'uid'
+LDAP_ATTR_EMAIL_LOGIN = 'mail'
+LDAP_ATTR_PASSWORD_LOGIN = 'userPassword'
+```
+
+Test this out by going to `https://yourinstance.tld/test_ldap_login?username=something&password=something_else`
+
+PieFed can also **write to** a LDAP server so that other services can log in using the account details they use on your instance. 
+piefed.social uses this to let people log in to chat.piefed.social and translate.piefed.social using their piefed.social account. The
+environment variables for this are very similar:
+
+```
+LDAP_SERVER = 'ip address'
+LDAP_PORT = 389
+LDAP_USE_SSL = 0
+LDAP_USE_TLS = 0
+LDAP_BIND_DN = 'cn=admin,dc=piefed,dc=social'
+LDAP_BIND_PASSWORD = ''
+LDAP_BASE_DN = 'ou=users,dc=piefed,dc=social'
+LDAP_USER_FILTER = '(uid={username})'
+LDAP_ATTR_USERNAME = 'uid'
+LDAP_ATTR_EMAIL = 'mail'
+LDAP_ATTR_PASSWORD = 'userPassword'
+```
+
+Test this out by going to `https://yourinstance.tld/test_ldap`
+
 #### CMS
 
 At /admin/pages there is a markdown-based CMS which you can use to add pages to your instance. Create one with the url
 'privacy' to override the default privacy policy. Create one with the url 'about' and it will be appended to the existing about page.
 
 All other urls have no special behaviour and will just display the page.
+
+---
+
+<div id="push-notifications"></div>
+
+## Push notifications
+
+To have realtime popup notifications your instance needs to install another web app: [https://codeberg.org/PieFed/piefed-notifs](https://codeberg.org/PieFed/piefed-notifs)
+
+This service needs to have access to the same redis service that the main PieFed app uses so putting it on the same server is simplest.
+
+You need to configure Nginx on the main PieFed app server to proxy requests to /notifications/stream through to the piefed-notifs service.
+See [the readme](https://codeberg.org/PieFed/piefed-notifs/src/branch/main/README.md) for more details. If you do this then you
+can set the `NOTIF_SERVER` environment variable to the same url as your instance. If you want to run piefed-notifs on an entirely different
+server then you can set `NOTIF_SERVER` to that url instead but I expect most will not need to -  Piefed-notifs is very lightweight.
 
 ---
 
@@ -777,4 +842,4 @@ pip install --upgrade <package_name>
 
 ## Developers
 
-See dev_notes.txt and https://join.piefed.social/docs/developers/
+See dev_notes.md and https://join.piefed.social/docs/developers/

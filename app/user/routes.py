@@ -39,7 +39,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
-    patch_db_session
+    patch_db_session, user_in_restricted_country
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -482,6 +482,13 @@ def export_user_settings(user):
         blocked_instances.append(i.domain)
     user_dict['blocked_instances'] = blocked_instances
 
+    notes = []
+    for user_note in UserNote.query.filter(UserNote.user_id == user.id):
+        target = User.query.get(user_note.target_id)
+        if target:
+            notes.append({'target': target.profile_id(), 'note': user_note.body})
+    user_dict['user_notes'] = notes
+
     # piefed versions of (most of) the same settings
     # TO-DO: adjust the piefed side import method to just take the doubled
     # settings from the lemmy formatted output. Then remove the duplicate
@@ -730,12 +737,12 @@ def ban_profile(actor):
                     # federate deletion
                     if user.is_local():
                         user.deleted_by = current_user.id
-                        purge_user_then_delete(user.id)
+                        purge_user_then_delete(user.id, flush=form.flush.data)
                         flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
                               actor=actor))
                     else:
                         user.delete_dependencies()
-                        user.purge_content()
+                        user.purge_content(flush=form.flush.data)
                         from app import redis_client
                         with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                             user = User.query.get(user.id)
@@ -784,9 +791,9 @@ def ban_profile(actor):
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, deleted=False).first()
+        user = User.query.filter_by(user_name=actor).first()
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
+            user = User.query.filter_by(ap_id=actor).first()
             if user is None:
                 abort(404)
 
@@ -794,6 +801,7 @@ def unban_profile(actor):
             flash(_('You cannot unban yourself.'), 'error')
         else:
             user.banned = False
+            user.deleted = False
             db.session.commit()
 
             add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
@@ -1095,7 +1103,7 @@ def send_deletion_requests(user_id):
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
@@ -1118,7 +1126,7 @@ def send_deletion_requests(user_id):
 def ban_purge_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor).first()
+        user = User.query.filter_by(user_name=actor, ap_id=None).first()
         if user is None:
             user = User.query.filter_by(ap_id=actor).first()
             if user is None:
@@ -1283,6 +1291,8 @@ def import_settings(filename):
 
 @celery.task
 def import_settings_task(user_id, filename):
+    from app.api.alpha.utils.misc import get_resolve_object
+
     with current_app.app_context():
         session = get_task_session()
         try:
@@ -1312,6 +1322,10 @@ def import_settings_task(user_id, filename):
                                 if not existing_member:
                                     member = CommunityMember(user_id=user.id, community_id=community.id)
                                     session.add(member)
+                                    if community.subscriptions_count is None:
+                                        community.subscriptions_count = 0
+                                    if community.total_subscriptions_count is None:
+                                        community.total_subscriptions_count = 0
                                     community.subscriptions_count += 1
                                     community.total_subscriptions_count += 1
                                     session.commit()
@@ -1357,8 +1371,34 @@ def import_settings_task(user_id, filename):
                             if not blocked_user.is_local():
                                 ...  # todo: federate block
 
-                for instance_domain in contents_json['blocked_instances']:
-                    ...
+                for user_note in contents_json['user_notes'] if 'user_notes' in contents_json else []:
+                    note_target = find_actor_or_create(user_note['target'])
+                    if note_target:
+                        session.add(UserNote(user_id=user.id, target_id=note_target.id, body=user_note['body']))
+
+                for instance_domain in contents_json['blocked_instances'] if 'blocked_instances' in contents_json else []:
+                    instance = Instance.query.filter(Instance.domain == instance_domain).first()
+                    session.add(InstanceBlock(user_id=user.id, instance_id=instance.id))
+
+                for ap_id in contents_json['saved_posts'] if 'saved_posts' in contents_json else []:
+                    try:
+                        post = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if post:
+                            existing_bookmark = session.query(PostBookmark).filter_by(post_id=post.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostBookmark(post_id=post.id, user_id=user.id))
+                    except Exception:
+                        continue
+
+                for ap_id in contents_json['saved_comments'] if 'saved_comments' in contents_json else []:
+                    try:
+                        reply = get_resolve_object(None, {"q": ap_id}, user_id=user.id, recursive=True)
+                        if reply:
+                            existing_bookmark = session.query(PostReplyBookmark).filter_by(post_reply_id=reply.id, user_id=user.id).first()
+                            if not existing_bookmark:
+                                session.add(PostReplyBookmark(post_reply_id=reply.id, user_id=user.id))
+                    except Exception:
+                        continue
 
                 session.commit()
                 cache.delete_memoized(blocked_communities, user.id)
@@ -1380,6 +1420,8 @@ def import_settings_task(user_id, filename):
 def user_settings_filters():
     form = FilterForm()
     if form.validate_on_submit():
+        if (form.hide_nsfw.data != 1 or form.hide_nsfl.data != 1) and user_in_restricted_country(current_user):
+            flash(_('NSFW content will be hidden due to legal restrictions in your country.'))
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
@@ -1387,6 +1429,10 @@ def user_settings_filters():
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
         current_user.community_keyword_filter = form.community_keyword_filter.data
+        if current_user.ip_address_country and user_in_restricted_country(current_user):
+            current_user.hide_nsfw = 1  # Hide nsfw
+            current_user.hide_nsfl = 1
+
         db.session.commit()
 
         cache.delete_memoized(filtered_out_communities, current_user)
@@ -1837,9 +1883,9 @@ def lookup(person, domain):
 
 # ----- user feed related routes
 
-@bp.route('/u/myfeeds', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/myfeeds', methods=['GET'])
 @login_required
-def user_myfeeds():
+def user_myfeeds(actor):
     # this will show a user's personal feeds
     user_has_feeds = False
     if current_user.is_authenticated and len(Feed.query.filter_by(user_id=current_user.id).all()) > 0:
@@ -1860,7 +1906,7 @@ def user_myfeeds():
                            )
 
 
-@bp.route('/u/<actor>/feeds', methods=['GET', 'POST'])
+@bp.route('/u/<actor>/feeds', methods=['GET'])
 def user_feeds(actor):
     # this will show a specific user's public feeds
     user_has_public_feeds = False

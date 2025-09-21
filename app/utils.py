@@ -4,6 +4,7 @@ import base64
 import bisect
 import gzip
 import hashlib
+import io
 import mimetypes
 import math
 import random
@@ -27,6 +28,8 @@ import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import orjson
 
+from app.translation import LibreTranslateAPI
+
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
 import os
 from furl import furl
@@ -44,7 +47,7 @@ import boto3
 from app import db, cache, httpx_client, celery
 from app.constants import *
 import re
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageCms
 
 from captcha.audio import AudioCaptcha
 from captcha.image import ImageCaptcha
@@ -52,7 +55,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan
 
 
 # Flask's render_template function, with support for themes added
@@ -137,6 +140,9 @@ def get_request(uri, params=None, headers=None) -> httpx.Response:
         except Exception as e:
             current_app.logger.info(f"{uri} {read_timeout}")
             raise httpx.HTTPError(f"HTTPError: {str(e)}") from read_timeout
+    except httpx.StreamError as stream_error:
+        # Convert to a more generic error we handle
+        raise httpx.HTTPError(f"HTTPError: {str(stream_error)}") from None
 
     return response
 
@@ -170,7 +176,7 @@ def head_request(uri, params=None, headers=None) -> httpx.Response:
 # Saves an arbitrary object into a persistent key-value store. cached.
 # Similar to g.site.* except g.site.* is populated on every single page load so g.site is best for settings that are
 # accessed very often (e.g. every page load)
-@cache.memoize(timeout=50)
+@cache.memoize(timeout=500)
 def get_setting(name: str, default=None):
     setting = db.session.query(Settings).filter_by(name=name).first()
     if setting is None:
@@ -287,6 +293,21 @@ allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite'
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
 
 
+LINK_PATTERN = re.compile(
+    r"""
+        \b
+        (
+            (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
+            \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
+            [^<>\s"']*                    # rest of url
+            (?<![?!.,:*_~);])             # exclude trailing punctuation
+            (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
+        )
+    """,
+    re.X
+)
+
+
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
     # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
@@ -373,11 +394,11 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
 
     # replace subscript markdown left in HTML
-    re_subscript = re.compile(r'~(\S+)~')
+    re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
     clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
 
     # replace superscript markdown left in HTML
-    re_superscript = re.compile(r'\^(\S+)\^')
+    re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
     clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
 
     # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
@@ -424,7 +445,12 @@ def escape_non_html_angle_brackets(text: str) -> str:
             tag_name = tag_content[1:].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        if tag_name in allowed_tags:
+        emoticons = ['3', # heart
+                     '\\3', # broken heart
+                     '|:‑)', # santa claus *<|:‑)
+                     ':‑|' # dumb, dunce-like
+                     ]
+        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content) or tag_content in emoticons:
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
@@ -476,27 +502,12 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
 
-        # turn links into anchors
-        link_pattern = re.compile(
-            r"""
-                \b
-                (
-                    (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
-                    \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
-                    [^<>\s"']*                    # rest of url
-                    (?<![?!.,:*_~);])             # exclude trailing punctuation
-                    (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
-                )
-            """,
-            re.X
-        )
-
         try:
             raw_html = markdown2.markdown(markdown_text,
                                           extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
-                                                  'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                  'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
-                                                  'tag-friendly': True})
+                                                  'tag-friendly': True, 'smarty-pants': True})
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
@@ -505,7 +516,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
                                                       'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
-                                                      'tag-friendly': True})
+                                                      'tag-friendly': True, 'smarty-pants': True})
             except:
                 raw_html = ''
         
@@ -606,7 +617,7 @@ def first_paragraph(html):
             second_paragraph = first_para.find_next('p')
             if second_paragraph:
                 return f'<p>{second_paragraph.text}</p>'
-        return f'<p>{first_para.text}</p>'
+        return allowlist_html(f'<p>{first_para.text}</p>')
     else:
         return ''
 
@@ -845,7 +856,9 @@ def communities_banned_from(user_id: int) -> List[int]:
     if user_id == 0:
         return []
     community_bans = db.session.query(CommunityBan).filter(CommunityBan.user_id == user_id).all()
-    return [cb.community_id for cb in community_bans]
+    instance_bans = db.session.query(Community).join(InstanceBan, Community.instance_id == InstanceBan.instance_id).\
+        filter(InstanceBan.user_id == user_id).all()
+    return [cb.community_id for cb in community_bans] + [cb.id for cb in instance_bans]
 
 
 @cache.memoize(timeout=86400)
@@ -990,6 +1003,8 @@ def trustworthy_account_required(func):
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
+        if is_activitypub_request():
+            return func(*args, **kwargs)
         if current_app.config['CONTENT_WARNING'] and request.cookies.get('warned') is None:
             return redirect(url_for('main.content_warning', next=request.path))
         if (g.site.private_instance and current_user.is_authenticated) or is_activitypub_request() or g.site.private_instance is False:
@@ -1127,7 +1142,7 @@ def instance_allowed(host: str) -> bool:
 
 
 @cache.memoize(timeout=150)
-def instance_banned(domain: str) -> bool:  # see also activitypub.util.instance_blocked()
+def instance_banned(domain: str) -> bool:
     session = get_task_session()
     try:
         if domain is None or domain == '':
@@ -1180,7 +1195,7 @@ def instance_gone_forever(domain: str) -> bool:
         domain = urlparse(domain).hostname
     session = get_task_session()
     try:
-        instance = Instance.query.filter_by(domain=domain).first()
+        instance = session.query(Instance).filter_by(domain=domain).first()
         if instance is not None:
             return instance.gone_forever
         else:
@@ -1292,6 +1307,12 @@ def can_create_post(user, content: Community) -> bool:
     if user.is_local():
         if user.verified is False or user.private_key is None:
             return False
+    else:
+        if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
+            return False
+
+    if content.banned:
+        return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1318,6 +1339,12 @@ def can_create_post_reply(user, content: Community) -> bool:
     if user.is_local():
         if user.verified is False or user.private_key is None:
             return False
+    else:
+        if instance_banned(user.instance.domain):
+            return False
+
+    if content.banned:
+        return False
 
     if content.is_moderator(user) or user.is_admin():
         return True
@@ -1367,7 +1394,7 @@ def reply_is_stupid(body) -> bool:
     return False
 
 
-@cache.memoize(timeout=10)
+@cache.memoize(timeout=3000)
 def trusted_instance_ids() -> List[int]:
     return [instance.id for instance in Instance.query.filter(Instance.trusted == True)]
 
@@ -1551,7 +1578,7 @@ def menu_my_feeds(user_id):
 @cache.memoize(timeout=3000)
 def menu_subscribed_feeds(user_id):
     return Feed.query.join(FeedMember, Feed.id == FeedMember.feed_id).filter(FeedMember.user_id == user_id).filter_by(
-        is_owner=False).all()
+        is_owner=False).order_by(Feed.name).all()
 
 
 # @cache.memoize(timeout=3000)
@@ -1605,9 +1632,14 @@ def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
         {'entity_id': entity_id, 'type': entity_type}).scalars())
 
 
-#@cache.memoize(timeout=30)
+@cache.memoize(timeout=30)
 def num_topics() -> int:
     return db.session.execute(text('SELECT COUNT(*) as c FROM "topic"')).scalar_one()
+
+
+@cache.memoize(timeout=30)
+def num_feeds() -> int:
+    return db.session.execute(text('SELECT COUNT(*) as c FROM "feed"')).scalar_one()
 
 
 # topics, in a tree
@@ -1618,9 +1650,9 @@ def topic_tree() -> List:
 
     for topic in topics:
         if topic.parent_id is not None:
-            parent_comment = topics_dict.get(topic.parent_id)
-            if parent_comment:
-                parent_comment['children'].append(topics_dict[topic.id])
+            parent_topic = topics_dict.get(topic.parent_id)
+            if parent_topic:
+                parent_topic['children'].append(topics_dict[topic.id])
 
     return [topic for topic in topics_dict.values() if topic['topic'].parent_id is None]
 
@@ -1633,23 +1665,26 @@ def feed_tree(user_id) -> List[dict]:
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-def feed_tree_public() -> List[dict]:
-    feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
+def feed_tree_public(search_param=None) -> List[dict]:
+    if search_param:
+        feeds = Feed.query.filter(Feed.public == True).filter(Feed.title.ilike(f"%{search_param}%")).order_by(Feed.title)
+    else:
+        feeds = Feed.query.filter(Feed.public == True).order_by(Feed.title)
 
     feeds_dict = {feed.id: {'feed': feed, 'children': []} for feed in feeds.all()}
 
     for feed in feeds:
         if feed.parent_feed_id is not None:
-            parent_comment = feeds_dict.get(feed.parent_feed_id)
-            if parent_comment:
-                parent_comment['children'].append(feeds_dict[feed.id])
+            parent_feed = feeds_dict.get(feed.parent_feed_id)
+            if parent_feed:
+                parent_feed['children'].append(feeds_dict[feed.id])
 
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
@@ -2148,6 +2183,35 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
             raise Exception('incorrect_login')
         if return_type and return_type == 'model':
             return user
+        elif return_type and return_type == 'dict':
+            user_ban_community_ids = communities_banned_from(user_id)
+            followed_community_ids = list(db.session.execute(text(
+                'SELECT community_id FROM "community_member" WHERE user_id = :user_id'),
+                {'user_id': user_id}).scalars())
+            bookmarked_reply_ids = list(db.session.execute(text(
+                'SELECT post_reply_id FROM "post_reply_bookmark" WHERE user_id = :user_id'),
+                {'user_id': user_id}).scalars())
+            blocked_creator_ids = blocked_users(user_id)
+            upvoted_reply_ids = recently_upvoted_post_replies(user_id)
+            downvoted_reply_ids = recently_downvoted_post_replies(user_id)
+            subscribed_reply_ids = list(db.session.execute(text(
+                'SELECT entity_id FROM "notification_subscription" WHERE type = :type and user_id = :user_id'),
+                {'type': NOTIF_REPLY, 'user_id': user_id}).scalars())
+            moderated_community_ids = list(db.session.execute(text(
+                'SELECT community_id FROM "community_member" WHERE user_id = :user_id AND is_moderator = true'),
+                {'user_id': user_id}).scalars())
+            user_dict = {
+                'id': user.id,
+                'user_ban_community_ids': user_ban_community_ids,
+                'followed_community_ids': followed_community_ids,
+                'bookmarked_reply_ids': bookmarked_reply_ids,
+                'blocked_creator_ids': blocked_creator_ids,
+                'upvoted_reply_ids': upvoted_reply_ids,
+                'downvoted_reply_ids': downvoted_reply_ids,
+                'subscribed_reply_ids': subscribed_reply_ids,
+                'moderated_community_ids': moderated_community_ids
+            }
+            return user_dict
         else:
             return user.id
 
@@ -2293,6 +2357,8 @@ def instance_software(domain: str):
 def referrer(default: str = None) -> str:
     if request.args.get('next'):
         return request.args.get('next')
+    if request.form.get('referrer'):
+        return request.form.get('referrer')
     if request.referrer and current_app.config['SERVER_NAME'] in request.referrer:
         return request.referrer
     if default:
@@ -2462,16 +2528,25 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
 
-    # filter out posts in communities where the community name is objectionable to them
+    # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
         filtered_out_community_ids = filtered_out_communities(current_user)
         if len(filtered_out_community_ids):
             post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
             params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
 
+        if bi := blocked_instances(current_user.id):
+            post_id_where.append('c.instance_id NOT IN :filtered_out_instance_ids ')
+            params['filtered_out_instance_ids'] = tuple(bi)
+            post_id_where.append('p.instance_id NOT IN :filtered_out_instance_ids2 ')
+            params['filtered_out_instance_ids2'] = tuple(bi)
+
     # filter out nsfw and nsfl if desired
     if current_user.is_anonymous:
-        post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
+        if current_app.config['CONTENT_WARNING']:
+            post_id_where.append('p.from_bot is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
+        else:
+            post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
@@ -2917,15 +2992,15 @@ def apply_feed_url_rules(self):
 # notification destination user helper function to make sure the
 # notification text is stored in the database using the language of the
 # recipient, rather than the language of the originator
-def get_recipient_language(user_id):
+def get_recipient_language(user_id: int) -> str:
     lang_to_use = ''
 
     # look up the user in the db based on the id
-    recipient = User.query.get(user_id)
+    recipient = db.session.query(User).get(user_id)
 
     # if the user has language_id set, use that
     if recipient.language_id:
-        lang = Language.query.get(recipient.language_id)
+        lang = db.session.query(Language).get(recipient.language_id)
         lang_to_use = lang.code
 
     # else if the user has interface_language use that
@@ -3262,3 +3337,64 @@ def archive_post(post_id: int):
         raise
     finally:
         session.close()
+
+
+def user_in_restricted_country(user: User) -> bool:
+    restricted_countries = get_setting('nsfw_country_restriction', '').split('\n')
+    return user.ip_address_country and user.ip_address_country in [country_code.strip() for country_code in restricted_countries]
+
+
+@cache.memoize(timeout=80600)
+def libretranslate_string(text: str, source: str, target: str):
+    try:
+        lt = LibreTranslateAPI(current_app.config['TRANSLATE_ENDPOINT'], api_key=current_app.config['TRANSLATE_KEY'])
+        return lt.translate(text, source=source, target=target)
+    except Exception as e:
+        current_app.logger.exception(str(e))
+        return ''
+
+
+def to_srgb(im: Image.Image, assume="sRGB"):
+    """ Convert a jpeg to sRGB, from other color profiles like CMYK. Test with testing_data/sample-wonky.profile.jpg.
+     See https://civitai.com/articles/18193 for background and the source of this code. """
+    srgb_cms = ImageCms.createProfile("sRGB")
+    srgb_wrap = ImageCms.ImageCmsProfile(srgb_cms)
+
+    # 1) source profile
+    icc_bytes = im.info.get("icc_profile")
+    if icc_bytes:
+        src = ImageCms.ImageCmsProfile(io.BytesIO(icc_bytes))
+    else:
+        src = ImageCms.createProfile(assume)
+
+    # 2) CMYK → RGB first
+    if im.mode == "CMYK":
+        im = im.convert("RGB")
+
+    try:
+        im = ImageCms.profileToProfile(
+            im, src, srgb_cms,
+            outputMode="RGB",
+            renderingIntent=0,
+            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+        )
+        # keep an sRGB tag just in case
+        im.info["icc_profile"] = srgb_wrap.tobytes()
+    except ImageCms.PyCMSError:
+        # Fallback: just convert without ICC
+        im = im.convert("RGB")
+
+    return im
+
+
+@cache.memoize(timeout=30)
+def show_explore():
+    return num_topics() > 0 or num_feeds() > 0
+
+
+def expand_hex_color(text: str) -> str:
+    new_text = ("#" +
+                text[1] * 2 +
+                text[2] * 2 +
+                text[3] * 2)
+    return new_text

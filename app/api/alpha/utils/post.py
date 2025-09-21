@@ -6,16 +6,19 @@ from sqlalchemy import desc, text
 from app import db
 from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
     array_of_integers_expected
-from app.api.alpha.views import post_view, post_report_view
+from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
-from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic
+from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
+    CommunityFlair
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read
+from app.post.util import post_replies, get_comment_branch
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
-    moderating_communities_ids, user_filters_home, user_filters_posts
+    moderating_communities_ids, user_filters_home, user_filters_posts, in_sorted_list
+from app.shared.tasks import task_selector
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
@@ -28,10 +31,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     else:
         page = 1
     limit = int(data['limit']) if data and 'limit' in data else 50
-    liked_only = data['liked_only'] if data and 'liked_only' in data else 'false'
-    liked_only = True if liked_only == 'true' else False
-    saved_only = data['saved_only'] if data and 'saved_only' in data else 'false'
-    saved_only = True if saved_only == 'true' else False
+    liked_only = data['liked_only'] if data and 'liked_only' in data else False
+    saved_only = data['saved_only'] if data and 'saved_only' in data else False
 
     query = data['q'] if data and 'q' in data else ''
 
@@ -91,7 +92,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                                                user_id=user_id). \
             join(Community, Community.id == CommunityMember.community_id).filter(
             Community.instance_id.not_in(blocked_instance_ids))
-    elif type == "ModeratorView" and user_id is not None:
+    elif (type == "ModeratorView" or type == "Moderating") and user_id is not None:
         posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING,
                                   Post.user_id.not_in(blocked_person_ids),
                                   Post.community_id.not_in(blocked_community_ids),
@@ -203,10 +204,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             bookmarked_post_ids = tuple(db.session.execute(text('SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
                                                      {"user_id": user_id}).scalars())
             posts = posts.filter(Post.id.in_(bookmarked_post_ids))
-        elif user.hide_read_posts:
+        else:
             u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
                                           {"user_id": user_id}).scalars())
-            posts = posts.filter(Post.id.not_in(u_rp_ids))              # do not pass set() into not_in(), only tuples or lists
+            if user.hide_read_posts:
+                posts = posts.filter(Post.id.not_in(u_rp_ids))              # do not pass set() into not_in(), only tuples or lists
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
@@ -310,6 +312,187 @@ def get_post(auth, data):
 
     post_json = post_view(post=id, variant=3, user_id=user_id)
     return post_json
+
+
+def get_post_replies(auth, data):
+    sort = data['sort'] if data and 'sort' in data else 'New'
+    max_depth = int(data['max_depth']) if data and 'max_depth' in data else None
+    page_cursor = data['page'] if data and 'page' in data else None  # Expects reply ID or None for first page
+    limit = int(data['limit']) if data and 'limit' in data else 20
+    post_id = data['post_id'] if data and 'post_id' in data else None
+    parent_id = data['parent_id'] if data and 'parent_id' in data else None
+
+    if auth:
+        user_details = authorise_api_user(auth, return_type='dict')
+        user_id = user_details['id']
+        # get_comment_branch() is borrowed from the web-ui so needs the full User
+        user = User.query.filter_by(id=user_id).one()
+    else:
+        user_details = {}
+        user_id = None
+        user = None
+
+    if parent_id:
+        parent = PostReply.query.filter_by(id=parent_id).one()
+        if post_id is None:
+            post_id = parent.post_id
+        post = Post.query.filter_by(id=post_id).one()
+        replies = get_comment_branch(post, parent.id, sort.lower(), user)
+    else:
+        post = Post.query.filter_by(id=post_id).one()
+        replies = post_replies(post, sort.lower(), user)
+
+    is_user_banned_from_community = post.community_id in user_details['user_ban_community_ids'] if user_details else False
+    is_user_following_community = post.community_id in user_details['followed_community_ids'] if user_details else False
+    is_user_moderator = post.community_id in user_details['moderated_community_ids'] if user_details else False
+
+    # Apply max_depth filter to the nested reply tree
+    def filter_max_depth(reply_tree, current_depth=0, parent_depth=0):
+        """Filter nested reply tree by max_depth"""
+        if max_depth is None:
+            return reply_tree
+
+        filtered_tree = []
+        for item in reply_tree:
+            comment = item['comment']
+            # Calculate depth relative to parent_id if specified, otherwise use absolute depth
+            effective_depth = current_depth if parent_id else comment.depth
+
+            if effective_depth <= max_depth:
+                filtered_item = {
+                    'comment': comment,
+                    'replies': filter_max_depth(item['replies'], current_depth + 1, parent_depth)
+                }
+                filtered_tree.append(filtered_item)
+
+        return filtered_tree
+
+    # Apply max_depth filter
+    if max_depth:
+        replies = filter_max_depth(replies)
+
+    # Apply cursor-based pagination
+    def paginate_with_cursor(reply_tree, cursor_id, limit):
+        """Paginate using reply ID cursor while keeping complete branches together"""
+        if not reply_tree:
+            return [], None
+
+        # Find starting position based on cursor
+        start_index = 0
+        if cursor_id:
+            try:
+                cursor_id = int(cursor_id)
+                # Find the top-level branch that matches this cursor
+                for i, branch in enumerate(reply_tree):
+                    if branch['comment'].id == cursor_id:
+                        start_index = i  # Start from the cursor branch itself
+                        break
+                else:
+                    # Cursor not found, return empty (past end)
+                    return [], None
+            except (ValueError, TypeError):
+                # Invalid cursor, start from beginning
+                start_index = 0
+
+        # Count flattened items in branches to respect limit
+        def get_branch_size(branch):
+            """Count total items in a branch (including all descendants)"""
+            count = 1  # The branch itself
+            for child in branch['replies']:
+                count += get_branch_size(child)
+            return count
+
+        # Collect branches starting from cursor position
+        included_branches = []
+        total_items = 0
+
+        for i in range(start_index, len(reply_tree)):
+            branch = reply_tree[i]
+            branch_size = get_branch_size(branch)
+
+            # Always include at least one branch, even if it exceeds limit
+            if not included_branches:
+                included_branches.append(branch)
+                total_items += branch_size
+            elif total_items + branch_size <= limit or total_items == 0:
+                # Include this branch if it fits within limit
+                included_branches.append(branch)
+                total_items += branch_size
+            else:
+                # Would exceed limit, stop here
+                break
+
+        # Determine next cursor (ID of next top-level branch after those included)
+        next_cursor = None
+        if included_branches:
+            last_included_index = start_index + len(included_branches) - 1
+            if last_included_index + 1 < len(reply_tree):
+                next_cursor = reply_tree[last_included_index + 1]['comment'].id
+
+        return included_branches, next_cursor
+
+    # Apply pagination
+    replies, next_cursor = paginate_with_cursor(replies, page_cursor, limit)
+
+    inner_post_view = None
+    inner_community_view = None
+
+    # Process nested reply tree while preserving structure
+    def process_nested_replies(reply_tree, is_top_level=True):
+        """Process nested reply tree while preserving nested structure"""
+        nonlocal inner_post_view, inner_community_view
+        nonlocal is_user_banned_from_community, is_user_following_community, is_user_moderator
+        processed_replies = []
+
+        for item in reply_tree:
+            reply = item['comment']
+            is_reply_bookmarked = reply.id in user_details['bookmarked_reply_ids'] if user_details else None
+            is_creator_blocked = reply.user_id in user_details['blocked_creator_ids'] if user_details else False
+            vote_effect = 0
+            if user_details and in_sorted_list(user_details['upvoted_reply_ids'], reply.id):
+                vote_effect = 1
+            elif user_details and in_sorted_list(user_details['downvoted_reply_ids'], reply.id):
+                vote_effect = -1
+            is_reply_subscribed = reply.id in user_details['subscribed_reply_ids'] if user_details else None
+
+            view = reply_view(reply=reply, variant=3, user_id=user_id,
+                              is_user_banned_from_community=is_user_banned_from_community,
+                              is_user_following_community=is_user_following_community,
+                              is_reply_bookmarked=is_reply_bookmarked,
+                              is_creator_blocked=is_creator_blocked,
+                              vote_effect=vote_effect,
+                              is_reply_subscribed=is_reply_subscribed,
+                              is_user_moderator=is_user_moderator,
+                              add_post_in_view=False,
+                              add_community_in_view=False)
+
+            # Only include post and community info on top-level replies
+            if is_top_level:
+                if not inner_post_view:
+                    inner_post_view = post_view(post, variant=1)
+                view['post'] = inner_post_view
+                if not inner_community_view:
+                    inner_community_view = community_view(post.community, variant=1, stub=True)
+                view['community'] = inner_community_view
+
+            # Process nested replies
+            if item['replies']:
+                view['replies'] = process_nested_replies(item['replies'], is_top_level=False)
+            else:
+                view['replies'] = []
+
+            processed_replies.append(view)
+
+        return processed_replies
+
+    replylist = process_nested_replies(replies)
+
+    list_json = {
+        "comments": replylist,
+        "next_page": str(next_cursor) if next_cursor is not None else None
+    }
+
+    return list_json
 
 
 def post_post_like(auth, data):
@@ -514,3 +697,64 @@ def post_post_mark_as_read(auth, data):
         mark_post_read(data['post_ids'], data['read'], user_id)
 
     return {"success": True}
+
+
+def get_post_like_list(auth, data):
+    post_id = data['post_id']
+    page = data['page'] if 'page' in data else 1
+    limit = data['limit'] if 'limit' in data else 50
+
+    user = authorise_api_user(auth, return_type='model')
+    post = Post.query.filter_by(id=post_id).one()
+
+    if post.community.is_moderator(user) or user.is_admin() or user.is_staff():
+        banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
+        banned_from_community_user_ids = list(db.session.execute(text
+            ('SELECT user_id from "community_ban" WHERE community_id = :community_id'), {"community_id": post.community_id}).scalars())
+        likes = PostVote.query.filter(PostVote.post_id == post_id, PostVote.effect != 0).order_by(PostVote.effect).order_by(
+                  PostVote.created_at).paginate(page=page, per_page=limit, error_out=False)
+        post_likes = []
+        for like in likes:
+            post_likes.append({
+                'score': like.effect,
+                'creator_banned_from_community': like.user_id in banned_from_community_user_ids,
+                'creator_banned': like.user_id in banned_from_site_user_ids,
+                'creator': user_view(user=like.user_id, variant=1, stub=True)
+            })
+        response_json = {
+            'next_page': str(likes.next_num) if likes.next_num is not None else None,
+            'post_likes': post_likes
+        }
+        return response_json
+    else:
+        raise Exception('Not a moderator')
+
+
+def put_post_set_flair(auth, data):
+    post_id = data['post_id']
+    flair_list = data['flair_id_list'] if 'flair_id_list' in data else []
+
+    post = Post.query.filter_by(id=post_id).one()
+    user = authorise_api_user(auth, return_type='model')
+    
+    if post.community.is_moderator(user) or user.is_admin_or_staff() or post.user_id == user.id:
+        # Start by clearing the existing flair
+        post.flair = []
+
+        if flair_list:
+            comm_flair = CommunityFlair.query.filter_by(community_id=post.community_id).all()
+            flair_objs = [CommunityFlair.query.get(flair_id) for flair_id in flair_list]
+
+            for flair in flair_objs:
+                if flair in comm_flair:
+                    # Flair from correct community, add it
+                    post.flair.append(flair)
+
+        db.session.commit()
+
+        if post.status == POST_STATUS_PUBLISHED:
+            task_selector('edit_post', post_id=post.id)
+        
+        return post_view(post=post, variant=2, stub=False)
+    else:
+        raise Exception("Insufficient permissions")

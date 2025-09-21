@@ -9,8 +9,9 @@ Flask-Limiter[redis]
 email-validator==2.0.0
 flask-mail~=0.10.0
 flask-babel~=4.0.0
+flask-bcrypt~=1.0.0
 psycopg2-binary
-httpx[http2]
+httpx[http2]~=0.28.0
 pyjwt==2.8.0
 SQLAlchemy-Searchable==2.1.0
 SQLAlchemy-Utils==0.41.1
@@ -42,7 +43,9 @@ webauthn~=2.5.0
 ldap3~=2.9.0
 sqlalchemy~=2.0.0
 orjson~=3.10.0
-marshmallow  # 3.26.1 is automatically resolved
-flask-smorest  # 0.42.3 is automatically resolved
+marshmallow~=4.0.0
+flask-smorest~=0.46.1
+ics~=0.7.0
+dateparser~=1.2.0
 uvicorn[standard]==0.35.0  # ASGI server for async Flask apps
 asgiref==3.9.1  # WSGI to ASGI adapter

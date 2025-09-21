@@ -1,53 +1,14 @@
 {% set something_displayed = false -%}
-{% if menu_instance_feeds or menu_my_feeds or menu_subscribed_feeds -%}
-    {% set something_displayed = true -%}
-    <div class="communities_menu_body">
-        {% if menu_topics or menu_instance_feeds or menu_my_feeds or menu_subscribed_feeds%}
-        <div class="d-lg-none jump_links">
-            <p>{{ _('Skip to:') }}</p>
-            {% if menu_instance_feeds or menu_my_feeds %}
-                <a href="#communities_mega_menu">{{ _('Communities') }}</a>
-            {% endif -%}
-            {% if menu_topics -%}
-                <a href="#topics_mega_menu">{{ _('Topics') }}</a>
-            {% endif -%}
-        </div>
-        {% endif %}
-        <h4 class="dropdown-header">{{ _('Feeds') }}</h4>
-        <ul class="text-end text-lg-start">
-          <li><a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Public Feeds') }}</a></li>
-          {% if menu_instance_feeds -%}
-               {% for feed_menu_item in menu_instance_feeds -%}
-                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-               {% endfor -%}
-               <li><hr class="dropdown-divider"></li>
-          {% endif -%}
-          <li><a class="dropdown-item" href="/feed/add_remote">{{ _('Add Remote Feed') }}</a></li>
-          {% if menu_my_feeds or menu_subscribed_feeds -%}
-               <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
-               {% for feed_menu_item in menu_my_feeds -%}
-                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-               {% endfor -%}
-               {% for feed_menu_item in menu_subscribed_feeds -%}
-                    <li><a class="dropdown-item{% if feed and feed.id == feed_menu_item.id%} active{% endif %}" href="/f/{{ feed_menu_item.ap_id if feed_menu_item.ap_id else feed_menu_item.name }}">{{ feed_menu_item.title }}</a></li>
-               {% endfor -%}
-          {% else -%}
-            <li><a class="dropdown-item{% if active_child == 'user_feeds' %} active{% endif %}" href="/u/myfeeds">{{ _('My Feeds') }}</a></li>
-          {% endif -%}
-        </ul>
-    </div>
-    <hr>
-{% endif %}
 {% if moderating_communities or joined_communities %}
     {% set something_displayed = true -%}
     <div class="communities_menu_body" id="communities_mega_menu">
         <h4 class="dropdown-header">{{ _('Communities') }}</h4>
         <div class="community_filter">
-            <input type="search" class="form-control" id="community-filter" placeholder="{{ _('Filter communities...') }}">
+            <input type="search" class="form-control" id="community-filter" placeholder="{{ _('Filter communities...') }}" autofocus>
             <span class="fe fe-search" aria-hidden="true" style="padding: 0; margin: 0;"></span>
         </div>
         <ul class="text-end text-lg-start">
-            <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a></li>
+            <li><a class="dropdown-item{% if active_child == 'list_communities_local' %} active{% endif %}" href="{{ url_for("main.list_communities", home_select="local") }}">{{ _('Local communities') }}</a></li>
             <li><a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a></li>
             <li><a class="dropdown-item" href="/community/add_remote">{{ _('Add remote community') }}</a></li>
           {% if moderating_communities %}
@@ -67,22 +28,6 @@
         </ul>
     </div>
     <hr>
-{% endif -%}
-{% if menu_topics -%}
-    {% set something_displayed = true -%}
-    <div class="communities_menu_body" id="topics_mega_menu">
-        <h4 class="dropdown-header">{{ _('Topics') }}</h4>
-        <ul class="text-end text-lg-start">
-          {% if menu_topics -%}
-               {% for topic_menu_item in menu_topics -%}
-                    <li><a class="dropdown-item{% if topic and topic.id == topic_menu_item.id%} active{% endif %}" href="/topic/{{ topic_menu_item.path() }}">{{ topic_menu_item.name }}</a></li>
-               {% endfor -%}
-               <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('More topics') }}</a></li>
-          {% else -%}
-            <li><a class="dropdown-item{% if active_child == 'list_topics' %} active{% endif %}" href="/topics">{{ _('Browse by topic') }}</a></li>
-          {% endif -%}
-        </ul>
-    </div>
 {% endif -%}
 {% if current_user.is_anonymous or not something_displayed -%}
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a>

@@ -7,22 +7,22 @@ from flask import current_app, json
 from app import celery, db
 from app.activitypub.signature import post_request, default_context, signed_get_request, send_post_request
 from app.activitypub.util import actor_json_to_model
-from app.community.util import send_to_remote_instance
+from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
 from app.utils import gibberish, ap_datetime, instance_banned, get_request
 
 import httpx
 
 
-def purge_user_then_delete(user_id):
+def purge_user_then_delete(user_id, flush=True):
     if current_app.debug:
-        purge_user_then_delete_task(user_id)
+        purge_user_then_delete_task(user_id, flush)
     else:
-        purge_user_then_delete_task.delay(user_id)
+        purge_user_then_delete_task.delay(user_id, flush)
 
 
 @celery.task
-def purge_user_then_delete_task(user_id):
+def purge_user_then_delete_task(user_id, flush):
     with current_app.app_context():
         user = User.query.get(user_id)
         if user:
@@ -62,7 +62,7 @@ def purge_user_then_delete_task(user_id):
 
                         for instance in post.community.following_instances():
                             if instance.inbox and not instance_banned(instance.domain):
-                                send_to_remote_instance(instance.id, post.community.id, announce)
+                                send_to_remote_instance_fast(instance.inbox, post.community.private_key, post.community.ap_profile_id, announce)
 
             # unsubscribe
             communities = CommunityMember.query.filter_by(user_id=user_id).all()
@@ -76,7 +76,7 @@ def purge_user_then_delete_task(user_id):
                 payload = {
                     "@context": default_context(),
                     "actor": user.public_url(),
-                    "id": f"http://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
                     "object": user.public_url(),
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"
@@ -88,7 +88,7 @@ def purge_user_then_delete_task(user_id):
                         send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
             user.delete_dependencies()
-            user.purge_content()
+            user.purge_content(flush)
             from app import redis_client
             with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
                 user = User.query.get(user_id)

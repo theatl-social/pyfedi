@@ -33,6 +33,7 @@ class SiteMiscForm(FlaskForm):
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
+    nsfw_country_restriction = TextAreaField(_l('Bar people from these countries from accessing NSFW and NSFL content'))
     community_creation_admin_only = BooleanField(_l('Only admins can create new local communities'))
     reports_email_admins = BooleanField(_l('Notify admins about reports, not just moderators'))
     email_verification = BooleanField(_l('Require new accounts to verify their email address'))
@@ -66,6 +67,15 @@ class SiteMiscForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
+class InstanceChooserForm(FlaskForm):
+    enable_instance_chooser = BooleanField(_l('Enable instance chooser'))
+    elevator_pitch = StringField(_l('One-sentence elevator pitch'), validators=[Length(max=90)])
+    number_of_admins = IntegerField(_l('Number of admins with emergency access'))
+    financial_stability = BooleanField(_l('Non-admins donate enough to pay for hosting'))
+    daily_backups = BooleanField(_l('This instance has automated daily backups'))
+    submit = SubmitField(_l('Save'))
+
+
 class FederationForm(FlaskForm):
     federation_mode = RadioField(_l('Federation mode'), choices=[
         ('blocklist', _l('Blocklist - deny federation with specified instances')),
@@ -77,12 +87,19 @@ class FederationForm(FlaskForm):
     blocked_phrases = TextAreaField(_l('Discard all posts, comments and PMs with these phrases (one per line)'))
     blocked_actors = TextAreaField(_l('Discard all posts and comments by users with these words in their name (one per line)'))
     blocked_bio = TextAreaField(_l('Discard all posts and comments by users with these phrases in their bio (one per line)'))
+    auto_add_remote_communities = BooleanField(_l('Automatically add new remote communities'))
     submit = SubmitField(_l('Save'))
+
+
+class CloseInstanceForm(FlaskForm):
+    announcement = TextAreaField(_l('Closing down announcement for home page'), validators=[DataRequired()])
+    submit = SubmitField(_l('Yes, close my instance'))
 
 
 class PreLoadCommunitiesForm(FlaskForm):
     communities_num = IntegerField(_l('Number of Communities to add'), default=25)
     pre_load_submit = SubmitField(_l('Add Communities'))
+
 
 class RemoteInstanceScanForm(FlaskForm):
     remote_url = StringField(_l('Remote Server'), validators=[DataRequired()])
@@ -91,6 +108,7 @@ class RemoteInstanceScanForm(FlaskForm):
     minimum_active_users = IntegerField(_l('Communities must have at least this many active users in the past week.'), default=100)
     dry_run = BooleanField(_l('Dry Run'))
     remote_scan_submit = SubmitField(_l('Scan'))
+
 
 class ImportExportBannedListsForm(FlaskForm):
     import_file = FileField(_l('Import Bans List Json File'))
@@ -164,6 +182,7 @@ class EditInstanceForm(FlaskForm):
     dormant = BooleanField(_l('Dormant'))
     gone_forever = BooleanField(_l('Gone forever'))
     trusted = BooleanField(_l('Trusted'))
+    hide = BooleanField(_l('Hide from instance chooser'))
     posting_warning = TextAreaField(_l('Posting warning'))
     inbox = StringField(_l('Inbox'))
     submit = SubmitField(_l('Save'))

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import random
 from datetime import datetime, timedelta
 from typing import Any
@@ -8,14 +10,16 @@ from flask import current_app, flash, g, make_response, redirect, request, sessi
 from flask_babel import _
 from flask_login import current_user, login_user
 from markupsafe import Markup
-from sqlalchemy import func
+from sqlalchemy import func, text
 from wtforms import Label
 
 from app import cache, db
+from app.activitypub.util import users_total
+from app.auth.forms import LoginForm
 from app.constants import NOTIF_REGISTRATION
 from app.email import send_verification_email
-from app.ldap_utils import sync_user_to_ldap
-from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow
+from app.ldap_utils import sync_user_to_ldap, login_with_ldap
+from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow, Role
 from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
     ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
 
@@ -247,10 +251,43 @@ def create_new_user(form, ip, country, verification_token):
         timezone=form.timezone.data,
         language_id=g.site.language_id
     )
+    if current_app.config['CONTENT_WARNING']:
+        user.hide_nsfw = 0
+    
     user.set_password(form.password.data)
 
     db.session.add(user)
     db.session.commit()
+    return user
+
+
+def create_new_user_from_ldap(user_name, email, password, ip):
+
+    user = User(
+        user_name=user_name,
+        title=user_name,
+        email=email,
+        verified=True,
+        instance_id=1,
+        ip_address=ip,
+        banned=False,
+        email_unread_sent=False,
+        referrer=session.get("Referer", ""),
+        alt_user_name=gibberish(random.randint(8, 20)),
+        font=get_font_preference(),
+        language_id=g.site.language_id,
+        last_seen=utcnow()
+    )
+    if current_app.config['CONTENT_WARNING']:
+        user.hide_nsfw = 0
+    user.set_password(password)
+
+    db.session.add(user)
+    db.session.commit()
+    finalize_user_setup(user)
+    if users_total() == 0:
+        user.roles.append(Role.query.get(4))
+        db.session.commit()
     return user
 
 
@@ -307,7 +344,11 @@ def render_registration_form(form):
     if g.site.tos_url is None or not g.site.tos_url.strip():
         del form.terms
 
-    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site, google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"], mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"], discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
+    return render_template("auth/register.html", title=_("Register"), form=form, site=g.site,
+                           instance_chooser_enabled=get_setting('enable_instance_chooser', False),
+                           google_oauth=current_app.config["GOOGLE_OAUTH_CLIENT_ID"],
+                           mastodon_oauth=current_app.config["MASTODON_OAUTH_CLIENT_ID"],
+                           discord_oauth=current_app.config["DISCORD_OAUTH_CLIENT_ID"])
 
 
 def redirect_next_page():
@@ -317,23 +358,34 @@ def redirect_next_page():
     return redirect(next_page)
 
 
-def process_login(form):
+def process_login(form: LoginForm):
     ip = ip_address()
     country = get_country(ip)
-    user = find_user(form)
 
-    if not user:
-        flash(_("No account exists with that user name."), "error")
-        return redirect(url_for("auth.login"))
+    if current_app.config['LDAP_SERVER_LOGIN']:
+        user = validate_user_ldap_login(form.user_name.data.strip(), form.password.data.strip(), ip)
+        if user is None:
+            return redirect(url_for("auth.login"))
+        ldap_sync = False
+    else:
+        ldap_sync = True
+        user = find_user(form.user_name.data.strip())
 
-    if not validate_user_login(user, form.password.data, ip):
-        return redirect(url_for("auth.login"))
+        if not user:
+            flash(_("No account exists with that user name."), "error")
+            return redirect(url_for("auth.login"))
 
-    return log_user_in(user, form, ip, country)
+        if not validate_user_login(user, form.password.data.strip(), ip):
+            return redirect(url_for("auth.login"))
+
+        if user.waiting_for_approval():
+            return redirect(url_for("auth.please_wait"))
+
+    return log_user_in(user, form, ip, country, ldap_sync=ldap_sync)
 
 
-def find_user(form):
-    username = form.user_name.data.strip()
+def find_user(user_name):
+    username = user_name.strip()
     user = User.query.filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
 
     if not user:
@@ -349,9 +401,13 @@ def validate_user_login(user, password, ip):
     if user.deleted:
         flash(_("No account exists with that user name."), "error")
         return False
-
+    
     if not user.check_password(password):
-        handle_invalid_password(user)
+        if user.password_hash is None:
+            message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
+            flash(message, "error")
+        else:
+            flash(_("Invalid password"), "error")
         return False
 
     if user.id != 1 and (user.banned or user_ip_banned() or user_cookie_banned()):
@@ -362,18 +418,19 @@ def validate_user_login(user, password, ip):
         flash(_("This account has been deleted."), "error")
         return False
 
-    if user.waiting_for_approval():
-        return redirect(url_for("auth.please_wait"))
-
     return True
 
 
-def handle_invalid_password(user):
-    if user.password_hash is None:
-        message = Markup(_('Invalid password. Please <a href="/auth/reset_password_request">reset your password</a>.'))
-        flash(message, "error")
+def validate_user_ldap_login(user_name: str, password: str, ip: str) -> User | None:
+    result = login_with_ldap(user_name, password)
+    if result is False:
+        flash(_('Login failed'))
+        return None
     else:
-        flash(_("Invalid password"), "error")
+        user = find_user(user_name)
+        if user is None:
+            user = create_new_user_from_ldap(user_name, result, password, ip)
+        return user
 
 
 def handle_banned_user(user, ip):
@@ -390,10 +447,11 @@ def handle_banned_user(user, ip):
     return response
 
 
-def log_user_in(user, form, ip, country):
+def log_user_in(user, form, ip, country, ldap_sync=True):
     login_user(user, remember=True)
     update_user_session(user, form, ip, country)
-    sync_user_with_ldap(user, form.password.data)
+    if ldap_sync:
+        sync_user_with_ldap(user, form.password.data)
 
     next_page = determine_next_page()
     response = make_response(redirect(next_page))

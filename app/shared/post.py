@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 import os
 from typing import List
 from zoneinfo import ZoneInfo
 
 import boto3
+import arrow
 from PIL import Image, ImageOps
 from flask import flash, request, current_app, g
 from flask_babel import _, force_locale, gettext
@@ -15,13 +18,13 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow, Instance
+    Report, Site, User, utcnow, Instance, Event
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language
+    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb
 
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
@@ -193,8 +196,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
 
-    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, posted_at=utcnow(),
-                ap_id=gibberish(), title=title, language_id=language_id)
+    post = Post(user_id=user.id, community_id=community.id, instance_id=user.instance_id, from_bot=user.bot or user.bot_override,
+                posted_at=utcnow(), ap_id=gibberish(), title=title, language_id=language_id)
     db.session.add(post)
     db.session.commit()
 
@@ -214,7 +217,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.add(vote)
     db.session.commit()
 
-    try:
+    try:    # federation is done in edit_post
         post = edit_post(input, post, type, src, user, auth, uploaded_file, from_scratch=True)
     except Exception as e:
         if str(e) == 'This image is blocked':
@@ -345,15 +348,15 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         ensure_directory_exists(directory)
 
         # save the file
-        final_place = os.path.join(directory, new_filename + file_ext)
+        final_place = os.path.join(directory, new_filename + file_ext.lower())
         uploaded_file.seek(0)
         uploaded_file.save(final_place)
 
-        final_ext = file_ext  # track file extension for conversion
+        final_ext = file_ext.lower()  # track file extension for conversion
 
-        if file_ext.lower() == '.heic':
+        if final_ext == '.heic':
             register_heif_opener()
-        if file_ext.lower() == '.avif':
+        if final_ext == '.avif':
             import pillow_avif  # NOQA  # do not remove
 
         Image.MAX_IMAGE_PIXELS = 89478485
@@ -370,7 +373,10 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
-                img = img.convert('RGB' if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']) else 'RGBA')
+                if (image_format == 'JPEG' or final_ext in ['.jpg', '.jpeg']):
+                    img = to_srgb(img)
+                else:
+                    img = img.convert('RGBA')
                 img.thumbnail((image_max_dimension, image_max_dimension), resample=Image.LANCZOS)
 
                 kwargs = {}
@@ -384,13 +390,6 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
                 img.save(final_place, optimize=True, **kwargs)
             else:
                 raise Exception('filetype not allowed')
-
-        if final_place.endswith('.gif'):
-            gif_image = Image.open(final_place)
-            gif_image.save(final_place[:-4] + ".webp", format="WEBP", save_all=True, loop=0)
-            os.remove(final_place)
-            final_place = final_place[:-4] + ".webp"
-            final_ext = '.webp'
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
@@ -455,15 +454,22 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url, hash=hash)
-            post.type = POST_TYPE_IMAGE
-            if uploaded_file:
+            if uploaded_file and type == POST_TYPE_IMAGE:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
-            make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
-            post.url = url
+
+            
+            # For events, uploaded images are banners - don't change post type or URL
+            if type == POST_TYPE_EVENT:
+                post.url = None  # Events don't have URLs when they have banner images
+                make_image_sizes(post.image_id, 170, 2000, 'posts', post.community.low_quality)
+            else:
+                make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
+                post.type = POST_TYPE_IMAGE
+                post.url = url
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
@@ -508,6 +514,37 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
         if poll.local_only:
             federate = False
+
+    if type == POST_TYPE_EVENT:
+        post.type = POST_TYPE_EVENT
+        event = Event.query.filter_by(post_id=post.id).first()
+        if event is None:
+            event = Event(post_id=post.id)
+            db.session.add(event)
+        # populate event model
+        # Treat datetime-local input as naive datetime in the specified timezone
+        local_tz = ZoneInfo(input.event_timezone.data)
+        local_start = input.start_datetime.data.replace(tzinfo=local_tz)
+        local_end = input.end_datetime.data.replace(tzinfo=local_tz)
+
+        # Convert to UTC for storage
+        utc_start = local_start.astimezone(ZoneInfo('UTC'))
+        utc_end = local_end.astimezone(ZoneInfo('UTC'))
+
+        # Store as naive UTC
+        event.start = utc_start.replace(tzinfo=None)
+        event.end = utc_end.replace(tzinfo=None)
+        event.timezone = input.event_timezone.data
+        event.max_attendees = input.max_attendees.data
+        event.online = input.online.data
+        event.online_link = input.online_link.data
+        event.join_mode = input.join_mode.data
+        event.location = {
+            'address': input.irl_address.data,
+            'city': input.irl_city.data,
+            'country': input.irl_country.data
+        }
+        db.session.commit()
 
     # add tags & flair
     post.tags = tags
@@ -816,3 +853,16 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
                 text('DELETE FROM "read_posts" WHERE user_id = :user_id AND read_post_id = :post_id'),
                 {"user_id": user_id, "post_id": post_id})
         db.session.commit()
+
+
+def get_post_flair_list(post: Post | int) -> list:
+    if isinstance(post, int):
+        post = Post.query.filter_by(id=post).one()
+    
+    if not post.flair:
+        # In case flair is null
+        flair_list = []
+    else:
+        flair_list = post.flair
+    
+    return flair_list

@@ -38,7 +38,7 @@
         {% if current_user.is_authenticated -%}
             {% set user_note = user.get_note(current_user) %}
             {% if user_note -%}
-                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">[{{ user_note | truncate(12, True) }}]</span>
+                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">{{ user_note | truncate(12, True) }}</span>
             {% endif -%}
         {% endif -%}
     {% endif -%}

@@ -98,6 +98,22 @@
                 </div>
             </div>
         </div>
+        {% if tags %}
+        <div class="card mt-3">
+            <div class="card-body">
+                {% if tags and len(tags) > 0 -%}
+                    <div class="post_tags_sidepane">
+                        {% for tag in tags -%}
+                            <span class="post_tag" style="font-size: {{ tag.font_size }}px"><a href="{{ url_for('topic.show_topic', topic_path=topic_path, tag=tag.name) }}">#{{ tag.display_as }}</a></span>
+                        {% endfor -%}
+                        {% if len(tags) > 1 -%}
+                            <br /><a href="{{ url_for('tag.tag_cloud', type='topic', category_id=topic.id) }}">{{ _('Explore Tag Cloud') }}</a>
+                        {% endif%}
+                    </div>
+                {% endif -%}
+            </div>
+        </div>
+        {% endif %}
         {% if topic_communities %}
         <div id="topic_communities" class="card mt-3">
             <div class="card-header">

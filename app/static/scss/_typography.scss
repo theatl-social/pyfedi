@@ -85,12 +85,24 @@
   content: "\e979";
 }
 
+.fe-communities::before {
+  content: "\e9f6";
+}
+
+.fe-explore::before {
+  content: "\e943";
+}
+
 .fe-popular::before {
   content: "\e9e6";
 }
 
 .fe-all::before {
   content: "\e986";
+}
+
+.fe-reminder::before {
+  content: "\e939";
 }
 
 .fe-activity::before {
@@ -390,6 +402,12 @@ h1 {
   }
 }
 
+.fe-translate {
+  &:before {
+    content: "\e972";
+  }
+}
+
 .fe-video {
   position: relative;
   top: 2px;
@@ -411,6 +429,14 @@ h1 {
   top: 2px;
   &:before {
     content: "\e91b"; /* possibly e985 */
+  }
+}
+
+.fe-event {
+  position: relative;
+  top: 1px;
+  &:before {
+    content: "\e927";
   }
 }
 

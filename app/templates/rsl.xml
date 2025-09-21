@@ -1,0 +1,7 @@
+<rsl xmlns="https://rslstandard.org/rsl">
+  <content url="/" server="https://rslcollective.org/api">
+    <license>
+      <prohibits type="usage">all</prohibits>
+    </license>
+  </content>
+</rsl>
