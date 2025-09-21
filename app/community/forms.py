@@ -30,7 +30,7 @@ class AddCommunityForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
-    publicize = BooleanField('Announce this community to other instances')
+    publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))

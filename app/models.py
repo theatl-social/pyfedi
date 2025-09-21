@@ -1097,7 +1097,7 @@ class User(UserMixin, db.Model):
     def trustworthy(self):
         if self.is_admin():
             return True
-        if self.created_recently() or self.reputation < 100:
+        if self.created_recently() and self.reputation < 100:
             return False
         return True
 
@@ -1824,6 +1824,10 @@ class Post(db.Model):
                             if 'href' in attachment_item:
                                 post.url = attachment_item['href']
                                 break
+                if 'image' in request_json['object'] and post.image is None:
+                    image = File(source_url=request_json['object']['image']['url'])
+                    db.session.add(image)
+                    post.image = image
 
                 db.session.commit()
 

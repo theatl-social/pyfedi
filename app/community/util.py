@@ -879,10 +879,22 @@ def publicize_community(community: Community):
     if community:
         make_post(form, community, POST_TYPE_LINK, SRC_WEB)
 
+        """
+        Have this removed for now, due to several problems:
+
+        1. 'community' has been over-ridden, and is now 'playground@piefed.social' or 'newcommunities@lemmy.world'
+
+        2. Lemmy's v3/resolve_object endpoint doesn't accept queries in '!community@domain' format,
+           it needs to be 'q={community.public_url()}'
+
+        3. None of those instances will add data to their DBs based on an anonymous query, so will just respond 400
+           to any communities they don't already know about
+
         if current_app.debug:
             publicize_community_task(community.id)
         else:
             publicize_community_task.delay(community.id)
+        """
 
 
 @celery.task

@@ -2033,7 +2033,13 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                 try:
                     post = create_post(store_ap_json, community, activity_json, user, announce_id=announce_id)
                     if post:
-                        log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
+                        # confirm that an Update didn't lose an async race with a Create
+                        if activity_json['type'] == 'Update' and post.edited_at is None:
+                            update_post_from_activity(post, activity_json)
+                            log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                        else:
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
+
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                         return
@@ -2065,7 +2071,13 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
                     reply = create_post_reply(store_ap_json, community, in_reply_to, activity_json, user,
                                               announce_id=announce_id)
                     if reply:
-                        log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
+                        # confirm that an Update didn't lose an async race with a Create
+                        if activity_json['type'] == 'Update' and reply.edited_at is None:
+                            update_post_reply_from_activity(reply, activity_json)
+                            log_incoming_ap(id, APLOG_UPDATE, APLOG_SUCCESS, saved_json)
+                        else:
+                            log_incoming_ap(id, APLOG_CREATE, APLOG_SUCCESS, saved_json)
+
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
                     return
