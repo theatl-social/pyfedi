@@ -2739,7 +2739,11 @@ def update_post_from_activity(post: Post, request_json: dict):
             if 'image' in request_json['object']:
                 image = File(source_url=request_json['object']['image']['url'])
                 db.session.add(image)
+                db.session.commit()
                 post.image = image
+                make_image_sizes(image.id, 170, 512, 'posts')
+            else:
+                post.image_id = None
             db.session.commit()
 
     # Links
