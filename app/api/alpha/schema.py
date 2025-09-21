@@ -50,7 +50,7 @@ class DefaultSchema(Schema):
 
 
 class Person(DefaultSchema):
-    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/u/rimu"})
+    actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
     bot = fields.Boolean(required=True)
     deleted = fields.Boolean(required=True)
