@@ -1553,6 +1553,8 @@ class Post(db.Model):
                     microblog=microblog,
                     posted_at=utcnow()
                     )
+        if request_json['type'] == 'Update':
+            post.edited_at = utcnow()
         if community.nsfw:
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
         if community.nsfl:
@@ -2307,6 +2309,8 @@ class PostReply(db.Model):
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
+        if request_json['type'] == 'Update':
+            reply.edited_at = utcnow()
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
