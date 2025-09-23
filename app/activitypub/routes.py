@@ -545,10 +545,10 @@ def shared_inbox():
         return '', 200
 
     pause_federation = redis_client.get('pause_federation')
-    if pause_federation == '1': # temporary pause as this instance ise overloaded
-        abort(429)
+    if pause_federation == '1': # temporary pause as this instance is overloaded
+        return '', 429
     elif pause_federation == '666':
-        abort(410)              # this instance has been permanently closed down, everyone should stop sending to it.
+        return '', 410 # this instance has been permanently closed down, everyone should stop sending to it.
 
     g.site = Site.query.get(1)  # g.site is not initialized by @app.before_request when request.path == '/inbox'
     store_ap_json = g.site.log_activitypub_json or False
