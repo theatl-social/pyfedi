@@ -2309,7 +2309,7 @@ class PostReply(db.Model):
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
-        if request_json['type'] == 'Update':
+        if request_json and request_json['type'] == 'Update':
             reply.edited_at = utcnow()
         if reply.body:
             for blocked_phrase in blocked_phrases():
