@@ -20,6 +20,14 @@ def example_after_post_creation(post_data):
     return post_data
 
 
+@hook("new_user")
+def example_new_user(user):
+    """Hook that runs after a new user is registered/created and verified"""
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        print(f"[PLUGIN DEBUG] New user is verified: {user.user_name}")
+    return user
+
+
 def plugin_info():
     """Plugin metadata"""
     return {
