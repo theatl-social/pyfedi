@@ -28,6 +28,14 @@ def example_new_user(user):
     return user
 
 
+@hook("new_registration_for_approval")
+def example_new_registration_for_approval(application):
+    """Hook that runs when a new user registration requires approval"""
+    if int(os.environ.get('FLASK_DEBUG', '0')):
+        print(f"[PLUGIN DEBUG] New user application for user {application.user.user_name}")
+    return application
+
+
 def plugin_info():
     """Plugin metadata"""
     return {
