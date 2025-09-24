@@ -161,7 +161,6 @@ def get_alpha_resolve_object(data):
         resp = get_resolve_object(auth, data)
         return ResolveObjectResponse().load(resp)
     except Exception as ex:
-        current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
