@@ -197,7 +197,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                     continue
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
-              'community_view': community_view(community=post.community, variant=2),
+              'community_view': community_view(community=post.community, variant=2, user_id=user_id),
               'moderators': modlist,
               'cross_posts': xplist}
 
