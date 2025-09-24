@@ -1553,7 +1553,7 @@ class Post(db.Model):
                     microblog=microblog,
                     posted_at=utcnow()
                     )
-        if request_json['type'] == 'Update':
+        if 'type' in request_json and request_json['type'] == 'Update':
             post.edited_at = utcnow()
         if community.nsfw:
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense

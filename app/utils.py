@@ -514,7 +514,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                      'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                      'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True, 'smarty-pants': True})
             except:
