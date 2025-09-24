@@ -230,6 +230,8 @@ def create_actor_from_remote(actor_address: str, community_only=False,
     else:
         # Try webfinger
         address, server = normalise_actor_string(actor_address)
+        if not address:
+            return None
         actor_json = fetch_actor_from_webfinger(address, server)
 
     if actor_json:

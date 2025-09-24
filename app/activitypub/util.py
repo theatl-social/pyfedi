@@ -3616,6 +3616,8 @@ def normalise_actor_string(actor: str) -> Tuple[str, str]:
     if '@' in actor:
         parts = actor.split('@')
         return parts[0].lower(), parts[1].lower()
+    else:
+        return '', ''
 
 
 def process_banned_message(banned_json, instance_domain: str, session):
