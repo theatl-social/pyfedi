@@ -64,7 +64,7 @@
             {{ render_field(form.feed_auto_leave) }}
             <small class="field_hint">{{ _('Communities joined outside of a feed will not be auto unsubscribed.') }}</small>
             <br>
-            <a href="/protocol_handler" style="float: right;">{{ _('Set up web+ap links') }}</a>
+            <a href="/protocol_handler" style="float: right;" class="d-none d-md-inline">{{ _('Set up web+ap links') }}</a>
             {{ render_field(form.submit) }}
         </form>
   </main>
