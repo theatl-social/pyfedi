@@ -999,8 +999,8 @@ def protocol_handler():
     q = request.args.get('to')
     if q:
         try:
-            resp = get_resolve_object(None, {'q': f'https://{q}'}, user_id=current_user.id)
-        except Exception as e:
+            resp = get_resolve_object(None, {'q': q.replace('web+ap://', 'https://')}, user_id=current_user.id)
+        except Exception:
             flash(_('Failed to look up %(url)s'))
             return redirect(url_for('main.index'))
 
