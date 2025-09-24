@@ -13,7 +13,7 @@ from markupsafe import Markup
 from sqlalchemy import func, text
 from wtforms import Label
 
-from app import cache, db
+from app import cache, db, plugins
 from app.activitypub.util import users_total
 from app.auth.forms import LoginForm
 from app.constants import NOTIF_REGISTRATION
@@ -101,6 +101,14 @@ def create_user_application(user: User, registration_answer: str):
 
 def notify_admins_of_registration(application):
     """Notify admins when a registration application is ready for review"""
+
+    # fire hook for use by plugins, commit is needed first so that db information available to plugin
+    db.session.commit()
+    application = plugins.fire_hook("new_registration_for_approval", application)
+
+    # commit once more in case any changes were made from the plugin
+    db.session.commit()
+
     targets_data = {'gen': '0', 'application_id': application.id, 'user_id': application.user_id}
     for admin in Site.admins():
         notify = Notification(title='New registration',

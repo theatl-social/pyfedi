@@ -44,7 +44,7 @@ from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery
+from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
 import re
 from PIL import Image, ImageOps, ImageCms
@@ -1623,6 +1623,12 @@ def finalize_user_setup(user):
     for rn in reg_notifs:
         rn.read = True
 
+    db.session.commit()
+
+    # fire hook for plugins to use upon a new user
+    user = plugins.fire_hook("new_user", user)
+
+    # commit once more in case any changes were made from the plugin
     db.session.commit()
 
 
