@@ -187,8 +187,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                               blocked_instance_ids))
             content_filters = user_filters_home(user_id) if user_id else {}
 
-    # change when polls are supported
-    posts = posts.filter(Post.type != POST_TYPE_POLL)
+    # change when polls and events are supported
+    posts = posts.filter(Post.type != POST_TYPE_POLL).filter(Post.type != POST_TYPE_EVENT)
 
     if query:
         if search_type == 'Url':

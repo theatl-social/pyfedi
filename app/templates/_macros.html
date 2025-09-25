@@ -1,10 +1,16 @@
 {# Shared utility macros used across multiple templates #}
 
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None) -%}
-<div class="render_username" xmlns="http://www.w3.org/1999/xhtml">
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None, inline=False) -%}
+{% if not inline -%}
+    <div class="render_username" xmlns="http://www.w3.org/1999/xhtml">
+{% else -%}
+    <span class="render_username" xmlns="http://www.w3.org/1999/xhtml">
+{% endif -%}
     {% if user.deleted -%}
         {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
+                [deleted]
+            </a>
         {% else -%}
             [deleted]
         {% endif -%}
@@ -16,15 +22,15 @@
             {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
         <div class="user_preview d-none" id="preview_{{ user.id }}"
-            {% if htmx_redirect_back_to -%}
-                hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}"
-            {% else %}
-                hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
-            {% endif %}
-            hx-trigger="intersect once"
-            hx-target="this"
-            hx-swap="innerHTML"
-        ></div>
+                {% if htmx_redirect_back_to -%}
+                    hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}"
+                {% else %}
+                    hx-get="{{ url_for('user.user_preview', user_id=user.id) }}"
+                {% endif %}
+                hx-trigger="intersect once"
+                hx-target="this"
+                hx-swap="innerHTML">
+        </div>
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
         {% endif -%}
@@ -46,7 +52,11 @@
             {% endif -%}
         {% endif -%}
     {% endif -%}
-</div>
+{% if not inline -%}
+    </div>
+{% else -%}
+    </span>
+{% endif -%}
 {%- endmacro %}
 
 {% macro render_communityname(community, add_domain=True, low_bandwidth=False, collapsed=False) -%}

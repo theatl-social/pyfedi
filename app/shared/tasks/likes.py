@@ -27,8 +27,6 @@ def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, fe
         session = get_task_session()
         with patch_db_session(session):
             post = session.query(Post).filter_by(id=post_id).one()
-            cache.delete_memoized(recently_upvoted_posts, user_id)
-            cache.delete_memoized(recently_downvoted_posts, user_id)
             if federate:
                 send_vote(user_id, post, vote_to_undo, vote_direction)
 
@@ -39,8 +37,6 @@ def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, 
         session = get_task_session()
         with patch_db_session(session):
             reply = session.query(PostReply).filter_by(id=reply_id).one()
-            cache.delete_memoized(recently_upvoted_post_replies, user_id)
-            cache.delete_memoized(recently_downvoted_post_replies, user_id)
             if federate:
                 send_vote(user_id, reply, vote_to_undo, vote_direction)
 

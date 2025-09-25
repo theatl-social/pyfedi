@@ -759,6 +759,8 @@ def show_feed(feed):
 
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
+        owner = User.query.get(feed.user_id)
+
         # Voting history
         if current_user.is_authenticated:
             recently_upvoted = recently_upvoted_posts(current_user.id)
@@ -772,7 +774,7 @@ def show_feed(feed):
             content_filters = {}
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
-                               sort=sort,
+                               sort=sort, owner=owner,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                tags=hashtags_used_in_communities(feed_community_ids, content_filters),

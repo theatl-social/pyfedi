@@ -6,7 +6,7 @@ from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, vali
 
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
-sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
+sort_list = ["Active", "Hot", "New", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
              "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old"]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
@@ -50,7 +50,7 @@ class DefaultSchema(Schema):
 
 
 class Person(DefaultSchema):
-    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/u/rimu"})
+    actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
     bot = fields.Boolean(required=True)
     deleted = fields.Boolean(required=True)
@@ -1156,6 +1156,7 @@ class ListPostsRequest(Schema):
     person_id = fields.Integer()
     limit = fields.Integer(metadata={"default": 50})
     page = fields.Integer(metadata={"default": 1})
+    page_cursor = fields.Integer(metadata={"default": 1})
     liked_only = fields.Boolean(metadata={"default": False})
     feed_id = fields.Integer()
     topic_id = fields.Integer()

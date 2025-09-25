@@ -44,7 +44,7 @@ from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery
+from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
 import re
 from PIL import Image, ImageOps, ImageCms
@@ -514,7 +514,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                      'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                      'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True, 'smarty-pants': True})
             except:
@@ -1623,6 +1623,12 @@ def finalize_user_setup(user):
     for rn in reg_notifs:
         rn.read = True
 
+    db.session.commit()
+
+    # fire hook for plugins to use upon a new user
+    user = plugins.fire_hook("new_user", user)
+
+    # commit once more in case any changes were made from the plugin
     db.session.commit()
 
 

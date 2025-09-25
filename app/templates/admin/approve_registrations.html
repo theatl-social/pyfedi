@@ -48,7 +48,7 @@
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td>
                         {% for similar_user in registration.search_similar_names() -%}
-                            {{ render_username(similar_user) }}
+                            {{ render_username(similar_user, admin_ids=admin_ids) }}
                             {% if similar_user.reputation < -3 -%}
                                 <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
                             {% endif -%}

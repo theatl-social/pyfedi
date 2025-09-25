@@ -13,6 +13,7 @@ from app.activitypub.util import users_total, active_month, local_posts, local_c
     lemmy_site_data, is_activitypub_request
 from app.activitypub.signature import default_context, LDSignature
 from app.admin.util import topics_for_form
+from app.api.alpha.utils.misc import get_resolve_object
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
     POST_STATUS_REVIEWING
 from app.email import send_email, send_registration_approved_email
@@ -989,6 +990,31 @@ def share():
                                                                             Post.status > POST_STATUS_REVIEWING).all()
 
     return render_template('share.html', form=form, title=request.args.get('title'), communities=communities)
+
+
+@bp.route('/protocol_handler')
+@login_required
+def protocol_handler():
+    """ handles the web+fedi:// protocol and redirects the viewer to the right place """
+    q = request.args.get('to')
+    if q:
+        try:
+            resp = get_resolve_object(None, {'q': q.replace('web+ap://', 'https://')}, user_id=current_user.id)
+        except Exception:
+            flash(_('Failed to look up %(url)s'))
+            return redirect(url_for('main.index'))
+
+        if 'post' in resp:
+            return redirect(url_for('activitypub.post_ap', post_id=resp['post']['post']['id']))
+        if 'comment' in resp:
+            return redirect(url_for('activitypub.comment_ap', comment_id=resp['comment']['comment']['id']))
+        if 'community' in resp:
+            return redirect(url_for('activitypub.community_profile', actor=resp['community']['community']['id']))
+        if 'person' in resp:
+            return redirect(url_for('activitypub.user_profile', actor=resp['person']['person']['id']))
+
+    else:
+        return render_template('protocol_handler.html', title=_('Protocol handler'))
 
 
 @bp.route('/test_email')
