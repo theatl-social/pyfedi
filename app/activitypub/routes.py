@@ -2011,7 +2011,7 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
         activity_json = request_json['object']
 
     # announce / create IDs that are too long will crash the app. Not referred to again, so it shouldn't matter if they're truncated
-    activity_json['id'] = shorten_string(activity_json['id'], 250)
+    activity_json['id'] = shorten_string(activity_json['id'], 100)
 
     if not in_reply_to:  # Creating a new post
         post = Post.get_by_ap_id(ap_id)
