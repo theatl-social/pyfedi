@@ -2201,6 +2201,10 @@ class Post(db.Model):
             self.ranking_scaled = int(self.ranking + self.community.scale_by())
 
             db.session.commit()
+            if user.is_local():
+                from app.utils import recently_upvoted_posts, recently_downvoted_posts
+                cache.delete_memoized(recently_upvoted_posts, user.id)
+                cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
 
 
@@ -2551,6 +2555,10 @@ class PostReply(db.Model):
             # Calculate the new ranking value
             self.ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
             db.session.commit()
+            if user.is_local():
+                from app.utils import recently_upvoted_post_replies, recently_downvoted_post_replies
+                cache.delete_memoized(recently_upvoted_post_replies, user.id)
+                cache.delete_memoized(recently_downvoted_post_replies, user.id)
         return undo
 
 
