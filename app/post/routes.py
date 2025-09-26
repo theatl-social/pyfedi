@@ -604,8 +604,13 @@ def continue_discussion(post_id, comment_id):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
+    # Events
+    event = None
+    if post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
-                               post=post, mods=mod_list,
+                               post=post, mods=mod_list, event=event,
                                is_moderator=is_moderator, comment=comment, replies=replies,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted_replies=recently_upvoted_replies,
