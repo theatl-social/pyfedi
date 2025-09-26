@@ -298,7 +298,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "show_nsfl": not user.hide_nsfl == 1,
                     "default_sort_type": user.default_sort.capitalize() if user.default_comment_sort else 'Hot',
                     "default_comment_sort_type": user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot',
-                    "default_listing_type": user.default_filter.capitalize() if user.default_comment_sort else 'Popular',
+                    "default_listing_type": user.default_filter.capitalize() if user.default_filter else 'Popular',
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
                     "show_read_posts": not user.hide_read_posts == True
