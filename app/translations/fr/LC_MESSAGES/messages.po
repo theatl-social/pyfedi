@@ -3,8 +3,8 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2025-09-09 22:34+0000\n"
-"Last-Translator: Snoopy <snoopy@users.noreply.translate.piefed.social>\n"
+"PO-Revision-Date: 2025-09-19 10:47+0000\n"
+"Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
 "Language-Team: French <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fr/>\n"
 "Language: fr\n"
@@ -63,7 +63,7 @@ msgstr "Phrase bloquée dans un commentaire"
 
 #: app/models.py:2268
 msgid "Replier blocked"
-msgstr "Les réponses sont bloquées"
+msgstr ""
 
 #: app/models.py:2271
 msgid "Duplicate reply"

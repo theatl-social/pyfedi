@@ -8,19 +8,21 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-09-18 15:04+1200\n"
-"PO-Revision-Date: 2025-09-18 15:04+1200\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"PO-Revision-Date: 2025-09-25 22:47+0000\n"
+"Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
+"Language-Team: Finnish <http://translate.piefed.social/projects/piefed/"
+"main-web-app/fi/>\n"
 "Language: fi\n"
-"Language-Team: fi <LL@li.org>\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:52
 msgid "Please log in to access this page."
-msgstr ""
+msgstr "Sivulle pääsy vaatii sisäänkirjautumisen."
 
 #: app/cli.py:560
 #, python-format
@@ -34,17 +36,17 @@ msgstr ""
 
 #: app/cli.py:763 app/main/routes.py:921
 msgid "[PieFed] You have unread notifications"
-msgstr ""
+msgstr "[PieFed] Sinulla on ilmoituksia lukematta"
 
 #: app/cli.py:906 app/shared/post.py:139
 #, python-format
 msgid "Replies to my post %(post_title)s"
-msgstr ""
+msgstr "Vastaukset julkaisuuni %(post_title)s"
 
 #: app/cli.py:916 app/models.py:2353 app/shared/reply.py:116
 #, python-format
 msgid "Replies to my comment on %(post_title)s"
-msgstr ""
+msgstr "Vastaukset kommenttiini %(post_title)s"
 
 #: app/email.py:22
 msgid "Check the console for a link."
@@ -52,19 +54,19 @@ msgstr ""
 
 #: app/email.py:24
 msgid "[PieFed] Reset Your Password"
-msgstr ""
+msgstr "[PieFed] Salasanan palautus"
 
 #: app/email.py:34
 msgid "[PieFed] Please verify your email address"
-msgstr ""
+msgstr "[PieFed] Vahvista sähköpostiosoitteesi"
 
 #: app/email.py:42
 msgid "Your application has been approved - welcome to PieFed"
-msgstr ""
+msgstr "Hakemuksesi on hyväksytty – tervetuloa PieFediin!"
 
 #: app/models.py:2283
 msgid "Comments are disabled on this post"
-msgstr ""
+msgstr "Tämän julkaisun kommentointi on estetty"
 
 #: app/models.py:2286
 msgid "Banned from commenting"
@@ -72,7 +74,7 @@ msgstr ""
 
 #: app/models.py:2309
 msgid "Blocked phrase in comment"
-msgstr ""
+msgstr "Kommentti sisältää kielletyn ilmauksen"
 
 #: app/models.py:2316
 msgid "Replier blocked"
@@ -84,23 +86,23 @@ msgstr ""
 
 #: app/models.py:2327
 msgid "Gif comment ignored"
-msgstr ""
+msgstr "Gif-kommentti sivuutettu"
 
 #: app/models.py:2330
 msgid "Low quality reply"
-msgstr ""
+msgstr "Huonolaatuinen vastaus"
 
 #: app/models.py:2991
 msgid "Added moderator"
-msgstr ""
+msgstr "Moderaattori nimitetty"
 
 #: app/models.py:2992
 msgid "Removed moderator"
-msgstr ""
+msgstr "Moderaattori poistettu"
 
 #: app/models.py:2993
 msgid "Featured post"
-msgstr ""
+msgstr "Esille nostettu julkaisu"
 
 #: app/models.py:2994
 msgid "Unfeatured post"
@@ -116,23 +118,24 @@ msgstr ""
 
 #: app/models.py:2997
 msgid "Deleted comment"
-msgstr ""
+msgstr "Kommentti poistettu"
 
 #: app/models.py:2998
 msgid "Un-deleted comment"
-msgstr ""
+msgstr "Kommentti palautettu"
 
 #: app/models.py:2999
+#, fuzzy
 msgid "Deleted community"
-msgstr ""
+msgstr "Yhteisö poistettu"
 
 #: app/models.py:3000
 msgid "Deleted account"
-msgstr ""
+msgstr "Tili poistettu"
 
 #: app/models.py:3001
 msgid "Restored account"
-msgstr ""
+msgstr "Tili palautettu"
 
 #: app/models.py:3002
 msgid "Banned account"
@@ -144,38 +147,38 @@ msgstr ""
 
 #: app/models.py:3004
 msgid "Lock post"
-msgstr ""
+msgstr "Lukitse julkaisu"
 
 #: app/models.py:3005
 msgid "Un-lock post"
-msgstr ""
+msgstr "Peru julkaisun lukitus"
 
 #: app/models.py:3006
 msgid "Lock comment"
-msgstr ""
+msgstr "Lukitse kommentti"
 
 #: app/models.py:3007
 msgid "Un-lock comment"
-msgstr ""
+msgstr "Poista kommentin lukitus"
 
 #: app/auth/routes.py:139 app/auth/util.py:437 app/post/routes.py:739
 #: app/shared/auth.py:73 app/utils.py:1991
 msgid "You have been banned."
-msgstr ""
+msgstr "Sinut on estetty."
 
 #: app/utils.py:2419
 msgid "Wrong Captcha text."
-msgstr ""
+msgstr "Virheellinen captcha-teksti."
 
 #: app/admin/forms.py:237 app/admin/forms.py:299 app/utils.py:2749
 msgid "User"
-msgstr ""
+msgstr "Käyttäjä"
 
 #: app/community/forms.py:154 app/templates/admin/communities.html:40
 #: app/templates/list_communities.html:209 app/templates/search/start.html:33
 #: app/utils.py:2751
 msgid "Community"
-msgstr ""
+msgstr "Yhteisö"
 
 #: app/utils.py:2753 app/utils.py:2759
 msgid "Topic/feed"
@@ -184,7 +187,7 @@ msgstr ""
 #: app/post/forms.py:20 app/templates/post/add_reply_inline.html:27
 #: app/utils.py:2755 app/utils.py:2757 app/utils.py:2761
 msgid "Comment"
-msgstr ""
+msgstr "Kommentti"
 
 #: app/templates/chat/conversation.html:37 app/utils.py:2763
 msgid "Chat"
@@ -199,7 +202,7 @@ msgstr ""
 #: app/templates/user/user_preview.html:15 app/utils.py:2765 app/utils.py:2767
 #: app/utils.py:2769 app/utils.py:2773 app/utils.py:2777 app/utils.py:2779
 msgid "Admin"
-msgstr ""
+msgstr "Ylläpitäjä"
 
 #: app/admin/forms.py:58 app/templates/_view_filter_nav.html:11
 #: app/templates/_view_filter_nav.html:27
@@ -215,11 +218,13 @@ msgstr ""
 #: app/templates/user/notifications.html:24 app/user/forms.py:94
 #: app/utils.py:2783
 msgid "All"
-msgstr ""
+msgstr "Kaikki"
 
 #: app/community/forms.py:46 app/utils.py:2956
 msgid "- cannot be in Url. Use _ instead?"
 msgstr ""
+"Osoite (URL) ei voi sisältää merkkiä \"-\". Haluaisitko sen sijaan käyttää "
+"merkkiä \"_\"?"
 
 #: app/utils.py:2972
 msgid "Feed urls can only contain letters, numbers, and underscores."
@@ -231,12 +236,12 @@ msgstr ""
 
 #: app/activitypub/routes.py:521 app/activitypub/routes.py:525
 msgid "Community not found on this instance"
-msgstr ""
+msgstr "Yhteisöä ei löytynyt tältä instanssilta"
 
 #: app/activitypub/util.py:2326
 #, python-format
 msgid "Reply to %(post_title)s"
-msgstr ""
+msgstr "Vastaus aloitukseen %(post_title)s"
 
 #: app/activitypub/util.py:2353
 #, python-format
@@ -245,27 +250,28 @@ msgstr ""
 
 #: app/activitypub/util.py:2957 app/post/routes.py:1337 app/shared/post.py:679
 msgid "A post has been reported"
-msgstr ""
+msgstr "Julkaisu on ilmiannettu"
 
 #: app/activitypub/util.py:2994 app/post/routes.py:1674 app/shared/reply.py:327
 msgid "A comment has been reported"
-msgstr ""
+msgstr "Kommentti on ilmiannettu"
 
 #: app/admin/forms.py:14
 msgid "Site Name"
-msgstr ""
+msgstr "Sivun nimi"
 
 #: app/admin/forms.py:15
 msgid "Tagline"
 msgstr ""
 
 #: app/admin/forms.py:16
+#, fuzzy
 msgid "Icon"
-msgstr ""
+msgstr "Ikoni"
 
 #: app/admin/forms.py:18
 msgid "Sidebar"
-msgstr ""
+msgstr "Sivupalkki"
 
 #: app/admin/forms.py:19 app/templates/auth/instance_chooser.html:96
 #: app/templates/base.html:262 app/templates/instance/people.html:25
@@ -283,11 +289,11 @@ msgstr ""
 
 #: app/admin/forms.py:22
 msgid "Terms of service url"
-msgstr ""
+msgstr "Käyttöehtojen internetosoite"
 
 #: app/admin/forms.py:23
 msgid "General instance contact email address"
-msgstr ""
+msgstr "Sähköpostiosoite yhteydenotoille instanssiin"
 
 #: app/admin/forms.py:24 app/admin/forms.py:67 app/admin/forms.py:76
 #: app/admin/forms.py:91 app/admin/forms.py:156 app/admin/forms.py:177
@@ -299,23 +305,23 @@ msgstr ""
 #: app/post/forms.py:84 app/post/forms.py:91
 #: app/templates/admin/permissions.html:41 app/user/forms.py:200
 msgid "Save"
-msgstr ""
+msgstr "Tallenna"
 
 #: app/admin/forms.py:28
 msgid "Enable downvotes"
-msgstr ""
+msgstr "Salli alaäänet"
 
 #: app/admin/forms.py:29
 msgid "Decrease reputation when posting only a gif as a comment"
-msgstr ""
+msgstr "Heikennä mainetta kommentoitaessa pelkällä gif:llä"
 
 #: app/admin/forms.py:30
 msgid "Decrease reputation when an image post matches the 4chan filter"
-msgstr ""
+msgstr "Heikennä mainetta kuva-aloituksen täsmätessä 4chan-filtterin kanssa"
 
 #: app/admin/forms.py:31
 msgid "Filter out comments that are simply a form of \"this\""
-msgstr ""
+msgstr "Suodata kommentit, jotka ovat pelkkä sanan \"tämä\" muoto"
 
 #: app/admin/forms.py:32
 msgid "Meme communities = low-quality"
@@ -323,47 +329,49 @@ msgstr ""
 
 #: app/admin/forms.py:33
 msgid "Allow local image posts"
-msgstr ""
+msgstr "Salli paikalliset kuva-aloitukset"
 
 #: app/admin/forms.py:34
 msgid "Allow NSFW communities"
-msgstr ""
+msgstr "Salli työpaikalle sopimattomat (NSFW) yhteisöt"
 
 #: app/admin/forms.py:35
 msgid "Allow NSFL communities and posts"
-msgstr ""
+msgstr "Salli traumatisoivat (NSFL) yhteisöt ja julkaisut"
 
 #: app/admin/forms.py:36
 msgid "Bar people from these countries from accessing NSFW and NSFL content"
 msgstr ""
+"Estä näistä maista olevilta pääsy traumatisoivaan (NSFL) tai työpaikalle "
+"sopimattomaan (NSFW) sisältöön"
 
 #: app/admin/forms.py:37
 msgid "Only admins can create new local communities"
-msgstr ""
+msgstr "Vain ylläpitäjät voivat perustaa uusia yhteisöjä"
 
 #: app/admin/forms.py:38
 msgid "Notify admins about reports, not just moderators"
-msgstr ""
+msgstr "Kerro ilmiannoista moderaattorien lisäksi myös ylläpitäjälle"
 
 #: app/admin/forms.py:39
 msgid "Require new accounts to verify their email address"
-msgstr ""
+msgstr "Vaadi uusilta tileiltä sähköpostiosoitteen vahvistaminen"
 
 #: app/admin/forms.py:40
 msgid "Require CAPTCHA for new account registration"
-msgstr ""
+msgstr "Vaadi CAPTCHA uuden tilin luomiseen"
 
 #: app/admin/forms.py:41
 msgid "Open"
-msgstr ""
+msgstr "Avaa"
 
 #: app/admin/forms.py:41
 msgid "Require application"
-msgstr ""
+msgstr "Vaadi hakemus"
 
 #: app/admin/forms.py:41
 msgid "Closed"
-msgstr ""
+msgstr "Suljettu"
 
 #: app/admin/forms.py:42
 msgid "Registration mode"
@@ -371,7 +379,7 @@ msgstr ""
 
 #: app/admin/forms.py:43
 msgid "Question to ask people applying for an account"
-msgstr ""
+msgstr "Kysymys uutta tiliä luoville"
 
 #: app/admin/forms.py:44
 msgid "Registration approved email"
@@ -379,15 +387,15 @@ msgstr ""
 
 #: app/admin/forms.py:46
 msgid "Provide a list of topics to subscribe to"
-msgstr ""
+msgstr "Anna tilattavat aiheet"
 
 #: app/admin/forms.py:47
 msgid "Trump Musk filter setup"
-msgstr ""
+msgstr "Trump-Musk-suodattimen asetukset"
 
 #: app/admin/forms.py:48
 msgid "Ignore registrations from these countries"
-msgstr ""
+msgstr "Estä rekisteröitymisyritykset näistä maista"
 
 #: app/admin/forms.py:49
 msgid "Block registrations from these referrers (one per line)"
@@ -400,11 +408,11 @@ msgstr ""
 #: app/admin/forms.py:51 app/templates/auth/instance_chooser.html:32
 #: app/templates/auth/instance_chooser.html:118
 msgid "Primary language"
-msgstr ""
+msgstr "Ensisijainen kieli"
 
 #: app/admin/forms.py:52
 msgid "Default theme"
-msgstr ""
+msgstr "Oletusaihe"
 
 #: app/admin/forms.py:53 app/user/forms.py:119
 msgid "Additional CSS"
@@ -419,21 +427,21 @@ msgstr ""
 #: app/templates/list_communities.html:70
 #: app/templates/themes/dillo/_view_filter_nav.html:5 app/user/forms.py:90
 msgid "Subscribed"
-msgstr ""
+msgstr "Tilattu"
 
 #: app/admin/forms.py:56 app/templates/_view_filter_nav.html:9
 #: app/templates/_view_filter_nav.html:23
 #: app/templates/list_communities.html:51
 #: app/templates/themes/dillo/_view_filter_nav.html:9 app/user/forms.py:92
 msgid "Local"
-msgstr ""
+msgstr "Paikallinen"
 
 #: app/admin/forms.py:57 app/templates/_view_filter_nav.html:10
 #: app/templates/_view_filter_nav.html:25
 #: app/templates/admin/communities.html:71
 #: app/templates/themes/dillo/_view_filter_nav.html:12 app/user/forms.py:93
 msgid "Popular"
-msgstr ""
+msgstr "Suosittu"
 
 #: app/admin/forms.py:60 app/user/forms.py:96
 msgid "Default home filter"
@@ -441,15 +449,15 @@ msgstr ""
 
 #: app/admin/forms.py:62
 msgid "Log ActivityPub JSON for debugging"
-msgstr ""
+msgstr "Kirjaa ActivityPubin JSON lokiin vianetsintää varten"
 
 #: app/admin/forms.py:63
 msgid "Show moderation actions publicly"
-msgstr ""
+msgstr "Näytä moderointitoimenpiteet julkisesti"
 
 #: app/admin/forms.py:64
 msgid "Private instance - require login to browse"
-msgstr ""
+msgstr "Yksityinen instanssi – vaadi sisäänkirjautuminen selaamiseen"
 
 #: app/admin/forms.py:65
 msgid "Show Rational Discourse Toolkit in sidebar"
@@ -457,7 +465,7 @@ msgstr ""
 
 #: app/admin/forms.py:71
 msgid "Enable instance chooser"
-msgstr ""
+msgstr "Näytä instanssivalitsin"
 
 #: app/admin/forms.py:72
 msgid "One-sentence elevator pitch"
@@ -473,7 +481,7 @@ msgstr ""
 
 #: app/admin/forms.py:75
 msgid "This instance has automated daily backups"
-msgstr ""
+msgstr "Tämä instanssi varmuuskopioituu automaattisesti päivittäin"
 
 #: app/admin/forms.py:80
 msgid "Federation mode"
@@ -481,11 +489,12 @@ msgstr ""
 
 #: app/admin/forms.py:81
 msgid "Blocklist - deny federation with specified instances"
-msgstr ""
+msgstr "Estolista – kieltäydy näiden instanssien federointipyynnöistä"
 
 #: app/admin/forms.py:82
 msgid "Allowlist - only allow federation with specified instances"
 msgstr ""
+"Sallittujen lista – hyväksy federoitumispyynnöt vain näiltä instansseilta"
 
 #: app/admin/forms.py:84
 msgid "Allow federation with these instances"
@@ -498,22 +507,29 @@ msgstr ""
 #: app/admin/forms.py:86
 msgid "Auto-defederate from any instance defederated by"
 msgstr ""
+"Pura automaattisesti federointi instansseihin, joihin federoitumisen purkaa"
 
 #: app/admin/forms.py:87
 msgid "Discard all posts, comments and PMs with these phrases (one per line)"
 msgstr ""
+"Hylkää kaikki julkaisut, kommentit ja yksityisviestit, joissa on jokin "
+"näistä ilmauksista (yksi per rivi)"
 
 #: app/admin/forms.py:88
 msgid ""
 "Discard all posts and comments by users with these words in their name "
 "(one per line)"
 msgstr ""
+"Hylkää kaikki julkaisut ja kommentit käyttäjiltä, joiden nimi sisältää näitä "
+"sanoja (yksi per rivi)"
 
 #: app/admin/forms.py:89
 msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
 "(one per line)"
 msgstr ""
+"Hylkää kaikki julkaisutja kommentit käyttäjiltä, joiden kuvaus sisältää "
+"näitä sanoja (yksi per rivi)"
 
 #: app/admin/forms.py:90
 msgid "Automatically add new remote communities"
@@ -521,35 +537,37 @@ msgstr ""
 
 #: app/admin/forms.py:95
 msgid "Closing down announcement for home page"
-msgstr ""
+msgstr "Ilmoitus tulevasta sulkemisesta aloitussivulle"
 
 #: app/admin/forms.py:96
 msgid "Yes, close my instance"
-msgstr ""
+msgstr "Kyllä, lakkauta tämä instanssi"
 
 #: app/admin/forms.py:100 app/admin/forms.py:106
 msgid "Number of Communities to add"
-msgstr ""
+msgstr "Lisättävien yhteisöjen määrä"
 
 #: app/admin/forms.py:101
 msgid "Add Communities"
-msgstr ""
+msgstr "Yhteisöjen lisääminen"
 
 #: app/admin/forms.py:105
 msgid "Remote Server"
-msgstr ""
+msgstr "Etäpalvelin"
 
 #: app/admin/forms.py:107
 msgid "Communities must have at least this many posts"
-msgstr ""
+msgstr "Yhteisöissä on oltava vähintään näin monta julkaisua"
 
 #: app/admin/forms.py:108
 msgid "Communities must have at least this many active users in the past week."
 msgstr ""
+"Yhteisössä on oltava ollut vähintään näin monta aktiivista käyttäjää "
+"viimeisen viikon aikana."
 
 #: app/admin/forms.py:109
 msgid "Dry Run"
-msgstr ""
+msgstr "Koekäyttö"
 
 #: app/admin/forms.py:110
 msgid "Scan"
@@ -557,28 +575,28 @@ msgstr ""
 
 #: app/admin/forms.py:114
 msgid "Import Bans List Json File"
-msgstr ""
+msgstr "Tuo estolista JSON-tiedostosta"
 
 #: app/admin/forms.py:115 app/user/forms.py:126
 msgid "Import"
-msgstr ""
+msgstr "Tuo"
 
 #: app/admin/forms.py:116 app/user/forms.py:125
 msgid "Export"
-msgstr ""
+msgstr "Vie"
 
 #: app/admin/forms.py:120 app/community/forms.py:75 app/community/forms.py:104
 #: app/community/forms.py:159 app/templates/admin/cms_pages.html:24
 #: app/templates/post/post_block_image_purge_posts.html:19
 #: app/templates/user/scheduled_posts.html:25
 msgid "Title"
-msgstr ""
+msgstr "Titteli"
 
 #: app/admin/forms.py:121 app/admin/forms.py:204 app/community/forms.py:26
 #: app/feed/forms.py:13 app/feed/forms.py:65
 #: app/templates/community/community_wiki_list.html:34
 msgid "Url"
-msgstr ""
+msgstr "Internetosoite"
 
 #: app/admin/forms.py:122 app/community/forms.py:27 app/community/forms.py:76
 #: app/feed/forms.py:14 app/feed/forms.py:66 app/templates/admin/home.html:58
@@ -586,12 +604,12 @@ msgstr ""
 #: app/templates/community/community_moderate.html:40
 #: app/templates/user/notifs/20.html:51
 msgid "Description"
-msgstr ""
+msgstr "Kuvaus"
 
 #: app/admin/forms.py:123 app/community/forms.py:29 app/community/forms.py:78
 #: app/feed/forms.py:19 app/feed/forms.py:71
 msgid "Icon image"
-msgstr ""
+msgstr "Ikonikuva"
 
 #: app/admin/forms.py:124 app/community/forms.py:30 app/community/forms.py:79
 #: app/feed/forms.py:20 app/feed/forms.py:72
@@ -600,7 +618,7 @@ msgstr ""
 
 #: app/admin/forms.py:125
 msgid "Rules"
-msgstr ""
+msgstr "Säännöt"
 
 #: app/admin/forms.py:126 app/community/forms.py:80
 msgid "NSFW community"
@@ -608,7 +626,7 @@ msgstr ""
 
 #: app/admin/forms.py:127
 msgid "Banned - no new posts accepted"
-msgstr ""
+msgstr "Estetty – uusia julkaisuja ei hyväksytä"
 
 #: app/admin/forms.py:128 app/community/forms.py:81
 msgid "Only accept posts from current instance"
@@ -616,11 +634,11 @@ msgstr ""
 
 #: app/admin/forms.py:129 app/community/forms.py:82
 msgid "Only moderators can post"
-msgstr ""
+msgstr "Vain moderaattorit voivat julkaista"
 
 #: app/admin/forms.py:130 app/community/forms.py:83
 msgid "New moderators wanted"
-msgstr ""
+msgstr "Uusia valvojia tarvitaan"
 
 #: app/admin/forms.py:131
 msgid "Posts can be popular"
@@ -628,7 +646,7 @@ msgstr ""
 
 #: app/admin/forms.py:132
 msgid "Posts show in All list"
-msgstr ""
+msgstr "Julkaisut näkyvät \"Kaikki\"-listassa"
 
 #: app/admin/forms.py:133
 msgid "Low quality / toxic - upvotes in here don't add to reputation"
@@ -636,51 +654,51 @@ msgstr ""
 
 #: app/admin/forms.py:134
 msgid "Forever"
-msgstr ""
+msgstr "Ikuisesti"
 
 #: app/admin/forms.py:135
 msgid "1 week"
-msgstr ""
+msgstr "1 viikko"
 
 #: app/admin/forms.py:136
 msgid "2 weeks"
-msgstr ""
+msgstr "2 viikkoa"
 
 #: app/admin/forms.py:137
 msgid "1 month"
-msgstr ""
+msgstr "1 kuukausi"
 
 #: app/admin/forms.py:138
 msgid "2 months"
-msgstr ""
+msgstr "2 kuukautta"
 
 #: app/admin/forms.py:139
 msgid "3 months"
-msgstr ""
+msgstr "3 kuukautta"
 
 #: app/admin/forms.py:140
 msgid "6 months"
-msgstr ""
+msgstr "6 kuukautta"
 
 #: app/admin/forms.py:141
 msgid "1 year"
-msgstr ""
+msgstr "1 vuosi"
 
 #: app/admin/forms.py:142
 msgid "2 years"
-msgstr ""
+msgstr "2 vuotta"
 
 #: app/admin/forms.py:143
 msgid "5 years"
-msgstr ""
+msgstr "5 vuotta"
 
 #: app/admin/forms.py:144
 msgid "10 years"
-msgstr ""
+msgstr "10 vuotta"
 
 #: app/admin/forms.py:146
 msgid "Retain content"
-msgstr ""
+msgstr "Säilytä sisältö"
 
 #: app/admin/forms.py:147 app/community/forms.py:92
 #: app/templates/admin/communities.html:45
@@ -688,7 +706,7 @@ msgstr ""
 #: app/templates/admin/communities.html:99
 #: app/templates/list_communities.html:105
 msgid "Topic"
-msgstr ""
+msgstr "Aihe"
 
 #: app/admin/forms.py:148 app/community/forms.py:95
 #: app/templates/community/_community_nav.html:132
@@ -696,11 +714,11 @@ msgstr ""
 #: app/templates/community/_community_nav.html:493
 #: app/templates/feed/_feed_nav.html:125 app/templates/feed/_feed_nav.html:190
 msgid "List"
-msgstr ""
+msgstr "Lista"
 
 #: app/admin/forms.py:149 app/community/forms.py:96
 msgid "Masonry"
-msgstr ""
+msgstr "Muuraus"
 
 #: app/admin/forms.py:150 app/community/forms.py:97
 msgid "Wide masonry"
@@ -713,7 +731,7 @@ msgstr ""
 #: app/templates/community/_community_nav.html:359
 #: app/templates/feed/_feed_nav.html:121
 msgid "Layout"
-msgstr ""
+msgstr "Asettelu"
 
 #: app/admin/forms.py:152 app/admin/forms.py:186 app/community/forms.py:28
 #: app/community/forms.py:77
@@ -722,7 +740,7 @@ msgstr ""
 
 #: app/admin/forms.py:153 app/community/forms.py:34 app/community/forms.py:93
 msgid "Languages"
-msgstr ""
+msgstr "Kielet"
 
 #: app/admin/forms.py:154
 msgid "Override remote language setting"
@@ -734,7 +752,7 @@ msgstr ""
 
 #: app/admin/forms.py:162 app/community/forms.py:42 app/feed/forms.py:31
 msgid "Url is required."
-msgstr ""
+msgstr "Internetosoite vaaditaan."
 
 #: app/admin/forms.py:173 app/community/forms.py:25 app/feed/forms.py:12
 #: app/feed/forms.py:64 app/templates/admin/approve_registrations.html:23
@@ -749,7 +767,7 @@ msgstr ""
 #: app/templates/user/filters.html:126 app/templates/user/filters.html:144
 #: app/user/forms.py:190
 msgid "Name"
-msgstr ""
+msgstr "Nimi"
 
 #: app/admin/forms.py:173
 msgid "Human readable name for the topic."
@@ -773,7 +791,7 @@ msgstr ""
 
 #: app/admin/forms.py:181
 msgid "Vote weight"
-msgstr ""
+msgstr "Äänen painoarvo"
 
 #: app/admin/forms.py:182 app/templates/admin/instances.html:24
 #: app/templates/admin/instances.html:105
@@ -781,12 +799,12 @@ msgstr ""
 #: app/templates/instance/list_instances.html:90
 #: app/templates/instance/list_instances.html:168
 msgid "Dormant"
-msgstr ""
+msgstr "Tauolla"
 
 #: app/admin/forms.py:183 app/templates/admin/instances.html:25
 #: app/templates/admin/instances.html:103
 msgid "Gone forever"
-msgstr ""
+msgstr "Poistunut iänkaikkisesti"
 
 #: app/admin/forms.py:184 app/templates/admin/instances.html:26
 #: app/templates/admin/instances.html:58 app/templates/admin/instances.html:59
@@ -794,15 +812,15 @@ msgstr ""
 #: app/templates/instance/list_instances.html:77
 #: app/templates/instance/list_instances.html:112
 msgid "Trusted"
-msgstr ""
+msgstr "Luotettu"
 
 #: app/admin/forms.py:185
 msgid "Hide from instance chooser"
-msgstr ""
+msgstr "Piilota instanssinvalintasivulta"
 
 #: app/admin/forms.py:187
 msgid "Inbox"
-msgstr ""
+msgstr "Saapuneet"
 
 #: app/admin/forms.py:192
 msgid "Domain (not including https://)"
@@ -815,7 +833,7 @@ msgstr ""
 
 #: app/admin/forms.py:198 app/admin/forms.py:206
 msgid "Filename"
-msgstr ""
+msgstr "Tiedostonimi"
 
 #: app/admin/forms.py:199 app/admin/forms.py:207
 #: app/templates/admin/blocked_images.html:21
@@ -828,32 +846,32 @@ msgstr ""
 #: app/admin/forms.py:212 app/auth/forms.py:15 app/auth/forms.py:26
 #: app/community/forms.py:118 app/community/forms.py:149
 msgid "User name"
-msgstr ""
+msgstr "Käyttäjänimi"
 
 #: app/admin/forms.py:214 app/user/forms.py:13
 msgid "Email address"
-msgstr ""
+msgstr "Sähköpostiosoite"
 
 #: app/admin/forms.py:215 app/auth/forms.py:18 app/auth/forms.py:30
 #: app/auth/forms.py:108
 msgid "Password"
-msgstr ""
+msgstr "Salasana"
 
 #: app/admin/forms.py:217 app/auth/forms.py:32 app/auth/forms.py:109
 msgid "Repeat password"
-msgstr ""
+msgstr "Toista salasana"
 
 #: app/admin/forms.py:218 app/user/forms.py:16
 msgid "Bio"
-msgstr ""
+msgstr "Henkilökuvaus"
 
 #: app/admin/forms.py:219 app/user/forms.py:31
 msgid "Matrix User ID"
-msgstr ""
+msgstr "Matrix-käyttäjätunnus"
 
 #: app/admin/forms.py:220 app/user/forms.py:33
 msgid "Avatar image"
-msgstr ""
+msgstr "Profiilikuva"
 
 #: app/admin/forms.py:221 app/user/forms.py:34
 msgid "Top banner image"
@@ -861,42 +879,42 @@ msgstr ""
 
 #: app/admin/forms.py:222 app/admin/forms.py:284 app/user/forms.py:35
 msgid "This profile is a bot"
-msgstr ""
+msgstr "Tämä on bottitili"
 
 #: app/admin/forms.py:223 app/admin/forms.py:287
 msgid "Email address is verified"
-msgstr ""
+msgstr "Sähköpostiosoite varmennettu"
 
 #: app/admin/forms.py:224 app/admin/forms.py:288
 #: app/templates/admin/approve_registrations.html:56
 #: app/templates/admin/users.html:50 app/templates/admin/users.html:89
 msgid "Banned"
-msgstr ""
+msgstr "Estetty"
 
 #: app/admin/forms.py:225 app/user/forms.py:57
 msgid "Subscribe to email newsletter"
-msgstr ""
+msgstr "Tilaa uutiskirje"
 
 #: app/admin/forms.py:226 app/admin/forms.py:291 app/user/forms.py:173
 msgid "Show"
-msgstr ""
+msgstr "Näytä"
 
 #: app/admin/forms.py:227 app/admin/forms.py:292 app/user/forms.py:174
 #: app/user/forms.py:194
 msgid "Hide completely"
-msgstr ""
+msgstr "Piilota täysin"
 
 #: app/admin/forms.py:228 app/admin/forms.py:293
 msgid "Blur"
-msgstr ""
+msgstr "Sumenna"
 
 #: app/admin/forms.py:229 app/admin/forms.py:294 app/user/forms.py:194
 msgid "Make semi-transparent"
-msgstr ""
+msgstr "Tee osin läpinäkyväksi"
 
 #: app/admin/forms.py:230 app/user/forms.py:59 app/user/forms.py:177
 msgid "Hide posts by bots"
-msgstr ""
+msgstr "Piilota bottien julkaisut"
 
 #: app/admin/forms.py:232 app/admin/forms.py:295 app/user/forms.py:60
 #: app/user/forms.py:179
@@ -921,32 +939,33 @@ msgstr ""
 
 #: app/admin/forms.py:247 app/auth/forms.py:49
 msgid "An account with this email address already exists."
-msgstr ""
+msgstr "Tällä sähköpostiosoitteella on jo olemassa tili."
 
 #: app/admin/forms.py:251 app/auth/forms.py:56
 msgid "User names cannot contain @."
-msgstr ""
+msgstr "Käyttäjänimessä ei voi olla @-merkkiä."
 
 #: app/admin/forms.py:255 app/auth/forms.py:65
 msgid "This username was used in the past and cannot be reused."
-msgstr ""
+msgstr "Tämä käytössä jo ollut käyttäjänimi ei ole uudelleenkäytettävissä."
 
 #: app/admin/forms.py:257 app/auth/forms.py:67
 msgid "An account with this user name already exists."
-msgstr ""
+msgstr "Käyttäjänimi on jo käytössä."
 
 #: app/admin/forms.py:260
 msgid "A community with this name exists so it cannot be used for a user."
 msgstr ""
+"Tämänniminen yhteisö on jo olemassa, joten se ei kelpaa käyttäjänimeksi."
 
 #: app/admin/forms.py:267 app/admin/forms.py:280 app/auth/forms.py:83
 #: app/auth/forms.py:99
 msgid "This password is too common."
-msgstr ""
+msgstr "Liian yleisesti käytetty salasana."
 
 #: app/admin/forms.py:277 app/auth/forms.py:96
 msgid "This password is not secure."
-msgstr ""
+msgstr "Tämä salasana on liian helppo arvattava."
 
 #: app/admin/forms.py:285
 msgid "Flag their posts as from a bot"
@@ -966,7 +985,7 @@ msgstr ""
 
 #: app/admin/forms.py:304
 msgid "Remove avatar"
-msgstr ""
+msgstr "Poista profiilikuva"
 
 #: app/admin/forms.py:305
 msgid "Remove banner"
@@ -990,53 +1009,53 @@ msgstr ""
 
 #: app/admin/forms.py:314 app/admin/routes.py:1779
 msgid "Send newsletter"
-msgstr ""
+msgstr "Lähetä uutiskirje"
 
 #: app/admin/forms.py:318
 msgid "New url"
-msgstr ""
+msgstr "Uusi internetosoite"
 
 #: app/admin/forms.py:319
 msgid "Set new owner"
-msgstr ""
+msgstr "Määritä uusi omistaja"
 
 #: app/admin/forms.py:320 app/templates/list_communities.html:81
 #: app/templates/post/_flair_choices.html:16 app/topic/forms.py:12
 msgid "Submit"
-msgstr ""
+msgstr "Lähetä"
 
 #: app/admin/forms.py:325
 msgid "A local community at that url already exists"
-msgstr ""
+msgstr "Tässä internetosoitteessa on jo yhteisö"
 
 #: app/admin/forms.py:329
 msgid "URL path"
-msgstr ""
+msgstr "Polku internetosoitteessa"
 
 #: app/admin/forms.py:330
 msgid "e.g., /about-us"
-msgstr ""
+msgstr "esim. /tietoa-projektista"
 
 #: app/admin/forms.py:331
 msgid "Page title"
-msgstr ""
+msgstr "Sivun otsikko"
 
 #: app/admin/forms.py:332
 msgid "Content (Markdown)"
-msgstr ""
+msgstr "Sisältö (Markdown)"
 
 #: app/admin/forms.py:333
 msgid "Write your content in Markdown format..."
-msgstr ""
+msgstr "Kirjoita sisältö Markdown-muodossa..."
 
 #: app/admin/forms.py:347
 msgid "A page with this URL already exists."
-msgstr ""
+msgstr "Tällä osoitteella on jo sivu."
 
 #: app/admin/routes.py:212 app/admin/routes.py:244 app/admin/routes.py:281
 #: app/admin/routes.py:327 app/feed/routes.py:238
 msgid "Settings saved."
-msgstr ""
+msgstr "Asetukset tallennettu."
 
 #: app/admin/routes.py:222 app/templates/admin/_nav.html:5
 #: app/templates/admin/site.html:16
@@ -1046,7 +1065,7 @@ msgstr ""
 #: app/admin/routes.py:313 app/admin/routes.py:335
 #: app/templates/admin/_nav.html:6 app/templates/admin/misc.html:19
 msgid "Misc settings"
-msgstr ""
+msgstr "Sekalaisia asetuksia"
 
 #: app/admin/routes.py:410
 #, python-format
@@ -1056,7 +1075,7 @@ msgstr ""
 #: app/admin/routes.py:460 app/admin/routes.py:782
 #, python-format
 msgid "Results: %(results)s"
-msgstr ""
+msgstr "Hakutulos: %(results)s"
 
 #: app/admin/routes.py:464
 #, python-format
@@ -1088,7 +1107,7 @@ msgstr ""
 
 #: app/admin/routes.py:930
 msgid "Federation settings"
-msgstr ""
+msgstr "Federointiasetukset"
 
 #: app/admin/routes.py:1067
 msgid ""
@@ -1098,7 +1117,7 @@ msgstr ""
 
 #: app/admin/routes.py:1090
 msgid "ActivityPub Log"
-msgstr ""
+msgstr "ActivityPubin loki"
 
 #: app/admin/routes.py:1099 app/templates/admin/activity_json.html:13
 msgid "Activity JSON"
@@ -1131,7 +1150,7 @@ msgstr ""
 #: app/templates/user/notifications.html:73
 #: app/templates/user/show_profile.html:349
 msgid "Communities"
-msgstr ""
+msgstr "Yhteisöt"
 
 #: app/admin/routes.py:1157
 msgid "Communities with no topic"
@@ -1148,7 +1167,7 @@ msgstr ""
 #: app/community/routes.py:1952 app/community/routes.py:2180
 #: app/domain/routes.py:40
 msgid "Saved"
-msgstr ""
+msgstr "Tallennettu"
 
 #: app/admin/routes.py:1251
 msgid ""
@@ -1158,11 +1177,11 @@ msgstr ""
 
 #: app/admin/routes.py:1271 app/community/routes.py:1174
 msgid "Edit community"
-msgstr ""
+msgstr "Muokkaa yhteisöä"
 
 #: app/admin/routes.py:1286 app/community/routes.py:1234
 msgid "Community deleted"
-msgstr ""
+msgstr "Yhteisö poistettu"
 
 #: app/admin/routes.py:1329 app/community/routes.py:515
 #: app/community/routes.py:1826 app/community/routes.py:1878
@@ -1197,11 +1216,11 @@ msgstr ""
 #: app/templates/admin/instances.html:49 app/templates/admin/users.html:15
 #: app/templates/user/alerts/_type.html:7
 msgid "Users"
-msgstr ""
+msgstr "Käyttäjät"
 
 #: app/admin/routes.py:1454
 msgid "Bad / Most downvoted"
-msgstr ""
+msgstr "Huonot / Eniten alaääniä"
 
 #: app/admin/routes.py:1464
 msgid "Likely spam"
@@ -1213,17 +1232,19 @@ msgstr ""
 
 #: app/admin/routes.py:1549
 msgid "Registration approved."
-msgstr ""
+msgstr "Rekisteröityminen hyväksytty."
 
 #: app/admin/routes.py:1577
 msgid "Registration denied. User removed from the database."
-msgstr ""
+msgstr "Rekisteröityminen hylätty. Käyttäjätiedot poistettu tietokannasta."
 
 #: app/admin/routes.py:1616
 msgid ""
 "Permissions are cached for 50 seconds so new admin roles won't take "
 "effect immediately."
 msgstr ""
+"Käyttöoikeudet tallennetaan välimuistiin 50 sekunniksi, joten uudet "
+"ylläpitäjäroolit eivät tule heti voimaan."
 
 #: app/admin/routes.py:1634
 msgid ""
@@ -1261,11 +1282,11 @@ msgstr ""
 
 #: app/admin/routes.py:1776
 msgid "Newsletter sent"
-msgstr ""
+msgstr "Uutiskirje lähetetty"
 
 #: app/admin/routes.py:1800
 msgid "Settings saved"
-msgstr ""
+msgstr "Asetukset tallennettu"
 
 #: app/admin/routes.py:1805 app/templates/user/show_profile.html:140
 msgid "Role permissions"
@@ -1277,12 +1298,12 @@ msgstr ""
 
 #: app/admin/routes.py:1911
 msgid "Problem adding instance to database"
-msgstr ""
+msgstr "Ongelma instanssin lisäämisessä tietokantaan"
 
 #: app/admin/routes.py:1926
 #, python-format
 msgid "Set community owner to %(user_name)s"
-msgstr ""
+msgstr "Aseta %(user_name)s yhteisön omistajaksi"
 
 #: app/admin/routes.py:1965
 #, python-format
@@ -1290,22 +1311,24 @@ msgid ""
 "%(community_name)s is now %(new_url)s. Contact the initiator of this "
 "request to let them know."
 msgstr ""
+"%(community_name)s  on nyt  %(new_url)s. Ota yhteys pyynnön tehneeseen, "
+"jotta hän saisi tiedon."
 
 #: app/admin/routes.py:1968
 msgid "Ensure this community has the right moderators."
-msgstr ""
+msgstr "Varmista, että yhteisöllä on oikeat moderaattorit."
 
 #: app/admin/routes.py:1973
 msgid "Move community"
-msgstr ""
+msgstr "Siirrä yhteisö"
 
 #: app/admin/routes.py:1983 app/templates/admin/_nav.html:34
 msgid "Blocked images"
-msgstr ""
+msgstr "Estetyt kuvat"
 
 #: app/admin/routes.py:2006
 msgid "Edit blocked image"
-msgstr ""
+msgstr "Muokkaa estettyä kuvaa"
 
 #: app/admin/routes.py:2030
 msgid ""
@@ -1316,12 +1339,12 @@ msgstr ""
 #: app/admin/routes.py:2032 app/templates/admin/blocked_images.html:14
 #: app/templates/admin/edit_blocked_image.html:15
 msgid "Add blocked image"
-msgstr ""
+msgstr "Lisää estetty kuva"
 
 #: app/admin/routes.py:2046 app/post/routes.py:2067
 #, python-format
 msgid "%(count)s posts deleted."
-msgstr ""
+msgstr "%(count)s julkaisua poistettu."
 
 #: app/admin/routes.py:2052 app/post/routes.py:2079
 #: app/templates/post/post_block_image_purge_posts.html:15
@@ -1368,7 +1391,7 @@ msgstr ""
 #: app/auth/forms.py:19 app/auth/forms.py:31 app/auth/forms.py:33
 #: app/user/forms.py:15
 msgid "Minimum length 8, maximum 128"
-msgstr ""
+msgstr "Vähimmäispituus 8, enimmäispituus 128"
 
 #: app/auth/forms.py:20 app/user/forms.py:65
 msgid "Low bandwidth mode"
@@ -1376,17 +1399,17 @@ msgstr ""
 
 #: app/auth/forms.py:22
 msgid "Log In"
-msgstr ""
+msgstr "Kirjaudu sisään"
 
 #: app/auth/forms.py:28 app/auth/forms.py:29 app/auth/forms.py:103
 #: app/auth/forms.py:129 app/templates/admin/approve_registrations.html:24
 #: app/templates/admin/approve_registrations.html:80
 msgid "Email"
-msgstr ""
+msgstr "Sähköposti"
 
 #: app/auth/forms.py:34
 msgid "Why would you like to join this site?"
-msgstr ""
+msgstr "Miksi haluaisit liittyä sivustolle?"
 
 #: app/auth/forms.py:35
 msgid "I agree to the terms of service & privacy policy (see links in footer)"
@@ -1394,7 +1417,7 @@ msgstr ""
 
 #: app/auth/forms.py:36
 msgid "Enter captcha code"
-msgstr ""
+msgstr "Syötä captcha-koodi"
 
 #: app/auth/forms.py:39 app/auth/util.py:347 app/templates/base.html:176
 #: app/templates/themes/dillo/base.html:108
@@ -3683,7 +3706,7 @@ msgstr ""
 #: app/templates/base.html:47 app/templates/post/post_embed.html:52
 #: app/templates/themes/dillo/base.html:28
 msgid "PieFed"
-msgstr ""
+msgstr "PieFed"
 
 #: app/templates/base.html:126 app/templates/themes/dillo/base.html:63
 msgid "To home page"
@@ -3760,8 +3783,9 @@ msgstr ""
 #: app/templates/admin/_nav.html:36 app/templates/base.html:217
 #: app/templates/community/community_modlog.html:18
 #: app/templates/themes/dillo/base.html:167
+#, fuzzy
 msgid "Modlog"
-msgstr ""
+msgstr "Modeloki"
 
 #: app/templates/admin/_nav.html:38 app/templates/base.html:219
 #: app/templates/dev/tools.html:10 app/templates/themes/dillo/base.html:169
@@ -4181,7 +4205,7 @@ msgstr ""
 
 #: app/templates/modlog.html:17
 msgid "Moderation log"
-msgstr ""
+msgstr "Moderointiloki"
 
 #: app/templates/modlog.html:20
 msgid "Type of action"
@@ -4232,7 +4256,7 @@ msgstr ""
 #: app/templates/community/community_modlog.html:33
 #: app/templates/modlog.html:64 app/templates/post/_post_reply_teaser.html:36
 msgid "Moderator"
-msgstr ""
+msgstr "Moderaattori"
 
 #: app/templates/modlog.html:96
 #, python-format
@@ -4293,7 +4317,7 @@ msgstr ""
 #: app/templates/admin/_nav.html:27 app/templates/admin/_tabbed_nav.html:29
 #: app/templates/admin/newsletter.html:15
 msgid "Newsletter"
-msgstr ""
+msgstr "Uutiskirje"
 
 #: app/templates/admin/_nav.html:28 app/templates/admin/_tabbed_nav.html:30
 #: app/templates/admin/activities.html:14
@@ -6164,7 +6188,7 @@ msgstr ""
 #: app/templates/user/show_profile.html:138
 #: app/templates/user/user_preview.html:13
 msgid "Instance"
-msgstr ""
+msgstr "Instanssi"
 
 #: app/templates/instance/list_instances.html:134
 msgid "Heard from"
@@ -6486,11 +6510,11 @@ msgstr ""
 
 #: app/templates/post/_post_voting_buttons_masonry.html:3
 msgid "UpVote"
-msgstr ""
+msgstr "Ylä-ääni"
 
 #: app/templates/post/_post_voting_buttons_masonry.html:10
 msgid "DownVote"
-msgstr ""
+msgstr "Alaääni"
 
 #: app/templates/post/add_reply.html:22 app/templates/post/post.html:48
 msgid ""
@@ -8422,4 +8446,3 @@ msgstr ""
 #: app/user/subscription.py:162
 msgid "Your donation has been cancelled."
 msgstr ""
-
