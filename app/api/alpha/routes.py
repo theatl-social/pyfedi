@@ -484,7 +484,7 @@ def get_alpha_feed_list(data):
 # Post
 @post_bp.route('/post/list', methods=['GET'])
 @post_bp.doc(summary="List posts.")
-@post_bp.arguments(ListPostsRequest, location="query")
+@post_bp.arguments(ListPostsRequest, location="query", unknown=INCLUDE)
 @post_bp.response(200, ListPostsResponse)
 @post_bp.alt_response(400, schema=DefaultError)
 def get_alpha_post_list(data):

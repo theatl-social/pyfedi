@@ -1155,7 +1155,6 @@ class ListPostsRequest(Schema):
     person_id = fields.Integer()
     limit = fields.Integer(metadata={"default": 50})
     page = fields.Integer(metadata={"default": 1})
-    page_cursor = fields.Integer(metadata={"default": 1})
     liked_only = fields.Boolean(metadata={"default": False})
     feed_id = fields.Integer()
     topic_id = fields.Integer()
