@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import cache, db
 from app.activitypub.util import active_month
 from app.constants import *
-from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
+from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities
@@ -43,6 +43,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1['removed'] = True
                 v1['deleted'] = False
+        v1['type'] = POST_TYPE_NAMES.get(post.type, "unknown")
         if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
             if post.url:
                 v1['url'] = post.url

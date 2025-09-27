@@ -299,6 +299,7 @@ class Post(DefaultSchema):
     url = fields.Url()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
+    type = fields.String(required=True)
 
 
 class PostAggregates(DefaultSchema):
