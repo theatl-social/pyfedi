@@ -1066,6 +1066,8 @@ class DeletePostRequest(DefaultSchema):
 class ReportPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     reason = fields.String(required=True)
+    description = fields.String()
+    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
 
 
 class PostReport(DefaultSchema):
