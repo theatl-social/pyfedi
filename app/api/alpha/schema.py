@@ -1023,11 +1023,10 @@ class GetPostResponse(DefaultSchema):
     cross_posts = fields.List(fields.Nested(PostView))
 
 
-class LikePostRequest(Schema):
+class LikePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)
     private = fields.Boolean()
-    auth = fields.String()      # Some apps include their bearer token here when they really should just have it in the http header
 
 
 class SavePostRequest(DefaultSchema):
