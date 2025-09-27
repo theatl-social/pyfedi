@@ -254,6 +254,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(
             desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Active":
+        posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
