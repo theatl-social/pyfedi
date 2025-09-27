@@ -32,6 +32,7 @@
         {% endif -%}
         {% block styles -%}
             {{ bootstrap.load_css() }}
+            <link href="{{ url_for('static', filename='pygments/fruity.css', changed=getmtime('pygments/fruity.css')) }}" type="text/css" rel="stylesheet" />
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
             <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
             {% if not low_bandwidth -%}

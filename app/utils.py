@@ -287,7 +287,7 @@ def mime_type_using_head(url):
 
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
-                'h6', 'pre',
+                'h6', 'pre', 'div',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
                 'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
@@ -504,7 +504,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
                                                   'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True, 'smarty-pants': True})
