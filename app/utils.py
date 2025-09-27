@@ -2626,6 +2626,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     elif sort == 'old':
         post_id_sort = 'ORDER BY p.posted_at ASC'
     elif sort == 'active':
+        post_id_where.append('p.reply_count > 0 ')
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()

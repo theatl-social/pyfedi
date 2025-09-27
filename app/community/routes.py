@@ -415,6 +415,7 @@ def show_community(community: Community):
             posts = posts.order_by(asc(Post.posted_at))
         elif sort == 'active':
             sticky_posts = sticky_posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
+            posts = posts.filter(Post.reply_count > 0)
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
         per_page = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
         if post_layout == 'masonry':
