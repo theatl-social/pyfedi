@@ -40,9 +40,9 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
-    vote_for_post, mark_post_read
+    vote_for_post, mark_post_read, report_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
-    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
+    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply
 from app.shared.site import block_remote_instance
 from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
@@ -1314,77 +1314,8 @@ def post_report(post_id: int):
         if post.reports == -1:
             flash(_('Post has already been reported, thank you!'))
             return redirect(post.community.local_url())
-        
-        suspect_user = User.query.get(post.author.id)
-        source_instance = Instance.query.get(suspect_user.instance_id)
-        targets_data = {'gen': '0',
-                        'suspect_post_id': post.id,
-                        'suspect_user_id': post.author.id,
-                        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
-                        'reporter_id': current_user.id,
-                        'reporter_user_name': current_user.user_name,
-                        'source_instance_id': suspect_user.instance_id,
-                        'source_instance_domain': source_instance.domain,
-                        'orig_post_title': post.title,
-                        'orig_post_body': post.body
-                        }
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id, in_community_id=post.community.id, 
-                        source_instance_id=1, targets=targets_data)
-        db.session.add(report)
 
-        # Notify moderators
-        already_notified = set()
-
-        for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.user_id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            subtype='post_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
-
-        # only notify admins for certain types of report
-        if '5' in form.reasons.data or '6' in form.reasons.data:
-            for admin in Site.admins():
-                if admin.id not in already_notified:
-                    with force_locale(get_recipient_language(admin.id)):
-                        notify = Notification(title=gettext('Reported content'), url='/admin/reports', user_id=admin.id,
-                                              author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                              subtype='post_reported',
-                                              targets=targets_data)
-                        db.session.add(notify)
-                        admin.unread_notifications += 1
-
-        post.reports += 1
-        db.session.commit()
-
-        # federate report to community instance
-        if not post.community.is_local() and form.report_remote.data:
-            summary = form.reasons_to_string(form.reasons.data)
-            if form.description.data:
-                summary += ' - ' + form.description.data
-            report_json = {
-                "actor": current_user.public_url(),
-                "audience": post.community.public_url(),
-                "content": None,
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
-                "object": post.ap_id,
-                "summary": summary,
-                "to": [
-                    post.community.public_url()
-                ],
-                "type": "Flag"
-            }
-            instance = Instance.query.get(post.community.instance_id)
-            if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) \
-                    and not instance_banned(instance.domain):
-                send_post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
-
+        report_post(post, form, SRC_WEB)
         flash(_('Post has been reported, thank you!'))
         return redirect(post.community.local_url())
     elif request.method == 'GET':
@@ -1647,76 +1578,11 @@ def post_reply_report(post_id: int, comment_id: int):
               'warning')
 
     if form.validate_on_submit():
-
         if post_reply.reports == -1:
             flash(_('Comment has already been reported, thank you!'))
             return redirect(post.community.local_url())
 
-        suspect_author = User.query.get(post_reply.author.id)
-        source_instance = Instance.query.get(suspect_author.instance_id)
-        targets_data = {'gen': '0',
-                        'suspect_comment_id': post_reply.id,
-                        'suspect_user_id': post_reply.author.id,
-                        'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                        'reporter_id': current_user.id,
-                        'reporter_user_name': current_user.user_name,
-                        'source_instance_id': suspect_author.instance_id,
-                        'source_instance_domain': source_instance.domain,
-                        'orig_comment_body': post_reply.body
-                        }
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=2, reporter_id=current_user.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id,
-                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id,
-                        in_community_id=post.community.id,
-                        source_instance_id=1, targets=targets_data)
-        db.session.add(report)
-
-        # Notify moderators
-        already_notified = set()
-        for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.user_id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            subtype='comment_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
-
-        if '5' in form.reasons.data or '6' in form.reasons.data:
-            for admin in Site.admins():
-                if admin.id not in already_notified:
-                    notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
-                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                          subtype='comment_reported',
-                                          targets=targets_data)
-                    db.session.add(notify)
-                    admin.unread_notifications += 1
-        post_reply.reports += 1
-        db.session.commit()
-
-        # federate report to originating instance
-        if not post.community.is_local() and form.report_remote.data:
-            summary = form.reasons_to_string(form.reasons.data)
-            if form.description.data:
-                summary += ' - ' + form.description.data
-            report_json = {
-                "actor": current_user.public_url(),
-                "audience": post.community.public_url(),
-                "content": None,
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
-                "object": post_reply.ap_id,
-                "summary": summary,
-                "to": [
-                    post.community.public_url()
-                ],
-                "type": "Flag"
-            }
-            instance = Instance.query.get(post.community.instance_id)
-            if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                send_post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
+        report_reply(post_reply, form, SRC_WEB)
 
         flash(_('Comment has been reported, thank you!'))
         return redirect(url_for('activitypub.post_ap', post_id=post.id))

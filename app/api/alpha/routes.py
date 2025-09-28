@@ -658,6 +658,8 @@ def post_alpha_post_report(data):
         auth = request.headers.get('Authorization')
         resp = post_post_report(auth, data)
         return PostReportResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

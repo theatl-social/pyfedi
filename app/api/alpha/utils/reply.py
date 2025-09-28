@@ -404,7 +404,8 @@ def post_reply_report(auth, data):
     report_remote = data['report_remote'] if 'report_remote' in data else True
     input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    user_id, report = report_reply(reply_id, input, SRC_API, auth)
+    reply = PostReply.query.filter_by(id=reply_id).one()
+    user_id, report = report_reply(reply, input, SRC_API, auth)
 
     reply_json = reply_report_view(report=report, reply_id=reply_id, user_id=user_id)
     return reply_json

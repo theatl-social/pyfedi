@@ -618,15 +618,14 @@ def post_post_delete(auth, data):
 
 
 def post_post_report(auth, data):
-    required(['post_id', 'reason'], data)
-    integer_expected(['post_id'], data)
-    string_expected(['reason'], data)
-
     post_id = data['post_id']
     reason = data['reason']
-    input = {'reason': reason, 'description': '', 'report_remote': True}
+    description = data['description'] if 'description' in data else ''
+    report_remote = data['report_remote'] if 'report_remote' in data else True
+    input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    user_id, report = report_post(post_id, input, SRC_API, auth)
+    post = Post.query.filter_by(id=post_id).one()
+    user_id, report = report_post(post, input, SRC_API, auth)
 
     post_json = post_report_view(report=report, post_id=post_id, user_id=user_id)
     return post_json
