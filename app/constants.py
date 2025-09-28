@@ -82,6 +82,7 @@ SRC_WEB = 1
 SRC_PUB = 2
 SRC_API = 3
 SRC_PLD = 4  # admin preload form to seed communities
+SRC_PLG = 5  # plugins
 
 APLOG_IN = True
 
