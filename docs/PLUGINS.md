@@ -20,4 +20,8 @@ Plugins can have their code executed by adding a @hook decorator to a function. 
 
   - `cron_daily` - is run once a day in the daily_maintenance_task.
 
+  - `new_user` - is run when a new user is verified; meaning that they have completed any required email verification and their application has been accepted (if applicable). The newly created `User` object is passed to this hook as an argument. When this hook completes, it should return the `User` object again.
+
+  - `new_registration_for_approval` - is run when a user has submitted an application and (if applicable) verified their email, but the application is awaiting admin approval. The `UserRegistration` object is passed to this plugin as an argument. When this hook completes, it should return the `UserRegistration` object again.
+
 More hooks will be added over time, presently the plugin engine is still experimental and undergoing heavy development.
