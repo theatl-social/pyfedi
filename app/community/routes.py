@@ -54,7 +54,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required, markdown_to_text, instance_gone_forever, permission_required
+    approval_required, permission_required, aged_account_required
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -66,6 +66,7 @@ from datetime import timezone, timedelta
 @login_required
 @validation_required
 @approval_required
+@aged_account_required
 def add_local():
     if current_user.banned:
         return show_ban_message()

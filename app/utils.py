@@ -1000,6 +1000,17 @@ def trustworthy_account_required(func):
     return decorated_view
 
 
+def aged_account_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.created_very_recently():
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.not_trustworthy'))
+
+    return decorated_view
+
+
 def login_required_if_private_instance(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
