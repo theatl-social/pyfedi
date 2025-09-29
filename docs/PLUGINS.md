@@ -7,7 +7,7 @@ publicly available.
 Each plugin is a directory under app/plugins and must include a __init__.py file. In that file there must be a plugin_info()
 function.
 
-See app/plugins/example_plugin/* to get started.
+See app/plugins/example_plugin/* to get started. Also check out [!piefed_plugins@piefed.social](https://piefed.social/c/piefed_plugins) for more plugin discussion, ask questions, and browse examples.
 
 Plugins can have their code executed by adding a @hook decorator to a function. The current list of hooks are:
 
