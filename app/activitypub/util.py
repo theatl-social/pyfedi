@@ -2715,6 +2715,8 @@ def update_post_from_activity(post: Post, request_json: dict):
         # no URLs in Polls to worry about, so return now
         return
 
+    old_db_entry_to_delete = None
+
     if request_json['object']['type'] == 'Event':
         event = Event.query.filter_by(post_id=post.id).first()
         if event:
@@ -2731,6 +2733,17 @@ def update_post_from_activity(post: Post, request_json: dict):
             event.buy_tickets_link = request_json['object']['buyTicketsLink']
             event.event_fee_currency = request_json['object']['feeCurrency']
             event.event_fee_amount = request_json['object']['feeAmount']
+            if post.image:
+                post.image.delete_from_disk()
+                old_db_entry_to_delete = post.image_id
+            if 'image' in request_json['object']:
+                image = File(source_url=request_json['object']['image']['url'])
+                db.session.add(image)
+                db.session.commit()
+                post.image = image
+                make_image_sizes(image.id, 170, 512, 'posts')
+            else:
+                post.image_id = None
             db.session.commit()
 
     # Links
@@ -2766,7 +2779,6 @@ def update_post_from_activity(post: Post, request_json: dict):
         if new_domain.banned:
             db.session.commit()
             return  # reject change to url if new domain is banned
-    old_db_entry_to_delete = None
     if old_url != new_url:
         if post.image:
             post.image.delete_from_disk()
@@ -3604,6 +3616,8 @@ def normalise_actor_string(actor: str) -> Tuple[str, str]:
     if '@' in actor:
         parts = actor.split('@')
         return parts[0].lower(), parts[1].lower()
+    else:
+        return '', ''
 
 
 def process_banned_message(banned_json, instance_domain: str, session):

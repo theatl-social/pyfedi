@@ -1,176 +1,115 @@
 {% set cs = csrf_token() -%}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="{{ 'en' if current_user.is_anonymous else current_user.interface_language }}">
-    <head>
-        {% block head -%}
-            <meta charset="utf-8">
-            <meta name="viewport"
-                  content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
-            <meta http-equiv="Content-Language" content="en" />
-            <meta name="msapplication-TileColor" content="#007BBF">
-            <meta name="theme-color" content="#007BBF">
-            <meta name="apple-mobile-web-app-status-bar-style"
-                  content="black-translucent" />
-            <meta name="apple-mobile-web-app-capable" content="yes">
-            <meta name="mobile-web-app-capable" content="yes">
-            <meta name="HandheldFriendly" content="True">
-            <meta name="MobileOptimized" content="320">
-            <meta name="color-scheme" content="light dark">
-            <meta name="csrf-token" content="{{ cs }}">
-            <link rel="expect" blocking="render" href="#navbarSupportedContent">
-            {% if current_user.is_anonymous -%}
-                <script rel="preload"
-                        src="/static/js/enable_low_bandwidth.js"
-                        type="text/javascript"
-                        fetchpriority="high"></script>
+  <head>
+    {% block head -%}
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, user-scalable=yes, initial-scale=1.0, shrink-to-fit=no">
+        <meta http-equiv="Content-Language" content="en" />
+        <meta name="msapplication-TileColor" content="#007BBF">
+        <meta name="theme-color" content="#007BBF">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="mobile-web-app-capable" content="yes">
+        <meta name="HandheldFriendly" content="True">
+        <meta name="MobileOptimized" content="320">
+        <meta name="color-scheme" content="light dark">
+        <meta name="csrf-token" content="{{ cs }}">
+        <link rel="expect" blocking="render" href="#navbarSupportedContent">
+        {% if current_user.is_anonymous -%}
+            <script rel="preload" src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
+        {% endif -%}
+        {% if current_user.font == 'atkinson' -%}
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'inter' -%}
+            <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
+        {% elif current_user.font == 'roboto' -%}
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
+        {% endif -%}
+        {% block styles -%}
+            {{ bootstrap.load_css() }}
+
+            <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
+            <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
+            {% if not low_bandwidth -%}
+                <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='pygments/fruity.css') }}" type="text/css" rel="stylesheet" />
             {% endif -%}
-            {% if current_user.font == 'atkinson' -%}
-                <link rel="preload"
-                      href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2"
-                      as="font"
-                      type="font/woff2">
-                <link rel="preload"
-                      href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2"
-                      as="font"
-                      type="font/woff2">
-                <link rel="preload"
-                      href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2"
-                      as="font"
-                      type="font/woff2">
-                <link rel="preload"
-                      href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2"
-                      as="font"
-                      type="font/woff2">
-            {% elif current_user.font == 'inter' -%}
-                <link rel="preload"
-                      href="/static/fonts/inter/InterVariable.woff2"
-                      as="font"
-                      type="font/woff2">
-            {% elif current_user.font == 'roboto' -%}
-                <link rel="preload"
-                      href="/static/fonts/roboto/Roboto-Regular.woff2"
-                      as="font"
-                      type="font/woff2">
-                <link rel="preload"
-                      href="/static/fonts/roboto/Roboto-Bold.woff2"
-                      as="font"
-                      type="font/woff2">
-            {% endif -%}
-            {% block styles -%}
-                {{ bootstrap.load_css() }}
-                <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css') ) }}"
-                      type="text/css"
-                      rel="stylesheet"
-                      data-reload="true" />
-                <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}"
-                      type="text/css"
-                      rel="alternate stylesheet"
-                      title="High contrast" />
-                {% if not low_bandwidth -%}
-                    <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}"
-                          type="text/css"
-                          rel="stylesheet" />
-                    <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}"
-                          type="text/css"
-                          rel="stylesheet" />
-                {% endif -%}
-                {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
-                    <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}"
-                          type="text/css"
-                          rel="stylesheet"
-                          data-reload="true" />
-                {% endif -%}
-            {% endblock -%}
-            {% block extra_css -%}
-            {% endblock -%}
-            <title>
-                {% if title %}
-                    {{ title }}
-                {% else %}
-                    {{ _("PieFed") }}
-                {% endif %}
-            </title>
-            <link rel="apple-touch-icon"
-                  sizes="180x180"
-                  href="{{ g.site.logo_180 if g.site.logo_180 else '/static/images/piefed_logo_icon_t_180.png' }}">
-            <link rel="apple-touch-icon"
-                  sizes="152x152"
-                  href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/piefed_logo_icon_t_152.png' }}">
-            <link rel="icon"
-                  type="image/png"
-                  sizes="32x32"
-                  href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-            <link rel="icon"
-                  type="image/png"
-                  sizes="16x16"
-                  href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
-            <link rel="manifest" href="/manifest.json">
-            <link rel="shortcut icon"
-                  type="image/png"
-                  href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
-            <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}"
-                  rel='icon'
-                  type='image/x-icon'>
-            <meta name="msapplication-TileColor" content="#da532c">
-            <meta name="msapplication-config" content="/static/browserconfig.xml">
-            <meta name="theme-color" content="#ffffff">
-            {% if canonical -%}
-                <link rel="canonical" href="{{ canonical }}" />
-            {% endif -%}
-            {% if description -%}
-                <meta name="description" content="{{ description }}" />
-            {% else -%}
-                <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
-            {% endif -%}
-            {% if og_image -%}
-                <meta property="og:image" content="{{ og_image }}" />
-            {% else -%}
-                <meta property="og:image"
-                      content="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" />
-            {% endif -%}
-            {% if rss_feed -%}
-                <link rel="alternate"
-                      type="application/rss+xml"
-                      title="{{ rss_feed_name }}"
-                      href="{{ rss_feed }}" />
-            {% endif -%}
-            {% if noindex -%}
-                <meta name="robots" content="noindex">
-            {% endif -%}
-            {% if post -%}
-                <link rel="alternate"
-                      type="application/json+oembed"
-                      href="{{ url_for('post.post_oembed', post_id=post.id, _external=True) }}"
-                      title="{{ post.title }}" />
-            {% endif -%}
-            {% if preconnect and not low_bandwidth -%}
-                <link rel="preconnect" href='{{ preconnect }}'>
-            {% endif -%}
-            {% if g.site.additional_css -%}
-                <style>{{ g.site.additional_css }}</style>
-            {% endif -%}
-            {% if current_user.is_authenticated and current_user.additional_css -%}
-                <style>{{ current_user.additional_css }}</style>
+            {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
+                <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
             {% endif -%}
         {% endblock -%}
-        <script src="{{ url_for('static', filename='js/set_theme.js', changed=getmtime('js/set_theme.js')) }}"
-                type="text/javascript"></script>
-        {% if current_user.is_authenticated and current_user.theme == 'hlt-fruits' -%}
-            <script src="/static/themes/hlt-fruits/scripts.js" type="text/javascript"></script>
+        {% block extra_css -%}
+        {% endblock -%}
+        <title>{% if title %}{{ title }}{% else %}{{ _('PieFed') }}{% endif %}</title>
+        <link rel="apple-touch-icon" sizes="180x180" href="{{ g.site.logo_180 if g.site.logo_180 else '/static/images/piefed_logo_icon_t_180.png' }}">
+        <link rel="apple-touch-icon" sizes="152x152" href="{{ g.site.logo_152 if g.site.logo_152 else '/static/images/piefed_logo_icon_t_152.png' }}">
+        <link rel="icon" type="image/png" sizes="32x32" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link rel="icon" type="image/png" sizes="16x16" href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon-16x16.png' }}">
+        <link rel="manifest" href="/manifest.json">
+        <link rel="shortcut icon" type="image/png" href="{{ g.site.logo_32 if g.site.logo_32 else '/static/images/favicon-32x32.png' }}">
+        <link href="{{ g.site.logo_16 if g.site.logo_16 else '/static/images/favicon.ico' }}" rel='icon' type='image/x-icon'>
+        <meta name="msapplication-TileColor" content="#da532c">
+        <meta name="msapplication-config" content="/static/browserconfig.xml">
+        <meta name="theme-color" content="#ffffff">
+        {% if canonical -%}
+            <link rel="canonical" href="{{ canonical }}" />
         {% endif -%}
-        {% block schema_org %}{% endblock %}
-    </head>
-    <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ request.cookies.get('compact_level', '') }}"
-          hx-headers='{"x-csrftoken": "{{ cs }}"}'>
-        {% if 'fontSize' in request.cookies -%}
-            <style>
+        {% if description -%}
+            <meta name="description" content="{{ description }}" />
+        {% else -%}
+            <meta name="description" content="{{ html_to_text(g.site.sidebar) }}" />
+        {% endif -%}
+        {% if og_image -%}
+            <meta property="og:image" content="{{ og_image }}" />
+        {% else -%}
+            <meta property="og:image" content="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" />
+        {% endif -%}
+        {% if rss_feed -%}
+            <link rel="alternate" type="application/rss+xml" title="{{ rss_feed_name }}" href="{{ rss_feed }}" />
+        {% endif -%}
+        {% if noindex -%}
+            <meta name="robots" content="noindex">
+        {% endif -%}
+        {% if post -%}
+            <link rel="alternate" type="application/json+oembed" href="{{ url_for('post.post_oembed', post_id=post.id, _external=True) }}" title="{{ post.title }}" />
+        {% endif -%}
+      {% if preconnect and not low_bandwidth -%}
+        <link rel="preconnect" href='{{ preconnect }}'>
+      {% endif -%}
+      {% if g.site.additional_css -%}
+      <style>
+          {{ g.site.additional_css }}
+      </style>
+      {% endif -%}
+      {% if current_user.is_authenticated and current_user.additional_css -%}
+      <style>
+          {{ current_user.additional_css }}
+      </style>
+      {% endif -%}
+    {% endblock -%}
+    <script src="{{ url_for('static', filename='js/set_theme.js', changed=getmtime('js/set_theme.js')) }}" type="text/javascript"></script>
+    {% if current_user.is_authenticated and current_user.theme == 'hlt-fruits' -%}
+      <script src="/static/themes/hlt-fruits/scripts.js" type="text/javascript"></script>
+    {% endif -%}
+    {% block schema_org %}
+    {% endblock %}
+  </head>
+  <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ request.cookies.get('compact_level', '') }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
+    {% if 'fontSize' in request.cookies -%}
+        <style>
             body, .form-control, .btn, .dropdown-item {
                 font-size: {{ request.cookies.get('fontSize') }}rem;
             }
-            </style>
-        {% endif -%}
-        {% if current_user.font -%}
-            <style>
+        </style>
+    {% endif -%}
+    {% if current_user.font -%}
+        <style>
             {% if current_user.font == 'inter' %}
                 {% include 'fonts/inter.css' %}
             {% elif current_user.font == 'atkinson' %}
@@ -178,392 +117,231 @@
             {% elif current_user.font == 'roboto' %}
                 {% include 'fonts/roboto.css' %}
             {% endif %}
-            </style>
-        {% endif -%}
-        <a href="#outer_container"
-           class="skip-link"
-           role="navigation"
-           aria-label="Skip main navigation"
-           tabindex="">Skip to main content</a>
-        <a href="#side_pane"
-           class="skip-link"
-           role="navigation"
-           aria-label="Go to side pane"
-           tabindex="">Go to side pane</a>
-        <!-- Page content -->
-        {% block navbar -%}
-            <div class="navbar navbar-expand-lg sticky-lg-top">
-                <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}"
-                     role="banner">
-                    <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">
-                        {% if not low_bandwidth -%}
-                            <img src="{% if g.site.logo and g.site.logo.endswith('.svg') -%} {{ g.site.logo }} {%- elif g.site.logo_152 -%} {{ g.site.logo_152 }} {%- else -%} /static/images/piefed_logo_full_t_300x300.svg {%- endif %}"
-                                 alt="Logo"
-                                 width="50"
-                                 height="50" />
-                        {%- endif %}{{ g.site.name }}</a>
-                        {% if current_user.is_authenticated -%}
-                            <a class="nav-link ms-auto d-lg-none"
-                               href="/notifications"
-                               aria-label="{{ _('Notifications') }}">
-                                {% if current_user.unread_notifications -%}
-                                    <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
-                                    <script type="text/javascript" nonce="{{ nonce }}">
+        </style>
+    {% endif -%}
+    <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
+    <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
+    <!-- Page content -->
+    {% block navbar -%}
+    <div class="navbar navbar-expand-lg sticky-lg-top">
+        <div class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }}" role="banner">
+            <a class="navbar-brand" href="/" aria-label="{{ _('To home page') }}">
+                {% if not low_bandwidth -%}
+                    <img src="{% if g.site.logo and g.site.logo.endswith('.svg') -%}
+                                    {{ g.site.logo }}
+                                {%- elif g.site.logo_152 -%}
+                                    {{ g.site.logo_152 }}
+                                {%- else -%}
+                                    /static/images/piefed_logo_full_t_300x300.svg
+                                {%- endif %}" alt="Logo" width="50" height="50" />
+                {%- endif %}{{ g.site.name }}</a>
+            {% if current_user.is_authenticated -%}
+                <a class="nav-link ms-auto d-lg-none" href="/notifications" aria-label="{{ _('Notifications') }}">
+                    {% if current_user.unread_notifications -%}
+                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
+                        <script type="text/javascript" nonce="{{ nonce }}">
                             let unreadNotifications = {{ current_user.unread_notifications }};
                             if ('setAppBadge' in navigator) { // Show a number badge on pwa icon
                               navigator.setAppBadge({{ current_user.unread_notifications }});
                             }
-                                    </script>
-                                {% else -%}
-                                    <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
-                                    <script type="text/javascript" nonce="{{ nonce }}">
+                        </script>
+                    {% else -%}
+                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
+                        <script type="text/javascript" nonce="{{ nonce }}">
                             let unreadNotifications = 0;
                             if ('setAppBadge' in navigator) {
                               navigator.clearAppBadge();
                             }
-                                    </script>
-                                {% endif -%}
-                            </a>
-                        {% endif -%}
-                        <button id="navbar-toggler"
-                                class="navbar-toggler"
-                                type="button"
-                                data-toggle="collapse"
-                                data-target="#navbarSupportedContent"
-                                aria-controls="navbarSupportedContent"
-                                aria-expanded="true"
-                                aria-label="Toggle navigation">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        <div class="collapse navbar-collapse"
-                             id="navbarSupportedContent"
-                             role="navigation">
-                            <ul class="nav navbar-nav text-end text-lg-start">
-                                {% if current_user.is_anonymous -%}
-                                    <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
-                                        <a class="nav-link dropdown-toggle"
-                                           data-bs-toggle="dropdown"
-                                           href="/communities"
-                                           aria-haspopup="true"
-                                           aria-expanded="false">{{ _("Communities") }}</a>
-                                        <div class="dropdown-menu communities_menu"
-                                             hx-get="{{ url_for('main.communities_menu') }}"
-                                             hx-trigger="intersect once"
-                                             hx-target="this"
-                                             hx-swap="innerHTML"></div>
-                                    </li>
-                                    {% if show_explore() -%}
-                                        <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
-                                            <a class="nav-link dropdown-toggle"
-                                               data-bs-toggle="dropdown"
-                                               href="/topics"
-                                               aria-haspopup="true"
-                                               aria-expanded="false">{{ _("Explore") }}</a>
-                                            <div class="dropdown-menu communities_menu"
-                                                 hx-get="{{ url_for('main.explore_menu') }}"
-                                                 hx-trigger="intersect once"
-                                                 hx-target="this"
-                                                 hx-swap="innerHTML"></div>
-                                        </li>
-                                    {% endif -%}
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/auth/login">{{ _("Log in") }}</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/auth/instance_chooser">{{ _("Register") }}</a>
-                                    </li>
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/donate">{{ _("Donate") }}</a>
-                                    </li>
-                                {% else %}
-                                    <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
-                                        <a class="nav-link dropdown-toggle"
-                                           data-bs-toggle="dropdown"
-                                           href="/communities"
-                                           aria-haspopup="true"
-                                           aria-expanded="false">{{ _("Communities") }}</a>
-                                        <div class="dropdown-menu communities_menu"
-                                             hx-get="{{ url_for('main.communities_menu') }}"
-                                             hx-trigger="intersect once"
-                                             hx-target="this"
-                                             hx-swap="innerHTML"></div>
-                                    </li>
-                                    {% if show_explore() -%}
-                                        <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
-                                            <a class="nav-link dropdown-toggle"
-                                               data-bs-toggle="dropdown"
-                                               href="/topics"
-                                               aria-haspopup="true"
-                                               aria-expanded="false">{{ _("Explore") }}</a>
-                                            <div class="dropdown-menu communities_menu"
-                                                 hx-get="{{ url_for('main.explore_menu') }}"
-                                                 hx-trigger="intersect once"
-                                                 hx-target="this"
-                                                 hx-swap="innerHTML"></div>
-                                        </li>
-                                    {% endif -%}
-                                    <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
-                                        <a class="nav-link dropdown-toggle"
-                                           data-bs-toggle="dropdown"
-                                           href="/u/{{ current_user.link() }}"
-                                           aria-haspopup="true"
-                                           aria-expanded="false">{{ _("Account") }}</a>
-                                        <ul class="dropdown-menu text-end text-lg-start">
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}"
-                                                   href="/u/{{ current_user.link() }}">{{ _("View profile") }}</a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}"
-                                                   href="/u/{{ current_user.link() }}/profile">{{ _("Edit profile") }}</a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}"
-                                                   href="/chat">{{ _("Chats") }}</a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}"
-                                                   href="/bookmarks">{{ _("Bookmarks") }}</a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}"
-                                                   href="/alerts">{{ _("Activity Alerts") }}</a>
-                                            </li>
-                                            <li>
-                                                <a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}"
-                                                   href="/scheduled_posts">{{ _("Scheduled posts") }}</a>
-                                            </li>
-                                            {% if current_user.is_authenticated -%}
-                                                {% if current_user.stripe_subscription_id -%}
-                                                    <li>
-                                                        <a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}"
-                                                           href="/donate">{{ _("Manage donations") }}</a>
-                                                    </li>
-                                                {% endif -%}
-                                                {% if current_user.hide_read_posts -%}
-                                                    <li>
-                                                        <a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}"
-                                                           href="/read-posts">{{ _("Read Posts") }}</a>
-                                                    </li>
-                                                {% endif -%}
-                                                <li>
-                                                    <a class="dropdown-item" href="/auth/logout">{{ _("Log out") }}</a>
-                                                </li>
-                                            {% endif -%}
-                                        </ul>
-                                    </li>
-                                    {% if current_user.is_staff() or current_user.is_admin() %}
-                                        <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
-                                            <a class="nav-link dropdown-toggle"
-                                               data-bs-toggle="dropdown"
-                                               href="/admin/"
-                                               aria-haspopup="true"
-                                               aria-expanded="false">{{ _("Admin") }}</a>
-                                            <ul class="dropdown-menu text-end text-lg-start">
-                                                <li>
-                                                    <a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}"
-                                                       href="{{ url_for('admin.admin_home') }}">{{ _("Home") }}</a>
-                                                </li>
-                                                {% if user_access('', current_user.id) -%}
-                                                    <li>
-                                                        <a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}"
-                                                           href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _("Spam") }}</a>
-                                                    </li>
-                                                {% endif -%}
-                                                <li>
-                                                    <a class="dropdown-item{{ ' active' if active_child == 'modlog' }}"
-                                                       href="{{ url_for('main.modlog') }}">{{ _("Modlog") }}</a>
-                                                </li>
-                                                {% if debug_mode %}
-                                                    <li>
-                                                        <a class="dropdown-item{{ ' active' if active_child == 'dev_tools' }}"
-                                                           href="{{ url_for('dev.tools') }}">{{ _("Dev Tools") }}</a>
-                                                    </li>
-                                                {% endif %}
-                                            </ul>
-                                        </li>
-                                    {% endif %}
-                                    <li class="nav-item">
-                                        <a class="nav-link" href="/donate">{{ _("Donate") }}</a>
-                                    </li>
-                                    <li class="nav-item right d-none d-md-inline-block">
-                                        <a class="nav-link"
-                                           href="/notifications"
-                                           title="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}"
-                                           aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
-                                            {% if current_user.unread_notifications %}
-                                                <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
-                                            {% else %}
-                                                <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
-                                            {% endif %}
-                                        </a>
-                                    </li>
-                                {% endif %}
-                                <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center"
-                                    aria-label="{{ _('Search') }}">
-                                    <a class="nav-link"
-                                       id="search"
-                                       href="/search"
-                                       tabindex=""
-                                       title="{{ _('Search') }}"><span class="fe fe-search"></span></a>
+                        </script>
+                    {% endif -%}
+                </a>
+            {% endif -%}
+
+            <button id="navbar-toggler" class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="true" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarSupportedContent" role="navigation">
+                    <ul class="nav navbar-nav text-end text-lg-start">
+                        {% if current_user.is_anonymous -%}
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                            </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                                 </li>
-                                <li class="nav-item content-center"  aria-label="{{ _('Settings') }}">
-                                    <a class="nav-link"
-                                       href="/user/settings"
-                                       tabindex=""
-                                       title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a>
-                                </li>
-                                <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}">
-                                    <a class="nav-link"
-                                       id="color_mode"
-                                       href="#"
-                                       tabindex=""
-                                       title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a>
-                                </li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            {% endblock %}
-            {% block content %}
-                <div id="outer_container"
-                     class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} flex-shrink-0"
-                     role="main">
-                    {% with messages = get_flashed_messages(with_categories=True) %}
-                        {% if messages %}
-                            {% for category, message in messages %}
-                                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
-                            {% endfor %}
-                        {% endif %}
-                    {% endwith %}
-                    {# application content needs to be provided in the app_content block #}
-                    {% block app_content %}{% endblock %}
-                </div>
-                <footer class="footer mt-auto" role="contentinfo">
-                    <p class="text-center mt-4">
-                        <button class="btn btn-primary"
-                                style="display: none"
-                                id="btn_add_home_screen">{{ _("Install PieFed app") }}</button>
-                    </p>
-                    <div class="text-center">
-                        <p>
-                            <a href="/about">{{ _("About") }}</a> | <a href="/instances">{{ _("Instances") }}</a>
-                        </p>
-                        <p>
-                            {% if g.site.tos_url -%}
-                                <a href="{{ g.site.tos_url }}">{{ _("Terms of service") }}</a> |
                             {% endif -%}
-                            {% if g.site.privacy_url -%}
-                                <a href="{{ g.site.privacy_url }}">{{ _("Privacy policy") }}</a>
-                            {% else -%}
-                                <a href="/privacy">{{ _("Privacy policy") }}</a>
+                            <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
+                        {% else %}
+                            <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/communities"  aria-haspopup="true" aria-expanded="false">{{ _('Communities') }}</a>
+                                <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.communities_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                            </li>
+                            {% if show_explore() -%}
+                                <li class="nav-item dropdown{% if active_parent == 'explore' %} active{% endif %} communities_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/topics"  aria-haspopup="true" aria-expanded="false">{{ _('Explore') }}</a>
+                                    <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
+                                </li>
+                            {% endif -%}
+                            <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
+                                <ul class="dropdown-menu text-end text-lg-start">
+                                  <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
+                                  <li><a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}" href="/scheduled_posts">{{ _('Scheduled posts') }}</a></li>
+                                          {% if current_user.is_authenticated -%}
+                                    {% if current_user.stripe_subscription_id -%}
+                                        <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
+                                    {% endif -%}
+                                    {% if current_user.hide_read_posts -%}
+                                        <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
+                                    {% endif -%}
+                                    <li><a class="dropdown-item" href="/auth/logout">{{ _('Log out') }}</a></li>
+                                  {% endif -%}
+                                </ul>
+                            </li>
+                            {% if current_user.is_staff() or current_user.is_admin() %}
+                                <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
+                                    <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
+                                    <ul class="dropdown-menu text-end text-lg-start">
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
+                                      {% if user_access('', current_user.id) -%}
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>
+                                      {% endif -%}
+                                      <li><a class="dropdown-item{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
+                                        {% if debug_mode %}
+                                            <li><a class="dropdown-item{{ ' active' if active_child == 'dev_tools' }}" href="{{ url_for('dev.tools') }}">{{ _('Dev Tools') }}</a></li>
+                                        {% endif %}
+                                    </ul>
+                                </li>
                             {% endif %}
-                            | <a href="/keyboard_shortcuts">{{ _("Keyboard shortcuts") }}</a>
-                        </p>
-                    </div>
-                    <p class="text-center">
-                        <a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.
-                        <br />
-                        Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.
-                    </p>
-                    <p role="timer"
-                       id="timeSpent"
-                       class="text-center mt-4"
-                       title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values.">
-                    </p>
-                </footer>
-                <nav class="d-lg-none mobilenav nav nav-pills nav-fill border-top">
-                <a class="nav-link py-2 small" href="/"><span class="fe fe-home"></span>
-                <br>
-            {{ _("Home") }}</a>
-            {% if show_explore() -%}
-            <a class="nav-link py-2 small" href="/explore"><span class="fe fe-explore"></span>
-            <br>
-        {{ _("Explore") }}</a>
-    {% endif -%}
-<a class="nav-link py-2 small" href="/communities"><span class="fe fe-communities"></span>
-<br>
-{{ _("Communities") }}</a>
-<a class="nav-link py-2 small" href="/search" id="search-link"><span class="fe fe-search"></span>
-<br>
-{{ _('Search') }}</a>
-{% if current_user.is_authenticated -%}
-<a class="nav-link py-2 small" href="/user/settings"><span class="fe fe-settings"></span>
-<br>
-{{ _('Settings') }}</a>
-{% else -%}
-<a class="nav-link py-2 small" href="/auth/login"><span class="fe fe-join"></span>
-<br>
-{{ _("Login") }}</a>
-{% endif -%}
-</nav>
-<dialog id="voting_dialog">
-    <div class="p-3">
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">{{ _("Voting Options") }}</h5>
-            <button type="button"
-                    class="btn-close"
-                    aria-label="{{ _('Close') }}"
-                    id="voting_dialog_close"></button>
+                            <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
+                            <li class="nav-item right d-none d-md-inline-block">
+                                <a class="nav-link" href="/notifications" title="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}" aria-label="{{ _('%(num)d unread notifications', num=current_user.unread_notifications) if current_user.unread_notifications else _('Notifications') }}">
+                                    {% if current_user.unread_notifications %}
+                                        <span class="fe fe-bell red"></span> <span class="red unreadNotificationDisplay">{{ current_user.unread_notifications }}</span>
+                                    {% else %}
+                                        <span class="fe fe-bell"></span> <span class="red unreadNotificationDisplay"></span>
+                                    {% endif %}
+                                </a>
+                            </li>
+                        {% endif %}
+                        <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
+                        <li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>
+                        <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                    </ul>
+            </div>
+
         </div>
-        <div class="d-grid gap-2">
-            <button type="button"
-                    class="btn btn-success"
-                    id="voting_dialog_upvote_public">
-                <i class="fe fe-arrow-up"></i> {{ _("Upvote (federated)") }}
-            </button>
-            <button type="button"
-                    class="btn btn-outline-success"
-                    id="voting_dialog_upvote_private">
-                <i class="fe fe-arrow-up"></i> {{ _("Upvote (local)") }}
-            </button>
-            <button type="button"
-                    class="btn btn-outline-danger"
-                    id="voting_dialog_downvote_private">
-                <i class="fe fe-arrow-down"></i> {{ _("Downvote (local)") }}
-            </button>
-            <button type="button"
-                    class="btn btn-danger"
-                    id="voting_dialog_downvote_public">
-                <i class="fe fe-arrow-down"></i> {{ _("Downvote (federated)") }}
-            </button>
-        </div>
-        <p align="center" class="mt-3 mb-0 small">{{ _("Local votes are a bit more private.") }}</p>
-        <p align="center" class="mt-3 mb-0 small">
-            {% if current_user.vote_privately %}
-                {{ _("Default mode: private.") }}
-            {% else %}
-                {{ _("Default mode: public.") }}
-            {% endif %}
-        </p>
     </div>
-</dialog>
-{% endblock -%}
-{% block scripts -%}
-{% endblock -%}
-{{ str(bootstrap.load_js() ).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
-<script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
-{% if not low_bandwidth -%}
-{% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
-<!-- -->
-{% endif -%}
-<script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
-<script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
-{% if notif_server and current_user.is_authenticated -%}
-<script type="text/javascript" nonce="{{ nonce }}">{% include "notifs.js" %}</script>
-{% endif -%}
-{% endif -%}
-{% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
-<script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>
-{% endif -%}
-{% block end_scripts -%}
-{% endblock -%}
-{% if g.site.additional_js -%}
-<script nonce="{{ nonce }}">{{ g.site.additional_js | safe }}</script>
-{% endif -%}
-{% if debug_mode %}
-<script nonce="{{ nonce }}">
+    {% endblock %}
+
+    {% block content %}
+        <div id="outer_container" class="{{ 'container-lg' if post_layout != 'masonry_wide' else 'container-fluid' }} flex-shrink-0" role="main">
+            {% with messages = get_flashed_messages(with_categories=True) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            {# application content needs to be provided in the app_content block #}
+            {% block app_content %}{% endblock %}
+        </div>
+        <footer class="footer mt-auto" role="contentinfo">
+            <p class="text-center mt-4"><button class="btn btn-primary" style="display: none;" id="btn_add_home_screen">{{ _('Install PieFed app') }}</button></p>
+            <div class="text-center">
+                <p>
+                    <a href="/about">{{ _("About") }}</a> | <a href="/donate">{{ _("Donate") }}</a> | <a href="/instances">{{ _("Instances") }}</a> | <a href="/modlog">{{ _("Modlog") }}</a>
+                </p>
+                <p>
+                    {% if g.site.tos_url -%}
+                        <a href="{{ g.site.tos_url }}">{{ _('Terms of service') }}</a> | 
+                    {% endif -%}
+                    <a href="/privacy">{{ _('Privacy policy') }}</a> | <a href="/keyboard_shortcuts">{{ _('Keyboard shortcuts') }}</a>
+                </p>
+            </div>
+            <p class="text-center"><a href="https://codeberg.org/rimu/pyfedi">{{ _('PieFed v%(version)s is free and open source', version=VERSION) }}</a>.<br />Please <a href="https://codeberg.org/rimu/pyfedi/issues">report bugs</a> or <a href="https://join.piefed.social/get-involved/">get involved</a>.</p>
+            <p role="timer" id="timeSpent" class="text-center mt-4" title="This is how long you have spent using PieFed during this month. We hope this use of your time aligns with your priorities and values."></p>
+        </footer>
+        <nav class="d-lg-none mobilenav nav nav-pills nav-fill border-top">
+            <a class="nav-link py-2 small" href="/"><span class="fe fe-home"></span><br>{{ _('Home') }}</a>
+            {% if show_explore() -%}
+            <a class="nav-link py-2 small" href="/explore"><span class="fe fe-explore"></span><br>{{ _('Explore') }}</a>
+            {% endif -%}
+            <a class="nav-link py-2 small" href="/communities"><span class="fe fe-communities"></span><br>{{ _('Communities') }}</a>
+            <a class="nav-link py-2 small" href="/search" id="search-link"><span class="fe fe-search"></span><br>{{ _('Search') }}</a>
+            {% if current_user.is_authenticated -%}
+                <a class="nav-link py-2 small" href="/user/settings"><span class="fe fe-settings"></span><br>{{ _('Settings') }}</a>
+            {% else -%}
+                <a class="nav-link py-2 small" href="/auth/login"><span class="fe fe-join"></span><br>{{ _('Login') }}</a>
+            {% endif -%}
+        </nav>
+        <dialog id="voting_dialog">
+            <div class="p-3">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">{{ _('Voting Options') }}</h5>
+                    <button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="voting_dialog_close"></button>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-success" id="voting_dialog_upvote_public">
+                        <i class="fe fe-arrow-up"></i> {{ _('Upvote (federated)') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-success" id="voting_dialog_upvote_private">
+                        <i class="fe fe-arrow-up"></i> {{ _('Upvote (local)') }}
+                    </button>
+                    <button type="button" class="btn btn-outline-danger" id="voting_dialog_downvote_private">
+                        <i class="fe fe-arrow-down"></i> {{ _('Downvote (local)') }}
+                    </button>
+                    <button type="button" class="btn btn-danger" id="voting_dialog_downvote_public">
+                        <i class="fe fe-arrow-down"></i> {{ _('Downvote (federated)') }}
+                    </button>
+                </div>
+                <p align="center" class="mt-3 mb-0 small">{{ _('Local votes are a bit more private.') }}</p>
+                <p align="center" class="mt-3 mb-0 small">{% if current_user.vote_privately %}{{ _('Default mode: private.') }}{% else %}{{ _('Default mode: public.') }}{% endif %}</p>
+            </div>
+        </dialog>
+    {% endblock -%}
+
+    {% block scripts -%}
+    {% endblock -%}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
+    {% if not low_bandwidth -%}
+        {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
+            <!-- -->
+        {% endif -%}
+        <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
+        {% if notif_server and current_user.is_authenticated -%}
+            <script type="text/javascript" nonce="{{ nonce }}">
+                {% include "notifs.js" %}
+            </script>
+        {% endif -%}
+    {% endif -%}
+    {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
+        <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>
+    {% endif -%}
+    {% block end_scripts -%}
+
+    {% endblock -%}
+    {% if g.site.additional_js -%}
+        <script nonce="{{ nonce }}">
+            {{ g.site.additional_js | safe }}
+        </script>
+    {% endif -%}
+    {% if debug_mode %}
+      <script nonce="{{ nonce }}">
         (() => {
             // Monitor all stylesheet links with data-reload="true"
             const links = Array.from(document.querySelectorAll('link[rel="stylesheet"][data-reload="true"]'));
@@ -596,7 +374,7 @@
                 });
             }, 5000);
         })();
-</script>
-{% endif %}
-</body>
+      </script>
+    {% endif %}
+  </body>
 </html>

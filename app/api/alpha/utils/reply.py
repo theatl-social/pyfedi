@@ -2,7 +2,6 @@ from flask import g
 from sqlalchemy import desc, or_, text
 
 from app import db
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view, user_view
 from app.constants import *
 from app.models import Notification, PostReply, Post, User, PostReplyVote
@@ -95,6 +94,8 @@ def get_reply_list(auth, data, user_details=None):
     if not replies:
         if not data or (not 'post_id' in data and not 'parent_id' in data):
             replies = PostReply.query
+            if user_id is None and page * limit > 10000:
+                raise Exception('unknown') # deliberately vague response
 
     add_post_in_view = True
     depth_first = False
@@ -403,7 +404,8 @@ def post_reply_report(auth, data):
     report_remote = data['report_remote'] if 'report_remote' in data else True
     input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    user_id, report = report_reply(reply_id, input, SRC_API, auth)
+    reply = PostReply.query.filter_by(id=reply_id).one()
+    user_id, report = report_reply(reply, input, SRC_API, auth)
 
     reply_json = reply_report_view(report=report, reply_id=reply_id, user_id=user_id)
     return reply_json

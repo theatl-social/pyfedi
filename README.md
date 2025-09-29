@@ -35,6 +35,6 @@ much of the fediverse as possible.
 
 - [Screencast: overview of the PieFed codebase](https://join.piefed.social/2024/01/22/an-introduction-to-the-piefed-codebase/)
 - [Database / entity relationship diagram](https://join.piefed.social/wp-content/uploads/2024/02/PieFed-entity-relationships.png)
-- [API Documentation (old, more complete)](https://freamon.github.io/piefed-api/) + [New API Documentation (more accurate, not complete)](https://piefed.wjs018.xyz/api/alpha/swagger)
+- API Documentation:  [https://piefed.wjs018.xyz/api/alpha/swagger](https://piefed.wjs018.xyz/api/alpha/swagger) or [https://crust.piefed.social/api/alpha/swagger](https://crust.piefed.social/api/alpha/swagger)
 - see [INSTALL.md](INSTALL.md) or [INSTALL-docker.md](INSTALL-docker.md)
 - see docs/project_management/* for a project roadmap, contributing guide and much more.

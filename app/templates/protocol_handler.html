@@ -1,0 +1,53 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+
+{% block app_content %}
+<div class="row">
+    <main class="row position-relative main_pane">
+        <div class="col-12 col-lg-8">
+        <h1>{{ title }}</h1>
+        <p>{{ _('When you open a Lemmy page, change the https part of the url to web+ap to open it in PieFed. This is possible by registering "web+ap" as a type of link that PieFed will open.') }}</p>
+        <p><button id="registerProtocolHandler" class="btn btn-primary">{{ _('Open web+ap links using %(domain)s', domain=instance_domain) }}</button></p>
+        <p><button id="unRegisterProtocolHandler" class="d-none btn btn-primary">{{ _('Un-register protocol handler') }}</button></p>
+        </div>
+    </main>
+</div>
+{% endblock %}
+
+{% block end_scripts -%}
+    <script nonce="{{ nonce }}">
+        document.addEventListener("DOMContentLoaded", function () {
+            const registerBtn = document.getElementById('registerProtocolHandler');
+            const unRegisterBtn = document.getElementById('unRegisterProtocolHandler');
+            const storageKey = 'webap_protocol_handler_registered_{{ instance_domain }}';
+            
+            // Check if protocol handler was previously registered
+            if (localStorage.getItem(storageKey) === 'true') {
+                registerBtn.classList.add('d-none');
+                unRegisterBtn.classList.remove('d-none');
+            }
+            
+            registerBtn.addEventListener('click', function () {
+                navigator.registerProtocolHandler("web+ap", "https://{{ instance_domain }}/protocol_handler?to=%s");
+                localStorage.setItem(storageKey, 'true');
+                alert('Your browser will pop up some confirmation dialogs. If you complete the process then links starting with web+ap:// will be displayed by {{ instance_domain }}.');
+                registerBtn.classList.add('d-none');
+                unRegisterBtn.classList.remove('d-none');
+            });
+            unRegisterBtn.addEventListener('click', function () {
+                if (typeof navigator.unregisterProtocolHandler === 'function') {
+                    navigator.unregisterProtocolHandler("web+ap", "https://{{ instance_domain }}/protocol_handler?to=%s");
+                    alert('Links starting with web+ap:// will not be displayed by {{ instance_domain }}.');
+                } else {
+                    alert('Unregistering protocol handlers is not supported in this browser. You may need to clear your browser settings manually.');
+                }
+                localStorage.removeItem(storageKey);
+                unRegisterBtn.classList.add('d-none');
+                registerBtn.classList.remove('d-none');
+            });
+        });
+    </script>
+{% endblock -%}

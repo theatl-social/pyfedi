@@ -4,77 +4,69 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = "settings" %}
+{% set active_child = 'settings' %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav class="mb-2"
-                 aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 title="Navigation">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Change settings") }}</li>
-                </ol>
-            </nav>
-            <h1>{{ _("Change settings") }}</h1>
-            {% include "user/_user_nav.html" %}
-            <form method='post' enctype="multipart/form-data" role="form">
-                {{ form.csrf_token() }}
-                <h5>{{ _("Mail Settings") }}</h5>
-                {{ render_field(form.newsletter) }}
-                {{ render_field(form.email_unread) }}
-                <hr>
-                <h5>{{ _("Visibility") }}</h5>
-                {{ render_field(form.searchable) }}
-                {{ render_field(form.indexable) }}
-                {{ render_field(form.hide_read_posts) }}
-                {{ render_field(form.show_subscribed_communities) }}
-                <hr>
-                <h5>{{ _("User interface") }}</h5>
-                {{ render_field(form.interface_language) }}
-                <small class="field_hint">{{ _("This is used for menus and labels in the user interface") }}</small>
-                {{ render_field(form.markdown_editor) }}
-                {{ render_field(form.low_bandwidth_mode) }}
-                {{ render_field(form.theme) }}
-                {{ render_field(form.compaction) }}
-                {{ render_field(form.font) }}
-                <table style="width: 100%; max-width: 400px;">
-                    <tr>
-                        <td>
-                            <a href="#" id="increase_font_size">{{ _("Increase font size") }}</a>
-                        </td>
-                        <td align="right">
-                            <a href="#" id="decrease_font_size">{{ _("Decrease font size") }}</a>
-                        </td>
-                    </tr>
-                </table>
-                {{ render_field(form.additional_css) }}
-                <small class="field_hint">{{ _("Do not blindly copy and paste CSS from random strangers on the internet.") }}</small>
-                <hr>
-                <h5>{{ _("Preferences") }}</h5>
-                {{ render_field(form.read_languages) }}
-                <small class="field_hint">{{ _("Only posts and replies in these selected languages will be visible. Choose none to allow all.") }}</small>
-                {{ render_field(form.accept_private_messages) }}
-                {{ render_field(form.default_sort) }}
-                {{ render_field(form.default_comment_sort) }}
-                {{ render_field(form.default_filter) }}
-                {{ render_field(form.federate_votes) }}
-                <small class="field_hint d-md-none">{{ _("Long press to vote differently.") }}</small>
-                <small class="field_hint d-none d-md-block">{{ _("Hold down the mouse button to vote differently.") }}</small>
-                <hr>
-                <h5>{{ _("Feeds") }}</h5>
-                {{ render_field(form.feed_auto_follow) }}
-                {{ render_field(form.feed_auto_leave) }}
-                <small class="field_hint">{{ _("Communities joined outside of a feed will not be auto unsubscribed.") }}</small>
-                <br>
-                {{ render_field(form.submit) }}
-            </form>
-        </main>
-    </div>
+
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Change settings') }}</li>
+          </ol>
+        </nav>
+        <h1>{{ _('Change settings') }}</h1>
+        {% include "user/_user_nav.html" %}
+        <form method='post' enctype="multipart/form-data" role="form">
+            {{ form.csrf_token() }}
+            <h5>{{ _('Mail Settings') }}</h5>
+            {{ render_field(form.newsletter) }}
+            {{ render_field(form.email_unread) }}
+            <hr>
+            <h5>{{ _('Visibility') }}</h5>
+            {{ render_field(form.searchable) }}
+            {{ render_field(form.indexable) }}
+            {{ render_field(form.hide_read_posts) }}
+            {{ render_field(form.show_subscribed_communities) }}
+            <hr>
+            <h5>{{ _('User interface') }}</h5>
+            {{ render_field(form.interface_language) }}
+            <small class="field_hint">{{ _('This is used for menus and labels in the user interface') }}</small>
+            {{ render_field(form.markdown_editor) }}
+            {{ render_field(form.low_bandwidth_mode) }}
+            {{ render_field(form.theme) }}
+            {{ render_field(form.compaction) }}
+            {{ render_field(form.font) }}
+            <table style="width: 100%; max-width: 400px;">
+                <tr>
+                    <td><a href="#" id="increase_font_size">{{ _('Increase font size') }}</a></td>
+                    <td align="right"><a href="#" id="decrease_font_size">{{ _('Decrease font size') }}</a></td>
+                </tr>
+            </table>
+            {{ render_field(form.additional_css) }}
+            <small class="field_hint">{{ _('Do not blindly copy and paste CSS from random strangers on the internet.') }}</small>
+            <hr>
+            <h5>{{ _('Preferences') }}</h5>
+            {{ render_field(form.read_languages) }}
+            <small class="field_hint">{{ _('Only posts and replies in these selected languages will be visible. Choose none to allow all.') }}</small>
+            {{ render_field(form.accept_private_messages) }}
+            {{ render_field(form.default_sort) }}
+            {{ render_field(form.default_comment_sort) }}
+            {{ render_field(form.default_filter) }}
+            {{ render_field(form.federate_votes) }}
+            <small class="field_hint d-md-none">{{ _('Long press to vote differently.') }}</small>
+            <small class="field_hint d-none d-md-block">{{ _('Hold down the mouse button to vote differently.') }}</small>
+            <hr>
+            <h5>{{ _('Feeds') }}</h5>
+            {{ render_field(form.feed_auto_follow) }}
+            {{ render_field(form.feed_auto_leave) }}
+            <small class="field_hint">{{ _('Communities joined outside of a feed will not be auto unsubscribed.') }}</small>
+            <br>
+            <a href="/protocol_handler" style="float: right;" class="d-none d-md-inline">{{ _('Set up web+ap links') }}</a>
+            {{ render_field(form.submit) }}
+        </form>
+  </main>
+</div>
 {% endblock %}

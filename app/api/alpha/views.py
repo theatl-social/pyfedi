@@ -7,7 +7,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from app import cache, db
 from app.activitypub.util import active_month
 from app.constants import *
-from app.models import ChatMessage, Community, CommunityMember, Language, Instance, Post, PostReply, User, \
+from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities
@@ -43,6 +43,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1['removed'] = True
                 v1['deleted'] = False
+        v1['type'] = POST_TYPE_NAMES.get(post.type, "unknown")
         if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
             if post.url:
                 v1['url'] = post.url
@@ -197,7 +198,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                     continue
 
         v3 = {'post_view': post_view(post=post, variant=2, user_id=user_id),
-              'community_view': community_view(community=post.community, variant=2),
+              'community_view': community_view(community=post.community, variant=2, user_id=user_id),
               'moderators': modlist,
               'cross_posts': xplist}
 
@@ -296,9 +297,9 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 "local_user": {
                     "show_nsfw": not user.hide_nsfw == 1,
                     "show_nsfl": not user.hide_nsfl == 1,
-                    "default_sort_type": user.default_sort.capitalize(),
+                    "default_sort_type": user.default_sort.capitalize() if user.default_comment_sort else 'Hot',
                     "default_comment_sort_type": user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot',
-                    "default_listing_type": user.default_filter.capitalize(),
+                    "default_listing_type": user.default_filter.capitalize() if user.default_filter else 'Popular',
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
                     "show_read_posts": not user.hide_read_posts == True

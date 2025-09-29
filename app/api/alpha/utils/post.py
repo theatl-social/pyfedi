@@ -187,8 +187,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                               blocked_instance_ids))
             content_filters = user_filters_home(user_id) if user_id else {}
 
-    # change when polls are supported
-    posts = posts.filter(Post.type != POST_TYPE_POLL)
+    # change when polls and events are supported
+    posts = posts.filter(Post.type != POST_TYPE_POLL).filter(Post.type != POST_TYPE_EVENT)
 
     if query:
         if search_type == 'Url':
@@ -255,6 +255,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(
             desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Active":
+        posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
@@ -618,15 +619,14 @@ def post_post_delete(auth, data):
 
 
 def post_post_report(auth, data):
-    required(['post_id', 'reason'], data)
-    integer_expected(['post_id'], data)
-    string_expected(['reason'], data)
-
     post_id = data['post_id']
     reason = data['reason']
-    input = {'reason': reason, 'description': '', 'report_remote': True}
+    description = data['description'] if 'description' in data else ''
+    report_remote = data['report_remote'] if 'report_remote' in data else True
+    input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    user_id, report = report_post(post_id, input, SRC_API, auth)
+    post = Post.query.filter_by(id=post_id).one()
+    user_id, report = report_post(post, input, SRC_API, auth)
 
     post_json = post_report_view(report=report, post_id=post_id, user_id=user_id)
     return post_json
