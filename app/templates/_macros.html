@@ -1,57 +1,65 @@
 {# Shared utility macros used across multiple templates #}
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None) -%}
-    <div class="render_username" xmlns="http://www.w3.org/1999/xhtml">
-        {% if user.deleted -%}
-            {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-                <a href="/u/{{ user.link() }}"
-                   title="{{ user.ap_id if user.ap_id != none else user.user_name }}"
-                   aria-label="{{ _('Author') }}">[deleted]</a>
-            {% else -%}
-                [deleted]
-            {% endif -%}
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None, inline=False) -%}
+    {% if not inline -%}
+        <div class="render_username" xmlns="http://www.w3.org/1999/xhtml">
         {% else -%}
-            <a href="/u/{{ user.link() }}"
-               aria-label="{{ _('Author') }}"
-               class="author_link {{ 'donor' if user.stripe_subscription_id }}"
-               title=""
-               rel="author">
-                {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                    <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
+            <span class="render_username" xmlns="http://www.w3.org/1999/xhtml">
+            {% endif -%}
+            {% if user.deleted -%}
+                {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
+                    <a href="/u/{{ user.link() }}"
+                       title="{{ user.ap_id if user.ap_id != none else user.user_name }}"
+                       aria-label="{{ _('Author') }}">[deleted]</a>
+                {% else -%}
+                    [deleted]
                 {% endif -%}
-                {{ user.display_name() }}
-                {% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
-            </a>
-            <div class="user_preview d-none"
-                 id="preview_{{ user.id }}"
-                 {% if htmx_redirect_back_to -%} hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}" {% else %} hx-get="{{ url_for('user.user_preview', user_id=user.id) }}" {% endif %}
-                 hx-trigger="intersect once"
-                 hx-target="this"
-                 hx-swap="innerHTML"></div>
-            {% if user.created_recently() -%}
-                <span class="fe fe-new-account" title="New account"></span>
-            {% endif -%}
-            {% if user.bot -%}
-                <span class="fe fe-bot-account" title="Bot account"></span>
-            {% endif -%}
-            {% if current_user and user.id != current_user.id -%}
-                {% if user.reputation < -12 -%}
-                    <span class="fe fe-warning red"
-                          title="{{ _('Very low reputation. Beware.') }}"></span>
-                    <span class="fe fe-warning red"
-                          title="{{ _('Very low reputation. Beware!') }}"></span>
-                {% elif user.reputation < -3 -%}
-                    <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"></span>
+            {% else -%}
+                <a href="/u/{{ user.link() }}"
+                   aria-label="{{ _('Author') }}"
+                   class="author_link {{ 'donor' if user.stripe_subscription_id }}"
+                   title=""
+                   rel="author">
+                    {% if user.avatar_id and not low_bandwidth and not collapsed -%}
+                        <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
+                    {% endif -%}
+                    {{ user.display_name() }}
+                    {% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+                </a>
+                <div class="user_preview d-none"
+                     id="preview_{{ user.id }}"
+                     {% if htmx_redirect_back_to -%} hx-get="{{ url_for('user.user_preview', user_id=user.id, return_to=htmx_redirect_back_to) }}" {% else %} hx-get="{{ url_for('user.user_preview', user_id=user.id) }}" {% endif %}
+                     hx-trigger="intersect once"
+                     hx-target="this"
+                     hx-swap="innerHTML"></div>
+                {% if user.created_recently() -%}
+                    <span class="fe fe-new-account" title="New account"></span>
+                {% endif -%}
+                {% if user.bot -%}
+                    <span class="fe fe-bot-account" title="Bot account"></span>
+                {% endif -%}
+                {% if current_user and user.id != current_user.id -%}
+                    {% if user.reputation < -12 -%}
+                        <span class="fe fe-warning red"
+                              title="{{ _('Very low reputation. Beware.') }}"></span>
+                        <span class="fe fe-warning red"
+                              title="{{ _('Very low reputation. Beware!') }}"></span>
+                    {% elif user.reputation < -3 -%}
+                        <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"></span>
+                    {% endif -%}
+                {% endif -%}
+                {% if current_user and current_user.is_authenticated -%}
+                    {% set user_note = user_notes[user.id] if user_notes and user.id in user_notes else none %}
+                    {% if user_note -%}
+                        <span class="user_note"
+                              title="{{ _('User note: %(note)s', note=user_note) }}">{{ user_note | truncate(12, True) }}</span>
+                    {% endif -%}
                 {% endif -%}
             {% endif -%}
-            {% if current_user and current_user.is_authenticated -%}
-                {% set user_note = user_notes[user.id] if user_notes and user.id in user_notes else none %}
-                {% if user_note -%}
-                    <span class="user_note"
-                          title="{{ _('User note: %(note)s', note=user_note) }}">{{ user_note | truncate(12, True) }}</span>
-                {% endif -%}
-            {% endif -%}
-        {% endif -%}
-    </div>
+            {% if not inline -%}
+            </div>
+        {% else -%}
+        </span>
+    {% endif -%}
 {%- endmacro %}
 {% macro render_communityname(community, add_domain=True, low_bandwidth=False, collapsed=False) -%}
     <span class="render_community">

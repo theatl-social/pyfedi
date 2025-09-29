@@ -4,12 +4,12 @@ from flask_login import current_user
 
 from app import db
 from app.activitypub.signature import send_post_request
-from app.constants import NOTIF_MESSAGE
+from app.constants import NOTIF_MESSAGE, SRC_WEB
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
 from app.utils import shorten_string, gibberish, markdown_to_html
 
 
-def send_message(message: str, conversation_id: int, user: User = current_user) -> ChatMessage:
+def send_message(message: str, conversation_id: int, user: User = current_user, src=SRC_WEB) -> ChatMessage:
     conversation = Conversation.query.get(conversation_id)
     reply = ChatMessage(sender_id=user.id, conversation_id=conversation.id,
                         body=message, body_html=markdown_to_html(message))
@@ -71,7 +71,8 @@ def send_message(message: str, conversation_id: int, user: User = current_user) 
                 send_post_request(recipient.ap_inbox_url, reply_json, user.private_key,
                                   user.public_url() + '#main-key')
 
-    flash(_('Message sent.'))
+    if src == SRC_WEB:
+        flash(_('Message sent.'))
     return reply
 
 

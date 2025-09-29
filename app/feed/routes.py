@@ -15,7 +15,7 @@ from app.activitypub.signature import RsaKeys, default_context, send_post_reques
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file, hashtags_used_in_communities
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER, SRC_WEB
 from app.feed import bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
 from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_communities_for_edit, \
@@ -759,6 +759,8 @@ def show_feed(feed):
 
         sub_feeds = Feed.query.filter_by(parent_feed_id=current_feed.id).order_by(Feed.name).all()
 
+        owner = User.query.get(feed.user_id)
+
         # Voting history
         if current_user.is_authenticated:
             recently_upvoted = recently_upvoted_posts(current_user.id)
@@ -772,7 +774,7 @@ def show_feed(feed):
             content_filters = {}
 
         return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
-                               sort=sort,
+                               sort=sort, owner=owner,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
                                tags=hashtags_used_in_communities(feed_community_ids, content_filters),
@@ -850,7 +852,7 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-def do_feed_subscribe(actor, user_id):
+def do_feed_subscribe(actor, user_id, src=SRC_WEB):
     try:
         remote = False
         actor = actor.strip()
@@ -919,11 +921,12 @@ def do_feed_subscribe(actor, user_id):
                                 db.session.add(feed_item)
                                 db.session.commit()
 
-                if success is True:
+                if success is True and src == SRC_WEB:
                     flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
             else:
                 msg_to_user = "Already subscribed, or subscription pending"
-                flash(_(msg_to_user))
+                if src == SRC_WEB:
+                    flash(_(msg_to_user))
 
             cache.delete_memoized(feed_membership, user, feed)
             cache.delete_memoized(menu_subscribed_feeds, user.id)

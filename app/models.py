@@ -1097,7 +1097,7 @@ class User(UserMixin, db.Model):
     def trustworthy(self):
         if self.is_admin():
             return True
-        if self.created_recently() or self.reputation < 100:
+        if self.created_recently() and self.reputation < 100:
             return False
         return True
 
@@ -1553,6 +1553,8 @@ class Post(db.Model):
                     microblog=microblog,
                     posted_at=utcnow()
                     )
+        if 'type' in request_json and request_json['type'] == 'Update':
+            post.edited_at = utcnow()
         if community.nsfw:
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
         if community.nsfl:
@@ -1824,6 +1826,10 @@ class Post(db.Model):
                             if 'href' in attachment_item:
                                 post.url = attachment_item['href']
                                 break
+                if 'image' in request_json['object'] and post.image is None:
+                    image = File(source_url=request_json['object']['image']['url'])
+                    db.session.add(image)
+                    post.image = image
 
                 db.session.commit()
 
@@ -2195,6 +2201,10 @@ class Post(db.Model):
             self.ranking_scaled = int(self.ranking + self.community.scale_by())
 
             db.session.commit()
+            if user.is_local():
+                from app.utils import recently_upvoted_posts, recently_downvoted_posts
+                cache.delete_memoized(recently_upvoted_posts, user.id)
+                cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
 
 
@@ -2303,6 +2313,8 @@ class PostReply(db.Model):
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
+        if request_json and request_json['type'] == 'Update':
+            reply.edited_at = utcnow()
         if reply.body:
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
@@ -2543,6 +2555,10 @@ class PostReply(db.Model):
             # Calculate the new ranking value
             self.ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
             db.session.commit()
+            if user.is_local():
+                from app.utils import recently_upvoted_post_replies, recently_downvoted_post_replies
+                cache.delete_memoized(recently_upvoted_post_replies, user.id)
+                cache.delete_memoized(recently_downvoted_post_replies, user.id)
         return undo
 
 

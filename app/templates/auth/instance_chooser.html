@@ -6,9 +6,6 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
-{% block schema_org %}
-    {% for instance in instances -%}<link rel="dns-prefetch" href="{{ instance['domain'] }}" crossorigin>{% endfor %}
-{% endblock %}
 {% block app_content %}
     <div class="row">
         <main class="col-12 position-relative main_pane">
@@ -174,6 +171,9 @@
     window.pingResults = {};
 
     async function pingServers() {
+      const preCheck = [
+        {% for instance in instances -%}"https://{{ instance['domain'] }}/health",{% endfor %}
+      ];
       const servers = [
         {% for instance in instances -%}"https://{{ instance['domain'] }}/health2",{% endfor %}
       ];
@@ -187,6 +187,21 @@
         return fetch(url, { ...options, signal: controller.signal })
           .finally(() => clearTimeout(id));
       }
+
+      // Do two pings to each server. The first one will be inaccurate because the current instance already has a network
+      // connection open, giving it an advantage.
+
+      const preChecks = preCheck.map(async (url) => {
+        const start = performance.now();
+
+        try {
+          await fetchWithTimeout(url, { method: "HEAD", mode: "no-cors" });
+        } catch (err) {
+
+        }
+      });
+
+      await Promise.allSettled(preChecks);
 
       const checks = servers.map(async (url) => {
         const start = performance.now();

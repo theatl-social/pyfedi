@@ -1,6 +1,7 @@
 from flask import current_app, jsonify, request
 from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
+from marshmallow.constants import INCLUDE
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
@@ -161,7 +162,8 @@ def get_alpha_resolve_object(data):
         resp = get_resolve_object(auth, data)
         return ResolveObjectResponse().load(resp)
     except Exception as ex:
-        current_app.logger.error(str(ex))
+        if str(ex) != 'No object found.':
+            current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
 
 
@@ -483,7 +485,7 @@ def get_alpha_feed_list(data):
 # Post
 @post_bp.route('/post/list', methods=['GET'])
 @post_bp.doc(summary="List posts.")
-@post_bp.arguments(ListPostsRequest, location="query")
+@post_bp.arguments(ListPostsRequest, location="query", unknown=INCLUDE)
 @post_bp.response(200, ListPostsResponse)
 @post_bp.alt_response(400, schema=DefaultError)
 def get_alpha_post_list(data):
@@ -656,6 +658,8 @@ def post_alpha_post_report(data):
         auth = request.headers.get('Authorization')
         resp = post_post_report(auth, data)
         return PostReportResponse().load(resp)
+    except NoResultFound:
+        return abort(400, message="Post not found")
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

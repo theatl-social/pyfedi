@@ -1,18 +1,21 @@
 /*
 TODO:
- - [ ] Add better upvote buttons
  - [X] Add customization options to the colorscheme
  - [ ] Piefed Domination
 */
 /* COLORS */
 :root {
-    --accent-color: #30957a;
-    --accent-color-hovered: #296b59;
-    --accent-color-active: #00c58f;
-
-    --accent-color-rgb: 48, 149, 122;
-    --accent-color-hovered-rgb: 41, 107, 89;
-
+    /*--accent-color: #FF5D40;
+    --accent-color-hovered: #CC4933;
+    --accent-color-active: #FF7661;*/
+    
+    --accent-color: #5900ff;
+    --accent-color-hovered: #7f41f4;
+    --accent-color-active: #b369ff;
+    
+    --accent-color-rgb: 151, 100, 255;
+    --accent-color-hovered-rgb: 127, 65, 244;
+    
     /* DO NOT TOUCH! */
     --bs-link-color: var(--accent-color);
     --bs-link-hover-color: var(--accent-color-hovered);
@@ -108,6 +111,10 @@ TODO:
     background-color: var(--accent-color-active);
 }
 
+#searchCommunities {
+    padding-bottom: 1rem;
+}
+
 @keyframes spin {
     0% {
         transform: rotate(0deg);
@@ -141,7 +148,27 @@ body {
 .card {
     background-color: var(--bs-body-bg);
     border-color: var(--bs-body-bg) !important;
-    border-radius: 7px;
+    border-radius: 7px !important;
+    border: 1px solid var(--bs-border-color) !important;
+
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.table > thead {
+    border-bottom: 1px solid !important;
+}
+
+.table-striped > tbody > tr:nth-of-type(2n+1) > * {
+    --bs-table-bg-type: unset;
+}
+
+.notification-table {
+    border-radius:0px 0px 7px 7px !important;
+}
+
+tr:last-child {
+    border-color: transparent;
 }
 
 div.navbar {
@@ -195,18 +222,11 @@ div.navbar {
     display: none;
 }
 
-.table {
-    border-radius: 10px !important;
-    border: 1px solid var(--bs-border-color) !important;
-}
-
 .tab-content > .tab-pane {
     border : solid 1px var(--bs-border-color);
     border-top: none;
 }
 
-.mb-2,
-#btnGroupDrop1,
 .post_teaser_clickable {
     font-style: italic;
     color: var(--bs-secondary-color);
@@ -218,9 +238,13 @@ div.navbar {
 /* END POSTS */
 /*ALERT*/
 [data-bs-theme="dark"] .alert-message {
-    background-color: var(--bs-secondary-bg);
     border-color: var(--accent-color);
 }
+
+[data-bs-theme="dark"] .alert {
+    background-color: transparent;
+}
+
 /* END ALERT*/
 /* FIELDS */
 .downarea-toolbar,
@@ -299,23 +323,85 @@ div.navbar {
 /* TAGS */
 .user_note,
 .user_flair {
-    background-color: var(--bs-info-border-subtle);
-    color: black;
+    border: solid 1px transparent;
+    
+    font-size: 87%;
     vertical-align: inherit;
     border-radius: 3px;
-    font-style: normal;
-    /* THESE ARE TEMPORARY. REMOVE LATER */
-    border: solid 1px var(--bs-info-border-subtle);
+    
     padding: 0px 3px 0px 3px;
     display: inline-block;
 }
 
-.user_flair.original_poster {
-    background-color: #3DDC84;
-    border-color: #3DDC84;
+.user_flair:not(.original_poster) {
+    background: linear-gradient(to right, #6666ff, #0099ff , #00ff00, #ff3399, #6666ff);
+
     color: black;
+    animation: rainbow_animation 6s ease-in-out infinite;
+    background-size: 400% 100%;
+}
+
+.user_note {
+    background-color: #2e4fda;
+    color: #000;
+}
+
+.user_flair.original_poster {
+    background-color: #dc0404;
+    border-color: transparent;
+    color: #000;
     vertical-align: inherit;
+    font-size: 87%;
     border-radius: 3px;
+}
+
+.red:not(.fe-warning) {
+    background: linear-gradient(to right, #6666ff, #0099ff , #00ff00, #ff3399, #6666ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: rainbow_animation 6s ease-in-out infinite;
+
+    background-size: 400% 100%;
+}
+
+.fe-delete,
+.fe-warning,
+.orangered,
+.fe-arrow-down-circle  {
+    color: orange !important;
+}
+
+.fe-distinguished {
+    color: #13c113 !important;
+}
+
+.fe-circle {
+    color: gray;
+}
+
+.fe-read,
+.fe-arrow-up-circle {
+    color: #008aff;
+}
+
+
+#add_passkey_button {
+    margin: 13px 0px 13px 0px;
+}
+
+@keyframes rainbow_animation {
+    0%,100% {
+        background-position: 0 0;
+    }
+
+    50% {
+        background-position: 100% 0;
+    }
+}
+
+div.unread::before {
+    background-color: #00ffae;
 }
 
 /* END TAGS */
@@ -333,6 +419,8 @@ div.navbar {
 
     border-radius: var(--bs-border-radius) !important;
     background-color: var(--bs-body-bg) !important;
+    margin-bottom: 15px !important;
+
 }
 
 .coolfieldset legend {
@@ -347,3 +435,13 @@ div.navbar {
     padding-bottom: 10px !important;
 }
 /* END CFS */
+
+
+.accordion-header {
+    border-radius: var(--bs-accordion-border-radius) var(--bs-accordion-border-radius) 0px 0px;
+}
+
+.accordion-preview .collapse:not(.show) .accordion-body::after {
+        background: none;
+}
+

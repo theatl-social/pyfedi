@@ -4,7 +4,7 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% from "_macros.html" import render_communityname %}
+{% from "_macros.html" import render_communityname, render_username %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 {% block app_content %}
     <div class="row">
@@ -257,6 +257,9 @@
                 <div id="feed_communities" class="card mt-3">
                     <div class="card-header">
                         <h2>{{ _("Feed communities") }}</h2>
+                    </div>
+                    <div class="card-header py-1">
+                        <h4 class="m-0">{{ _("Curated by ") }}{{ render_username(owner, inline=True) }}</h4>
                     </div>
                     <div class="card-body">
                         <ul class="list-group list-group-flush">

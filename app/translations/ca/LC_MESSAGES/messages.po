@@ -1,17 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2024-05-21 07:43+0000\n"
-"Last-Translator: \n"
+"PO-Revision-Date: 2025-09-19 10:47+0000\n"
+"Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
+"Language-Team: Catalan <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ca/>\n"
 "Language: ca\n"
-"Language-Team: Catalan\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:51
@@ -54,9 +55,8 @@ msgid "Comments are disabled on this post"
 msgstr "S'ha informat d'un comentari"
 
 #: app/models.py:2238
-#, fuzzy
 msgid "Banned from commenting"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/models.py:2261
 msgid "Blocked phrase in comment"
@@ -321,9 +321,8 @@ msgid "Filter out comments that are simply a form of \"this\""
 msgstr ""
 
 #: app/admin/forms.py:32
-#, fuzzy
 msgid "Meme communities = low-quality"
-msgstr "Comunitats"
+msgstr ""
 
 #: app/admin/forms.py:33
 msgid "Allow local image posts"
@@ -8887,4 +8886,3 @@ msgstr "S'ha informat d'un comentari"
 
 #~ msgid "Label"
 #~ msgstr ""
-

@@ -6,12 +6,12 @@ from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, vali
 
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
-sort_list = ["Active", "Hot", "New", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
+sort_list = ["Active", "Hot", "New", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
              "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old"]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
-post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopMonth", "TopThreeMonths",
-                  "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
+post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
+                  "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "New", "Old"]
 community_sort_list = ["Hot", "Top", "New"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
@@ -50,7 +50,7 @@ class DefaultSchema(Schema):
 
 
 class Person(DefaultSchema):
-    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/u/rimu"})
+    actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
     bot = fields.Boolean(required=True)
     deleted = fields.Boolean(required=True)
@@ -299,6 +299,7 @@ class Post(DefaultSchema):
     url = fields.Url()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
+    type = fields.String(required=True)
 
 
 class PostAggregates(DefaultSchema):
@@ -1242,11 +1243,10 @@ class GetPostResponse(DefaultSchema):
     cross_posts = fields.List(fields.Nested(PostView))
 
 
-class LikePostRequest(Schema):
+class LikePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)
     private = fields.Boolean()
-    auth = fields.String()      # Some apps include their bearer token here when they really should just have it in the http header
 
 
 class SavePostRequest(DefaultSchema):
@@ -1285,6 +1285,8 @@ class DeletePostRequest(DefaultSchema):
 class ReportPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     reason = fields.String(required=True)
+    description = fields.String()
+    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
 
 
 class PostReport(DefaultSchema):

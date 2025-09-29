@@ -1,4 +1,4 @@
-VERSION = '1.3.0-dev-20250919-theatl'
+VERSION = '1.3.0-dev-20250929-theatl'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -6,6 +6,15 @@ POST_TYPE_IMAGE = 3
 POST_TYPE_VIDEO = 4
 POST_TYPE_POLL = 5
 POST_TYPE_EVENT = 6
+
+POST_TYPE_NAMES = {
+    POST_TYPE_LINK: "link",
+    POST_TYPE_ARTICLE: "discussion",
+    POST_TYPE_IMAGE: "image",
+    POST_TYPE_VIDEO: "video",
+    POST_TYPE_POLL: "poll",
+    POST_TYPE_EVENT: "event",
+}
 
 POST_STATUS_SCHEDULED = -2
 POST_STATUS_DRAFT = -1
@@ -73,6 +82,7 @@ SRC_WEB = 1
 SRC_PUB = 2
 SRC_API = 3
 SRC_PLD = 4  # admin preload form to seed communities
+SRC_PLG = 5  # plugins
 
 APLOG_IN = True
 

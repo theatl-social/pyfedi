@@ -629,82 +629,100 @@ def restore_post(post_id, src, auth):
         return
 
 
-def report_post(post_id, input, src, auth=None):
+def report_post(post, input, src, auth=None):
     if src == SRC_API:
-        post = Post.query.filter_by(id=post_id).one()
-        user_id = authorise_api_user(auth)
+        reporter_user = authorise_api_user(auth, return_type='model')
+        suspect_user = User.query.filter_by(id=post.user_id).one()
+        source_instance = Instance.query.filter_by(id=post.instance_id).one()
         reason = input['reason']
         description = input['description']
+        notify_admins = (any(x in reason.lower() for x in ['csam', 'dox']) or
+                        any(x in description.lower() for x in ['csam', 'dox']))
         report_remote = input['report_remote']
     else:
-        post = Post.query.get_or_404(post_id)
-        user_id = current_user.id
+        reporter_user = current_user
+        suspect_user = User.query.get(post.user_id)
+        source_instance = Instance.query.get(suspect_user.instance_id)
         reason = input.reasons_to_string(input.reasons.data)
         description = input.description.data
+        notify_admins = ('5' in input.reasons.data or '6' in input.reasons.data)
         report_remote = input.report_remote.data
 
-    if post.reports == -1:  # When a mod decides to ignore future reports, post.reports is set to -1
-        if src == SRC_API:
-            raise Exception('already_reported')
-        else:
-            flash(_('Post has already been reported, thank you!'))
-            return
-
-    suspect_user = User.query.get(post.user_id)
-    source_instance = Instance.query.get(suspect_user.instance_id)
-    reporter_user = User.query.get(user_id)
-    targets_data = {'gen': '0',
-                    'suspect_post_id': post.id,
-                    'suspect_user_id': post.user_id,
-                    'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
-                    'source_instance_id': suspect_user.instance_id,
-                    'source_instance_domain': source_instance.domain,
-                    'reporter_id': user_id,
-                    'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
-                    'orig_post_title': post.title,
-                    'orig_post_body': post.body
-                    }
-    report = Report(reasons=reason, description=description, type=1, reporter_id=user_id, suspect_post_id=post.id,
+    targets_data = {
+        'gen': '0',
+        'suspect_post_id': post.id,
+        'suspect_user_id': post.user_id,
+        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+        'source_instance_id': source_instance.id,
+        'source_instance_domain': source_instance.domain,
+        'reporter_id': reporter_user.id,
+        'reporter_user_name': reporter_user.user_name,
+        'orig_post_title': post.title,
+        'orig_post_body': post.body
+    }
+    # report.type 1 = 'post'
+    report = Report(reasons=reason, description=description, type=1, reporter_id=reporter_user.id, suspect_post_id=post.id,
                     suspect_community_id=post.community_id,
-                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=1,
+                    suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=reporter_user.instance_id,
                     targets=targets_data)
     db.session.add(report)
 
-    # Notify moderators
+    # Notify local moderators, and send Flag to remote moderators
+    # if user has not selected 'report_remote', just send to remote mods not on community's or suspect_users's instances
     already_notified = set()
+    remote_instance_ids = set()
     for mod in post.community.moderators():
         moderator = User.query.get(mod.user_id)
-        if moderator and moderator.is_local():
-            with force_locale(get_recipient_language(moderator.id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                            author_id=user_id, notif_type=NOTIF_REPORT,
-                                            subtype='post_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
+        if moderator:
+            if moderator.is_local():
+                with force_locale(get_recipient_language(moderator.id)):
+                    notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
+                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                author_id=reporter_user.id, notif_type=NOTIF_REPORT,
+                                                subtype='post_reported',
+                                                targets=targets_data)
+                    db.session.add(notification)
+                    already_notified.add(mod.user_id)
+            else:
+                if not report_remote:
+                    if moderator.instance_id != suspect_user.instance_id and moderator.instance_id != post.community.instance_id:
+                        remote_instance_ids.add(moderator.instance_id)
+                else:
+                    remote_instance_ids.add(moderator.instance_id)
+
+    if notify_admins:
+        for admin in Site.admins():
+            if admin.id not in already_notified:
+                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
+                                      author_id=reporter_user.id, notif_type=NOTIF_REPORT,
+                                      subtype='post_reported',
+                                      targets=targets_data)
+                db.session.add(notify)
+                admin.unread_notifications += 1
+    else:
+        print('no notify_admins', notify_admins)
+
+    # Lemmy doesn't process or generate Announce / Flag, so Flags also have to be sent from here to user's and community's instances
+    if report_remote:
+        if not post.community.is_local():
+            if post.community_id not in remote_instance_ids: # very unlikely, since it will typically have mods on same instance.
+                remote_instance_ids.add(post.community.instance_id)
+        if not suspect_user.is_local():
+            if suspect_user.instance_id not in remote_instance_ids:
+                remote_instance_ids.add(suspect_user.instance_id)
+
     post.reports += 1
-    # todo: only notify admins for certain types of report
-    for admin in Site.admins():
-        if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
-                                  author_id=user_id, notif_type=NOTIF_REPORT,
-                                  subtype='post_reported',
-                                  targets=targets_data)
-            db.session.add(notify)
-            admin.unread_notifications += 1
     db.session.commit()
 
-    # federate report to originating instance
-    if not post.community.is_local() and report_remote:
+    if remote_instance_ids:
         summary = reason
         if description:
             summary += ' - ' + description
 
-        task_selector('report_post', user_id=user_id, post_id=post_id, summary=summary)
+        task_selector('report_post', user_id=reporter_user.id, post_id=post.id, summary=summary, instance_ids=remote_instance_ids)
 
     if src == SRC_API:
-        return user_id, report
+        return reporter_user.id, report
     else:
         return
 

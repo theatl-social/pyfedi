@@ -44,7 +44,7 @@ from wtforms.widgets import ListWidget, CheckboxInput, TextInput
 from wtforms.validators import ValidationError
 from markupsafe import Markup
 import boto3
-from app import db, cache, httpx_client, celery
+from app import db, cache, httpx_client, celery, plugins
 from app.constants import *
 import re
 from PIL import Image, ImageOps, ImageCms
@@ -287,7 +287,7 @@ def mime_type_using_head(url):
 
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
-                'h6', 'pre',
+                'h6', 'pre', 'div',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
                 'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
@@ -445,7 +445,12 @@ def escape_non_html_angle_brackets(text: str) -> str:
             tag_name = tag_content[1:].split()[0]
         else:
             tag_name = tag_content.split()[0]
-        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content):
+        emoticons = ['3', # heart
+                     '\\3', # broken heart
+                     '|:‑)', # santa claus *<|:‑)
+                     ':‑|' # dumb, dunce-like
+                     ]
+        if tag_name in allowed_tags or re.match(LINK_PATTERN, tag_content) or tag_content in emoticons:
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
@@ -499,7 +504,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
                                                   'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True, 'smarty-pants': True})
@@ -509,7 +514,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             try:
                 raw_html = markdown2.markdown(markdown_text,
                                               extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                      'tg-spoiler': True, 'link-patterns': [(link_pattern, r'\1')],
+                                                      'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                       'breaks': {'on_newline': True, 'on_backslash': True},
                                                       'tag-friendly': True, 'smarty-pants': True})
             except:
@@ -1620,6 +1625,12 @@ def finalize_user_setup(user):
 
     db.session.commit()
 
+    # fire hook for plugins to use upon a new user
+    user = plugins.fire_hook("new_user", user)
+
+    # commit once more in case any changes were made from the plugin
+    db.session.commit()
+
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
     return list(db.session.execute(
@@ -2615,6 +2626,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     elif sort == 'old':
         post_id_sort = 'ORDER BY p.posted_at ASC'
     elif sort == 'active':
+        post_id_where.append('p.reply_count > 0 ')
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()

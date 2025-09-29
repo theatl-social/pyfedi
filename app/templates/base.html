@@ -73,6 +73,9 @@
                     <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}"
                           type="text/css"
                           rel="stylesheet" />
+                    <link href="{{ url_for('static', filename='pygments/fruity.css') }}"
+                          type="text/css"
+                          rel="stylesheet" />
                 {% endif -%}
                 {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
                     <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}"
@@ -447,18 +450,13 @@
                     </p>
                     <div class="text-center">
                         <p>
-                            <a href="/about">{{ _("About") }}</a> | <a href="/instances">{{ _("Instances") }}</a>
+                            <a href="/about">{{ _("About") }}</a> | <a href="/donate">{{ _("Donate") }}</a> | <a href="/instances">{{ _("Instances") }}</a> | <a href="/modlog">{{ _("Modlog") }}</a>
                         </p>
                         <p>
                             {% if g.site.tos_url -%}
                                 <a href="{{ g.site.tos_url }}">{{ _("Terms of service") }}</a> |
                             {% endif -%}
-                            {% if g.site.privacy_url -%}
-                                <a href="{{ g.site.privacy_url }}">{{ _("Privacy policy") }}</a>
-                            {% else -%}
-                                <a href="/privacy">{{ _("Privacy policy") }}</a>
-                            {% endif %}
-                            | <a href="/keyboard_shortcuts">{{ _("Keyboard shortcuts") }}</a>
+                            <a href="/privacy">{{ _("Privacy policy") }}</a> | <a href="/keyboard_shortcuts">{{ _("Keyboard shortcuts") }}</a>
                         </p>
                     </div>
                     <p class="text-center">

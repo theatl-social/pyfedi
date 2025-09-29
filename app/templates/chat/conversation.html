@@ -80,7 +80,7 @@
                                             {% if message.deleted %}
                                                 <p>{{ _("Deleted by author") }}</p>
                                             {% else %}
-                                                {{ message.body_html|remove_images|safe }}
+                                                {{ message.body_html|remove_images|person_links|community_links|feed_links|safe }}
                                             {% endif %}
                                         </div>
                                     </div>

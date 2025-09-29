@@ -148,13 +148,41 @@
                                     ' if form.choice_3.data == none }}">
                             {{ form.choice_3(class_="form-control") }}
                         </div>
-                        <div class="form-group" style="display: none;">{{ form.choice_4(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_5(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_6(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_7(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_8(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_9(class_="form-control") }}</div>
-                        <div class="form-group" style="display: none;">{{ form.choice_10(class_="form-control") }}</div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_4.data == none }}">
+                            {{ form.choice_4(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_5.data == none }}">
+                            {{ form.choice_5(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_6.data == none }}">
+                            {{ form.choice_6(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_7.data == none }}">
+                            {{ form.choice_7(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_8.data == none }}">
+                            {{ form.choice_8(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_9.data == none }}">
+                            {{ form.choice_9(class_="form-control") }}
+                        </div>
+                        <div class="form-group"
+                             style="{{ 'display: none;
+                                    ' if form.choice_10.data == none }}">
+                            {{ form.choice_10(class_="form-control") }}
+                        </div>
                         <button id="addPollChoice" type="button" class="btn btn-primary">{{ _("Add choice") }}</button>
                     </fieldset>
                     {{ render_field(form.mode) }}
