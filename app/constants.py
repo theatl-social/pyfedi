@@ -8,12 +8,12 @@ POST_TYPE_POLL = 5
 POST_TYPE_EVENT = 6
 
 POST_TYPE_NAMES = {
-    POST_TYPE_LINK: "link",
-    POST_TYPE_ARTICLE: "discussion",
-    POST_TYPE_IMAGE: "image",
-    POST_TYPE_VIDEO: "video",
-    POST_TYPE_POLL: "poll",
-    POST_TYPE_EVENT: "event",
+    POST_TYPE_LINK: "Link",
+    POST_TYPE_ARTICLE: "Discussion",
+    POST_TYPE_IMAGE: "Image",
+    POST_TYPE_VIDEO: "Video",
+    POST_TYPE_POLL: "Poll",
+    POST_TYPE_EVENT: "Event",
 }
 
 POST_STATUS_SCHEDULED = -2

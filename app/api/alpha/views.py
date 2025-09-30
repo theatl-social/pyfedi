@@ -43,7 +43,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1['removed'] = True
                 v1['deleted'] = False
-        v1['type'] = POST_TYPE_NAMES.get(post.type, "unknown")
+        v1['post_type'] = POST_TYPE_NAMES.get(post.type, "Discussion")
         if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
             if post.url:
                 v1['url'] = post.url

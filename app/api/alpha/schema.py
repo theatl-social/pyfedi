@@ -19,6 +19,8 @@ community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read"]
+feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
+post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 
 
 def validate_datetime_string(text):
@@ -299,7 +301,7 @@ class Post(DefaultSchema):
     url = fields.Url()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
-    type = fields.String(required=True)
+    post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
 
 
 class PostAggregates(DefaultSchema):
@@ -1108,7 +1110,7 @@ class LockPostRequest(DefaultSchema):
 class FeaturePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     featured = fields.Boolean(required=True)
-    feature_type = fields.String(required=True)
+    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
 
 
 class RemovePostRequest(DefaultSchema):
