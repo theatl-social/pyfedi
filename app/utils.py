@@ -307,6 +307,10 @@ LINK_PATTERN = re.compile(
     re.X
 )
 
+PERSON_PATTERN = re.compile(r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
+COMMUNITY_PATTERN = re.compile(r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
+FEED_PATTERN = re.compile(r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
+
 
 # sanitise HTML using an allow list
 def allowlist_html(html: str, a_target='_blank') -> str:
@@ -491,6 +495,43 @@ def escape_img(raw_html: str) -> str:
     return raw_html
 
 
+def handle_lemmy_autocomplete(text: str) -> str:
+    """
+    Handles markdown formatted links that are in the format that lemmy autocompletes users/communities to and replaces
+    them with instance-agnostic links.
+    
+    Lemmy autocomplete format:
+        [!news@lemmy.world](https://lemmy.world/c/news)
+    Convert this to:
+        !news@lemmy.world
+    
+    ...which will be later converted to an instance-local link
+    """
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text)
+
+    # Step 2: ID all the markdown-formatted links and check the part in [] if it matches comm/person/feed formats
+    def sub_non_formatted_actor(match):
+        bracket_part = match.group(1)
+        if re.match(COMMUNITY_PATTERN, bracket_part):
+            return bracket_part
+        elif re.match(PERSON_PATTERN, bracket_part):
+            return bracket_part
+        elif re.match(FEED_PATTERN, bracket_part):
+            return bracket_part
+        return match.string
+
+    re_link = re.compile(r"\[((!|@|~).*?)\]\(.*?\)")
+
+    text = re.sub(re_link, sub_non_formatted_actor, text)
+
+    # Step 3: Restore code blocks
+    text = pop_code(code_snippets=code_snippets, text=text)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str:
@@ -501,6 +542,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
+        markdown_text = handle_lemmy_autocomplete(markdown_text)
 
         try:
             raw_html = markdown2.markdown(markdown_text,
@@ -634,7 +676,7 @@ def community_link_to_href(link: str, server_name_override: str | None = None) -
     # Stash the existing links so they are not formatted
     link_snippets, link = stash_link_html(link)
 
-    pattern = r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = COMMUNITY_PATTERN
     server = r'<a href="https://' + server_name + r'/community/lookup/'
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'!\g<1>@\g<2></a>', link)
 
@@ -659,7 +701,7 @@ def feed_link_to_href(link: str, server_name_override: str | None = None) -> str
     # Stash the existing links so they are not formatted
     link_snippets, link = stash_link_html(link)
 
-    pattern = r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = FEED_PATTERN
     server = r'<a href="https://' + server_name + r'/feed/lookup/'
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'~\g<1>@\g<2></a>', link)
 
@@ -685,7 +727,7 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     link_snippets, link = stash_link_html(link)
 
     # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
-    pattern = r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = PERSON_PATTERN
     server = f'https://{server_name}/user/lookup/'
     replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
     link = re.sub(pattern, replacement, link)
