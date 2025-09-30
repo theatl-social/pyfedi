@@ -17,7 +17,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap
+    post_replies_for_ap, is_vote
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -577,6 +577,10 @@ def shared_inbox():
 
         id = object['id']
 
+
+    if id.startswith('xyz'):
+        eee = 1
+
     if redis_client.exists(id):  # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
         return '', 200
@@ -604,9 +608,9 @@ def shared_inbox():
         log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, f'Actor could not be found 1 - : {actor_name}, actor object: {actor}')
         return '', 200
 
-    if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
-        log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
-        return '', 200
+    #if actor.is_local():  # should be impossible (can be Announced back, but not sent without access to privkey)
+    #    log_incoming_ap(id, APLOG_NOTYPE, APLOG_FAILURE, saved_json, 'ActivityPub activity from a local actor')
+    #    return '', 200
 
     bounced = False
     try:
@@ -1706,6 +1710,8 @@ def process_delete_request(request_json, store_ap_json):
 # if is_flag is set, the report is just sent to any remote mods and the reported user's instance
 def announce_activity_to_followers(community: Community, creator: User, activity, can_batch=False,
                                    is_flag=False, admin_instance_id=1):
+    from app.activitypub.signature import default_context
+
     # avoid announcing activity sent to local users unless it is also in a local community
     if not community.is_local():
         return
@@ -1740,6 +1746,7 @@ def announce_activity_to_followers(community: Community, creator: User, activity
     else:
         instances = community.following_instances(include_dormant=True)
 
+    send_async = []
     for instance in instances:
         # awaken dormant instances if they've been sleeping for long enough to be worth trying again
         awaken_dormant_instance(instance)
@@ -1752,7 +1759,21 @@ def announce_activity_to_followers(community: Community, creator: User, activity
                                                  payload=activity))
                     db.session.commit()
                 else:
-                    send_to_remote_instance_fast(instance.inbox, community.private_key, community.ap_profile_id, announce_activity)
+                    if current_app.config['NOTIF_SERVER'] and is_vote(announce_activity):   # Votes make up a very high percentage of activities, so it is more efficient to send them via piefed_notifs. However piefed_notifs does not retry failed sends. For votes this is acceptable.
+                        send_async.append(HttpSignature.signed_request(instance.inbox, announce_activity,
+                                                                       community.private_key,
+                                                                       community.ap_profile_id + '#main-key',
+                                                                       send_via_async=True))
+                    else:
+                        send_to_remote_instance_fast(instance.inbox, community.private_key, community.ap_profile_id, announce_activity)
+
+    if len(send_async):
+        from app import redis_client
+        from app.activitypub.signature import default_context
+        # send announce_activity via redis pub/sub to piefed_notifs service
+        redis_client.publish("http_posts:activity", json.dumps({'urls': [url[0] for url in send_async],
+                                                                'headers': [url[1] for url in send_async],
+                                                                'data': send_async[0][2].decode('utf-8')}))
 
 
 @bp.route('/c/<actor>/outbox', methods=['GET'])
