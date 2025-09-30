@@ -851,6 +851,14 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
     is_local = (creator['instance_id'] == 1 and recipient['instance_id'] == 1)
+    ap_id = cm.ap_id
+    if ap_id is None:
+        # old CMs will be missing an ap_id
+        if creator['instance_id'] == 1:
+            ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{cm.id}"
+        else:
+            # CMs from remote instances can't be re-created so fudge something here to keep validator happy
+            ap_id = f"{creator['actor_id']}/message/{cm.id}"
 
     v1 = {
         'private_message': {
@@ -861,7 +869,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
             'deleted': cm.deleted if cm.deleted is not None else False,
             'read': cm.read,
             'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
-            'ap_id': cm.ap_id,
+            'ap_id': ap_id,
             'local': is_local
         },
         'creator': creator,
@@ -897,7 +905,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
                 'deleted': cm.deleted,
                 'read': cm.read,
                 'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
-                'ap_id': cm.ap_id,
+                'ap_id': ap_id,
                 'local': is_local
             },
             'private_message_creator': creator,
