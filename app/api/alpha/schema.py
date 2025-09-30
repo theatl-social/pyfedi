@@ -1,7 +1,7 @@
 import re
 
 from datetime import datetime
-from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema
+from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema, INCLUDE
 
 
 # Lists used in schema for validation
@@ -411,7 +411,7 @@ class CommunityFlairEditResponse(CommunityFlair):
     pass
 
 
-class Comment(DefaultSchema):
+class Comment(Schema):
     ap_id = fields.Url(required=True)
     body = fields.String(required=True, metadata={"format": "markdown"})
     deleted = fields.Boolean(required=True)
@@ -426,6 +426,10 @@ class Comment(DefaultSchema):
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     locked = fields.Boolean()
+
+    class Meta:
+        unknown = INCLUDE # let the not-consistent-with-anything 'repliesEnabled' through for Boost
+        datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class CommentReport(DefaultSchema):

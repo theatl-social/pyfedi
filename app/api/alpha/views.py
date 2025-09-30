@@ -544,6 +544,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
                    'distinguished': reply.distinguished if reply.distinguished else False,
                    'locked': not reply.replies_enabled if reply.replies_enabled is not None else False,
                    'removed': False})
+        v1['repliesEnabled'] = not v1['locked']
 
         if not reply.path:
             calculate_path(reply)
