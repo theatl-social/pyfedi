@@ -117,6 +117,9 @@ def get_reply_list(auth, data, user_details=None):
             replies = replies.filter_by(post_id=data['post_id'])
             add_community_in_view = False
             add_post_in_view = False
+
+        if 'max_depth' in data:
+            replies = replies.filter(PostReply.depth < int(data['max_depth']))
     else:
         # PARENT_ID or POST_ID - threaded conversation
         parent_id = None # stays at None for a post_id query

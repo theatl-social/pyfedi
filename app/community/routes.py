@@ -278,7 +278,7 @@ def show_community(community: Community):
     if current_user.is_authenticated and community.id not in communities_banned_from(current_user.id):
         is_moderator = any(mod.user_id == current_user.id for mod in mods)
         is_owner = any(mod.user_id == current_user.id and mod.is_owner == True for mod in mods)
-        is_admin = current_user.is_admin()
+        is_admin = current_user.id in g.admin_ids
     else:
         is_moderator = False
         is_owner = False
