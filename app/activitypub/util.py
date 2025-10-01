@@ -3649,5 +3649,5 @@ def is_vote(activity: dict) -> bool:
                 return True
     except Exception:
         return False
-    finally:
-        return False
+
+    return False
