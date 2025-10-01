@@ -55,7 +55,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag
 
 
 # Flask's render_template function, with support for themes added
@@ -2526,7 +2526,7 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
     return post_ids[start:end]
 
 
-def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, hashtag: str = '') -> List[int]:
     from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
@@ -2544,6 +2544,13 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
+        if hashtag:
+            # Filter by post tag
+            tag_record = Tag.query.filter(Tag.name == hashtag.strip()).first()
+            if tag_record:
+                post_id_sql += 'INNER JOIN "post_tag" as pt ON p.id = pt.post_id'
+                post_id_where.append('pt.tag_id = :tag_record_id')
+                params['tag_record_id'] = tag_record.id
 
     # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:

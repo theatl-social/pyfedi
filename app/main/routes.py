@@ -75,6 +75,7 @@ def home_page(sort, view_filter):
     page = request.args.get('page', 0, type=int)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
 
     # view filter - subscribed/local/all
@@ -105,7 +106,7 @@ def home_page(sort, view_filter):
     elif view_filter == 'moderating':
         community_ids = modded_communities
 
-    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort, tag)
     has_next_page = len(post_ids) > page + 1 * page_length
     post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
     posts = post_ids_to_models(post_ids, sort)
