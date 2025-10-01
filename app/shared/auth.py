@@ -9,7 +9,6 @@ from sqlalchemy import func
 from sqlalchemy.exc import NoResultFound
 
 from app import db, cache
-from app.api.alpha.utils.validators import required, string_expected
 from app.auth.util import get_country
 from app.constants import *
 from app.ldap_utils import sync_user_to_ldap
@@ -26,9 +25,6 @@ def log_user_in(input, src):
         password = input.password.data
         user = User.query.filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
-        required(["username", "password"], input)
-        string_expected(["username", "password"], input)
-
         username = input['username'].lower()
         password = input['password']
         

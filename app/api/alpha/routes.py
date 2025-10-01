@@ -1,7 +1,6 @@
 from flask import current_app, jsonify, request
 from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
-from marshmallow.constants import INCLUDE
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter

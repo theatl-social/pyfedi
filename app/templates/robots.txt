@@ -65,6 +65,7 @@ User-agent: meta-externalagent
 User-agent: Meta-ExternalAgent
 User-agent: meta-externalfetcher
 User-agent: Meta-ExternalFetcher
+User-agent: meta-webindexer
 User-agent: TikTokSpider
 User-agent: DuckAssistBot
 User-agent: anthropic-ai

@@ -4,8 +4,6 @@ from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
-    array_of_integers_expected
 from app.api.alpha.views import feed_view
 from app.constants import *
 from app.models import User
@@ -16,8 +14,8 @@ from app.utils import authorise_api_user, blocked_communities, blocked_instances
 
 def get_feed_list(auth, data, user_id=None) -> dict:
 
-    mine_only = data['mine_only'] if data and 'mine_only' in data else False
-    include_communities = data['include_communities'] if data and 'include_communities' in data else True
+    mine_only = data['mine_only'] if 'mine_only' in data else False
+    include_communities = data['include_communities'] if 'include_communities' in data else True
 
     if auth:
         user_id = authorise_api_user(auth)

@@ -6,7 +6,6 @@ from app import db, cache
 from app.activitypub.util import make_image_sizes
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
@@ -15,8 +14,8 @@ from app.utils import authorise_api_user, communities_banned_from, blocked_users
 
 
 def get_user(auth, data):
-    if not data or ('person_id' not in data and 'username' not in data):
-        raise Exception('missing_parameters')
+    if 'person_id' not in data and 'username' not in data:
+        raise Exception('person_id or username required')
     if 'person_id' in data:
         person = int(data['person_id'])
     elif 'username' in data:
@@ -35,10 +34,9 @@ def get_user(auth, data):
                                    User.deleted == False).one()
         data['person_id'] = person.id
     include_content = data['include_content'] if 'include_content' in data else False
-    # include_content = True if include_content == 'true' else False
     saved_only = data['saved_only'] if 'saved_only' in data else False
-    # saved_only = True if saved_only == 'true' else False
-    data["limit"] = data["limit"] if data and "limit" in data else 20
+    if 'limit' not in data:
+        data['limit'] = 20
 
     user_details = None
     user_id = None
@@ -68,12 +66,12 @@ def get_user_list(auth, data):
     # only support 'api/alpha/search?q&type_=Users&sort=Top&listing_type=Local&page=1&limit=15' for now
     # (enough for instance view)
 
-    type = data['type_'] if data and 'type_' in data else "All"
-    page = int(data['page']) if data and 'page' in data else 1
-    sort = data['sort'] if data and 'sort' in data else "Hot"
-    limit = int(data['limit']) if data and 'limit' in data else 10
+    type = data['type_'] if 'type_' in data else "All"
+    page = int(data['page']) if 'page' in data else 1
+    sort = data['sort'] if 'sort' in data else "Hot"
+    limit = int(data['limit']) if 'limit' in data else 10
 
-    query = data['q'] if data and 'q' in data else ''
+    query = data['q'] if 'q' in data else ''
 
     user_id = authorise_api_user(auth) if auth else None
 
@@ -109,10 +107,6 @@ def get_user_list(auth, data):
 
 
 def post_user_block(auth, data):
-    required(['person_id', 'block'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['block'], data)
-
     person_id = data['person_id']
     block = data['block']
 
@@ -161,10 +155,10 @@ def get_user_unread_count(auth):
 
 
 def get_user_replies(auth, data, mentions=False):
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    sort = data['sort'] if data and 'sort' in data else "New"
-    unread_only = data['unread_only'] if data and 'unread_only' in data else True
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
+    sort = data['sort'] if 'sort' in data else "New"
+    unread_only = data['unread_only'] if 'unread_only' in data else True
 
     user_details = authorise_api_user(auth, return_type='dict')
     user_id = user_details['id']
@@ -262,10 +256,6 @@ def post_user_mark_all_as_read(auth):
 
 
 def put_user_subscribe(auth, data):
-    required(['person_id', 'subscribe'], data)
-    integer_expected(['person_id'], data)
-    boolean_expected(['subscribe'], data)
-
     person_id = data['person_id']
     subscribe = data['subscribe']
 
@@ -396,8 +386,8 @@ def get_user_notifications(auth, data):
     status = data['status']
 
     # get the page for pagination from the data.page
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
 
     # items dict
     items = []
@@ -591,10 +581,6 @@ def _process_notification_item(item):
 
 
 def put_user_notification_state(auth, data):
-    required(['notif_id', 'read_state'], data)
-    integer_expected(['notif_id'], data)
-    boolean_expected(['read_state'], data)
-
     user_id = authorise_api_user(auth)
     notif_id = data['notif_id']
     read_state = data['read_state']
@@ -647,9 +633,6 @@ def put_user_mark_all_notifications_read(auth):
 
 
 def post_user_verify_credentials(data):
-    required(["username", "password"], data)
-    string_expected(["username", "password"], data)
-
     username = data['username'].lower()
     password = data['password']
 
@@ -665,10 +648,7 @@ def post_user_verify_credentials(data):
 
 
 def post_user_set_flair(auth, data):
-    required(['community_id'], data)
-    integer_expected(['community_id'], data)
-
-    flair_text = data['flair_text'] if data and 'flair_text' in data else None
+    flair_text = data['flair_text'] if 'flair_text' in data else None
 
     if flair_text is not None and len(flair_text) > 50:
         raise Exception('Flair text is too long (50 chars max)')

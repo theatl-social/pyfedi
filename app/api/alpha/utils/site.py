@@ -1,4 +1,3 @@
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected
 from app.api.alpha.views import site_view, federated_instances_view, site_instance_chooser_view
 from app.constants import SRC_API, VERSION
 from app.models import InstanceBlock, InstanceChooser, Language
@@ -64,10 +63,6 @@ def get_federated_instances(data):
 
 
 def post_site_block(auth, data):
-    required(['instance_id', 'block'], data)
-    integer_expected(['instance_id'], data)
-    boolean_expected(['block'], data)
-
     instance_id = data['instance_id']
     block = data['block']
 
