@@ -862,6 +862,24 @@ def communities_banned_from(user_id: int) -> List[int]:
 
 
 @cache.memoize(timeout=86400)
+def communities_banned_from_all_users() -> dict[int, List[int]]:
+    """Returns dict mapping user_id to list of community_ids they are banned from."""
+    rows = db.session.execute(text("""
+        SELECT user_id, ARRAY_AGG(DISTINCT community_id) as community_ids
+        FROM (
+            SELECT user_id, community_id FROM community_ban
+            UNION
+            SELECT ib.user_id, c.id as community_id
+            FROM instance_ban ib
+            JOIN community c ON c.instance_id = ib.instance_id
+        ) all_bans
+        GROUP BY user_id
+    """)).fetchall()
+    
+    return {user_id: list(community_ids) for user_id, community_ids in rows}
+
+
+@cache.memoize(timeout=86400)
 def blocked_domains(user_id) -> List[int]:
     if user_id == 0:
         return []
@@ -1528,6 +1546,22 @@ def moderating_communities_ids(user_id) -> List[int]:
     """)
 
     return db.session.execute(sql, {'user_id': user_id}).scalars().all()
+
+
+@cache.memoize(timeout=86400)
+def moderating_communities_ids_all_users() -> dict[int, List[int]]:
+    """Returns dict mapping user_id to list of community_ids they moderate."""
+    rows = db.session.execute(text("""
+        SELECT cm.user_id, ARRAY_AGG(c.id ORDER BY c.title) as community_ids
+        FROM community c
+        JOIN community_member cm ON c.id = cm.community_id
+        WHERE c.banned = false
+          AND (cm.is_moderator = true OR cm.is_owner = true)
+          AND cm.is_banned = false
+        GROUP BY cm.user_id
+    """)).fetchall()
+    
+    return {user_id: list(community_ids) for user_id, community_ids in rows}
 
 
 @cache.memoize(timeout=300)

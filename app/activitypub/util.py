@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session, to_srgb
+    patch_db_session, to_srgb, communities_banned_from_all_users
 
 
 def public_key():
@@ -1963,6 +1963,7 @@ def ban_user(blocker, blocked, community, core_activity):
             db.session.commit()
 
             cache.delete_memoized(communities_banned_from, blocked.id)
+            cache.delete_memoized(communities_banned_from_all_users)
             cache.delete_memoized(joined_communities, blocked.id)
             cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -1997,6 +1998,7 @@ def unban_user(blocker, blocked, community, core_activity):
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(communities_banned_from_all_users)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 

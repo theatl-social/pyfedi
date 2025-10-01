@@ -54,7 +54,8 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required, permission_required, aged_account_required
+    approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
+    moderating_communities_ids_all_users
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -1281,6 +1282,7 @@ def community_make_owner(community_id: int, user_id: int):
 
         cache.delete_memoized(moderating_communities_ids, current_user.id)
         cache.delete_memoized(moderating_communities_ids, user.id)
+        cache.delete_memoized(moderating_communities_ids_all_users)
 
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(joined_communities, user.id)
@@ -1319,6 +1321,7 @@ def community_remove_owner(community_id: int, user_id: int):
 
             cache.delete_memoized(moderating_communities_ids, current_user.id)
             cache.delete_memoized(moderating_communities_ids, user.id)
+            cache.delete_memoized(moderating_communities_ids_all_users)
 
             cache.delete_memoized(joined_communities, current_user.id)
             cache.delete_memoized(joined_communities, user.id)
@@ -1468,6 +1471,7 @@ def community_ban_user(community_id: int, user_id: int):
             ...
             # todo: send chatmessage to remote user and federate it
         cache.delete_memoized(communities_banned_from, user.id)
+        cache.delete_memoized(communities_banned_from_all_users)
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
@@ -1524,6 +1528,7 @@ def community_unban_user(community_id: int, user_id: int):
         # todo: send chatmessage to remote user and federate it
 
     cache.delete_memoized(communities_banned_from, user.id)
+    cache.delete_memoized(communities_banned_from_all_users)
 
     add_to_modlog('unban_user', actor=current_user, target_user=user, community=community, link_text=user.display_name(), link=user.link())
 

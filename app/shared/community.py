@@ -21,7 +21,7 @@ from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
     communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
-    get_recipient_language, moderating_communities_ids
+    get_recipient_language, moderating_communities_ids, moderating_communities_ids_all_users
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -498,6 +498,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     cache.delete_memoized(joined_communities, new_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, new_moderator.id)
+    cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
@@ -534,6 +535,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     cache.delete_memoized(joined_communities, old_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, old_moderator.id)
+    cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)

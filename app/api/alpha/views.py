@@ -127,11 +127,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if banned_from is None:
                 banned = post.community_id in communities_banned_from(post.user_id)
             else:
-                banned = post.community_id in banned_from
+                banned = post.community_id in banned_from[post.user_id] if post.user_id in banned_from else []
             if communities_moderating is None:
                 moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
             else:
-                moderator = post.community_id in communities_moderating
+                moderator = post.community_id in communities_moderating[post.user_id] if post.user_id in communities_moderating else []
             admin = post.user_id in g.admin_ids
         else:
             banned = False

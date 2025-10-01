@@ -33,7 +33,8 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     can_upvote, can_create_post, awaken_dormant_instance, shorten_string, can_create_post_reply, sha256_digest, \
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
-    blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids
+    blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids, \
+    moderating_communities_ids_all_users
 
 
 @bp.route('/testredis')
@@ -1294,6 +1295,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 cache.delete_memoized(joined_communities, new_mod.id)
                                 cache.delete_memoized(community_moderators, community.id)
                                 cache.delete_memoized(moderating_communities_ids, new_mod.id)
+                                cache.delete_memoized(moderating_communities_ids_all_users)
                                 cache.delete_memoized(Community.moderators, community)
                                 log_incoming_ap(id, APLOG_ADD, APLOG_SUCCESS, saved_json)
                             else:
@@ -1393,6 +1395,7 @@ def process_inbox_request(request_json, store_ap_json):
                                     cache.delete_memoized(joined_communities, old_mod.id)
                                     cache.delete_memoized(community_moderators, community.id)
                                     cache.delete_memoized(moderating_communities_ids, old_mod.id)
+                                    cache.delete_memoized(moderating_communities_ids_all_users)
                                     cache.delete_memoized(Community.moderators, community)
                                     log_incoming_ap(id, APLOG_REMOVE, APLOG_SUCCESS, saved_json)
                                 add_to_modlog('remove_mod', actor=mod, target_user=old_mod, community=community,

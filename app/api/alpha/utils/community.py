@@ -15,7 +15,7 @@ from app.shared.community import join_community, leave_community, block_communit
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
 from app.shared.tasks import task_selector
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, communities_banned_from_all_users
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities, expand_hex_color
 
@@ -323,6 +323,7 @@ def put_community_moderate_unban(auth, data):
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(communities_banned_from_all_users)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -397,6 +398,7 @@ def post_community_moderate_ban(auth, data):
         db.session.commit()
 
     cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(communities_banned_from_all_users)
     cache.delete_memoized(joined_communities, blocked.id)
     cache.delete_memoized(moderating_communities, blocked.id)
 

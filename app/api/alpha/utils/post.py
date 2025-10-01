@@ -14,8 +14,9 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
 from app.post.util import post_replies, get_comment_branch
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
-    site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
-    moderating_communities_ids, user_filters_home, user_filters_posts, in_sorted_list
+    site_language_id, filtered_out_communities, joined_or_modding_communities, \
+    user_filters_home, user_filters_posts, in_sorted_list, \
+    communities_banned_from_all_users, moderating_communities_ids_all_users
 from app.shared.tasks import task_selector
 
 
@@ -36,6 +37,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if auth:
         user_id = authorise_api_user(auth)
+
+    user_id = 1 #NODEPLOY
 
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
@@ -259,7 +262,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if user_id:
 
-        banned_from = communities_banned_from(user_id)
+        banned_from = communities_banned_from_all_users()
 
         bookmarked_posts = list(db.session.execute(text(
             'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
@@ -275,11 +278,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
         read_posts = set(u_rp_ids)  # lookups ("in") on a set is O(1), tuples/lists are O(n). read_posts can be very large so this makes a difference.
 
-        communities_moderating = moderating_communities_ids(user.id)
+        communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
     else:
         bookmarked_posts = []
-        banned_from = []
+        banned_from = {}
         post_subscriptions = []
         read_posts = set()
         communities_moderating = []
@@ -287,7 +290,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     postlist = []
     for post in posts:
-        postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
+        postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_posts,
