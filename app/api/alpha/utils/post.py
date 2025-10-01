@@ -287,7 +287,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     postlist = []
     for post in posts:
-        postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
+        postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_posts,
