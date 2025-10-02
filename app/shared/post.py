@@ -11,7 +11,7 @@ from flask import flash, request, current_app, g
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from pillow_heif import register_heif_opener
-from sqlalchemy import text
+from sqlalchemy import text, Integer
 
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
@@ -29,14 +29,14 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
-        post = Post.query.filter_by(id=post_id).one()
+        post = db.session.query(Post).filter_by(id=post_id).one()
         user = authorise_api_user(auth, return_type='model')
         if vote_direction == 'upvote' and not can_upvote(user, post.community):
             return user.id
         elif vote_direction == 'downvote' and not can_downvote(user, post.community):
             return user.id
     else:
-        post = Post.query.get_or_404(post_id)
+        post = db.session.query(Post).get_or_404(post_id)
         user = current_user
 
         if (vote_direction == 'upvote' and not can_upvote(user, post.community)) or (
@@ -108,7 +108,7 @@ def remove_bookmark_post(post_id: int, src, auth=None):
 
 
 def subscribe_post(post_id: int, subscribe, src, auth=None):
-    post = Post.query.filter_by(id=post_id, deleted=False).one()
+    post = db.session.query(Post).filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
@@ -583,7 +583,7 @@ def delete_post(post_id, src, auth):
     else:
         user_id = current_user.id
 
-    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=False).one()
+    post = db.session.query(Post).filter_by(id=post_id, user_id=user_id, deleted=False).one()
     if post.url:
         post.calculate_cross_posts(delete_only=True)
 
@@ -597,6 +597,15 @@ def delete_post(post_id, src, auth):
 
     task_selector('delete_post', user_id=user_id, post_id=post.id)
 
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
     if src == SRC_API:
         return user_id, post
     else:
@@ -609,7 +618,7 @@ def restore_post(post_id, src, auth):
     else:
         user_id = current_user.id
 
-    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=True).one()
+    post = db.session.query(Post).filter_by(id=post_id, user_id=user_id, deleted=True).one()
     if post.url:
         post.calculate_cross_posts()
 
@@ -733,7 +742,7 @@ def lock_post(post_id, locked, src, auth=None):
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = db.session.query(Post).filter_by(id=post_id).one()
     if locked:
         comments_enabled = False
         modlog_type = 'lock_post'
@@ -767,7 +776,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = db.session.query(Post).filter_by(id=post_id).one()
     community = post.community
 
     if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin_or_staff():
@@ -798,7 +807,7 @@ def mod_remove_post(post_id, reason, src, auth):
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=False).one()
+    post = db.session.query(Post).filter_by(id=post_id, user_id=user.id, deleted=False).one()
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -819,6 +828,15 @@ def mod_remove_post(post_id, reason, src, auth):
 
     task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
 
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
     if src == SRC_API:
         return user.id, post
     else:
@@ -831,7 +849,7 @@ def mod_restore_post(post_id, reason, src, auth):
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=True).one()
+    post = db.session.query(Post).filter_by(id=post_id, user_id=user.id, deleted=True).one()
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -875,7 +893,7 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
 
 def get_post_flair_list(post: Post | int) -> list:
     if isinstance(post, int):
-        post = Post.query.filter_by(id=post).one()
+        post = db.session.query(Post).filter_by(id=post).one()
     
     if not post.flair:
         # In case flair is null
