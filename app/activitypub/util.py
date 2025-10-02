@@ -348,10 +348,13 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
         existing_flair = None
 
     if existing_flair is None:
-        if 'preferredUsername' not in flair:
-            return None
-        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
+        if 'preferredUsername' in flair:
+            existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
                                                               CommunityFlair.community_id == community_id).first()
+        elif 'display_name' in flair:
+            existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['display_name'].strip(),
+                                                                  CommunityFlair.community_id == community_id).first()
+
     if existing_flair:
         # Update flair properties
         if "text_color" in flair:
@@ -401,10 +404,13 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
             flair_text = flair["display_name"]
         elif "preferredUsername" in flair:
             flair_text = flair['preferredUsername']
+        
+        new_ap_id = flair["id"] if "id" in flair else None
+
         new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
                                    text_color=text_color, background_color=background_color,
                                    blur_images=blur_images,
-                                   ap_id=flair['id'])
+                                   ap_id=new_ap_id)
         session.add(new_flair)
         return new_flair
 
@@ -1141,7 +1147,19 @@ def actor_json_to_model(activity_json, address, server):
         except IntegrityError:
             db.session.rollback()
             return db.session.query(Community).filter_by(ap_profile_id=activity_json['id'].lower()).one()
-        if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+        if 'tag' in activity_json and isinstance(activity_json['tag'], list):
+            # New-style post flair
+            community.flair = []
+            for flair in activity_json["tag"]:
+                if flair["type"] == "CommunityPostTag":
+                    flair_dict = flair
+                    flair_obj = find_flair_or_create(flair_dict, community.id)
+                    if flair_obj:
+                        community.flair.append(flair_obj)
+            db.session.commit()
+        elif 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+            # Legacy post flair
+            community.flair = []
             for flair in activity_json['lemmy:tagsForPosts']:
                 flair_dict = {'display_name': flair['display_name']}
                 if 'text_color' in flair:
@@ -1150,7 +1168,11 @@ def actor_json_to_model(activity_json, address, server):
                     flair_dict['background_color'] = flair['background_color']
                 if 'blur_images' in flair:
                     flair_dict['blur_images'] = flair['blur_images']
-                community.flair.append(find_flair_or_create(flair_dict, community.id))
+                if 'id' in flair:
+                    flair_dict['id'] = flair['id']
+                flair_obj = find_flair_or_create(flair_dict, community.id)
+                if flair_obj:
+                    community.flair.append(flair_obj)
             db.session.commit()
         if community.icon_id:
             make_image_sizes(community.icon_id, 60, 250, 'communities')
