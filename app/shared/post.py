@@ -29,7 +29,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
-        post = db.session.query(Post).filter_by(id=post_id).one()
+        post = db.session.query(Post).get(post_id)
         user = authorise_api_user(auth, return_type='model')
         if vote_direction == 'upvote' and not can_upvote(user, post.community):
             return user.id
@@ -68,7 +68,6 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
 
 
 def bookmark_post(post_id: int, src, auth=None):
-    Post.query.filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     mark_post_read([post_id], True, user_id)
@@ -89,7 +88,6 @@ def bookmark_post(post_id: int, src, auth=None):
 
 
 def remove_bookmark_post(post_id: int, src, auth=None):
-    Post.query.filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
@@ -583,7 +581,7 @@ def delete_post(post_id: int, src, auth):
     else:
         user_id = current_user.id
 
-    post = db.session.query(Post).filter_by(id=post_id, user_id=user_id, deleted=False).one()
+    post = db.session.query(Post).get(post_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
 
@@ -592,8 +590,6 @@ def delete_post(post_id: int, src, auth):
     post.author.post_count -= 1
     post.community.post_count -= 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post deleted.'))
 
     task_selector('delete_post', user_id=user_id, post_id=post.id)
 
@@ -618,7 +614,7 @@ def restore_post(post_id: int, src, auth):
     else:
         user_id = current_user.id
 
-    post = db.session.query(Post).filter_by(id=post_id, user_id=user_id, deleted=True).one()
+    post = db.session.query(Post).get(post_id)
     if post.url:
         post.calculate_cross_posts()
 
@@ -627,8 +623,6 @@ def restore_post(post_id: int, src, auth):
     post.author.post_count += 1
     post.community.post_count += 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post restored.'))
 
     task_selector('restore_post', user_id=user_id, post_id=post.id)
 
@@ -742,7 +736,7 @@ def lock_post(post_id: int, locked, src, auth=None):
     else:
         user = current_user
 
-    post = db.session.query(Post).filter_by(id=post_id).one()
+    post = db.session.query(Post).get(post_id)
     if locked:
         comments_enabled = False
         modlog_type = 'lock_post'
@@ -776,7 +770,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     else:
         user = current_user
 
-    post = db.session.query(Post).filter_by(id=post_id).one()
+    post = db.session.query(Post).get(post_id)
     community = post.community
 
     if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin_or_staff():
@@ -807,7 +801,7 @@ def mod_remove_post(post_id: int, reason, src, auth):
     else:
         user = current_user
 
-    post = db.session.query(Post).filter_by(id=post_id, user_id=user.id, deleted=False).one()
+    post = db.session.query(Post).get(post_id)
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -819,8 +813,6 @@ def mod_remove_post(post_id: int, reason, src, auth):
     post.author.post_count -= 1
     post.community.post_count -= 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post deleted.'))
 
     add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
@@ -849,7 +841,7 @@ def mod_restore_post(post_id: int, reason, src, auth):
     else:
         user = current_user
 
-    post = db.session.query(Post).filter_by(id=post_id, user_id=user.id, deleted=True).one()
+    post = db.session.query(Post).get(post_id)
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -861,8 +853,6 @@ def mod_restore_post(post_id: int, reason, src, auth):
     post.author.post_count += 1
     post.community.post_count += 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post restored.'))
 
     add_to_modlog('restore_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
