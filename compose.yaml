@@ -74,21 +74,27 @@ services:
       retries: 3
       start_period: 20s
 
-  # git clone https://codeberg.org/PieFed/piefed-notifs into a directory beside the pyfedi one to enable real-time notifications.
   piefednotifs:
     build:
-      context: ../piefed-notifs
-      dockerfile: Dockerfile
+      context: .
+      target: builder
     container_name: piefed_notifs
     restart: unless-stopped
     depends_on:
       - redis
     env_file:
-      - ../piefed-notifs/.env
+      - ./.env.docker
+    entrypoint: ./entrypoint_async.sh
     ports:
       - "8040:8000"   # host:container, Piefed-Notifs runs on 8000 internally
     networks:
       - pf_network
+    healthcheck:
+      test: [ "CMD", "pgrep", "-f", "uvicorn" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
 
   adminer:
