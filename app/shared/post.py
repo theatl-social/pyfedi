@@ -236,7 +236,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
+def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
         if not user:
             user = authorise_api_user(auth, return_type='model')
@@ -577,7 +577,7 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
 
 # just for deletes by owner (mod deletes are classed as 'remove')
-def delete_post(post_id, src, auth):
+def delete_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
@@ -612,7 +612,7 @@ def delete_post(post_id, src, auth):
         return
 
 
-def restore_post(post_id, src, auth):
+def restore_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
@@ -638,7 +638,7 @@ def restore_post(post_id, src, auth):
         return
 
 
-def report_post(post, input, src, auth=None):
+def report_post(post: Post, input, src, auth=None):
     if src == SRC_API:
         reporter_user = authorise_api_user(auth, return_type='model')
         suspect_user = User.query.filter_by(id=post.user_id).one()
@@ -736,7 +736,7 @@ def report_post(post, input, src, auth=None):
         return
 
 
-def lock_post(post_id, locked, src, auth=None):
+def lock_post(post_id: int, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
@@ -801,7 +801,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
 
 
 # mod deletes
-def mod_remove_post(post_id, reason, src, auth):
+def mod_remove_post(post_id: int, reason, src, auth):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
@@ -843,7 +843,7 @@ def mod_remove_post(post_id, reason, src, auth):
         return
 
 
-def mod_restore_post(post_id, reason, src, auth):
+def mod_restore_post(post_id: int, reason, src, auth):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
