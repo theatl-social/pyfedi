@@ -38,8 +38,6 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if auth:
         user_id = authorise_api_user(auth)
 
-    user_id = 1 #NODEPLOY
-
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
         user = User.query.get(user_id)
