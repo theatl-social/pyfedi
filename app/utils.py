@@ -2216,7 +2216,7 @@ def add_to_modlog(action: str, actor: User, target_user: User = None, reason: st
     db.session.commit()
 
 
-def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
+def authorise_api_user(auth, return_type=None, id_match=None) -> User | dict | int:
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
@@ -2224,7 +2224,9 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).first()
+        if user is None:
+            raise Exception('incorrect_login')
         if user.password_updated_at:
             issued_at_time = decoded['iat']
             password_updated_time = int(user.password_updated_at.timestamp())
