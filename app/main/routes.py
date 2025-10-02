@@ -245,8 +245,8 @@ def list_communities():
     
     if subscribe_select != "any":
         # get the user's joined communities
-        user_joined_communities = joined_communities(current_user.id)
-        user_moderating_communities = moderating_communities(current_user.id)
+        user_joined_communities = joined_communities(current_user.get_id())
+        user_moderating_communities = moderating_communities(current_user.get_id())
         # get the joined community ids list
         joined_ids = []
         for jc in user_joined_communities:
