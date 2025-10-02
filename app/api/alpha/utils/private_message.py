@@ -24,7 +24,7 @@ def get_private_message_list(auth, data):
     private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
-    for private_message in private_messages:
+    for private_message in private_messages.items:
         pm_list.append(private_message_view(private_message, variant=1))
 
     pm_json = {
