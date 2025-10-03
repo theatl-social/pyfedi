@@ -1772,6 +1772,7 @@ def announce_activity_to_followers(community: Community, creator: User, activity
 
     if len(send_async):
         from app import redis_client
+        from app.activitypub.signature import default_context
         # send announce_activity via redis pub/sub to piefed_notifs service
         redis_client.publish("http_posts:activity", json.dumps({'urls': [url[0] for url in send_async],
                                                                 'headers': [url[1] for url in send_async],
