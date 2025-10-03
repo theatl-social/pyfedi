@@ -129,7 +129,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
                     if current_app.config['NOTIF_SERVER']:   # Votes make up a very high percentage of activities, so it is more efficient to send them via piefed_notifs. However piefed_notifs does not retry failed sends. For votes this is acceptable.
                         send_async.append(HttpSignature.signed_request(instance.inbox, announce,
                                                                        community.private_key,
-                                                                       community.ap_profile_id + '#main-key',
+                                                                       community.public_url() + '#main-key',
                                                                        send_via_async=True))
                     else:
                         # Send the announcement
