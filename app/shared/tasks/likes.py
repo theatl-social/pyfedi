@@ -90,49 +90,50 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
             }
 
         if community.is_local():
+            # Select the appropriate payload
+            if vote_to_undo:
+                payload_copy = undo_public.copy()
+            else:
+                payload_copy = vote_public.copy()
+
+            # Remove context for inner object
+            del payload_copy['@context']
+
+            # Create announcement with the selected payload
+            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            actor = community.public_url()
+            to = ["https://www.w3.org/ns/activitystreams#Public"]
+            cc = [community.ap_followers_url]
+            announce = {
+                'id': announce_id,
+                'type': 'Announce',
+                'actor': actor,
+                'object': payload_copy,
+                '@context': default_context(),
+                'to': to,
+                'cc': cc
+            }
+
             send_async = []
-            # For local communities, we need to create announcements for each instance
+
+            # For local communities, we need to sends announcements to each instance
             for instance in community.following_instances():
                 if not (instance.inbox and instance.online() and
                        not user.has_blocked_instance(instance.id) and
                        not instance_banned(instance.domain)):
                     continue
 
-                # Select the appropriate payload
-                if vote_to_undo:
-                    payload_copy = undo_public.copy()
-                else:
-                    payload_copy = vote_public.copy()
-
-                # Remove context for inner object
-                del payload_copy['@context']
-
                 if instance.software == 'piefed':  # Send in a batch later
                     session.add(ActivityBatch(instance_id=instance.id, community_id=community.id, payload=payload_copy))
                     session.commit()
                 else:
-                    # Create announcement with the selected payload
-                    announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
-                    actor = community.public_url()
-                    to = ["https://www.w3.org/ns/activitystreams#Public"]
-                    cc = [community.ap_followers_url]
-                    announce = {
-                        'id': announce_id,
-                        'type': 'Announce',
-                        'actor': actor,
-                        'object': payload_copy,
-                        '@context': default_context(),
-                        'to': to,
-                        'cc': cc
-                    }
-
-                    if current_app.config['NOTIF_SERVER']:   # Votes make up a very high percentage of activities, so it is more efficient to send them via piefed_notifs. However piefed_notifs does not retry failed sends. For votes this is acceptable.
+                    if current_app.config['NOTIF_SERVER']:   # Votes make up a very high percentage of activities, so it is more efficient to send them via fastapi_server.py. However fastapi_server.py does not retry failed sends. For votes this is acceptable.
                         send_async.append(HttpSignature.signed_request(instance.inbox, announce,
                                                                        community.private_key,
                                                                        community.public_url() + '#main-key',
                                                                        send_via_async=True))
                     else:
-                        # Send the announcement
+                        # Send the announcement directly
                         send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
 
             if len(send_async):
