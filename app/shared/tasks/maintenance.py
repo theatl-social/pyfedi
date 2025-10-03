@@ -17,7 +17,7 @@ from app.models import Notification, SendQueue, CommunityBan, CommunityMember, U
     InstanceBan
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session, archive_post, get_setting, set_setting
+    shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users
 
 
 @celery.task
@@ -102,6 +102,7 @@ def process_expired_bans():
                 # Clear relevant caches
                 from app.utils import communities_banned_from, joined_communities, moderating_communities
                 cache.delete_memoized(communities_banned_from, blocked.id)
+                cache.delete_memoized(communities_banned_from_all_users)
                 cache.delete_memoized(joined_communities, blocked.id)
                 cache.delete_memoized(moderating_communities, blocked.id)
 

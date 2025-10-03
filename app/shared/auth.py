@@ -6,10 +6,8 @@ from markupsafe import Markup
 from flask_babel import _
 from flask_login import login_user
 from sqlalchemy import func
-from sqlalchemy.exc import NoResultFound
 
 from app import db, cache
-from app.api.alpha.utils.validators import required, string_expected
 from app.auth.util import get_country
 from app.constants import *
 from app.ldap_utils import sync_user_to_ldap
@@ -24,19 +22,16 @@ def log_user_in(input, src):
     if src == SRC_WEB:
         username = input.user_name.data.lower()
         password = input.password.data
-        user = User.query.filter_by(user_name=username, ap_id=None).first()
+        user = db.session.query(User).filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
-        required(["username", "password"], input)
-        string_expected(["username", "password"], input)
-
         username = input['username'].lower()
         password = input['password']
         
-        user = User.query.filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
+        user = db.session.query(User).filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
         
         if not user:
             # user is None if no match was found
-            user = User.query.filter(func.lower(User.email) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
+            user = db.session.query(User).filter(func.lower(User.email) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
 
         if not user:
             # No match for username or email was found

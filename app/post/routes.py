@@ -40,9 +40,9 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
-    vote_for_post, mark_post_read
+    vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
-    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply
+    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply
 from app.shared.site import block_remote_instance
 from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
@@ -604,8 +604,13 @@ def continue_discussion(post_id, comment_id):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
+    # Events
+    event = None
+    if post.type == POST_TYPE_EVENT:
+        event = Event.query.filter_by(post_id=post.id).first()
+
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
-                               post=post, mods=mod_list,
+                               post=post, mods=mod_list, event=event,
                                is_moderator=is_moderator, comment=comment, replies=replies,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted_replies=recently_upvoted_replies,
@@ -1020,66 +1025,10 @@ def post_delete_post(community: Community, post: Post, user_id: int, reason: str
         db.session.commit()
 
     if federate_deletion:
-
-        delete_json = {
-            'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-            'type': 'Delete',
-            'actor': user.public_url(),
-            'audience': post.community.public_url(),
-            'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-            'published': ap_datetime(utcnow()),
-            'cc': [user.followers_url()],
-            'object': post.ap_id,
-            'uri': post.ap_id
-        }
         if post.user_id != user.id:
-            delete_json['summary'] = 'Deleted by mod'
-
-        # Federation
-        if not community.local_only:  # local_only communities do not federate
-            # if this is a remote community and we are a mod of that community
-            if not post.community.is_local() and user.is_local() and (post.user_id == user.id or community.is_moderator(user)):
-                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
-            elif post.community.is_local():  # if this is a local community - Announce it to followers on remote instances
-                announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": post.community.ap_profile_id,
-                    "cc": [
-                        post.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': delete_json
-                }
-                for instance in post.community.following_instances():
-                    if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                        send_to_remote_instance(instance.id, post.community.id, announce)
-
-        # Federate to microblog followers
-        followers = db.session.query(UserFollower).filter_by(local_user_id=post.user_id)
-        if followers:
-            instances = db.session.query(Instance).join(User, User.instance_id == Instance.id).join(UserFollower,
-                                                                                        UserFollower.remote_user_id == User.id)
-            instances = instances.filter(UserFollower.local_user_id == post.user_id)
-            for instance in instances:
-                if instance.inbox and not user.has_blocked_instance(instance.id) and not instance_banned(instance.domain) and instance.online():
-                    send_post_request(instance.inbox, delete_json, user.private_key, user.public_url() + '#main-key')
-
-    if post.user_id != user.id and reason is not None:
-        add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason, community=community, post=post,
-                      link_text=shorten_string(post.title), link=f'post/{post.id}')
-        
-    # remove any notifications about the post
-    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
-    for notif in notifs:
-        # dont delete report notifs
-        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
-            continue
-        db.session.delete(notif)
-    db.session.commit()
+            mod_remove_post(post.id, reason, SRC_WEB, None)
+        else:
+            delete_post(post.id, SRC_WEB, None)
 
 
 @bp.route('/post/<int:post_id>/restore', methods=['POST'])
@@ -1088,68 +1037,9 @@ def post_restore(post_id: int):
     post = Post.query.get_or_404(post_id)
     if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.is_admin():
         if post.deleted_by == post.user_id:
-            was_mod_deletion = False
+            restore_post(post.id, SRC_WEB, None)
         else:
-            was_mod_deletion = True
-        post.deleted = False
-        post.deleted_by = None
-        post.author.post_count += 1
-        post.community.post_count += 1
-        db.session.commit()
-
-        # Federate un-delete
-        if not post.community.local_only:
-            delete_json = {
-                "actor": current_user.public_url(),
-                "to": ["https://www.w3.org/ns/activitystreams#Public"],
-                "object": {
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
-                    'type': 'Delete',
-                    'actor': current_user.public_url(),
-                    'audience': post.community.public_url(),
-                    'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                    'published': ap_datetime(utcnow()),
-                    'cc': [
-                        current_user.followers_url()
-                    ],
-                    'object': post.ap_id,
-                    'uri': post.ap_id,
-                },
-                "cc": [post.community.public_url()],
-                "audience": post.community.public_url(),
-                "type": "Undo",
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
-            }
-            if was_mod_deletion:
-                delete_json['object']['summary'] = "Deleted by mod"
-
-            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                if not was_mod_deletion or (was_mod_deletion and post.community.is_moderator(current_user)):
-                    send_post_request(post.community.ap_inbox_url, delete_json, current_user.private_key,
-                                      current_user.public_url() + '#main-key')
-
-            else:  # local community - send it to followers on remote instances
-                announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
-                    "type": 'Announce',
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "actor": post.community.public_url(),
-                    "cc": [
-                        post.community.ap_followers_url
-                    ],
-                    '@context': default_context(),
-                    'object': delete_json
-                }
-
-                for instance in post.community.following_instances():
-                    if instance.inbox and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                        send_to_remote_instance(instance.id, post.community.id, announce)
-
-        if post.user_id != current_user.id:
-            add_to_modlog('restore_post', actor=current_user, target_user=post.author, community=post.community, post=post,
-                          link_text=shorten_string(post.title), link=f'post/{post.id}')
+            mod_restore_post(post.id, SRC_WEB, None)
 
         flash(_('Post has been restored.'))
     return redirect(url_for('activitypub.post_ap', post_id=post.id))
@@ -1309,77 +1199,8 @@ def post_report(post_id: int):
         if post.reports == -1:
             flash(_('Post has already been reported, thank you!'))
             return redirect(post.community.local_url())
-        
-        suspect_user = User.query.get(post.author.id)
-        source_instance = Instance.query.get(suspect_user.instance_id)
-        targets_data = {'gen': '0',
-                        'suspect_post_id': post.id,
-                        'suspect_user_id': post.author.id,
-                        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
-                        'reporter_id': current_user.id,
-                        'reporter_user_name': current_user.user_name,
-                        'source_instance_id': suspect_user.instance_id,
-                        'source_instance_domain': source_instance.domain,
-                        'orig_post_title': post.title,
-                        'orig_post_body': post.body
-                        }
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=1, reporter_id=current_user.id, suspect_user_id=post.author.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id, in_community_id=post.community.id, 
-                        source_instance_id=1, targets=targets_data)
-        db.session.add(report)
 
-        # Notify moderators
-        already_notified = set()
-
-        for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.user_id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            subtype='post_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
-
-        # only notify admins for certain types of report
-        if '5' in form.reasons.data or '6' in form.reasons.data:
-            for admin in Site.admins():
-                if admin.id not in already_notified:
-                    with force_locale(get_recipient_language(admin.id)):
-                        notify = Notification(title=gettext('Reported content'), url='/admin/reports', user_id=admin.id,
-                                              author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                              subtype='post_reported',
-                                              targets=targets_data)
-                        db.session.add(notify)
-                        admin.unread_notifications += 1
-
-        post.reports += 1
-        db.session.commit()
-
-        # federate report to community instance
-        if not post.community.is_local() and form.report_remote.data:
-            summary = form.reasons_to_string(form.reasons.data)
-            if form.description.data:
-                summary += ' - ' + form.description.data
-            report_json = {
-                "actor": current_user.public_url(),
-                "audience": post.community.public_url(),
-                "content": None,
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
-                "object": post.ap_id,
-                "summary": summary,
-                "to": [
-                    post.community.public_url()
-                ],
-                "type": "Flag"
-            }
-            instance = Instance.query.get(post.community.instance_id)
-            if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) \
-                    and not instance_banned(instance.domain):
-                send_post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
-
+        report_post(post, form, SRC_WEB)
         flash(_('Post has been reported, thank you!'))
         return redirect(post.community.local_url())
     elif request.method == 'GET':
@@ -1642,76 +1463,11 @@ def post_reply_report(post_id: int, comment_id: int):
               'warning')
 
     if form.validate_on_submit():
-
         if post_reply.reports == -1:
             flash(_('Comment has already been reported, thank you!'))
             return redirect(post.community.local_url())
 
-        suspect_author = User.query.get(post_reply.author.id)
-        source_instance = Instance.query.get(suspect_author.instance_id)
-        targets_data = {'gen': '0',
-                        'suspect_comment_id': post_reply.id,
-                        'suspect_user_id': post_reply.author.id,
-                        'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                        'reporter_id': current_user.id,
-                        'reporter_user_name': current_user.user_name,
-                        'source_instance_id': suspect_author.instance_id,
-                        'source_instance_domain': source_instance.domain,
-                        'orig_comment_body': post_reply.body
-                        }
-        report = Report(reasons=form.reasons_to_string(form.reasons.data), description=form.description.data,
-                        type=2, reporter_id=current_user.id, suspect_post_id=post.id,
-                        suspect_community_id=post.community.id,
-                        suspect_user_id=post_reply.author.id, suspect_post_reply_id=post_reply.id,
-                        in_community_id=post.community.id,
-                        source_instance_id=1, targets=targets_data)
-        db.session.add(report)
-
-        # Notify moderators
-        already_notified = set()
-        for mod in post.community.moderators():
-            with force_locale(get_recipient_language(mod.user_id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                                            author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                            subtype='comment_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
-
-        if '5' in form.reasons.data or '6' in form.reasons.data:
-            for admin in Site.admins():
-                if admin.id not in already_notified:
-                    notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
-                                          author_id=current_user.id, notif_type=NOTIF_REPORT,
-                                          subtype='comment_reported',
-                                          targets=targets_data)
-                    db.session.add(notify)
-                    admin.unread_notifications += 1
-        post_reply.reports += 1
-        db.session.commit()
-
-        # federate report to originating instance
-        if not post.community.is_local() and form.report_remote.data:
-            summary = form.reasons_to_string(form.reasons.data)
-            if form.description.data:
-                summary += ' - ' + form.description.data
-            report_json = {
-                "actor": current_user.public_url(),
-                "audience": post.community.public_url(),
-                "content": None,
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}",
-                "object": post_reply.ap_id,
-                "summary": summary,
-                "to": [
-                    post.community.public_url()
-                ],
-                "type": "Flag"
-            }
-            instance = Instance.query.get(post.community.instance_id)
-            if post.community.ap_inbox_url and not current_user.has_blocked_instance(instance.id) and not instance_banned(instance.domain):
-                send_post_request(post.community.ap_inbox_url, report_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
+        report_reply(post_reply, form, SRC_WEB)
 
         flash(_('Comment has been reported, thank you!'))
         return redirect(url_for('activitypub.post_ap', post_id=post.id))

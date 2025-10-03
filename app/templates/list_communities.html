@@ -269,7 +269,10 @@
                                 {{ _('Created') }}
                                 <span class="{{ 'fe fe-chevron-up' if sort_by == 'created_at asc' }}{{ 'fe fe-chevron-down' if sort_by == 'created_at desc' }}"></span>
                             </button>
-                        </th>                    
+                        </th>
+                        <th scope="col">
+                            <span style="font-weight: normal;">{{ _('Rank') }}</span>
+                        </th>
                     </tr>
                 </thead>
                 <tbody>
@@ -323,6 +326,9 @@
                             </td>
                             <td>
                                 {{ arrow.get(community.created_at).humanize(locale=locale) }}
+                            </td>
+                            <td align="center">
+                                {{ loop.index }}
                             </td>
                         </tr>
                     {% endfor -%}

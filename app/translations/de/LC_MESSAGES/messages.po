@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2025-06-10 17:47+0000\n"
-"Last-Translator: Raini Schmusi <stefanp.gimpel@posteo.de>\n"
+"PO-Revision-Date: 2025-09-24 21:47+0000\n"
+"Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
+"Language-Team: German <http://translate.piefed.social/projects/piefed/"
+"main-web-app/de/>\n"
 "Language: de\n"
-"Language-Team: German <http://translate.piefed.social/projects/piefed"
-"/main-web-app/de/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:51
@@ -55,14 +55,12 @@ msgid "Comments are disabled on this post"
 msgstr "Kommentare sind deaktiviert."
 
 #: app/models.py:2238
-#, fuzzy
 msgid "Banned from commenting"
-msgstr "Community sperren"
+msgstr ""
 
 #: app/models.py:2261
-#, fuzzy
 msgid "Blocked phrase in comment"
-msgstr "Zum Kommentieren anmelden"
+msgstr "Blockierte Phrase im Kommentar"
 
 #: app/models.py:2268
 #, fuzzy
@@ -74,9 +72,8 @@ msgid "Duplicate reply"
 msgstr ""
 
 #: app/models.py:2279
-#, fuzzy
 msgid "Gif comment ignored"
-msgstr "Kommentar wiederhergestellt."
+msgstr "Gif-Kommentar ignoriert"
 
 #: app/models.py:2282
 msgid "Low quality reply"
@@ -143,9 +140,8 @@ msgid "Un-lock post"
 msgstr "Beitrag entsperren"
 
 #: app/models.py:2953
-#, fuzzy
 msgid "Lock comment"
-msgstr "Keine Kommentare."
+msgstr "Beitrag sperren"
 
 #: app/models.py:2954
 #, fuzzy
@@ -314,9 +310,8 @@ msgid "Filter out comments that are simply a form of \"this\""
 msgstr ""
 
 #: app/admin/forms.py:32
-#, fuzzy
 msgid "Meme communities = low-quality"
-msgstr "Mehr Communities"
+msgstr ""
 
 #: app/admin/forms.py:33
 msgid "Allow local image posts"
@@ -8881,4 +8876,3 @@ msgstr "Deine neue Community wurde erstellt."
 
 #~ msgid "Label"
 #~ msgstr "Lokal"
-

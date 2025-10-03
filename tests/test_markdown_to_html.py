@@ -225,6 +225,31 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "```\n<https://piefed.social>\n```"
         result = markdown_to_html(markdown)
         self.assertEqual('<pre><code>&lt;https://piefed.social&gt;\n</code></pre>\n', result)
+    
+    def test_lemmy_autocomplete_community(self):
+        """Test that lemmy-formatted autocomplete community names drop the markdown link formatting"""
+
+        markdown = "[!community@instance.tld](https://instance.tld/c/community)"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p>!community@instance.tld</p>\n', result)
+    
+    def test_lemmy_autocomplete_person(self):
+        """Test that lemmy-formatted autocomplete person names drop the markdown link formatting"""
+
+        markdown = "[@user@instance.tld](https://instance.tld/u/user)"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p>@user@instance.tld</p>\n', result)
+    
+    def test_lemmy_autocomplete_feed(self):
+        """
+        Test that lemmy-formatted autocomplete feed names drop the markdown link formatting. Note that lemmy does not
+        currently have autocomplete for feeds, this is really just a means to keep formatting consistent with people
+        and communities.
+        """
+
+        markdown = "[~feed@instance.tld](https://instance.tld/f/feed)"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p>~feed@instance.tld</p>\n', result)
 
 
 if __name__ == '__main__':

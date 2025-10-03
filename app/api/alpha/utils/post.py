@@ -4,8 +4,6 @@ from flask import current_app, g
 from sqlalchemy import desc, text
 
 from app import db
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
-    array_of_integers_expected
 from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
@@ -16,25 +14,26 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
 from app.post.util import post_replies, get_comment_branch
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
-    site_language_id, filtered_out_communities, communities_banned_from, joined_or_modding_communities, \
-    moderating_communities_ids, user_filters_home, user_filters_posts, in_sorted_list
+    site_language_id, filtered_out_communities, joined_or_modding_communities, \
+    user_filters_home, user_filters_posts, in_sorted_list, \
+    communities_banned_from_all_users, moderating_communities_ids_all_users
 from app.shared.tasks import task_selector
 
 
 def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
-    type = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
-    if data and 'page_cursor' in data:
+    type = data['type_'] if 'type_' in data else "All"
+    sort = data['sort'] if 'sort' in data else "Hot"
+    if 'page_cursor' in data:
         page = int(data['page_cursor'])
-    elif data and 'page' in data:
+    elif 'page' in data:
         page = int(data['page'])
     else:
         page = 1
-    limit = int(data['limit']) if data and 'limit' in data else 50
-    liked_only = data['liked_only'] if data and 'liked_only' in data else False
-    saved_only = data['saved_only'] if data and 'saved_only' in data else False
+    limit = int(data['limit']) if 'limit' in data else 50
+    liked_only = data['liked_only'] if 'liked_only' in data else False
+    saved_only = data['saved_only'] if 'saved_only' in data else False
 
-    query = data['q'] if data and 'q' in data else ''
+    query = data['q'] if 'q' in data else ''
 
     if auth:
         user_id = authorise_api_user(auth)
@@ -47,11 +46,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     # user_id: the logged in user
     # person_id: the author of the posts being requested
 
-    community_id = int(data['community_id']) if data and 'community_id' in data else None
-    feed_id = int(data['feed_id']) if data and 'feed_id' in data else None
-    topic_id = int(data['topic_id']) if data and 'topic_id' in data else None
-    community_name = data['community_name'] if data and 'community_name' in data else None
-    person_id = int(data['person_id']) if data and 'person_id' in data else None
+    community_id = int(data['community_id']) if 'community_id' in data else None
+    feed_id = int(data['feed_id']) if 'feed_id' in data else None
+    topic_id = int(data['topic_id']) if 'topic_id' in data else None
+    community_name = data['community_name'] if 'community_name' in data else None
+    person_id = int(data['person_id']) if 'person_id' in data else None
 
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
@@ -254,13 +253,14 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = posts.filter(Post.ranking_scaled != None).order_by(desc(Post.ranking_scaled)).order_by(
             desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Active":
+        posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
     if user_id:
 
-        banned_from = communities_banned_from(user_id)
+        banned_from = communities_banned_from_all_users()
 
         bookmarked_posts = list(db.session.execute(text(
             'SELECT post_id FROM "post_bookmark" WHERE user_id = :user_id'),
@@ -276,11 +276,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
         read_posts = set(u_rp_ids)  # lookups ("in") on a set is O(1), tuples/lists are O(n). read_posts can be very large so this makes a difference.
 
-        communities_moderating = moderating_communities_ids(user.id)
+        communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
     else:
         bookmarked_posts = []
-        banned_from = []
+        banned_from = {}
         post_subscriptions = []
         read_posts = set()
         communities_moderating = []
@@ -288,7 +288,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     postlist = []
     for post in posts:
-        postlist.append(post_view(post=post, variant=2, stub=True, user_id=user_id,
+        postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
                                   post_subscriptions=post_subscriptions, read_posts=read_posts,
@@ -315,12 +315,12 @@ def get_post(auth, data):
 
 
 def get_post_replies(auth, data):
-    sort = data['sort'] if data and 'sort' in data else 'New'
-    max_depth = int(data['max_depth']) if data and 'max_depth' in data else None
-    page_cursor = data['page'] if data and 'page' in data else None  # Expects reply ID or None for first page
-    limit = int(data['limit']) if data and 'limit' in data else 20
-    post_id = data['post_id'] if data and 'post_id' in data else None
-    parent_id = data['parent_id'] if data and 'parent_id' in data else None
+    sort = data['sort'] if 'sort' in data else 'New'
+    max_depth = int(data['max_depth']) if 'max_depth' in data else None
+    page_cursor = data['page'] if 'page' in data else None  # Expects reply ID or None for first page
+    limit = int(data['limit']) if 'limit' in data else 20
+    post_id = data['post_id'] if 'post_id' in data else None
+    parent_id = data['parent_id'] if 'parent_id' in data else None
 
     if auth:
         user_details = authorise_api_user(auth, return_type='dict')
@@ -496,10 +496,6 @@ def get_post_replies(auth, data):
 
 
 def post_post_like(auth, data):
-    required(['post_id', 'score'], data)
-    integer_expected(['post_id', 'score'], data)
-    boolean_expected(['private'], data)
-
     post_id = data['post_id']
     score = data['score']
     private = data['private'] if 'private' in data else False
@@ -517,10 +513,6 @@ def post_post_like(auth, data):
 
 
 def put_post_save(auth, data):
-    required(['post_id', 'save'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['save'], data)
-
     post_id = data['post_id']
     save = data['save']
 
@@ -530,10 +522,6 @@ def put_post_save(auth, data):
 
 
 def put_post_subscribe(auth, data):
-    required(['post_id', 'subscribe'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['subscribe'], data)
-
     post_id = data['post_id']
     subscribe = data['subscribe']
 
@@ -543,11 +531,6 @@ def put_post_subscribe(auth, data):
 
 
 def post_post(auth, data):
-    required(['title', 'community_id'], data)
-    integer_expected(['language_id'], data)
-    boolean_expected(['nsfw'], data)
-    string_expected(['title', 'body', 'url'], data)
-
     title = data['title']
     community_id = data['community_id']
     body = data['body'] if 'body' in data else ''
@@ -571,11 +554,6 @@ def post_post(auth, data):
 
 
 def put_post(auth, data):
-    required(['post_id'], data)
-    integer_expected(['language_id'], data)
-    boolean_expected(['nsfw'], data)
-    string_expected(['title', 'body', 'url'], data)
-
     post_id = data['post_id']
     post = Post.query.filter_by(id=post_id).one()
 
@@ -600,42 +578,36 @@ def put_post(auth, data):
 
 
 def post_post_delete(auth, data):
-    required(['post_id', 'deleted'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['deleted'], data)
-
     post_id = data['post_id']
     deleted = data['deleted']
 
-    if deleted == True:
-        user_id, post = delete_post(post_id, SRC_API, auth)
-    else:
-        user_id, post = restore_post(post_id, SRC_API, auth)
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+
+        if deleted == True:
+            user_id, post = delete_post(post_id, SRC_API, auth)
+        else:
+            user_id, post = restore_post(post_id, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
 
 
 def post_post_report(auth, data):
-    required(['post_id', 'reason'], data)
-    integer_expected(['post_id'], data)
-    string_expected(['reason'], data)
-
     post_id = data['post_id']
     reason = data['reason']
-    input = {'reason': reason, 'description': '', 'report_remote': True}
+    description = data['description'] if 'description' in data else ''
+    report_remote = data['report_remote'] if 'report_remote' in data else True
+    input = {'reason': reason, 'description': description, 'report_remote': report_remote}
 
-    user_id, report = report_post(post_id, input, SRC_API, auth)
+    post = Post.query.filter_by(id=post_id).one()
+    user_id, report = report_post(post, input, SRC_API, auth)
 
     post_json = post_report_view(report=report, post_id=post_id, user_id=user_id)
     return post_json
 
 
 def post_post_lock(auth, data):
-    required(['post_id', 'locked'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['locked'], data)
-
     post_id = data['post_id']
     locked = data['locked']
 
@@ -646,11 +618,6 @@ def post_post_lock(auth, data):
 
 
 def post_post_feature(auth, data):
-    required(['post_id', 'featured', 'feature_type'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['featured'], data)
-    string_expected(['feature_type'], data)
-
     post_id = data['post_id']
     featured = data['featured']
 
@@ -661,32 +628,24 @@ def post_post_feature(auth, data):
 
 
 def post_post_remove(auth, data):
-    required(['post_id', 'removed'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['removed'], data)
-    string_expected(['reason'], data)
-
     post_id = data['post_id']
     removed = data['removed']
 
-    if removed == True:
-        reason = data['reason'] if 'reason' in data else 'Removed by mod'
-        user_id, post = mod_remove_post(post_id, reason, SRC_API, auth)
-    else:
-        reason = data['reason'] if 'reason' in data else 'Restored by mod'
-        user_id, post = mod_restore_post(post_id, reason, SRC_API, auth)
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post_id}", timeout=10, blocking_timeout=6):
+        if removed == True:
+            reason = data['reason'] if 'reason' in data else 'Removed by mod'
+            user_id, post = mod_remove_post(post_id, reason, SRC_API, auth)
+        else:
+            reason = data['reason'] if 'reason' in data else 'Restored by mod'
+            user_id, post = mod_restore_post(post_id, reason, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
 
 
 def post_post_mark_as_read(auth, data):
-    required(['read'], data)
-    integer_expected(['post_id'], data)
-    array_of_integers_expected(['post_ids'], data)
-    boolean_expected(['read'], data)
-
-    if not 'post_id' in data and not 'post_ids' in data:
+    if 'post_id' not in data and 'post_ids' not in data:
         raise Exception('post_id or post_ids required')
 
     user_id = authorise_api_user(auth)

@@ -55,7 +55,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag
 
 
 # Flask's render_template function, with support for themes added
@@ -287,7 +287,7 @@ def mime_type_using_head(url):
 
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
-                'h6', 'pre',
+                'h6', 'pre', 'div',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
                 'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
@@ -306,6 +306,10 @@ LINK_PATTERN = re.compile(
     """,
     re.X
 )
+
+PERSON_PATTERN = re.compile(r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
+COMMUNITY_PATTERN = re.compile(r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
+FEED_PATTERN = re.compile(r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
 
 
 # sanitise HTML using an allow list
@@ -491,6 +495,43 @@ def escape_img(raw_html: str) -> str:
     return raw_html
 
 
+def handle_lemmy_autocomplete(text: str) -> str:
+    """
+    Handles markdown formatted links that are in the format that lemmy autocompletes users/communities to and replaces
+    them with instance-agnostic links.
+    
+    Lemmy autocomplete format:
+        [!news@lemmy.world](https://lemmy.world/c/news)
+    Convert this to:
+        !news@lemmy.world
+    
+    ...which will be later converted to an instance-local link
+    """
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text)
+
+    # Step 2: ID all the markdown-formatted links and check the part in [] if it matches comm/person/feed formats
+    def sub_non_formatted_actor(match):
+        bracket_part = match.group(1)
+        if re.match(COMMUNITY_PATTERN, bracket_part):
+            return bracket_part
+        elif re.match(PERSON_PATTERN, bracket_part):
+            return bracket_part
+        elif re.match(FEED_PATTERN, bracket_part):
+            return bracket_part
+        return match.string
+
+    re_link = re.compile(r"\[((!|@|~).*?)\]\(.*?\)")
+
+    text = re.sub(re_link, sub_non_formatted_actor, text)
+
+    # Step 3: Restore code blocks
+    text = pop_code(code_snippets=code_snippets, text=text)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str:
@@ -501,10 +542,11 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True) -> str
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
+        markdown_text = handle_lemmy_autocomplete(markdown_text)
 
         try:
             raw_html = markdown2.markdown(markdown_text,
-                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': True, 'strike': True,
+                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
                                                   'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
                                                   'breaks': {'on_newline': True, 'on_backslash': True},
                                                   'tag-friendly': True, 'smarty-pants': True})
@@ -634,7 +676,7 @@ def community_link_to_href(link: str, server_name_override: str | None = None) -
     # Stash the existing links so they are not formatted
     link_snippets, link = stash_link_html(link)
 
-    pattern = r"(?<![\/])!([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = COMMUNITY_PATTERN
     server = r'<a href="https://' + server_name + r'/community/lookup/'
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'!\g<1>@\g<2></a>', link)
 
@@ -659,7 +701,7 @@ def feed_link_to_href(link: str, server_name_override: str | None = None) -> str
     # Stash the existing links so they are not formatted
     link_snippets, link = stash_link_html(link)
 
-    pattern = r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = FEED_PATTERN
     server = r'<a href="https://' + server_name + r'/feed/lookup/'
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r'~\g<1>@\g<2></a>', link)
 
@@ -685,7 +727,7 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     link_snippets, link = stash_link_html(link)
 
     # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
-    pattern = r"(?<![\/])@([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b"
+    pattern = PERSON_PATTERN
     server = f'https://{server_name}/user/lookup/'
     replacement = (r'<a href="' + server + r'\g<1>/\g<2>" rel="nofollow noindex">@\g<1>@\g<2></a>')
     link = re.sub(pattern, replacement, link)
@@ -862,6 +904,24 @@ def communities_banned_from(user_id: int) -> List[int]:
 
 
 @cache.memoize(timeout=86400)
+def communities_banned_from_all_users() -> dict[int, List[int]]:
+    """Returns dict mapping user_id to list of community_ids they are banned from."""
+    rows = db.session.execute(text("""
+        SELECT user_id, ARRAY_AGG(DISTINCT community_id) as community_ids
+        FROM (
+            SELECT user_id, community_id FROM community_ban
+            UNION
+            SELECT ib.user_id, c.id as community_id
+            FROM instance_ban ib
+            JOIN community c ON c.instance_id = ib.instance_id
+        ) all_bans
+        GROUP BY user_id
+    """)).fetchall()
+    
+    return {user_id: list(community_ids) for user_id, community_ids in rows}
+
+
+@cache.memoize(timeout=86400)
 def blocked_domains(user_id) -> List[int]:
     if user_id == 0:
         return []
@@ -993,6 +1053,17 @@ def trustworthy_account_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
         if current_user.trustworthy():
+            return func(*args, **kwargs)
+        else:
+            return redirect(url_for('auth.not_trustworthy'))
+
+    return decorated_view
+
+
+def aged_account_required(func):
+    @wraps(func)
+    def decorated_view(*args, **kwargs):
+        if not current_user.created_very_recently():
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.not_trustworthy'))
@@ -1517,6 +1588,22 @@ def moderating_communities_ids(user_id) -> List[int]:
     """)
 
     return db.session.execute(sql, {'user_id': user_id}).scalars().all()
+
+
+@cache.memoize(timeout=86400)
+def moderating_communities_ids_all_users() -> dict[int, List[int]]:
+    """Returns dict mapping user_id to list of community_ids they moderate."""
+    rows = db.session.execute(text("""
+        SELECT cm.user_id, ARRAY_AGG(c.id ORDER BY c.title) as community_ids
+        FROM community c
+        JOIN community_member cm ON c.id = cm.community_id
+        WHERE c.banned = false
+          AND (cm.is_moderator = true OR cm.is_owner = true)
+          AND cm.is_banned = false
+        GROUP BY cm.user_id
+    """)).fetchall()
+    
+    return {user_id: list(community_ids) for user_id, community_ids in rows}
 
 
 @cache.memoize(timeout=300)
@@ -2171,7 +2258,7 @@ def add_to_modlog(action: str, actor: User, target_user: User = None, reason: st
     db.session.commit()
 
 
-def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
+def authorise_api_user(auth, return_type=None, id_match=None) -> User | dict | int:
     if not auth:
         raise Exception('incorrect_login')
     token = auth[7:]  # remove 'Bearer '
@@ -2179,7 +2266,9 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | int:
     decoded = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=["HS256"])
     if decoded:
         user_id = decoded['sub']
-        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).one()
+        user = User.query.filter_by(id=user_id, ap_id=None, verified=True, banned=False, deleted=False).first()
+        if user is None:
+            raise Exception('incorrect_login')
         if user.password_updated_at:
             issued_at_time = decoded['iat']
             password_updated_time = int(user.password_updated_at.timestamp())
@@ -2515,7 +2604,7 @@ def paginate_post_ids(post_ids, page: int, page_length: int):
     return post_ids[start:end]
 
 
-def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) -> List[int]:
+def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, hashtag: str = '') -> List[int]:
     from app import redis_client
     if community_ids is None or len(community_ids) == 0:
         return []
@@ -2533,6 +2622,13 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
         post_id_sql = 'SELECT p.id, p.cross_posts, p.user_id, p.reply_count FROM "post" as p\nINNER JOIN "community" as c on p.community_id = c.id\n'
         post_id_where = ['c.id IN :community_ids AND c.banned is false ']
         params = {'community_ids': tuple(community_ids)}
+        if hashtag:
+            # Filter by post tag
+            tag_record = Tag.query.filter(Tag.name == hashtag.strip()).first()
+            if tag_record:
+                post_id_sql += 'INNER JOIN "post_tag" as pt ON p.id = pt.post_id'
+                post_id_where.append('pt.tag_id = :tag_record_id')
+                params['tag_record_id'] = tag_record.id
 
     # filter out posts in communities where the community name is objectionable to them or they blocked the instance
     if current_user.is_authenticated:
@@ -2626,6 +2722,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str) ->
     elif sort == 'old':
         post_id_sort = 'ORDER BY p.posted_at ASC'
     elif sort == 'active':
+        post_id_where.append('p.reply_count > 0 ')
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()

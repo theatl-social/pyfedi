@@ -15,14 +15,14 @@ from app.utils import render_template, authorise_api_user, shorten_string, \
 
 def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id).one()
+        reply = db.session.query(PostReply).filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
         if vote_direction == 'upvote' and not can_upvote(user, reply.community):
             return user.id
         elif vote_direction == 'downvote' and not can_downvote(user, reply.community):
             return user.id
     else:
-        reply = PostReply.query.get_or_404(reply_id)
+        reply = db.session.query(PostReply).get_or_404(reply_id)
         user = current_user
 
     undo = reply.vote(user, vote_direction)
@@ -86,7 +86,7 @@ def remove_bookmark_reply(reply_id: int, src, auth=None):
 
 
 def subscribe_reply(reply_id: int, subscribe, src, auth=None):
-    reply = PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
@@ -151,7 +151,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         distinguished = input.distinguished.data
 
     if parent_id:
-        parent_reply = PostReply.query.filter_by(id=parent_id).one()
+        parent_reply = db.session.query(PostReply).filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
             raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
         if not parent_reply.replies_enabled:
@@ -230,7 +230,7 @@ def delete_reply(reply_id, src, auth):
     else:
         user_id = current_user.id
 
-    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, user_id=user_id, deleted=False).one()
     reply.deleted = True
     reply.deleted_by = user_id
 
@@ -256,7 +256,7 @@ def restore_reply(reply_id, src, auth):
     else:
         user_id = current_user.id
 
-    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=True).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, user_id=user_id, deleted=True).one()
     reply.deleted = False
     reply.deleted_by = None
 
@@ -278,81 +278,98 @@ def restore_reply(reply_id, src, auth):
         return
 
 
-def report_reply(reply_id, input, src, auth=None):
+def report_reply(reply, input, src, auth=None):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id).one()
-        user_id = authorise_api_user(auth)
+        reporter_user = authorise_api_user(auth, return_type='model')
+        suspect_user = User.query.filter_by(id=reply.user_id).one()
+        source_instance = Instance.query.filter_by(id=reply.instance_id).one()
         reason = input['reason']
         description = input['description']
+        notify_admins = (any(x in reason.lower() for x in ['csam', 'dox']) or
+                        any(x in description.lower() for x in ['csam', 'dox']))
         report_remote = input['report_remote']
     else:
-        reply = PostReply.query.get_or_404(reply_id)
-        user_id = current_user.id
+        reporter_user = current_user
+        suspect_user = User.query.get(reply.user_id)
+        source_instance = Instance.query.get(suspect_user.instance_id)
         reason = input.reasons_to_string(input.reasons.data)
         description = input.description.data
+        notify_admins = ('5' in input.reasons.data or '6' in input.reasons.data)
         report_remote = input.report_remote.data
 
-    if reply.reports == -1:  # When a mod decides to ignore future reports, reply.reports is set to -1
-        if src == SRC_API:
-            raise Exception('already_reported')
-        else:
-            flash(_('Comment has already been reported, thank you!'))
-            return
-
-    suspect_author = User.query.get(reply.author.id)
-    source_instance = Instance.query.get(suspect_author.instance_id)
-    reporter_user = User.query.get(user_id)
-    targets_data = {'gen': '0',
-                    'suspect_comment_id': reply.id,
-                    'suspect_user_id': reply.author.id,
-                    'suspect_user_user_name': suspect_author.ap_id if suspect_author.ap_id else suspect_author.user_name,
-                    'source_instance_id': suspect_author.instance_id,
-                    'source_instance_domain': source_instance.domain,
-                    'reporter_id': user_id,
-                    'reporter_user_name': reporter_user.ap_id if reporter_user.ap_id else reporter_user.user_name,
-                    'orig_comment_body': reply.body
-                    }
-    report = Report(reasons=reason, description=description, type=2, reporter_id=user_id, suspect_post_id=reply.post.id,
-                    suspect_community_id=reply.community.id,
-                    suspect_user_id=reply.author.id, suspect_post_reply_id=reply.id, in_community_id=reply.community.id,
-                    source_instance_id=1, targets=targets_data)
+    targets_data = {
+        'gen': '0',
+        'suspect_comment_id': reply.id,
+        'suspect_user_id': reply.user_id,
+        'suspect_user_user_name': suspect_user.ap_id if suspect_user.ap_id else suspect_user.user_name,
+        'source_instance_id': source_instance.id,
+        'source_instance_domain': source_instance.domain,
+        'reporter_id': reporter_user.id,
+        'reporter_user_name': reporter_user.user_name,
+        'orig_comment_body': reply.body
+    }
+    # report.type 2 = 'reply'
+    report = Report(reasons=reason, description=description, type=2, reporter_id=reporter_user.id, suspect_post_id=reply.post_id,
+                    suspect_community_id=reply.community_id,
+                    suspect_user_id=reply.user_id, suspect_post_reply_id=reply.id, in_community_id=reply.community_id,
+                    source_instance_id=reporter_user.instance_id,
+                    targets=targets_data)
     db.session.add(report)
 
-    # Notify moderators
+    # Notify local moderators, and send Flag to remote moderators
+    # if user has not selected 'report_remote', just send to remote mods not on community's or suspect_users's instances
     already_notified = set()
+    remote_instance_ids = set()
     for mod in reply.community.moderators():
         moderator = User.query.get(mod.user_id)
-        if moderator and moderator.is_local():
-            with force_locale(get_recipient_language(moderator.id)):
-                notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                            author_id=user_id, notif_type=NOTIF_REPORT,
-                                            subtype='comment_reported',
-                                            targets=targets_data)
-                db.session.add(notification)
-                already_notified.add(mod.user_id)
+        if moderator:
+            if moderator.is_local():
+                with force_locale(get_recipient_language(moderator.id)):
+                    notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
+                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                author_id=reporter_user.id, notif_type=NOTIF_REPORT,
+                                                subtype='comment_reported',
+                                                targets=targets_data)
+                    db.session.add(notification)
+                    already_notified.add(mod.user_id)
+            else:
+                if not report_remote:
+                    if moderator.instance_id != suspect_user.instance_id and moderator.instance_id != reply.community.instance_id:
+                        remote_instance_ids.add(moderator.instance_id)
+                else:
+                    remote_instance_ids.add(moderator.instance_id)
+
+    if notify_admins:
+        for admin in Site.admins():
+            if admin.id not in already_notified:
+                notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
+                                      author_id=reporter_user.id, notif_type=NOTIF_REPORT,
+                                      subtype='comment_reported',
+                                      targets=targets_data)
+                db.session.add(notify)
+                admin.unread_notifications += 1
+
+    # Lemmy doesn't process or generate Announce / Flag, so Flags also have to be sent from here to user's and community's instances
+    if report_remote:
+        if not reply.community.is_local():
+            if reply.community_id not in remote_instance_ids: # very unlikely, since it will typically have mods on same instance.
+                remote_instance_ids.add(reply.community.instance_id)
+        if not suspect_user.is_local():
+            if suspect_user.instance_id not in remote_instance_ids:
+                remote_instance_ids.add(suspect_user.instance_id)
+
     reply.reports += 1
-    # todo: only notify admins for certain types of report
-    for admin in Site.admins():
-        if admin.id not in already_notified:
-            notify = Notification(title='Suspicious content', url='/admin/reports', user_id=admin.id,
-                                  author_id=user_id, notif_type=NOTIF_REPORT,
-                                  subtype='comment_reported',
-                                  targets=targets_data)
-            db.session.add(notify)
-            admin.unread_notifications += 1
     db.session.commit()
 
-    # federate report to originating instance
-    if not reply.community.is_local() and report_remote:
+    if remote_instance_ids:
         summary = reason
         if description:
             summary += ' - ' + description
 
-        task_selector('report_reply', user_id=user_id, reply_id=reply_id, summary=summary)
+        task_selector('report_reply', user_id=reporter_user.id, reply_id=reply.id, summary=summary, instance_ids=remote_instance_ids)
 
     if src == SRC_API:
-        return user_id, report
+        return reporter_user.id, report
     else:
         return
 
@@ -364,7 +381,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
     else:
         user = current_user
 
-    reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=False).one()
     if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin_or_staff():
         raise Exception('Does not have permission')
 
@@ -400,7 +417,7 @@ def mod_restore_reply(reply_id, reason, src, auth):
     else:
         user = current_user
 
-    reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=True).one()
     if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -433,10 +450,10 @@ def mod_restore_reply(reply_id, reason, src, auth):
 def lock_post_reply(post_reply_id, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        post_reply = PostReply.query.filter_by(id=post_reply_id).one()
+        post_reply = db.session.query(PostReply).filter_by(id=post_reply_id).one()
     else:
         user = current_user
-        post_reply = PostReply.query.get(post_reply_id)
+        post_reply = db.session.query(PostReply).get(post_reply_id)
 
     if locked:
         replies_enabled = False

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2025-09-18 03:19+0000\n"
+"PO-Revision-Date: 2025-09-20 18:47+0000\n"
 "Last-Translator: Thadah Denyse <thadahdenyse@protonmail.com>\n"
 "Language-Team: Basque <http://translate.piefed.social/projects/piefed/"
 "main-web-app/eu/>\n"
@@ -384,11 +384,11 @@ msgstr ""
 
 #: app/admin/forms.py:49
 msgid "Block registrations from these referrers (one per line)"
-msgstr ""
+msgstr "Blokeatu erreferentzia hauen erregistroak (lerro bakoitzeko bat)"
 
 #: app/admin/forms.py:50
 msgid "Warn if new account banned from these instances"
-msgstr ""
+msgstr "Abisatu kontu berri bat debekatu baden instantzia hauetan"
 
 #: app/admin/forms.py:51 app/templates/auth/instance_chooser.html:32
 #: app/templates/auth/instance_chooser.html:117

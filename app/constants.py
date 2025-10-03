@@ -7,6 +7,15 @@ POST_TYPE_VIDEO = 4
 POST_TYPE_POLL = 5
 POST_TYPE_EVENT = 6
 
+POST_TYPE_NAMES = {
+    POST_TYPE_LINK: "Link",
+    POST_TYPE_ARTICLE: "Discussion",
+    POST_TYPE_IMAGE: "Image",
+    POST_TYPE_VIDEO: "Video",
+    POST_TYPE_POLL: "Poll",
+    POST_TYPE_EVENT: "Event",
+}
+
 POST_STATUS_SCHEDULED = -2
 POST_STATUS_DRAFT = -1
 POST_STATUS_REVIEWING = 0
@@ -73,6 +82,7 @@ SRC_WEB = 1
 SRC_PUB = 2
 SRC_API = 3
 SRC_PLD = 4  # admin preload form to seed communities
+SRC_PLG = 5  # plugins
 
 APLOG_IN = True
 

@@ -15,7 +15,7 @@ from app.activitypub.signature import RsaKeys, default_context, send_post_reques
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.community.util import save_icon_file, save_banner_file, hashtags_used_in_communities
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_IMAGE, \
-    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER
+    POST_TYPE_LINK, POST_TYPE_VIDEO, NOTIF_FEED, SUBSCRIPTION_MEMBER, SUBSCRIPTION_NONMEMBER, SRC_WEB
 from app.feed import bp
 from app.feed.forms import AddCopyFeedForm, EditFeedForm, SearchRemoteFeed
 from app.feed.util import feeds_for_form, search_for_feed, actor_to_feed, feed_communities_for_edit, \
@@ -695,6 +695,7 @@ def show_feed(feed):
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     if post_layout == 'masonry':
@@ -740,7 +741,7 @@ def show_feed(feed):
             for item in feed_items:
                 feed_community_ids.append(item.community_id)
 
-        post_ids = get_deduped_post_ids(result_id, feed_community_ids, sort)
+        post_ids = get_deduped_post_ids(result_id, feed_community_ids, sort, tag)
         has_next_page = len(post_ids) > page + 1 * page_length
         post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
         posts = post_ids_to_models(post_ids, sort)
@@ -852,7 +853,7 @@ def subscribe(actor):
         return redirect('/f/' + actor)
 
 
-def do_feed_subscribe(actor, user_id):
+def do_feed_subscribe(actor, user_id, src=SRC_WEB):
     try:
         remote = False
         actor = actor.strip()
@@ -921,11 +922,12 @@ def do_feed_subscribe(actor, user_id):
                                 db.session.add(feed_item)
                                 db.session.commit()
 
-                if success is True:
+                if success is True and src == SRC_WEB:
                     flash(_('You subscribed to %(feed_title)s', feed_title=feed.title))
             else:
                 msg_to_user = "Already subscribed, or subscription pending"
-                flash(_(msg_to_user))
+                if src == SRC_WEB:
+                    flash(_(msg_to_user))
 
             cache.delete_memoized(feed_membership, user, feed)
             cache.delete_memoized(menu_subscribed_feeds, user.id)

@@ -1,4 +1,4 @@
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, inline=False) -%}
 <div class="render_username">
     {% if user.deleted -%}
         [deleted]

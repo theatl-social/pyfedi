@@ -54,7 +54,8 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
-    approval_required, markdown_to_text, instance_gone_forever, permission_required
+    approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
+    moderating_communities_ids_all_users
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.utils import get_recipient_language
@@ -66,6 +67,7 @@ from datetime import timezone, timedelta
 @login_required
 @validation_required
 @approval_required
+@aged_account_required
 def add_local():
     if current_user.banned:
         return show_ban_message()
@@ -277,7 +279,7 @@ def show_community(community: Community):
     if current_user.is_authenticated and community.id not in communities_banned_from(current_user.id):
         is_moderator = any(mod.user_id == current_user.id for mod in mods)
         is_owner = any(mod.user_id == current_user.id and mod.is_owner == True for mod in mods)
-        is_admin = current_user.is_admin()
+        is_admin = current_user.id in g.admin_ids
     else:
         is_moderator = False
         is_owner = False
@@ -415,6 +417,7 @@ def show_community(community: Community):
             posts = posts.order_by(asc(Post.posted_at))
         elif sort == 'active':
             sticky_posts = sticky_posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
+            posts = posts.filter(Post.reply_count > 0)
             posts = posts.order_by(desc(Post.sticky)).order_by(desc(Post.last_active))
         per_page = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
         if post_layout == 'masonry':
@@ -1279,6 +1282,7 @@ def community_make_owner(community_id: int, user_id: int):
 
         cache.delete_memoized(moderating_communities_ids, current_user.id)
         cache.delete_memoized(moderating_communities_ids, user.id)
+        cache.delete_memoized(moderating_communities_ids_all_users)
 
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(joined_communities, user.id)
@@ -1317,6 +1321,7 @@ def community_remove_owner(community_id: int, user_id: int):
 
             cache.delete_memoized(moderating_communities_ids, current_user.id)
             cache.delete_memoized(moderating_communities_ids, user.id)
+            cache.delete_memoized(moderating_communities_ids_all_users)
 
             cache.delete_memoized(joined_communities, current_user.id)
             cache.delete_memoized(joined_communities, user.id)
@@ -1466,6 +1471,7 @@ def community_ban_user(community_id: int, user_id: int):
             ...
             # todo: send chatmessage to remote user and federate it
         cache.delete_memoized(communities_banned_from, user.id)
+        cache.delete_memoized(communities_banned_from_all_users)
 
         # Remove their notification subscription,  if any
         db.session.query(NotificationSubscription).filter(NotificationSubscription.entity_id == community.id,
@@ -1522,6 +1528,7 @@ def community_unban_user(community_id: int, user_id: int):
         # todo: send chatmessage to remote user and federate it
 
     cache.delete_memoized(communities_banned_from, user.id)
+    cache.delete_memoized(communities_banned_from_all_users)
 
     add_to_modlog('unban_user', actor=current_user, target_user=user, community=community, link_text=user.display_name(), link=user.link())
 

@@ -1,6 +1,6 @@
 {# Shared utility macros used across multiple templates #}
 
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None) -%}
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None, inline=False) -%}
 <div class="render_username" xmlns="http://www.w3.org/1999/xhtml">
     {% if user.deleted -%}
         {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
