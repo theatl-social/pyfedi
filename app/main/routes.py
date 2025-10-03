@@ -11,7 +11,7 @@ from ua_parser import parse as uaparse
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
-from app.activitypub.signature import default_context, LDSignature
+from app.activitypub.signature import default_context, LDSignature, HttpSignature
 from app.admin.util import topics_for_form
 from app.api.alpha.utils.misc import get_resolve_object
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
@@ -836,9 +836,32 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    #community = Community.query.get(33)
-    #publicize_community(community)
-    add_remote_communities()
+    from flask import json
+    community = Community.query.get(33)
+    announce_activity = {
+        'actor': community.ap_profile_id,
+        'id': f'xyz{gibberish()}',
+        'object': {
+            'actor': 'https://piefed.rimu.geek.nz/u/rimu',
+            'id': f'xyz2{gibberish()}',
+            'object': 'https://piefed.ngrok.app/u/rimu',
+            'type': 'Like',
+        },
+        'type': 'Announce',
+    }
+
+    send_async = []
+    send_async.append(HttpSignature.signed_request('https://piefed.ngrok.app/inbox', announce_activity,
+                                                   community.private_key,
+                                                   community.ap_profile_id + '#main-key',
+                                                   send_via_async=True))
+
+    from app import redis_client
+    # send announce_activity via redis pub/sub to piefed_notifs service
+    redis_client.publish("http_posts:activity", json.dumps({'urls': [url[0] for url in send_async],
+                                                            'headers': [url[1] for url in send_async],
+                                                            'data': send_async[0][2].decode('utf-8')}))
+
     return 'Done'
     import json
     user_id = 1

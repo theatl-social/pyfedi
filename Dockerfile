@@ -20,6 +20,7 @@ RUN pybabel compile -d app/translations || true
 
 RUN chmod u+x ./entrypoint.sh
 RUN chmod u+x ./entrypoint_celery.sh
+RUN chmod u+x ./entrypoint_async.sh
 
 USER python
 ENTRYPOINT ["./entrypoint.sh"]

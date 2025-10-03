@@ -370,6 +370,7 @@ class HttpSignature:
             content_type: str = "application/activity+json",
             method: Literal["get", "post"] = "post",
             timeout: int = 5,
+            send_via_async=False
     ):
         """
         Performs a request to the given path, with a document, signed
@@ -426,29 +427,32 @@ class HttpSignature:
 
         # Send the request with all those headers except the pseudo one
         del headers["(request-target)"]
-        try:
-            response = httpx_client.request(
-                method,
-                uri,
-                headers=headers,
-                data=body_bytes,
-                timeout=timeout,
-                follow_redirects=method == "GET",
-            )
-        except httpx.HTTPError as ex:
-            # Convert to a more generic error we handle
-            raise httpx.HTTPError(f"HTTP Exception for {ex.request.url} - {ex}") from None
+        if send_via_async:  # 'async' sending involves passing the data through to the piefed_notifs service. See announce_activity_to_followers().
+            return uri, headers, body_bytes
+        else:
+            try:
+                response = httpx_client.request(
+                    method,
+                    uri,
+                    headers=headers,
+                    data=body_bytes,
+                    timeout=timeout,
+                    follow_redirects=method == "GET",
+                )
+            except httpx.HTTPError as ex:
+                # Convert to a more generic error we handle
+                raise httpx.HTTPError(f"HTTP Exception for {ex.request.url} - {ex}") from None
 
-        if (
-                method == "POST"
-                and 400 <= response.status_code < 500
-                and response.status_code != 404
-        ):
-            raise ValueError(
-                f"POST error to {uri}: {response.status_code} {response.content!r}"
-            )
+            if (
+                    method == "POST"
+                    and 400 <= response.status_code < 500
+                    and response.status_code != 404
+            ):
+                raise ValueError(
+                    f"POST error to {uri}: {response.status_code} {response.content!r}"
+                )
 
-        return response
+            return response
 
 
 class HttpSignatureDetails(TypedDict):

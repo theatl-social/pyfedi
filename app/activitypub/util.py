@@ -3661,3 +3661,17 @@ def process_banned_message(banned_json, instance_domain: str, session):
                 "banned_until": utcnow() + timedelta(days=1)
             })
             session.commit()
+
+
+def is_vote(activity: dict) -> bool:
+    try:
+        if 'type' in activity:
+            if activity['type'] == 'Announce':
+                if 'object' in activity and isinstance(activity['object'], dict) and (activity['object']['type'] == 'Like' or activity['object']['type'] == 'Dislike'):
+                    return True
+            elif activity['type'] == 'Like' or activity['type'] == 'Dislike':
+                return True
+    except Exception:
+        return False
+
+    return False
