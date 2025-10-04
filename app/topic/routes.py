@@ -30,6 +30,8 @@ from app.utils import render_template, user_filters_posts, validation_required, 
 def show_topic(topic_path):
     page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    if sort == 'scaled':
+        sort = ''
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)

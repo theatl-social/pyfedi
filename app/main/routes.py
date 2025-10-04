@@ -25,7 +25,6 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
-from app.shared.tasks.maintenance import add_remote_communities
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -853,7 +852,7 @@ def test():
     send_async = []
     send_async.append(HttpSignature.signed_request('https://piefed.ngrok.app/inbox', announce_activity,
                                                    community.private_key,
-                                                   community.ap_profile_id + '#main-key',
+                                                   community.profile_id() + '#main-key',
                                                    send_via_async=True))
 
     from app import redis_client
