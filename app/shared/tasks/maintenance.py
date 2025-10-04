@@ -969,6 +969,10 @@ def clean_up_tmp():
 
     now = time.time()
     directory = 'app/static/tmp'
+
+    if not os.path.exists(directory):
+        return
+
     for filename in os.listdir(directory):
         file_path = os.path.join(directory, filename)
         if os.path.isfile(file_path):
