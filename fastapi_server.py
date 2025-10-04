@@ -19,7 +19,7 @@ DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "yes")
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG if DEBUG else logging.INFO,
+    level=logging.DEBUG if DEBUG else logging.WARNING,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -103,7 +103,7 @@ async def send_http_posts(all_urls: List, all_headers: List, data_json: str):
             logger.debug(f"Sending POST to {url}")
             response = await http_client.post(url, headers=headers, data=data_json.encode("utf8"), timeout=10.0)
             if response.status_code >= 400:
-                logger.warning(f"HTTP POST to {url} failed with status {response.status_code}")
+                logger.warning(f"HTTP POST to {url} failed with status {response.status_code} - {response.content!r}")
             else:
                 logger.debug(f"HTTP POST to {url} succeeded")
             return url, response.status_code
@@ -204,7 +204,7 @@ async def startup_event():
     global http_client
     # Initialize HTTP client with connection limits
     limits = httpx.Limits(max_keepalive_connections=200, max_connections=200)
-    http_client = httpx.AsyncClient(limits=limits)
+    http_client = httpx.AsyncClient(limits=limits, http2=True)
     logger.info("HTTP client initialized with 200 connection limit")
 
     asyncio.create_task(redis_listener())

@@ -255,6 +255,8 @@ def show_community(community: Community):
 
     page = request.args.get('page', 1, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    if sort == 'scaled':
+        sort = ''
     content_type = request.args.get('content_type', 'posts')
     flair = request.args.get('flair', '')
     tag = request.args.get('tag', '')
