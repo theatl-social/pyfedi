@@ -1783,7 +1783,7 @@ def community_wiki_add(actor):
             if form.validate_on_submit():
                 new_page = CommunityWikiPage(community_id=community.id, slug=form.slug.data, title=form.title.data,
                                              body=form.body.data, who_can_edit=form.who_can_edit.data)
-                new_page.body_html = markdown_to_html(new_page.body)
+                new_page.body_html = markdown_to_html(new_page.body, a_target="")
                 db.session.add(new_page)
                 db.session.commit()
 
@@ -1950,7 +1950,7 @@ def community_wiki_edit(actor, page_id):
                 page.title = form.title.data
                 page.slug = form.slug.data
                 page.body = form.body.data
-                page.body_html = markdown_to_html(page.body)
+                page.body_html = markdown_to_html(page.body, a_target="")
                 page.who_can_edit = form.who_can_edit.data
                 page.edited_at = utcnow()
                 new_revision = CommunityWikiPageRevision(wiki_page_id=page.id, user_id=current_user.id,
