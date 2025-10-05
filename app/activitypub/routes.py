@@ -451,7 +451,11 @@ def community_profile(actor):
     else:
         if actor.isdigit():
             community: Community = Community.query.get(actor)
-            return redirect(url_for('activitypub.community_profile', actor=community.link()))
+            if community is None:
+                profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
+                community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+            else:
+                return redirect(url_for('activitypub.community_profile', actor=community.link()))
         else:
             profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
             community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
