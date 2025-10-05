@@ -1,14 +1,14 @@
 from datetime import timedelta
 
 from flask import current_app, g
-from sqlalchemy import desc, text
+from sqlalchemy import desc, text, and_, exists
 
 from app import db
 from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
 from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
-    CommunityFlair
+    CommunityFlair, read_posts
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read
 from app.post.util import post_replies, get_comment_branch
@@ -37,6 +37,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if auth:
         user_id = authorise_api_user(auth)
+
+    user_id = 1 #NODEPLOY
 
     # get the user to check if the user has hide_read posts set later down the function
     if user_id:
@@ -207,7 +209,18 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
                                           {"user_id": user_id}).scalars())
             if user.hide_read_posts:
-                posts = posts.filter(Post.id.not_in(u_rp_ids))              # do not pass set() into not_in(), only tuples or lists
+                # Alias the read_posts table
+                rp = read_posts.alias()
+
+                # Filter posts that the user has NOT read, using ~exists
+                posts = posts.filter(
+                    ~exists().where(
+                        and_(
+                            rp.c.user_id == user_id,
+                            rp.c.read_post_id == Post.id
+                        )
+                    )
+                )
 
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
@@ -274,7 +287,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if post_subscriptions is None:
             post_subscriptions = []
 
-        read_posts = set(u_rp_ids)  # lookups ("in") on a set is O(1), tuples/lists are O(n). read_posts can be very large so this makes a difference.
+        read_post_set = set(u_rp_ids)  # lookups ("in") on a set is O(1), tuples/lists are O(n). read_posts can be very large so this makes a difference.
 
         communities_moderating = moderating_communities_ids_all_users()
         communities_joined = joined_or_modding_communities(user.id)
@@ -282,7 +295,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         bookmarked_posts = []
         banned_from = {}
         post_subscriptions = []
-        read_posts = set()
+        read_post_set = set()
         communities_moderating = []
         communities_joined = []
 
@@ -291,7 +304,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         postlist.append(post_view(post=post, variant=2, stub=False, user_id=user_id,
                                   communities_moderating=communities_moderating,
                                   banned_from=banned_from, bookmarked_posts=bookmarked_posts,
-                                  post_subscriptions=post_subscriptions, read_posts=read_posts,
+                                  post_subscriptions=post_subscriptions, read_posts=read_post_set,
                                   communities_joined=communities_joined, content_filters=content_filters))
 
     list_json = {
