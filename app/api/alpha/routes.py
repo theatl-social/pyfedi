@@ -57,8 +57,11 @@ def get_alpha_site():
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        resp = get_site(auth)
+        with limiter.limit('20/minute'):
+            resp = get_site(auth)
         return GetSiteResponse().load(resp)
+    except RateLimitExceeded as ex:
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
