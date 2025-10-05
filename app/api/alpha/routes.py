@@ -11,6 +11,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
     post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
     post_community_flair_delete
+from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
@@ -1176,6 +1177,24 @@ def get_alpha_topic_list(data):
         resp = get_topic_list(auth, data)
         validated = TopicListResponse().load(resp)
         return orjson_response(validated)
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+# Domain
+@user_bp.route('/domain/block', methods=['POST'])
+@user_bp.doc(summary="Block or unblock a domain")
+@user_bp.arguments(DomainBlockRequest)
+@user_bp.response(200, DomainBlockResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_domain_block(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_domain_block(auth, data)
+        return {'blocked': resp}
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))

@@ -10,7 +10,7 @@ from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.utils import authorise_api_user, communities_banned_from, blocked_users, in_sorted_list, user_in_restricted_country
+from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country
 
 
 def get_user(auth, data):

@@ -782,6 +782,15 @@ class CommentReplyView(DefaultSchema):
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
 
 
+class DomainBlockRequest(DefaultSchema):
+    block = fields.Boolean(required=True)
+    domain = fields.String(required=True)
+
+
+class DomainBlockResponse(DefaultSchema):
+    blocked = fields.Boolean(required=True)
+
+
 class UserRepliesResponse(DefaultSchema):
     next_page = fields.String(allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
