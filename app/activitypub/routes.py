@@ -451,7 +451,7 @@ def community_profile(actor):
     else:
         if actor.isdigit():
             community: Community = Community.query.get(actor)
-            if community is None:
+            if community is None:   # getting by number didn't work, try by string (e.g. /c/50501)
                 profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
                 community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
             else:
