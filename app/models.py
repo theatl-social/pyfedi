@@ -27,6 +27,15 @@ from sqlalchemy_utils.types import \
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
+
+# Helper function to conditionally create TSVector columns (PostgreSQL only)
+def create_tsvector_type(*args, **kwargs):
+    """Create TSVectorType for PostgreSQL, None for SQLite (testing)"""
+    db_url = os.environ.get('DATABASE_URL', '')
+    if db_url.startswith('sqlite'):
+        # Return None for SQLite - full text search won't be available but tests can run
+        return None
+    return TSVectorType(*args, **kwargs)
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
@@ -543,7 +552,7 @@ class Community(db.Model):
 
     ignore_remote_language = db.Column(db.Boolean, default=False)
 
-    search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules', auto_index=False))
+    search_vector = db.Column(create_tsvector_type('name', 'title', 'description', 'rules', auto_index=False))
 
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -940,7 +949,7 @@ class User(UserMixin, db.Model):
     ap_inbox_url = db.Column(db.String(255))
     ap_domain = db.Column(db.String(255))
 
-    search_vector = db.Column(TSVectorType('user_name', 'about', 'keywords', auto_index=False))
+    search_vector = db.Column(create_tsvector_type('user_name', 'about', 'keywords', auto_index=False))
     activity = db.relationship('ActivityLog', backref='account', lazy='dynamic', cascade="all, delete-orphan")
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
@@ -1464,7 +1473,7 @@ class Post(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}, auto_index=False))
+    search_vector = db.Column(create_tsvector_type('title', 'body', weights={"title": "A", "body": "B"}, auto_index=False))
 
     image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
@@ -2249,7 +2258,7 @@ class PostReply(db.Model):
     ap_announce_id = db.Column(db.String(100))
     ap_updated = db.Column(db.DateTime)  # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(TSVectorType('body', auto_index=False))
+    search_vector = db.Column(create_tsvector_type('body', auto_index=False))
 
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
@@ -3187,7 +3196,7 @@ class Feed(db.Model):
     show_posts_in_children = db.Column(db.Boolean, default=False)
     member_communities = db.relationship('FeedItem', lazy='dynamic', cascade="all, delete-orphan")
 
-    search_vector = db.Column(TSVectorType('name', 'description', auto_index=False))
+    search_vector = db.Column(create_tsvector_type('name', 'description', auto_index=False))
 
     icon = db.relationship('File', lazy='joined', foreign_keys=[icon_id], single_parent=True, backref='feed', cascade="all, delete-orphan")
     image = db.relationship('File', lazy='joined', foreign_keys=[image_id], single_parent=True, cascade="all, delete-orphan")
