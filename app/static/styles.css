@@ -2100,6 +2100,7 @@ a.unread:before, div.unread:before {
   border-left-style: solid;
   border-left-width: 4px;
   background-color: var(--bs-secondary-bg-subtle);
+  border-left-color: var(--bs-secondary-border-subtle);
 }
 .post_body blockquote p, .comment_body blockquote p, #preview blockquote p, .reply_preview blockquote p, .accordion-body blockquote p, .post_col blockquote p {
   margin-bottom: 0px;

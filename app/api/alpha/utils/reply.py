@@ -26,14 +26,14 @@ def get_reply_list(auth, data, user_details=None):
     # user_id: the logged in user
     # person_id: the author of the posts being requested
 
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    sort = data['sort'] if data and 'sort' in data else 'New'
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
+    sort = data['sort'] if 'sort' in data else 'New'
 
     # LIKED_ONLY
     vote_effect = None
     by_liked_only = False
-    if data and 'liked_only' in data and data['liked_only']:
+    if 'liked_only' in data and data['liked_only']:
         if not user_id:
             raise Exception('Login required for liked_only query')
         replies = PostReply.query.filter(PostReply.id.in_(user_details['upvoted_reply_ids']), PostReply.user_id != user_id)
@@ -43,7 +43,7 @@ def get_reply_list(auth, data, user_details=None):
     # SAVED_ONLY
     is_reply_bookmarked = None
     by_saved_only = False
-    if data and 'saved_only' in data and data['saved_only']:
+    if 'saved_only' in data and data['saved_only']:
         if not user_id:
             raise Exception('Login required for saved_only query')
         if not replies:
@@ -58,7 +58,7 @@ def get_reply_list(auth, data, user_details=None):
     is_creator_blocked = None
     is_creator_admin = None
     by_person_id = False
-    if data and 'person_id' in data:
+    if 'person_id' in data:
         person_id = int(data['person_id'])
         if not replies:
             replies = PostReply.query.filter_by(user_id=person_id)
@@ -75,7 +75,7 @@ def get_reply_list(auth, data, user_details=None):
     is_user_following_community = None
     is_user_moderator = None
     by_community_id = False
-    if data and 'community_id' in data:
+    if 'community_id' in data:
         community_id = int(data['community_id'])
         if not replies:
             replies = PostReply.query.filter_by(community_id=community_id)
@@ -92,7 +92,7 @@ def get_reply_list(auth, data, user_details=None):
 
     # ALL REPLIES (NO FILTER)
     if not replies:
-        if not data or (not 'post_id' in data and not 'parent_id' in data):
+        if 'post_id' not in data and 'parent_id' not in data:
             replies = PostReply.query
             if user_id is None and page * limit > 10000:
                 raise Exception('unknown') # deliberately vague response
@@ -113,17 +113,20 @@ def get_reply_list(auth, data, user_details=None):
                 replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 
         # if 'post_id' is also in data, treat it as an additional filter to liked_only, saved_only, person_id, community_id
-        if data and 'post_id' in data:
+        if 'post_id' in data:
             replies = replies.filter_by(post_id=data['post_id'])
             add_community_in_view = False
             add_post_in_view = False
+
+        if 'max_depth' in data:
+            replies = replies.filter(PostReply.depth < int(data['max_depth']))
     else:
         # PARENT_ID or POST_ID - threaded conversation
         parent_id = None # stays at None for a post_id query
         max_depth = None
 
         # max_depth for parent_id query
-        if data and 'parent_id' in data:
+        if 'parent_id' in data:
             parent_id = int(data['parent_id'])
             parent_depth = db.session.execute(text('SELECT depth FROM "post_reply" WHERE id = :id'),
                                               {"id": parent_id}).scalar()
@@ -134,7 +137,7 @@ def get_reply_list(auth, data, user_details=None):
                 max_depth = parent_depth + relative_depth
 
         # max_depth for post_id query
-        elif data and 'post_id' in data:
+        elif 'post_id' in data:
             post_id = int(data['post_id'])
             if 'max_depth' in data:
                 max_depth = int(data['max_depth'])
@@ -142,7 +145,7 @@ def get_reply_list(auth, data, user_details=None):
         # blocked users aren't filtered out for a threaded convo to avoid creating gaps
         # get_comment_branch() isn't used here for the same reason
 
-        if data and ('post_id' in data or 'parent_id' in data):
+        if 'post_id' in data or 'parent_id' in data:
             # some apps paginate through all replies to get them all in one session and build the tree client-side
             # replies.paginate() can be used for those (it won't matter if the parent of a reply on page 1 is on page 2)
 
@@ -150,7 +153,7 @@ def get_reply_list(auth, data, user_details=None):
             # allowing for this means that the number of replies returned may exceed the limit for a page
             # 'depth_first' can be sent by these apps (although they're likely better off using the /post/replies route)
             # note: actually doing something like 'ORDER BY depth, posted_at' gives boring results (all depth=0 on page 1)
-            if 'depth_first' in data and data['depth_first'] == 'true':
+            if 'depth_first' in data and data['depth_first']:
                 depth_first = True
                 if parent_id is not None:
                     if parent_depth == 0:

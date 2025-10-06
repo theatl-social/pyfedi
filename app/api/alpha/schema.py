@@ -1,7 +1,7 @@
 import re
 
 from datetime import datetime
-from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema
+from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema, INCLUDE
 
 
 # Lists used in schema for validation
@@ -19,6 +19,8 @@ community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read"]
+feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
+post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 
 
 def validate_datetime_string(text):
@@ -299,7 +301,7 @@ class Post(DefaultSchema):
     url = fields.Url()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
-    type = fields.String(required=True)
+    post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
 
 
 class PostAggregates(DefaultSchema):
@@ -409,7 +411,7 @@ class CommunityFlairEditResponse(CommunityFlair):
     pass
 
 
-class Comment(DefaultSchema):
+class Comment(Schema):
     ap_id = fields.Url(required=True)
     body = fields.String(required=True, metadata={"format": "markdown"})
     deleted = fields.Boolean(required=True)
@@ -424,6 +426,10 @@ class Comment(DefaultSchema):
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     locked = fields.Boolean()
+
+    class Meta:
+        unknown = INCLUDE # let the not-consistent-with-anything 'repliesEnabled' through for Boost
+        datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class CommentReport(DefaultSchema):
@@ -776,6 +782,15 @@ class CommentReplyView(DefaultSchema):
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
 
 
+class DomainBlockRequest(DefaultSchema):
+    block = fields.Boolean(required=True)
+    domain = fields.String(required=True)
+
+
+class DomainBlockResponse(DefaultSchema):
+    blocked = fields.Boolean(required=True)
+
+
 class UserRepliesResponse(DefaultSchema):
     next_page = fields.String(allow_none=True)
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
@@ -839,6 +854,10 @@ class UserSaveSettingsRequest(DefaultSchema):
 
 class UserSaveSettingsResponse(DefaultSchema):
     my_user = fields.Nested(MyUserInfo)
+
+
+class UserMeResponse(MyUserInfo):
+    ...
 
 
 class UserNotificationsRequest(DefaultSchema):
@@ -1327,7 +1346,7 @@ class LockPostRequest(DefaultSchema):
 class FeaturePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     featured = fields.Boolean(required=True)
-    feature_type = fields.String(required=True)
+    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
 
 
 class RemovePostRequest(DefaultSchema):

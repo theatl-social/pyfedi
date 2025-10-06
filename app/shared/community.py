@@ -21,7 +21,7 @@ from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
     communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
-    get_recipient_language, moderating_communities_ids
+    get_recipient_language, moderating_communities_ids, moderating_communities_ids_all_users
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -35,8 +35,8 @@ def join_community(community_id: int, src, auth=None, user_id=None):
     sync_retval = task_selector('join_community', send_async, user_id=user_id, community_id=community_id, src=src)
 
     if send_async or sync_retval is True:
-        existing_member = CommunityMember.query.filter_by(user_id=user_id,
-                                                          community_id=community_id).first()
+        existing_member = db.session.query(CommunityMember).filter_by(user_id=user_id,
+                                                                      community_id=community_id).first()
         if not existing_member:
             member = CommunityMember(user_id=user_id, community_id=community_id)
             db.session.add(member)
@@ -53,7 +53,7 @@ def join_community(community_id: int, src, auth=None, user_id=None):
 # function can be shared between WEB and API (only API calls it for now)
 def leave_community(community_id: int, src, auth=None):
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
-    cm = CommunityMember.query.filter_by(user_id=user_id, community_id=community_id).one()
+    cm = db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community_id).one()
     if not cm.is_owner:
         task_selector('leave_community', user_id=user_id, community_id=community_id)
 
@@ -122,7 +122,7 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
 
     recipient = search_for_user(handle)
     if recipient and not recipient.banned and not instance_banned(recipient.instance.domain):
-        community = Community.query.get(community_id)
+        community = db.session.query(Community).get(community_id)
         if community.banned:
             return 0
 
@@ -157,7 +157,7 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
     else:
         user = current_user
 
-    community = Community.query.get(community_id)
+    community = db.session.query(Community).get(community_id)
     if community.banned:
         return 0
 
@@ -204,7 +204,7 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         raise Exception('A User with that name already exists, so it cannot be used for a Community')
     # test community with this name doesn't already exist (it'll be reinforced by the DB, but check first anyway)
     ap_profile_id = 'https://' + current_app.config['SERVER_NAME'] + '/c/' + name.lower()
-    existing_community = Community.query.filter_by(ap_profile_id=ap_profile_id).first()
+    existing_community = db.session.query(Community).filter_by(ap_profile_id=ap_profile_id).first()
     if existing_community:
         raise Exception('community with that name already exists')
 
@@ -343,7 +343,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
 
 
 def subscribe_community(community_id: int, subscribe, src, auth=None):
-    community = Community.query.filter_by(id=community_id, banned=False).one()
+    community = db.session.query(Community).filter_by(id=community_id, banned=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
@@ -395,7 +395,7 @@ def delete_community(community_id: int, src, auth=None):
     else:
         user = current_user.id
 
-    community = Community.query.filter_by(id=community_id).one()
+    community = db.session.query(Community).filter_by(id=community_id).one()
     if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
@@ -424,7 +424,7 @@ def restore_community(community_id: int, src, auth=None):
     else:
         user = current_user
 
-    community = Community.query.filter_by(id=community_id).one()
+    community = db.session.query(Community).filter_by(id=community_id).one()
     if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
         raise Exception('incorrect_login')
     if not community.is_local():
@@ -448,12 +448,12 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     else:
         user = current_user
 
-    community = Community.query.filter_by(id=community_id).one()
+    community = db.session.query(Community).filter_by(id=community_id).one()
     new_moderator = User.query.filter_by(id=person_id, banned=False).one()
     if not community.is_owner(user) and not user.is_admin_or_staff():
-        raise Exception('incorrect_login')
+        raise Exception('no_permission')
 
-    existing_member = CommunityMember.query.filter(CommunityMember.user_id == new_moderator.id,
+    existing_member = db.session.query(CommunityMember).filter(CommunityMember.user_id == new_moderator.id,
                                                    CommunityMember.community_id == community_id).first()
     if existing_member:
         existing_member.is_moderator = True
@@ -498,6 +498,7 @@ def add_mod_to_community(community_id: int, person_id: int, src, auth=None):
     cache.delete_memoized(joined_communities, new_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, new_moderator.id)
+    cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
 
     task_selector('add_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
@@ -512,12 +513,12 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     else:
         user = current_user
 
-    community = Community.query.filter_by(id=community_id).one()
+    community = db.session.query(Community).filter_by(id=community_id).one()
     old_moderator = User.query.filter_by(id=person_id).one()
     if not community.is_owner(user) and not user.is_admin_or_staff():
         raise Exception('incorrect_login')
 
-    existing_member = CommunityMember.query.filter(CommunityMember.user_id == old_moderator.id,
+    existing_member = db.session.query(CommunityMember).filter(CommunityMember.user_id == old_moderator.id,
                                                    CommunityMember.community_id == community_id).first()
     if existing_member:
         existing_member.is_moderator = False
@@ -534,6 +535,7 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
     cache.delete_memoized(joined_communities, old_moderator.id)
     cache.delete_memoized(community_moderators, community_id)
     cache.delete_memoized(moderating_communities_ids, old_moderator.id)
+    cache.delete_memoized(moderating_communities_ids_all_users)
     cache.delete_memoized(Community.moderators, community)
 
     task_selector('remove_mod', user_id=user.id, mod_id=person_id, community_id=community_id)
@@ -545,14 +547,14 @@ def remove_mod_from_community(community_id: int, person_id: int, src, auth=None)
 def get_comm_flair_list(community: Community | int | str) -> list:
     if isinstance(community, int):
         community_id = community
-        community = Community.query.filter_by(id=community).one()
+        community = db.session.query(Community).filter_by(id=community).one()
     elif isinstance(community, Community):
         community_id = community.id
     elif isinstance(community, str):
         name, ap_domain = community.strip().split('@')
-        community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+        community = db.session.query(Community).filter_by(name=name, ap_domain=ap_domain).first()
         if community is None:
-            community = Community.query.filter(func.lower(Community.name) == name.lower(),
+            community = db.session.query(Community).filter(func.lower(Community.name) == name.lower(),
                                                func.lower(Community.ap_domain) == ap_domain.lower()).one()
         community_id = community.id
 

@@ -11,7 +11,7 @@ from ua_parser import parse as uaparse
 from app import db, cache
 from app.activitypub.util import users_total, active_month, local_posts, local_communities, \
     lemmy_site_data, is_activitypub_request
-from app.activitypub.signature import default_context, LDSignature
+from app.activitypub.signature import default_context, LDSignature, HttpSignature
 from app.admin.util import topics_for_form
 from app.api.alpha.utils.misc import get_resolve_object
 from app.constants import SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, \
@@ -25,7 +25,6 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
-from app.shared.tasks.maintenance import add_remote_communities
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -75,6 +74,7 @@ def home_page(sort, view_filter):
     page = request.args.get('page', 0, type=int)
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
 
     # view filter - subscribed/local/all
@@ -112,7 +112,7 @@ def home_page(sort, view_filter):
     elif view_filter == 'moderating':
         community_ids = modded_communities
 
-    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort)
+    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort, tag)
     has_next_page = len(post_ids) > page + 1 * page_length
     post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
     posts = post_ids_to_models(post_ids, sort)
@@ -251,8 +251,8 @@ def list_communities():
     
     if subscribe_select != "any":
         # get the user's joined communities
-        user_joined_communities = joined_communities(current_user.id)
-        user_moderating_communities = moderating_communities(current_user.id)
+        user_joined_communities = joined_communities(current_user.get_id())
+        user_moderating_communities = moderating_communities(current_user.get_id())
         # get the joined community ids list
         joined_ids = []
         for jc in user_joined_communities:
@@ -842,9 +842,32 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    #community = Community.query.get(33)
-    #publicize_community(community)
-    add_remote_communities()
+    from flask import json
+    community = Community.query.get(33)
+    announce_activity = {
+        'actor': community.ap_profile_id,
+        'id': f'xyz{gibberish()}',
+        'object': {
+            'actor': 'https://piefed.rimu.geek.nz/u/rimu',
+            'id': f'xyz2{gibberish()}',
+            'object': 'https://piefed.ngrok.app/u/rimu',
+            'type': 'Like',
+        },
+        'type': 'Announce',
+    }
+
+    send_async = []
+    send_async.append(HttpSignature.signed_request('https://piefed.ngrok.app/inbox', announce_activity,
+                                                   community.private_key,
+                                                   community.profile_id() + '#main-key',
+                                                   send_via_async=True))
+
+    from app import redis_client
+    # send announce_activity via redis pub/sub to piefed_notifs service
+    redis_client.publish("http_posts:activity", json.dumps({'urls': [url[0] for url in send_async],
+                                                            'headers': [url[1] for url in send_async],
+                                                            'data': send_async[0][2].decode('utf-8')}))
+
     return 'Done'
     import json
     user_id = 1

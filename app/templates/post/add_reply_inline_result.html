@@ -3,7 +3,7 @@
    We need to include that macro because this template is used as part of a full page (it's an ajax response) so
    it does not inherit from base.html where the macro is normally defined.
 #}
-{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None) -%}
+{% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, inline=False) -%}
     <div class="render_username">
         {% if user.deleted -%}
             {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}

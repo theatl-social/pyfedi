@@ -345,6 +345,7 @@ jobs:
         run: |
           echo "🧪 Testing Docker image startup"
           docker run --rm \
+            --entrypoint python \
             -e PYTHONPATH=/app \
             -e SERVER_NAME=test.localhost \
             -e SECRET_KEY=test-secret-key \
@@ -354,7 +355,7 @@ jobs:
             -e CELERY_BROKER_URL=memory://localhost/ \
             -e TESTING=true \
             pyfedi:test \
-            python tests/test_startup_validation.py
+            tests/test_startup_validation.py
 
   # Full production mirror tests (optional/conditional)
   production-mirror-tests:

@@ -31,7 +31,7 @@
                         </ol>
                     </nav>
                     <h1 class="mt-2 post_title">{{ page.title }}</h1>
-                    {{ page.body_html | safe }}
+                    {{ page.body_html | community_links | feed_links | person_links | safe }}
                     {% if page.can_edit(current_user, community) -%}
                         <p>
                             <a class="btn btn-primary"

@@ -36,7 +36,7 @@ def block_another_user(person_id, src, auth=None):
             flash(_('You cannot block admin or staff.'), 'error')
             return
 
-    existing_block = UserBlock.query.filter_by(blocker_id=user_id, blocked_id=person_id).first()
+    existing_block = db.session.query(UserBlock).filter_by(blocker_id=user_id, blocked_id=person_id).first()
     if not existing_block:
         block = UserBlock(blocker_id=user_id, blocked_id=person_id)
         db.session.add(block)
@@ -68,7 +68,7 @@ def unblock_another_user(person_id, src, auth=None):
             flash(_('You cannot unblock yourself.'), 'error')
             return
 
-    existing_block = UserBlock.query.filter_by(blocker_id=user_id, blocked_id=person_id).first()
+    existing_block = db.session.query(UserBlock).filter_by(blocker_id=user_id, blocked_id=person_id).first()
     if existing_block:
         db.session.delete(existing_block)
         db.session.commit()
@@ -85,7 +85,7 @@ def unblock_another_user(person_id, src, auth=None):
 
 def subscribe_user(person_id: int, subscribe, src, auth=None):
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
-    person = User.query.filter_by(id=person_id, banned=False).one()
+    person = db.session.query(User).filter_by(id=person_id, banned=False).one()
 
     if src == SRC_WEB:
         subscribe = False if person.notify_new_posts(user_id) else True

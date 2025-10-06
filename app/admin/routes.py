@@ -100,15 +100,15 @@ def admin_site():
 
         site.about = form.about.data
         if form.about.data:
-            site.about_html = markdown_to_html(form.about.data)
+            site.about_html = markdown_to_html(form.about.data, a_target="")
 
         site.sidebar = form.sidebar.data
         if form.sidebar.data:
-            site.sidebar_html = markdown_to_html(form.sidebar.data)
+            site.sidebar_html = markdown_to_html(form.sidebar.data, a_target="")
 
         site.legal_information = form.legal_information.data
         if form.legal_information.data:
-            site.legal_information_html = markdown_to_html(form.legal_information.data)
+            site.legal_information_html = markdown_to_html(form.legal_information.data, a_target="")
 
         site.tos_url = form.tos_url.data
         site.privacy_url = form.privacy_url.data
@@ -209,7 +209,7 @@ def admin_site():
 
         db.session.commit()
         set_setting('announcement', form.announcement.data)
-        set_setting('announcement_html', markdown_to_html(form.announcement.data, anchors_new_tab=False))
+        set_setting('announcement_html', markdown_to_html(form.announcement.data, anchors_new_tab=False, a_target=""))
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.name.data = site.name
@@ -241,7 +241,7 @@ def admin_misc():
         site.registration_mode = 'Closed'
         if close_form.announcement.data:
             set_setting('announcement', close_form.announcement.data)
-            set_setting('announcement_html', markdown_to_html(close_form.announcement.data, anchors_new_tab=False))
+            set_setting('announcement_html', markdown_to_html(close_form.announcement.data, anchors_new_tab=False, a_target=""))
         db.session.commit()
         flash(_('Settings saved.'))
     elif form.validate_on_submit():
@@ -2105,7 +2105,7 @@ def admin_cms_page_edit(page_id):
         page.url = form.url.data
         page.title = form.title.data
         page.body = form.body.data
-        page.body_html = markdown_to_html(form.body.data)
+        page.body_html = markdown_to_html(form.body.data, a_target="")
         page.last_edited_by = current_user.display_name()
         page.edited_at = utcnow()
         db.session.commit()

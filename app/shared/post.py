@@ -11,7 +11,7 @@ from flask import flash, request, current_app, g
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from pillow_heif import register_heif_opener
-from sqlalchemy import text
+from sqlalchemy import text, Integer
 
 from app import db, cache
 from app.activitypub.util import make_image_sizes, notify_about_post
@@ -29,14 +29,14 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
-        post = Post.query.filter_by(id=post_id).one()
+        post = db.session.query(Post).get(post_id)
         user = authorise_api_user(auth, return_type='model')
         if vote_direction == 'upvote' and not can_upvote(user, post.community):
             return user.id
         elif vote_direction == 'downvote' and not can_downvote(user, post.community):
             return user.id
     else:
-        post = Post.query.get_or_404(post_id)
+        post = db.session.query(Post).get_or_404(post_id)
         user = current_user
 
         if (vote_direction == 'upvote' and not can_upvote(user, post.community)) or (
@@ -68,7 +68,6 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
 
 
 def bookmark_post(post_id: int, src, auth=None):
-    Post.query.filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     mark_post_read([post_id], True, user_id)
@@ -89,7 +88,6 @@ def bookmark_post(post_id: int, src, auth=None):
 
 
 def remove_bookmark_post(post_id: int, src, auth=None):
-    Post.query.filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing_bookmark = PostBookmark.query.filter_by(post_id=post_id, user_id=user_id).first()
@@ -108,7 +106,7 @@ def remove_bookmark_post(post_id: int, src, auth=None):
 
 
 def subscribe_post(post_id: int, subscribe, src, auth=None):
-    post = Post.query.filter_by(id=post_id, deleted=False).one()
+    post = db.session.query(Post).filter_by(id=post_id, deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
@@ -236,7 +234,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
 
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
-def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
+def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
         if not user:
             user = authorise_api_user(auth, return_type='model')
@@ -577,13 +575,13 @@ def edit_post(input, post, type, src, user=None, auth=None, uploaded_file=None, 
 
 
 # just for deletes by owner (mod deletes are classed as 'remove')
-def delete_post(post_id, src, auth):
+def delete_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 
-    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=False).one()
+    post = db.session.query(Post).get(post_id)
     if post.url:
         post.calculate_cross_posts(delete_only=True)
 
@@ -592,10 +590,17 @@ def delete_post(post_id, src, auth):
     post.author.post_count -= 1
     post.community.post_count -= 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post deleted.'))
 
     task_selector('delete_post', user_id=user_id, post_id=post.id)
+
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
 
     if src == SRC_API:
         return user_id, post
@@ -603,13 +608,13 @@ def delete_post(post_id, src, auth):
         return
 
 
-def restore_post(post_id, src, auth):
+def restore_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
         user_id = current_user.id
 
-    post = Post.query.filter_by(id=post_id, user_id=user_id, deleted=True).one()
+    post = db.session.query(Post).get(post_id)
     if post.url:
         post.calculate_cross_posts()
 
@@ -618,8 +623,6 @@ def restore_post(post_id, src, auth):
     post.author.post_count += 1
     post.community.post_count += 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post restored.'))
 
     task_selector('restore_post', user_id=user_id, post_id=post.id)
 
@@ -629,7 +632,7 @@ def restore_post(post_id, src, auth):
         return
 
 
-def report_post(post, input, src, auth=None):
+def report_post(post: Post, input, src, auth=None):
     if src == SRC_API:
         reporter_user = authorise_api_user(auth, return_type='model')
         suspect_user = User.query.filter_by(id=post.user_id).one()
@@ -727,13 +730,13 @@ def report_post(post, input, src, auth=None):
         return
 
 
-def lock_post(post_id, locked, src, auth=None):
+def lock_post(post_id: int, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = db.session.query(Post).get(post_id)
     if locked:
         comments_enabled = False
         modlog_type = 'lock_post'
@@ -767,7 +770,7 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = db.session.query(Post).get(post_id)
     community = post.community
 
     if post.community.is_moderator(user) or post.community.is_instance_admin(user) or user.is_admin_or_staff():
@@ -792,13 +795,13 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
 
 
 # mod deletes
-def mod_remove_post(post_id, reason, src, auth):
+def mod_remove_post(post_id: int, reason, src, auth):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=False).one()
+    post = db.session.query(Post).get(post_id)
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -810,8 +813,6 @@ def mod_remove_post(post_id, reason, src, auth):
     post.author.post_count -= 1
     post.community.post_count -= 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post deleted.'))
 
     add_to_modlog('delete_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
@@ -819,19 +820,28 @@ def mod_remove_post(post_id, reason, src, auth):
 
     task_selector('delete_post', user_id=user.id, post_id=post.id, reason=reason)
 
+    # remove any notifications about the post
+    notifs = db.session.query(Notification).filter(Notification.targets.op("->>")("post_id").cast(Integer) == post.id)
+    for notif in notifs:
+        # dont delete report notifs
+        if notif.notif_type == NOTIF_REPORT or notif.notif_type == NOTIF_REPORT_ESCALATION:
+            continue
+        db.session.delete(notif)
+    db.session.commit()
+
     if src == SRC_API:
         return user.id, post
     else:
         return
 
 
-def mod_restore_post(post_id, reason, src, auth):
+def mod_restore_post(post_id: int, reason, src, auth):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
         user = current_user
 
-    post = Post.query.filter_by(id=post_id, user_id=user.id, deleted=True).one()
+    post = db.session.query(Post).get(post_id)
     if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -843,8 +853,6 @@ def mod_restore_post(post_id, reason, src, auth):
     post.author.post_count += 1
     post.community.post_count += 1
     db.session.commit()
-    if src == SRC_WEB:
-        flash(_('Post restored.'))
 
     add_to_modlog('restore_post', actor=user, target_user=post.author, reason=reason,
                   community=post.community, post=post,
@@ -875,7 +883,7 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
 
 def get_post_flair_list(post: Post | int) -> list:
     if isinstance(post, int):
-        post = Post.query.filter_by(id=post).one()
+        post = db.session.query(Post).filter_by(id=post).one()
     
     if not post.flair:
         # In case flair is null

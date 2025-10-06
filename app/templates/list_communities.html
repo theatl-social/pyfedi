@@ -316,7 +316,7 @@
                             <td align="center">{{ community.post_reply_count }}</td>
                             <td>{{ arrow.get(community.last_active).humanize(locale=locale) }}</td>
                             <td>{{ arrow.get(community.created_at).humanize(locale=locale) }}</td>
-                            <td>{{ loop.index }}</td>
+                            <td align="center">{{ loop.index }}</td>
                         </tr>
                     {% endfor -%}
                 </tbody>
