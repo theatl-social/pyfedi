@@ -148,25 +148,26 @@ services:
         condition: service_healthy
       test-redis:
         condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
     command: |
-      sh -c "
+      "
         echo '🔧 Test Environment Ready - Validating Current Operations'
         echo '📊 Running baseline validation tests...'
-        
+
         # Run our existing baseline tests first
         echo '1️⃣ Startup Validation Tests'
         python -m pytest tests/test_startup_validation.py -v
-        
+
         echo '2️⃣ Database Schema Immutability Tests'
         python -m pytest tests/test_field_consistency_simple.py -v
-        
-        echo '3️⃣ Content Processing Tests' 
+
+        echo '3️⃣ Content Processing Tests'
         python -m pytest tests/test_allowlist_html.py -v
         python -m pytest tests/test_markdown_to_html.py -v
-        
+
         echo '4️⃣ API Endpoint Tests (when ready)'
         # python -m pytest tests/test_api_endpoints.py -v
-        
+
         echo '✅ Comprehensive validation complete!'
         echo '📝 Current operations verified before substantial changes'
       "
