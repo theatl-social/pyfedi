@@ -62,6 +62,14 @@ def get_user(auth, data):
     return user_json
 
 
+def get_user_details(auth):
+    person = authorise_api_user(auth, return_type='model')
+
+    user_json = user_view(user=person, variant=6, user_id=person.id)
+
+    return user_json
+
+
 def get_user_list(auth, data):
     # only support 'api/alpha/search?q&type_=Users&sort=Top&listing_type=Local&page=1&limit=15' for now
     # (enough for instance view)

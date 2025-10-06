@@ -856,6 +856,10 @@ class UserSaveSettingsResponse(DefaultSchema):
     my_user = fields.Nested(MyUserInfo)
 
 
+class UserMeResponse(MyUserInfo):
+    ...
+
+
 class UserNotificationsRequest(DefaultSchema):
     status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
     limit = fields.Integer(metadata={"default": 10})

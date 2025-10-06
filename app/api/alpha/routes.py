@@ -30,7 +30,7 @@ from app.api.alpha.utils.upload import post_upload_image, post_upload_community_
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
+    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -1213,6 +1213,25 @@ def get_alpha_user(data):
         auth = request.headers.get('Authorization')
         resp = get_user(auth, data)
         validated = GetUserResponse().load(resp)
+        return orjson_response(validated)
+    except NoResultFound:
+        return abort(400, message="User not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@user_bp.route("/user/me", methods=["GET"])
+@user_bp.doc(summary="Get the details for the current user")
+@user_bp.response(200, UserMeResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def get_alpha_user_details():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = get_user_details(auth)
+        validated = UserMeResponse().load(resp)
         return orjson_response(validated)
     except NoResultFound:
         return abort(400, message="User not found")
