@@ -38,7 +38,6 @@ def get_private_message_conversation(auth, data):
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 10
     person_id = int(data['person_id'])
-    person = User.query.filter_by(id=person_id).one()
 
     user_id = authorise_api_user(auth)
 

@@ -583,9 +583,6 @@ def shared_inbox():
         id = object['id']
 
 
-    if id.startswith('xyz'):
-        eee = 1
-
     if redis_client.exists(id):  # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
         return '', 200

@@ -4,30 +4,43 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
-
 {% block app_content -%}
-
-<div class="row">
-    <main class="col-12 col-lg-8 position-relative main_pane">
-        <div class="row position-relative">
-            <div class="col post_col post_type_normal wiki_page">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
-                  <ol class="breadcrumb">
-                    {% for breadcrumb in breadcrumbs -%}
-                      <li class="breadcrumb-item">{% if breadcrumb.url -%}<a href="{{ breadcrumb.url }}">{% endif -%}{{ breadcrumb.text }}{% if breadcrumb.url -%}</a>{% endif -%}</li>
-                    {% endfor -%}
-                    <li class="breadcrumb-item"><a href="/c/{{ page.community.link() }}">{{ page.community.title }}@{{ page.community.ap_domain }}</a></li>
-                    <li class="breadcrumb-item active">{{ page.title|shorten(15) }}</li>
-                  </ol>
-                </nav>
-                <h1 class="mt-2 post_title">{{ page.title }}</h1>
-                {{ page.body_html | community_links | feed_links | person_links | safe }}
-                {% if page.can_edit(current_user, community) -%}
-                    <p><a class="btn btn-primary" href="{{ url_for('community.community_wiki_edit', actor=community.link(), page_id=page.id, return='page') }}">{{ _('Edit') }}</a></p>
-                {% endif %}
+    <div class="row">
+        <main class="col-12 col-lg-8 position-relative main_pane">
+            <div class="row position-relative">
+                <div class="col post_col post_type_normal wiki_page">
+                    <nav aria-label="breadcrumb"
+                         id="breadcrumb_nav"
+                         aria-label="{{ _('Navigation') }}">
+                        <ol class="breadcrumb">
+                            {% for breadcrumb in breadcrumbs -%}
+                                <li class="breadcrumb-item">
+                                    {% if breadcrumb.url -%}
+                                        <a href="{{ breadcrumb.url }}">
+                                        {% endif -%}
+                                        {{ breadcrumb.text }}
+                                        {% if breadcrumb.url -%}
+                                        </a>
+                                    {% endif -%}
+                                </li>
+                            {% endfor -%}
+                            <li class="breadcrumb-item">
+                                <a href="/c/{{ page.community.link() }}">{{ page.community.title }}@{{ page.community.ap_domain }}</a>
+                            </li>
+                            <li class="breadcrumb-item active">{{ page.title|shorten(15) }}</li>
+                        </ol>
+                    </nav>
+                    <h1 class="mt-2 post_title">{{ page.title }}</h1>
+                    {{ page.body_html | community_links | feed_links | person_links | safe }}
+                    {% if page.can_edit(current_user, community) -%}
+                        <p>
+                            <a class="btn btn-primary"
+                               href="{{ url_for('community.community_wiki_edit', actor=community.link() , page_id=page.id, return='page') }}">{{ _("Edit") }}</a>
+                        </p>
+                    {% endif %}
+                </div>
             </div>
-        </div>
-    </main>
-    {% include "_side_pane.html" %}
-</div>
+        </main>
+        {% include "_side_pane.html" %}
+    </div>
 {% endblock -%}
