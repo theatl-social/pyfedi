@@ -30,11 +30,11 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 
 # Helper function to conditionally create TSVector columns (PostgreSQL only)
 def create_tsvector_type(*args, **kwargs):
-    """Create TSVectorType for PostgreSQL, None for SQLite (testing)"""
+    """Create TSVectorType for PostgreSQL, Text for SQLite (testing)"""
     db_url = os.environ.get('DATABASE_URL', '')
     if db_url.startswith('sqlite'):
-        # Return None for SQLite - full text search won't be available but tests can run
-        return None
+        # Use Text column for SQLite - full text search won't work but tests can run
+        return db.Text
     return TSVectorType(*args, **kwargs)
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \

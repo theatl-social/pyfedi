@@ -10,8 +10,13 @@ echo "Starting cron daemon..."
 cron
 
 # 2. Run setup tasks (as root)
-echo "Running database migrations..."
-python3 -m flask db upgrade
+# Skip migrations for SQLite (used in testing)
+if echo "$DATABASE_URL" | grep -q "^sqlite"; then
+  echo "Skipping database migrations (SQLite testing mode)"
+else
+  echo "Running database migrations..."
+  python3 -m flask db upgrade
+fi
 
 # echo "Populating community search..."
 # python3 -m flask populate_community_search
