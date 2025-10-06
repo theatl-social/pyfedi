@@ -385,6 +385,7 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
 
         return existing_flair
     else:
+        flair_text = text_color = background_color = blur_images = ''
         if "text_color" in flair:
             text_color = flair['text_color']
         elif "textColor" in flair:
@@ -407,12 +408,15 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
         
         new_ap_id = flair["id"] if "id" in flair else None
 
-        new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
-                                   text_color=text_color, background_color=background_color,
-                                   blur_images=blur_images,
-                                   ap_id=new_ap_id)
-        session.add(new_flair)
-        return new_flair
+        if flair_text:
+            new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
+                                       text_color=text_color, background_color=background_color,
+                                       blur_images=blur_images,
+                                       ap_id=new_ap_id)
+            session.add(new_flair)
+            return new_flair
+        else:
+            return None
 
 
 def update_community_flair_from_tags(community: Community, flair_tags: list, session=None):
@@ -734,7 +738,9 @@ def refresh_community_profile_task(community_id, activity_json):
                                     flair_dict['background_color'] = flair['background_color']
                                 if 'blur_images' in flair:
                                     flair_dict['blur_images'] = flair['blur_images']
-                                community.flair.append(find_flair_or_create(flair_dict, community.id, session))
+                                new_flair = find_flair_or_create(flair_dict, community.id, session)
+                                if new_flair:
+                                    community.flair.append(new_flair)
                             session.commit()
                     
                     if "tag" in activity_json and isinstance(activity_json["tag"], list):
