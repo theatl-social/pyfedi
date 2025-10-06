@@ -30,10 +30,13 @@ from app.utils import render_template, user_filters_posts, validation_required, 
 def show_topic(topic_path):
     page = request.args.get('page', 0, type=int)
     sort = request.args.get('sort', '' if current_user.is_anonymous else current_user.default_sort)
+    if sort == 'scaled':
+        sort = ''
     result_id = request.args.get('result_id', gibberish(15)) if current_user.is_authenticated else None
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     post_layout = request.args.get('layout', 'list' if not low_bandwidth else None)
     content_type = request.args.get('content_type', 'posts')
+    tag = request.args.get('tag', '')
     page_length = 20 if low_bandwidth else current_app.config['PAGE_LENGTH']
     if post_layout == 'masonry':
         page_length = 200
@@ -79,7 +82,7 @@ def show_topic(topic_path):
         posts = None
         comments = None
         if content_type == 'posts':
-            post_ids = get_deduped_post_ids(result_id, community_ids, sort)
+            post_ids = get_deduped_post_ids(result_id, community_ids, sort, tag)
             has_next_page = len(post_ids) > page + 1 * page_length
             post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
             posts = post_ids_to_models(post_ids, sort)

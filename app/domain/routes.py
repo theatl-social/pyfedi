@@ -8,11 +8,12 @@ from flask_login import current_user, login_required
 from sqlalchemy import desc, or_
 
 from app import db, constants, cache, limiter
-from app.constants import POST_STATUS_REVIEWING
+from app.constants import POST_STATUS_REVIEWING, SRC_WEB
 from app.domain import bp
 from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
+from app.shared.domain import block_domain, unblock_domain
 from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
     return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
@@ -203,12 +204,9 @@ def domains_blocked_list():
 @login_required
 def domain_block(domain_id):
     domain = Domain.query.get_or_404(domain_id)
-    block = DomainBlock.query.filter_by(user_id=current_user.id, domain_id=domain_id).first()
-    if not block:
-        block = DomainBlock(user_id=current_user.id, domain_id=domain_id)
-        db.session.add(block)
-        db.session.commit()
-    cache.delete_memoized(blocked_domains, current_user.id)
+
+    block_domain(domain.name, SRC_WEB)
+
     flash(_('%(name)s blocked.', name=domain.name))
 
     if request.headers.get("HX-Request"):
@@ -224,11 +222,9 @@ def domain_block(domain_id):
 @login_required
 def domain_unblock(domain_id):
     domain = Domain.query.get_or_404(domain_id)
-    block = DomainBlock.query.filter_by(user_id=current_user.id, domain_id=domain_id).first()
-    if block:
-        db.session.delete(block)
-        db.session.commit()
-    cache.delete_memoized(blocked_domains, current_user.id)
+
+    unblock_domain(domain.name, SRC_WEB)
+
     flash(_('%(name)s un-blocked.', name=domain.name))
 
     if request.headers.get("HX-Request"):

@@ -6,7 +6,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 ✅ [Cross-posting](https://piefed.social/post/411644)
 
-[Mobile app](https://piefed.social/post/411560)
+~~[Mobile app](https://piefed.social/post/411560)~~
 
 [Improve reputation icons](https://piefed.social/post/411563)
 
@@ -18,7 +18,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 ✅ [Scheduled posts](https://piefed.social/post/411583)
 
-[Built-in instance chooser during onboarding](https://piefed.social/post/411579)
+✅ [Built-in instance chooser during onboarding](https://piefed.social/post/411579)
 
 ✅ [Default sort for comments](https://piefed.social/post/411572)
 

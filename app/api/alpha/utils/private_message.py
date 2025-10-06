@@ -1,7 +1,6 @@
 from sqlalchemy import desc, or_, text
 
 from app import db
-from app.api.alpha.utils.validators import required, string_expected, integer_expected, boolean_expected
 from app.api.alpha.views import private_message_view
 from app.constants import NOTIF_MESSAGE, NOTIF_REPORT
 from app.chat.util import send_message, update_message
@@ -11,9 +10,9 @@ from app.shared.tasks import task_selector
 
 
 def get_private_message_list(auth, data):
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    unread_only = data['unread_only'] if data and 'unread_only' in data else False
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
+    unread_only = data['unread_only'] if 'unread_only' in data else False
 
     user_id = authorise_api_user(auth)
 
@@ -25,7 +24,7 @@ def get_private_message_list(auth, data):
     private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
-    for private_message in private_messages:
+    for private_message in private_messages.items:
         pm_list.append(private_message_view(private_message, variant=1))
 
     pm_json = {
@@ -36,15 +35,10 @@ def get_private_message_list(auth, data):
 
 
 def get_private_message_conversation(auth, data):
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    if not data or 'person_id' not in data:
-        raise Exception('Missing person_id parameter')
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
     person_id = int(data['person_id'])
     person = User.query.filter_by(id=person_id).one()
-
-    if person is None:
-        raise Exception('person not found')
 
     user_id = authorise_api_user(auth)
 
@@ -70,10 +64,6 @@ def get_private_message_conversation(auth, data):
 
 
 def post_private_message(auth, data):
-    required(['content', 'recipient_id'], data)
-    string_expected(['content'], data)
-    integer_expected(['recipient_id'], data)
-
     sender = authorise_api_user(auth, return_type='model')
     recipient = User.query.filter_by(id=data['recipient_id']).one()
 
@@ -92,10 +82,6 @@ def post_private_message(auth, data):
 
 
 def post_private_message_mark_as_read(auth, data):
-    required(['private_message_id', 'read'], data)
-    integer_expected(['private_message_id'], data)
-    boolean_expected(['read'], data)
-
     user = authorise_api_user(auth, return_type='model')
     message_id = data['private_message_id']
     read = data['read']
@@ -120,10 +106,6 @@ def post_private_message_mark_as_read(auth, data):
 
 
 def put_private_message(auth, data):
-    required(['private_message_id', 'content'], data)
-    string_expected(['content'], data)
-    integer_expected(['private_message_id'], data)
-
     chat_message_id = int(data['private_message_id'])
     content = data['content']
 
@@ -140,10 +122,6 @@ def put_private_message(auth, data):
 
 
 def post_private_message_delete(auth, data):
-    required(['private_message_id', 'deleted'], data)
-    boolean_expected(['deleted'], data)
-    integer_expected(['private_message_id'], data)
-
     chat_message_id = int(data['private_message_id'])
     deleted = data['deleted']
 
@@ -161,10 +139,6 @@ def post_private_message_delete(auth, data):
 
 
 def post_private_message_report(auth, data):
-    required(['private_message_id', 'reason'], data)
-    integer_expected(['private_message_id'], data)
-    string_expected(['reason'], data)
-
     chat_message_id = data['private_message_id']
     reason = data['reason']
 

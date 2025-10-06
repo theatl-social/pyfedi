@@ -1,7 +1,6 @@
 from flask import current_app, jsonify, request
 from flask_smorest import abort
 from flask_limiter import RateLimitExceeded
-from marshmallow.constants import INCLUDE
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import limiter
@@ -12,6 +11,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
     post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
     post_community_flair_delete
+from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
@@ -30,7 +30,7 @@ from app.api.alpha.utils.upload import post_upload_image, post_upload_community_
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair
+    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -58,8 +58,11 @@ def get_alpha_site():
         return abort(400, message="alpha api is not enabled")
     try:
         auth = request.headers.get('Authorization')
-        resp = get_site(auth)
+        with limiter.limit('20/minute'):
+            resp = get_site(auth)
         return GetSiteResponse().load(resp)
+    except RateLimitExceeded as ex:
+        return abort(429, message=str(ex))
     except Exception as ex:
         current_app.logger.error(str(ex))
         return abort(400, message=str(ex))
@@ -1179,6 +1182,24 @@ def get_alpha_topic_list(data):
         return abort(400, message=str(ex))
 
 
+# Domain
+@user_bp.route('/domain/block', methods=['POST'])
+@user_bp.doc(summary="Block or unblock a domain")
+@user_bp.arguments(DomainBlockRequest)
+@user_bp.response(200, DomainBlockResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_domain_block(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = post_domain_block(auth, data)
+        return {'blocked': resp}
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
 # User
 @user_bp.route("/user", methods=["GET"])
 @user_bp.doc(summary="Get the details for a person")
@@ -1192,6 +1213,25 @@ def get_alpha_user(data):
         auth = request.headers.get('Authorization')
         resp = get_user(auth, data)
         validated = GetUserResponse().load(resp)
+        return orjson_response(validated)
+    except NoResultFound:
+        return abort(400, message="User not found")
+    except Exception as ex:
+        current_app.logger.error(str(ex))
+        return abort(400, message=str(ex))
+
+
+@user_bp.route("/user/me", methods=["GET"])
+@user_bp.doc(summary="Get the details for the current user")
+@user_bp.response(200, UserMeResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def get_alpha_user_details():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    try:
+        auth = request.headers.get('Authorization')
+        resp = get_user_details(auth)
+        validated = UserMeResponse().load(resp)
         return orjson_response(validated)
     except NoResultFound:
         return abort(400, message="User not found")

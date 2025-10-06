@@ -15,14 +15,14 @@ from app.utils import render_template, authorise_api_user, shorten_string, \
 
 def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
     if src == SRC_API:
-        reply = PostReply.query.filter_by(id=reply_id).one()
+        reply = db.session.query(PostReply).filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
         if vote_direction == 'upvote' and not can_upvote(user, reply.community):
             return user.id
         elif vote_direction == 'downvote' and not can_downvote(user, reply.community):
             return user.id
     else:
-        reply = PostReply.query.get_or_404(reply_id)
+        reply = db.session.query(PostReply).get_or_404(reply_id)
         user = current_user
 
     undo = reply.vote(user, vote_direction)
@@ -86,7 +86,7 @@ def remove_bookmark_reply(reply_id: int, src, auth=None):
 
 
 def subscribe_reply(reply_id: int, subscribe, src, auth=None):
-    reply = PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     if src == SRC_WEB:
@@ -151,7 +151,7 @@ def make_reply(input, post, parent_id, src, auth=None):
         distinguished = input.distinguished.data
 
     if parent_id:
-        parent_reply = PostReply.query.filter_by(id=parent_id).one()
+        parent_reply = db.session.query(PostReply).filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(user.id) or parent_reply.author.has_blocked_instance(user.instance_id):
             raise Exception('The author of the parent reply has blocked the author or instance of the new reply.')
         if not parent_reply.replies_enabled:
@@ -230,7 +230,7 @@ def delete_reply(reply_id, src, auth):
     else:
         user_id = current_user.id
 
-    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, user_id=user_id, deleted=False).one()
     reply.deleted = True
     reply.deleted_by = user_id
 
@@ -256,7 +256,7 @@ def restore_reply(reply_id, src, auth):
     else:
         user_id = current_user.id
 
-    reply = PostReply.query.filter_by(id=reply_id, user_id=user_id, deleted=True).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, user_id=user_id, deleted=True).one()
     reply.deleted = False
     reply.deleted_by = None
 
@@ -381,7 +381,7 @@ def mod_remove_reply(reply_id, reason, src, auth):
     else:
         user = current_user
 
-    reply = PostReply.query.filter_by(id=reply_id, deleted=False).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=False).one()
     if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user) and not user.is_admin_or_staff():
         raise Exception('Does not have permission')
 
@@ -417,7 +417,7 @@ def mod_restore_reply(reply_id, reason, src, auth):
     else:
         user = current_user
 
-    reply = PostReply.query.filter_by(id=reply_id, deleted=True).one()
+    reply = db.session.query(PostReply).filter_by(id=reply_id, deleted=True).one()
     if not reply.community.is_moderator(user) and not reply.community.is_instance_admin(user):
         raise Exception('Does not have permission')
 
@@ -450,10 +450,10 @@ def mod_restore_reply(reply_id, reason, src, auth):
 def lock_post_reply(post_reply_id, locked, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
-        post_reply = PostReply.query.filter_by(id=post_reply_id).one()
+        post_reply = db.session.query(PostReply).filter_by(id=post_reply_id).one()
     else:
         user = current_user
-        post_reply = PostReply.query.get(post_reply_id)
+        post_reply = db.session.query(PostReply).get(post_reply_id)
 
     if locked:
         replies_enabled = False

@@ -6,8 +6,6 @@ from sqlalchemy import desc, or_, text
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
-from app.api.alpha.utils.validators import required, integer_expected, boolean_expected, string_expected, \
-    array_of_integers_expected
 from app.api.alpha.views import community_view, user_view, post_view, cached_modlist_for_community, flair_view
 from app.community.util import search_for_community
 from app.constants import *
@@ -17,23 +15,23 @@ from app.shared.community import join_community, leave_community, block_communit
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
 from app.shared.tasks import task_selector
-from app.utils import authorise_api_user
+from app.utils import authorise_api_user, communities_banned_from_all_users
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities, expand_hex_color
 
 
 def get_community_list(auth, data):
-    type_ = data['type_'] if data and 'type_' in data else "All"
-    sort = data['sort'] if data and 'sort' in data else "Hot"
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
-    show_nsfw = data['show_nsfw'] if data and 'show_nsfw' in data else False
+    type_ = data['type_'] if 'type_' in data else "All"
+    sort = data['sort'] if 'sort' in data else "Hot"
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
+    show_nsfw = data['show_nsfw'] if 'show_nsfw' in data else False
     show_nsfl = show_nsfw
 
     user = authorise_api_user(auth, return_type='model') if auth else None
     user_id = user.id if user else None
 
-    query = data['q'] if data and 'q' in data else ''
+    query = data['q'] if 'q' in data else ''
     if user_id and '@' in query and '.' in query and query.startswith('!'):
         search_for_community(query)
         query = query[1:]
@@ -90,8 +88,8 @@ def get_community_list(auth, data):
 
 
 def get_community(auth, data):
-    if not data or ('id' not in data and 'name' not in data):
-        raise Exception('missing parameters for community')
+    if 'id' not in data and 'name' not in data:
+        raise Exception('id or name required')
     if 'id' in data:
         community = int(data['id'])
     elif 'name' in data:
@@ -115,10 +113,6 @@ def get_community(auth, data):
 
 
 def post_community_follow(auth, data):
-    required(['community_id', 'follow'], data)
-    integer_expected(['community_id'], data)
-    boolean_expected(['follow'], data)
-
     community_id = data['community_id']
     follow = data['follow']
 
@@ -128,10 +122,6 @@ def post_community_follow(auth, data):
 
 
 def post_community_block(auth, data):
-    required(['community_id', 'block'], data)
-    integer_expected(['community_id'], data)
-    boolean_expected(['block'], data)
-
     community_id = data['community_id']
     block = data['block']
 
@@ -141,11 +131,6 @@ def post_community_block(auth, data):
 
 
 def post_community(auth, data):
-    required(['name', 'title'], data)
-    string_expected(['name', 'title', 'description', 'rules', 'icon_url', 'banner_url'], data)
-    boolean_expected(['nsfw', 'restricted_to_mods', 'local_only'], data)
-    array_of_integers_expected(['discussion_languages'], data)
-
     name = data['name']
     title = data['title']
     description = data['description'] if 'description' in data else ''
@@ -168,12 +153,6 @@ def post_community(auth, data):
 
 
 def put_community(auth, data):
-    required(['community_id'], data)
-    integer_expected(['community_id'], data)
-    string_expected(['title', 'description', 'rules', 'icon_url', 'banner_url'], data)
-    boolean_expected(['nsfw', 'restricted_to_mods', 'local_only'], data)
-    array_of_integers_expected(['discussion_languages'], data)
-
     community_id = data['community_id']
     community = Community.query.filter_by(id=community_id).one()
 
@@ -213,10 +192,6 @@ def put_community(auth, data):
 
 
 def put_community_subscribe(auth, data):
-    required(['community_id', 'subscribe'], data)
-    integer_expected(['community_id'], data)
-    boolean_expected(['subscribe'], data)
-
     community_id = data['community_id']
     subscribe = data['subscribe']
 
@@ -226,10 +201,6 @@ def put_community_subscribe(auth, data):
 
 
 def post_community_delete(auth, data):
-    required(['community_id', 'deleted'], data)
-    integer_expected(['community_id'], data)
-    boolean_expected(['deleted'], data)
-
     community_id = data['community_id']
     deleted = data['deleted']
 
@@ -242,8 +213,6 @@ def post_community_delete(auth, data):
 
 
 def get_community_moderate_bans(auth, data):
-    required(['community_id'], data)
-
     # get the community_id from the data
     community_id = int(data['community_id'])
     community = Community.query.filter_by(id=community_id).one()
@@ -252,8 +221,8 @@ def get_community_moderate_bans(auth, data):
     user = authorise_api_user(auth, return_type='model')
 
     # get the page for pagination from the data.page
-    page = int(data['page']) if data and 'page' in data else 1
-    limit = int(data['limit']) if data and 'limit' in data else 10
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
 
     # validate that the user is a mod or owner of the community, or an instance admin
     if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
@@ -295,10 +264,6 @@ def get_community_moderate_bans(auth, data):
 
 
 def put_community_moderate_unban(auth, data):
-    required(['community_id', 'user_id'], data)
-    integer_expected(['community_id'], data)
-    integer_expected(['user_id'], data)
-
     # get the user to unban
     user_id = data['user_id']
     blocked = User.query.get(user_id)
@@ -358,6 +323,7 @@ def put_community_moderate_unban(auth, data):
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(communities_banned_from_all_users)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -366,13 +332,6 @@ def put_community_moderate_unban(auth, data):
 
 
 def post_community_moderate_ban(auth, data):
-    required(['community_id', 'user_id', 'reason'], data)
-    integer_expected(['community_id'], data)
-    integer_expected(['user_id'], data)
-    string_expected(['reason'], data)
-    string_expected(['expires_at'], data)
-    boolean_expected(['permanent'], data)
-
     # get the user to ban
     user_id = data['user_id']
     blocked = User.query.get(user_id)
@@ -439,6 +398,7 @@ def post_community_moderate_ban(auth, data):
         db.session.commit()
 
     cache.delete_memoized(communities_banned_from, blocked.id)
+    cache.delete_memoized(communities_banned_from_all_users)
     cache.delete_memoized(joined_communities, blocked.id)
     cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -456,10 +416,6 @@ def post_community_moderate_ban(auth, data):
 
 
 def post_community_moderate_post_nsfw(auth, data):
-    required(['post_id', 'nsfw_status'], data)
-    integer_expected(['post_id'], data)
-    boolean_expected(['nsfw_status'], data)
-
     # get the user from the auth and make sure they are allowed to conduct this action
     mod_user = authorise_api_user(auth, return_type='model')
 
@@ -487,10 +443,6 @@ def post_community_moderate_post_nsfw(auth, data):
 
 
 def post_community_mod(auth, data):
-    required(['community_id', 'person_id', 'added'], data)
-    integer_expected(['community_id', 'person_id'], data)
-    boolean_expected(['added'], data)
-
     community_id = data['community_id']
     person_id = data['person_id']
     added = data['added']

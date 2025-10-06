@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session, to_srgb
+    patch_db_session, to_srgb, communities_banned_from_all_users
 
 
 def public_key():
@@ -348,10 +348,13 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
         existing_flair = None
 
     if existing_flair is None:
-        if 'preferredUsername' not in flair:
-            return None
-        existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
+        if 'preferredUsername' in flair:
+            existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['preferredUsername'].strip(), 
                                                               CommunityFlair.community_id == community_id).first()
+        elif 'display_name' in flair:
+            existing_flair = session.query(CommunityFlair).filter(CommunityFlair.flair == flair['display_name'].strip(),
+                                                                  CommunityFlair.community_id == community_id).first()
+
     if existing_flair:
         # Update flair properties
         if "text_color" in flair:
@@ -401,10 +404,13 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
             flair_text = flair["display_name"]
         elif "preferredUsername" in flair:
             flair_text = flair['preferredUsername']
+        
+        new_ap_id = flair["id"] if "id" in flair else None
+
         new_flair = CommunityFlair(flair=flair_text.strip(), community_id=community_id,
                                    text_color=text_color, background_color=background_color,
                                    blur_images=blur_images,
-                                   ap_id=flair['id'])
+                                   ap_id=new_ap_id)
         session.add(new_flair)
         return new_flair
 
@@ -1141,7 +1147,19 @@ def actor_json_to_model(activity_json, address, server):
         except IntegrityError:
             db.session.rollback()
             return db.session.query(Community).filter_by(ap_profile_id=activity_json['id'].lower()).one()
-        if 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+        if 'tag' in activity_json and isinstance(activity_json['tag'], list):
+            # New-style post flair
+            community.flair = []
+            for flair in activity_json["tag"]:
+                if flair["type"] == "CommunityPostTag":
+                    flair_dict = flair
+                    flair_obj = find_flair_or_create(flair_dict, community.id)
+                    if flair_obj:
+                        community.flair.append(flair_obj)
+            db.session.commit()
+        elif 'lemmy:tagsForPosts' in activity_json and isinstance(activity_json['lemmy:tagsForPosts'], list):
+            # Legacy post flair
+            community.flair = []
             for flair in activity_json['lemmy:tagsForPosts']:
                 flair_dict = {'display_name': flair['display_name']}
                 if 'text_color' in flair:
@@ -1150,7 +1168,11 @@ def actor_json_to_model(activity_json, address, server):
                     flair_dict['background_color'] = flair['background_color']
                 if 'blur_images' in flair:
                     flair_dict['blur_images'] = flair['blur_images']
-                community.flair.append(find_flair_or_create(flair_dict, community.id))
+                if 'id' in flair:
+                    flair_dict['id'] = flair['id']
+                flair_obj = find_flair_or_create(flair_dict, community.id)
+                if flair_obj:
+                    community.flair.append(flair_obj)
             db.session.commit()
         if community.icon_id:
             make_image_sizes(community.icon_id, 60, 250, 'communities')
@@ -1963,6 +1985,7 @@ def ban_user(blocker, blocked, community, core_activity):
             db.session.commit()
 
             cache.delete_memoized(communities_banned_from, blocked.id)
+            cache.delete_memoized(communities_banned_from_all_users)
             cache.delete_memoized(joined_communities, blocked.id)
             cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -1997,6 +2020,7 @@ def unban_user(blocker, blocked, community, core_activity):
         db.session.commit()
 
         cache.delete_memoized(communities_banned_from, blocked.id)
+        cache.delete_memoized(communities_banned_from_all_users)
         cache.delete_memoized(joined_communities, blocked.id)
         cache.delete_memoized(moderating_communities, blocked.id)
 
@@ -3637,3 +3661,17 @@ def process_banned_message(banned_json, instance_domain: str, session):
                 "banned_until": utcnow() + timedelta(days=1)
             })
             session.commit()
+
+
+def is_vote(activity: dict) -> bool:
+    try:
+        if 'type' in activity:
+            if activity['type'] == 'Announce':
+                if 'object' in activity and isinstance(activity['object'], dict) and (activity['object']['type'] == 'Like' or activity['object']['type'] == 'Dislike'):
+                    return True
+            elif activity['type'] == 'Like' or activity['type'] == 'Dislike':
+                return True
+    except Exception:
+        return False
+
+    return False

@@ -43,7 +43,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if post.deleted_by and post.user_id != post.deleted_by:
                 v1['removed'] = True
                 v1['deleted'] = False
-        v1['type'] = POST_TYPE_NAMES.get(post.type, "unknown")
+        v1['post_type'] = POST_TYPE_NAMES.get(post.type, "Discussion")
         if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
             if post.url:
                 v1['url'] = post.url
@@ -127,11 +127,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             if banned_from is None:
                 banned = post.community_id in communities_banned_from(post.user_id)
             else:
-                banned = post.community_id in banned_from
+                banned = post.community_id in banned_from[post.user_id] if post.user_id in banned_from else []
             if communities_moderating is None:
                 moderator = post.community.is_moderator(post.author) or post.community.is_owner(post.author)
             else:
-                moderator = post.community_id in communities_moderating
+                moderator = post.community_id in communities_moderating[post.user_id] if post.user_id in communities_moderating else []
             admin = post.user_id in g.admin_ids
         else:
             banned = False
@@ -544,6 +544,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
                    'distinguished': reply.distinguished if reply.distinguished else False,
                    'locked': not reply.replies_enabled if reply.replies_enabled is not None else False,
                    'removed': False})
+        v1['repliesEnabled'] = not v1['locked']
 
         if not reply.path:
             calculate_path(reply)
@@ -851,6 +852,14 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
     creator = user_view(cm.sender_id, variant=1)
     recipient = user_view(cm.recipient_id, variant=1)
     is_local = (creator['instance_id'] == 1 and recipient['instance_id'] == 1)
+    ap_id = cm.ap_id
+    if ap_id is None:
+        # old CMs will be missing an ap_id
+        if creator['instance_id'] == 1:
+            ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{cm.id}"
+        else:
+            # CMs from remote instances can't be re-created so fudge something here to keep validator happy
+            ap_id = f"{creator['actor_id']}/message/{cm.id}"
 
     v1 = {
         'private_message': {
@@ -861,7 +870,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
             'deleted': cm.deleted if cm.deleted is not None else False,
             'read': cm.read,
             'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
-            'ap_id': cm.ap_id,
+            'ap_id': ap_id,
             'local': is_local
         },
         'creator': creator,
@@ -897,7 +906,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
                 'deleted': cm.deleted,
                 'read': cm.read,
                 'published': cm.created_at.isoformat(timespec="microseconds") + 'Z',
-                'ap_id': cm.ap_id,
+                'ap_id': ap_id,
                 'local': is_local
             },
             'private_message_creator': creator,
