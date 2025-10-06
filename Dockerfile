@@ -4,7 +4,7 @@ FROM --platform=$BUILDPLATFORM python:3.13-slim-trixie AS builder
 # Create python user
 RUN useradd -m -s /bin/bash python
 
-# Install system dependencies
+# Install system dependencies including gosu for privilege dropping
 RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     gcc \
@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     bash \
     cron \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -33,5 +34,5 @@ RUN chmod u+x ./entrypoint.sh
 RUN chmod u+x ./entrypoint_celery.sh
 RUN chmod u+x ./entrypoint_async.sh
 
-USER python
+# Run as root so cron daemon can start, then entrypoint.sh will drop to python user via gosu
 ENTRYPOINT ["./entrypoint.sh"]
