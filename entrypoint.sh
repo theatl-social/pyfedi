@@ -9,7 +9,11 @@ export FLASK_APP=pyfedi.py
 echo "Starting cron daemon..."
 cron
 
-# 2. Run setup tasks (as root)
+# 2. Ensure directories are writable by python user
+mkdir -p /dev/shm/pyfedi /app/logs
+chown -R python:python /dev/shm/pyfedi /app/logs 2>/dev/null || true
+
+# 3. Run setup tasks (as root)
 # Skip migrations for SQLite (used in testing)
 if echo "$DATABASE_URL" | grep -q "^sqlite"; then
   echo "Skipping database migrations (SQLite testing mode)"
