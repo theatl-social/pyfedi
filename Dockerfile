@@ -1,11 +1,22 @@
 # syntax=docker/dockerfile:1.4
-FROM --platform=$BUILDPLATFORM python:3-alpine AS builder
+FROM --platform=$BUILDPLATFORM python:3.13-slim-trixie AS builder
 
+# Create python user
+RUN useradd -m -s /bin/bash python
 
-RUN adduser -D python
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    pkg-config \
+    gcc \
+    python3-dev \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    postgresql-client \
+    bash \
+    cron \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apk add --no-cache pkgconfig gcc python3-dev musl-dev tesseract-ocr tesseract-ocr-data-eng postgresql-client bash
-
+# Install Python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip \
     --mount=source=requirements.txt,target=/tmp/requirements.txt \
     pip3 install -r /tmp/requirements.txt

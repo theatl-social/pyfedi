@@ -354,7 +354,7 @@ jobs:
             -e CELERY_BROKER_URL=memory://localhost/ \
             -e TESTING=true \
             pyfedi:test \
-            python3 tests/test_startup_validation.py
+            python tests/test_startup_validation.py
 
   # Full production mirror tests (optional/conditional)
   production-mirror-tests:
