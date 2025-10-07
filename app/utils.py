@@ -520,7 +520,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
             return bracket_part
         elif re.match(FEED_PATTERN, bracket_part):
             return bracket_part
-        return match.string
+        return match.group(0)
 
     re_link = re.compile(r"\[((!|@|~).*?)\]\(.*?\)")
 

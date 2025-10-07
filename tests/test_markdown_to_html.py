@@ -251,6 +251,13 @@ And if you want to add your score to the database to help your fellow Bookworms 
         result = markdown_to_html(markdown)
         self.assertEqual('<p>~feed@instance.tld</p>\n', result)
 
+    def test_lemmy_autocomplete_multiple_links(self):
+        """Test that multiple lemmy autocomplete links are all handled correctly"""
+
+        markdown = "Check out [!community@instance.tld](https://instance.tld/c/community) and [@user@instance.tld](https://instance.tld/u/user)"
+        result = markdown_to_html(markdown)
+        self.assertEqual('<p>Check out !community@instance.tld and @user@instance.tld</p>\n', result)
+
 
 if __name__ == '__main__':
     unittest.main()
