@@ -98,6 +98,8 @@ def convert_archived_replies_to_tree(archived_replies: list, post: Post) -> List
         author.ap_profile_id = reply_data.get('author_ap_profile_id')
         author.user_name = reply_data.get('author_user_name')
         author.deleted = reply_data.get('author_deleted')
+        author.bot = reply_data.get('author_bot', False)
+        author.banned = reply_data.get('author_banned', False)
         if reply_data.get('author_created'):
             author.created = datetime.fromisoformat(reply_data['author_created'])
         else:
