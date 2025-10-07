@@ -388,8 +388,7 @@ def put_user_save_user_settings(auth, data):
 
 def get_user_notifications(auth, data):
     # get the user from data.user_id
-    #user = authorise_api_user(auth, return_type='model')
-    user = User.query.get(1)
+    user = authorise_api_user(auth, return_type='model')
 
     # get the status from data.status
     status = data['status']
