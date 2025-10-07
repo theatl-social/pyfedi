@@ -87,7 +87,10 @@ def shared_error_handler(e):
         response = {"code": 429, "message": str(e), "status": "Bad Request"}
         return jsonify(response), 429
     elif isinstance(e, NoResultFound):
-        response = {"code": 429, "message": str(e), "status": "Bad credentials"}
+        response = {"code": 400, "message": str(e), "status": "Not found"}
+        return jsonify(response), 400
+    elif isinstance(e, BlockingIOError):
+        response = {"code": 400, "message": str(e), "status": "Bad credentials"}
         return jsonify(response), 400
     elif isinstance(e, UnprocessableEntity):
         # Log using the standard logging mechanism

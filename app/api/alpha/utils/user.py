@@ -646,12 +646,12 @@ def post_user_verify_credentials(data):
     password = data['password']
 
     if '@' in username:
-        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).one()
+        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).first()
     else:
-        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).one()
+        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).first()
 
     if user is None or not user.check_password(password):
-        raise NoResultFound
+        raise BlockingIOError
 
     return {}
 
