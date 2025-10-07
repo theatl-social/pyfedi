@@ -1,4 +1,4 @@
-<li><a href="{{ url_for('chat.chat_delete', conversation_id=conversation.id) }}" class="dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
+<li><a href="#" data-url="{{ url_for('chat.chat_delete', conversation_id=conversation.id) }}" class="send_post dropdown-item no-underline confirm_first" rel="nofollow"><span class="fe fe-delete"></span>
     {{ _('Delete conversation') }}</a></li>
 {% for member in conversation.members %}
     {% if member.id != current_user.id %}
