@@ -894,6 +894,7 @@ time {
   min-height: $min-touch-target;
   /* justify-content: space-between; */
   justify-content: left;
+  user-select: none;
   @include breakpoint(tablet) {
     justify-content: left;
   }
@@ -1410,6 +1411,7 @@ time {
     min-height: $min-touch-target;
     container-type: inline-size;
     justify-content: left;
+    user-select: none;
     @include breakpoint(tablet) {
       justify-content: left;
     }

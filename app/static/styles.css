@@ -1362,6 +1362,7 @@ time {
   min-height: 44px;
   /* justify-content: space-between; */
   justify-content: left;
+  user-select: none;
 }
 @media (min-width: 992px) {
   .post_utilities_bar {
@@ -1810,6 +1811,7 @@ time {
   min-height: 44px;
   container-type: inline-size;
   justify-content: left;
+  user-select: none;
 }
 @media (min-width: 992px) {
   .comment .comment_actions {
