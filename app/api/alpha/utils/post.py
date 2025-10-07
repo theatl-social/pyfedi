@@ -2,6 +2,7 @@ from datetime import timedelta
 
 from flask import current_app, g
 from sqlalchemy import desc, text, and_, exists
+from sqlalchemy.exc import IntegrityError
 
 from app import db
 from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
@@ -671,12 +672,13 @@ def post_post_mark_as_read(auth, data):
         raise Exception('post_id or post_ids required')
 
     user_id = authorise_api_user(auth)
-
-    if 'post_id' in data:
-        mark_post_read([data['post_id']], data['read'], user_id)
-    elif 'post_ids' in data:
-        mark_post_read(data['post_ids'], data['read'], user_id)
-
+    try:
+        if 'post_id' in data:
+            mark_post_read([data['post_id']], data['read'], user_id)
+        elif 'post_ids' in data:
+            mark_post_read(data['post_ids'], data['read'], user_id)
+    except IntegrityError:
+        return {"success": False}
     return {"success": True}
 
 
