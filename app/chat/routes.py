@@ -127,9 +127,7 @@ def ban_from_mod(user_id, community_id):
 def chat_options(conversation_id):
     conversation = Conversation.query.get_or_404(conversation_id)
     if current_user.is_admin() or conversation.is_member(current_user):
-        return render_template('chat/chat_options.html', conversation=conversation,
-
-                               )
+        return render_template('chat/chat_options.html', conversation=conversation)
 
 
 @bp.route('/chat/<int:conversation_id>/delete', methods=['POST'])
