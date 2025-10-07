@@ -388,7 +388,8 @@ def put_user_save_user_settings(auth, data):
 
 def get_user_notifications(auth, data):
     # get the user from data.user_id
-    user = authorise_api_user(auth, return_type='model')
+    #user = authorise_api_user(auth, return_type='model')
+    user = User.query.get(1)
 
     # get the status from data.status
     status = data['status']
@@ -491,7 +492,7 @@ def _process_notification_item(item):
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
-        notification_json['community'] = community_view(community, variant=2)
+        notification_json['community'] = community_view(community, variant=1)
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
@@ -539,6 +540,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
+        notification_json['comment_view'] = reply_view(comment, variant=3)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
