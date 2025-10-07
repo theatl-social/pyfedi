@@ -416,7 +416,7 @@ def get_user_notifications(auth, data):
     ]
 
     # new
-    if status == 'Unread':
+    if status == 'Unread' or status == 'New':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):

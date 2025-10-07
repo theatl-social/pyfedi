@@ -18,7 +18,7 @@ listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "Mod
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
-notification_status_list = ["All", "Unread", "Read"]
+notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 
