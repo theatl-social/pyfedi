@@ -110,5 +110,14 @@ def run_startup_validations():
         }
     finally:
         # Clean up the database session to prevent stale objects
-        # from polluting the session for subsequent requests
-        db.session.remove()
+        # from polluting the session for subsequent requests.
+        # This is critical because finalize_user_setup() performs commits
+        # and leaves objects attached to the session.
+        try:
+            # First, expire all objects to force reload on next access
+            db.session.expire_all()
+            # Then remove the session entirely to start fresh
+            db.session.remove()
+            current_app.logger.debug("Database session cleaned up after startup validation")
+        except Exception as cleanup_error:
+            current_app.logger.error(f"Error cleaning up database session: {cleanup_error}")
