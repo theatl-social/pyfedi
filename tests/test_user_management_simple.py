@@ -252,16 +252,22 @@ class TestUserStatistics(unittest.TestCase):
     def test_get_user_statistics(self, mock_utcnow, mock_user_class):
         """Test getting user statistics"""
         from app.api.admin.user_management import get_user_statistics
-        
+
         mock_time = datetime(2025, 1, 1, 12, 0, 0)
         mock_utcnow.return_value = mock_time
-        
-        # Mock database queries
-        mock_user_class.query.filter_by.return_value.count.return_value = 100
-        mock_user_class.query.filter.return_value.count.return_value = 25
-        
+
+        # Mock database queries - need to create separate mock chains
+        mock_filter_by = MagicMock()
+        mock_filter_by.count.return_value = 100
+
+        mock_filter = MagicMock()
+        mock_filter.count.return_value = 25
+
+        mock_user_class.query.filter_by.return_value = mock_filter_by
+        mock_user_class.query.filter.return_value = mock_filter
+
         result = get_user_statistics()
-        
+
         self.assertIn('total_users', result)
         self.assertIn('local_users', result)
         self.assertIn('active_24h', result)
@@ -273,15 +279,17 @@ class TestUserStatistics(unittest.TestCase):
     def test_get_registration_statistics(self, mock_utcnow, mock_user_class):
         """Test getting registration statistics"""
         from app.api.admin.user_management import get_registration_statistics
-        
+
         mock_time = datetime(2025, 1, 1, 12, 0, 0)
         mock_utcnow.return_value = mock_time
-        
+
         # Mock database query
-        mock_user_class.query.filter.return_value.count.return_value = 50
-        
+        mock_filter = MagicMock()
+        mock_filter.count.return_value = 50
+        mock_user_class.query.filter.return_value = mock_filter
+
         result = get_registration_statistics(days=7, include_hourly=True)
-        
+
         self.assertEqual(result['period_days'], 7)
         self.assertIn('total_registrations', result)
         self.assertIn('daily_breakdown', result)
@@ -292,18 +300,18 @@ class TestUserStatistics(unittest.TestCase):
     def test_export_user_data_basic(self):
         """Test basic user data export"""
         from app.api.admin.user_management import export_user_data
-        
-        # Mock the list_users function
+
+        # Mock the list_users function from private_registration module
         mock_users_data = [
             {'id': 1, 'username': 'user1', 'email': 'user1@test.com'},
             {'id': 2, 'username': 'user2', 'email': 'user2@test.com'}
         ]
-        
-        with patch('app.api.admin.user_management.list_users') as mock_list:
+
+        with patch('app.api.admin.private_registration.list_users') as mock_list:
             mock_list.return_value = {'users': mock_users_data}
-            
+
             result = export_user_data(format_type='csv')
-            
+
             self.assertTrue(result['success'])
             self.assertEqual(result['format'], 'csv')
             self.assertEqual(result['total_records'], 2)
