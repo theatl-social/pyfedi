@@ -133,6 +133,14 @@ def create_private_user(user_data):
 
         user_id = new_user.id
 
+        # Finalize user setup for ActivityPub federation (generates keypair, sets AP URLs, etc.)
+        if auto_activate:
+            from app.utils import finalize_user_setup
+            finalize_user_setup(new_user)
+        else:
+            # If not auto-activated, finalize_user_setup will be called when admin approves/activates
+            current_app.logger.info(f"User {user_id} created but not finalized - awaiting activation")
+
         # Send welcome email if requested (implement this based on existing email system)
         if send_welcome_email:
             # TODO: Implement welcome email sending

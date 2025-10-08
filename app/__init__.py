@@ -301,6 +301,11 @@ def create_app(config_class=Config):
     from app.plugins import load_plugins
     load_plugins()
 
+    # Run startup validations to fix any data integrity issues
+    with app.app_context():
+        from app.startup_validation import run_startup_validations
+        run_startup_validations()
+
     return app
 
 
