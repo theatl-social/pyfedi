@@ -802,7 +802,8 @@ def mod_remove_post(post_id: int, reason, src, auth):
         user = current_user
 
     post = db.session.query(Post).get(post_id)
-    if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
+
+    if not post.community.is_moderator(user) and not user.is_admin_or_staff():
         raise Exception('Does not have permission')
 
     if post.url:
@@ -842,7 +843,7 @@ def mod_restore_post(post_id: int, reason, src, auth):
         user = current_user
 
     post = db.session.query(Post).get(post_id)
-    if not post.community.is_moderator(user) and not post.community.is_instance_admin(user):
+    if not post.community.is_moderator(user) and not user.is_admin_or_staff():
         raise Exception('Does not have permission')
 
     if post.url:

@@ -84,6 +84,9 @@
                                             {% endif %}
                                         </div>
                                     </div>
+                                    {% if alone -%}
+                                        <div class="alert alert-warning alone_message" role="alert">{{ _("The other participant has left the chat.") }}</div>
+                                    {% endif -%}
                                 {% endfor %}
                                 {{ render_form(form) }}
                                 <div class="dropdown">

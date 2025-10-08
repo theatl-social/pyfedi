@@ -69,9 +69,6 @@ class TestStartupSessionCleanup:
             db.session.commit()
             user_id = incomplete_user.id
 
-            # Get initial session identity map count
-            initial_identity_map_size = len(db.session.identity_map)
-
             # Run startup validation (will fix the user)
             result = run_startup_validations()
 
@@ -179,9 +176,6 @@ class TestStartupSessionCleanup:
             run_startup_validations()
 
             # After cleanup, querying the same user should create a fresh instance
-            # Get user before validation reference
-            user_before_id = id(user)
-
             # Clear local reference
             del user
 

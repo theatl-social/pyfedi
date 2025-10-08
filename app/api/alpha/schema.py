@@ -12,13 +12,13 @@ default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
-comment_sort_list = ["Hot", "Top", "New", "Old"]
+comment_sort_list = ["Hot", "Top", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
-notification_status_list = ["All", "Unread", "Read"]
+notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 
@@ -874,6 +874,7 @@ class UserNotificationItemView(DefaultSchema):
     notif_type = fields.Integer(required=True, metadata={"description": "returned for all notif types"})
     status = fields.String(validate=validate.OneOf(["Unread", "Read"]), required=True, metadata={"description": "returned for all notif types"})
     comment = fields.Nested(Comment, metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
+    comment_view = fields.Nested(CommentView, metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
     comment_id = fields.Integer(metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
     community = fields.Nested(Community, metadata={"description": "returned for notif_type 1"})
     post = fields.Nested(PostView, metadata={"description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"})
@@ -1399,6 +1400,10 @@ class ListPostsRequest(Schema):
     liked_only = fields.Boolean(metadata={"default": False})
     feed_id = fields.Integer()
     topic_id = fields.Integer()
+
+
+class ListPostsRequest2(ListPostsRequest):
+    page = fields.String(metadata={"default": ""})
 
 
 # Private Message Schemas

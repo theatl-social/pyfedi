@@ -37,6 +37,10 @@ Note: If your testing/dev instance needs to federate with other instances then y
 sudo nano compose.yaml
 ```
 
+If you want to customise compose.yaml it is better to
+[make a copy of it named compose.override.yaml](https://docs.docker.com/compose/how-tos/multiple-compose-files/merge/#example)
+and make your changes in there.
+
 #### CREATE REQUIRED FOLDERS WITH REQUIRED PERMISSIONS
 
 Do **not** skip this. Enter your sudo password when prompted.

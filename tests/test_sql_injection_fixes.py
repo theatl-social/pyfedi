@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 from flask import Flask
 
 from app import create_app, db
-from app.models import User, Conversation, Message, Notification
+from app.models import User, Conversation, ChatMessage, Notification
 from app.constants import POST_STATUS_REVIEWING
 
 

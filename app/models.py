@@ -246,6 +246,7 @@ class Conversation(db.Model):
 conversation_member = db.Table('conversation_member',
                                db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
                                db.Column('conversation_id', db.Integer, db.ForeignKey('conversation.id')),
+                               db.Column('joined', db.Boolean, default=True),
                                db.PrimaryKeyConstraint('user_id', 'conversation_id')
                                )
 

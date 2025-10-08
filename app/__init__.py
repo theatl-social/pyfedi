@@ -44,7 +44,7 @@ def get_ip_address() -> str:
     return ip
 
 
-db = SQLAlchemy(session_options={"autoflush": False}, engine_options={'pool_size': Config.DB_POOL_SIZE, 'max_overflow': Config.DB_MAX_OVERFLOW, 'pool_recycle': 3600})
+db = SQLAlchemy(session_options={"autoflush": False})
 make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()

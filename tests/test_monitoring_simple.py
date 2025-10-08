@@ -6,10 +6,26 @@ import unittest
 from unittest.mock import patch, MagicMock
 import time
 import json
+import os
 
 
 class TestAdvancedRateLimiter(unittest.TestCase):
-    """Test advanced rate limiting functionality"""
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     def test_parse_rate_limit_formats(self):
         """Test parsing different rate limit formats"""
@@ -136,6 +152,23 @@ class TestAdvancedRateLimiter(unittest.TestCase):
 class TestAdminAPIMonitor(unittest.TestCase):
     """Test admin API monitoring functionality"""
 
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
+
     def test_record_request_basic(self):
         """Test basic request recording"""
         from app.api.admin.monitoring import AdminAPIMonitor
@@ -230,6 +263,27 @@ class TestAdminAPIMonitor(unittest.TestCase):
 
 class TestMonitoringDecorators(unittest.TestCase):
     """Test monitoring decorators and utilities"""
+
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+        self.request_context = self.app.test_request_context()
+        self.request_context.push()
+
+    def tearDown(self):
+        """Clean up Flask contexts"""
+        if hasattr(self, 'request_context'):
+            self.request_context.pop()
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     def test_track_admin_request_decorator(self):
         """Test request tracking decorator"""

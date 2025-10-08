@@ -520,7 +520,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
             return bracket_part
         elif re.match(FEED_PATTERN, bracket_part):
             return bracket_part
-        return match.string
+        return match.group(0)
 
     re_link = re.compile(r"\[((!|@|~).*?)\]\(.*?\)")
 
@@ -3048,6 +3048,30 @@ def user_notes(user_id):
     return result
 
 
+class SqlKeysetPagination:
+    """Wrapper to make sqlakeyset pages more similar to existing Flask pagination interface"""
+
+    def __init__(self, page_obj):
+        self.items = page_obj
+        self._page_obj = page_obj
+
+    @property
+    def has_next(self):
+        return self._page_obj.paging.has_next
+
+    @property
+    def has_prev(self):
+        return self._page_obj.paging.has_previous
+
+    @property
+    def next_bookmark(self):
+        return self._page_obj.paging.bookmark_next if self.has_next else None
+
+    @property
+    def prev_bookmark(self):
+        return self._page_obj.paging.bookmark_previous if self.has_prev else None
+
+
 @event.listens_for(User.unread_notifications, 'set')
 def on_unread_notifications_set(target, value, oldvalue, initiator):
     if value != oldvalue and current_app.config['NOTIF_SERVER']:
@@ -3373,6 +3397,8 @@ def archive_post(post_id: int):
                                 'author_reputation': comment.author.reputation if comment.author else 0,
                                 'author_created': comment.author.created.isoformat() if comment.author else None,
                                 'author_ap_domain': comment.author.ap_domain if comment.author else '',
+                                'author_bot': comment.author.bot if comment.author else False,
+                                'author_banned': comment.author.banned if comment.author else False,
                                 'replies': serialize_tree(reply_dict['replies'])
                             }
                             result.append(serialized)

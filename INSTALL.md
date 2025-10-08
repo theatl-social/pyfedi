@@ -1,5 +1,6 @@
 # Contents
 
+* [Minimum server requirements](#minimum)
 * [Choose your path - easy way or hard way](#choose-path)
 * [Setup Database](#setup-database)
 * [Install Python Libraries](#install-python-libraries)
@@ -17,6 +18,17 @@
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
 * [Notes for Windows (WSL2)](#notes-for-windows-wsl2)        
 * [Notes for Pip Package Management](#notes-for-pip-package-management)
+
+<div id="minimum"></div>
+
+## Minimum server requirements
+
+Any OS that runs Python 3.9+
+2 CPU cores
+4 GB of RAM
+40 GB of storage (eventually)
+
+If your server will be used by more than 10 people, double the CPU and RAM.
 
 <div id="choose-path"></div>
 

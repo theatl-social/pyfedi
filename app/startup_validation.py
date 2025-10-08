@@ -22,6 +22,18 @@ def validate_and_fix_user_activitypub_setup():
         dict: Summary of users found and fixed
     """
     try:
+        # Check if tables exist (skip in test mode before db.create_all())
+        from sqlalchemy import inspect
+        inspector = inspect(db.engine)
+        if 'user' not in inspector.get_table_names():
+            current_app.logger.debug("Skipping startup validation - database tables not yet created")
+            return {
+                'users_checked': 0,
+                'users_fixed': 0,
+                'users_found': [],
+                'skipped': True
+            }
+
         # Find local users that are:
         # 1. Verified (activated)
         # 2. Not deleted or banned

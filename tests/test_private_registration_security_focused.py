@@ -20,16 +20,26 @@ class PrivateRegSecurityTestConfig:
     TESTING = True
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ENGINE_OPTIONS = {}
     SERVER_NAME = 'localhost'
     SECRET_KEY = 'test-security-key'
     CACHE_TYPE = 'null'
     MAIL_SUPPRESS_SEND = True
     CELERY_ALWAYS_EAGER = True
-    
+
     # Required config values to prevent KeyError
     SENTRY_DSN = ''
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     RATELIMIT_ENABLED = False
+    SERVE_API_DOCS = False
+    CACHE_REDIS_URL = 'memory://'
+    GOOGLE_OAUTH_CLIENT_ID = ''
+    GOOGLE_OAUTH_CLIENT_SECRET = ''
+    MASTODON_OAUTH_CLIENT_ID = ''
+    MASTODON_OAUTH_CLIENT_SECRET = ''
+    DISCORD_OAUTH_CLIENT_ID = ''
+    DISCORD_OAUTH_CLIENT_SECRET = ''
+    MAIL_SERVER = ''
 
 
 @pytest.fixture
@@ -45,9 +55,15 @@ def security_app():
     with patch.dict(os.environ, test_env):
         from app import create_app, db
         app = create_app(PrivateRegSecurityTestConfig)
-        
+
         with app.app_context():
-            db.create_all()
+            # Create database tables (skip PostgreSQL-specific DDL errors on SQLite)
+            try:
+                db.create_all()
+            except Exception as e:
+                # Skip PostgreSQL function creation errors on SQLite
+                if 'parse_websearch' not in str(e) and 'CREATE OR REPLACE' not in str(e):
+                    raise
             yield app
             db.session.remove()
             db.drop_all()
