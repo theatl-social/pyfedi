@@ -57,7 +57,8 @@ def get_alpha_site():
     auth = request.headers.get('Authorization')
     with limiter.limit('20/minute'):
         resp = get_site(auth)
-    return GetSiteResponse().load(resp)
+    validated = GetSiteResponse().load(resp)
+    return orjson_response(validated)
 
 
 @site_bp.route('/site/version', methods=['GET'])
@@ -391,7 +392,8 @@ def get_alpha_post_list(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_post_list(auth, data)
-    return ListPostsResponse().load(resp)
+    validated = ListPostsResponse().load(resp)
+    return orjson_response(validated)
 
 
 @post_bp.route('/post/list2', methods=['GET'])
@@ -404,7 +406,8 @@ def get_alpha_post_list2(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = get_post_list2(auth, data)
-    return ListPostsResponse().load(resp)
+    validated = ListPostsResponse().load(resp)
+    return orjson_response(validated)
 
 
 @post_bp.route('/post', methods=['GET'])
