@@ -178,10 +178,10 @@
             <a href="#overview_tab" class="nav-link {{ 'active' if post_prev_url is none and replies_prev_url is none }}" id="overview-pill" data-bs-toggle="pill" role="tab" aria-current="page">Overview</a>
           </li>
           <li class="nav-item">
-            <a href="#post_list_tab" class="nav-link {{ 'active' if post_prev_url is not none and post_next_url is not none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
+            <a href="#post_list_tab" class="nav-link {{ 'active' if post_prev_url is not none }}" id="post-pill" data-bs-toggle="pill" role="tab" aria-current="page">Posts</a>
           </li>
           <li class="nav-item">
-            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none and replies_prev_url }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
+            <a href="#comments_tab" class="nav-link {{ 'active' if replies_prev_url is not none }}" id="comments-pill" data-bs-toggle="pill" role="tab">Comments</a>
           </li>
         </ul>
         <div class="tab-content">
