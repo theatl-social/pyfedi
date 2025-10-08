@@ -1183,6 +1183,10 @@ class ListPostsRequest(Schema):
     topic_id = fields.Integer()
 
 
+class ListPostsRequest2(ListPostsRequest):
+    page = fields.String(metadata={"default": ""})
+
+
 # Private Message Schemas
 class PrivateMessage(DefaultSchema):
     id = fields.Integer(required=True)
