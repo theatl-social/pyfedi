@@ -25,11 +25,12 @@ class PrivateRegSecurityTestConfig:
     CACHE_TYPE = 'null'
     MAIL_SUPPRESS_SEND = True
     CELERY_ALWAYS_EAGER = True
-    
+
     # Required config values to prevent KeyError
     SENTRY_DSN = ''
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     RATELIMIT_ENABLED = False
+    SERVE_API_DOCS = False
 
 
 @pytest.fixture
