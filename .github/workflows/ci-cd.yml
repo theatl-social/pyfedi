@@ -151,9 +151,16 @@ jobs:
       - name: Run additional core tests
         run: |
           echo "📝 Running additional core logic tests"
-          # Run any other fast unit tests
-          # NOTE: Removed || true to ensure test failures actually fail CI
-          find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -exec python -m pytest {} -v \;
+          # Collect all test files (excluding ones run separately)
+          TEST_FILES=$(find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -not -name "test_migration_heads.py" -not -name "test_explore_ci_real_world.py")
+
+          # Run all tests in a single pytest command so failures propagate properly
+          if [ -n "$TEST_FILES" ]; then
+            echo "Running tests: $TEST_FILES"
+            python -m pytest $TEST_FILES -v --tb=line
+          else
+            echo "No additional test files found"
+          fi
         env:
           SERVER_NAME: test.localhost
           SECRET_KEY: test-secret-key-for-ci
