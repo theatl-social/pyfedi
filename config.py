@@ -66,8 +66,9 @@ class Config(object):
 
     # SQLAlchemy engine options for connection pooling
     # Only apply pool settings for PostgreSQL (not SQLite)
-    _db_url = os.environ.get('DATABASE_URL', '')
-    if _db_url.startswith('postgresql') or _db_url.startswith('postgres'):
+    # Check the actual database URI that will be used (same logic as SQLALCHEMY_DATABASE_URI)
+    _db_uri = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
+    if _db_uri.startswith('postgresql') or _db_uri.startswith('postgres'):
         SQLALCHEMY_ENGINE_OPTIONS = {
             'pool_size': int(DB_POOL_SIZE),
             'max_overflow': int(DB_MAX_OVERFLOW),
