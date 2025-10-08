@@ -298,7 +298,7 @@ class Post(DefaultSchema):
     small_thumbnail_url = fields.Url()
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    url = fields.Url()
+    url = fields.String()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
