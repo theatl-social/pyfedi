@@ -5,10 +5,26 @@ Tests the core user management operations without full Flask app setup
 import unittest
 from unittest.mock import patch, MagicMock
 from datetime import datetime, timedelta
+import os
 
 
 class TestUserManagementLogic(unittest.TestCase):
-    """Test user management core functions"""
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     @patch('app.api.admin.user_management.User')
     @patch('app.api.admin.user_management.db')
@@ -214,6 +230,23 @@ class TestUserManagementLogic(unittest.TestCase):
 class TestUserStatistics(unittest.TestCase):
     """Test user statistics functions"""
 
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
+
     @patch('app.api.admin.user_management.User')
     @patch('app.api.admin.user_management.utcnow')
     def test_get_user_statistics(self, mock_utcnow, mock_user_class):
@@ -280,6 +313,23 @@ class TestUserStatistics(unittest.TestCase):
 
 class TestInputValidation(unittest.TestCase):
     """Test input validation and security"""
+
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     def test_unknown_action_validation(self):
         """Test that unknown actions are rejected"""
