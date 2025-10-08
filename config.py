@@ -65,12 +65,18 @@ class Config(object):
     DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
 
     # SQLAlchemy engine options for connection pooling
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(DB_POOL_SIZE),
-        'max_overflow': int(DB_MAX_OVERFLOW),
-        'pool_pre_ping': True,  # Verify connections are alive before using
-        'pool_recycle': 300  # Recycle connections after 5 minutes
-    }
+    # Only apply pool settings for PostgreSQL (not SQLite)
+    _db_url = os.environ.get('DATABASE_URL', '')
+    if _db_url.startswith('postgresql') or _db_url.startswith('postgres'):
+        SQLALCHEMY_ENGINE_OPTIONS = {
+            'pool_size': int(DB_POOL_SIZE),
+            'max_overflow': int(DB_MAX_OVERFLOW),
+            'pool_pre_ping': True,  # Verify connections are alive before using
+            'pool_recycle': 300  # Recycle connections after 5 minutes
+        }
+    else:
+        # SQLite doesn't support connection pooling parameters
+        SQLALCHEMY_ENGINE_OPTIONS = {}
 
     LOG_ACTIVITYPUB_TO_DB = os.environ.get('LOG_ACTIVITYPUB_TO_DB') or False
     LOG_ACTIVITYPUB_TO_FILE = os.environ.get('LOG_ACTIVITYPUB_TO_FILE') or False
