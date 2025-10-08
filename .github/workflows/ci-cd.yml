@@ -167,7 +167,6 @@ jobs:
             -not -name "test_explore_page_integration.py" \
             -not -name "test_api_blueprint_registration.py" \
             -not -name "test_sql_injection_fixes.py" \
-            -not -name "test_monitoring_simple.py" \
             -not -name "test_user_management_simple.py" \
             -not -name "test_private_registration.py" \
             -not -name "test_private_registration_simple.py" \
