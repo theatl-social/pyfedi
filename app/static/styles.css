@@ -2690,6 +2690,10 @@ form h5 {
   background-color: var(--bs-card-cap-bg);
 }
 
+.alone_message {
+  float: inline-start;
+}
+
 #subtopic_nav {
   position: relative;
   left: -15px;

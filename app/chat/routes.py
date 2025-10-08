@@ -25,8 +25,9 @@ def chat_home(conversation_id=None):
     else:
         conversations = Conversation.query.join(conversation_member,
                                                 conversation_member.c.conversation_id == Conversation.id). \
-            filter(conversation_member.c.user_id == current_user.id).order_by(desc(Conversation.updated_at)).limit(
-            50).all()
+            filter(conversation_member.c.user_id == current_user.id). \
+            filter(conversation_member.c.joined == True). \
+            order_by(desc(Conversation.updated_at)).limit(50).all()
         if conversation_id is None:
             if conversations:
                 return redirect(url_for('chat.chat_home', conversation_id=conversations[0].id))
@@ -45,6 +46,14 @@ def chat_home(conversation_id=None):
             else:
                 messages = []
 
+            members = db.session.execute(text("SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"),
+                                         {"state": True, "conversation_id": conversation_id}).all()
+            
+            if len(members) == 1:
+                alone = True
+            else:
+                alone = False
+
             sql = f"UPDATE notification SET read = true WHERE url LIKE '/chat/{conversation_id}%' AND user_id = {current_user.id}"
             db.session.execute(text(sql))
             db.session.commit()
@@ -53,10 +62,8 @@ def chat_home(conversation_id=None):
 
             return render_template('chat/conversation.html',
                                    title=_('Chat with %(name)s', name=conversation.member_names(current_user.id)),
-                                   conversations=conversations, messages=messages, form=form,
-                                   current_conversation=conversation_id, conversation=conversation,
-
-                                   )
+                                   conversations=conversations, messages=messages, form=form, alone=alone,
+                                   current_conversation=conversation_id, conversation=conversation)
 
 
 @bp.route('/chat/<int:to>/new', methods=['GET', 'POST'])
@@ -70,7 +77,10 @@ def new_message(to):
         return redirect(url_for('chat.blocked'))
     existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=current_user)
     if existing_conversation:
-        return redirect(url_for('chat.chat_home', conversation_id=existing_conversation.id, _anchor='message'))
+        members = db.session.execute(text("SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"),
+                                         {"state": True, "conversation_id": existing_conversation.id}).all()
+        if current_user.id in members and recipient.id in members:
+            return redirect(url_for('chat.chat_home', conversation_id=existing_conversation.id, _anchor='message'))
     form = AddReply()
     form.submit.label.text = _('Send')
     if form.validate_on_submit():
@@ -139,6 +149,18 @@ def chat_delete(conversation_id):
         db.session.delete(conversation)
         db.session.commit()
         flash(_('Conversation deleted'))
+    return redirect(url_for('chat.chat_home'))
+
+
+@bp.route('/chat/<int:conversation_id>/leave', methods=['POST'])
+@login_required
+def chat_leave(conversation_id):
+    conversation = Conversation.query.get_or_404(conversation_id)
+    if conversation.is_member(current_user):
+        # Leave conversation
+        db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
+                           {"state": False, "person_id": current_user.id, "conversation_id": conversation_id})
+        db.session.commit()
     return redirect(url_for('chat.chat_home'))
 
 
