@@ -151,8 +151,21 @@ jobs:
       - name: Run additional core tests
         run: |
           echo "📝 Running additional core logic tests"
-          # Collect all test files (excluding ones run separately)
-          TEST_FILES=$(find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -not -name "test_migration_heads.py" -not -name "test_explore_ci_real_world.py")
+          # Collect all test files (excluding ones run separately and integration tests requiring populated DB)
+          TEST_FILES=$(find tests/ -name "test_*.py" \
+            -not -name "test_startup_validation.py" \
+            -not -name "test_field_consistency_simple.py" \
+            -not -name "test_allowlist_html.py" \
+            -not -name "test_migration_heads.py" \
+            -not -name "test_explore_ci_real_world.py" \
+            -not -name "test_api_*_subscriptions.py" \
+            -not -name "test_api_*_bookmarks.py" \
+            -not -name "test_api_get_*.py" \
+            -not -name "test_api_instance_blocks.py" \
+            -not -name "test_activitypub_util.py" \
+            -not -name "test_explore_template_render.py" \
+            -not -name "test_explore_page_integration.py" \
+            -not -name "test_api_blueprint_registration.py")
 
           # Run all tests in a single pytest command so failures propagate properly
           if [ -n "$TEST_FILES" ]; then
