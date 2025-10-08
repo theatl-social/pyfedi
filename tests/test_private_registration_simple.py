@@ -2,6 +2,7 @@
 Simple unit tests for private registration functionality
 These tests avoid full Flask app initialization to prevent configuration issues
 """
+import os
 import unittest
 from unittest.mock import patch, MagicMock
 import hmac
@@ -10,6 +11,23 @@ import ipaddress
 
 class TestSecurityFunctions(unittest.TestCase):
     """Test security utility functions"""
+
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     @patch('app.api.admin.security.get_private_registration_secret')
     def test_validate_registration_secret_success(self, mock_get_secret):
@@ -85,6 +103,23 @@ class TestSecurityFunctions(unittest.TestCase):
 
 class TestPrivateRegistrationLogic(unittest.TestCase):
     """Test private registration logic functions"""
+
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        if hasattr(self, 'app_context'):
+            self.app_context.pop()
 
     @patch('app.api.admin.private_registration.User')
     def test_validate_user_availability_success(self, mock_user):
