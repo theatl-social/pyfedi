@@ -152,7 +152,8 @@ jobs:
         run: |
           echo "📝 Running additional core logic tests"
           # Run any other fast unit tests
-          find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -exec python -m pytest {} -v \; || true
+          # NOTE: Removed || true to ensure test failures actually fail CI
+          find tests/ -name "test_*.py" -not -name "test_startup_validation.py" -not -name "test_field_consistency_simple.py" -not -name "test_allowlist_html.py" -exec python -m pytest {} -v \;
         env:
           SERVER_NAME: test.localhost
           SECRET_KEY: test-secret-key-for-ci
