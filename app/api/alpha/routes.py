@@ -397,7 +397,7 @@ def get_alpha_post_list(data):
 
 
 @post_bp.route('/post/list2', methods=['GET'])
-@post_bp.doc(summary="List posts.")
+@post_bp.doc(summary="List posts. For testing only, do not use.")
 @post_bp.arguments(ListPostsRequest2, location="query", unknown=INCLUDE)
 @post_bp.response(200, ListPostsResponse)
 @post_bp.alt_response(400, schema=DefaultError)
