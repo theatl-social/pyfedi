@@ -89,21 +89,26 @@ def run_startup_validations():
     """
     current_app.logger.info("Running startup validations...")
 
-    # Validate and fix user ActivityPub setup
-    activitypub_result = validate_and_fix_user_activitypub_setup()
+    try:
+        # Validate and fix user ActivityPub setup
+        activitypub_result = validate_and_fix_user_activitypub_setup()
 
-    if activitypub_result.get('users_fixed', 0) > 0:
-        current_app.logger.info(
-            f"Fixed ActivityPub setup for {activitypub_result['users_fixed']} user(s)"
-        )
+        if activitypub_result.get('users_fixed', 0) > 0:
+            current_app.logger.info(
+                f"Fixed ActivityPub setup for {activitypub_result['users_fixed']} user(s)"
+            )
 
-    if 'error' in activitypub_result:
-        current_app.logger.error(
-            f"Error during ActivityPub validation: {activitypub_result['error']}"
-        )
+        if 'error' in activitypub_result:
+            current_app.logger.error(
+                f"Error during ActivityPub validation: {activitypub_result['error']}"
+            )
 
-    current_app.logger.info("Startup validations completed")
+        current_app.logger.info("Startup validations completed")
 
-    return {
-        'activitypub_validation': activitypub_result
-    }
+        return {
+            'activitypub_validation': activitypub_result
+        }
+    finally:
+        # Clean up the database session to prevent stale objects
+        # from polluting the session for subsequent requests
+        db.session.remove()
