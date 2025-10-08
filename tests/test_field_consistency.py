@@ -21,6 +21,7 @@ class TestConfig(Config):
     TESTING = True
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ENGINE_OPTIONS = {}  # SQLite doesn't support pool settings
     MAIL_SUPPRESS_SEND = True
 
 

@@ -14,6 +14,10 @@ class Config(object):
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Database connection pool settings (only used for PostgreSQL)
+    DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
+    DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
     MAIL_SERVER = os.environ.get('MAIL_SERVER') or None
     MAIL_PORT = int(os.environ.get('MAIL_PORT') or 25)
     MAIL_USE_TLS = os.environ.get('MAIL_USE_TLS') is not None
@@ -60,24 +64,6 @@ class Config(object):
     IPINFO_TOKEN = os.environ.get('IPINFO_TOKEN') or ''
 
     NUM_CPU = int(os.environ.get('NUM_CPU') or 0)
-
-    DB_POOL_SIZE = os.environ.get('DB_POOL_SIZE') or 10
-    DB_MAX_OVERFLOW = os.environ.get('DB_MAX_OVERFLOW') or 30
-
-    # SQLAlchemy engine options for connection pooling
-    # Only apply pool settings for PostgreSQL (not SQLite)
-    # Check the actual database URI that will be used (same logic as SQLALCHEMY_DATABASE_URI)
-    _db_uri = os.environ.get('DATABASE_URL') or 'sqlite:///' + os.path.join(basedir, 'app.db')
-    if _db_uri.startswith('postgresql') or _db_uri.startswith('postgres'):
-        SQLALCHEMY_ENGINE_OPTIONS = {
-            'pool_size': int(DB_POOL_SIZE),
-            'max_overflow': int(DB_MAX_OVERFLOW),
-            'pool_pre_ping': True,  # Verify connections are alive before using
-            'pool_recycle': 300  # Recycle connections after 5 minutes
-        }
-    else:
-        # SQLite doesn't support connection pooling parameters
-        SQLALCHEMY_ENGINE_OPTIONS = {}
 
     LOG_ACTIVITYPUB_TO_DB = os.environ.get('LOG_ACTIVITYPUB_TO_DB') or False
     LOG_ACTIVITYPUB_TO_FILE = os.environ.get('LOG_ACTIVITYPUB_TO_FILE') or False
@@ -182,3 +168,18 @@ class Config(object):
     TRANSLATE_KEY = os.environ.get('TRANSLATE_KEY') or ''
 
     ALLOW_AI_CRAWLERS = os.environ.get('ALLOW_AI_CRAWLERS') or False
+
+
+# Set SQLALCHEMY_ENGINE_OPTIONS on Config class after it's defined
+# This must be done outside the class body so it can reference SQLALCHEMY_DATABASE_URI
+_db_uri = Config.SQLALCHEMY_DATABASE_URI
+if _db_uri and (_db_uri.startswith('postgresql') or _db_uri.startswith('postgres')):
+    Config.SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': int(Config.DB_POOL_SIZE),
+        'max_overflow': int(Config.DB_MAX_OVERFLOW),
+        'pool_pre_ping': True,  # Verify connections are alive before using
+        'pool_recycle': 300  # Recycle connections after 5 minutes
+    }
+else:
+    # SQLite doesn't support connection pooling parameters
+    Config.SQLALCHEMY_ENGINE_OPTIONS = {}

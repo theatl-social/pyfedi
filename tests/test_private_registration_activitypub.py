@@ -3,9 +3,25 @@ Test that private registration properly sets up ActivityPub for new users
 """
 import unittest
 from unittest.mock import patch, MagicMock, call
+import os
 
 
 class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        self.app_context.pop()
     """Test that private registration calls finalize_user_setup for ActivityPub"""
 
     @patch('app.api.admin.private_registration.db')
@@ -122,6 +138,21 @@ class TestPrivateRegistrationActivityPubSetup(unittest.TestCase):
 
 
 class TestFinalizeUserSetupBehavior(unittest.TestCase):
+    def setUp(self):
+        """Set up test Flask app context"""
+        os.environ['SERVER_NAME'] = 'test.localhost'
+        os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+        os.environ['CACHE_TYPE'] = 'NullCache'
+        os.environ['TESTING'] = 'true'
+
+        from app import create_app
+        self.app = create_app()
+        self.app_context = self.app.app_context()
+        self.app_context.push()
+
+    def tearDown(self):
+        """Clean up Flask app context"""
+        self.app_context.pop()
     """Test that finalize_user_setup properly configures ActivityPub fields"""
 
     @patch('app.utils.plugins')
