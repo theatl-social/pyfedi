@@ -40,7 +40,13 @@ def test_app():
     app = create_app(TestConfig)
 
     with app.app_context():
-        db.create_all()
+        # Create database tables (skip PostgreSQL-specific DDL errors on SQLite)
+        try:
+            db.create_all()
+        except Exception as e:
+            # Skip PostgreSQL function creation errors on SQLite
+            if 'parse_websearch' not in str(e) and 'CREATE OR REPLACE' not in str(e):
+                raise
         yield app
         db.session.remove()
         db.drop_all()
