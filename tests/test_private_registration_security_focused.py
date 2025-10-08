@@ -39,6 +39,7 @@ class PrivateRegSecurityTestConfig:
     MASTODON_OAUTH_CLIENT_SECRET = ''
     DISCORD_OAUTH_CLIENT_ID = ''
     DISCORD_OAUTH_CLIENT_SECRET = ''
+    MAIL_SERVER = ''
 
 
 @pytest.fixture
