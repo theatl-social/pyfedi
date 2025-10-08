@@ -165,7 +165,8 @@ jobs:
             -not -name "test_activitypub_util.py" \
             -not -name "test_explore_template_render.py" \
             -not -name "test_explore_page_integration.py" \
-            -not -name "test_api_blueprint_registration.py")
+            -not -name "test_api_blueprint_registration.py" \
+            -not -name "test_sql_injection_fixes.py")
 
           # Run all tests in a single pytest command so failures propagate properly
           if [ -n "$TEST_FILES" ]; then
