@@ -31,6 +31,7 @@ class PrivateRegSecurityTestConfig:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     RATELIMIT_ENABLED = False
     SERVE_API_DOCS = False
+    CACHE_REDIS_URL = 'memory://'
 
 
 @pytest.fixture
