@@ -329,7 +329,8 @@ def user_profile(actor):
     actor = actor.strip()
     if actor.isdigit():
         user = User.query.get(actor)
-        return redirect(url_for('activitypub.user_profile', actor=user.link()))
+        if user is not None:
+            return redirect(url_for('activitypub.user_profile', actor=user.link()))
     # admins can view deleted accounts
     if current_user.is_authenticated and current_user.is_admin():
         if '@' in actor:

@@ -894,6 +894,7 @@ time {
   min-height: $min-touch-target;
   /* justify-content: space-between; */
   justify-content: left;
+  user-select: none;
   @include breakpoint(tablet) {
     justify-content: left;
   }
@@ -1410,6 +1411,7 @@ time {
     min-height: $min-touch-target;
     container-type: inline-size;
     justify-content: left;
+    user-select: none;
     @include breakpoint(tablet) {
       justify-content: left;
     }
@@ -2398,6 +2400,10 @@ form {
     color: var(--bs-card-cap-color);
     background-color: var(--bs-card-cap-bg);
   }
+}
+
+.alone_message {
+  float: inline-start;
 }
 
 #subtopic_nav {

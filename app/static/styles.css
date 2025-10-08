@@ -1362,6 +1362,7 @@ time {
   min-height: 44px;
   /* justify-content: space-between; */
   justify-content: left;
+  user-select: none;
 }
 @media (min-width: 992px) {
   .post_utilities_bar {
@@ -1810,6 +1811,7 @@ time {
   min-height: 44px;
   container-type: inline-size;
   justify-content: left;
+  user-select: none;
 }
 @media (min-width: 992px) {
   .comment .comment_actions {
@@ -2686,6 +2688,10 @@ form h5 {
 .message.from_me {
   color: var(--bs-card-cap-color);
   background-color: var(--bs-card-cap-bg);
+}
+
+.alone_message {
+  float: inline-start;
 }
 
 #subtopic_nav {

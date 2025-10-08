@@ -842,6 +842,9 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    archive_post(800)
+    return 'Done'
+
     from flask import json
     community = Community.query.get(33)
     announce_activity = {

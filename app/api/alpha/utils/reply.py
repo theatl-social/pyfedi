@@ -215,7 +215,7 @@ def get_reply_list(auth, data, user_details=None):
             add_post_in_view = False
 
     if replies:
-        if sort == 'Hot':
+        if sort == 'Hot' or sort == 'Controversial':
             replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
         elif sort == 'Top':
             replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))

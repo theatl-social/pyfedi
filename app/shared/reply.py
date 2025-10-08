@@ -361,12 +361,12 @@ def report_reply(reply, input, src, auth=None):
     reply.reports += 1
     db.session.commit()
 
-    if remote_instance_ids:
+    if len(remote_instance_ids):
         summary = reason
         if description:
             summary += ' - ' + description
 
-        task_selector('report_reply', user_id=reporter_user.id, reply_id=reply.id, summary=summary, instance_ids=remote_instance_ids)
+        task_selector('report_reply', user_id=reporter_user.id, reply_id=reply.id, summary=summary, instance_ids=list(remote_instance_ids))
 
     if src == SRC_API:
         return reporter_user.id, report

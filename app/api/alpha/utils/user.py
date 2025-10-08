@@ -416,7 +416,7 @@ def get_user_notifications(auth, data):
     ]
 
     # new
-    if status == 'Unread':
+    if status == 'Unread' or status == 'New':
         for item in user_notifications:
             if item.read == False and item.notif_type in supported_notif_types:
                 if isinstance(item.subtype, str):
@@ -491,7 +491,7 @@ def _process_notification_item(item):
         notification_json['author'] = user_view(user=author.id, variant=1)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
-        notification_json['community'] = community_view(community, variant=2)
+        notification_json['community'] = community_view(community, variant=1)
         notification_json['notif_body'] = post.body if post.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
         return notification_json
@@ -539,6 +539,7 @@ def _process_notification_item(item):
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
+        notification_json['comment_view'] = reply_view(comment, variant=3)
         notification_json['comment_id'] = comment.id
         notification_json['notif_body'] = comment.body if comment.body else ''
         notification_json['status'] = 'Read' if item.read else 'Unread'
@@ -645,12 +646,12 @@ def post_user_verify_credentials(data):
     password = data['password']
 
     if '@' in username:
-        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).one()
+        user = User.query.filter(func.lower(User.email) == username, User.ap_id == None, User.deleted == False).first()
     else:
-        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).one()
+        user = User.query.filter(func.lower(User.user_name) == username, User.ap_id == None, User.deleted == False).first()
 
     if user is None or not user.check_password(password):
-        raise NoResultFound
+        raise BlockingIOError
 
     return {}
 
