@@ -246,12 +246,12 @@ class TestDatabaseSchemaImmutability:
         """Test that Community table columns haven't been renamed or removed"""
         with app.app_context():
             required_columns = {
-                'id', 'name', 'title', 'description', 'created',
+                'id', 'name', 'title', 'description', 'created_at',
                 'user_id', 'nsfw', 'restricted_to_mods'
             }
-            
+
             actual_columns = {col.name for col in Community.__table__.columns}
-            
+
             missing_columns = required_columns - actual_columns
             assert not missing_columns, f"Community table missing critical columns: {missing_columns}"
 

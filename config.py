@@ -178,7 +178,7 @@ if _db_uri and (_db_uri.startswith('postgresql') or _db_uri.startswith('postgres
         'pool_size': int(Config.DB_POOL_SIZE),
         'max_overflow': int(Config.DB_MAX_OVERFLOW),
         'pool_pre_ping': True,  # Verify connections are alive before using
-        'pool_recycle': 300  # Recycle connections after 5 minutes
+        'pool_recycle': 3600  # Recycle connections after 1 hour (was hardcoded in __init__.py)
     }
 else:
     # SQLite doesn't support connection pooling parameters
