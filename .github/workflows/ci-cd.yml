@@ -168,10 +168,8 @@ jobs:
             -not -name "test_api_blueprint_registration.py" \
             -not -name "test_sql_injection_fixes.py" \
             -not -name "test_private_registration.py" \
-            -not -name "test_private_registration_simple.py" \
             -not -name "test_explore_real_world.py" \
-            -not -name "test_private_registration_security.py" \
-            -not -name "test_private_registration_security_focused.py")
+            -not -name "test_private_registration_security.py")
 
           # Run all tests in a single pytest command so failures propagate properly
           if [ -n "$TEST_FILES" ]; then
