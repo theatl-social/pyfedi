@@ -20,6 +20,7 @@ class PrivateRegSecurityTestConfig:
     TESTING = True
     WTF_CSRF_ENABLED = False
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ENGINE_OPTIONS = {}
     SERVER_NAME = 'localhost'
     SECRET_KEY = 'test-security-key'
     CACHE_TYPE = 'null'
@@ -32,6 +33,12 @@ class PrivateRegSecurityTestConfig:
     RATELIMIT_ENABLED = False
     SERVE_API_DOCS = False
     CACHE_REDIS_URL = 'memory://'
+    GOOGLE_OAUTH_CLIENT_ID = ''
+    GOOGLE_OAUTH_CLIENT_SECRET = ''
+    MASTODON_OAUTH_CLIENT_ID = ''
+    MASTODON_OAUTH_CLIENT_SECRET = ''
+    DISCORD_OAUTH_CLIENT_ID = ''
+    DISCORD_OAUTH_CLIENT_SECRET = ''
 
 
 @pytest.fixture
