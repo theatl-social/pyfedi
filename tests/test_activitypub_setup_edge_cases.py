@@ -276,7 +276,7 @@ class TestStartupValidationErrorHandling:
 
                 # Mock logger to verify error logging
                 with patch('app.startup_validation.current_app.logger') as mock_logger:
-                    result = validate_and_fix_user_activitypub_setup()
+                    validate_and_fix_user_activitypub_setup()
 
                     # Verify error was logged
                     assert any(
