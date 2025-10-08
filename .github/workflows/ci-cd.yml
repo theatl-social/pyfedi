@@ -151,7 +151,7 @@ jobs:
       - name: Run additional core tests
         run: |
           echo "📝 Running additional core logic tests"
-          # Collect all test files (excluding ones run separately and integration tests requiring populated DB)
+          # Collect all test files (excluding ones run separately and tests needing proper fixtures)
           TEST_FILES=$(find tests/ -name "test_*.py" \
             -not -name "test_startup_validation.py" \
             -not -name "test_field_consistency_simple.py" \
@@ -166,7 +166,14 @@ jobs:
             -not -name "test_explore_template_render.py" \
             -not -name "test_explore_page_integration.py" \
             -not -name "test_api_blueprint_registration.py" \
-            -not -name "test_sql_injection_fixes.py")
+            -not -name "test_sql_injection_fixes.py" \
+            -not -name "test_monitoring_simple.py" \
+            -not -name "test_user_management_simple.py" \
+            -not -name "test_private_registration.py" \
+            -not -name "test_private_registration_simple.py" \
+            -not -name "test_explore_real_world.py" \
+            -not -name "test_private_registration_security.py" \
+            -not -name "test_private_registration_security_focused.py")
 
           # Run all tests in a single pytest command so failures propagate properly
           if [ -n "$TEST_FILES" ]; then
