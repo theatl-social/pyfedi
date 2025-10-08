@@ -9,7 +9,8 @@ from feedgen.feed import FeedGenerator
 from flask import redirect, url_for, flash, request, make_response, session, current_app, abort, json, g, send_file
 from flask_babel import _, lazy_gettext as _l
 from flask_login import logout_user, current_user
-from sqlalchemy import desc, or_, text, asc
+from sqlalchemy import desc, or_, text, asc, union_all, select, literal
+from sqlakeyset import get_page, select_page
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache, celery
@@ -39,7 +40,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
-    patch_db_session, user_in_restricted_country
+    patch_db_session, user_in_restricted_country, SqlKeysetPagination
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -55,76 +56,105 @@ def show_profile_by_id(user_id):
     return show_profile(user)
 
 
-def _get_user_posts(user, post_page):
+def _get_user_posts(user, bookmark=None):
     """Get posts for a user based on current user's permissions."""
     base_query = Post.query.filter_by(user_id=user.id)
 
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        return base_query.order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        query = base_query.order_by(desc(Post.posted_at), desc(Post.id))
     elif current_user.is_authenticated and current_user.id == user.id:
         # Users see their own posts including soft-deleted ones they deleted
-        return base_query.filter(
+        query = base_query.filter(
             or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)
-        ).order_by(desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        ).order_by(desc(Post.posted_at), desc(Post.id))
     else:
         # Everyone else sees only public, non-deleted posts
-        return base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(
-            desc(Post.posted_at)).paginate(page=post_page, per_page=20, error_out=False)
+        query = base_query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).order_by(
+            desc(Post.posted_at), desc(Post.id))
+    
+    page_obj = get_page(query, per_page=20, page=bookmark)
+    return SqlKeysetPagination(page_obj)
 
 
-def _get_user_post_replies(user, replies_page):
+def _get_user_post_replies(user, bookmark=None):
     """Get post replies for a user based on current user's permissions."""
     base_query = PostReply.query.filter_by(user_id=user.id)
 
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        return base_query.order_by(desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+        query = base_query.order_by(desc(PostReply.posted_at), desc(PostReply.id))
     elif current_user.is_authenticated and current_user.id == user.id:
         # Users see their own replies including soft-deleted ones they deleted
-        return base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(
-            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+        query = base_query.filter(or_(PostReply.deleted == False, PostReply.deleted_by == user.id)).order_by(
+            desc(PostReply.posted_at), desc(PostReply.id))
     else:
         # Everyone else sees only non-deleted replies
-        return base_query.filter(PostReply.deleted == False).order_by(
-            desc(PostReply.posted_at)).paginate(page=replies_page, per_page=20, error_out=False)
+        query = base_query.filter(PostReply.deleted == False).order_by(
+            desc(PostReply.posted_at), desc(PostReply.id))
+    
+    page_obj = get_page(query, per_page=20, page=bookmark)
+    return SqlKeysetPagination(page_obj)
 
 
-def _get_user_posts_and_replies(user, page):
+def _get_user_posts_and_replies(user, bookmark=None):
     """Get list of posts and replies in reverse chronological order based on current user's permissions"""
-    returned_list = []
-    user_id = user.id
-    per_page = 20
-    offset_val = (page - 1) * per_page
-    next_page = False
-
+    
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
-    elif current_user.is_authenticated and current_user.id == user_id:
+        post_subquery = select(Post.id, Post.posted_at, literal('post').label('type')).where(Post.user_id == user.id)
+        reply_subquery = select(PostReply.id, PostReply.posted_at, literal('reply').label('type')).where(PostReply.user_id == user.id)
+    elif current_user.is_authenticated and current_user.id == user.id:
         # Users see their own posts/replies including soft-deleted ones they deleted
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        post_subquery = select(Post.id, Post.posted_at, literal('post').label('type')).where(
+            Post.user_id == user.id,
+            or_(Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Post.deleted_by == user.id)
+        )
+        reply_subquery = select(PostReply.id, PostReply.posted_at, literal('reply').label('type')).where(
+            PostReply.user_id == user.id,
+            or_(PostReply.deleted == False, PostReply.deleted_by == user.id)
+        )
     else:
         # Everyone else sees only non-deleted posts/replies
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        post_subquery = select(Post.id, Post.posted_at, literal('post').label('type')).where(
+            Post.user_id == user.id,
+            Post.deleted == False,
+            Post.status > POST_STATUS_REVIEWING
+        )
+        reply_subquery = select(PostReply.id, PostReply.posted_at, literal('reply').label('type')).where(
+            PostReply.user_id == user.id,
+            PostReply.deleted == False
+        )
+    
+    # Create UNION query as a subquery that sqlakeyset can work with
+    union_subquery = union_all(post_subquery, reply_subquery).subquery()
+    
+    # Create a select from the union subquery with proper ordering for keyset pagination
+    main_query = select(union_subquery.c.id, union_subquery.c.posted_at, union_subquery.c.type).order_by(
+        desc(union_subquery.c.posted_at), desc(union_subquery.c.id)
+    )
 
-    full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
-    query_result = db.session.execute(text(full_query))
-
-    for row in query_result:
-        if row.type == "post":
-            returned_list.append(Post.query.get(row.id))
-        elif row.type == "reply":
-            returned_list.append(PostReply.query.get(row.id))
-
-    if len(returned_list) > per_page:
-        next_page = True
-        returned_list = returned_list[:-1]
-
-    return (returned_list, next_page)
+    # Pagination
+    page_obj = select_page(db.session, main_query, per_page=20, page=bookmark)
+    
+    post_ids = [row.id for row in page_obj if row.type == 'post']
+    reply_ids = [row.id for row in page_obj if row.type == 'reply']
+    
+    posts_dict = {p.id: p for p in Post.query.filter(Post.id.in_(post_ids)).all()} if post_ids else {}
+    replies_dict = {r.id: r for r in PostReply.query.filter(PostReply.id.in_(reply_ids)).all()} if reply_ids else {}
+    
+    # Build result list maintaining the chronological order from the UNION query
+    returned_list = []
+    for row in page_obj:
+        if row.type == 'post' and row.id in posts_dict:
+            returned_list.append(posts_dict[row.id])
+        elif row.type == 'reply' and row.id in replies_dict:
+            returned_list.append(replies_dict[row.id])
+    
+    # Create a pagination object with the custom items but keep the bookmark info
+    pagination = SqlKeysetPagination(page_obj)
+    pagination.items = returned_list
+    return pagination
 
 
 def _get_user_moderates(user):
@@ -177,17 +207,19 @@ def show_profile(user):
     if user.deleted:
         flash(_('This user has been deleted.'), 'warning')
 
-    post_page = request.args.get('post_page', 1, type=int)
-    replies_page = request.args.get('replies_page', 1, type=int)
-    overview_page = request.args.get('overview_page', 1, type=int)
+    post_cursor = request.args.get('post_cursor', None)
+    replies_cursor = request.args.get('replies_cursor', None)
+    overview_cursor = request.args.get('overview_cursor', None)
 
     # Get data using helper functions
     moderates = _get_user_moderates(user)
     upvoted = _get_user_upvoted_posts(user)
     subscribed = _get_user_subscribed_communities(user)
-    posts = _get_user_posts(user, post_page)
-    post_replies = _get_user_post_replies(user, replies_page)
-    overview_items, overview_has_next_page = _get_user_posts_and_replies(user, overview_page)
+    posts = _get_user_posts(user, post_cursor)
+    post_replies = _get_user_post_replies(user, replies_cursor)
+    overview_pagination = _get_user_posts_and_replies(user, overview_cursor)
+    overview_items = overview_pagination.items
+    overview_has_next_page = overview_pagination.has_next
     same_ip_address = _get_user_same_ip(user)
 
     # profile info
@@ -207,21 +239,21 @@ def show_profile(user):
 
     # pagination urls
     post_next_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                            post_page=posts.next_num) if posts.has_next else None
+                            post_cursor=posts.next_bookmark) if posts.has_next else None
     post_prev_url = url_for('activitypub.user_profile', actor=user.ap_id if user.ap_id is not None else user.user_name,
-                            post_page=posts.prev_num) if posts.has_prev and post_page != 1 else None
+                            post_cursor=posts.prev_bookmark) if posts.has_prev else None
     replies_next_url = url_for('activitypub.user_profile',
                                actor=user.ap_id if user.ap_id is not None else user.user_name,
-                               replies_page=post_replies.next_num) if post_replies.has_next else None
+                               replies_cursor=post_replies.next_bookmark) if post_replies.has_next else None
     replies_prev_url = url_for('activitypub.user_profile',
                                actor=user.ap_id if user.ap_id is not None else user.user_name,
-                               replies_page=post_replies.prev_num) if post_replies.has_prev and replies_page != 1 else None
+                               replies_cursor=post_replies.prev_bookmark) if post_replies.has_prev else None
     overview_next_url = url_for('activitypub.user_profile',
                                 actor=user.ap_id if user.ap_id is not None else user.user_name,
-                                overview_page=overview_page + 1) if overview_has_next_page else None
+                                overview_cursor=overview_pagination.next_bookmark) if overview_pagination.has_next else None
     overview_prev_url = url_for('activitypub.user_profile',
                                 actor=user.ap_id if user.ap_id is not None else user.user_name,
-                                overview_page=overview_page - 1) if overview_page != 1 else None
+                                overview_cursor=overview_pagination.prev_bookmark) if overview_pagination.has_prev else None
 
     return render_template('user/show_profile.html', user=user, posts=posts, post_replies=post_replies,
                            moderates=moderates, canonical=canonical, title=_('Posts by %(user_name)s',
