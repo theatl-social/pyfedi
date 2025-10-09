@@ -211,6 +211,15 @@ def get_suggestion(data):
             person_text = other_person.lemmy_link()
             if person_text not in result:
                 result.append(person_text)
+        if len(result) < 7:
+            other_people = User.query.filter(User.user_name.ilike(f'%{query[1:]}%')).order_by(
+                desc(User.reputation)).limit(7).all()
+            for other_person in other_people:
+                if len(result) >= 7:
+                    break
+                person_text = other_person.lemmy_link()
+                if person_text not in result:
+                    result.append(person_text)
     elif query.startswith('!'):
         for community in Community.query.filter(Community.name.ilike(f'{query[1:]}%')).order_by(desc(Community.active_monthly)).limit(7).all():
             result.append(community.lemmy_link())
