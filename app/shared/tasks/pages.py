@@ -300,10 +300,11 @@ def send_post(post_id, edit=False, session=None):
     if 'name' in page:
         del page['name']
     note = page
+    note['content'] = ''
     if note['type'] == 'Page' or note['type'] == 'Event':
         note['type'] = 'Note'
     if post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO:
-        note['content'] = '<p><a href=' + post.url + '>' + post.title + '</a></p>'
+        note['content'] += '<p><a href=' + post.url + '>' + post.title + '</a></p>'
     elif post.type != POST_TYPE_POLL:
         note['content'] = '<p>' + post.title + '</p>'
     if post.type == POST_TYPE_EVENT:
@@ -313,6 +314,8 @@ def send_post(post_id, edit=False, session=None):
         note['content'] += '<p>' + local_start.strftime('%Y-%m-%dT%H:%M:%S') + f' ({post.event.timezone})</p>'
     if post_body_html:
         note['content'] = note['content'] + post_body_html
+    if post.language_id:
+        note['contentMap'] = {post.language_code(): note['content']}
     note['inReplyTo'] = None
     create['object'] = note
     if not community.local_only:
