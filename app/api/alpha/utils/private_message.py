@@ -95,6 +95,9 @@ def post_leave_conversation(auth, data):
     conversation_id = data["conversation_id"]
     conversation = Conversation.query.get(conversation_id)
 
+    if not conversation or not conversation.is_member(user):
+        raise Exception("You are not a part of this conversation")
+
     if conversation.is_member(user):
         db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
                            {"state": False, "person_id": user.id, "conversation_id": conversation_id})
