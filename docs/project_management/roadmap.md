@@ -10,7 +10,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 [Improve reputation icons](https://piefed.social/post/411563)
 
-[User @mentions support](https://piefed.social/post/411582)
+✅ [User @mentions support](https://piefed.social/post/411582)
 
 ✅ [User-created topics, “multi-reddits”, favorite communities](https://piefed.social/post/411558)
 
