@@ -18,8 +18,8 @@ def get_private_message_list(auth, data):
 
     # Get the list of conversation ids that the user has still joined
     joined_conversations = db.session.execute(text(
-        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state",
-        {"user_id": user_id, "state": True})).scalars()
+        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state"),
+        {"user_id": user_id, "state": True}).scalars()
 
     if unread_only:
         private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False). \
@@ -60,8 +60,8 @@ def get_private_message_conversation(auth, data):
             {"person_id": person_id}).scalars()
     
     joined_conversations = db.session.execute(text(
-        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state",
-        {"user_id": user_id, "state": True})).scalars()
+        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state"),
+        {"user_id": user_id, "state": True}).scalars()
     
     if 'conversation_id' in data:
         conversation = Conversation.query.get(data['conversation_id'])
