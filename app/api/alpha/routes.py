@@ -17,7 +17,7 @@ from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, pu
     post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
-    post_private_message_report
+    post_private_message_report, post_leave_conversation
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
     put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock, \
     get_reply_like_list
@@ -807,6 +807,18 @@ def get_alpha_private_message_conversation(data):
     auth = request.headers.get('Authorization')
     resp = get_private_message_conversation(auth, data)
     return GetPrivateMessageConversationResponse().load(resp)
+
+
+@private_message_bp.route('/private_message/conversation/leave', methods=['POST'])
+@private_message_bp.doc(summary="Leave a conversation")
+@private_message_bp.arguments(LeaveConversationRequest)
+@private_message_bp.response(200)
+@private_message_bp.alt_response(400, schema=DefaultError)
+def post_alpha_conversation_leave(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    post_leave_conversation(auth, data)
 
 
 @private_message_bp.route('/private_message', methods=['POST'])

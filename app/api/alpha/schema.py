@@ -1204,6 +1204,7 @@ class PrivateMessageView(DefaultSchema):
     private_message = fields.Nested(PrivateMessage, required=True)
     creator = fields.Nested(Person, required=True)
     recipient = fields.Nested(Person, required=True)
+    conversation_id = fields.Integer()
 
 
 class PrivateMessageResponse(DefaultSchema):
@@ -1221,13 +1222,23 @@ class ListPrivateMessagesResponse(DefaultSchema):
 
 
 class GetPrivateMessageConversationRequest(DefaultSchema):
-    person_id = fields.Integer(required=True)
-    page = fields.Integer()
-    limit = fields.Integer()
+    person_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
+    conversation_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 10})
+
+    @validates_schema
+    def validate_input(self, data, **kwargs):
+        if "person_id" not in data and "conversation_id" not in data:
+            raise ValidationError("One of either person_id or conversation_id must be specified")
 
 
 class GetPrivateMessageConversationResponse(DefaultSchema):
     private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class LeaveConversationRequest(DefaultSchema):
+    conversation_id = fields.Integer(required=True)
 
 
 class CreatePrivateMessageRequest(DefaultSchema):
