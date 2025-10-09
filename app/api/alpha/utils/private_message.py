@@ -64,7 +64,7 @@ def get_private_message_conversation(auth, data):
         {"user_id": user_id, "state": True})).scalars()
     
     if 'conversation_id' in data:
-        conversation = Conversation.query.get(data['conversation_id']).first()
+        conversation = Conversation.query.get(data['conversation_id'])
         conversation_ids = [conversation.id]
         if conversation.id not in joined_conversations:
             raise Exception("User is not a member of this conversation")
@@ -93,7 +93,7 @@ def get_private_message_conversation(auth, data):
 def post_leave_conversation(auth, data):
     user = authorise_api_user(auth, return_type="model")
     conversation_id = data["conversation_id"]
-    conversation = Conversation.query.get(conversation_id).first()
+    conversation = Conversation.query.get(conversation_id)
 
     if conversation.is_member(user):
         db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
