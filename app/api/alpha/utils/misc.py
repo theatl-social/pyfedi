@@ -222,5 +222,5 @@ def get_suggestion(data):
                     result.append(person_text)
     elif query.startswith('!'):
         for community in Community.query.filter(Community.name.ilike(f'{query[1:]}%')).order_by(desc(Community.active_monthly)).limit(7).all():
-            result.append(community.lemmy_link())
+            result.append(community.lemmy_link()[1:])
     return {'result': result}
