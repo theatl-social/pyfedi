@@ -11,7 +11,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     post_community_flair_delete
 from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list
-from app.api.alpha.utils.misc import get_search, get_resolve_object
+from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
     post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2
@@ -153,6 +153,18 @@ def get_alpha_federated_instances():
     data = {"include_federation_state": False}
     resp = get_federated_instances(data)
     return GetFederatedInstancesResponse().load(resp)
+
+
+@misc_bp.route('/suggest_completion', methods=['GET'])
+@misc_bp.doc(summary="Suggest people and communities while users type.")
+@comm_bp.arguments(GetSuggestCompletionRequest, location="query")
+@misc_bp.response(200, GetSuggestCompletionResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+def get_alpha_suggest_completion(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    resp = get_suggestion(data)
+    return GetSuggestCompletionResponse().load(resp)
 
 
 # Community

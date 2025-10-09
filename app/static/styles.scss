@@ -2181,7 +2181,7 @@ form {
   }
 }
 
-.coolfieldset legend, .coolfieldset.expanded legend{
+.coolfieldset legend, .coolfieldset.expanded legend {
 	background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
 }
 
@@ -2592,6 +2592,18 @@ form {
   }
 }
 
+.user-suggestion-box {
+  position: absolute;
+  background: var(--bs-body-bg, #fff);
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  border-radius: 0.375rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  max-height: 300px;
+  overflow: hidden;
+  z-index: 9999;
+  min-width: 200px;
+}
+
 #typeTab .nav-link {
   padding-left: 3px;
   padding-right: 3px;
@@ -2629,6 +2641,14 @@ form {
 
 [data-bs-theme="dark"] .dropdown-header {
   color: white;
+}
+
+[data-bs-theme="dark"] .coolfieldset legend, .coolfieldset.expanded legend {
+	background: #424549 url(/static/images/expanded.gif) no-repeat center left;
+}
+
+[data-bs-theme="dark"] .coolfieldset.collapsed legend{
+	background: #424549 url(/static/images/collapsed.gif) no-repeat center left;
 }
 
 @import "scss/compact";

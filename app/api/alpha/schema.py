@@ -12,7 +12,7 @@ default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
-comment_sort_list = ["Hot", "Top", "New", "Old", "Controversial"]
+comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Active"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed"]
@@ -525,6 +525,14 @@ class GetCommunityResponse(DefaultSchema):
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
     site = fields.Nested(Site)
+
+
+class GetSuggestCompletionRequest(DefaultSchema):
+    q = fields.String()
+
+
+class GetSuggestCompletionResponse(DefaultSchema):
+    result = fields.List(fields.String(), required=True)
 
 
 class CommunityFlairDeleteRequest(DefaultSchema):

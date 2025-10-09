@@ -1,5 +1,7 @@
 from urllib.parse import urlparse
 
+from sqlalchemy import desc
+
 from app.activitypub.util import find_actor_or_create, remote_object_to_json, actor_json_to_model, \
     find_community, create_resolved_object
 from app.api.alpha.utils.community import get_community_list
@@ -186,3 +188,30 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
 
     # failed to resolve if here.
     raise Exception('No object found.')
+
+
+def get_suggestion(data):
+    query = data['q']
+    result = []
+    if query.startswith('@'):
+        if 'post_id' in data:
+            people_from_post = User.query.join(PostReply, PostReply.user_id == User.id).\
+                filter(PostReply.post_id == data['post_id']).\
+                filter(User.user_name.ilike(f'{query[1:]}%')).distinct()
+
+            for person in people_from_post.all():
+                person_text = person.lemmy_link()
+                if person_text not in result:
+                    result.append(person_text)
+
+        other_people = User.query.filter(User.user_name.ilike(f'{query[1:]}%')).order_by(desc(User.reputation)).limit(7).all()
+        for other_person in other_people:
+            if len(result) >= 7:
+                break
+            person_text = other_person.lemmy_link()
+            if person_text not in result:
+                result.append(person_text)
+    elif query.startswith('!'):
+        for community in Community.query.filter(Community.name.ilike(f'{query[1:]}%')).order_by(desc(Community.active_monthly)).limit(7).all():
+            result.append(community.lemmy_link())
+    return {'result': result}

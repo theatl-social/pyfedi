@@ -316,6 +316,7 @@
     {% endblock -%}
     {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/user-mentions.js', changed=getmtime('js/user-mentions.js')) }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
     {% if not low_bandwidth -%}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
