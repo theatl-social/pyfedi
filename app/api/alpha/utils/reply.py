@@ -217,7 +217,7 @@ def get_reply_list(auth, data, user_details=None):
     if replies:
         if sort == 'Hot' or sort == 'Controversial':
             replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
-        elif sort == 'Top':
+        elif sort.startswith('Top'):
             replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == 'Old':
             replies = replies.order_by(PostReply.posted_at)
