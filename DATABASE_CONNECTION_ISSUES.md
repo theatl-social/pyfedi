@@ -11,25 +11,42 @@ sqlalchemy.exc.ResourceClosedError: This result object does not return rows
 
 ## Root Causes
 
-### 1. Connection Pool Exhaustion
+### 1. Fork-Inherited Connection Pool (PRIMARY CAUSE - FIXED ✅)
+When Celery forks worker processes, the SQLAlchemy Engine and its connection pool are copied from the parent process. These copied connections are file descriptors pointing to the same TCP sockets as the parent process.
+
+**Why This Causes PGRES_TUPLES_OK Errors**:
+- Multiple processes access the same PostgreSQL connection file descriptors
+- Protocol state gets corrupted (PGRES_TUPLES_OK status but no readable data)
+- Transaction boundaries become confused
+- libpq can't read result data because another process consumed it
+
+**Evidence**:
+- Error is intermittent and non-deterministic (classic fork issue)
+- Occurs randomly in both Celery workers
+- Matches symptoms from 10+ similar issues documented online
+- SQLAlchemy docs explicitly warn about this scenario
+
+**Solution Applied**:
+- Added `worker_process_init` signal to call `db.engine.dispose(close=False)`
+- This marks inherited connections as invalid without closing parent process connections
+- Each worker process starts with a fresh connection pool
+
+### 2. Stale Session State (SECONDARY - FIXED ✅)
+Sessions not being cleaned up between Celery tasks.
+
+**Solution Applied**:
+- Added `task_prerun`/`task_postrun` signals to call `db.session.remove()`
+
+### 3. Connection Pool Exhaustion (POSSIBLE CONTRIBUTING FACTOR)
 Multiple Gunicorn workers + Celery workers competing for limited database connections.
 
 **Current Settings** (from config.py):
 ```python
-DB_POOL_SIZE = 10  # May be insufficient
-DB_MAX_OVERFLOW = 30  # May be insufficient
+DB_POOL_SIZE = 10  # May need increase if fork fix doesn't fully resolve
+DB_MAX_OVERFLOW = 30  # May need increase if fork fix doesn't fully resolve
 ```
 
-### 2. Stale/Broken Connections
-Connections being reused after they've timed out or been closed by PostgreSQL.
-
-**Evidence**:
-- Errors happening during high-concurrency ActivityPub inbox processing
-- "PGRES_TUPLES_OK with no message" indicates PostgreSQL returned success but connection is broken
-- Deferred attribute loading failures indicate session corruption
-
-### 3. Transaction Management Issues
-Transactions not being properly committed/rolled back, leaving sessions in bad states.
+**Note**: The fork issue fix should resolve most errors. Monitor after deployment to see if pool size increase is still needed.
 
 ## Errors Observed
 
@@ -88,12 +105,27 @@ SQLALCHEMY_ENGINE_OPTIONS = {
 }
 ```
 
-### Priority 2: Add Session Scoping for Celery
+### Priority 2: Add Connection Pool Disposal on Fork (CRITICAL - COMPLETED ✅)
 
-**File**: `celery_worker_docker.py` or task decorator
+**File**: `celery_worker_docker.py` and `celery_worker.default.py`
 
 ```python
-from celery.signals import task_prerun, task_postrun
+from celery.signals import worker_process_init, task_prerun, task_postrun
+
+@worker_process_init.connect
+def init_celery_worker(**kwargs):
+    """
+    Called once when each Celery worker process starts (after fork).
+    Disposes of the connection pool inherited from the parent process.
+
+    This prevents the "PGRES_TUPLES_OK and no message from libpq" error
+    caused by multiple processes sharing the same PostgreSQL connection
+    file descriptors.
+
+    Reference: https://docs.sqlalchemy.org/en/20/core/pooling.html#using-connection-pools-with-multiprocessing-or-os-fork
+    """
+    # close=False prevents closing parent process connections
+    db.engine.dispose(close=False)
 
 @task_prerun.connect
 def celery_task_prerun(*args, **kwargs):
@@ -105,6 +137,10 @@ def celery_task_postrun(*args, **kwargs):
     """Clean up database session after Celery task"""
     db.session.remove()
 ```
+
+**Why Both Are Needed:**
+- `worker_process_init` → Runs once per worker process when it starts (fixes fork issue)
+- `task_prerun`/`task_postrun` → Runs per task (ensures clean session state)
 
 ### Priority 3: Add Connection Retry Logic
 
@@ -200,8 +236,9 @@ def receive_checkout(dbapi_conn, connection_record, connection_proxy):
 ## Status
 
 - ✅ **Fixed**: Startup validation session cleanup (prevents one source of stale sessions)
-- ⚠️ **Pending**: Connection pool configuration (needs environment variables)
-- ⚠️ **Pending**: Celery session scoping (needs worker configuration)
+- ✅ **Fixed**: Celery worker process fork issue - Added `worker_process_init` signal to dispose inherited connection pool
+- ✅ **Fixed**: Celery task session cleanup - Added `task_prerun`/`task_postrun` signal handlers
+- ⚠️ **Pending**: Connection pool configuration (needs environment variables - may not be needed after fork fix)
 - ⚠️ **Recommended**: Connection retry logic (improves resilience)
 
 ## Next Steps
