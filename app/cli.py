@@ -99,6 +99,12 @@ def register(app):
                 return
 
             db.drop_all()
+
+            # Drop PostgreSQL functions that are created by migrations but not dropped by drop_all()
+            # These functions persist even after tables are dropped and cause errors on db.create_all(), later.
+            db.session.execute(text("DROP FUNCTION IF EXISTS post_search_vector_update() CASCADE"))
+            db.session.commit()
+
             db.configure_mappers()
             db.create_all()
             private_key, public_key = RsaKeys.generate_keypair()
