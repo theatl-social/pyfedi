@@ -139,6 +139,7 @@ def post_to_page(post: Post):
         "name": post.title,
         "cc": [],
         "content": post.body_html if post.body_html else '',
+        "summary": post.body_html if post.body_html else '',
         "mediaType": "text/html",
         "source": {"content": post.body if post.body else '', "mediaType": "text/markdown"},
         "attachment": [],
@@ -154,6 +155,8 @@ def post_to_page(post: Post):
             "name": post.language_name()
         },
     }
+    if post.language_id:
+        activity_data['contentMap'] = {post.language_code(): activity_data['content']}
     if post.edited_at is not None:
         activity_data["updated"] = ap_datetime(post.edited_at)
     if (post.type == POST_TYPE_LINK or post.type == POST_TYPE_VIDEO or post.type == POST_TYPE_EVENT) and post.url is not None:

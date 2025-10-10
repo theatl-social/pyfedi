@@ -12,8 +12,8 @@ default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
-comment_sort_list = ["Hot", "Top", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "New"]
+comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
+community_sort_list = ["Hot", "Top", "New", "Active"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
@@ -298,7 +298,7 @@ class Post(DefaultSchema):
     small_thumbnail_url = fields.Url()
     thumbnail_url = fields.Url()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    url = fields.Url()
+    url = fields.String()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
@@ -525,6 +525,14 @@ class GetCommunityResponse(DefaultSchema):
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
     site = fields.Nested(Site)
+
+
+class GetSuggestCompletionRequest(DefaultSchema):
+    q = fields.String()
+
+
+class GetSuggestCompletionResponse(DefaultSchema):
+    result = fields.List(fields.String(), required=True)
 
 
 class CommunityFlairDeleteRequest(DefaultSchema):
@@ -1423,6 +1431,7 @@ class PrivateMessageView(DefaultSchema):
     private_message = fields.Nested(PrivateMessage, required=True)
     creator = fields.Nested(Person, required=True)
     recipient = fields.Nested(Person, required=True)
+    conversation_id = fields.Integer()
 
 
 class PrivateMessageResponse(DefaultSchema):
@@ -1440,13 +1449,23 @@ class ListPrivateMessagesResponse(DefaultSchema):
 
 
 class GetPrivateMessageConversationRequest(DefaultSchema):
-    person_id = fields.Integer(required=True)
-    page = fields.Integer()
-    limit = fields.Integer()
+    person_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
+    conversation_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 10})
+
+    @validates_schema
+    def validate_input(self, data, **kwargs):
+        if "person_id" not in data and "conversation_id" not in data:
+            raise ValidationError("One of either person_id or conversation_id must be specified")
 
 
 class GetPrivateMessageConversationResponse(DefaultSchema):
     private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class LeaveConversationRequest(DefaultSchema):
+    conversation_id = fields.Integer(required=True)
 
 
 class CreatePrivateMessageRequest(DefaultSchema):
