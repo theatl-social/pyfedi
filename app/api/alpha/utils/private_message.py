@@ -16,11 +16,21 @@ def get_private_message_list(auth, data):
 
     user_id = authorise_api_user(auth)
 
+    # Get the list of conversation ids that the user has still joined
+    joined_conversations = db.session.execute(text(
+        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state"),
+        {"user_id": user_id, "state": True}).scalars()
+
     if unread_only:
-        private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False).order_by(desc(ChatMessage.created_at))
+        private_messages = ChatMessage.query.filter_by(recipient_id=user_id, read=False). \
+            order_by(desc(ChatMessage.created_at))
     else:
         private_messages = ChatMessage.query.filter(or_(ChatMessage.recipient_id == user_id,
                     ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
+    
+    # Only return conversations that the user hasn't left
+    private_messages = private_messages.filter(ChatMessage.conversation_id.in_(joined_conversations))
+
     private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
 
     pm_list = []
@@ -41,14 +51,32 @@ def get_private_message_conversation(auth, data):
 
     user_id = authorise_api_user(auth)
 
-    conversation_ids = db.session.execute(text("SELECT conversation_id FROM conversation_member WHERE user_id = :person_id"),
-                                         {"person_id": person_id}).scalars()
+    conversation = None
+    conversation_ids = []
+
+    if 'person_id' in data:
+        conversation_ids = db.session.execute(text(
+            "SELECT conversation_id FROM conversation_member WHERE user_id = :person_id"),
+            {"person_id": person_id}).scalars()
+    
+    joined_conversations = db.session.execute(text(
+        "SELECT conversation_id FROM conversation_member WHERE user_id = :user_id AND joined = :state"),
+        {"user_id": user_id, "state": True}).scalars()
+    
+    if 'conversation_id' in data:
+        conversation = Conversation.query.get(data['conversation_id'])
+        conversation_ids = [conversation.id]
+        if conversation.id not in joined_conversations:
+            raise Exception("User is not a member of this conversation")
+    
     pm_list = []
     next_page = None
-    if conversation_ids:
+    if conversation_ids and joined_conversations:
         private_messages = ChatMessage.query.filter(ChatMessage.conversation_id.in_(conversation_ids),
-                              or_(ChatMessage.recipient_id == user_id,
-                                  ChatMessage.sender_id == user_id)).order_by(desc(ChatMessage.created_at))
+                                                    ChatMessage.conversation_id.in_(joined_conversations),
+                                                    or_(ChatMessage.recipient_id == user_id,
+                                                        ChatMessage.sender_id == user_id)). \
+                                                            order_by(desc(ChatMessage.created_at))
         private_messages = private_messages.paginate(page=page, per_page=limit, error_out=False)
         for private_message in private_messages:
             pm_list.append(private_message_view(private_message, variant=1))
@@ -60,6 +88,22 @@ def get_private_message_conversation(auth, data):
         'next_page': next_page
     }
     return pm_json
+
+
+def post_leave_conversation(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+    conversation_id = data["conversation_id"]
+    conversation = Conversation.query.get(conversation_id)
+
+    if not conversation or not conversation.is_member(user):
+        raise Exception("You are not a part of this conversation")
+
+    if conversation.is_member(user):
+        db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
+                           {"state": False, "person_id": user.id, "conversation_id": conversation_id})
+        db.session.commit()
+    
+    return
 
 
 def post_private_message(auth, data):
@@ -89,7 +133,8 @@ def post_private_message_mark_as_read(auth, data):
     private_message.read = read
 
     notif_read = not read
-    notifications = Notification.query.filter_by(user_id=user.id, notif_type=NOTIF_MESSAGE, subtype='chat_message', read=notif_read)
+    notifications = Notification.query.filter_by(user_id=user.id, notif_type=NOTIF_MESSAGE,
+                                                 subtype='chat_message', read=notif_read)
     for notification in notifications:
         if 'message_id' in notification.targets and notification.targets['message_id'] == message_id:
             notification.read = read
@@ -99,7 +144,6 @@ def post_private_message_mark_as_read(auth, data):
                 user.unread_notifications += 1
             break
     db.session.commit()
-
 
     return private_message_view(private_message, variant=2)
 

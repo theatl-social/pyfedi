@@ -874,7 +874,8 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
             'local': is_local
         },
         'creator': creator,
-        'recipient': recipient
+        'recipient': recipient,
+        'conversation_id': cm.conversation_id
     }
 
     if variant == 1:

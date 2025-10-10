@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupPasswordEye();
     setupBasicAutoResize();
     setupEventTimes();
+    setupUserMentionSuggestions();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1524,6 +1525,7 @@ function setupDynamicContent() {
     setupHideButtons();
     setupPopupTooltips();
     setupBasicAutoResize();
+    setupUserMentionSuggestions();
     
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {

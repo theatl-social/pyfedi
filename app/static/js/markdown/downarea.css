@@ -34,7 +34,6 @@
     min-width: max-content !important;
     min-height: 120px !important;
     position: relative;
-    overflow: hidden;
 }
 
 .downarea.focused {
