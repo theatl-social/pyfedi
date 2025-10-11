@@ -1081,7 +1081,7 @@ class EditPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     title = fields.String()
     body = fields.String()
-    url = fields.Url()
+    url = fields.Url(allow_none=True, metadata={"description": "Pass value of null to remove the post url"})
     nsfw = fields.Boolean()
     language_id = fields.Integer()
 
