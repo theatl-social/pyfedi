@@ -802,6 +802,7 @@ div.navbar {
   padding-left: 0;
   break-after: avoid-column;
   text-align: right;
+  font-size: 120%;
 }
 @media (min-width: 992px) {
   .communities_menu .dropdown-header {

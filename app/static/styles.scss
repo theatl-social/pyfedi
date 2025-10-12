@@ -256,6 +256,7 @@ div.navbar {
     padding-left: 0;
     break-after: avoid-column;
     text-align: right;
+    font-size: 120%;
     @include breakpoint(tablet) {
       text-align: left;
     }
