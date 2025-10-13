@@ -13,7 +13,7 @@ from flask_login import current_user
 from pillow_heif import register_heif_opener
 from sqlalchemy import text, Integer
 
-from app import db, cache
+from app import db, cache, plugins
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
@@ -226,6 +226,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
     if post.status == POST_STATUS_PUBLISHED:
         notify_about_post(post)
+
+    plugins.fire_hook('after_post_create')
 
     if src == SRC_API:
         return user.id, post

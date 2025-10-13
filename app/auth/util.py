@@ -102,11 +102,7 @@ def create_user_application(user: User, registration_answer: str):
 def notify_admins_of_registration(application):
     """Notify admins when a registration application is ready for review"""
 
-    # fire hook for use by plugins, commit is needed first so that db information available to plugin
-    db.session.commit()
-    application = plugins.fire_hook("new_registration_for_approval", application)
-
-    # commit once more in case any changes were made from the plugin
+    # commit is needed here first so that db information available later to plugin
     db.session.commit()
 
     targets_data = {'gen': '0', 'application_id': application.id, 'user_id': application.user_id}
@@ -118,6 +114,8 @@ def notify_admins_of_registration(application):
                               targets=targets_data)
         admin.unread_notifications += 1
         db.session.add(notify)
+    
+    plugins.fire_hook("new_registration_for_approval", application)
 
 
 def create_registration_application(user, answer):
