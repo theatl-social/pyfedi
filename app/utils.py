@@ -1713,10 +1713,7 @@ def finalize_user_setup(user):
     db.session.commit()
 
     # fire hook for plugins to use upon a new user
-    user = plugins.fire_hook("new_user", user)
-
-    # commit once more in case any changes were made from the plugin
-    db.session.commit()
+    plugins.fire_hook("new_user", user)
 
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
