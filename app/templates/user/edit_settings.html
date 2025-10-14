@@ -39,10 +39,20 @@
             {{ render_field(form.theme) }}
             {{ render_field(form.compaction) }}
             {{ render_field(form.font) }}
-            <table style="width: 100%; max-width: 400px;">
+            <table style="width: 100%; max-width: 400px;" class="mb-3">
                 <tr>
                     <td><a href="#" id="increase_font_size">{{ _('Increase font size') }}</a></td>
                     <td align="right"><a href="#" id="decrease_font_size">{{ _('Decrease font size') }}</a></td>
+                </tr>
+            </table>
+            <table class="mb-3" style="width: 100%">
+                <tr>
+                    <td>
+                        {{ render_field(form.code_style) }}
+                    </td>
+                    <td class="text-center">
+                        <a target="_blank" rel="noopener noreferrer" href="https://pygments.org/styles/">{{ _('Go here to preview the different code styles') }}</a>
+                    </td>
                 </tr>
             </table>
             {{ render_field(form.additional_css) }}

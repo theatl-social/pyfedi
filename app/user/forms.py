@@ -109,6 +109,10 @@ class SettingsForm(FlaskForm):
              ]
     font = SelectField(_l('Font'), choices=fonts, validators=[Optional()], coerce=str,
                                render_kw={'class': 'form-select'})
+    code_styles = ['autumn', 'borland', 'bw', 'colorful', 'default', 'emacs', 'friendly', 'fruity', 'manni', 'monokai',
+                   'murphy', 'native', 'pastie', 'perldoc', 'tango', 'trac', 'vim', 'vs']
+    code_style = SelectField(_l('Code syntax highlighting color scheme'), choices=code_styles, coerce=str,
+                             render_kw={'class': 'form-select'})
     accept_from = [
         ('0', _l('None')),
         ('1', _l('This instance')),

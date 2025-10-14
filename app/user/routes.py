@@ -564,6 +564,7 @@ def user_settings():
         current_user.read_language_ids = form.read_languages.data
         current_user.accept_private_messages = form.accept_private_messages.data
         current_user.font = form.font.data
+        current_user.code_style = form.code_style.data
         current_user.additional_css = form.additional_css.data
         session['ui_language'] = form.interface_language.data
         current_user.vote_privately = not form.federate_votes.data
@@ -603,6 +604,7 @@ def user_settings():
         form.compaction.data = request.cookies.get('compact_level', '')
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
+        form.code_style.data = current_user.code_style or 'fruity'
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
 

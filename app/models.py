@@ -922,6 +922,7 @@ class User(UserMixin, db.Model):
     mastodon_oauth_id = db.Column(db.String(64), unique=True, index=True)
     discord_oauth_id = db.Column(db.String(64), unique=True, index=True)
     password_updated_at = db.Column(db.DateTime, default=utcnow)
+    code_style = db.Column(db.String(25), default='fruity')
 
     avatar = db.relationship('File', lazy='joined', foreign_keys=[avatar_id], single_parent=True, cascade="all, delete-orphan")
     cover = db.relationship('File', lazy='joined', foreign_keys=[cover_id], single_parent=True, cascade="all, delete-orphan")
