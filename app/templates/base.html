@@ -38,7 +38,11 @@
             {% if not low_bandwidth -%}
                 <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
                 <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
-                <link href="{{ url_for('static', filename='pygments/fruity.css') }}" type="text/css" rel="stylesheet" />
+                {% if current_user.code_style -%}
+                    <link href="{{ url_for('static', filename='pygments/' + current_user.code_style + '.css') }}" type="text/css" rel="stylesheet" />
+                {% else -%}
+                    <link href="{{ url_for('static', filename='pygments/fruity.css') }}" type="text/css" rel="stylesheet" />
+                {% endif -%}
             {% endif -%}
             {% if theme() and file_exists('app/templates/themes/' + theme() + '/styles.css') -%}
                 <link href="{{ url_for('static', filename='themes/' + theme() + '/styles.css', changed=getmtime('themes/' + theme() + '/styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
