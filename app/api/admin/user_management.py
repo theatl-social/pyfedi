@@ -37,7 +37,11 @@ def update_user(user_id, update_data):
     # Validate email uniqueness if changing
     if "email" in update_data:
         existing = User.query.filter(
-            and_(User.email == update_data["email"], User.id != user_id, User.deleted is False)
+            and_(
+                User.email == update_data["email"],
+                User.id != user_id,
+                User.deleted is False,
+            )
         ).first()
         if existing:
             raise ValueError(f"Email '{update_data['email']}' is already in use")
@@ -79,7 +83,9 @@ def update_user(user_id, update_data):
 
         # Log update (handle testing context gracefully)
         try:
-            current_app.logger.info(f"User {user_id} updated by admin. Fields: {updated_fields}")
+            current_app.logger.info(
+                f"User {user_id} updated by admin. Fields: {updated_fields}"
+            )
         except RuntimeError:
             pass  # No logging outside Flask context
 
@@ -99,7 +105,9 @@ def update_user(user_id, update_data):
         raise ValueError(f"Failed to update user: {str(e)}")
 
 
-def perform_user_action(user_id, action, reason=None, expires_at=None, notify_user=False):
+def perform_user_action(
+    user_id, action, reason=None, expires_at=None, notify_user=False
+):
     """
     Perform administrative action on user (ban, disable, etc).
 
@@ -153,7 +161,11 @@ def perform_user_action(user_id, action, reason=None, expires_at=None, notify_us
             user.deleted = True
             user.user_name = f"deleted_{user.id}_{int(timestamp.timestamp())}"
             user.email = f"deleted_{user.id}@deleted.local"
-            message = f"User soft deleted. Reason: {reason}" if reason else "User soft deleted"
+            message = (
+                f"User soft deleted. Reason: {reason}"
+                if reason
+                else "User soft deleted"
+            )
 
         else:
             raise ValueError(f"Unknown action: {action}")
@@ -162,14 +174,18 @@ def perform_user_action(user_id, action, reason=None, expires_at=None, notify_us
 
         # Log the action
         try:
-            current_app.logger.info(f"User {user_id} {action} by {admin_user}. Reason: {reason}")
+            current_app.logger.info(
+                f"User {user_id} {action} by {admin_user}. Reason: {reason}"
+            )
         except RuntimeError:
             pass  # No logging outside Flask context
 
         # TODO: Send notification email if requested
         if notify_user:
             try:
-                current_app.logger.info(f"Notification email requested for user {user_id} but not implemented")
+                current_app.logger.info(
+                    f"Notification email requested for user {user_id} but not implemented"
+                )
             except RuntimeError:
                 pass  # No logging outside Flask context
 
@@ -207,7 +223,9 @@ def bulk_user_operations(operation, user_ids, reason=None, notify_users=False):
     if not user_ids or len(user_ids) == 0:
         raise ValueError("User IDs list cannot be empty")
     if len(user_ids) > 100:
-        raise ValueError("Cannot perform bulk operations on more than 100 users at once")
+        raise ValueError(
+            "Cannot perform bulk operations on more than 100 users at once"
+        )
 
     results = []
     successful = 0
@@ -215,8 +233,12 @@ def bulk_user_operations(operation, user_ids, reason=None, notify_users=False):
 
     for user_id in user_ids:
         try:
-            result = perform_user_action(user_id, operation, reason, notify_user=notify_users)
-            results.append({"user_id": user_id, "success": True, "message": result["message"]})
+            result = perform_user_action(
+                user_id, operation, reason, notify_user=notify_users
+            )
+            results.append(
+                {"user_id": user_id, "success": True, "message": result["message"]}
+            )
             successful += 1
         except Exception as e:
             results.append({"user_id": user_id, "success": False, "error": str(e)})
@@ -253,18 +275,30 @@ def get_user_statistics():
     banned_users = User.query.filter_by(deleted=False, banned=True).count()
 
     # Activity statistics
-    active_24h = User.query.filter(and_(User.deleted is False, User.last_seen >= day_ago)).count()
+    active_24h = User.query.filter(
+        and_(User.deleted is False, User.last_seen >= day_ago)
+    ).count()
 
-    active_7d = User.query.filter(and_(User.deleted is False, User.last_seen >= week_ago)).count()
+    active_7d = User.query.filter(
+        and_(User.deleted is False, User.last_seen >= week_ago)
+    ).count()
 
-    active_30d = User.query.filter(and_(User.deleted is False, User.last_seen >= month_ago)).count()
+    active_30d = User.query.filter(
+        and_(User.deleted is False, User.last_seen >= month_ago)
+    ).count()
 
     # Registration statistics
-    registrations_today = User.query.filter(and_(User.deleted is False, User.created >= day_ago)).count()
+    registrations_today = User.query.filter(
+        and_(User.deleted is False, User.created >= day_ago)
+    ).count()
 
-    registrations_7d = User.query.filter(and_(User.deleted is False, User.created >= week_ago)).count()
+    registrations_7d = User.query.filter(
+        and_(User.deleted is False, User.created >= week_ago)
+    ).count()
 
-    registrations_30d = User.query.filter(and_(User.deleted is False, User.created >= month_ago)).count()
+    registrations_30d = User.query.filter(
+        and_(User.deleted is False, User.created >= month_ago)
+    ).count()
 
     return {
         "total_users": total_users,
@@ -297,7 +331,9 @@ def get_registration_statistics(days=30, include_hourly=False):
     start_date = now - timedelta(days=days)
 
     # Total registrations in period
-    total_registrations = User.query.filter(and_(User.deleted is False, User.created >= start_date)).count()
+    total_registrations = User.query.filter(
+        and_(User.deleted is False, User.created >= start_date)
+    ).count()
 
     # TODO: Track private vs public registrations
     # For now, assume all are public since we don't have tracking yet
@@ -314,10 +350,14 @@ def get_registration_statistics(days=30, include_hourly=False):
         day_end = day_start + timedelta(days=1)
 
         count = User.query.filter(
-            and_(User.deleted is False, User.created >= day_start, User.created < day_end)
+            and_(
+                User.deleted is False, User.created >= day_start, User.created < day_end
+            )
         ).count()
 
-        daily_breakdown.append({"date": current_date.isoformat(), "registrations": count})
+        daily_breakdown.append(
+            {"date": current_date.isoformat(), "registrations": count}
+        )
 
         current_date += timedelta(days=1)
 
@@ -329,7 +369,11 @@ def get_registration_statistics(days=30, include_hourly=False):
             hour_end = hour_start + timedelta(hours=1)
 
             count = User.query.filter(
-                and_(User.deleted is False, User.created >= hour_start, User.created < hour_end)
+                and_(
+                    User.deleted is False,
+                    User.created >= hour_start,
+                    User.created < hour_end,
+                )
             ).count()
 
             hourly_breakdown.append({"hour": hour, "registrations": count})

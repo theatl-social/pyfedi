@@ -18,16 +18,16 @@ jobs:
   startup-validation:
     name: 🚀 Startup Validation
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      
+
       - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
@@ -35,13 +35,13 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-mock
-      
+
       - name: Run startup validation tests
         run: |
           echo "🧪 Running startup validation tests with Python 3.13"
@@ -54,7 +54,7 @@ jobs:
           CACHE_REDIS_URL: memory://
           CELERY_BROKER_URL: memory://localhost/
           TESTING: true
-      
+
       - name: Standalone startup test
         run: |
           echo "🚀 Running standalone startup validation"
@@ -74,16 +74,16 @@ jobs:
     name: 🔒 Core Logic Tests
     runs-on: ubuntu-latest
     needs: startup-validation
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      
+
       - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
@@ -91,13 +91,13 @@ jobs:
           key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
-      
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest
-      
+
       - name: Run field consistency tests
         run: |
           echo "🔒 Testing database schema immutability"
@@ -109,7 +109,7 @@ jobs:
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
           TESTING: true
-      
+
       - name: Run HTML processing tests
         run: |
           echo "🧹 Testing HTML sanitization and processing"
@@ -121,7 +121,7 @@ jobs:
           CACHE_TYPE: NullCache
           CACHE_REDIS_URL: memory://
           TESTING: true
-      
+
       - name: Run migration consistency tests
         run: |
           echo "🗄️ Testing database migration consistency"
@@ -134,7 +134,7 @@ jobs:
           CACHE_REDIS_URL: memory://
           CELERY_BROKER_URL: memory://localhost/
           TESTING: true
-      
+
       - name: Run explore page functionality tests
         run: |
           echo "🔍 Testing explore page rendering and content"
@@ -147,7 +147,7 @@ jobs:
           CACHE_REDIS_URL: memory://
           CELERY_BROKER_URL: memory://localhost/
           TESTING: true
-          
+
       - name: Run additional core tests
         run: |
           echo "📝 Running additional core logic tests"
@@ -194,41 +194,41 @@ jobs:
     runs-on: ubuntu-latest
     # Run in parallel with other jobs, only wait for startup validation
     needs: startup-validation
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      
+
       - name: Install linting tools
         run: |
           python -m pip install --upgrade pip
           pip install ruff black isort mypy
           # Install project dependencies for mypy
           pip install -r requirements.txt
-      
+
       - name: Run ruff linting
         run: |
           echo "🔍 Running ruff linting"
           ruff check . --output-format=github
         continue-on-error: true
-      
+
       - name: Run black formatting check
         run: |
           echo "🖤 Checking code formatting with black"
           black --check --diff .
         continue-on-error: true
-      
+
       - name: Run isort import sorting check
         run: |
-          echo "📦 Checking import sorting with isort" 
+          echo "📦 Checking import sorting with isort"
           isort --check-only --diff .
         continue-on-error: true
-      
+
       - name: Run mypy type checking
         run: |
           echo "🏷️ Running type checking with mypy"
@@ -241,16 +241,16 @@ jobs:
     runs-on: ubuntu-latest
     # Run in parallel with other jobs, only wait for startup validation
     needs: startup-validation
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Python 3.13
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      
+
       - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
@@ -258,7 +258,7 @@ jobs:
           key: ${{ runner.os }}-pip-djlint-${{ hashFiles('.djlintrc') }}
           restore-keys: |
             ${{ runner.os }}-pip-djlint-
-      
+
       - name: Install template validation tools
         run: |
           python -m pip install --upgrade pip
@@ -266,7 +266,7 @@ jobs:
           echo "📦 djlint version:"
           djlint --version
           echo "📦 jinja2 installed"
-      
+
       - name: Check djlint configuration
         run: |
           if [ -f .djlintrc ]; then
@@ -275,7 +275,7 @@ jobs:
           else
             echo "⚠️ No .djlintrc file found, using defaults"
           fi
-      
+
       - name: Run template linting
         run: |
           echo "📄 Running template linting with djlint"
@@ -297,7 +297,7 @@ jobs:
             echo "❌ Template linting errors found!"
             exit 1
           fi
-      
+
       - name: Template syntax validation
         run: |
           echo "🔍 Validating Jinja2 template syntax"
@@ -305,14 +305,14 @@ jobs:
           import os
           import sys
           from jinja2 import Environment, FileSystemLoader, TemplateSyntaxError
-          
+
           # Create environment with custom filters mocked
           env = Environment(loader=FileSystemLoader('app/templates'))
-          
+
           # Add mock custom filters that are defined in the Flask app
           def mock_filter(*args, **kwargs):
               return ''
-          
+
           # Register known custom filters as mocks
           env.filters['shorten'] = mock_filter
           env.filters['shorten_url'] = mock_filter
@@ -320,10 +320,10 @@ jobs:
           env.filters['feed_links'] = mock_filter
           env.filters['person_links'] = mock_filter
           env.filters['remove_images'] = mock_filter
-          
+
           errors = []
           warnings = []
-          
+
           for root, dirs, files in os.walk('app/templates'):
               for file in files:
                   if file.endswith('.html'):
@@ -339,7 +339,7 @@ jobs:
                           else:
                               errors.append(f'❌ {template_path}: {e}')
                               print(f'❌ {template_path}: {e}')
-          
+
           if errors:
               print(f'\n❌ Found {len(errors)} template syntax errors!')
               sys.exit(1)
@@ -355,19 +355,19 @@ jobs:
     name: 🐳 Docker Build Validation
     runs-on: ubuntu-latest
     needs: startup-validation
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Build Docker image
         run: |
           echo "🐳 Building Docker image for validation"
           docker build --target builder -t pyfedi:test .
-      
+
       - name: Test Docker image startup
         run: |
           echo "🧪 Testing Docker image startup"
@@ -390,21 +390,21 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.inputs.run_full_tests == 'true' || github.ref == 'refs/heads/main' || github.event_name == 'pull_request' }}
     needs: [startup-validation, core-tests]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Run production mirror tests
         run: |
           echo "🏭 Running full production mirror test suite"
           chmod +x scripts/run-production-mirror-tests.sh
           ./scripts/run-production-mirror-tests.sh
         timeout-minutes: 15
-      
+
       - name: Upload test logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -421,11 +421,11 @@ jobs:
     runs-on: ubuntu-latest
     # Run in parallel with other quality checks
     needs: startup-validation
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Run Bandit security scan
         run: |
           pip install bandit[toml]
@@ -433,7 +433,7 @@ jobs:
           bandit -r app/ -f json -o bandit-report.json || true
           bandit -r app/ || true
         continue-on-error: true
-      
+
       - name: Upload security report
         if: always()
         uses: actions/upload-artifact@v4
@@ -448,49 +448,49 @@ jobs:
     runs-on: ubuntu-latest
     needs: [startup-validation, core-tests, python-quality, template-quality, docker-validation, security-scan]
     if: always()
-    
+
     steps:
       - name: CI Summary
         run: |
           echo "## 🧪 CI/CD Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [[ "${{ needs.startup-validation.result }}" == "success" ]]; then
             echo "✅ **Startup Validation**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Startup Validation**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.core-tests.result }}" == "success" ]]; then
             echo "✅ **Core Tests**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Core Tests**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.python-quality.result }}" == "success" ]]; then
             echo "✅ **Python Code Quality**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ **Python Code Quality**: Issues found (not blocking)" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.template-quality.result }}" == "success" ]]; then
             echo "✅ **Template Quality**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ **Template Quality**: Issues found" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.docker-validation.result }}" == "success" ]]; then
             echo "✅ **Docker Build**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "❌ **Docker Build**: Failed" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           if [[ "${{ needs.security-scan.result }}" == "success" ]]; then
             echo "✅ **Security Scan**: Passed" >> $GITHUB_STEP_SUMMARY
           else
             echo "⚠️ **Security Scan**: Issues found (review recommended)" >> $GITHUB_STEP_SUMMARY
           fi
-          
+
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔍 Test Coverage" >> $GITHUB_STEP_SUMMARY
           echo "- Flask app initialization and blueprint registration" >> $GITHUB_STEP_SUMMARY

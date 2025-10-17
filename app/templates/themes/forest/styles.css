@@ -74,7 +74,7 @@ a {
     color: #DCD7C9;
 }
 /* NAVIGATION MENU BAR DROPDOWN */
-.dropdown-menu { 
+.dropdown-menu {
 }
 .dropdown-menu .dropdown-item.active {
     background-color: #6F826A;
@@ -177,4 +177,3 @@ div.navbar {
     color: white;
 }
 /* END */
-

@@ -24,14 +24,17 @@ def validate_and_fix_user_activitypub_setup():
     try:
         # Check if tables exist (skip in test mode before db.create_all())
         from sqlalchemy import inspect
+
         inspector = inspect(db.engine)
-        if 'user' not in inspector.get_table_names():
-            current_app.logger.debug("Skipping startup validation - database tables not yet created")
+        if "user" not in inspector.get_table_names():
+            current_app.logger.debug(
+                "Skipping startup validation - database tables not yet created"
+            )
             return {
-                'users_checked': 0,
-                'users_fixed': 0,
-                'users_found': [],
-                'skipped': True
+                "users_checked": 0,
+                "users_fixed": 0,
+                "users_found": [],
+                "skipped": True,
             }
 
         # Find local users that are:
@@ -43,15 +46,17 @@ def validate_and_fix_user_activitypub_setup():
             User.verified == True,  # Only activated users
             User.banned == False,
             User.deleted == False,
-            User.private_key == None  # Missing ActivityPub setup
+            User.private_key == None,  # Missing ActivityPub setup
         ).all()
 
         if not incomplete_users:
             current_app.logger.info("No users with incomplete ActivityPub setup found")
             return {
-                'users_checked': User.query.filter_by(instance_id=1, deleted=False).count(),
-                'users_fixed': 0,
-                'users_found': []
+                "users_checked": User.query.filter_by(
+                    instance_id=1, deleted=False
+                ).count(),
+                "users_fixed": 0,
+                "users_found": [],
             }
 
         fixed_users = []
@@ -64,11 +69,9 @@ def validate_and_fix_user_activitypub_setup():
                 # Run the complete setup process
                 finalize_user_setup(user)
 
-                fixed_users.append({
-                    'id': user.id,
-                    'username': user.user_name,
-                    'email': user.email
-                })
+                fixed_users.append(
+                    {"id": user.id, "username": user.user_name, "email": user.email}
+                )
 
                 current_app.logger.info(
                     f"Successfully fixed ActivityPub setup for user {user.id} ({user.user_name})"
@@ -80,17 +83,14 @@ def validate_and_fix_user_activitypub_setup():
                 )
 
         return {
-            'users_checked': User.query.filter_by(instance_id=1, deleted=False).count(),
-            'users_fixed': len(fixed_users),
-            'users_found': fixed_users
+            "users_checked": User.query.filter_by(instance_id=1, deleted=False).count(),
+            "users_fixed": len(fixed_users),
+            "users_found": fixed_users,
         }
 
     except Exception as e:
         current_app.logger.error(f"Error during user ActivityPub validation: {e}")
-        return {
-            'error': str(e),
-            'users_fixed': 0
-        }
+        return {"error": str(e), "users_fixed": 0}
 
 
 def run_startup_validations():
@@ -105,21 +105,19 @@ def run_startup_validations():
         # Validate and fix user ActivityPub setup
         activitypub_result = validate_and_fix_user_activitypub_setup()
 
-        if activitypub_result.get('users_fixed', 0) > 0:
+        if activitypub_result.get("users_fixed", 0) > 0:
             current_app.logger.info(
                 f"Fixed ActivityPub setup for {activitypub_result['users_fixed']} user(s)"
             )
 
-        if 'error' in activitypub_result:
+        if "error" in activitypub_result:
             current_app.logger.error(
                 f"Error during ActivityPub validation: {activitypub_result['error']}"
             )
 
         current_app.logger.info("Startup validations completed")
 
-        return {
-            'activitypub_validation': activitypub_result
-        }
+        return {"activitypub_validation": activitypub_result}
     finally:
         # Clean up the database session to prevent stale objects
         # from polluting the session for subsequent requests.
@@ -130,6 +128,10 @@ def run_startup_validations():
             db.session.expire_all()
             # Then remove the session entirely to start fresh
             db.session.remove()
-            current_app.logger.debug("Database session cleaned up after startup validation")
+            current_app.logger.debug(
+                "Database session cleaned up after startup validation"
+            )
         except Exception as cleanup_error:
-            current_app.logger.error(f"Error cleaning up database session: {cleanup_error}")
+            current_app.logger.error(
+                f"Error cleaning up database session: {cleanup_error}"
+            )

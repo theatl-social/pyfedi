@@ -15,12 +15,12 @@ To allow registration:
 1. Login to your instance as your admin user
 2. Go to **Admin**
 3. Click on **Misc settings**
-4. Look for **Registration mode**. 
-5. Either set the choice to **Open** or **Require Application** 
+4. Look for **Registration mode**.
+5. Either set the choice to **Open** or **Require Application**
 
 ### Registering
 
-After registration is set to open/require application, the common user flow is to 
+After registration is set to open/require application, the common user flow is to
 navigate to your instance and click **Register**.
 
 ## Admin screen
@@ -28,8 +28,8 @@ navigate to your instance and click **Register**.
 1. Login to your instance as your admin user
 2. Go to **Admin**
 3. Click **Users**
-4. Click the **Add local user** button. 
-5. Fill in the details 
-6. Ensure you click **Email address is verified**. 
+4. Click the **Add local user** button.
+5. Fill in the details
+6. Ensure you click **Email address is verified**.
 
 Once you've set all the details and save, the user is now accessible.

@@ -7,7 +7,7 @@ import sentry_sdk
 from werkzeug.exceptions import UnprocessableEntity
 
 # Non-documented routes in swagger UI
-bp = Blueprint('api_alpha', __name__)
+bp = Blueprint("api_alpha", __name__)
 
 # Different blueprints to organize different api namespaces
 site_bp = ApiBlueprint(
@@ -45,47 +45,24 @@ topic_bp = ApiBlueprint(
     description="",
 )
 
-user_bp = ApiBlueprint(
-    "User",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+user_bp = ApiBlueprint("User", __name__, url_prefix="/api/alpha", description="")
 
 admin_bp = ApiBlueprint(
-    "Admin", 
+    "Admin",
     __name__,
     url_prefix="/api/alpha/admin",
-    description="Administrative endpoints for user management and private registration"
+    description="Administrative endpoints for user management and private registration",
 )
 
-reply_bp = ApiBlueprint(
-    "Comment",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+reply_bp = ApiBlueprint("Comment", __name__, url_prefix="/api/alpha", description="")
 
-post_bp = ApiBlueprint(
-    "Post",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+post_bp = ApiBlueprint("Post", __name__, url_prefix="/api/alpha", description="")
 
 private_message_bp = ApiBlueprint(
-    "Private Message",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
+    "Private Message", __name__, url_prefix="/api/alpha", description=""
 )
 
-upload_bp = ApiBlueprint(
-    "Upload",
-    __name__,
-    url_prefix="/api/alpha",
-    description=""
-)
+upload_bp = ApiBlueprint("Upload", __name__, url_prefix="/api/alpha", description="")
 
 
 def shared_error_handler(e):
@@ -101,15 +78,19 @@ def shared_error_handler(e):
         return jsonify(response), 400
     elif isinstance(e, UnprocessableEntity):
         # Log using the standard logging mechanism
-        if current_app.config['SENTRY_DSN']:
+        if current_app.config["SENTRY_DSN"]:
             sentry_sdk.capture_exception(e)
-        
-        response = {"code": 400, "message": "Validation failed", "status": str(e.data['messages'])}
+
+        response = {
+            "code": 400,
+            "message": "Validation failed",
+            "status": str(e.data["messages"]),
+        }
         return jsonify(response), 400
     else:
-        if str(e) != 'incorrect_login' and str(e) != 'No object found.':
+        if str(e) != "incorrect_login" and str(e) != "No object found.":
             current_app.logger.exception("API exception")
-            if current_app.config['SENTRY_DSN']:
+            if current_app.config["SENTRY_DSN"]:
                 sentry_sdk.capture_exception(e)
         response = {"code": 400, "message": str(e), "status": "Bad Request"}
         return jsonify(response), 400
@@ -131,7 +112,18 @@ def _get_provided_value(field):
 
 
 # Register the shared error handler for all blueprints
-blueprints = [site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, reply_bp, post_bp, private_message_bp, upload_bp]
+blueprints = [
+    site_bp,
+    misc_bp,
+    comm_bp,
+    feed_bp,
+    topic_bp,
+    user_bp,
+    reply_bp,
+    post_bp,
+    private_message_bp,
+    upload_bp,
+]
 for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)
 

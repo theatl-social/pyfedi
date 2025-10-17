@@ -6,11 +6,15 @@ from wtforms.validators import DataRequired
 
 
 class ShareLinkForm(FlaskForm):
-    which_community = SelectField(_l('Community to post this link to'), validators=[DataRequired()], coerce=int,
-                                  render_kw={'class': 'form-select'})
-    submit = SubmitField(_l('Next'))
+    which_community = SelectField(
+        _l("Community to post this link to"),
+        validators=[DataRequired()],
+        coerce=int,
+        render_kw={"class": "form-select"},
+    )
+    submit = SubmitField(_l("Next"))
 
 
 class ContentWarningForm(FlaskForm):
     next = HiddenField()
-    submit = SubmitField(_l('Continue'))
+    submit = SubmitField(_l("Continue"))

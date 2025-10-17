@@ -21,10 +21,10 @@ It and Backblaze are the least expensive S3 providers
 Proper configuration is necessary.
 
 You must use Cloudflare as your DNS.
-You need to use a CNAME as a subdomain entry that points to the wasabi endpoint. 
+You need to use a CNAME as a subdomain entry that points to the wasabi endpoint.
   And that CNAME prepended to your domain name must exactly match the name of the Wasabi bucket.
 For the CNAME, you must enable the proxy option.
-  
+
 It's simpler than it sounds. For feddit.online:
 I have a CNAME "piefed-media" that points to "s3.wasabisys.com", the Wasabi endpoint for us-east-1. If your bucket
 is not in us-east-1, then you would use a different endpoint in the CNAME.
@@ -68,7 +68,7 @@ The Piefed .ENV file:
 Here is my .ENV file. Note you cannot use "auto" for the region, like in Cloudflare R2. You must specify the proper region.
 
 Note also that S3_ENDPOINT is used by piefed to know where to place the files. It uses the URL, if us-east-1, https://s3.wasabisys.com
-to write the files. Files will be read from the bucket using the S3_PUBLIC_URL, as in 
+to write the files. Files will be read from the bucket using the S3_PUBLIC_URL, as in
 https://piefed-media.feddit.online/posts/....
 
 For Wasabi, when proxying through Cloudflare, the S3_BUCKET and the S3_PUBLIC_URL must be the same.
@@ -79,7 +79,3 @@ For Wasabi, when proxying through Cloudflare, the S3_BUCKET and the S3_PUBLIC_UR
     S3_PUBLIC_URL = 'piefed-media.feddit.online'
     S3_ACCESS_KEY = 'access key'
     S3_ACCESS_SECRET = 'secret key'
-
-
-
-        

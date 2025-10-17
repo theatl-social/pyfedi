@@ -4,5 +4,5 @@ from wtforms import StringField, SubmitField
 
 
 class PostWarningForm(FlaskForm):
-    post_warning = StringField(_l('Warning on posts'))
-    submit = SubmitField(_l('Save'))
+    post_warning = StringField(_l("Warning on posts"))
+    submit = SubmitField(_l("Save"))

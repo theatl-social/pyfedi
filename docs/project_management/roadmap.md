@@ -28,4 +28,3 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
  - [Content warnings](https://piefed.social/post/411566)
 
 ✅ [OAuth - “log in with mastodon” or Passkeys](https://piefed.social/post/411577)
-

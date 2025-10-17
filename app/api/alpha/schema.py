@@ -1,25 +1,75 @@
 import re
 
 from datetime import datetime
-from marshmallow import Schema, fields, validate, ValidationError, EXCLUDE, validates_schema, INCLUDE
+from marshmallow import (
+    Schema,
+    fields,
+    validate,
+    ValidationError,
+    EXCLUDE,
+    validates_schema,
+    INCLUDE,
+)
 
 
 # Lists used in schema for validation
 reg_mode_list = ["Closed", "RequireApplication", "Open"]
-sort_list = ["Active", "Hot", "New", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopDay", "TopWeek", "TopMonth",
-             "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "Scaled", "Old"]
+sort_list = [
+    "Active",
+    "Hot",
+    "New",
+    "Top",
+    "TopHour",
+    "TopSixHour",
+    "TopTwelveHour",
+    "TopDay",
+    "TopWeek",
+    "TopMonth",
+    "TopThreeMonths",
+    "TopSixMonths",
+    "TopNineMonths",
+    "TopYear",
+    "TopAll",
+    "Scaled",
+    "Old",
+]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
-post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
-                  "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
+post_sort_list = [
+    "Hot",
+    "Top",
+    "TopHour",
+    "TopSixHour",
+    "TopTwelveHour",
+    "TopWeek",
+    "TopDay",
+    "TopMonth",
+    "TopThreeMonths",
+    "TopSixMonths",
+    "TopNineMonths",
+    "TopYear",
+    "TopAll",
+    "New",
+    "Scaled",
+    "Active",
+]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Active"]
-listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
+listing_type_list = [
+    "All",
+    "Local",
+    "Subscribed",
+    "Popular",
+    "Moderating",
+    "ModeratorView",
+]
 community_listing_type_list = ["All", "Local", "Subscribed"]
 content_type_list = ["Communities", "Posts", "Users", "Url"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
-feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
+feature_type_list = [
+    "Community"
+]  # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 
 
@@ -35,7 +85,7 @@ def validate_datetime_string(text):
 def validate_color_code(text):
     try:
         # Ensures that hex color code strings have the correct format
-        color_pattern = re.compile(r'^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$')
+        color_pattern = re.compile(r"^#([a-fA-F0-9]{6}|[a-fA-F0-9]{3})$")
         return bool(re.match(color_pattern, text))
     except:
         raise ValidationError(f"Bad hex color code string: {text}")
@@ -52,7 +102,9 @@ class DefaultSchema(Schema):
 
 
 class Person(DefaultSchema):
-    actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
+    actor_id = fields.String(
+        required=True, metadata={"example": "https://piefed.social/u/rimu"}
+    )
     banned = fields.Boolean(required=True)
     bot = fields.Boolean(required=True)
     deleted = fields.Boolean(required=True)
@@ -65,7 +117,10 @@ class Person(DefaultSchema):
     avatar = fields.Url(allow_none=True)
     banner = fields.Url(allow_none=True)
     flair = fields.String()
-    published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     title = fields.String(allow_none=True)
 
 
@@ -102,7 +157,9 @@ class Site(DefaultSchema):
 
 
 class Community(DefaultSchema):
-    actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social/c/piefed_meta"})
+    actor_id = fields.Url(
+        required=True, metadata={"example": "https://piefed.social/c/piefed_meta"}
+    )
     ap_domain = fields.String(metadata={"example": "piefed.social"})
     deleted = fields.Boolean(required=True)
     hidden = fields.Boolean(required=True)
@@ -111,7 +168,11 @@ class Community(DefaultSchema):
     local = fields.Boolean(required=True)
     name = fields.String(required=True)
     nsfw = fields.Boolean(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     removed = fields.Boolean(required=True)
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
@@ -120,7 +181,10 @@ class Community(DefaultSchema):
     description = fields.String(metadata={"format": "markdown"})
     icon = fields.Url(allow_none=True)
     posting_warning = fields.String(allow_none=True)
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
 class CommunityBlockView(DefaultSchema):
@@ -136,9 +200,16 @@ class CommunityFollowerView(DefaultSchema):
 class Instance(DefaultSchema):
     domain = fields.String(required=True, metadata={"example": "piefed.social"})
     id = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     software = fields.String()
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     version = fields.String()
 
 
@@ -148,8 +219,12 @@ class InstanceBlockView(DefaultSchema):
 
 
 class LocalUser(DefaultSchema):
-    default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
-    default_listing_type = fields.String(required=True, validate=validate.OneOf(listing_type_list))
+    default_comment_sort_type = fields.String(
+        required=True, validate=validate.OneOf(comment_sort_list)
+    )
+    default_listing_type = fields.String(
+        required=True, validate=validate.OneOf(listing_type_list)
+    )
     default_sort_type = fields.String(validate=validate.OneOf(sort_list))
     show_bot_accounts = fields.Boolean(required=True)
     show_nsfl = fields.Boolean(required=True)
@@ -236,9 +311,10 @@ class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
     monthsmonitored = fields.Integer(required=True)
 
 
-
 class GetSiteInstanceChooserSearchResponse(DefaultSchema):
-    result = fields.List(fields.Nested(GetSiteInstanceChooserSearchResponseItem), required=True)
+    result = fields.List(
+        fields.Nested(GetSiteInstanceChooserSearchResponseItem), required=True
+    )
 
 
 class BlockInstanceRequest(DefaultSchema):
@@ -288,7 +364,11 @@ class Post(DefaultSchema):
     local = fields.Boolean(required=True)
     locked = fields.Boolean(required=True)
     nsfw = fields.Boolean(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     removed = fields.Boolean(required=True)
     sticky = fields.Boolean(required=True)
     title = fields.String(required=True)
@@ -297,7 +377,10 @@ class Post(DefaultSchema):
     body = fields.String(metadata={"format": "markdown"})
     small_thumbnail_url = fields.Url()
     thumbnail_url = fields.Url()
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     url = fields.String()
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
@@ -307,9 +390,17 @@ class Post(DefaultSchema):
 class PostAggregates(DefaultSchema):
     comments = fields.Integer(required=True)
     downvotes = fields.Integer(required=True)
-    newest_comment_time = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    newest_comment_time = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     post_id = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
     cross_posts = fields.Integer(required=True)
@@ -319,13 +410,30 @@ class CommunityFlair(DefaultSchema):
     id = fields.Integer(required=True)
     community_id = fields.Integer(required=True)
     flair_title = fields.String(required=True)
-    text_color = fields.String(required=True, validate=validate_color_code,
-                               metadata={"example": "#000000", "description": "Hex color code for the text of the flair"})
-    background_color = fields.String(required=True, validate=validate_color_code,
-                                     metadata={"example": "#DEDDDA", "description": "Hex color code for the background of the flair"})
+    text_color = fields.String(
+        required=True,
+        validate=validate_color_code,
+        metadata={
+            "example": "#000000",
+            "description": "Hex color code for the text of the flair",
+        },
+    )
+    background_color = fields.String(
+        required=True,
+        validate=validate_color_code,
+        metadata={
+            "example": "#DEDDDA",
+            "description": "Hex color code for the background of the flair",
+        },
+    )
     blur_images = fields.Boolean(required=True)
-    ap_id = fields.Url(required=True, allow_none=True,
-                       metadata={"description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id"})
+    ap_id = fields.Url(
+        required=True,
+        allow_none=True,
+        metadata={
+            "description": "Legacy tags that existed prior to 1.2 and some tags for remote communities might not have a defined ap_id"
+        },
+    )
 
 
 class PostView(DefaultSchema):
@@ -340,7 +448,9 @@ class PostView(DefaultSchema):
     post = fields.Nested(Post, required=True)
     read = fields.Boolean(required=True)
     saved = fields.Boolean(required=True)
-    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    subscribed = fields.String(
+        required=True, validate=validate.OneOf(subscribed_type_list)
+    )
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
@@ -365,7 +475,9 @@ class CommunityView(DefaultSchema):
     blocked = fields.Boolean(required=True)
     community = fields.Nested(Community, required=True)
     counts = fields.Nested(CommunityAggregates, required=True)
-    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    subscribed = fields.String(
+        required=True, validate=validate.OneOf(subscribed_type_list)
+    )
     flair_list = fields.List(fields.Nested(CommunityFlair))
 
 
@@ -377,13 +489,17 @@ class CommunityFlairCreateRequest(DefaultSchema):
         metadata={
             "example": "#000 or #000000",
             "default": "#000000",
-            "description": "Hex color code for the text of the flair."})
+            "description": "Hex color code for the text of the flair.",
+        },
+    )
     background_color = fields.String(
         validate=validate_color_code,
         metadata={
             "example": "#fff or #FFFFFF",
             "default": "#DEDDDA",
-            "description": "Hex color code for the background of the flair."})
+            "description": "Hex color code for the background of the flair.",
+        },
+    )
     blur_images = fields.Boolean(metadata={"default": False})
 
 
@@ -398,12 +514,16 @@ class CommunityFlairEditRequest(DefaultSchema):
         validate=validate_color_code,
         metadata={
             "example": "#000 or #000000",
-            "description": "Hex color code for the text of the flair."})
+            "description": "Hex color code for the text of the flair.",
+        },
+    )
     background_color = fields.String(
         validate=validate_color_code,
         metadata={
             "example": "#fff or #FFFFFF",
-            "description": "Hex color code for the background of the flair."})
+            "description": "Hex color code for the background of the flair.",
+        },
+    )
     blur_images = fields.Boolean()
 
 
@@ -420,15 +540,22 @@ class Comment(Schema):
     local = fields.Boolean(required=True)
     path = fields.String(required=True)
     post_id = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     removed = fields.Boolean(required=True)
     user_id = fields.Integer(required=True)
     distinguished = fields.Boolean()
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     locked = fields.Boolean()
 
     class Meta:
-        unknown = INCLUDE # let the not-consistent-with-anything 'repliesEnabled' through for Boost
+        unknown = INCLUDE  # let the not-consistent-with-anything 'repliesEnabled' through for Boost
         datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
@@ -440,15 +567,26 @@ class CommentReport(DefaultSchema):
     reason = fields.String()
     resolved = fields.Boolean(required=True)
     # TODO: resolver_id = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
 class CommentAggregates(DefaultSchema):
     child_count = fields.Integer(required=True)
     comment_id = fields.Integer(required=True)
     downvotes = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     score = fields.Integer(required=True)
     upvotes = fields.Integer(required=True)
 
@@ -463,7 +601,7 @@ class CommentView(DefaultSchema):
     creator_banned_from_community = fields.Boolean(required=True)
     creator_blocked = fields.Boolean(required=True)
     creator_is_admin = fields.Boolean(required=True)
-    creator_is_moderator = fields.Boolean(required=True) 
+    creator_is_moderator = fields.Boolean(required=True)
     post = fields.Nested(Post, required=True)
     saved = fields.Boolean(required=True)
     subscribed = fields.String(required=True)
@@ -499,9 +637,16 @@ class ResolveObjectResponse(DefaultSchema):
 class InstanceWithoutFederationState(DefaultSchema):
     domain = fields.String(required=True)
     id = fields.Integer(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     software = fields.String()
-    updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    updated = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     version = fields.String()
 
 
@@ -633,8 +778,22 @@ class CommunityModerationBanItem(DefaultSchema):
     banned_user = fields.Nested(Person)
     community = fields.Nested(Community)
     expired = fields.Boolean()
-    expired_at = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z, null=permanent ban", "format": "datetime"})
-    expires_at = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z, null=permanent ban", "format": "datetime"})
+    expired_at = fields.String(
+        allow_none=True,
+        validate=validate_datetime_string,
+        metadata={
+            "example": "2025-06-07T02:29:07.980084Z, null=permanent ban",
+            "format": "datetime",
+        },
+    )
+    expires_at = fields.String(
+        allow_none=True,
+        validate=validate_datetime_string,
+        metadata={
+            "example": "2025-06-07T02:29:07.980084Z, null=permanent ban",
+            "format": "datetime",
+        },
+    )
     reason = fields.String()
 
 
@@ -647,7 +806,10 @@ class CommunityModerationBanRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     reason = fields.String(required=True)
     user_id = fields.Integer(required=True)
-    expires_at = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    expires_at = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     permanent = fields.Boolean()
 
 
@@ -673,15 +835,28 @@ class FeedView(DefaultSchema):
     name = fields.String(required=True)
     nsfl = fields.Boolean(required=True)
     nsfw = fields.Boolean(required=True)
-    owner = fields.Boolean(required=True, metadata={"description": "Is the authorized user the creator of the feed?"})
+    owner = fields.Boolean(
+        required=True,
+        metadata={"description": "Is the authorized user the creator of the feed?"},
+    )
     public = fields.Boolean(required=True)
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     show_posts_from_children = fields.Boolean(required=True)
     subscribed = fields.Boolean(required=True)
     subscriptions_count = fields.Integer(required=True)
     title = fields.String(required=True)
-    updated = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    user_id = fields.Integer(required=True, metadata={"description": "user_id of the feed creator/owner"}) 
+    updated = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    user_id = fields.Integer(
+        required=True, metadata={"description": "user_id of the feed creator/owner"}
+    )
     banner = fields.Url(allow_none=True)
     description = fields.String(allow_none=True, metadata={"format": "markdown"})
     description_html = fields.String(allow_none=True, metadata={"format": "html"})
@@ -690,8 +865,18 @@ class FeedView(DefaultSchema):
 
 
 class FeedListRequest(DefaultSchema):
-    include_communities = fields.Boolean(metadata={"description": "include list of communities in each feed with result", "default": True})
-    mine_only = fields.Boolean(metadata={"description": "only return feeds created by the authorized user", "default": False})
+    include_communities = fields.Boolean(
+        metadata={
+            "description": "include list of communities in each feed with result",
+            "default": True,
+        }
+    )
+    mine_only = fields.Boolean(
+        metadata={
+            "description": "only return feeds created by the authorized user",
+            "default": False,
+        }
+    )
 
 
 class FeedListResponse(DefaultSchema):
@@ -710,7 +895,12 @@ class TopicView(DefaultSchema):
 
 
 class TopicListRequest(DefaultSchema):
-    include_communities = fields.Boolean(metadata={"description": "include list of communities in each topic with result", "default": True})
+    include_communities = fields.Boolean(
+        metadata={
+            "description": "include list of communities in each topic with result",
+            "default": True,
+        }
+    )
 
 
 class TopicListResponse(DefaultSchema):
@@ -718,19 +908,33 @@ class TopicListResponse(DefaultSchema):
 
 
 class GetUserRequest(DefaultSchema):
-    person_id = fields.Integer(metadata={"description": "One of either person_id or username must be specified"})
-    username = fields.String(metadata={"description": "One of either person_id or username must be specified"})
+    person_id = fields.Integer(
+        metadata={
+            "description": "One of either person_id or username must be specified"
+        }
+    )
+    username = fields.String(
+        metadata={
+            "description": "One of either person_id or username must be specified"
+        }
+    )
     sort = fields.String(validate=validate.OneOf(sort_list))
     page = fields.Integer(metadata={"default": 1})
-    limit = fields.Integer(metadata={"default": 20})  # Previous defaults were 50 for posts, 10 for comments
-    community_id = fields.Integer(metadata={"description": "Limit posts/comments to just a single community"})
+    limit = fields.Integer(
+        metadata={"default": 20}
+    )  # Previous defaults were 50 for posts, 10 for comments
+    community_id = fields.Integer(
+        metadata={"description": "Limit posts/comments to just a single community"}
+    )
     saved_only = fields.Boolean(metadata={"default": False})
     include_content = fields.Boolean(metadata={"default": False})
 
     @validates_schema
     def validate_input(self, data, **kwargs):
         if "person_id" not in data and "username" not in data:
-            raise ValidationError("One of either person_id or username must be specified")
+            raise ValidationError(
+                "One of either person_id or username must be specified"
+            )
 
 
 class GetUserResponse(DefaultSchema):
@@ -751,23 +955,38 @@ class UserLoginResponse(DefaultSchema):
 
 
 class UserUnreadCountsResponse(DefaultSchema):
-    mentions = fields.Integer(required=True, metadata={"description": "Post and comment mentions"})
+    mentions = fields.Integer(
+        required=True, metadata={"description": "Post and comment mentions"}
+    )
     private_messages = fields.Integer(required=True)
-    replies = fields.Integer(required=True, metadata={"description": "Replies to posts and comments"})
-    other = fields.Integer(required=True, metadata={"description": "Any other type of notification (reports, activity alerts, etc.)"})
+    replies = fields.Integer(
+        required=True, metadata={"description": "Replies to posts and comments"}
+    )
+    other = fields.Integer(
+        required=True,
+        metadata={
+            "description": "Any other type of notification (reports, activity alerts, etc.)"
+        },
+    )
 
 
 class UserRepliesRequest(DefaultSchema):
     limit = fields.Integer(metadata={"default": 10})
     page = fields.Integer(metadata={"default": 1})
-    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    sort = fields.String(
+        validate=validate.OneOf(comment_sort_list), metadata={"default": "New"}
+    )
     unread_only = fields.Boolean(metadata={"default": True})
 
 
 class CommentReply(DefaultSchema):
     id = fields.Integer(required=True)  # redundant with comment_id
     comment_id = fields.Integer(required=True)  # redundant with id
-    published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     read = fields.Boolean(required=True)
     recipient_id = fields.Integer(required=True)
 
@@ -787,7 +1006,9 @@ class CommentReplyView(DefaultSchema):
     post = fields.Nested(Post, required=True)
     recipient = fields.Nested(Person, required=True)
     saved = fields.Boolean(required=True)
-    subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
+    subscribed = fields.String(
+        required=True, validate=validate.OneOf(subscribed_type_list)
+    )
 
 
 class DomainBlockRequest(DefaultSchema):
@@ -807,7 +1028,9 @@ class UserRepliesResponse(DefaultSchema):
 class UserMentionsRequest(DefaultSchema):
     limit = fields.Integer(metadata={"default": 10})
     page = fields.Integer(metadata={"default": 1})
-    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    sort = fields.String(
+        validate=validate.OneOf(comment_sort_list), metadata={"default": "New"}
+    )
     unread_only = fields.Boolean(metadata={"default": True})
 
 
@@ -827,7 +1050,11 @@ class UserBlockResponse(DefaultSchema):
 
 
 class UserMarkAllReadResponse(DefaultSchema):
-    replies = fields.List(fields.Nested(CommentReplyView), required=True, metadata={"description": "Should be empty list"})
+    replies = fields.List(
+        fields.Nested(CommentReplyView),
+        required=True,
+        metadata={"description": "Should be empty list"},
+    )
 
 
 class UserSubscribeRequest(DefaultSchema):
@@ -842,7 +1069,10 @@ class UserSubscribeResponse(DefaultSchema):
 
 class UserSetFlairRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    flair_text = fields.String(allow_none=True, metadata={"description": "Either omit or set to null to remove existing flair"})
+    flair_text = fields.String(
+        allow_none=True,
+        metadata={"description": "Either omit or set to null to remove existing flair"},
+    )
 
 
 class UserSetFlairResponse(DefaultSchema):
@@ -850,10 +1080,24 @@ class UserSetFlairResponse(DefaultSchema):
 
 
 class UserSaveSettingsRequest(DefaultSchema):
-    avatar = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
+    avatar = fields.String(
+        allow_none=True,
+        metadata={
+            "format": "url",
+            "description": "Pass a null value to remove the image",
+        },
+    )
     bio = fields.String(metadata={"format": "markdown"})
-    cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
-    default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
+    cover = fields.String(
+        allow_none=True,
+        metadata={
+            "format": "url",
+            "description": "Pass a null value to remove the image",
+        },
+    )
+    default_comment_sort_type = fields.String(
+        validate=validate.OneOf(default_comment_sorts_list)
+    )
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
     show_nsfw = fields.Boolean()
     show_nsfl = fields.Boolean()
@@ -864,29 +1108,70 @@ class UserSaveSettingsResponse(DefaultSchema):
     my_user = fields.Nested(MyUserInfo)
 
 
-class UserMeResponse(MyUserInfo):
-    ...
+class UserMeResponse(MyUserInfo): ...
 
 
 class UserNotificationsRequest(DefaultSchema):
-    status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
+    status = fields.String(
+        required=True, validate=validate.OneOf(notification_status_list)
+    )
     limit = fields.Integer(metadata={"default": 10})
     page = fields.Integer(metadata={"default": 1})
 
 
 class UserNotificationItemView(DefaultSchema):
-    author = fields.Nested(Person, required=True, metadata={"description": "returned for all notif types"})
-    notif_body = fields.String(required=True, metadata={"description": "returned for all notif types"})
-    notif_id = fields.Integer(required=True, metadata={"description": "returned for all notif types"})
-    notif_subtype = fields.String(required=True, metadata={"description": "returned for all notif types"})
-    notif_type = fields.Integer(required=True, metadata={"description": "returned for all notif types"})
-    status = fields.String(validate=validate.OneOf(["Unread", "Read"]), required=True, metadata={"description": "returned for all notif types"})
-    comment = fields.Nested(Comment, metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
-    comment_view = fields.Nested(CommentView, metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
-    comment_id = fields.Integer(metadata={"description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"})
-    community = fields.Nested(Community, metadata={"description": "returned for notif_type 1"})
-    post = fields.Nested(PostView, metadata={"description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"})
-    post_id = fields.Integer(metadata={"description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"})
+    author = fields.Nested(
+        Person, required=True, metadata={"description": "returned for all notif types"}
+    )
+    notif_body = fields.String(
+        required=True, metadata={"description": "returned for all notif types"}
+    )
+    notif_id = fields.Integer(
+        required=True, metadata={"description": "returned for all notif types"}
+    )
+    notif_subtype = fields.String(
+        required=True, metadata={"description": "returned for all notif types"}
+    )
+    notif_type = fields.Integer(
+        required=True, metadata={"description": "returned for all notif types"}
+    )
+    status = fields.String(
+        validate=validate.OneOf(["Unread", "Read"]),
+        required=True,
+        metadata={"description": "returned for all notif types"},
+    )
+    comment = fields.Nested(
+        Comment,
+        metadata={
+            "description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"
+        },
+    )
+    comment_view = fields.Nested(
+        CommentView,
+        metadata={
+            "description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"
+        },
+    )
+    comment_id = fields.Integer(
+        metadata={
+            "description": "returned for notif_types: 3, 4, 6 (comment_mention subtype)"
+        }
+    )
+    community = fields.Nested(
+        Community, metadata={"description": "returned for notif_type 1"}
+    )
+    post = fields.Nested(
+        PostView,
+        metadata={
+            "description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"
+        },
+    )
+    post_id = fields.Integer(
+        metadata={
+            "description": "returned for notif_types: 0, 1, 2, 3, 4, 5, 6 (post_mention subtype)"
+        }
+    )
+
 
 class UserNotificationsCounts(DefaultSchema):
     unread = fields.Integer(required=True)
@@ -897,14 +1182,21 @@ class UserNotificationsCounts(DefaultSchema):
 class UserNotificationsResponse(DefaultSchema):
     counts = fields.Nested(UserNotificationsCounts, required=True)
     items = fields.List(fields.Nested(UserNotificationItemView), required=True)
-    status = fields.String(required=True, validate=validate.OneOf(notification_status_list))
+    status = fields.String(
+        required=True, validate=validate.OneOf(notification_status_list)
+    )
     username = fields.String(required=True)
     next_page = fields.String(allow_none=True)
 
 
 class UserNotificationStateRequest(DefaultSchema):
     notif_id = fields.Integer(required=True)
-    read_state = fields.Boolean(required=True, metadata={"description": "true sets notification as read, false marks it unread"})
+    read_state = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "true sets notification as read, false marks it unread"
+        },
+    )
 
 
 class UserNotificationsCountResponse(DefaultSchema):
@@ -912,14 +1204,18 @@ class UserNotificationsCountResponse(DefaultSchema):
 
 
 class UserMarkAllNotifsReadResponse(DefaultSchema):
-    mark_all_notifications_as_read = fields.String(required=True, metadata={"example": "complete"})
+    mark_all_notifications_as_read = fields.String(
+        required=True, metadata={"example": "complete"}
+    )
 
 
 # Upstream API Schemas - Added from merge
 class ListCommentsRequest(DefaultSchema):
     limit = fields.Integer(metadata={"default": 10})
     page = fields.Integer(metadata={"default": 1})
-    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    sort = fields.String(
+        validate=validate.OneOf(comment_sort_list), metadata={"default": "New"}
+    )
     liked_only = fields.Boolean()
     saved_only = fields.Boolean()
     person_id = fields.Integer()
@@ -927,7 +1223,11 @@ class ListCommentsRequest(DefaultSchema):
     post_id = fields.Integer()
     parent_id = fields.Integer()
     max_depth = fields.Integer()
-    depth_first = fields.Boolean(metadata={"description": "guarantee parent comments are on the same page as any fetched comments"})
+    depth_first = fields.Boolean(
+        metadata={
+            "description": "guarantee parent comments are on the same page as any fetched comments"
+        }
+    )
 
 
 class ListCommentsResponse(DefaultSchema):
@@ -945,8 +1245,19 @@ class GetCommentResponse(DefaultSchema):
 
 class LikeCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
-    score = fields.Integer(required=True, metadata={"example": 1, "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote"})
-    private = fields.Boolean(metadata={"description": "private votes are not federated to other instances", "default": False})
+    score = fields.Integer(
+        required=True,
+        metadata={
+            "example": 1,
+            "description": "-1 to downvote, 1 to upvote, 0 to revert previous vote",
+        },
+    )
+    private = fields.Boolean(
+        metadata={
+            "description": "private votes are not federated to other instances",
+            "default": False,
+        }
+    )
 
 
 class SaveCommentRequest(DefaultSchema):
@@ -970,7 +1281,12 @@ class EditCommentRequest(DefaultSchema):
     body = fields.String(required=True)
     comment_id = fields.Integer(required=True)
     language_id = fields.Integer()
-    distinguished = fields.Boolean(metadata={"default": False, "description": "Visibly mark reply as from a moderator in the web UI"})
+    distinguished = fields.Boolean(
+        metadata={
+            "default": False,
+            "description": "Visibly mark reply as from a moderator in the web UI",
+        }
+    )
 
 
 class DeleteCommentRequest(DefaultSchema):
@@ -982,7 +1298,12 @@ class ReportCommentRequest(DefaultSchema):
     comment_id = fields.Integer(required=True)
     reason = fields.String(required=True)
     description = fields.String()
-    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
+    report_remote = fields.Boolean(
+        metadata={
+            "default": True,
+            "description": "Also send report to originating instance",
+        }
+    )
 
 
 class GetCommentReportResponse(DefaultSchema):
@@ -1044,37 +1365,87 @@ class ListPostLikesResponse(DefaultSchema):
 
 # Admin API Schemas
 class AdminPrivateRegistrationRequest(DefaultSchema):
-    username = fields.String(required=True, validate=validate.Length(min=3, max=50), 
-                             metadata={"description": "Username (3-50 characters, alphanumeric + underscore)"})
+    username = fields.String(
+        required=True,
+        validate=validate.Length(min=3, max=50),
+        metadata={
+            "description": "Username (3-50 characters, alphanumeric + underscore)"
+        },
+    )
     email = fields.Email(required=True, metadata={"description": "Valid email address"})
-    display_name = fields.String(validate=validate.Length(min=1, max=100),
-                                metadata={"description": "Display name (1-100 characters)"})
-    password = fields.String(validate=validate.Length(min=8, max=128),
-                            metadata={"description": "Password (8-128 characters). If omitted, a secure password will be generated"})
-    auto_activate = fields.Boolean(metadata={"description": "Skip email verification", "default": True})
-    send_welcome_email = fields.Boolean(metadata={"description": "Send welcome email to user", "default": False})
-    bio = fields.String(validate=validate.Length(max=5000), 
-                       metadata={"description": "User biography (max 5000 characters)"})
-    timezone = fields.String(metadata={"description": "User timezone", "default": "UTC"})
+    display_name = fields.String(
+        validate=validate.Length(min=1, max=100),
+        metadata={"description": "Display name (1-100 characters)"},
+    )
+    password = fields.String(
+        validate=validate.Length(min=8, max=128),
+        metadata={
+            "description": "Password (8-128 characters). If omitted, a secure password will be generated"
+        },
+    )
+    auto_activate = fields.Boolean(
+        metadata={"description": "Skip email verification", "default": True}
+    )
+    send_welcome_email = fields.Boolean(
+        metadata={"description": "Send welcome email to user", "default": False}
+    )
+    bio = fields.String(
+        validate=validate.Length(max=5000),
+        metadata={"description": "User biography (max 5000 characters)"},
+    )
+    timezone = fields.String(
+        metadata={"description": "User timezone", "default": "UTC"}
+    )
 
 
 class AdminPrivateRegistrationResponse(DefaultSchema):
-    success = fields.Boolean(required=True, metadata={"description": "Registration success status"})
+    success = fields.Boolean(
+        required=True, metadata={"description": "Registration success status"}
+    )
     user_id = fields.Integer(required=True, metadata={"description": "Created user ID"})
-    username = fields.String(required=True, metadata={"description": "Created username"})
+    username = fields.String(
+        required=True, metadata={"description": "Created username"}
+    )
     email = fields.String(required=True, metadata={"description": "User email address"})
     display_name = fields.String(metadata={"description": "User display name"})
-    generated_password = fields.String(metadata={"description": "Generated password (only if password was not provided)"})
-    activation_required = fields.Boolean(required=True, metadata={"description": "Whether email verification is required"})
+    generated_password = fields.String(
+        metadata={
+            "description": "Generated password (only if password was not provided)"
+        }
+    )
+    activation_required = fields.Boolean(
+        required=True,
+        metadata={"description": "Whether email verification is required"},
+    )
     message = fields.String(required=True, metadata={"description": "Success message"})
 
 
 class AdminPrivateRegistrationError(DefaultSchema):
-    success = fields.Boolean(required=True, metadata={"description": "Always false for errors"})
-    error = fields.String(required=True, metadata={"description": "Error type", 
-                          "enum": ["invalid_secret", "rate_limited", "validation_failed", "user_exists", "feature_disabled", "ip_unauthorized"]})
-    message = fields.String(required=True, metadata={"description": "Human readable error message"})
-    details = fields.Dict(metadata={"description": "Additional error details including field-specific errors"})
+    success = fields.Boolean(
+        required=True, metadata={"description": "Always false for errors"}
+    )
+    error = fields.String(
+        required=True,
+        metadata={
+            "description": "Error type",
+            "enum": [
+                "invalid_secret",
+                "rate_limited",
+                "validation_failed",
+                "user_exists",
+                "feature_disabled",
+                "ip_unauthorized",
+            ],
+        },
+    )
+    message = fields.String(
+        required=True, metadata={"description": "Human readable error message"}
+    )
+    details = fields.Dict(
+        metadata={
+            "description": "Additional error details including field-specific errors"
+        }
+    )
 
 
 class AdminUserValidationRequest(DefaultSchema):
@@ -1085,21 +1456,47 @@ class AdminUserValidationRequest(DefaultSchema):
 class AdminUserValidationResponse(DefaultSchema):
     username_available = fields.Boolean(required=True)
     email_available = fields.Boolean(required=True)
-    username_suggestions = fields.List(fields.String(), metadata={"description": "Alternative username suggestions if taken"})
-    validation_errors = fields.Dict(metadata={"description": "Field-specific validation errors"})
+    username_suggestions = fields.List(
+        fields.String(),
+        metadata={"description": "Alternative username suggestions if taken"},
+    )
+    validation_errors = fields.Dict(
+        metadata={"description": "Field-specific validation errors"}
+    )
 
 
 class AdminUserListRequest(DefaultSchema):
-    local_only = fields.Boolean(metadata={"description": "Filter to local users only", "default": True})
+    local_only = fields.Boolean(
+        metadata={"description": "Filter to local users only", "default": True}
+    )
     verified = fields.Boolean(metadata={"description": "Filter by verification status"})
     active = fields.Boolean(metadata={"description": "Filter by active/banned status"})
-    search = fields.String(validate=validate.Length(max=100), metadata={"description": "Search username or email"})
-    sort = fields.String(validate=validate.OneOf(["created_desc", "created_asc", "username_asc", "username_desc", 
-                                                  "last_seen_desc", "last_seen_asc", "post_count_desc"]),
-                        metadata={"description": "Sort order", "default": "created_desc"})
+    search = fields.String(
+        validate=validate.Length(max=100),
+        metadata={"description": "Search username or email"},
+    )
+    sort = fields.String(
+        validate=validate.OneOf(
+            [
+                "created_desc",
+                "created_asc",
+                "username_asc",
+                "username_desc",
+                "last_seen_desc",
+                "last_seen_asc",
+                "post_count_desc",
+            ]
+        ),
+        metadata={"description": "Sort order", "default": "created_desc"},
+    )
     page = fields.Integer(validate=validate.Range(min=1), metadata={"default": 1})
-    limit = fields.Integer(validate=validate.Range(min=1, max=100), metadata={"default": 50})
-    last_seen_days = fields.Integer(validate=validate.Range(min=1), metadata={"description": "Users active within N days"})
+    limit = fields.Integer(
+        validate=validate.Range(min=1, max=100), metadata={"default": 50}
+    )
+    last_seen_days = fields.Integer(
+        validate=validate.Range(min=1),
+        metadata={"description": "Users active within N days"},
+    )
 
 
 class AdminUserInfo(DefaultSchema):
@@ -1107,8 +1504,8 @@ class AdminUserInfo(DefaultSchema):
     username = fields.String(required=True)
     email = fields.String(required=True)
     display_name = fields.String()
-    created_at = fields.DateTime(required=True, format='iso')
-    last_seen = fields.DateTime(format='iso')
+    created_at = fields.DateTime(required=True, format="iso")
+    last_seen = fields.DateTime(format="iso")
     is_verified = fields.Boolean(required=True)
     is_banned = fields.Boolean(required=True)
     is_local = fields.Boolean(required=True)
@@ -1136,11 +1533,13 @@ class AdminUserLookupRequest(DefaultSchema):
     username = fields.String(validate=validate.Length(min=1, max=50))
     email = fields.Email()
     id = fields.Integer(validate=validate.Range(min=1))
-    
+
     @validates_schema
     def validate_at_least_one_field(self, data, **kwargs):
-        if not any([data.get('username'), data.get('email'), data.get('id')]):
-            raise ValidationError("At least one of username, email, or id must be provided")
+        if not any([data.get("username"), data.get("email"), data.get("id")]):
+            raise ValidationError(
+                "At least one of username, email, or id must be provided"
+            )
 
 
 class AdminUserLookupResponse(DefaultSchema):
@@ -1151,10 +1550,11 @@ class AdminUserLookupResponse(DefaultSchema):
 class AdminHealthResponse(DefaultSchema):
     private_registration = fields.Dict(required=True)
     database = fields.String(required=True)
-    timestamp = fields.DateTime(required=True, format='iso')
+    timestamp = fields.DateTime(required=True, format="iso")
 
 
 # Phase 2: User Management Schemas
+
 
 class AdminUserUpdateRequest(DefaultSchema):
     display_name = fields.String(validate=validate.Length(min=1, max=100))
@@ -1174,28 +1574,43 @@ class AdminUserUpdateResponse(DefaultSchema):
 
 
 class AdminUserActionRequest(DefaultSchema):
-    reason = fields.String(validate=validate.Length(min=1, max=500), 
-                          metadata={"description": "Reason for action (required for ban/disable)"})
-    expires_at = fields.DateTime(format='iso', 
-                                metadata={"description": "Optional expiry date for temporary actions"})
-    notify_user = fields.Boolean(metadata={"description": "Send notification email to user", "default": False})
+    reason = fields.String(
+        validate=validate.Length(min=1, max=500),
+        metadata={"description": "Reason for action (required for ban/disable)"},
+    )
+    expires_at = fields.DateTime(
+        format="iso",
+        metadata={"description": "Optional expiry date for temporary actions"},
+    )
+    notify_user = fields.Boolean(
+        metadata={"description": "Send notification email to user", "default": False}
+    )
 
 
 class AdminUserActionResponse(DefaultSchema):
     success = fields.Boolean(required=True)
     user_id = fields.Integer(required=True)
-    action = fields.String(required=True, 
-                          validate=validate.OneOf(["disabled", "enabled", "banned", "unbanned", "deleted"]))
+    action = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            ["disabled", "enabled", "banned", "unbanned", "deleted"]
+        ),
+    )
     message = fields.String(required=True)
     performed_by = fields.String(metadata={"description": "Admin who performed action"})
-    timestamp = fields.DateTime(required=True, format='iso')
+    timestamp = fields.DateTime(required=True, format="iso")
 
 
 class AdminBulkUserRequest(DefaultSchema):
-    operation = fields.String(required=True, 
-                             validate=validate.OneOf(["disable", "enable", "ban", "unban", "delete"]))
-    user_ids = fields.List(fields.Integer(validate=validate.Range(min=1)), required=True,
-                          validate=validate.Length(min=1, max=100))
+    operation = fields.String(
+        required=True,
+        validate=validate.OneOf(["disable", "enable", "ban", "unban", "delete"]),
+    )
+    user_ids = fields.List(
+        fields.Integer(validate=validate.Range(min=1)),
+        required=True,
+        validate=validate.Length(min=1, max=100),
+    )
     reason = fields.String(validate=validate.Length(min=1, max=500))
     notify_users = fields.Boolean(metadata={"default": False})
 
@@ -1222,13 +1637,17 @@ class AdminUserStatsResponse(DefaultSchema):
     registrations_today = fields.Integer(required=True)
     registrations_7d = fields.Integer(required=True)
     registrations_30d = fields.Integer(required=True)
-    timestamp = fields.DateTime(required=True, format='iso')
+    timestamp = fields.DateTime(required=True, format="iso")
 
 
 class AdminRegistrationStatsRequest(DefaultSchema):
-    days = fields.Integer(validate=validate.Range(min=1, max=365), 
-                         metadata={"description": "Number of days to analyze", "default": 30})
-    include_hourly = fields.Boolean(metadata={"description": "Include hourly breakdown", "default": False})
+    days = fields.Integer(
+        validate=validate.Range(min=1, max=365),
+        metadata={"description": "Number of days to analyze", "default": 30},
+    )
+    include_hourly = fields.Boolean(
+        metadata={"description": "Include hourly breakdown", "default": False}
+    )
 
 
 class AdminRegistrationStatsResponse(DefaultSchema):
@@ -1236,19 +1655,26 @@ class AdminRegistrationStatsResponse(DefaultSchema):
     total_registrations = fields.Integer(required=True)
     private_registrations = fields.Integer(required=True)
     public_registrations = fields.Integer(required=True)
-    daily_breakdown = fields.List(fields.Dict(), 
-                                 metadata={"description": "Daily registration counts"})
-    hourly_breakdown = fields.List(fields.Dict(), 
-                                  metadata={"description": "Hourly breakdown (if requested)"})
-    timestamp = fields.DateTime(required=True, format='iso')
+    daily_breakdown = fields.List(
+        fields.Dict(), metadata={"description": "Daily registration counts"}
+    )
+    hourly_breakdown = fields.List(
+        fields.Dict(), metadata={"description": "Hourly breakdown (if requested)"}
+    )
+    timestamp = fields.DateTime(required=True, format="iso")
 
 
 class AdminUserExportRequest(DefaultSchema):
-    format = fields.String(validate=validate.OneOf(["csv", "json"]), 
-                          metadata={"description": "Export format", "default": "csv"})
-    export_fields = fields.List(fields.String(), 
-                        metadata={"description": "Fields to include in export"})
-    filters = fields.Dict(metadata={"description": "Same filters as user list endpoint"})
+    format = fields.String(
+        validate=validate.OneOf(["csv", "json"]),
+        metadata={"description": "Export format", "default": "csv"},
+    )
+    export_fields = fields.List(
+        fields.String(), metadata={"description": "Fields to include in export"}
+    )
+    filters = fields.Dict(
+        metadata={"description": "Same filters as user list endpoint"}
+    )
 
 
 class AdminUserExportResponse(DefaultSchema):
@@ -1256,7 +1682,7 @@ class AdminUserExportResponse(DefaultSchema):
     format = fields.String(required=True)
     total_records = fields.Integer(required=True)
     download_url = fields.String(metadata={"description": "Temporary download URL"})
-    expires_at = fields.DateTime(format='iso')
+    expires_at = fields.DateTime(format="iso")
     message = fields.String(required=True)
 
 
@@ -1314,7 +1740,12 @@ class ReportPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     reason = fields.String(required=True)
     description = fields.String()
-    report_remote = fields.Boolean(metadata={"default": True, "description": "Also send report to originating instance"})
+    report_remote = fields.Boolean(
+        metadata={
+            "default": True,
+            "description": "Also send report to originating instance",
+        }
+    )
 
 
 class PostReport(DefaultSchema):
@@ -1325,7 +1756,10 @@ class PostReport(DefaultSchema):
     original_post_body = fields.String(required=True)
     reason = fields.String(required=True)
     resolved = fields.Boolean(required=True)
-    published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
 
 
 class PostReportView(DefaultSchema):
@@ -1339,7 +1773,9 @@ class PostReportView(DefaultSchema):
     creator_is_moderator = fields.Boolean(required=True)
     creator_is_admin = fields.Boolean(required=True)
     creator_blocked = fields.Boolean(required=True)
-    subscribed = fields.String(validate=validate.OneOf(subscribed_type_list), required=True)
+    subscribed = fields.String(
+        validate=validate.OneOf(subscribed_type_list), required=True
+    )
     saved = fields.Boolean(required=True)
 
 
@@ -1397,8 +1833,12 @@ class GetPostRepliesResponse(DefaultSchema):
 
 class ListPostsRequest(Schema):
     q = fields.String()
-    sort = fields.String(validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"})
-    type_ = fields.String(validate=validate.OneOf(listing_type_list), metadata={"default": "All"})
+    sort = fields.String(
+        validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"}
+    )
+    type_ = fields.String(
+        validate=validate.OneOf(listing_type_list), metadata={"default": "All"}
+    )
     community_name = fields.String()
     community_id = fields.Integer()
     saved_only = fields.Boolean(metadata={"default": False})
@@ -1422,7 +1862,11 @@ class PrivateMessage(DefaultSchema):
     content = fields.String(required=True)
     deleted = fields.Boolean(required=True)
     read = fields.Boolean(required=True)
-    published = fields.String(validate=validate_datetime_string, required=True, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    published = fields.String(
+        validate=validate_datetime_string,
+        required=True,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
     ap_id = fields.Url(required=True)
     local = fields.Boolean(required=True)
 
@@ -1449,15 +1893,25 @@ class ListPrivateMessagesResponse(DefaultSchema):
 
 
 class GetPrivateMessageConversationRequest(DefaultSchema):
-    person_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
-    conversation_id = fields.Integer(metadata={"description": "One of either person_id or conversation_id must be specified"})
+    person_id = fields.Integer(
+        metadata={
+            "description": "One of either person_id or conversation_id must be specified"
+        }
+    )
+    conversation_id = fields.Integer(
+        metadata={
+            "description": "One of either person_id or conversation_id must be specified"
+        }
+    )
     page = fields.Integer(metadata={"default": 1})
     limit = fields.Integer(metadata={"default": 10})
 
     @validates_schema
     def validate_input(self, data, **kwargs):
         if "person_id" not in data and "conversation_id" not in data:
-            raise ValidationError("One of either person_id or conversation_id must be specified")
+            raise ValidationError(
+                "One of either person_id or conversation_id must be specified"
+            )
 
 
 class GetPrivateMessageConversationResponse(DefaultSchema):
@@ -1515,7 +1969,10 @@ class PostSetFlairRequest(DefaultSchema):
     flair_id_list = fields.List(
         fields.Integer(),
         allow_none=True,
-        metadata={"description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"})
+        metadata={
+            "description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"
+        },
+    )
 
 
 class PostSetFlairResponse(PostView):

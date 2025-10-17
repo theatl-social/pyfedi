@@ -15,7 +15,14 @@ def block_domain(domain, src, auth=None):
     domain_to_block = db.session.query(Domain).filter(Domain.name == domain).first()
 
     if domain_to_block:
-        existing_block = db.session.query(DomainBlock).filter(DomainBlock.domain_id == domain_to_block.id, DomainBlock.user_id == user_id).first()
+        existing_block = (
+            db.session.query(DomainBlock)
+            .filter(
+                DomainBlock.domain_id == domain_to_block.id,
+                DomainBlock.user_id == user_id,
+            )
+            .first()
+        )
         if not existing_block:
             block = DomainBlock(domain_id=domain_to_block.id, user_id=user_id)
             db.session.add(block)
@@ -38,7 +45,14 @@ def unblock_domain(domain, src, auth=None):
     domain_to_unblock = db.session.query(Domain).filter(Domain.name == domain).first()
 
     if domain_to_unblock:
-        existing_block = db.session.query(DomainBlock).filter(DomainBlock.domain_id == domain_to_unblock.id, DomainBlock.user_id == user_id).first()
+        existing_block = (
+            db.session.query(DomainBlock)
+            .filter(
+                DomainBlock.domain_id == domain_to_unblock.id,
+                DomainBlock.user_id == user_id,
+            )
+            .first()
+        )
         if existing_block:
             db.session.delete(existing_block)
             db.session.commit()

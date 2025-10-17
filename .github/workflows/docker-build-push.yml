@@ -21,28 +21,28 @@ on:
 jobs:
   docker:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.branch }}
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
+
       - name: Prepare tags
         id: meta
         run: |
           # Primary tag
           TAGS="mikehdev/peachpie-compiled:${{ github.event.inputs.tag }}"
-          
+
           # Add additional tags if provided
           if [ -n "${{ github.event.inputs.additional_tags }}" ]; then
             IFS=',' read -ra EXTRA_TAGS <<< "${{ github.event.inputs.additional_tags }}"
@@ -50,14 +50,14 @@ jobs:
               TAGS="${TAGS},mikehdev/peachpie-compiled:${tag// /}"
             done
           fi
-          
+
           # Add commit SHA as a tag for traceability
           SHORT_SHA=$(echo "${{ github.sha }}" | cut -c1-7)
           TAGS="${TAGS},mikehdev/peachpie-compiled:sha-${SHORT_SHA}"
-          
+
           echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "Building with tags: ${TAGS}"
-      
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -72,7 +72,7 @@ jobs:
             BUILD_DATE=${{ github.event.repository.updated_at }}
             VCS_REF=${{ github.sha }}
             VERSION=${{ github.event.inputs.tag }}
-      
+
       - name: Image digest
         run: |
           echo "## 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY

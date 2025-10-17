@@ -1,6 +1,6 @@
 # Adding communities
 
-To add a community to your local 
+To add a community to your local
 
 ## Notes
 

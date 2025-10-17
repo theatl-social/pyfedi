@@ -39,9 +39,9 @@ run_test() {
     TEST_COUNT=$((TEST_COUNT + 1))
     TEST_NAME="$1"
     TEST_CMD="$2"
-    
+
     print_status "Test $TEST_COUNT: $TEST_NAME"
-    
+
     if eval "$TEST_CMD" >/dev/null 2>&1; then
         print_success "✅ $TEST_NAME - PASSED"
         PASSED_COUNT=$((PASSED_COUNT + 1))
@@ -72,7 +72,7 @@ export PYTHONPATH=/Users/michael/code/pyfedi-original/pyfedi
 export SERVER_NAME=test.localhost
 export SECRET_KEY=test-secret-key-comprehensive
 export DATABASE_URL=sqlite:///memory:test.db
-export CACHE_TYPE=NullCache  
+export CACHE_TYPE=NullCache
 export CACHE_REDIS_URL=memory://
 export CELERY_BROKER_URL=memory://localhost/
 export TESTING=true
@@ -92,7 +92,7 @@ run_test "Celery worker import" "python -c 'import celery_worker_docker; print(\
 # Test 5: Run our comprehensive startup tests
 run_test "Startup validation suite" "python -m pytest tests/test_startup_validation.py -v --tb=short"
 
-# Test 6: Database field consistency (critical!)  
+# Test 6: Database field consistency (critical!)
 run_test "Database schema immutability" "python -m pytest tests/test_field_consistency_simple.py -v --tb=short"
 
 # Test 7: HTML processing tests
@@ -135,7 +135,7 @@ run_test "PostgreSQL URL (dry run)" "python -c '
 import os
 os.environ[\"DATABASE_URL\"] = \"sqlite:///memory:test.db\"  # Override back to working
 from app import create_app
-app = create_app() 
+app = create_app()
 print(\"PostgreSQL URL handling works\")
 '"
 
@@ -158,12 +158,12 @@ fi
 
 echo ""
 print_status "🔍 Test Coverage Summary:"
-echo "   ✅ Python syntax and import validation"  
+echo "   ✅ Python syntax and import validation"
 echo "   ✅ Flask application creation and configuration"
 echo "   ✅ Celery worker initialization"
 echo "   ✅ Blueprint registration (including flask-smorest fix)"
 echo "   ✅ Database model consistency"
-echo "   ✅ HTML processing and sanitization" 
+echo "   ✅ HTML processing and sanitization"
 echo "   ✅ Multiple cache backend configurations"
 echo "   ✅ Production vs development environment handling"
 echo "   ✅ Extension initialization"
@@ -186,7 +186,7 @@ fi
 echo ""
 print_status "📚 Additional Resources:"
 echo "   - Run individual tests: python -m pytest tests/test_startup_validation.py::TestName::test_method"
-echo "   - Production mirror test: ./scripts/run-production-mirror-tests.sh" 
+echo "   - Production mirror test: ./scripts/run-production-mirror-tests.sh"
 echo "   - Docker validation: docker build --target builder -t pyfedi:test ."
 
 exit $EXIT_CODE

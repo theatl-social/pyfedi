@@ -39,35 +39,35 @@ with app.app_context():
         print('🏗️  Creating site configuration...')
         private_key, public_key = RsaKeys.generate_keypair()
         db.session.add(Site(
-            name='PieFed Test Instance', 
-            description='Test instance for validating current operations', 
+            name='PieFed Test Instance',
+            description='Test instance for validating current operations',
             public_key=public_key,
-            private_key=private_key, 
+            private_key=private_key,
             language_id=2
         ))
-        
+
         print('🌐 Creating local instance...')
         db.session.add(Instance(
             domain='test.pyfedi.local',
             software='PieFed'
         ))
-        
+
         print('⚙️  Adding basic settings...')
         db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
         db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
         db.session.add(Settings(name='allow_dislike', value=json.dumps(True)))
-        
+
         print('👤 Creating test admin user...')
         # Create basic roles
         admin_role = Role(id=1, name='admin', title='Admin', color='#FF0000', permissions=0xFFFFFFFF)
         user_role = Role(id=2, name='user', title='User', color='#000000', permissions=0)
         db.session.add(admin_role)
         db.session.add(user_role)
-        
+
         # Create test admin user with predictable credentials
         password = 'test_admin_password_123'
         password_hash = hashlib.sha256(password.encode()).hexdigest()
-        
+
         admin_user = User(
             id=1,
             user_name='test_admin',
@@ -77,7 +77,7 @@ with app.app_context():
             instance_id=1
         )
         db.session.add(admin_user)
-        
+
         db.session.commit()
         print('✅ Test setup complete! Admin: test_admin / test_admin_password_123')
 " 2>/dev/null || {

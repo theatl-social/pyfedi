@@ -5,7 +5,7 @@ The communities that make up the heart of the "threadiverse" are represented as 
 
 ## Group objects as JSON
 
-Server-to-server or server-to-client traffic that represents Communities is sent as .json. I.e. when a remote server wishes to find out information about your local server's `technology` community, the remote server will be sent that data in a json payload. 
+Server-to-server or server-to-client traffic that represents Communities is sent as .json. I.e. when a remote server wishes to find out information about your local server's `technology` community, the remote server will be sent that data in a json payload.
 
 
 ### Getting community information
@@ -67,7 +67,7 @@ The result should look something like this:
 
 Now that we have the communities object we can parse it for the information we want. Since this is the threadiverse we are mostly wanting the posts in the community.
 
-Those can be found by requesting the actors `outbox`. 
+Those can be found by requesting the actors `outbox`.
 
 
 Run this curl command:

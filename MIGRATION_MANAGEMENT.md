@@ -135,16 +135,16 @@ elif [ "$head_count" -eq 0 ]; then
 else
     echo "⚠️  Multiple heads detected:"
     echo "$heads"
-    
+
     # Extract revision IDs
     head1=$(echo "$heads" | sed -n '1p' | awk '{print $1}')
     head2=$(echo "$heads" | sed -n '2p' | awk '{print $1}')
-    
+
     echo "Creating merge migration for: $head1 and $head2"
-    
+
     # Create merge migration
     SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge $head1 $head2 -m "merge migration heads"
-    
+
     echo "✅ Merge migration created"
     echo "Don't forget to commit: git add migrations/ && git commit -m 'Merge migration heads'"
 fi
@@ -174,7 +174,7 @@ git merge upstream/main
 # Good
 flask db merge xxx yyy -m "merge upstream v1.3 migrations with custom user features"
 
-# Bad  
+# Bad
 flask db merge xxx yyy -m "merge"
 ```
 
@@ -207,13 +207,13 @@ Keep a list of your custom migrations in `CUSTOM_MIGRATIONS.md`:
 
 ### "Can't locate revision identified by 'xxx'"
 **Cause**: Missing migration file
-**Solution**: 
+**Solution**:
 - Check if migration exists in `migrations/versions/`
 - Pull latest changes from your repo
 - Never delete migration files
 
 ### "Target database is not up to date"
-**Solution**: 
+**Solution**:
 ```bash
 flask db upgrade
 ```

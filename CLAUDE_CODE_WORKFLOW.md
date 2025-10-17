@@ -6,11 +6,11 @@
 
 ### Database Schema
 - ❌ **NO column renames** in existing tables
-- ❌ **NO table renames** 
+- ❌ **NO table renames**
 - ❌ **NO constraint changes** (unique, foreign keys, indexes)
 - ❌ **NO data type changes**
 
-### Public API Endpoints  
+### Public API Endpoints
 - ❌ **NO changes to URL paths**: `/api/alpha/site`, `/api/alpha/user/{id}`, etc.
 - ❌ **NO changes to query parameters**: `?page=`, `?limit=`, `?sort=`, etc.
 - ❌ **NO changes to request/response field names** in public APIs

@@ -21,7 +21,7 @@ chilling
     https://beehaw.org/c/entertainment
     https://beehaw.org/c/chat
     https://lemmy.world/c/bestoflemmy
-    
+
 gaming
     https://sh.itjust.works/c/games
     https://sh.itjust.works/c/patientgamers
@@ -32,14 +32,14 @@ gaming
     https://lemmy.world/c/pcgaming
     https://lemmy.world/c/diablo
     https://sopuli.xyz/c/steamdeck
-    
+
 interesting stuff
     https://lemmy.world/c/space
     https://lemmy.world/c/interestingasfuck
     https://lemmy.world/c/mildlyinteresting
     https://lemmy.world/c/til
     https://lemmy.world/c/science
-    
+
 tech
     https://lemmy.world/c/technology
     https://lemmy.world/c/selfhosted
@@ -58,7 +58,7 @@ tech
     https://lemmy.one/c/privacyguides
     https://lemmy.world/c/ergomechkeyboards
     https://lemmy.world/c/buildapc
-    
+
 linux
     https://sh.itjust.works/c/linux
     https://lemmy.world/c/linux
@@ -78,7 +78,7 @@ programming
     https://programming.dev/c/cs_career_questions
     https://beehaw.org/c/programming
     https://lemmy.blahaj.zone/c/gamedev
-    
+
 news & politics
     https://sh.itjust.works/c/worldnews
     https://lemmy.world/c/news
@@ -93,7 +93,7 @@ news & politics
     https://beehaw.org/c/usnews
     https://lemmy.world/c/outoftheloop
     https://feddit.de/c/europe
-    
+
 lgbtq
     https://beehaw.org/c/lgbtq_plus
     https://sh.itjust.works/c/lgbtq_plus
@@ -101,7 +101,7 @@ lgbtq
     https://lemmy.blahaj.zone/c/mtf
     https://lemmy.blahaj.zone/c/lgbtq_plus
     https://lemmy.one/c/nonbinary
-    
+
 environment
     https://sh.itjust.works/c/environment
     https://sh.itjust.works/c/sewingrepairing
@@ -115,7 +115,7 @@ environment
     https://slrpnk.net/c/buyitforlife
     https://beehaw.org/c/greenspace
     https://beehaw.org/c/environment
-    
+
 mental health
     https://sh.itjust.works/c/neurodivergentlifehacks
     https://sh.itjust.works/c/mindfulness
@@ -125,7 +125,7 @@ mental health
     https://lemmy.world/c/mentalhealth
     https://beehaw.org/c/neurodivergence
     https://lemmy.blahaj.zone/c/bipolar
-    
+
 health
     https://lemmy.ml/c/coronavirus
     https://mander.xyz/c/medicine

@@ -8,14 +8,14 @@ TODO:
     /*--accent-color: #FF5D40;
     --accent-color-hovered: #CC4933;
     --accent-color-active: #FF7661;*/
-    
+
     --accent-color: #5900ff;
     --accent-color-hovered: #7f41f4;
     --accent-color-active: #b369ff;
-    
+
     --accent-color-rgb: 151, 100, 255;
     --accent-color-hovered-rgb: 127, 65, 244;
-    
+
     /* DO NOT TOUCH! */
     --bs-link-color: var(--accent-color);
     --bs-link-hover-color: var(--accent-color-hovered);
@@ -292,7 +292,7 @@ div.navbar {
 
 .user_preview > .card {
     background-color: black;
-    
+
 }
 /* END USER PREVIEWS */
 /* COMMUNITIIES */
@@ -324,11 +324,11 @@ div.navbar {
 .user_note,
 .user_flair {
     border: solid 1px transparent;
-    
+
     font-size: 87%;
     vertical-align: inherit;
     border-radius: 3px;
-    
+
     padding: 0px 3px 0px 3px;
     display: inline-block;
 }
@@ -444,4 +444,3 @@ div.unread::before {
 .accordion-preview .collapse:not(.show) .accordion-body::after {
         background: none;
 }
-

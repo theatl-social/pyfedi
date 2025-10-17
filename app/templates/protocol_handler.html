@@ -29,13 +29,13 @@
             const registerBtn = document.getElementById('registerProtocolHandler');
             const unRegisterBtn = document.getElementById('unRegisterProtocolHandler');
             const storageKey = 'webap_protocol_handler_registered_{{ instance_domain }}';
-            
+
             // Check if protocol handler was previously registered
             if (localStorage.getItem(storageKey) === 'true') {
                 registerBtn.classList.add('d-none');
                 unRegisterBtn.classList.remove('d-none');
             }
-            
+
             registerBtn.addEventListener('click', function () {
                 navigator.registerProtocolHandler("web+ap", "https://{{ instance_domain }}/protocol_handler?to=%s");
                 localStorage.setItem(storageKey, 'true');
