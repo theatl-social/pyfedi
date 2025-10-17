@@ -210,7 +210,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     community.last_active = g.site.last_active = utcnow()
     user.post_count += 1
 
-    post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+    post.generate_ap_id(community)
+
     vote = PostVote(user_id=user.id, post_id=post.id, author_id=user.id, effect=1)
     db.session.add(vote)
     db.session.commit()

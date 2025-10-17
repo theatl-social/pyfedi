@@ -1008,7 +1008,7 @@ def add_post(actor, type=None):
         if post.sticky:
             sticky_post(post.id, True, SRC_WEB)  # federating post's stickiness is separate from creating it
 
-        resp = make_response(redirect(f"/post/{post.id}"))
+        resp = make_response(redirect(post.slug))
         # remove cookies used to maintain state when switching post type
         resp.delete_cookie('post_title')
         resp.delete_cookie('post_description')

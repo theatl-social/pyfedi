@@ -1949,6 +1949,11 @@ def post_ap(post_id):
         return show_post(post_id)
 
 
+@bp.route('/c/<community_name>/p/<int:post_id>/<slug>', methods=['GET', 'HEAD', 'POST'])
+def post_nice(community_name, post_id, slug):
+    return post_ap(post_id)
+
+
 @bp.route('/post/<int:post_id>/replies', methods=['GET'])
 def post_replies_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():

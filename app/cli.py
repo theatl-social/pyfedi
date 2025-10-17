@@ -499,7 +499,7 @@ def register(app):
                         db.session.add(scheduled_post)
                         db.session.commit()
 
-                        scheduled_post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{scheduled_post.id}"
+                        scheduled_post.generate_ap_id(scheduled_post.community)
                         # Update the scheduled_for with the next occurrence date
                         post.scheduled_for = next_occurrence
 

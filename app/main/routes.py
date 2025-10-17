@@ -835,8 +835,10 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    archive_post(800)
-    return 'Done'
+    post = Post.query.get(13)
+    post.generate_ap_id()
+    db.session.commit()
+    return 'ok'
 
     from flask import json
     community = Community.query.get(33)

@@ -16,6 +16,7 @@ from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
+from slugify import slugify
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
@@ -1421,7 +1422,7 @@ class Post(db.Model):
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     licence_id = db.Column(db.Integer, db.ForeignKey('licence.id'), index=True)
     status = db.Column(db.Integer, index=True, default=1)  # see POST_STATUS_* in constants.py
-    slug = db.Column(db.String(255))
+    slug = db.Column(db.String(255), index=True)
     title = db.Column(db.String(255))
     url = db.Column(db.String(2048))
     body = db.Column(db.Text)
@@ -1520,6 +1521,10 @@ class Post(db.Model):
         return db.session.query(cls).filter_by(ap_id=ap_id).first()
 
     @classmethod
+    def get_by_slug(cls, slug):
+        return db.session.query(cls).filter_by(slug=slug).first()
+
+    @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
         from app.activitypub.util import instance_weight, find_language_or_create, find_language, \
             find_hashtag_or_create, \
@@ -1562,6 +1567,7 @@ class Post(db.Model):
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
         if community.nsfl:
             post.nsfl = True
+        post.generate_slug(community)
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             # prefer Markdown in 'source' in provided
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
@@ -2005,6 +2011,60 @@ class Post(db.Model):
                 return f'{video_id}'
 
         return ''
+
+    def generate_ap_id(self, community):
+        # Make the ActivityPub ID of a post in the format of instance.tld/c/community@instance/p/post_id/post-title-as-slug
+        # Use this for posts this instance is creating only - remote posts will already have an AP ID.
+        if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
+            slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
+            candidate_ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+
+            # Ensure that no other posts have the same AP_ID
+            next_number = 0
+            while True:
+                existing_post = Post.get_by_ap_id(f"{candidate_ap_id}{next_number if next_number else ''}")
+                if existing_post:
+                    if next_number > 0:
+                        next_number = next_number + 1
+                    else:
+                        next_number = 1
+                else:
+                    candidate_ap_id = f"{candidate_ap_id}{next_number if next_number else ''}"
+                    slug = f"{slug}{next_number if next_number else ''}"
+                    break
+                if next_number > 10:
+                    self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                    self.slug = f'/post/{self.id}'
+                    return
+
+            self.ap_id = candidate_ap_id
+            self.slug = slug
+
+    def generate_slug(self, community):
+        # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
+        # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
+        if self.slug is None or self.slug == '':
+            slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
+            candidate_slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+
+            # Ensure that no other posts have the same AP_ID
+            next_number = 0
+            while True:
+                existing_post = Post.get_by_slug(f"{candidate_slug}{next_number if next_number else ''}")
+                if existing_post:
+                    if next_number > 0:
+                        next_number = next_number + 1
+                    else:
+                        next_number = 1
+                else:
+                    slug = f"{slug}{next_number if next_number else ''}"
+                    break
+                if next_number > 10:
+                    self.slug = f'/post/{self.id}'
+                    return
+
+            self.slug = slug
 
     def peertube_embed(self):
         if self.url:
