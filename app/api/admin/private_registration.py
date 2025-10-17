@@ -156,7 +156,7 @@ def create_private_user(user_data):
 
             finalize_user_setup(new_user)
         else:
-            # If not auto-activated, finalize_user_setup will be called when admin approves/activates
+            # If not auto-activated, finalize_user_setup will be called when admin approves activation
             current_app.logger.info(
                 f"User {user_id} created but not finalized - awaiting activation"
             )
