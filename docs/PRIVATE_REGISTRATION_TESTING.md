@@ -7,7 +7,7 @@ This guide covers comprehensive testing of the private registration API endpoint
 The private registration testing suite provides comprehensive coverage of:
 
 - **HTTP Endpoint Testing** - Full request/response validation
-- **Authentication & Authorization** - Secret validation, IP restrictions  
+- **Authentication & Authorization** - Secret validation, IP restrictions
 - **Configuration Testing** - Environment variables vs database settings
 - **Security Testing** - Rate limiting, attack scenarios, concurrent access
 - **Performance Testing** - Response time benchmarks
@@ -44,7 +44,7 @@ uv pip install pytest pytest-cov pytest-html pytest-benchmark
 
 **Endpoints Covered:**
 - `/api/alpha/admin/health` - Health check with private registration status
-- `/api/alpha/admin/private_register` - Main user registration endpoint  
+- `/api/alpha/admin/private_register` - Main user registration endpoint
 - `/api/alpha/admin/user/validate` - Username/email validation
 
 **Test Categories:**
@@ -60,7 +60,7 @@ uv pip install pytest pytest-cov pytest-html pytest-benchmark
 **Security Features:**
 - ✅ Rate limiting enforcement per IP
 - ✅ IP whitelist validation (CIDR ranges, exact matches)
-- ✅ Concurrent request handling  
+- ✅ Concurrent request handling
 - ✅ Brute force protection
 - ✅ Malicious payload handling
 - ✅ Header injection protection
@@ -85,7 +85,7 @@ export PRIVATE_REGISTRATION_ALLOWED_IPS="127.0.0.1,10.0.0.0/8"
 ### Environment-Only Configuration
 Tests that settings are read from environment variables instead of database.
 
-### Mixed Configuration  
+### Mixed Configuration
 Tests behavior when some settings come from environment, others from database.
 
 ## Local Testing Commands
@@ -97,7 +97,7 @@ Tests behavior when some settings come from environment, others from database.
 
 # Equivalent to running:
 ./scripts/test-private-registration.sh --config default
-./scripts/test-private-registration.sh --config env-only  
+./scripts/test-private-registration.sh --config env-only
 ./scripts/test-private-registration.sh --config mixed
 ```
 
@@ -148,7 +148,7 @@ curl -X POST \
      -H "X-Forwarded-For: 127.0.0.1" \
      -d '{
        "username":"testuser",
-       "email":"test@example.com", 
+       "email":"test@example.com",
        "display_name":"Test User",
        "auto_activate":true
      }' \
@@ -253,7 +253,7 @@ flask init-db
 # Run specific failing test
 python -m pytest tests/test_private_registration_endpoints.py::test_health_check_success -v -s
 
-# Enable Flask debug mode  
+# Enable Flask debug mode
 export FLASK_DEBUG=1
 flask run
 ```
@@ -283,7 +283,7 @@ print(f'Average response time: {(end-start)/100:.3f}s')
 ### Expected Performance Metrics
 
 - **Health Endpoint**: < 100ms response time
-- **User Validation**: < 200ms response time  
+- **User Validation**: < 200ms response time
 - **User Registration**: < 500ms response time
 - **Rate Limiting**: < 50ms additional overhead
 
@@ -323,7 +323,7 @@ curl -X POST -H "X-PieFed-Secret: test-secret" \
 ### Adding New Tests
 
 1. **Endpoint Tests**: Add to `test_private_registration_endpoints.py`
-2. **Security Tests**: Add to `test_private_registration_security.py`  
+2. **Security Tests**: Add to `test_private_registration_security.py`
 3. **Update CI/CD**: Modify `.github/workflows/private-registration-tests.yml` if needed
 4. **Documentation**: Update this guide
 
@@ -348,7 +348,7 @@ python -m pytest tests/ -k "private_registration" -v
 # Include in CI/CD pipeline
 # Tests automatically run on PR changes to:
 # - app/api/admin/**
-# - app/utils.py  
+# - app/utils.py
 # - tests/test_private_registration*
 ```
 
@@ -366,7 +366,7 @@ python -m pytest tests/ -k "private_registration" -v
 For issues with the private registration testing suite:
 
 1. Check this documentation for troubleshooting steps
-2. Review test output for specific error messages  
+2. Review test output for specific error messages
 3. Verify environment configuration
 4. Run tests in isolation to identify issues
 5. Check CI/CD workflow logs for detailed information

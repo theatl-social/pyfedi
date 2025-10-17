@@ -20,7 +20,7 @@ DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in ("true", "1", "yes")
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG if DEBUG else logging.WARNING,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
@@ -51,7 +51,9 @@ async def notifications_stream(user_id: str):
     logger.debug(f"New SSE connection for user {user_id}")
     q = asyncio.Queue()
     connected_clients.setdefault(user_id, set()).add(q)
-    logger.debug(f"Total connections for user {user_id}: {len(connected_clients[user_id])}")
+    logger.debug(
+        f"Total connections for user {user_id}: {len(connected_clients[user_id])}"
+    )
 
     async def event_stream():
         try:
@@ -71,10 +73,15 @@ async def notifications_stream(user_id: str):
                     logger.error(f"Error getting message for user {user_id}: {e}")
                     break
         except (asyncio.CancelledError, GeneratorExit) as e:
-            logger.debug(f"SSE connection cancelled for user {user_id}: {type(e).__name__}: {e}")
+            logger.debug(
+                f"SSE connection cancelled for user {user_id}: {type(e).__name__}: {e}"
+            )
         except Exception as e:
             # Log unexpected errors but don't break the connection
-            logger.error(f"SSE unexpected error for user {user_id}: {type(e).__name__}: {e}", exc_info=True)
+            logger.error(
+                f"SSE unexpected error for user {user_id}: {type(e).__name__}: {e}",
+                exc_info=True,
+            )
         finally:
             logger.debug(f"Cleaning up SSE connection for user {user_id}")
             # Clean up the queue from connected clients
@@ -88,7 +95,11 @@ async def notifications_stream(user_id: str):
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
-        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no", "Access-Control-Allow-Origin": "*"}
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Access-Control-Allow-Origin": "*",
+        },
     )
 
 
@@ -101,9 +112,13 @@ async def send_http_posts(all_urls: List, all_headers: List, data_json: str):
     async def post_to_url(url, headers):
         try:
             logger.debug(f"Sending POST to {url}")
-            response = await http_client.post(url, headers=headers, data=data_json.encode("utf8"), timeout=10.0)
+            response = await http_client.post(
+                url, headers=headers, data=data_json.encode("utf8"), timeout=10.0
+            )
             if response.status_code >= 400:
-                logger.warning(f"HTTP POST to {url} failed with status {response.status_code} - {response.content!r}")
+                logger.warning(
+                    f"HTTP POST to {url} failed with status {response.status_code} - {response.content!r}"
+                )
             else:
                 logger.debug(f"HTTP POST to {url} succeeded")
             return url, response.status_code
@@ -117,10 +132,12 @@ async def send_http_posts(all_urls: List, all_headers: List, data_json: str):
     # Process URLs in batches to respect connection limits
     results = []
     for i in range(0, len(all_urls), 100):
-        url_batch = all_urls[i:i + 100]
-        header_batch = all_headers[i:i + 100]
+        url_batch = all_urls[i : i + 100]
+        header_batch = all_headers[i : i + 100]
         batch_results = await asyncio.gather(
-            *[post_to_url(url, header) for url, header in zip(url_batch, header_batch)], return_exceptions=True)
+            *[post_to_url(url, header) for url, header in zip(url_batch, header_batch)],
+            return_exceptions=True,
+        )
         results.extend(batch_results)
 
     logger.info(f"Completed HTTP POST requests to {len(all_urls)} URLs")
@@ -147,7 +164,9 @@ async def redis_listener():
                             try:
                                 await q.put(data)
                             except Exception as e:
-                                logger.error(f"Failed to queue message for user {user_id}: {e}")
+                                logger.error(
+                                    f"Failed to queue message for user {user_id}: {e}"
+                                )
 
                     elif channel.startswith("http_posts:"):
                         # Handle HTTP POST messages
@@ -164,7 +183,9 @@ async def redis_listener():
                                 continue
 
                             # Send HTTP POST requests asynchronously
-                            asyncio.create_task(send_http_posts(urls, headers, post_data_json))
+                            asyncio.create_task(
+                                send_http_posts(urls, headers, post_data_json)
+                            )
 
                         except json.JSONDecodeError as e:
                             logger.error(f"Failed to parse HTTP POST message JSON: {e}")
@@ -188,15 +209,13 @@ async def health_check():
         return {
             "status": "healthy",
             "redis": "connected",
-            "active_connections": sum(len(conns) for conns in connected_clients.values())
+            "active_connections": sum(
+                len(conns) for conns in connected_clients.values()
+            ),
         }
     except Exception as e:
         logger.error(f"Health check failed: {e}")
-        return {
-            "status": "unhealthy",
-            "redis": "disconnected",
-            "error": str(e)
-        }
+        return {"status": "unhealthy", "redis": "disconnected", "error": str(e)}
 
 
 @app.on_event("startup")

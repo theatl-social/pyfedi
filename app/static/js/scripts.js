@@ -95,7 +95,7 @@ function setupUserPopup() {
                     userPreview.classList.add('d-none');
                 }
             });
-            
+
             anchor.dataset.userPopupSetup = 'true';
         }
     });
@@ -524,28 +524,28 @@ function setupSendPost() {
                 if (event.action_cancelled) {
                     return;
                 }
-                
+
                 event.preventDefault();
-                
+
                 const url = element.getAttribute('data-url');
                 if (!url) return;
-                
+
                 // Get CSRF token from meta tag
                 const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-                
+
                 // Create a form and submit it to preserve flash messages
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = url;
                 form.style.display = 'none';
-                
+
                 // Add CSRF token as hidden input
                 const tokenInput = document.createElement('input');
                 tokenInput.type = 'hidden';
                 tokenInput.name = 'csrf_token';
                 tokenInput.value = csrfToken;
                 form.appendChild(tokenInput);
-                
+
                 document.body.appendChild(form);
                 form.submit();
             });
@@ -672,7 +672,7 @@ function setupHideButtons() {
                 const unhide = parentElement.parentElement.querySelectorAll('.unhide');
                 unhide[0].style.display = 'inline-block';
             });
-            
+
             hideEl.dataset.hideButtonSetup = 'true';
         }
     });
@@ -689,7 +689,7 @@ function setupHideButtons() {
                     hidable.style.display = '';
                 });
             });
-            
+
             showEl.dataset.unhideButtonSetup = 'true';
         }
     });
@@ -1249,18 +1249,18 @@ function setupFederationModeToggle() {
     const federationModeRadios = document.querySelectorAll('input[name="federation_mode"]');
     const allowlistField = document.getElementById('allowlist');
     const blocklistField = document.getElementById('blocklist');
-    
+
     if (federationModeRadios.length === 0 || !allowlistField || !blocklistField) {
         return; // Exit if we're not on the federation page
     }
-    
+
     // Get the form groups containing the textarea fields
     const allowlistGroup = allowlistField.closest('.form-group');
     const blocklistGroup = blocklistField.closest('.form-group');
-    
+
     function toggleFields() {
         const selectedMode = document.querySelector('input[name="federation_mode"]:checked').value;
-        
+
         if (selectedMode === 'allowlist') {
             allowlistGroup.style.display = '';
             blocklistGroup.style.display = 'none';
@@ -1269,10 +1269,10 @@ function setupFederationModeToggle() {
             blocklistGroup.style.display = '';
         }
     }
-    
+
     // Set initial state
     toggleFields();
-    
+
     // Add event listeners to radio buttons
     federationModeRadios.forEach(radio => {
         radio.addEventListener('change', toggleFields);
@@ -1442,7 +1442,7 @@ function setupVideoSpoilers() {
 function setupDynamicContentObserver() {
     const observer = new MutationObserver(function(mutations) {
         let shouldResetup = false;
-        
+
         mutations.forEach(function(mutation) {
             // Check if new nodes were added
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
@@ -1474,13 +1474,13 @@ function setupDynamicContentObserver() {
                 });
             }
         });
-        
+
         // Re-run setup functions for the new content
         if (shouldResetup) {
             setupDynamicContent();
         }
     });
-    
+
     // Start observing
     observer.observe(document.body, {
         childList: true,
@@ -1526,7 +1526,7 @@ function setupDynamicContent() {
     setupPopupTooltips();
     setupBasicAutoResize();
     setupUserMentionSuggestions();
-    
+
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
         processToBeHiddenArray();
@@ -1565,7 +1565,7 @@ function setupCommunityFilter() {
         if (event.target.classList && event.target.classList.contains('communities_menu')) {
             hookupCommunityFilter();
         }
-        
+
         // Also check if the swapped content is inside the communities menu
         const communitiesMenu = event.target.closest('.communities_menu');
         if (communitiesMenu) {
@@ -1589,39 +1589,39 @@ function hookupCommunityFilter() {
     if (!filterInput) {
         return; // Only run if filter element exists in current theme
     }
-    
+
     const communityItems = document.querySelectorAll('.community-item');
     const communitySections = document.querySelectorAll('.community-section');
 
     function prevSection(communityItem) {
         let current = communityItem.previousElementSibling;
-        
+
         while (current) {
             if (current.classList.contains('community-section')) {
                 return current;
             }
             current = current.previousElementSibling;
         }
-        
+
         return null; // No section found
     }
 
     function filterCommunities() {
         const filterText = filterInput.value.toLowerCase().trim();
-        
+
         let visibleInSection = {};
-        
+
         // Show/hide clear button
         if (clearButton) {
             //clearButton.style.display = filterText ? 'block' : 'none';
         }
-        
+
         communityItems.forEach((item, index) => {
             const communityName = item.getAttribute('data-community-name') || '';
             const isVisible = !filterText || communityName.includes(filterText);
-            
+
             item.style.display = isVisible ? 'list-item' : 'none';
-            
+
             // Track which sections have visible items
             if (isVisible) {
                 const parentSection = prevSection(item);
@@ -1633,26 +1633,26 @@ function hookupCommunityFilter() {
                 }
             }
         });
-        
+
         // Show/hide section headers based on whether they have visible items
         communitySections.forEach((section, index) => {
             let shouldShow = false;
-            
+
             const sectionType = section.getAttribute('data-community-section');
             if (sectionType) {
                 shouldShow = visibleInSection[sectionType];
             }
-            
+
             section.style.display = shouldShow ? 'list-item' : 'none';
         });
     }
-    
+
     function clearFilter() {
         filterInput.value = '';
         filterCommunities();
         filterInput.focus();
     }
-    
+
     // Event listeners
     filterInput.addEventListener('input', filterCommunities);
     filterInput.addEventListener('keydown', function(e) {
@@ -1660,7 +1660,7 @@ function hookupCommunityFilter() {
             clearFilter();
         }
     });
-    
+
     if (clearButton) {
         clearButton.addEventListener('click', clearFilter);
     }
@@ -1677,7 +1677,7 @@ function hookupCommunityFilter() {
             }
         });
     });
-    
+
     // Observe the communities menu for changes (HTMX loading)
     const communitiesMenu = document.querySelector('.communities_menu');
     if (communitiesMenu) {
@@ -1728,7 +1728,7 @@ function addLanguageCheck(languageSelect, warningDiv, recipientLanguage) {
     }
 
     console.log(languageSelect, warningDiv, recipientLanguage);
-    
+
 
     if (languageSelect && warningDiv) {
         // Initial check
@@ -1790,7 +1790,7 @@ function setupVotingLongPress() {
                     const touch = event.touches[0];
                     const deltaX = Math.abs(touch.clientX - touchStartX);
                     const deltaY = Math.abs(touch.clientY - touchStartY);
-                    
+
                     // If the user has moved more than 10 pixels in any direction, consider it scrolling
                     if (deltaX > 10 || deltaY > 10) {
                         hasMoved = true;
@@ -1814,7 +1814,7 @@ function setupVotingLongPress() {
                     event.stopPropagation();
                 }
             });
-            
+
             element.dataset.votingLongPressSetup = 'true';
         }
     });

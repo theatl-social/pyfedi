@@ -226,24 +226,24 @@
       sortCardsByPing();
       updateSpeedIcons();
     }
-    
+
     function updatePingSortValues() {
         const cards = document.querySelectorAll('.card[data-sort]');
         cards.forEach(card => {
             const cardElement = card.closest('.col-12');
             if (!cardElement) return;
-            
+
             // Find the instance domain from the card
             const domainLink = card.querySelector('a[href*="://"]');
             if (!domainLink) return;
-            
+
             const domain = domainLink.href.match(/https?:\/\/([^\/]+)/)?.[1];
             if (!domain) return;
-            
+
             const domainUrl = `https://${domain}/health2`;
             const pingResult = window.pingResults[domainUrl];
             let sortValue = 10000; // Default for no ping result
-            
+
             if (pingResult && typeof pingResult === 'number') {
                 sortValue = pingResult;
             } else if (pingResult === 'timeout') {
@@ -251,43 +251,43 @@
             } else if (pingResult === 'error') {
                 sortValue = 9998;
             }
-            
+
             card.setAttribute('data-sort', sortValue);
         });
     }
 
     // Instance chooser search functionality
     let searchTimeout;
-    
+
     function collectFormData() {
         const form = document.querySelector('form');
         const formData = new FormData(form);
         const params = new URLSearchParams();
-        
+
         for (const [key, value] of formData.entries()) {
             if (value && value !== 'all') {
                 params.append(key, value);
             }
         }
-        
+
         return params.toString();
     }
-    
+
     async function searchInstances() {
         const loadingIndicator = document.getElementById('loading-indicator');
         const resultsContainer = document.getElementById('search-results');
-        
+
         // Show loading indicator
         loadingIndicator.classList.remove('d-none');
-        
+
         try {
             const queryString = collectFormData();
             const response = await fetch(`/api/alpha/site/instance_chooser_search?${queryString}`);
-            
+
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
-            
+
             const data = await response.json();
             renderResults(data.result || []);
         } catch (error) {
@@ -298,10 +298,10 @@
             loadingIndicator.classList.add('d-none');
         }
     }
-    
+
     function renderResults(instances) {
         const resultsContainer = document.getElementById('search-results');
-        
+
         if (instances.length === 0) {
             resultsContainer.innerHTML = '<div class="col-12"><p class="text-center">No instances found matching your criteria.</p></div>';
             return;
@@ -312,7 +312,7 @@
             const domainUrl = `https://${instance.domain}/health2`;
             const pingResult = window.pingResults[domainUrl];
             let sortValue = 10000; // Default for no ping result
-            
+
             if (pingResult && typeof pingResult === 'number') {
                 sortValue = pingResult;
             } else if (pingResult === 'timeout') {
@@ -322,7 +322,7 @@
             } else {
                 sortValue = 10000;
             }
-            
+
             return `
             <div class="col-12 col-md-4 col-lg-3 mb-3">
                 <div class="card h-100" data-id="${instance.id}" data-sort="${sortValue}">
@@ -355,69 +355,69 @@
             </div>
             `;
         }).join('');
-        
+
         resultsContainer.innerHTML = cardsHtml;
-        
+
         // Store instances data as a lookup map by ID for modal access
         window.currentInstancesMap = {};
         instances.forEach(instance => {
             window.currentInstancesMap[instance.id] = instance;
         });
-        
+
         // Add event listeners to More buttons
         addMoreButtonListeners();
-        
+
         // Sort by ping results
         sortCardsByPing();
-        
+
         // Update speed icons
         updateSpeedIcons();
     }
-    
+
     function sortCardsByPing() {
         const resultsContainer = document.getElementById('search-results');
         const cards = Array.from(resultsContainer.children);
-        
+
         // Sort cards by data-sort attribute (ascending - lowest ping first)
         cards.sort((a, b) => {
             const aSort = parseInt(a.querySelector('.card').getAttribute('data-sort')) || 10000;
             const bSort = parseInt(b.querySelector('.card').getAttribute('data-sort')) || 10000;
             return aSort - bSort;
         });
-        
+
         // Re-append the sorted cards to the container
         cards.forEach(card => resultsContainer.appendChild(card));
     }
-    
+
     function calculateSpeedCategories() {
         // Get all numeric ping results
         const numericPings = Object.values(window.pingResults)
             .filter(ping => typeof ping === 'number' && ping > 0)
             .sort((a, b) => a - b);
-        
+
         if (numericPings.length === 0) return { fast: [], medium: [], slow: [] };
-        
+
         const third = Math.floor(numericPings.length / 3);
         const twoThirds = Math.floor((numericPings.length * 2) / 3);
-        
+
         return {
             fast: numericPings.slice(0, third),
             medium: numericPings.slice(third, twoThirds),
             slow: numericPings.slice(twoThirds)
         };
     }
-    
+
     function getSpeedCategory(ping) {
         if (typeof ping !== 'number' || ping <= 0) return 'unknown';
-        
+
         const categories = calculateSpeedCategories();
         const allPings = [...categories.fast, ...categories.medium, ...categories.slow];
-        
+
         if (allPings.length === 0) return 'unknown';
-        
+
         const third = Math.floor(allPings.length / 3);
         const twoThirds = Math.floor((allPings.length * 2) / 3);
-        
+
         if (ping <= allPings[third - 1] || (third === 0 && ping <= allPings[0])) {
             return 'fast';
         } else if (ping <= allPings[twoThirds - 1] || (twoThirds === third && ping <= allPings[third])) {
@@ -426,23 +426,23 @@
             return 'slow';
         }
     }
-    
+
     function updateSpeedIcons() {
         // Go through all current instances and update their speed icons
         if (!window.currentInstancesMap) return;
-        
+
         Object.values(window.currentInstancesMap).forEach(instance => {
             const domainId = instance.domain.replace(/\./g, '-');
             const speedElement = document.getElementById(`speed_${domainId}`);
-            
+
             if (!speedElement) return;
-            
+
             const domainUrl = `https://${instance.domain}/health2`;
             const pingResult = window.pingResults[domainUrl];
-            
+
             let icon = '';
             let title = '';
-            
+
             if (typeof pingResult === 'number' && pingResult > 0) {
                 const category = getSpeedCategory(pingResult);
                 switch (category) {
@@ -469,22 +469,22 @@
                 icon = '<span class="text-muted" title="Testing speed...">⏳</span>';
                 title = 'Testing...';
             }
-            
+
             speedElement.innerHTML = icon;
             speedElement.title = title;
         });
     }
-    
+
     function renderError(message) {
         const resultsContainer = document.getElementById('search-results');
         resultsContainer.innerHTML = `<div class="col-12"><div class="alert alert-danger">${message}</div></div>`;
     }
-    
+
     function debounceSearch() {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(searchInstances, 300);
     }
-    
+
     function addMoreButtonListeners() {
         const moreButtons = document.querySelectorAll('.more-info-btn');
         moreButtons.forEach(button => {
@@ -498,18 +498,18 @@
             });
         });
     }
-    
+
     function showInstanceModal(instance) {
         // Populate modal with instance data
         document.getElementById('modal-logo').src = instance.logo_url;
         document.getElementById('modal-name').textContent = instance.name;
         document.getElementById('modal-domain').textContent = instance.domain;
         document.getElementById('modal-elevator-pitch').textContent = instance.elevator_pitch;
-        
+
         // Set links
         document.getElementById('modal-join-link').href = `https://${instance.domain}/auth/register`;
         document.getElementById('modal-instance-link').href = `https://${instance.domain}`;
-        
+
         // Handle optional fields
         const descriptionSection = document.getElementById('modal-description-section');
         const modalDescription = document.getElementById('modal-description');
@@ -519,7 +519,7 @@
         } else {
             descriptionSection.style.display = 'none';
         }
-        
+
         const aboutSection = document.getElementById('modal-about-section');
         const modalAbout = document.getElementById('modal-about');
         if (instance.about && instance.about.trim()) {
@@ -528,7 +528,7 @@
         } else {
             aboutSection.style.display = 'none';
         }
-        
+
         const sidebarSection = document.getElementById('modal-sidebar-section');
         const modalSidebar = document.getElementById('modal-sidebar');
         if (instance.sidebar && instance.sidebar.trim()) {
@@ -537,7 +537,7 @@
         } else {
             sidebarSection.style.display = 'none';
         }
-        
+
         // Populate instance info
         document.getElementById('modal-maturity').textContent = instance.maturity || 'Unknown';
         document.getElementById('modal-months').textContent = instance.monthsmonitored ? `${instance.monthsmonitored} months` : 'Unknown';
@@ -545,7 +545,7 @@
         document.getElementById('modal-newbie').textContent = instance.newbie_friendly ? 'Yes' : 'No';
         document.getElementById('modal-language').textContent = instance.language || 'Not specified';
         document.getElementById('modal-registration').textContent = instance.registration_mode === 'RequireApplication' ? 'Open' : (instance.registration_mode || 'Unknown');
-        
+
         // Handle TOS link
         const tosLink = document.getElementById('modal-tos-link');
         if (instance.tos_url && instance.tos_url.trim()) {
@@ -554,7 +554,7 @@
         } else {
             tosLink.classList.add('d-none');
         }
-        
+
         // Handle federation status
         const watchedDomains = {
             'hexbear.net': 'hexbear-status',
@@ -562,15 +562,15 @@
             'lemmygrad.ml': 'lemmygrad-status',
             'lemmy.ml': 'lemmy-status'
         };
-        
+
         const defederatedDomains = instance.defederation || [];
 
         countDefederated = 0;
-        
+
         Object.entries(watchedDomains).forEach(([domain, elementId]) => {
             const statusElement = document.getElementById(elementId);
             const isDefederated = defederatedDomains.includes(domain);
-            
+
             if (isDefederated) {
                 countDefederated += 1
                 // Green tick for blocked
@@ -594,32 +594,32 @@
 
         const defederationElement = document.getElementById('modal-defederation')
         defederationElement.innerHTML = defederationQuality;
-        
+
         // Show the modal
         const modal = new bootstrap.Modal(document.getElementById('instanceModal'));
         modal.show();
     }
-    
+
     // Add event listeners
     document.addEventListener('DOMContentLoaded', function() {
         const form = document.querySelector('form');
         const searchInput = form.querySelector('input[name="q"]');
         const selectElements = form.querySelectorAll('select');
-        
+
         // Search input with debounce
         searchInput.addEventListener('input', debounceSearch);
-        
+
         // Select dropdowns trigger immediate search
         selectElements.forEach(select => {
             select.addEventListener('change', searchInstances);
         });
-        
+
         // Prevent form submission
         form.addEventListener('submit', function(e) {
             e.preventDefault();
             searchInstances();
         });
-        
+
         // Perform initial search
         searchInstances();
     });

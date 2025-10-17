@@ -5,6 +5,7 @@ This test verifies that the startup validation doesn't leave stale
 objects in the SQLAlchemy session that could cause issues for
 subsequent requests.
 """
+
 import pytest
 from unittest.mock import patch, MagicMock
 from app import create_app, db
@@ -14,13 +15,14 @@ from app.startup_validation import run_startup_validations
 
 class TestConfig:
     """Test configuration"""
+
     TESTING = True
     WTF_CSRF_ENABLED = False
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
     MAIL_SUPPRESS_SEND = True
-    SERVER_NAME = 'test.localhost'
-    SECRET_KEY = 'test-secret-key'
-    CACHE_TYPE = 'null'
+    SERVER_NAME = "test.localhost"
+    SECRET_KEY = "test-secret-key"
+    CACHE_TYPE = "null"
     CELERY_ALWAYS_EAGER = True
 
 
@@ -33,11 +35,7 @@ def app():
         with app.app_context():
             db.create_all()
             # Create a Site object (required for many operations)
-            site = Site(
-                id=1,
-                name='Test Site',
-                default_theme='piefed'
-            )
+            site = Site(id=1, name="Test Site", default_theme="piefed")
             db.session.add(site)
             db.session.commit()
             yield app
@@ -55,15 +53,15 @@ class TestStartupSessionCleanup:
         with app.app_context():
             # Create an incomplete user that will be fixed
             incomplete_user = User(
-                user_name='test_cleanup',
-                email='cleanup@example.com',
-                password_hash='dummy_hash',
+                user_name="test_cleanup",
+                email="cleanup@example.com",
+                password_hash="dummy_hash",
                 instance_id=1,
                 verified=True,
                 banned=False,
                 deleted=False,
                 private_key=None,  # Will trigger fix
-                created=utcnow()
+                created=utcnow(),
             )
             db.session.add(incomplete_user)
             db.session.commit()
@@ -73,7 +71,7 @@ class TestStartupSessionCleanup:
             result = run_startup_validations()
 
             # Verify user was fixed
-            assert result['activitypub_validation']['users_fixed'] == 1
+            assert result["activitypub_validation"]["users_fixed"] == 1
 
             # The critical test: after validation, the session should be clean
             # Either empty or only contain fresh objects
@@ -82,7 +80,7 @@ class TestStartupSessionCleanup:
             # This would fail if stale objects are in session
             site = Site.query.get(1)
             assert site is not None
-            assert site.default_theme == 'piefed'  # Should not raise KeyError
+            assert site.default_theme == "piefed"  # Should not raise KeyError
 
             # Verify we can access the user again fresh
             user = User.query.get(user_id)
@@ -102,10 +100,12 @@ class TestStartupSessionCleanup:
             # These should not raise "Deferred loader failed" errors
             try:
                 theme = site.default_theme
-                assert theme is not None or theme is None  # Either is fine, just shouldn't error
+                assert (
+                    theme is not None or theme is None
+                )  # Either is fine, just shouldn't error
 
                 name = site.name
-                assert name == 'Test Site'
+                assert name == "Test Site"
 
             except KeyError as e:
                 pytest.fail(f"Deferred attribute loading failed after validation: {e}")
@@ -115,29 +115,29 @@ class TestStartupSessionCleanup:
         with app.app_context():
             # Create test data
             user1 = User(
-                user_name='user1',
-                email='user1@example.com',
-                password_hash='hash',
+                user_name="user1",
+                email="user1@example.com",
+                password_hash="hash",
                 instance_id=1,
                 verified=True,
                 private_key=None,
-                created=utcnow()
+                created=utcnow(),
             )
             user2 = User(
-                user_name='user2',
-                email='user2@example.com',
-                password_hash='hash',
+                user_name="user2",
+                email="user2@example.com",
+                password_hash="hash",
                 instance_id=1,
                 verified=True,
                 private_key=None,
-                created=utcnow()
+                created=utcnow(),
             )
             db.session.add_all([user1, user2])
             db.session.commit()
 
             # Run validation
             result = run_startup_validations()
-            assert result['activitypub_validation']['users_fixed'] == 2
+            assert result["activitypub_validation"]["users_fixed"] == 2
 
             # Now perform various queries that should all work
             # Query 1: Get all users
@@ -145,7 +145,7 @@ class TestStartupSessionCleanup:
             assert len(all_users) >= 2
 
             # Query 2: Get specific user
-            specific_user = User.query.filter_by(user_name='user1').first()
+            specific_user = User.query.filter_by(user_name="user1").first()
             assert specific_user is not None
 
             # Query 3: Access lazy-loaded attributes
@@ -161,13 +161,13 @@ class TestStartupSessionCleanup:
         with app.app_context():
             # Create incomplete user
             user = User(
-                user_name='identity_test',
-                email='identity@example.com',
-                password_hash='hash',
+                user_name="identity_test",
+                email="identity@example.com",
+                password_hash="hash",
                 instance_id=1,
                 verified=True,
                 private_key=None,
-                created=utcnow()
+                created=utcnow(),
             )
             db.session.add(user)
             db.session.commit()
@@ -180,7 +180,7 @@ class TestStartupSessionCleanup:
             del user
 
             # Query again - should be fresh instance (different Python object)
-            user_after = User.query.filter_by(user_name='identity_test').first()
+            user_after = User.query.filter_by(user_name="identity_test").first()
 
             # Verify it's a fresh object (not the same Python instance)
             # Note: This test is subtle - we're checking that the session
@@ -197,7 +197,7 @@ class TestStartupSessionCleanup:
             result = run_startup_validations()
 
             # Should complete successfully
-            assert result['activitypub_validation']['users_fixed'] == 0
+            assert result["activitypub_validation"]["users_fixed"] == 0
 
             # Session should still be clean
             site = Site.query.get(1)
@@ -208,26 +208,26 @@ class TestStartupSessionCleanup:
         with app.app_context():
             # Create user that will be processed
             user = User(
-                user_name='error_test',
-                email='error@example.com',
-                password_hash='hash',
+                user_name="error_test",
+                email="error@example.com",
+                password_hash="hash",
                 instance_id=1,
                 verified=True,
                 private_key=None,
-                created=utcnow()
+                created=utcnow(),
             )
             db.session.add(user)
             db.session.commit()
 
             # Mock finalize_user_setup to raise an error
-            with patch('app.startup_validation.finalize_user_setup') as mock_finalize:
+            with patch("app.startup_validation.finalize_user_setup") as mock_finalize:
                 mock_finalize.side_effect = Exception("Simulated error")
 
                 # Run validation - should not crash
                 result = run_startup_validations()
 
                 # Should report 0 users fixed due to error
-                assert result['activitypub_validation']['users_fixed'] == 0
+                assert result["activitypub_validation"]["users_fixed"] == 0
 
                 # Session should still be cleaned up (finally block)
                 # This should work without errors
@@ -244,18 +244,18 @@ class TestSessionCleanupWithAppContext:
         # First context - run validation
         with app.app_context():
             db.create_all()
-            site = Site(id=1, name='Test', default_theme='piefed')
+            site = Site(id=1, name="Test", default_theme="piefed")
             db.session.add(site)
             db.session.commit()
 
             user = User(
-                user_name='context_test',
-                email='context@example.com',
-                password_hash='hash',
+                user_name="context_test",
+                email="context@example.com",
+                password_hash="hash",
                 instance_id=1,
                 verified=True,
                 private_key=None,
-                created=utcnow()
+                created=utcnow(),
             )
             db.session.add(user)
             db.session.commit()
@@ -275,12 +275,12 @@ class TestSessionCleanupWithAppContext:
             # This should not raise KeyError about deferred attributes
             try:
                 theme = site.default_theme
-                assert theme == 'piefed'
+                assert theme == "piefed"
             except KeyError as e:
                 pytest.fail(f"Session was polluted from previous context: {e}")
 
             # Should be able to query users
-            user = User.query.filter_by(user_name='context_test').first()
+            user = User.query.filter_by(user_name="context_test").first()
             assert user is not None
             assert user.private_key is not None  # Should be fixed
 
@@ -297,25 +297,25 @@ def test_session_cleanup_integration(app):
     """
     with app.app_context():
         db.create_all()
-        site = Site(id=1, name='Integration Test', default_theme='piefed')
+        site = Site(id=1, name="Integration Test", default_theme="piefed")
         db.session.add(site)
 
         # Create incomplete user
         user = User(
-            user_name='integration_test',
-            email='integration@example.com',
-            password_hash='hash',
+            user_name="integration_test",
+            email="integration@example.com",
+            password_hash="hash",
             instance_id=1,
             verified=True,
             private_key=None,
-            created=utcnow()
+            created=utcnow(),
         )
         db.session.add(user)
         db.session.commit()
 
         # Simulate app startup - run validation
         result = run_startup_validations()
-        assert result['activitypub_validation']['users_fixed'] == 1
+        assert result["activitypub_validation"]["users_fixed"] == 1
 
     # Simulate new request context (like Gunicorn worker handling request)
     with app.app_context():
@@ -326,13 +326,13 @@ def test_session_cleanup_integration(app):
 
         # Should not raise: KeyError: "Deferred loader for attribute 'default_theme' failed"
         theme = site.default_theme
-        assert theme == 'piefed'
+        assert theme == "piefed"
 
         # User should be properly fixed
-        user = User.query.filter_by(user_name='integration_test').first()
+        user = User.query.filter_by(user_name="integration_test").first()
         assert user.private_key is not None
         assert user.ap_profile_id is not None
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

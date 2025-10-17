@@ -31,7 +31,7 @@
             <script type="text/javascript" nonce="{{ nonce }}">
             // Tag data from backend
             var tags = {{ tags_data | tojson }};
-            
+
             // Co-occurrence matrix: how often tags appear together in posts
             // Higher values = more frequently used together = closer in 3D space
             var tagRelationships = {{ tag_relationships | tojson }};

@@ -28,29 +28,44 @@ def validate_user_availability(username, email):
         dict: Validation result with availability and suggestions
     """
     from flask import current_app
-    
-    result = {"username_available": True, "email_available": True, "username_suggestions": [], "validation_errors": {}}
+
+    result = {
+        "username_available": True,
+        "email_available": True,
+        "username_suggestions": [],
+        "validation_errors": {},
+    }
 
     # Check exact case username match
     existing_user = User.query.filter_by(user_name=username).first()
-    
+
     # Check case-insensitive conflicts (different case, same username)
-    case_conflict = User.query.filter(User.user_name.ilike(username)).filter(User.user_name != username).first()
-    
+    case_conflict = (
+        User.query.filter(User.user_name.ilike(username))
+        .filter(User.user_name != username)
+        .first()
+    )
+
     # Check ActivityPub profile ID conflicts
     ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{username.lower()}"
     ap_conflict = User.query.filter_by(ap_profile_id=ap_profile_id).first()
-    
+
     if existing_user or case_conflict or ap_conflict:
         result["username_available"] = False
         result["username_suggestions"] = generate_username_suggestions(username)
-        
+
         if existing_user:
-            result["validation_errors"]["username"] = f"Username '{username}' is already taken"
+            result["validation_errors"]["username"] = (
+                f"Username '{username}' is already taken"
+            )
         elif case_conflict:
-            result["validation_errors"]["username"] = f"Username '{username}' conflicts with existing user '{case_conflict.user_name}' (case difference)"
+            result["validation_errors"]["username"] = (
+                f"Username '{username}' conflicts with existing user '{case_conflict.user_name}' (case difference)"
+            )
         elif ap_conflict:
-            result["validation_errors"]["username"] = f"Username '{username}' would create ActivityPub URL conflict with existing user"
+            result["validation_errors"]["username"] = (
+                f"Username '{username}' would create ActivityPub URL conflict with existing user"
+            )
 
     # Check email availability
     existing_email = User.query.filter_by(email=email).first()
@@ -90,7 +105,9 @@ def create_private_user(user_data):
             error_details["username_suggestions"] = validation["username_suggestions"]
 
         log_registration_attempt(username, email, False, "validation_failed")
-        raise ValidationError("User validation failed", field_name="validation", details=error_details)
+        raise ValidationError(
+            "User validation failed", field_name="validation", details=error_details
+        )
 
     # Generate password if not provided
     password = user_data.get("password")
@@ -136,15 +153,20 @@ def create_private_user(user_data):
         # Finalize user setup for ActivityPub federation (generates keypair, sets AP URLs, etc.)
         if auto_activate:
             from app.utils import finalize_user_setup
+
             finalize_user_setup(new_user)
         else:
             # If not auto-activated, finalize_user_setup will be called when admin approves/activates
-            current_app.logger.info(f"User {user_id} created but not finalized - awaiting activation")
+            current_app.logger.info(
+                f"User {user_id} created but not finalized - awaiting activation"
+            )
 
         # Send welcome email if requested (implement this based on existing email system)
         if send_welcome_email:
             # TODO: Implement welcome email sending
-            current_app.logger.info(f"Welcome email requested for user {user_id} but not yet implemented")
+            current_app.logger.info(
+                f"Welcome email requested for user {user_id} but not yet implemented"
+            )
 
         db.session.commit()
 
@@ -166,7 +188,9 @@ def create_private_user(user_data):
         if generated_password:
             response["generated_password"] = generated_password
 
-        current_app.logger.info(f"Private registration successful: user_id={user_id}, username={username}")
+        current_app.logger.info(
+            f"Private registration successful: user_id={user_id}, username={username}"
+        )
 
         return response
 
@@ -223,7 +247,14 @@ def get_user_by_lookup(username=None, email=None, user_id=None):
 
 
 def list_users(
-    local_only=True, verified=None, active=None, search=None, sort="created_desc", page=1, limit=50, last_seen_days=None
+    local_only=True,
+    verified=None,
+    active=None,
+    search=None,
+    sort="created_desc",
+    page=1,
+    limit=50,
+    last_seen_days=None,
 ):
     """
     List users with filtering and pagination.
@@ -258,7 +289,9 @@ def list_users(
 
     if search:
         search_term = f"%{search}%"
-        query = query.filter(db.or_(User.user_name.ilike(search_term), User.email.ilike(search_term)))
+        query = query.filter(
+            db.or_(User.user_name.ilike(search_term), User.email.ilike(search_term))
+        )
 
     if last_seen_days:
         cutoff_date = utcnow() - timedelta(days=last_seen_days)
@@ -284,7 +317,9 @@ def list_users(
         query = query.order_by(User.created.desc())
 
     # Paginate
-    paginated = query.paginate(page=page, per_page=min(limit, 100), error_out=False)  # Cap at 100
+    paginated = query.paginate(
+        page=page, per_page=min(limit, 100), error_out=False
+    )  # Cap at 100
 
     # Build user list
     users = []

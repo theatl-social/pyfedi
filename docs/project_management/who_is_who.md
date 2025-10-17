@@ -8,4 +8,3 @@ is inadvertently left out of a decision.
 - https://piefed.social/u/rimu, https://mastodon.nzoss.nz/@rimu
 
 Founder and lead developer. Approver of PRs, payer of bills.
-

@@ -39,7 +39,9 @@ class LibreTranslateAPI:
         if self.url[-1] != "/":
             self.url += "/"
 
-    def translate(self, q: str, source: str = "en", target: str = "es", timeout: int = 30) -> Any:
+    def translate(
+        self, q: str, source: str = "en", target: str = "es", timeout: int = 30
+    ) -> Any:
         """Translate string
 
         Args:

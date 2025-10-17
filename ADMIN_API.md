@@ -416,7 +416,7 @@ class PieFedAdmin:
             'X-PieFed-Secret': secret,
             'Content-Type': 'application/json'
         }
-    
+
     def create_user(self, username, email, display_name=None):
         data = {
             'username': username,
@@ -430,7 +430,7 @@ class PieFedAdmin:
             headers=self.headers
         )
         return response.json()
-    
+
     def ban_user(self, user_id, reason):
         data = {'reason': reason}
         response = requests.post(
@@ -459,7 +459,7 @@ call_admin_api() {
     local endpoint="$1"
     local method="${2:-GET}"
     local data="$3"
-    
+
     if [ -n "$data" ]; then
         curl -s -X "$method" \
              -H "X-PieFed-Secret: $SECRET" \

@@ -31,7 +31,7 @@ else
     echo ""
     echo "$heads_output"
     echo ""
-    
+
     # Extract revision IDs (up to 4 heads supported)
     heads_array=()
     while IFS= read -r line; do
@@ -40,21 +40,21 @@ else
             heads_array+=("$revision")
         fi
     done <<< "$heads_output"
-    
+
     echo "Found revisions: ${heads_array[@]}"
     echo ""
-    
+
     # Ask for confirmation
     read -p "Create merge migration for these heads? (y/n): " -n 1 -r
     echo ""
-    
+
     if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Generate merge message
         timestamp=$(date +"%Y%m%d")
         merge_msg="merge migration heads $timestamp"
-        
+
         echo "Creating merge migration..."
-        
+
         # Create merge migration (supports 2-4 heads)
         if [ ${#heads_array[@]} -eq 2 ]; then
             SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge ${heads_array[0]} ${heads_array[1]} -m "$merge_msg"
@@ -67,7 +67,7 @@ else
             echo "Manual intervention required"
             exit 1
         fi
-        
+
         echo ""
         echo "✅ Merge migration created successfully!"
         echo ""

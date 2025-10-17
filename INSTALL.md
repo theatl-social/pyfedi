@@ -4,7 +4,7 @@
 * [Choose your path - easy way or hard way](#choose-path)
 * [Setup Database](#setup-database)
 * [Install Python Libraries](#install-python-libraries)
-* [Install additional requirements](#install-additional-requirements)      
+* [Install additional requirements](#install-additional-requirements)
 * [Setup pyfedi](#setup-pyfedi)
 * [Setup .env file](#setup-env-file)
 * [Initialise Database and Setup Admin account](#initialise-database-and-setup-admin-account)
@@ -16,7 +16,7 @@
 * [Accepting donations through Stripe](#stripe)
 * [Testing and debugging](#testing)
 * [Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
-* [Notes for Windows (WSL2)](#notes-for-windows-wsl2)        
+* [Notes for Windows (WSL2)](#notes-for-windows-wsl2)
 * [Notes for Pip Package Management](#notes-for-pip-package-management)
 
 <div id="minimum"></div>
@@ -86,14 +86,14 @@ sudo apt install libpq-dev postgresql
 
 #### Create new DB user
 
-Choose a username and password. To use 'pyfedi' for both:     
+Choose a username and password. To use 'pyfedi' for both:
 ```bash
 sudo -iu postgres psql -c "CREATE USER pyfedi WITH PASSWORD 'pyfedi';"
 ```
 
 #### Create new database
 
-Choose a database name, owned by your new user. For a database called and owned by 'pyfedi':      
+Choose a database name, owned by your new user. For a database called and owned by 'pyfedi':
 ```bash
 sudo -iu postgres psql -c "CREATE DATABASE pyfedi WITH OWNER pyfedi;"
 ```
@@ -102,20 +102,20 @@ sudo -iu postgres psql -c "CREATE DATABASE pyfedi WITH OWNER pyfedi;"
 
 ## Install Python Libraries
 
-[Pre-requisites for Mac OS](#pre-requisites-for-mac-os)         
-[Notes for Windows (WSL2)](#notes-for-windows-wsl2)        
+[Pre-requisites for Mac OS](#pre-requisites-for-mac-os)
+[Notes for Windows (WSL2)](#notes-for-windows-wsl2)
 
-For installation environments that use `apt` as a package manager:   
+For installation environments that use `apt` as a package manager:
 ```bash
 sudo apt install python3-pip python3-venv python3-dev python3-psycopg2
-``` 
+```
 
 
 <div id="install-additional-requirements"></div>
 
 ## Install additional requirements
 
-For installation environments that use 'apt' as a package manager:   
+For installation environments that use 'apt' as a package manager:
 
 ```bash
 sudo apt install redis-server
@@ -150,13 +150,13 @@ python3 -m venv ./venv
 source venv/bin/activate
 ```
 
-* Use pip to install requirements           
+* Use pip to install requirements
 
 ```bash
 pip install wheel
 pip install -r requirements.txt
 ```
-(see [Notes for Windows (WSL2)](#windows-wsl2) if appropriate)        
+(see [Notes for Windows (WSL2)](#windows-wsl2) if appropriate)
 
 <div id="setup-env-file"></div>
 
@@ -169,7 +169,7 @@ pip install -r requirements.txt
     DATABASE_URL=postgresql+psycopg2://username:password@localhost/database_name
     ```
     * Also change `SECRET_KEY` to some random sequence of numbers and letters.
-    
+
 
 ### Extra info
 
@@ -247,12 +247,12 @@ your judgement.
 
 <div id="run-the-app"></div>
 
-## Run the app    
+## Run the app
 
 ```bash
 flask run
 ```
-(open web browser at http://127.0.0.1:5000)          
+(open web browser at http://127.0.0.1:5000)
 (log in with username and password from admin account)
 
 For development purposes, that should be enough - see ./dev_notes.txt for a few more bits and pieces. Most of what follows is for running PieFed in production.
@@ -261,7 +261,7 @@ For development purposes, that should be enough - see ./dev_notes.txt for a few 
 
 ## Database Management
 
-In future if you use git pull and notice some new files in `migrations/versions/*`, you need to do:    
+In future if you use git pull and notice some new files in `migrations/versions/*`, you need to do:
 
 ```bash
 source venv/bin/activate #if not already in virtual environment
@@ -275,8 +275,8 @@ create a migration based on recent changes to `app/models.py`:
 ```bash
 flask db migrate -m "users table"
 ```
-     
-run migrations:         
+
+run migrations:
 ```bash
 flask db upgrade
 ```
@@ -303,7 +303,7 @@ Federation doesn't work without SSL, without a domain name or without your serve
 
 The site will still run without federation. You can create local communities and post in them...
 
-My way around this is to use ngrok.com, which is a quick and simple way to create a temporary VPN with a domain and SSL. The free plan comes with ephermeral domain names that change every few days, which will break federation, or one randomly-named static domain that will need re-launching every few days. $10 per month will get you https://yourwhatever.ngrok.app which won't change. 
+My way around this is to use ngrok.com, which is a quick and simple way to create a temporary VPN with a domain and SSL. The free plan comes with ephermeral domain names that change every few days, which will break federation, or one randomly-named static domain that will need re-launching every few days. $10 per month will get you https://yourwhatever.ngrok.app which won't change.
 
 Once you have ngrok working, edit the `.env` file and change the `SERVER_NAME` variable to your new domain name (all lower case).
 
@@ -372,7 +372,7 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
-    
+
 
 #### Celery
 
@@ -662,7 +662,7 @@ LDAP_ATTR_PASSWORD_LOGIN = 'userPassword'
 
 Test this out by going to `https://yourinstance.tld/test_ldap_login?username=something&password=something_else`
 
-PieFed can also **write to** a LDAP server so that other services can log in using the account details they use on your instance. 
+PieFed can also **write to** a LDAP server so that other services can log in using the account details they use on your instance.
 piefed.social uses this to let people log in to chat.piefed.social and translate.piefed.social using their piefed.social account. The
 environment variables for this are very similar:
 
@@ -752,12 +752,12 @@ You can also run `flask config_check` to validate your configuration and identif
 
 #### Install Python Version Manager (pyenv)
 see this site: https://opensource.com/article/19/5/python-3-default-mac
-    
+
 ```bash
 brew install pyenv
 ```
 
-#### Install Python3 version and set as default (with pyenv) 
+#### Install Python3 version and set as default (with pyenv)
 
 ```bash
 pyenv install 3.8.6
@@ -766,20 +766,20 @@ pyenv global 3.7.3
 
 Note..
 You may see this error when running `pip install -r requirements.txt` in regards to psycopg2:
-    
+
     ld: library not found for -lssl
     clang: error: linker command failed with exit code 1 (use -v to see invocation)
     error: command 'clang' failed with exit status 1
 
 If this happens try installing openssl...
 Install openssl with brew install openssl if you don't have it already.
-    
+
 `brew install openssl`
-    
+
 Add openssl path to LIBRARY_PATH :
-    
+
     export LIBRARY_PATH=$LIBRARY_PATH:/usr/local/opt/openssl/lib/
-    
+
 ---
 
 <div id="notes-for-windows-wsl2"></div>
@@ -790,7 +790,7 @@ Add openssl path to LIBRARY_PATH :
     Python 3.10+ or 3.11+ may cause some package or compatibility errors. If you are having issues installing packages from
     `requirements.txt`, try using Python 3.8 or 3.9 instead with `pyenv` (https://github.com/pyenv/pyenv).
     Follow all the setup instructions in the pyenv documentation and setup any version of either Python 3.8 or 3.9.
-    If you are getting installation errors or missing packages with pyenv, run 
+    If you are getting installation errors or missing packages with pyenv, run
 
 ```bash
 sudo apt-update
@@ -809,7 +809,7 @@ sudo apt-get install python3-venv
 
 #### Setup venv first before installing other packages
 **Note: **
-    (Replace <3.9> with your version number if you are using another version of Python, 
+    (Replace <3.9> with your version number if you are using another version of Python,
     e.g. 'sudo apt-get install python3.10-venv' for Python 3.10. Repeat for the rest of the instructions below.)
 
 ```bash
@@ -836,7 +836,7 @@ make sure you have `wheel` installed:
 ```bash
 pip install wheel
 ```
-    
+
 install packages from a file:
 ```bash
 pip install -r requirements.txt

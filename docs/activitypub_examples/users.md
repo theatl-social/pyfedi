@@ -4,7 +4,7 @@ Users on the fediverse are [Person](https://www.w3.org/TR/activitystreams-vocabu
 
 ## User objects as JSON
 
-Server-to-server or server-to-client traffic that represents Users are sent as .json. I.e. when a remote server wishes to find out information about your user account on your local server, the remote server will be sent that data in a json payload. 
+Server-to-server or server-to-client traffic that represents Users are sent as .json. I.e. when a remote server wishes to find out information about your user account on your local server, the remote server will be sent that data in a json payload.
 
 ### Getting user information
 
@@ -54,4 +54,3 @@ The result should look something like this:
     "type": "Person"
 }
 ```
-

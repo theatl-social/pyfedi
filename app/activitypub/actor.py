@@ -9,16 +9,33 @@ from flask import current_app
 from sqlalchemy import or_
 
 from app import cache, db
-from app.activitypub.util import get_request, signed_get_request, actor_json_to_model, refresh_user_profile, \
-    refresh_community_profile, refresh_feed_profile, extract_domain_and_actor, normalise_actor_string
+from app.activitypub.util import (
+    get_request,
+    signed_get_request,
+    actor_json_to_model,
+    refresh_user_profile,
+    refresh_community_profile,
+    refresh_feed_profile,
+    extract_domain_and_actor,
+    normalise_actor_string,
+)
 from app.models import User, Community, Feed, Site
-from app.utils import utcnow, get_setting, actor_contains_blocked_words, actor_profile_contains_blocked_words, \
-    instance_banned, low_value_reposters, instance_allowed
+from app.utils import (
+    utcnow,
+    get_setting,
+    actor_contains_blocked_words,
+    actor_profile_contains_blocked_words,
+    instance_banned,
+    low_value_reposters,
+    instance_allowed,
+)
 
 
 def find_local_community(actor_url: str) -> Community:
     """Find a local community by URL."""
-    return db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
+    return (
+        db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
+    )
 
 
 def find_local_feed(actor_url: str) -> Feed:
@@ -28,9 +45,15 @@ def find_local_feed(actor_url: str) -> Feed:
 
 def find_local_user(actor_url: str) -> User:
     """Find a local user by URL or alt name."""
-    alt_user_name = actor_url.rsplit('/', 1)[-1]
-    return db.session.query(User).filter(or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)).filter_by(
-        ap_id=None, banned=False).first()
+    alt_user_name = actor_url.rsplit("/", 1)[-1]
+    return (
+        db.session.query(User)
+        .filter(
+            or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)
+        )
+        .filter_by(ap_id=None, banned=False)
+        .first()
+    )
 
 
 def validate_remote_actor(actor_url, actor=None):
@@ -38,7 +61,7 @@ def validate_remote_actor(actor_url, actor=None):
     server, _ = extract_domain_and_actor(actor_url)
 
     # Check if instance is allowed/banned
-    if get_setting('use_allowlist', False):
+    if get_setting("use_allowlist", False):
         if not instance_allowed(server):
             return False
     else:
@@ -63,39 +86,53 @@ def validate_remote_actor(actor_url, actor=None):
 def find_remote_actor(actor_url):
     """Find a remote actor in the database."""
     # Check URL patterns to optimize database queries
-    if '/u/' in actor_url:
+    if "/u/" in actor_url:
         # URL contains /u/ - likely a user
         actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
         if actor:
             return actor
-    elif '/c/' in actor_url:
+    elif "/c/" in actor_url:
         # URL contains /c/ - likely a community
-        actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
+        actor = (
+            db.session.query(Community)
+            .filter(Community.ap_profile_id == actor_url)
+            .first()
+        )
         if actor and actor.banned:
             # Try to find a non-banned copy of the community
-            unbanned_actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url,
-                                                                Community.banned == False).first()
+            unbanned_actor = (
+                db.session.query(Community)
+                .filter(Community.ap_profile_id == actor_url, Community.banned == False)
+                .first()
+            )
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
         if actor:
             return actor
-    elif '/f/' in actor_url:
+    elif "/f/" in actor_url:
         # URL contains /f/ - likely a feed
         actor = db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
         if actor:
             return actor
-    
+
     # Fallback to trying everything
     actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
 
     # Look for a remote community if not found as user
     if actor is None:
-        actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
+        actor = (
+            db.session.query(Community)
+            .filter(Community.ap_profile_id == actor_url)
+            .first()
+        )
         if actor and actor.banned:
             # Try to find a non-banned copy of the community
-            unbanned_actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url,
-                                                                Community.banned == False).first()
+            unbanned_actor = (
+                db.session.query(Community)
+                .filter(Community.ap_profile_id == actor_url, Community.banned == False)
+                .first()
+            )
             if unbanned_actor is None:
                 return None
             actor = unbanned_actor
@@ -110,10 +147,13 @@ def find_remote_actor(actor_url):
 def schedule_actor_refresh(actor, override=False):
     """Schedule an async refresh of actor data if needed."""
     if not actor.is_local() and (
-        actor.ap_fetched_at is None or actor.ap_fetched_at < utcnow() - timedelta(days=1) or override):
-        refresh_in_progress = cache.get(f'refreshing_{actor.id}')
+        actor.ap_fetched_at is None
+        or actor.ap_fetched_at < utcnow() - timedelta(days=1)
+        or override
+    ):
+        refresh_in_progress = cache.get(f"refreshing_{actor.id}")
         if not refresh_in_progress:
-            cache.set(f'refreshing_{actor.id}', True, timeout=300)
+            cache.set(f"refreshing_{actor.id}", True, timeout=300)
 
             if isinstance(actor, User):
                 refresh_user_profile(actor.id)
@@ -128,7 +168,7 @@ def fetch_remote_actor_data(url: str, retry_count=1):
     for attempt in range(retry_count + 1):
         response = None
         try:
-            response = get_request(url, headers={'Accept': 'application/activity+json'})
+            response = get_request(url, headers={"Accept": "application/activity+json"})
             if response.status_code == 200:
                 try:
                     return response.json()
@@ -139,7 +179,11 @@ def fetch_remote_actor_data(url: str, retry_count=1):
                 signed_response = None
                 try:
                     site = db.session.query(Site).get(1)
-                    signed_response = signed_get_request(url, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                    signed_response = signed_get_request(
+                        url,
+                        site.private_key,
+                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                    )
                     try:
                         return signed_response.json()
                     except ValueError:
@@ -162,7 +206,13 @@ def fetch_remote_actor_data(url: str, retry_count=1):
             return None
 
         # These exceptions usually mean "server is overloaded", so retry
-        except (httpx.ReadTimeout, httpx.ConnectTimeout, httpx.WriteTimeout, httpx.ReadError, httpx.RemoteProtocolError):
+        except (
+            httpx.ReadTimeout,
+            httpx.ConnectTimeout,
+            httpx.WriteTimeout,
+            httpx.ReadError,
+            httpx.RemoteProtocolError,
+        ):
             if attempt < retry_count:
                 time.sleep(randint(3, 10))
                 continue
@@ -180,17 +230,20 @@ def fetch_remote_actor_data(url: str, retry_count=1):
     return None
 
 
-
 def fetch_actor_from_webfinger(address: str, server: str):
     """Fetch actor data using webfinger protocol."""
     try:
-        webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                     params={'resource': f"acct:{address}@{server}"})
+        webfinger_data = get_request(
+            f"https://{server}/.well-known/webfinger",
+            params={"resource": f"acct:{address}@{server}"},
+        )
     except httpx.HTTPError:
         time.sleep(randint(3, 10))
         try:
-            webfinger_data = get_request(f"https://{server}/.well-known/webfinger",
-                                         params={'resource': f"acct:{address}@{server}"})
+            webfinger_data = get_request(
+                f"https://{server}/.well-known/webfinger",
+                params={"resource": f"acct:{address}@{server}"},
+            )
         except Exception:
             return None
 
@@ -198,15 +251,19 @@ def fetch_actor_from_webfinger(address: str, server: str):
         webfinger_json = webfinger_data.json()
         webfinger_data.close()
 
-        for link in webfinger_json.get('links', []):
-            if link.get('rel') == 'self':
-                type_header = link.get('type', 'application/activity+json')
+        for link in webfinger_json.get("links", []):
+            if link.get("rel") == "self":
+                type_header = link.get("type", "application/activity+json")
                 try:
-                    actor_data = get_request(link['href'], headers={'Accept': type_header})
+                    actor_data = get_request(
+                        link["href"], headers={"Accept": type_header}
+                    )
                 except httpx.HTTPError:
                     time.sleep(randint(3, 10))
                     try:
-                        actor_data = get_request(link['href'], headers={'Accept': type_header})
+                        actor_data = get_request(
+                            link["href"], headers={"Accept": type_header}
+                        )
                     except Exception:
                         return None
 
@@ -221,10 +278,11 @@ def fetch_actor_from_webfinger(address: str, server: str):
     return None
 
 
-def create_actor_from_remote(actor_address: str, community_only=False,
-                             feed_only=False) -> User | Community | Feed | None:
+def create_actor_from_remote(
+    actor_address: str, community_only=False, feed_only=False
+) -> User | Community | Feed | None:
     """Create a new actor from remote data."""
-    if actor_address.startswith('https://'):
+    if actor_address.startswith("https://"):
         server, address = extract_domain_and_actor(actor_address)
         actor_json = fetch_remote_actor_data(actor_address)
     else:
@@ -254,7 +312,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
     """Find an actor by URL without creating it."""
     """Warning: this function returns None if not found, False if found and banned/deleted"""
     actor_url = actor_url.strip().lower()
-    server_name = current_app.config['SERVER_NAME']
+    server_name = current_app.config["SERVER_NAME"]
 
     # Check for local actors first
     if f"{server_name}/c/" in actor_url:
@@ -280,7 +338,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
         return None
 
     # For remote actors
-    if actor_url.startswith('https://'):
+    if actor_url.startswith("https://"):
         actor = find_remote_actor(actor_url)
 
         if actor:

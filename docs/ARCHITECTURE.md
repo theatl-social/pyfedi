@@ -37,4 +37,3 @@ FOSS, browser-based, run on a Linux server.
 ##  Patterns used, diagrams
 
 ##  Risks, open questions, future work
-

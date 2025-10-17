@@ -1,10 +1,10 @@
 #!/bin/bash
 #
 # Comprehensive Private Registration Testing Script
-# 
+#
 # This script tests private registration endpoints in various configurations:
 # - Local development testing
-# - CI/CD environment testing  
+# - CI/CD environment testing
 # - Different configuration scenarios
 #
 # Usage:
@@ -17,7 +17,7 @@ set -e
 
 # Colors for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'  
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
@@ -111,16 +111,16 @@ done
 # Environment setup based on mode
 setup_environment() {
     local config=$1
-    
+
     log "Setting up environment for configuration: $config"
-    
+
     # Base environment variables
     export TESTING=true
     export WTF_CSRF_ENABLED=false
     export MAIL_SUPPRESS_SEND=true
     export CACHE_TYPE=null
     export CELERY_ALWAYS_EAGER=true
-    
+
     case $config in
         "env-only")
             log "Testing environment variable configuration only"
@@ -145,29 +145,29 @@ setup_environment() {
             export PRIVATE_REGISTRATION_RATE_LIMIT="5"
             ;;
     esac
-    
+
     # Set server name to avoid config issues
     export SERVER_NAME=localhost
-    
+
     # Database configuration
     if [ "$MODE" = "ci" ]; then
         export DATABASE_URL="sqlite:///:memory:"
     else
         export DATABASE_URL="sqlite:///test_private_reg.db"
     fi
-    
+
     success "Environment configured for $config mode"
 }
 
-# Check prerequisites  
+# Check prerequisites
 check_prerequisites() {
     log "Checking prerequisites..."
-    
+
     # Check if we're in the right directory
     if [ ! -f "$PROJECT_ROOT/app/__init__.py" ]; then
         error "Not in PieFed project root. Please run from project directory."
     fi
-    
+
     # Check if virtual environment is activated
     if [ "$MODE" = "local" ] && [ -z "$VIRTUAL_ENV" ]; then
         warning "Virtual environment not detected. Attempting to activate..."
@@ -178,12 +178,12 @@ check_prerequisites() {
             error "No virtual environment found. Please run 'uv venv && source .venv/bin/activate'"
         fi
     fi
-    
+
     # Check required dependencies
     if ! python -c "import pytest" 2>/dev/null; then
         error "pytest not installed. Please install test dependencies."
     fi
-    
+
     success "Prerequisites check passed"
 }
 
@@ -191,22 +191,22 @@ check_prerequisites() {
 run_test_configuration() {
     local config=$1
     local test_name="Private Registration Tests ($config)"
-    
+
     log "Running $test_name..."
-    
+
     setup_environment "$config"
-    
+
     # Pytest arguments
     local pytest_args=(
         "$PROJECT_ROOT/tests/test_private_registration_endpoints.py"
         "-v"
         "--tb=short"
     )
-    
+
     if [ "$VERBOSE" = true ]; then
         pytest_args+=("-s")
     fi
-    
+
     if [ "$MODE" = "ci" ]; then
         pytest_args+=(
             "--junit-xml=test-results/private-registration-$config.xml"
@@ -214,12 +214,12 @@ run_test_configuration() {
             "--cov-report=xml:coverage-$config.xml"
         )
     fi
-    
+
     # Add PYTHONPATH if needed
     if [ -z "$PYTHONPATH" ]; then
         export PYTHONPATH="$PROJECT_ROOT"
     fi
-    
+
     # Run the tests
     if pytest "${pytest_args[@]}"; then
         success "$test_name passed"
@@ -234,9 +234,9 @@ run_test_configuration() {
 test_endpoints_with_curl() {
     local base_url="http://localhost:5000/api/alpha/admin"
     local secret="$PRIVATE_REGISTRATION_SECRET"
-    
+
     log "Running curl-based endpoint tests..."
-    
+
     # Start a test server in background (if not already running)
     local server_pid=""
     if ! curl -s "$base_url/health" >/dev/null 2>&1; then
@@ -246,20 +246,20 @@ test_endpoints_with_curl() {
         server_pid=$!
         sleep 5  # Wait for server to start
     fi
-    
+
     # Test health endpoint
     log "Testing health endpoint..."
     local health_response=$(curl -s \
         -H "X-PieFed-Secret: $secret" \
         -H "X-Forwarded-For: 127.0.0.1" \
         "$base_url/health")
-    
+
     if echo "$health_response" | grep -q '"enabled": true'; then
         success "Health endpoint test passed"
     else
         warning "Health endpoint test failed: $health_response"
     fi
-    
+
     # Test user validation endpoint
     log "Testing user validation endpoint..."
     local validation_response=$(curl -s \
@@ -268,13 +268,13 @@ test_endpoints_with_curl() {
         -H "X-Forwarded-For: 127.0.0.1" \
         -d '{"username":"testuser","email":"test@example.com"}' \
         "$base_url/user/validate")
-    
+
     if echo "$validation_response" | grep -q '"username_available"'; then
         success "User validation endpoint test passed"
     else
         warning "User validation endpoint test failed: $validation_response"
     fi
-    
+
     # Test registration endpoint (basic validation)
     log "Testing registration endpoint..."
     local reg_response=$(curl -s \
@@ -287,13 +287,13 @@ test_endpoints_with_curl() {
             "auto_activate":true
         }' \
         "$base_url/private_register")
-    
+
     if echo "$reg_response" | grep -q '"success": true'; then
         success "Registration endpoint test passed"
     else
         warning "Registration endpoint test failed: $reg_response"
     fi
-    
+
     # Cleanup server if we started it
     if [ -n "$server_pid" ]; then
         kill $server_pid 2>/dev/null || true
@@ -304,16 +304,16 @@ test_endpoints_with_curl() {
 main() {
     log "Starting Private Registration Test Suite"
     log "Mode: $MODE, Config: $CONFIG_TYPE"
-    
+
     check_prerequisites
-    
+
     # Create test results directory for CI
     if [ "$MODE" = "ci" ]; then
         mkdir -p "$PROJECT_ROOT/test-results"
     fi
-    
+
     local exit_code=0
-    
+
     if [ "$CONFIG_TYPE" = "all" ]; then
         # Run all configuration scenarios
         local configs=("default" "env-only" "mixed")
@@ -330,25 +330,25 @@ main() {
             exit_code=1
         fi
     fi
-    
+
     # Run curl-based integration tests in local mode
     if [ "$MODE" = "local" ] && [ "$exit_code" -eq 0 ]; then
         test_endpoints_with_curl
     fi
-    
+
     # Cleanup
     if [ "$CLEANUP" = true ]; then
         log "Cleaning up test artifacts..."
         rm -f "$PROJECT_ROOT/test_private_reg.db" 2>/dev/null || true
         success "Cleanup completed"
     fi
-    
+
     if [ "$exit_code" -eq 0 ]; then
         success "All Private Registration tests passed!"
     else
         error "Some tests failed. Check output above."
     fi
-    
+
     exit $exit_code
 }
 

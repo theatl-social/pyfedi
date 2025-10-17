@@ -5,39 +5,40 @@ Revises: d32ef1893ce4
 Create Date: 2024-11-19 18:34:47.914982
 
 """
+
 from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import text
 
 
 # revision identifiers, used by Alembic.
-revision = 'd2bd6281a8d3'
-down_revision = 'd32ef1893ce4'
+revision = "d2bd6281a8d3"
+down_revision = "d32ef1893ce4"
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
     # Find duplicate communities by ap_profile_id
-    dupes_query = text('''
-            SELECT ap_profile_id FROM "community" 
-            GROUP BY ap_profile_id 
+    dupes_query = text("""
+            SELECT ap_profile_id FROM "community"
+            GROUP BY ap_profile_id
             HAVING COUNT(*) > 1
-        ''')
+        """)
 
     conn = op.get_bind()
     duplicate_profiles = conn.execute(dupes_query).scalars()
-    print('Cleaning up duplicate communities, this may take a while...')
+    print("Cleaning up duplicate communities, this may take a while...")
 
     for profile_id in duplicate_profiles:
         if profile_id is None:
             continue
         # Get all communities with the same ap_profile_id, ordered by ID
-        users_query = text('''
-                SELECT id FROM "community" 
-                WHERE ap_profile_id = :ap_profile_id 
+        users_query = text("""
+                SELECT id FROM "community"
+                WHERE ap_profile_id = :ap_profile_id
                 ORDER BY id
-            ''')
+            """)
         users = conn.execute(users_query, {"ap_profile_id": profile_id}).fetchall()
 
         # Set the lowest ID as the new_id, and collect other IDs to update/delete
@@ -48,31 +49,80 @@ def upgrade():
 
         if old_ids:
             # Update tables with batch IN clause
-            conn.execute(text('UPDATE "post" SET community_id = :new_id WHERE community_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
-            conn.execute(text('UPDATE "post_reply" SET community_id = :new_id WHERE community_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
-            conn.execute(text('UPDATE "report" SET suspect_community_id = :new_id WHERE suspect_community_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
-            conn.execute(text('UPDATE "report" SET in_community_id = :new_id WHERE in_community_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
-            conn.execute(text('UPDATE "mod_log" SET community_id = :new_id WHERE community_id IN :old_ids'), {"new_id": new_id, "old_ids": tuple(old_ids)})
-            conn.execute(text('DELETE FROM "community_block" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
-            conn.execute(text('DELETE FROM "community_member" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
-            conn.execute(text('DELETE FROM "community_ban" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
-            conn.execute(text('DELETE FROM "community_join_request" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
-            conn.execute(text('DELETE FROM "community_language" WHERE community_id IN :old_ids'), {"old_ids": tuple(old_ids)})
+            conn.execute(
+                text(
+                    'UPDATE "post" SET community_id = :new_id WHERE community_id IN :old_ids'
+                ),
+                {"new_id": new_id, "old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text(
+                    'UPDATE "post_reply" SET community_id = :new_id WHERE community_id IN :old_ids'
+                ),
+                {"new_id": new_id, "old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text(
+                    'UPDATE "report" SET suspect_community_id = :new_id WHERE suspect_community_id IN :old_ids'
+                ),
+                {"new_id": new_id, "old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text(
+                    'UPDATE "report" SET in_community_id = :new_id WHERE in_community_id IN :old_ids'
+                ),
+                {"new_id": new_id, "old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text(
+                    'UPDATE "mod_log" SET community_id = :new_id WHERE community_id IN :old_ids'
+                ),
+                {"new_id": new_id, "old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text('DELETE FROM "community_block" WHERE community_id IN :old_ids'),
+                {"old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text('DELETE FROM "community_member" WHERE community_id IN :old_ids'),
+                {"old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text('DELETE FROM "community_ban" WHERE community_id IN :old_ids'),
+                {"old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text(
+                    'DELETE FROM "community_join_request" WHERE community_id IN :old_ids'
+                ),
+                {"old_ids": tuple(old_ids)},
+            )
+            conn.execute(
+                text('DELETE FROM "community_language" WHERE community_id IN :old_ids'),
+                {"old_ids": tuple(old_ids)},
+            )
 
             # Delete the duplicate users
-            conn.execute(text('DELETE FROM "community" WHERE id IN :old_ids'), {"old_ids": tuple(old_ids)})
+            conn.execute(
+                text('DELETE FROM "community" WHERE id IN :old_ids'),
+                {"old_ids": tuple(old_ids)},
+            )
     # ### commands auto generated by Alembic - please adjust! ###
-    with op.batch_alter_table('community', schema=None) as batch_op:
-        batch_op.drop_index('ix_community_ap_profile_id')
-        batch_op.create_index(batch_op.f('ix_community_ap_profile_id'), ['ap_profile_id'], unique=True)
+    with op.batch_alter_table("community", schema=None) as batch_op:
+        batch_op.drop_index("ix_community_ap_profile_id")
+        batch_op.create_index(
+            batch_op.f("ix_community_ap_profile_id"), ["ap_profile_id"], unique=True
+        )
 
     # ### end Alembic commands ###
 
 
 def downgrade():
     # ### commands auto generated by Alembic - please adjust! ###
-    with op.batch_alter_table('community', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_community_ap_profile_id'))
-        batch_op.create_index('ix_community_ap_profile_id', ['ap_profile_id'], unique=False)
+    with op.batch_alter_table("community", schema=None) as batch_op:
+        batch_op.drop_index(batch_op.f("ix_community_ap_profile_id"))
+        batch_op.create_index(
+            "ix_community_ap_profile_id", ["ap_profile_id"], unique=False
+        )
 
     # ### end Alembic commands ###

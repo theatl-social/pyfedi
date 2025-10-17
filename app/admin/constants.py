@@ -1,4 +1,3 @@
-
 # 3 is unused
 class ReportTypes:
     ALL = -1
