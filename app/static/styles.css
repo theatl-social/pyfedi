@@ -2099,7 +2099,6 @@ a.unread:before, div.unread:before {
   height: auto;
 }
 .post_body .post_image img, .comment_body .post_image img, #preview .post_image img, .reply_preview .post_image img, .accordion-body .post_image img, .post_col .post_image img {
-  margin-left: -6px;
   margin-bottom: 15px;
 }
 .post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
