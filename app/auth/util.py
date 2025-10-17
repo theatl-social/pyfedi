@@ -368,7 +368,7 @@ def process_login(form: LoginForm):
     ip = ip_address()
     country = get_country(ip)
 
-    if current_app.config['LDAP_SERVER_LOGIN']:
+    if current_app.config['LDAP_READ_ENABLE']:
         user = validate_user_ldap_login(form.user_name.data.strip(), form.password.data.strip(), ip)
         if user is None:
             return redirect(url_for("auth.login"))
