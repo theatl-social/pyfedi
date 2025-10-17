@@ -1940,8 +1940,12 @@ def post_ap(post_id):
             resp = jsonify(post_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Vary', 'Accept')
-            resp.headers.set('Link',
-                             f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
+            if post.slug:
+                resp.headers.set('Link',
+                                 f'<https://{current_app.config["SERVER_NAME"]}{post.slug}>; rel="alternate"; type="text/html"')
+            else:
+                resp.headers.set('Link',
+                                 f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="text/html"')
             return resp
         else:
             return redirect(post.ap_id, code=301)
