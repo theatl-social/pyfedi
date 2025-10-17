@@ -148,6 +148,18 @@ jobs:
           CELERY_BROKER_URL: memory://localhost/
           TESTING: true
 
+      - name: Run connection pool thread-safety tests
+        run: |
+          echo "🔐 Testing database connection pool thread-safety"
+          python -m pytest tests/test_connection_pool_thread_safety.py -v
+        env:
+          SERVER_NAME: test.localhost
+          SECRET_KEY: test-secret-key-for-ci
+          DATABASE_URL: sqlite:///memory:test.db
+          CACHE_TYPE: NullCache
+          CACHE_REDIS_URL: memory://
+          TESTING: true
+
       - name: Run additional core tests
         run: |
           echo "📝 Running additional core logic tests"
