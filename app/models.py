@@ -506,6 +506,7 @@ class Community(db.Model):
     content_retention = db.Column(db.Integer, default=-1)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'), index=True)
     default_layout = db.Column(db.String(15))
+    default_post_type = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))

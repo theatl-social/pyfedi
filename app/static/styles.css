@@ -2095,9 +2095,12 @@ a.unread:before, div.unread:before {
   word-wrap: break-word;
 }
 .post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img {
-  max-height: 40vh;
   max-width: 100%;
   height: auto;
+}
+.post_body .post_image img, .comment_body .post_image img, #preview .post_image img, .reply_preview .post_image img, .accordion-body .post_image img, .post_col .post_image img {
+  margin-left: -6px;
+  margin-bottom: 15px;
 }
 .post_body blockquote, .comment_body blockquote, #preview blockquote, .reply_preview blockquote, .accordion-body blockquote, .post_col blockquote {
   padding: 0.2em 5px;

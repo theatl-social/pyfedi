@@ -922,11 +922,11 @@ def join_then_add(actor):
 
 
 @bp.route('/<actor>/submit/<string:type>', methods=['GET', 'POST'])
-@bp.route('/<actor>/submit', defaults={'type': 'discussion'}, methods=['GET', 'POST'])
+@bp.route('/<actor>/submit', methods=['GET', 'POST'])
 @login_required
 @validation_required
 @approval_required
-def add_post(actor, type):
+def add_post(actor, type=None):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()
     if request.method == 'GET':
@@ -937,8 +937,12 @@ def add_post(actor, type):
         else:
             community = actor_to_community(actor)
 
-    post_type = POST_TYPE_ARTICLE
+    if type is None:
+        type = community.default_post_type or 'link'
+
+    post_type = POST_TYPE_LINK
     if type == 'discussion':
+        post_type = POST_TYPE_ARTICLE
         form = CreateDiscussionForm()
     elif type == 'link':
         post_type = POST_TYPE_LINK
@@ -1120,6 +1124,7 @@ def community_edit(community_id: int):
             community.new_mods_wanted = form.new_mods_wanted.data
             community.topic_id = form.topic.data if form.topic.data != 0 else None
             community.default_layout = form.default_layout.data
+            community.default_post_type = form.default_post_type.data
             community.downvote_accept_mode = form.downvote_accept_mode.data
 
             icon_file = request.files['icon_file']
@@ -1175,6 +1180,7 @@ def community_edit(community_id: int):
             form.topic.data = community.topic_id if community.topic_id else None
             form.languages.data = community.language_ids()
             form.default_layout.data = community.default_layout
+            form.default_post_type.data = community.default_post_type
             form.downvote_accept_mode.data = community.downvote_accept_mode
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",

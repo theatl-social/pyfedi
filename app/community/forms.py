@@ -97,6 +97,15 @@ class EditCommunityForm(FlaskForm):
                ('masonry_wide', _l('Wide masonry'))]
     default_layout = SelectField(_l('Layout'), coerce=str, choices=layouts, validators=[Optional()],
                                  render_kw={'class': 'form-select'})
+    post_types = [('link', _l('Link')),
+                  ('discussion', _l('Discussion')),
+                  ('image', _l('Image')),
+                  ('video', _l('Video')),
+                  ('poll]', _l('Poll')),
+                  ('event', _l('Event')),
+                 ]
+    default_post_type = SelectField(_l('Default post type'), coerce=str, choices=post_types, validators=[Optional()],
+                                 render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 

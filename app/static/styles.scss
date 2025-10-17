@@ -1749,9 +1749,13 @@ a.unread, div.unread {
   word-wrap: break-word;
 
   img {
-    max-height: 40vh;
     max-width: 100%;
     height: auto;
+  }
+
+  .post_image img {
+    margin-left: -6px;
+    margin-bottom: 15px;
   }
 
   blockquote {
