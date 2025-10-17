@@ -30,7 +30,11 @@
                             <div class="card-title">{{ _('Found a post:') }}</div>
                             <div class="card-body">
                                 <p>
-                                    <a href="/post/{{ new_post.id }}">{{ new_post.title }}</a>
+                                    {% if new_post.slug %}
+                                        <a href="{{ new_post.slug }}">{{ new_post.title }}</a>
+                                    {% else %}
+                                        <a href="/post/{{ new_post.id }}">{{ new_post.title }}</a>
+                                    {% endif %}
                                 </p>
                             </div>
                         </div>

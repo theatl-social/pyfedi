@@ -280,7 +280,7 @@
                                 <form action='/poll/{{ post.id }}/vote' method="post">
                             {% else -%}
                                 <form action='/auth/login' method="get">
-                                    <input type="hidden" name="next" value="/post/{{ post.id }}">
+                                    <input type="hidden" name="next" value="{{ post.slug }}">
                             {% endif -%}
                             <ul>
                                 {% for choice in poll_choices -%}
@@ -337,7 +337,7 @@
                         <form action='/poll/{{ post.id }}/vote' method="post">
                     {% else -%}
                         <form action='/auth/login' method="get">
-                            <input type="hidden" name="next" value="/post/{{ post.id }}">
+                            <input type="hidden" name="next" value="{{ post.slug }}">
                     {% endif -%}
                     <ul>
                         {% for choice in poll_choices -%}
