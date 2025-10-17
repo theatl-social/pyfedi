@@ -2017,21 +2017,20 @@ class Post(db.Model):
         # Use this for posts this instance is creating only - remote posts will already have an AP ID.
         if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
             slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            candidate_ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
-            slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            base_ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            base_slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
 
             # Ensure that no other posts have the same AP_ID
             next_number = 0
             while True:
-                existing_post = Post.get_by_ap_id(f"{candidate_ap_id}{next_number if next_number else ''}")
+                candidate_ap_id = f"{base_ap_id}{next_number if next_number else ''}"
+                existing_post = Post.get_by_ap_id(candidate_ap_id)
                 if existing_post:
-                    if next_number > 0:
-                        next_number = next_number + 1
-                    else:
+                    if next_number == 0:
                         next_number = 1
+                    else:
+                        next_number = next_number + 1
                 else:
-                    candidate_ap_id = f"{candidate_ap_id}{next_number if next_number else ''}"
-                    slug = f"{slug}{next_number if next_number else ''}"
                     break
                 if next_number > 10:
                     self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
@@ -2039,32 +2038,32 @@ class Post(db.Model):
                     return
 
             self.ap_id = candidate_ap_id
-            self.slug = slug
+            self.slug = f"{base_slug}{next_number if next_number else ''}"
 
     def generate_slug(self, community):
         # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
         # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
         if self.slug is None or self.slug == '':
             slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            candidate_slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            base_slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
 
-            # Ensure that no other posts have the same AP_ID
+            # Ensure that no other posts have the same slug
             next_number = 0
             while True:
-                existing_post = Post.get_by_slug(f"{candidate_slug}{next_number if next_number else ''}")
+                candidate_slug = f"{base_slug}{next_number if next_number else ''}"
+                existing_post = Post.get_by_slug(candidate_slug)
                 if existing_post:
-                    if next_number > 0:
-                        next_number = next_number + 1
-                    else:
+                    if next_number == 0:
                         next_number = 1
+                    else:
+                        next_number = next_number + 1
                 else:
-                    slug = f"{slug}{next_number if next_number else ''}"
                     break
                 if next_number > 10:
                     self.slug = f'/post/{self.id}'
                     return
 
-            self.slug = slug
+            self.slug = candidate_slug
 
     def peertube_embed(self):
         if self.url:
