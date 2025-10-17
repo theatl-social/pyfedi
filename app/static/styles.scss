@@ -1745,6 +1745,10 @@ a.unread, div.unread {
   float: right;
 }
 
+#color_mode {
+  margin-right: 0;
+}
+
 .post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col {
   word-wrap: break-word;
 
