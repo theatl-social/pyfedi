@@ -1567,7 +1567,6 @@ class Post(db.Model):
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
         if community.nsfl:
             post.nsfl = True
-        post.generate_slug(community)
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             # prefer Markdown in 'source' in provided
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
@@ -1862,6 +1861,8 @@ class Post(db.Model):
             db.session.add(vote)
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
+
+            post.generate_slug(community)
             db.session.commit()
 
         return post
