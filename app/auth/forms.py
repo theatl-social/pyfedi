@@ -23,8 +23,8 @@ class LoginForm(FlaskForm):
 
 
 class RegistrationForm(FlaskForm):
-    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(max=50)], render_kw={'autofocus': True,
-                                                                                                     'autocomplete': 'username'})
+    user_name = StringField(_l('User name'), validators=[DataRequired(), Length(min=3, max=50)],
+                            render_kw={'autofocus': True, 'autocomplete': 'username'})
     email = HiddenField(_l('Email'))
     real_email = EmailField(_l('Email'), validators=[DataRequired(), Email(), Length(min=5, max=255)], render_kw={'autocomplete': 'email'})
     password = PasswordField(_l('Password'), validators=[DataRequired(), Length(min=8, max=129)],
