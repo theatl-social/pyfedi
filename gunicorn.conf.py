@@ -50,18 +50,21 @@ def post_worker_init(worker):
     and SQLAlchemy needs specific settings for thread-safe operation.
     """
     from app import db
-
-    # Set pool_pre_ping to check connections before using them
-    # This prevents "PGRES_TUPLES_OK" errors from stale/broken connections
-    db.engine.pool._pre_ping = True
-
-    # Ensure NullPool for gthread to avoid connection sharing between threads
+    from sqlalchemy import create_engine
     from sqlalchemy.pool import NullPool
 
-    if not isinstance(db.engine.pool, NullPool):
-        # Recreate engine with NullPool for thread safety
-        from sqlalchemy import create_engine
+    # Dispose of the existing engine/pool to close any inherited connections
+    db.engine.dispose()
 
-        db.engine = create_engine(db.engine.url, poolclass=NullPool, echo=False)
+    # Recreate engine with NullPool for thread safety
+    # NullPool creates a fresh connection per request, preventing sharing between threads
+    db.engine = create_engine(
+        db.engine.url,
+        poolclass=NullPool,
+        pool_pre_ping=True,  # Verify connection before use
+        echo=False,
+    )
 
-    worker.log.info(f"Worker {worker.pid}: SQLAlchemy configured for gthread")
+    worker.log.info(
+        f"Worker {worker.pid}: SQLAlchemy configured with NullPool for gthread"
+    )
