@@ -101,7 +101,7 @@ class EditCommunityForm(FlaskForm):
                   ('discussion', _l('Discussion')),
                   ('image', _l('Image')),
                   ('video', _l('Video')),
-                  ('poll]', _l('Poll')),
+                  ('poll', _l('Poll')),
                   ('event', _l('Event')),
                  ]
     default_post_type = SelectField(_l('Default post type'), coerce=str, choices=post_types, validators=[Optional()],
