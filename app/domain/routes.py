@@ -132,7 +132,10 @@ def show_domain_rss(domain_id):
             for post in posts:
                 fe = fg.add_entry()
                 fe.title(post.title)
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                if post.slug:
+                    fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                else:
+                    fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
                 if post.url:
                     if post.url in already_added:
                         continue

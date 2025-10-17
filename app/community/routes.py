@@ -661,7 +661,10 @@ def show_community_rss(actor):
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
-            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.slug:
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+            else:
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith('text/'):
