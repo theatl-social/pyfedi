@@ -12,6 +12,7 @@ The PGRES_TUPLES_OK errors occur when:
 
 import concurrent.futures
 import os
+import tempfile
 import threading
 import time
 from typing import List
@@ -28,59 +29,62 @@ def test_concurrent_database_queries_with_queuepool_unsafe():
     This test EXPECTS to occasionally see connection issues with QueuePool
     when multiple threads hammer the same connection pool.
     """
-    # Create engine with QueuePool (default) - this is UNSAFE for threads
-    # Use file:///tmp/test_queuepool.db to share across connections
-    engine = create_engine(
-        "sqlite:///tmp/test_queuepool.db",
-        poolclass=QueuePool,
-        pool_size=2,
-        max_overflow=0,
-        pool_pre_ping=False,  # THIS IS THE PROBLEM
-    )
+    # Create a temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-    # Create a table
-    with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS test"))
-        conn.execute(text("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)"))
-        conn.execute(text("INSERT INTO test VALUES (1, 'test')"))
-        conn.commit()
+    try:
+        # Create engine with QueuePool (default) - this is UNSAFE for threads
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            poolclass=QueuePool,
+            pool_size=2,
+            max_overflow=0,
+            pool_pre_ping=False,  # THIS IS THE PROBLEM
+        )
 
-    errors = []
-    success_count = 0
-    lock = threading.Lock()
+        # Create a table
+        with engine.connect() as conn:
+            conn.execute(text("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)"))
+            conn.execute(text("INSERT INTO test VALUES (1, 'test')"))
+            conn.commit()
 
-    def query_database(thread_id: int):
-        """Simulate concurrent queries"""
-        nonlocal success_count
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(text("SELECT * FROM test WHERE id = 1"))
-                row = result.fetchone()
-                time.sleep(0.001)  # Simulate processing
-                if row:
-                    with lock:
-                        success_count += 1
-        except Exception as e:
-            with lock:
-                errors.append((thread_id, str(e), type(e).__name__))
+        errors = []
+        success_count = 0
+        lock = threading.Lock()
 
-    num_threads = 20
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(query_database, i) for i in range(num_threads)]
-        concurrent.futures.wait(futures)
+        def query_database(thread_id: int):
+            """Simulate concurrent queries"""
+            nonlocal success_count
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("SELECT * FROM test WHERE id = 1"))
+                    row = result.fetchone()
+                    time.sleep(0.001)  # Simulate processing
+                    if row:
+                        with lock:
+                            success_count += 1
+            except Exception as e:
+                with lock:
+                    errors.append((thread_id, str(e), type(e).__name__))
 
-    print("\nQueuePool (UNSAFE) Test Results:")
-    print(f"  Successful queries: {success_count}/{num_threads}")
-    print(f"  Errors: {len(errors)}")
+        num_threads = 20
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(query_database, i) for i in range(num_threads)]
+            concurrent.futures.wait(futures)
 
-    # With QueuePool and no pre_ping, we might see issues
-    # This test documents the problem, doesn't assert failure
-    engine.dispose()
+        print("\nQueuePool (UNSAFE) Test Results:")
+        print(f"  Successful queries: {success_count}/{num_threads}")
+        print(f"  Errors: {len(errors)}")
 
-    # Cleanup
-    import pathlib
+        # With QueuePool and no pre_ping, we might see issues
+        # This test documents the problem, doesn't assert failure
+        engine.dispose()
+    finally:
+        # Cleanup
+        import pathlib
 
-    pathlib.Path("/tmp/test_queuepool.db").unlink(missing_ok=True)
+        pathlib.Path(db_path).unlink(missing_ok=True)
 
 
 def test_concurrent_database_queries_with_nullpool_safe():
@@ -89,58 +93,61 @@ def test_concurrent_database_queries_with_nullpool_safe():
 
     This is what our gunicorn.conf.py post_worker_init does.
     """
-    # Create engine with NullPool - this is SAFE for threads
-    # Use file:///tmp/test_nullpool.db to share across connections
-    engine = create_engine(
-        "sqlite:///tmp/test_nullpool.db",
-        poolclass=NullPool,  # No connection pooling - safe for threads
-    )
+    # Create a temporary database file
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+        db_path = tmp.name
 
-    # Create a table
-    with engine.connect() as conn:
-        conn.execute(text("DROP TABLE IF EXISTS test"))
-        conn.execute(text("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)"))
-        conn.execute(text("INSERT INTO test VALUES (1, 'test')"))
-        conn.commit()
+    try:
+        # Create engine with NullPool - this is SAFE for threads
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            poolclass=NullPool,  # No connection pooling - safe for threads
+        )
 
-    errors = []
-    success_count = 0
-    lock = threading.Lock()
+        # Create a table
+        with engine.connect() as conn:
+            conn.execute(text("CREATE TABLE test (id INTEGER PRIMARY KEY, value TEXT)"))
+            conn.execute(text("INSERT INTO test VALUES (1, 'test')"))
+            conn.commit()
 
-    def query_database(thread_id: int):
-        """Simulate concurrent queries"""
-        nonlocal success_count
-        try:
-            with engine.connect() as conn:
-                result = conn.execute(text("SELECT * FROM test WHERE id = 1"))
-                row = result.fetchone()
-                time.sleep(0.001)
-                if row:
-                    with lock:
-                        success_count += 1
-        except Exception as e:
-            with lock:
-                errors.append((thread_id, str(e), type(e).__name__))
+        errors = []
+        success_count = 0
+        lock = threading.Lock()
 
-    num_threads = 20
-    with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
-        futures = [executor.submit(query_database, i) for i in range(num_threads)]
-        concurrent.futures.wait(futures)
+        def query_database(thread_id: int):
+            """Simulate concurrent queries"""
+            nonlocal success_count
+            try:
+                with engine.connect() as conn:
+                    result = conn.execute(text("SELECT * FROM test WHERE id = 1"))
+                    row = result.fetchone()
+                    time.sleep(0.001)
+                    if row:
+                        with lock:
+                            success_count += 1
+            except Exception as e:
+                with lock:
+                    errors.append((thread_id, str(e), type(e).__name__))
 
-    print("\nNullPool (SAFE) Test Results:")
-    print(f"  Successful queries: {success_count}/{num_threads}")
-    print(f"  Errors: {len(errors)}")
+        num_threads = 20
+        with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
+            futures = [executor.submit(query_database, i) for i in range(num_threads)]
+            concurrent.futures.wait(futures)
 
-    # With NullPool, all should succeed
-    assert len(errors) == 0, f"NullPool should be thread-safe! Errors: {errors}"
-    assert success_count == num_threads
+        print("\nNullPool (SAFE) Test Results:")
+        print(f"  Successful queries: {success_count}/{num_threads}")
+        print(f"  Errors: {len(errors)}")
 
-    engine.dispose()
+        # With NullPool, all should succeed
+        assert len(errors) == 0, f"NullPool should be thread-safe! Errors: {errors}"
+        assert success_count == num_threads
 
-    # Cleanup
-    import pathlib
+        engine.dispose()
+    finally:
+        # Cleanup
+        import pathlib
 
-    pathlib.Path("/tmp/test_nullpool.db").unlink(missing_ok=True)
+        pathlib.Path(db_path).unlink(missing_ok=True)
 
 
 def test_gunicorn_post_worker_init_exists():
