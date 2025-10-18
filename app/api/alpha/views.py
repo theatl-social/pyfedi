@@ -153,6 +153,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         creator_is_moderator = True if moderator else False
         creator_is_admin = True if admin else False
         subscribe_type = 'Subscribed' if followed else 'NotSubscribed'
+        can_auth_user_moderate = True if user_id and user_id in communities_moderating and post.community_id in communities_moderating[user_id] else False
         v2 = {'post': post_view(post=post, variant=1, stub=stub), 'counts': counts, 'banned_from_community': False,
               'subscribed': subscribe_type,
               'saved': saved, 'read': read, 'hidden': False, 'unread_comments': post.reply_count, 'my_vote': my_vote,
@@ -160,7 +161,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               'blurred': post.blurred(g.user if hasattr(g, 'user') else None),
               'activity_alert': activity_alert,
               'creator_banned_from_community': creator_banned_from_community,
-              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin}
+              'creator_is_moderator': creator_is_moderator, 'creator_is_admin': creator_is_admin,
+              'can_auth_user_moderate': can_auth_user_moderate}
         
         post_flair =[]
         

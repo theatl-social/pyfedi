@@ -280,7 +280,7 @@ class MiniCrossPosts(DefaultSchema):
 
 
 class Post(DefaultSchema):
-    ap_id = fields.Url(required=True)
+    ap_id = fields.String(required=True)
     community_id = fields.Integer(required=True)
     deleted = fields.Boolean(required=True)
     id = fields.Integer(required=True)
@@ -345,6 +345,7 @@ class PostView(DefaultSchema):
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
     flair_list = fields.List(fields.Nested(CommunityFlair))
+    can_auth_user_moderate = fields.Boolean()
 
 
 class CommunityAggregates(DefaultSchema):
