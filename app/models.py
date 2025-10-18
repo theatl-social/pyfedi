@@ -2013,20 +2013,20 @@ class Post(db.Model):
 
         return ''
 
-    def generate_ap_id(self, community):
+    def generate_ap_id(self, community: Community):
         # Make the ActivityPub ID of a post in the format of instance.tld/c/community@instance/p/post_id/post-title-as-slug
         # Use this for posts this instance is creating only - remote posts will already have an AP ID.
         if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
             slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
-            self.slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
+            self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
 
-    def generate_slug(self, community):
+    def generate_slug(self, community: Community):
         # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
         # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
         if self.slug is None or self.slug == '':
             slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            self.slug = f'/c/{community.lemmy_link()[1:]}/p/{self.id}/{slug}'
+            self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
 
     def peertube_embed(self):
         if self.url:
