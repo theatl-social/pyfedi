@@ -99,6 +99,10 @@ def show_post(post_id: int):
         if post.mea_culpa:
             flash(_('%(name)s has indicated they made a mistake in this post.', name=post.author.user_name), 'warning')
 
+        if post.slug and '/c/' in request.path:
+            if request.path != post.slug:
+                abort(404)  # post url was tampered with
+
         mods = community_moderators(community.id)
         is_moderator = community.is_moderator()
 
