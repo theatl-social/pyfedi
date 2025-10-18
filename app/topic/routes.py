@@ -151,6 +151,8 @@ def show_topic(topic_path):
             prev_url = url_for('topic.show_topic', topic_path=topic_path,
                                page=comments.prev_num, sort=sort, layout=post_layout,
                                content_type=content_type) if comments.has_prev and page != 1 else None
+        else:
+            abort(400)
 
         sub_topics = Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
 
