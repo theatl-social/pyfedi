@@ -8,3 +8,6 @@
 {% if title -%}
 <input id="retrieved_title" type="hidden" value="{{ title }}" hx-swap-oob="true">
 {% endif -%}
+{% if description -%}
+<input id="retrieved_description" type="hidden" value="{{ description }}" hx-swap-oob="true">
+{% endif -%}

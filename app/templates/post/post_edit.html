@@ -21,6 +21,13 @@
         title.value = retrieved.value;
       }
 
+      const retrieved_description = document.getElementById('retrieved_description');
+      const body = document.getElementById('body');
+
+      if (retrieved_description && body && retrieved_description.value && !body.value) {
+        body.value = retrieved_description.value;
+      }
+
       setTimeout(checkAndCopyTitle, 1000); // Check every second
     }
 
@@ -60,6 +67,7 @@
                 {{ render_field(form.link_url) }}
                 <div id="urlUsed"></div>
                 <input type="hidden" id="retrieved_title" value="">
+                <input type="hidden" id="retrieved_description" value="">
             {% endif -%}
             {{ render_field(form.title) }}
             {% if post_type == POST_TYPE_EVENT %}

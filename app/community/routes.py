@@ -2443,8 +2443,9 @@ def check_url_already_posted():
         url = remove_tracking_from_link(url.strip())
         communities = Community.query.filter_by(banned=False).join(Post).filter(Post.url == url, Post.deleted == False,
                                                                                 Post.status > POST_STATUS_REVIEWING).all()
+        title, description = retrieve_metadata_of_url(url)
         return flask.render_template('community/check_url_posted.html', communities=communities,
-                                     title=retrieve_title_of_url(url))
+                                     title=title, description=description)
     else:
         abort(404)
 
@@ -2465,7 +2466,9 @@ def get_sidebar(community_id):
     return flask.render_template('community/description.html', community=community, hide_community_actions=True)
 
 
-def retrieve_title_of_url(url):
+def retrieve_metadata_of_url(url):
+    title = ''
+    description = ''
     try:
         response = httpx_client.get(url, timeout=10, follow_redirects=True)
         if response.status_code == 200:
@@ -2474,18 +2477,23 @@ def retrieve_title_of_url(url):
             # Try og:title first
             og_title = soup.find('meta', property='og:title')
             if og_title and og_title.get('content'):
-                return og_title.get('content').strip()
+                title = og_title.get('content').strip()
 
-            # Fall back to HTML title
-            title_tag = soup.find('title')
-            if title_tag:
-                return title_tag.get_text().strip()
+            if title == '':
+                # Fall back to HTML title
+                title_tag = soup.find('title')
+                if title_tag:
+                    title = title_tag.get_text().strip()
 
-            return ""
+            meta_description = soup.find('meta', {'name': 'description'})
+            if meta_description and meta_description.get('content'):
+                description = meta_description.get('content').strip()
+
+            return title, description
         else:
-            return ""
+            return title, description
     except Exception:
-        return ""
+        return title, description
 
 
 @bp.route('/c/<actor>/fixup_from_remote')
