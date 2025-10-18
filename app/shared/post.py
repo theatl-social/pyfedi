@@ -725,7 +725,7 @@ def report_post(post: Post, input, src, auth=None):
         if description:
             summary += ' - ' + description
 
-        task_selector('report_post', user_id=reporter_user.id, post_id=post.id, summary=summary, instance_ids=remote_instance_ids)
+        task_selector('report_post', user_id=reporter_user.id, post_id=post.id, summary=summary, instance_ids=list(remote_instance_ids))
 
     if src == SRC_API:
         return reporter_user.id, report
