@@ -59,6 +59,12 @@
   }
 }
 
+.pl-lg-0 {
+  @include breakpoint(tablet) {
+    padding-left: 0 !important;
+  }
+}
+
 .ml-auto {
   margin-left: auto;
 }
