@@ -62,8 +62,8 @@ class Person(DefaultSchema):
     user_name = fields.String(required=True)
     about = fields.String(metadata={"format": "markdown"})
     about_html = fields.String(metadata={"format": "html"})
-    avatar = fields.Url(allow_none=True)
-    banner = fields.Url(allow_none=True)
+    avatar = fields.String(allow_none=True, metadata={"format": "url"})
+    banner = fields.String(allow_none=True, metadata={"format": "url"})
     flair = fields.String()
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     title = fields.String(allow_none=True)
@@ -94,7 +94,7 @@ class Site(DefaultSchema):
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
     sidebar = fields.String(metadata={"format": "html"})
     sidebar_md = fields.String(metadata={"format": "markdown"})
@@ -116,9 +116,9 @@ class Community(DefaultSchema):
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
     banned = fields.Boolean()
-    banner = fields.Url(allow_none=True)
+    banner = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     posting_warning = fields.String(allow_none=True)
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
@@ -547,10 +547,10 @@ class CommunityFlairDeleteResponse(GetCommunityResponse):
 class CreateCommunityRequest(DefaultSchema):
     name = fields.String(required=True)
     title = fields.String(required=True)
-    banner_url = fields.Url(allow_none=True)
+    banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.Url(allow_none=True)
+    icon_url = fields.String(allow_none=True)
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
@@ -565,10 +565,10 @@ class CommunityResponse(DefaultSchema):
 class EditCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     title = fields.String(required=True)
-    banner_url = fields.Url(allow_none=True)
+    banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.Url(allow_none=True)
+    icon_url = fields.String(allow_none=True)
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
@@ -683,10 +683,10 @@ class FeedView(DefaultSchema):
     title = fields.String(required=True)
     updated = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     user_id = fields.Integer(required=True, metadata={"description": "user_id of the feed creator/owner"}) 
-    banner = fields.Url(allow_none=True)
+    banner = fields.String(allow_none=True)
     description = fields.String(allow_none=True, metadata={"format": "markdown"})
     description_html = fields.String(allow_none=True, metadata={"format": "html"})
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     parent_feed_id = fields.Integer(allow_none=True)
 
 
@@ -1073,7 +1073,7 @@ class CreatePostRequest(DefaultSchema):
     title = fields.String(required=True)
     community_id = fields.Integer(required=True)
     body = fields.String()
-    url = fields.Url()
+    url = fields.String()
     nsfw = fields.Boolean()
     language_id = fields.Integer()
 
@@ -1082,7 +1082,7 @@ class EditPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     title = fields.String()
     body = fields.String()
-    url = fields.Url(allow_none=True, metadata={"description": "Pass value of null to remove the post url"})
+    url = fields.String(allow_none=True, metadata={"description": "Pass value of null to remove the post url"})
     nsfw = fields.Boolean()
     language_id = fields.Integer()
 
@@ -1281,7 +1281,7 @@ class ImageUploadRequest(DefaultSchema):
 
 
 class ImageUploadResponse(DefaultSchema):
-    url = fields.Url(required=True)
+    url = fields.String(required=True)
     liked_only = fields.Boolean()
     saved_only = fields.Boolean()
     q = fields.String()
