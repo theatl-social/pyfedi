@@ -835,10 +835,7 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
-    post = Post.query.get(13)
-    post.generate_ap_id()
-    db.session.commit()
-    return 'ok'
+    return markdown_to_html('Testing!\n\n![an image :: width=50](https://piefed.social/static/media/logo_8p7en.svg, https://media.piefed.social/posts/up/TR/upTRjfvFt2ma0hz.webp)\n\nthere we go')
 
     from flask import json
     community = Community.query.get(33)

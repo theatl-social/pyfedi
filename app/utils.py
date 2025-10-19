@@ -28,6 +28,7 @@ import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import orjson
 
+from app.markdown_extras import apply_enhanced_image_attributes
 from app.translation import LibreTranslateAPI
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
@@ -363,8 +364,13 @@ def allowlist_html(html: str, a_target='_blank') -> str:
             tag.extract()
         else:
             # Filter and sanitize attributes
+            allowed_attrs = ['href', 'src', 'alt', 'class']
+            # Add image-specific attributes for enhanced-images markdown extra
+            if tag.name == 'img':
+                allowed_attrs.extend(['width', 'height', 'align', 'title', 'data-enhanced-img'])
+
             for attr in list(tag.attrs):
-                if attr not in ['href', 'src', 'alt', 'class']:
+                if attr not in allowed_attrs:
                     del tag[attr]
             # Remove some mastodon guff - spans with class "invisible"
             if tag.name == 'span' and 'class' in tag.attrs and 'invisible' in tag.attrs['class']:
@@ -547,20 +553,26 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = markdown_text.replace('þ', 'th')
 
         try:
-            raw_html = markdown2.markdown(markdown_text,
-                                          extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
-                                                  'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
-                                                  'breaks': {'on_newline': True, 'on_backslash': True},
-                                                  'tag-friendly': True, 'smarty-pants': True})
+            md = markdown2.Markdown(extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
+                                            'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
+                                            'breaks': {'on_newline': True, 'on_backslash': True},
+                                            'tag-friendly': True, 'smarty-pants': True,
+                                            'enhanced-images': True})
+            raw_html = md.convert(markdown_text)
+            # Apply enhanced image attributes after markdown processing
+            raw_html = apply_enhanced_image_attributes(raw_html, md)
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
-                raw_html = markdown2.markdown(markdown_text,
-                                              extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                      'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
-                                                      'breaks': {'on_newline': True, 'on_backslash': True},
-                                                      'tag-friendly': True, 'smarty-pants': True})
+                md = markdown2.Markdown(extras={'middle-word-em': False, 'tables': True, 'strike': True,
+                                                'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
+                                                'breaks': {'on_newline': True, 'on_backslash': True},
+                                                'tag-friendly': True, 'smarty-pants': True,
+                                                'enhanced-images': True})
+                raw_html = md.convert(markdown_text)
+                # Apply enhanced image attributes after markdown processing
+                raw_html = apply_enhanced_image_attributes(raw_html, md)
             except:
                 raw_html = ''
         
