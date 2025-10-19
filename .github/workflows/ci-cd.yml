@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       run_full_tests:
@@ -12,6 +13,11 @@ on:
         required: false
         default: false
         type: boolean
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   # Fast validation jobs that run on every commit

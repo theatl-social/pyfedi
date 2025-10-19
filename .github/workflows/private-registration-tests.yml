@@ -3,6 +3,7 @@ name: Private Registration API Tests
 on:
   # Run on PRs that modify private registration code
   pull_request:
+    types: [opened, synchronize, reopened]
     paths:
       - 'app/api/admin/**'
       - 'app/api/alpha/schema.py'
@@ -32,6 +33,11 @@ on:
           - 'default'
           - 'env-only'
           - 'mixed'
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
 
 jobs:
   # Unit and Integration Tests
