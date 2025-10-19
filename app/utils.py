@@ -2695,7 +2695,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         post_id_sort = 'ORDER BY p.ranking DESC, p.posted_at DESC'
     elif sort == 'scaled':
         post_id_sort = 'ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC'
-        post_id_where.append('p.ranking_scaled is not null ')
+        post_id_where.append('p.ranking_scaled is not null AND p.from_bot is false ')
     elif sort.startswith('top'):
         if sort != 'top_all':
             post_id_where.append('p.posted_at > :top_cutoff ')
