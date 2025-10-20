@@ -13,26 +13,51 @@
 {% block app_content %}
 <script src="/static/js/coolfieldset.js?v=3"></script>
 <script nonce="{{ nonce }}">
-    function checkAndCopyTitle() {
+    function checkAndCopyTitle(curr_url = "", swapped = {}) {
       const retrieved = document.getElementById('retrieved_title');
-      const title = document.getElementById('title');
-
-      if (retrieved && title && retrieved.value && !title.value) {
-        title.value = retrieved.value;
-      }
-
       const retrieved_description = document.getElementById('retrieved_description');
+      const title = document.getElementById('title');
       const body = document.getElementById('body');
+      const link_url = document.getElementById('link_url');
+      let skip = false;
+      let swapped_title = false;
+      let swapped_body = false;
 
-      if (retrieved_description && body && retrieved_description.value && !body.value) {
-        body.value = retrieved_description.value;
+      if (link_url && (link_url.value != curr_url)) {
+        if (curr_url in swapped) {
+          delete swapped[curr_url];
+        }
+        curr_url = link_url.value;
+        swapped[curr_url] = false;
+        retrieved.value = "";
+        retrieved_description.value = "";
+      } else {
+        skip = true;
       }
 
-      setTimeout(checkAndCopyTitle, 1000); // Check every second
+      if (!skip || !swapped[curr_url]) {
+        if (retrieved && title && retrieved.value && !title.value) {
+            title.value = retrieved.value;
+            swapped_title = true;
+        }
+
+        if (retrieved_description && body && retrieved_description.value && !body.value) {
+            body.value = retrieved_description.value;
+            swapped_body = true;
+        }
+
+        swapped[curr_url] = swapped_title || swapped_body;
+      }
+
+      setTimeout(checkAndCopyTitle, 1000, curr_url, swapped); // Check every second
     }
 
+    let curr_url = "";
+    let swapped = {};
+
     // Start the checking loop
-    checkAndCopyTitle();
+    console.log("Starting loop...");
+    checkAndCopyTitle(curr_url, swapped);
 
     function showHideLocationDivs(element) {
         const onlineLocation = document.getElementById('online_location');
