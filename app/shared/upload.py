@@ -4,11 +4,14 @@ import boto3
 from PIL import Image, ImageOps
 from flask import current_app
 from pillow_heif import register_heif_opener
+from sqlalchemy import text
 
+from app import db
+from app.models import File
 from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
 
 
-def process_upload(image_file, destination='posts'):
+def process_upload(image_file, destination='posts', user_id=None):
     # should have errored earlier if no upload, but just to be paranoid
     if not image_file or image_file.filename == '':
         raise Exception('file not uploaded')
@@ -88,6 +91,15 @@ def process_upload(image_file, destination='posts'):
               new_filename[0:2] + '/' + new_filename[2:4] + '/' + new_filename + final_ext
         s3.close()
         os.unlink(final_place)
+
+    # associate file with uploader. Only provide user_id to this function when the image is not being used for a community icon, user avatar, etc where there is some other way to associate the image with the user.
+    if user_id:
+        file = File(source_url=url)
+        db.session.add(file)
+        db.session.commit()
+        db.session.execute(text('INSERT INTO "user_file" (file_id, user_id) VALUES (:file_id, :user_id)'),
+                           {'file_id': file.id, 'user_id': user_id})
+        db.session.commit()
 
     if not url:
         raise Exception('unable to process upload')

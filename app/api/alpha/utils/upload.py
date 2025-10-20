@@ -3,8 +3,8 @@ from app.utils import authorise_api_user
 
 
 def post_upload_image(auth, image_file=None):
-    authorise_api_user(auth)
-    url = process_upload(image_file)
+    user_id = authorise_api_user(auth)
+    url = process_upload(image_file, user_id=user_id)
     return {'url': url}
 
 

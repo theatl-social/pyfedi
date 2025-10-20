@@ -826,6 +826,13 @@ user_role = db.Table('user_role',
                      db.PrimaryKeyConstraint('user_id', 'role_id')
                      )
 
+
+user_file = db.Table('user_file',
+                     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+                     db.Column('file_id', db.Integer, db.ForeignKey('file.id')),
+                     db.PrimaryKeyConstraint('user_id', 'file_id')
+                     )
+
 # table to hold users' 'read' post ids
 read_posts = db.Table('read_posts',
                       db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True, nullable=False),
@@ -1360,6 +1367,13 @@ class User(UserMixin, db.Model):
                 reply.deleted = True
             else:
                 db.session.delete(reply)
+            db.session.commit()
+
+        files = File.query.join(user_file).filter(user_file.c.user_id == self.id).all()
+        for file in files:
+            file.delete_from_disk(purge_cdn=flush)
+            db.session.execute(text('DELETE FROM "user_file" WHERE file_id = :file_id'), {'file_id': file.id})
+            db.session.delete(file)
             db.session.commit()
 
     def mention_tag(self):
