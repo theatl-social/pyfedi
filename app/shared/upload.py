@@ -69,7 +69,7 @@ def process_upload(image_file, destination='posts', user_id=None):
 
             img.save(final_place, optimize=True, **kwargs)
 
-            file_size = os.path(final_place)
+            file_size = os.path.getsize(final_place)
 
             url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
         else:
