@@ -830,6 +830,7 @@ user_role = db.Table('user_role',
 user_file = db.Table('user_file',
                      db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
                      db.Column('file_id', db.Integer, db.ForeignKey('file.id')),
+                     db.Column('size', db.Integer),
                      db.PrimaryKeyConstraint('user_id', 'file_id')
                      )
 

@@ -33,6 +33,7 @@ def process_upload(image_file, destination='posts', user_id=None):
     final_place = os.path.join(directory, new_filename + file_ext)
     image_file.seek(0)
     image_file.save(final_place)
+    file_size = os.path.getsize(final_place)
 
     final_ext = file_ext  # track file extension for conversion
 
@@ -68,6 +69,8 @@ def process_upload(image_file, destination='posts', user_id=None):
 
             img.save(final_place, optimize=True, **kwargs)
 
+            file_size = os.path(final_place)
+
             url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
         else:
             raise Exception('filetype not allowed')
@@ -97,8 +100,8 @@ def process_upload(image_file, destination='posts', user_id=None):
         file = File(source_url=url)
         db.session.add(file)
         db.session.commit()
-        db.session.execute(text('INSERT INTO "user_file" (file_id, user_id) VALUES (:file_id, :user_id)'),
-                           {'file_id': file.id, 'user_id': user_id})
+        db.session.execute(text('INSERT INTO "user_file" (file_id, user_id, size) VALUES (:file_id, :user_id, :size)'),
+                           {'file_id': file.id, 'user_id': user_id, 'size': file_size})
         db.session.commit()
 
     if not url:

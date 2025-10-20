@@ -1,8 +1,8 @@
 """user file association
 
-Revision ID: 84ca58257212
+Revision ID: 461c871f0f58
 Revises: 2411d5c6539e
-Create Date: 2025-10-20 20:40:35.027262
+Create Date: 2025-10-20 21:44:30.387711
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '84ca58257212'
+revision = '461c871f0f58'
 down_revision = '2411d5c6539e'
 branch_labels = None
 depends_on = None
@@ -21,6 +21,7 @@ def upgrade():
     op.create_table('user_file',
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('file_id', sa.Integer(), nullable=False),
+    sa.Column('size', sa.Integer(), nullable=True),
     sa.ForeignKeyConstraint(['file_id'], ['file.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['user.id'], ),
     sa.PrimaryKeyConstraint('user_id', 'file_id')
