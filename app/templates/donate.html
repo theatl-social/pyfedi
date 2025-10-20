@@ -30,7 +30,9 @@
             </div>
             <div class="card-body">
                 <p><strong>{{ g.site.description|safe }}</strong></p>
-                <p>{{ g.site.sidebar_html|safe }}</p>
+                {% if g.site.sidebar_html -%}
+                    <p>{{ g.site.sidebar_html|safe }}</p>
+                {% endif -%}
                 <p class="mt-4">
                     <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
                 </p>
