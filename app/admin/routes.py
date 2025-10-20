@@ -101,14 +101,20 @@ def admin_site():
         site.about = form.about.data
         if form.about.data:
             site.about_html = markdown_to_html(form.about.data, a_target="")
+        else:
+            site.about_html = ""
 
         site.sidebar = form.sidebar.data
         if form.sidebar.data:
             site.sidebar_html = markdown_to_html(form.sidebar.data, a_target="")
+        else:
+            site.sidebar_html = ""
 
         site.legal_information = form.legal_information.data
         if form.legal_information.data:
             site.legal_information_html = markdown_to_html(form.legal_information.data, a_target="")
+        else:
+            site.legal_information_html = ""
 
         site.tos_url = form.tos_url.data
         site.updated = utcnow()
