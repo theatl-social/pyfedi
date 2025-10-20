@@ -3516,7 +3516,7 @@ def to_srgb(im: Image.Image, assume="sRGB"):
             im, src, srgb_cms,
             outputMode="RGB",
             renderingIntent=0,
-            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+            flags=ImageCms.Flags["BLACKPOINTCOMPENSATION"],
         )
         # keep an sRGB tag just in case
         im.info["icc_profile"] = srgb_wrap.tobytes()
