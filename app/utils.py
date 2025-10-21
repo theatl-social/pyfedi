@@ -3523,6 +3523,16 @@ def to_srgb(im: Image.Image, assume="sRGB"):
     except ImageCms.PyCMSError:
         # Fallback: just convert without ICC
         im = im.convert("RGB")
+    except AttributeError:
+        # Fallback, older versions of PIL have a different attribute name
+        im = ImageCms.profileToProfile(
+            im, src, srgb_cms,
+            outputMode="RGB",
+            renderingIntent=0,
+            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+        )
+        # keep an sRGB tag just in case
+        im.info["icc_profile"] = srgb_wrap.tobytes()
 
     return im
 
