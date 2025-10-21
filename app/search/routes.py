@@ -31,7 +31,7 @@ def run_search():
     type = request.args.get('type', 0, type=int)
     software = request.args.get('software', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    q = request.args.get('q')
+    q = (request.args.get('q') or '').strip()
     sort_by = request.args.get('sort_by', '')
     search_for = request.args.get('search_for', 'posts')
 
