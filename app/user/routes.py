@@ -318,13 +318,16 @@ def edit_profile(actor):
 
         db.session.commit()
 
-        # Sync to LDAP if password was provided
-        if password_updated:
-            try:
-                sync_user_to_ldap(current_user.user_name, current_user.email, form.password.data.strip())
-            except Exception as e:
-                # Log error but don't fail the profile update
-                current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
+        # Sync to LDAP
+        try:
+            sync_user_to_ldap(
+                current_user.user_name,
+                current_user.email,
+                form.password.data.strip() if password_updated else None
+            )
+        except Exception as e:
+            # Log error but don't fail the profile update
+            current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
 
         flash(_('Your changes have been saved.'), 'success')
 
