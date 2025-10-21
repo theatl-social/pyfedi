@@ -73,7 +73,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     # note: accommodating ! and @ queries for communities and people is different from lemmy's v3 api
 
     server = None
-    if query.startswith('https://') or query.startswith('http://'):
+    if query.startswith('https://'):
         parsed_url = urlparse(query)
         server = parsed_url.netloc.lower()
     elif query.startswith('!') or query.startswith('@'):
