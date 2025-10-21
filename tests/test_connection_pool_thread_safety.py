@@ -11,6 +11,31 @@ The PGRES_TUPLES_OK errors occur when:
 1. Multiple worker processes share inherited connection file descriptors
 2. Workers attempt to use connections simultaneously
 3. Protocol state corruption occurs (lost synchronization with server)
+
+IMPORTANT: Thread-Safety Test Limitations
+==========================================
+
+These tests use SQLite by default, which CANNOT reproduce the actual
+PGRES_TUPLES_OK bug that occurs with PostgreSQL.
+
+SQLite is single-threaded and handles concurrent access differently than
+PostgreSQL's client-server protocol.
+
+FOR POSTGRESQL VALIDATION:
+- Set DATABASE_URL to PostgreSQL connection string
+- Run compose.test.yml which uses PostgreSQL 17
+- Or run: DATABASE_URL=postgresql://... pytest tests/test_connection_pool_*
+
+WHAT THESE TESTS VALIDATE:
+✓ QueuePool thread handling with SQLite (NOT the real bug)
+✓ Hook file structure exists
+✓ Engine recreation logic works (with SQLite)
+
+WHAT THESE TESTS DO NOT VALIDATE:
+✗ Real PGRES_TUPLES_OK errors with PostgreSQL
+✗ Actual hook execution during Gunicorn/Celery startup
+✗ Thread safety under true PostgreSQL protocol conditions
+✗ Connection pool inheritance scenarios with real fork()
 """
 
 import concurrent.futures
@@ -24,6 +49,25 @@ from typing import List
 import pytest
 from sqlalchemy import create_engine, text
 from sqlalchemy.pool import NullPool, QueuePool
+
+
+# Helper to determine if we're using PostgreSQL
+def get_test_database_url():
+    """
+    Get database URL for testing.
+
+    Uses DATABASE_URL environment variable if set, otherwise falls back
+    to SQLite in-memory database.
+
+    PostgreSQL is REQUIRED to properly test PGRES_TUPLES_OK errors.
+    """
+    db_url = os.environ.get("DATABASE_URL", "sqlite:///:memory:")
+    return db_url
+
+
+def is_postgresql():
+    """Check if tests are running against PostgreSQL"""
+    return "postgresql" in get_test_database_url().lower()
 
 
 def test_concurrent_database_queries_with_queuepool_unsafe():
@@ -230,15 +274,24 @@ def test_forked_workers_with_inherited_pool_unsafe():
 
     WITHOUT post_worker_init recreating the engine, child processes share
     the parent's connection pool state, causing protocol corruption.
-    """
-    # Create a temporary database file
-    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
-        db_path = tmp.name
 
+    NOTE: This test uses SQLite by default, which will NOT exhibit the bug.
+    With PostgreSQL (via DATABASE_URL env var), this WOULD cause errors.
+    """
+    db_url = get_test_database_url()
+
+    if not is_postgresql():
+        pytest.skip(
+            "PostgreSQL required to properly test PGRES_TUPLES_OK errors. "
+            "This test with SQLite cannot reproduce the actual production bug. "
+            "Set DATABASE_URL=postgresql://... to run this test properly."
+        )
+
+    # Use actual database URL (PostgreSQL in production tests)
     try:
         # PARENT PROCESS: Create engine with QueuePool
         parent_engine = create_engine(
-            f"sqlite:///{db_path}",
+            db_url,
             poolclass=QueuePool,
             pool_size=2,
             max_overflow=0,
@@ -310,9 +363,8 @@ def test_forked_workers_with_inherited_pool_unsafe():
 
         parent_engine.dispose()
     finally:
-        import pathlib
-
-        pathlib.Path(db_path).unlink(missing_ok=True)
+        # No cleanup needed for PostgreSQL (uses temp tables)
+        pass
 
 
 def test_forked_workers_with_engine_recreation_safe():
@@ -415,9 +467,8 @@ def test_forked_workers_with_engine_recreation_safe():
 
         parent_engine.dispose()
     finally:
-        import pathlib
-
-        pathlib.Path(db_path).unlink(missing_ok=True)
+        # No cleanup needed for PostgreSQL (uses temp tables)
+        pass
 
 
 if __name__ == "__main__":
