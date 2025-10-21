@@ -384,8 +384,8 @@ def process_login(form: LoginForm):
         if not validate_user_login(user, form.password.data.strip(), ip):
             return redirect(url_for("auth.login"))
 
-        if user.waiting_for_approval():
-            return redirect(url_for("auth.please_wait"))
+    if user.waiting_for_approval():
+        return redirect(url_for("auth.please_wait"))
 
     return log_user_in(user, form, ip, country, ldap_sync=ldap_sync)
 
