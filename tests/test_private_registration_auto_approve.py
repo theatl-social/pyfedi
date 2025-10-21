@@ -21,21 +21,43 @@ from app.models import User
 
 @pytest.fixture
 def app():
-    """Create Flask app for testing"""
-    os.environ["TESTING"] = "true"
-    os.environ["SERVER_NAME"] = "test.local"
-    os.environ["SECRET_KEY"] = "test-secret-key"
-    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+    """
+    Create Flask app for testing.
+
+    Uses DATABASE_URL from environment (PostgreSQL in Docker, SQLite locally).
+    PostgreSQL is required for full functionality testing.
+    """
+    # Only set these if not already set (preserve compose.test.yml environment)
+    if "TESTING" not in os.environ:
+        os.environ["TESTING"] = "true"
+    if "SERVER_NAME" not in os.environ:
+        os.environ["SERVER_NAME"] = "test.local"
+    if "SECRET_KEY" not in os.environ:
+        os.environ["SECRET_KEY"] = "test-secret-key"
+    # Use DATABASE_URL from environment if set, otherwise fallback to SQLite
+    if "DATABASE_URL" not in os.environ:
+        os.environ["DATABASE_URL"] = "sqlite:///:memory:"
 
     app = create_app()
     app.config["TESTING"] = True
-    app.config["SERVER_NAME"] = "test.local"
+
+    # Use SERVER_NAME from environment if available
+    if "SERVER_NAME" in os.environ:
+        app.config["SERVER_NAME"] = os.environ["SERVER_NAME"]
 
     with app.app_context():
-        db.create_all()
+        # Don't create_all() if using PostgreSQL - schema already exists
+        # SQLite needs create_all() because it's in-memory
+        if "sqlite" in os.environ.get("DATABASE_URL", ""):
+            db.create_all()
+
         yield app
+
         db.session.remove()
-        db.drop_all()
+
+        # Only drop tables for SQLite (PostgreSQL schema is persistent)
+        if "sqlite" in os.environ.get("DATABASE_URL", ""):
+            db.drop_all()
 
 
 def test_auto_activate_true_immediate_finalization(app):
