@@ -73,7 +73,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     # note: accommodating ! and @ queries for communities and people is different from lemmy's v3 api
 
     server = None
-    if query.startswith('https://'):
+    if query.startswith('https://') or query.startswith('http://'):
         parsed_url = urlparse(query)
         server = parsed_url.netloc.lower()
     elif query.startswith('!') or query.startswith('@'):
@@ -92,7 +92,10 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
             local_request = bool(search_for_community(query.lower(), allow_fetch=False))
         elif query.startswith('@'):
             # Check if this user is already federated
-            local_request = bool(search_for_user(query.lower(), allow_fetch=False))
+            if query.endswith(current_app.config['SERVER_NAME']):
+                user_name = query[1:]
+                user_name = user_name.split('@')[0]
+            local_request = bool(search_for_user(user_name.lower(), allow_fetch=False))
         else:
             local_request = False
     
@@ -147,7 +150,10 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
 
             # This is a user specified using the @user@instance.tld notation
             if query.startswith("@"):
-                object = search_for_user(query.lower(), allow_fetch=bool(user_id))
+                if query.endswith(current_app.config['SERVER_NAME']):
+                    user_name = query[1:]
+                    user_name = user_name.split('@')[0]
+                object = search_for_user(user_name.lower(), allow_fetch=bool(user_id))
                 if object:
                     return user_view(user=object, variant=7, user_id=user_id)
                 else:
@@ -165,6 +171,9 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
             if not user_name:
                 raise Exception('No object found.')
             
+            if user_name.endswith(current_app.config['SERVER_NAME']) and '@' in user_name:
+                user_name = user_name.split('@')[0]
+
             object = search_for_user(user_name.lower(), allow_fetch=bool(user_id))
             if object:
                 return user_view(user=object, variant=7, user_id=user_id)
