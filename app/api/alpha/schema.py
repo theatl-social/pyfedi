@@ -11,7 +11,7 @@ sort_list = ["Active", "Hot", "New", "Top", "TopHour", "TopSixHour", "TopTwelveH
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
-                  "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Scaled", "Active"]
+                  "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Old", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Active"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
@@ -1190,6 +1190,7 @@ class ListPostsRequest(Schema):
     liked_only = fields.Boolean(metadata={"default": False})
     feed_id = fields.Integer()
     topic_id = fields.Integer()
+    ignore_sticky = fields.Boolean(metadata={"default": False, "description": "If filtering by community, ignores a post's sticky state"})
 
 
 class ListPostsRequest2(ListPostsRequest):
