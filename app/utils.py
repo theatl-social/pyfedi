@@ -4315,13 +4315,21 @@ def to_srgb(im: Image.Image, assume="sRGB"):
         im = im.convert("RGB")
 
     try:
+        # Pillow 11+ changed FLAGS dict to Flags enum
+        try:
+            # Pillow 11+ uses Flags enum
+            flags = ImageCms.Flags.BLACKPOINTCOMPENSATION
+        except AttributeError:
+            # Pillow < 11 uses FLAGS dict
+            flags = ImageCms.FLAGS["BLACKPOINTCOMPENSATION"]
+
         im = ImageCms.profileToProfile(
             im,
             src,
             srgb_cms,
             outputMode="RGB",
             renderingIntent=0,
-            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+            flags=flags,
         )
         # keep an sRGB tag just in case
         im.info["icc_profile"] = srgb_wrap.tobytes()
