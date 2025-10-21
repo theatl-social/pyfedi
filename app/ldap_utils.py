@@ -56,14 +56,14 @@ def _bind_user(dn: str, password: str) -> Optional[Connection]:
         return None
 
 
-def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
+def sync_user_to_ldap(username: str, email: str, password: Optional[str]) -> bool:
     """
     Synchronize user data to LDAP server.
 
     Args:
         username: User's username
         email: User's email address
-        password: User's plain text password
+        password: User's plain text password (optional)
 
     Returns:
         bool: True if sync was successful or skipped, False if failed
@@ -73,11 +73,6 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
         return True
 
     username = username.lower()
-
-    # Skip if no password provided
-    if not password or not password.strip():
-        logger.info(f"No password provided for user {username}, skipping LDAP sync")
-        return True
 
     conn = _bind_user(current_app.config.get('LDAP_WRITE_BIND_DN'), current_app.config.get('LDAP_WRITE_BIND_PASSWORD'))
     if not conn:
@@ -96,7 +91,7 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
             search_base=base_dn,
             search_filter=user_filter,
             search_scope=SUBTREE,
-            attributes=[username_attr, email_attr, password_attr]
+            attributes=[username_attr, email_attr]
         )
 
         if conn.entries:
@@ -109,8 +104,9 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
             if current_email != email:
                 changes[email_attr] = [(MODIFY_REPLACE, [email])]
 
-            # Always update password (assume it's hashed appropriately by LDAP server)
-            changes[password_attr] = [(MODIFY_REPLACE, [password])]
+            # Update password if given (assume it's hashed appropriately by LDAP server)
+            if password and password.strip():
+                changes[password_attr] = [(MODIFY_REPLACE, [password])]
 
             if changes:
                 success = conn.modify(user_dn, changes)
@@ -124,6 +120,11 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
                 logger.info(f"No changes needed for LDAP user {username}")
                 return True
         else:
+            # Skip if no password provided
+            if not password or not password.strip():
+                logger.info(f"No password provided for user {username}, couldn't create user")
+                return True
+
             # User doesn't exist, create new entry
             user_dn = f"{username_attr}={username},{base_dn}"
             attributes = {
