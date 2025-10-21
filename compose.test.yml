@@ -165,7 +165,10 @@ services:
         python -m pytest tests/test_allowlist_html.py -v
         python -m pytest tests/test_markdown_to_html.py -v
 
-        echo '4️⃣ API Endpoint Tests (when ready)'
+        echo '4️⃣ Connection Pool Thread Safety Tests'
+        python -m pytest tests/test_connection_pool_thread_safety.py -v
+
+        echo '5️⃣ API Endpoint Tests (when ready)'
         # python -m pytest tests/test_api_endpoints.py -v
 
         echo '✅ Comprehensive validation complete!'
