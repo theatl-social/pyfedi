@@ -384,6 +384,9 @@ def process_login(form: LoginForm):
         if not validate_user_login(user, form.password.data.strip(), ip):
             return redirect(url_for("auth.login"))
 
+    if requires_email_verification(user):
+        return redirect(url_for("auth.check_email"))
+
     if user.waiting_for_approval():
         return redirect(url_for("auth.please_wait"))
 
