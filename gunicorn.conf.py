@@ -44,24 +44,43 @@ def post_fork(server, worker):
 def post_worker_init(worker):
     """
     Called after a worker has been initialized (after post_fork).
-    For gthread worker class, ensures proper SQLAlchemy configuration.
+    Recreates the SQLAlchemy engine with a fresh connection pool.
 
-    This is critical because gthread uses threads within each worker process,
-    and SQLAlchemy needs specific settings for thread-safe operation.
+    This is critical for gthread workers because:
+    1. post_fork disposes the inherited pool
+    2. We need to create a FRESH pool after fork (not inherited from parent)
+    3. QueuePool is thread-safe with Flask-SQLAlchemy's scoped_session
+    4. Each worker gets its own pool, preventing protocol corruption
+
+    Without this, workers may reuse parent's pool state, causing
+    PGRES_TUPLES_OK errors and connection protocol corruption.
+
+    Reference: SQLALCHEMY_POOLING_BEST_PRACTICES.md
     """
     from app import db
+    from config import Config
+    from sqlalchemy import create_engine
 
-    # Set pool_pre_ping to check connections before using them
-    # This prevents "PGRES_TUPLES_OK" errors from stale/broken connections
-    db.engine.pool._pre_ping = True
+    # Save original pool configuration before disposing
+    original_url = db.engine.url
+    original_pool_size = Config.DB_POOL_SIZE
+    original_max_overflow = Config.DB_MAX_OVERFLOW
 
-    # Ensure NullPool for gthread to avoid connection sharing between threads
-    from sqlalchemy.pool import NullPool
+    # Dispose any remaining pool state
+    db.engine.dispose()
 
-    if not isinstance(db.engine.pool, NullPool):
-        # Recreate engine with NullPool for thread safety
-        from sqlalchemy import create_engine
+    # Recreate engine with fresh QueuePool
+    # Uses same configuration from config.py
+    db.engine = create_engine(
+        original_url,
+        pool_size=int(original_pool_size),
+        max_overflow=int(original_max_overflow),
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        echo=False,
+    )
 
-        db.engine = create_engine(db.engine.url, poolclass=NullPool, echo=False)
-
-    worker.log.info(f"Worker {worker.pid}: SQLAlchemy configured for gthread")
+    worker.log.info(
+        f"Worker {worker.pid}: Recreated engine with fresh QueuePool "
+        f"(pool_size={original_pool_size}, max_overflow={original_max_overflow})"
+    )

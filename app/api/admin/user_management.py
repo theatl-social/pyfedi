@@ -154,8 +154,21 @@ def perform_user_action(
         elif action == "enable":
             if user.verified:
                 raise ValueError("User is already enabled")
+
+            # Check if user was created via private registration without auto_activate
+            # In this case, we need to call finalize_user_setup() to set up AP keys
+            needs_finalization = not user.ap_profile_id or not user.private_key
+
             user.verified = True
-            message = "User enabled"
+
+            # Finalize user setup if needed (AP keys, profile URLs)
+            if needs_finalization:
+                from app.utils import finalize_user_setup
+
+                finalize_user_setup(user)
+                message = "User enabled and finalized (AP keys generated)"
+            else:
+                message = "User enabled"
 
         elif action == "delete":
             user.deleted = True
