@@ -153,7 +153,7 @@ source venv/bin/activate
 * Use pip to install requirements           
 
 ```bash
-pip install wheel
+pip install wheel setuptools
 pip install -r requirements.txt
 ```
 (see [Notes for Windows (WSL2)](#windows-wsl2) if appropriate)        

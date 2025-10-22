@@ -1066,7 +1066,7 @@ def approval_required(func):
 def trustworthy_account_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if current_user.trustworthy():
+        if current_user.trustworthy() or current_user.get_id() in g.admin_ids:
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.not_trustworthy'))
@@ -1077,7 +1077,7 @@ def trustworthy_account_required(func):
 def aged_account_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not current_user.created_very_recently():
+        if current_user.get_id() in g.admin_ids or not current_user.created_very_recently():
             return func(*args, **kwargs)
         else:
             return redirect(url_for('auth.not_trustworthy'))
