@@ -183,33 +183,33 @@
                             const dropdownMenu = document.createElement('ul');
                             dropdownMenu.className = 'dropdown-menu';
 
-                            // Compress option
-                            const compressItem = document.createElement('li');
-                            const compressLink = document.createElement('a');
-                            compressLink.className = 'dropdown-item';
-                            compressLink.href = '#';
-                            compressLink.textContent = '{{ _("Compress") }}';
-                            compressLink.onclick = function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Compress:', image.url);
-                                // TODO: Implement compress API call
-                            };
-                            compressItem.appendChild(compressLink);
+                            // // Compress option
+                            // const compressItem = document.createElement('li');
+                            // const compressLink = document.createElement('a');
+                            // compressLink.className = 'dropdown-item';
+                            // compressLink.href = '#';
+                            // compressLink.textContent = '{{ _("Compress") }}';
+                            // compressLink.onclick = function(e) {
+                            //     e.preventDefault();
+                            //     e.stopPropagation();
+                            //     console.log('Compress:', image.url);
+                            //     // TODO: Implement compress API call
+                            // };
+                            // compressItem.appendChild(compressLink);
 
-                            // Rename option
-                            const renameItem = document.createElement('li');
-                            const renameLink = document.createElement('a');
-                            renameLink.className = 'dropdown-item';
-                            renameLink.href = '#';
-                            renameLink.textContent = '{{ _("Rename") }}';
-                            renameLink.onclick = function(e) {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                console.log('Rename:', image.name);
-                                // TODO: Implement rename API call
-                            };
-                            renameItem.appendChild(renameLink);
+                            // // Rename option
+                            // const renameItem = document.createElement('li');
+                            // const renameLink = document.createElement('a');
+                            // renameLink.className = 'dropdown-item';
+                            // renameLink.href = '#';
+                            // renameLink.textContent = '{{ _("Rename") }}';
+                            // renameLink.onclick = function(e) {
+                            //     e.preventDefault();
+                            //     e.stopPropagation();
+                            //     console.log('Rename:', image.name);
+                            //     // TODO: Implement rename API call
+                            // };
+                            // renameItem.appendChild(renameLink);
 
                             // Delete option
                             const deleteItem = document.createElement('li');
@@ -220,13 +220,33 @@
                             deleteLink.onclick = function(e) {
                                 e.preventDefault();
                                 e.stopPropagation();
-                                console.log('Delete:', image.url);
-                                // TODO: Implement delete API call
+
+                                fetch('/api/alpha/image/delete', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({ file: image.url })
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        throw new Error('Delete failed');
+                                    }
+                                    return response.json();
+                                })
+                                .then(data => {
+                                    // Reload the image grid to show the updated list
+                                    loadImageThumbnails();
+                                })
+                                .catch(error => {
+                                    console.error('Delete error:', error);
+                                    alert('{{ _("Failed to delete image. Please try again.") }}');
+                                });
                             };
                             deleteItem.appendChild(deleteLink);
 
-                            dropdownMenu.appendChild(compressItem);
-                            dropdownMenu.appendChild(renameItem);
+                            // dropdownMenu.appendChild(compressItem);
+                            // dropdownMenu.appendChild(renameItem);
                             dropdownMenu.appendChild(deleteItem);
 
                             moreContainer.appendChild(moreBtn);

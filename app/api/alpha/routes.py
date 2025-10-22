@@ -1203,7 +1203,7 @@ def post_alpha_upload_user_image(files_data):
 
 @upload_bp.route('/image/delete', methods=['POST'])
 @upload_bp.doc(summary="Delete a user image.")
-@upload_bp.arguments(ImageDeleteRequest, location="files")
+@upload_bp.arguments(ImageDeleteRequest)
 @upload_bp.response(200, ImageDeleteResponse)
 @upload_bp.alt_response(400, schema=DefaultError)
 @upload_bp.alt_response(429, schema=DefaultError)
