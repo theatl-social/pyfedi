@@ -90,6 +90,7 @@
             {% block post_type %}{% endblock %}
             {% if post_type == POST_TYPE_LINK %}
                 {{ render_field(form.link_url) }}
+                {{ render_field(form.image_alt_text) }}
                 <div id="urlUsed"></div>
                 <input type="hidden" id="retrieved_title" value="">
                 <input type="hidden" id="retrieved_description" value="">
