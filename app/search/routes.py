@@ -35,7 +35,7 @@ def run_search():
     sort_by = request.args.get('sort_by', '')
     search_for = request.args.get('search_for', 'posts')
 
-    if q is not None or type != 0 or language_id != 0 or community_id != 0:
+    if q != '' or type != 0 or language_id != 0 or community_id != 0:
         posts = None
         db.session.execute(text("SET work_mem = '100MB';"))
         if search_for == 'posts':
