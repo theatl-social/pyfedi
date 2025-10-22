@@ -2651,6 +2651,10 @@ form h5 {
   width: 96%;
 }
 
+#insertImageDialog {
+  max-width: 1000px;
+}
+
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;
