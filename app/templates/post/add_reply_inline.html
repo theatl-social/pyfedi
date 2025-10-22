@@ -27,11 +27,11 @@
                 {{ _('Comment') }}
             </a>
             <a href="#" 
-                class="btn btn-outline mt-2" 
+                class="btn btn-outline-secondary mt-2"
                 hx-post="{{ url_for('post.preview') }}" 
                 hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
                 {{ _('Preview') }}
-            </a>
+            </a><a href="#" class="btn btn-outline-secondary mt-2 {{ 'd-none' if markdown_editor }}" id="insertImage_{{ comment_id }}">{{ _('Insert image') }}</a>
         </div>
         <div class="col-4 text-right">
             <select name="language_id" 
@@ -64,8 +64,52 @@
                 value: document.getElementById("body").value
             });
             setupAutoResize('textarea_in_reply_to_{{ comment_id }}');
+
+            // Override the image button to open media library
+            setTimeout(function() {
+                const imageButton = document.querySelector('#textarea_in_reply_to_{{ comment_id }}').parentNode.parentNode.querySelector('.downarea-toolbar-tool[data-action="image"]');
+                if (imageButton) {
+                    const newImageButton = imageButton.cloneNode(true);
+                    imageButton.parentNode.replaceChild(newImageButton, imageButton);
+                    newImageButton.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        document.getElementById('insertImage_{{ comment_id }}').click();
+                    });
+                }
+            }, 100);
         </script>
     {% endif %}
+
+    <script nonce="{{ nonce }}">
+        // Initialize Media Library for this reply form
+        const mediaLibrary_{{ comment_id }} = new MediaLibrary({
+            dialogId: 'insertImageDialog',
+            dialogCloseId: 'insert_image_dialog_close',
+            triggerLinkId: 'insertImage_{{ comment_id }}',
+            loadContainerId: 'loadImagesHere',
+            targetTextareaId: 'textarea_in_reply_to_{{ comment_id }}',
+            uploadInputId: 'imageUploadInput',
+            uploadButtonId: 'imageUploadButton',
+            uploadStatusId: 'uploadStatus',
+            translations: {
+                loading: '{{ _("Loading...") }}',
+                noImages: '{{ _("No images found.") }}',
+                errorLoading: '{{ _("Error loading images.") }}',
+                insert: '{{ _("Insert") }}',
+                more: '{{ _("More") }}',
+                delete: '{{ _("Delete") }}',
+                confirmDelete: '{{ _("Are you sure you want to delete this image?") }}',
+                deleteError: '{{ _("Failed to delete image. Please try again.") }}',
+                selectFile: '{{ _("Please select a file.") }}',
+                selectImage: '{{ _("Please select an image file.") }}',
+                uploading: '{{ _("Uploading...") }}',
+                uploadSuccess: '{{ _("Upload successful!") }}',
+                uploadError: '{{ _("Upload failed. Please try again.") }}',
+                pasteUploadError: '{{ _("Failed to upload pasted image. Please try again.") }}'
+            }
+        });
+    </script>
     <div class="row">
         <div class="col">
             <div id="textarea_in_reply_to_preview_{{ comment_id }}" class="reply_preview"></div>

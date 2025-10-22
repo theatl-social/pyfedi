@@ -31,6 +31,8 @@
  */
 
 class MediaLibrary {
+    static activeInstance = null;
+
     constructor(options) {
         this.dialog = document.getElementById(options.dialogId);
         this.triggerLink = document.getElementById(options.triggerLinkId);
@@ -59,6 +61,9 @@ class MediaLibrary {
         // Open dialog
         this.triggerLink.addEventListener('click', (e) => {
             e.preventDefault();
+
+            // Set this instance as active
+            MediaLibrary.activeInstance = this;
 
             // Load images if not already loaded or if refresh needed
             if (this.loadContainer.children.length === 0 || this.needsRefresh) {
@@ -361,16 +366,18 @@ class MediaLibrary {
     }
 
     insertImage(image) {
-        if (!this.targetTextarea) return;
+        // Use the active instance's textarea
+        const activeInstance = MediaLibrary.activeInstance || this;
+        if (!activeInstance.targetTextarea) return;
 
         const markdown = '\n![' + image.name + '](' + image.url + ')\n';
-        const cursorPos = this.targetTextarea.selectionStart;
-        const textBefore = this.targetTextarea.value.substring(0, cursorPos);
-        const textAfter = this.targetTextarea.value.substring(cursorPos);
+        const cursorPos = activeInstance.targetTextarea.selectionStart;
+        const textBefore = activeInstance.targetTextarea.value.substring(0, cursorPos);
+        const textAfter = activeInstance.targetTextarea.value.substring(cursorPos);
 
-        this.targetTextarea.value = textBefore + markdown + textAfter;
-        this.targetTextarea.focus();
-        this.targetTextarea.setSelectionRange(cursorPos + markdown.length, cursorPos + markdown.length);
+        activeInstance.targetTextarea.value = textBefore + markdown + textAfter;
+        activeInstance.targetTextarea.focus();
+        activeInstance.targetTextarea.setSelectionRange(cursorPos + markdown.length, cursorPos + markdown.length);
 
         this.dialog.close();
     }
