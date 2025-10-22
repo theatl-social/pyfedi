@@ -64,20 +64,6 @@
                 value: document.getElementById("body").value
             });
             setupAutoResize('textarea_in_reply_to_{{ comment_id }}');
-
-            // Override the image button to open media library
-            setTimeout(function() {
-                const imageButton = document.querySelector('#textarea_in_reply_to_{{ comment_id }}').parentNode.parentNode.querySelector('.downarea-toolbar-tool[data-action="image"]');
-                if (imageButton) {
-                    const newImageButton = imageButton.cloneNode(true);
-                    imageButton.parentNode.replaceChild(newImageButton, imageButton);
-                    newImageButton.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        document.getElementById('insertImage_{{ comment_id }}').click();
-                    });
-                }
-            }, 100);
         </script>
     {% endif %}
 
@@ -109,6 +95,11 @@
                 pasteUploadError: '{{ _("Failed to upload pasted image. Please try again.") }}'
             }
         });
+
+        {% if markdown_editor %}
+        // Override DownArea image button to use media library
+        mediaLibrary_{{ comment_id }}.overrideDownAreaImageButton('#textarea_in_reply_to_{{ comment_id }}');
+        {% endif %}
     </script>
     <div class="row">
         <div class="col">

@@ -51,6 +51,11 @@
                 pasteUploadError: '{{ _("Failed to upload pasted image. Please try again.") }}'
             }
         });
+
+        {% if markdown_editor %}
+        // Override DownArea image button to use media library
+        mediaLibrary.overrideDownAreaImageButton('#body');
+        {% endif %}
     });
 
 </script>
@@ -104,11 +109,11 @@
                                             <tr>
                                                 <td>{{ render_field(form.submit) }}</td>
                                                 <td><a href="#"
-                                                    class="btn btn-outline"
+                                                    class="btn btn-outline-secondary"
                                                     hx-post="{{ url_for('post.preview') }}"
                                                     hx-target="#textarea_comment_to_preview">
                                                     {{ _('Preview') }}
-                                                </a> | <a href="#" id="insertImage">{{ _('Insert image') }}</a></td>
+                                                </a> <a href="#" id="insertImage" class="btn btn-outline-secondary {{ 'd-none' if markdown_editor }}">{{ _('Insert image') }}</a></td>
                                             </tr>
                                         </table>
                                             <div class="row">
@@ -146,26 +151,6 @@
                                                     value: document.getElementById("body").value
                                                 });
                                                 setupAutoResize('body');
-
-                                                // Override the image button to open media library instead
-                                                setTimeout(function() {
-                                                    const imageButton = document.querySelector('.downarea-toolbar-tool[data-action="image"]');
-                                                    if (imageButton) {
-                                                        // Remove the default click handler by cloning the element
-                                                        const newImageButton = imageButton.cloneNode(true);
-                                                        imageButton.parentNode.replaceChild(newImageButton, imageButton);
-
-                                                        // Add new click handler to open media library
-                                                        newImageButton.addEventListener('click', function(e) {
-                                                            e.preventDefault();
-                                                            e.stopPropagation();
-                                                            const insertImageLink = document.getElementById('insertImage');
-                                                            if (insertImageLink) {
-                                                                insertImageLink.click();
-                                                            }
-                                                        });
-                                                    }
-                                                }, 100);
                                             });
                                         </script>
                                     {% else -%}

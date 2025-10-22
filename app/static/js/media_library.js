@@ -1,7 +1,7 @@
 /**
  * Media library functionality
  *
- * Usage:
+ * Basic usage:
  * const mediaLibrary = new MediaLibrary({
  *     dialogId: 'insertImageDialog',
  *     dialogCloseId: 'insert_image_dialog_close',
@@ -28,6 +28,9 @@
  *         pasteUploadError: 'Failed to upload pasted image. Please try again.'
  *     }
  * });
+ *
+ * To override DownArea markdown editor's image button:
+ * mediaLibrary.overrideDownAreaImageButton('#body');
  */
 
 class MediaLibrary {
@@ -53,6 +56,58 @@ class MediaLibrary {
         this.setupDialogHandlers();
         this.setupUploadHandlers();
         this.setupPasteHandler();
+    }
+
+    /**
+     * Override DownArea markdown editor's image button to use media library
+     * Call this method after DownArea is initialized
+     * @param {string} textareaSelector - CSS selector for the textarea (e.g., '#body' or '#textarea_in_reply_to_123')
+     * @param {number} delay - Delay in ms to wait for DownArea initialization (default: 100)
+     */
+    overrideDownAreaImageButton(textareaSelector, delay = 100) {
+        setTimeout(() => {
+            let imageButton;
+
+            console.log('overrideDownAreaImageButton called with selector:', textareaSelector, 'delay:', delay);
+
+            if (textareaSelector) {
+                // Find image button within specific textarea's DownArea toolbar
+                const textarea = document.querySelector(textareaSelector);
+                console.log('Found textarea:', textarea);
+
+                if (textarea && textarea.parentNode && textarea.parentNode.parentNode) {
+                    console.log('parentNode:', textarea.parentNode);
+                    console.log('parentNode.parentNode:', textarea.parentNode.parentNode);
+                    imageButton = textarea.parentNode.parentNode.querySelector('.downarea-toolbar-tool[data-action="image"]');
+                    console.log('Found image button:', imageButton);
+                } else {
+                    console.log('Could not navigate parent nodes');
+                }
+            } else {
+                // Find first image button on page
+                imageButton = document.querySelector('.downarea-toolbar-tool[data-action="image"]');
+                console.log('Found first image button on page:', imageButton);
+            }
+
+            if (imageButton) {
+                console.log('Overriding image button click handler');
+                // Remove the default click handler by cloning the element
+                const newImageButton = imageButton.cloneNode(true);
+                imageButton.parentNode.replaceChild(newImageButton, imageButton);
+
+                // Add new click handler to open media library
+                newImageButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Media library image button clicked, triggerLink:', this.triggerLink);
+                    if (this.triggerLink) {
+                        this.triggerLink.click();
+                    }
+                });
+            } else {
+                console.log('Image button NOT found!');
+            }
+        }, delay);
     }
 
     setupDialogHandlers() {
@@ -370,16 +425,26 @@ class MediaLibrary {
         const activeInstance = MediaLibrary.activeInstance || this;
         if (!activeInstance.targetTextarea) return;
 
-        const markdown = '\n![' + image.name + '](' + image.url + ')\n';
         const cursorPos = activeInstance.targetTextarea.selectionStart;
         const textBefore = activeInstance.targetTextarea.value.substring(0, cursorPos);
         const textAfter = activeInstance.targetTextarea.value.substring(cursorPos);
 
+        // Don't add leading newline if textarea is empty or cursor is at start
+        const leadingNewline = (textBefore.trim().length === 0) ? '' : '\n';
+        // Don't add trailing newline if at end of empty textarea
+        const trailingNewline = (textAfter.trim().length === 0 && textBefore.trim().length === 0) ? '' : '\n';
+
+        const markdown = leadingNewline + '![' + image.name + '](' + image.url + ')' + trailingNewline;
+
         activeInstance.targetTextarea.value = textBefore + markdown + textAfter;
-        activeInstance.targetTextarea.focus();
-        activeInstance.targetTextarea.setSelectionRange(cursorPos + markdown.length, cursorPos + markdown.length);
 
         this.dialog.close();
+
+        // Set focus and cursor position after dialog closes
+        setTimeout(() => {
+            activeInstance.targetTextarea.focus();
+            activeInstance.targetTextarea.setSelectionRange(cursorPos + markdown.length, cursorPos + markdown.length);
+        }, 0);
     }
 
     deleteImage(image) {
