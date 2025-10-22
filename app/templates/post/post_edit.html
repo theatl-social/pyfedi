@@ -74,12 +74,288 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         const online = document.getElementById("online");
+        if(online) {
+            online.addEventListener('change', function () {
+                showHideLocationDivs(online);
+            });
 
-        online.addEventListener('change', function () {
             showHideLocationDivs(online);
-        });
+        }
 
-        showHideLocationDivs(online);
+        // set up event handlers for insertImageDialog:
+        const insertImageLink = document.getElementById('insertImage');
+        const insertImageDialog = document.getElementById('insertImageDialog');
+        const dialogClose = document.getElementById('insert_image_dialog_close');
+        const loadImagesContainer = document.getElementById('loadImagesHere');
+        const bodyTextarea = document.getElementById('body');
+
+        // Function to load and render image thumbnails
+        function loadImageThumbnails() {
+            loadImagesContainer.innerHTML = '<p class="text-center">{{ _("Loading...") }}</p>';
+
+            fetch('/api/alpha/user/media?limit=50')
+                .then(response => response.json())
+                .then(data => {
+                    loadImagesContainer.innerHTML = '';
+
+                    if (data.media && data.media.length > 0) {
+                        const grid = document.createElement('div');
+                        grid.className = 'd-grid gap-2';
+                        grid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(150px, 1fr))';
+
+                        data.media.forEach(function(image) {
+                            const imgWrapper = document.createElement('div');
+                            imgWrapper.style.position = 'relative';
+                            imgWrapper.style.cursor = 'pointer';
+                            imgWrapper.style.aspectRatio = '1';
+                            imgWrapper.style.overflow = 'hidden';
+                            imgWrapper.style.borderRadius = '8px';
+                            imgWrapper.style.border = '2px solid transparent';
+                            imgWrapper.style.transition = 'border-color 0.2s';
+
+                            const img = document.createElement('img');
+                            img.src = image.url;
+                            img.alt = image.name;
+                            img.style.width = '100%';
+                            img.style.height = '100%';
+                            img.style.objectFit = 'cover';
+
+                            // Retry loading if image fails (for R2 propagation delays)
+                            let retryCount = 0;
+                            img.onerror = function() {
+                                if (retryCount < 3) {
+                                    retryCount++;
+                                    setTimeout(function() {
+                                        img.src = image.url + '?retry=' + retryCount;
+                                    }, retryCount * 500); // 500ms, 1s, 1.5s
+                                }
+                            };
+
+                            imgWrapper.appendChild(img);
+
+                            // Create overlay with action buttons
+                            const overlay = document.createElement('div');
+                            overlay.style.position = 'absolute';
+                            overlay.style.top = '0';
+                            overlay.style.left = '0';
+                            overlay.style.width = '100%';
+                            overlay.style.height = '100%';
+                            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+                            overlay.style.display = 'none';
+                            overlay.style.flexDirection = 'column';
+                            overlay.style.alignItems = 'center';
+                            overlay.style.justifyContent = 'center';
+                            overlay.style.gap = '10px';
+                            overlay.style.padding = '10px';
+
+                            // Insert button
+                            const insertBtn = document.createElement('button');
+                            insertBtn.className = 'btn btn-primary btn-sm';
+                            insertBtn.textContent = '{{ _("Insert") }}';
+                            insertBtn.style.width = '80%';
+                            insertBtn.onclick = function(e) {
+                                e.stopPropagation();
+                                const markdown = '\n![' + image.name + '](' + image.url + ')\n';
+                                const cursorPos = bodyTextarea.selectionStart;
+                                const textBefore = bodyTextarea.value.substring(0, cursorPos);
+                                const textAfter = bodyTextarea.value.substring(cursorPos);
+
+                                bodyTextarea.value = textBefore + markdown + textAfter;
+                                bodyTextarea.focus();
+                                bodyTextarea.setSelectionRange(cursorPos + markdown.length, cursorPos + markdown.length);
+
+                                insertImageDialog.close();
+                            };
+
+                            // More button with dropdown
+                            const moreContainer = document.createElement('div');
+                            moreContainer.className = 'dropdown';
+                            moreContainer.style.width = '80%';
+
+                            const moreBtn = document.createElement('button');
+                            moreBtn.className = 'btn btn-secondary btn-sm dropdown-toggle w-100';
+                            moreBtn.textContent = '{{ _("More") }}';
+                            moreBtn.setAttribute('data-bs-toggle', 'dropdown');
+                            moreBtn.onclick = function(e) {
+                                e.stopPropagation();
+                            };
+
+                            const dropdownMenu = document.createElement('ul');
+                            dropdownMenu.className = 'dropdown-menu';
+
+                            // Compress option
+                            const compressItem = document.createElement('li');
+                            const compressLink = document.createElement('a');
+                            compressLink.className = 'dropdown-item';
+                            compressLink.href = '#';
+                            compressLink.textContent = '{{ _("Compress") }}';
+                            compressLink.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Compress:', image.url);
+                                // TODO: Implement compress API call
+                            };
+                            compressItem.appendChild(compressLink);
+
+                            // Rename option
+                            const renameItem = document.createElement('li');
+                            const renameLink = document.createElement('a');
+                            renameLink.className = 'dropdown-item';
+                            renameLink.href = '#';
+                            renameLink.textContent = '{{ _("Rename") }}';
+                            renameLink.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Rename:', image.name);
+                                // TODO: Implement rename API call
+                            };
+                            renameItem.appendChild(renameLink);
+
+                            // Delete option
+                            const deleteItem = document.createElement('li');
+                            const deleteLink = document.createElement('a');
+                            deleteLink.className = 'dropdown-item text-danger';
+                            deleteLink.href = '#';
+                            deleteLink.textContent = '{{ _("Delete") }}';
+                            deleteLink.onclick = function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                console.log('Delete:', image.url);
+                                // TODO: Implement delete API call
+                            };
+                            deleteItem.appendChild(deleteLink);
+
+                            dropdownMenu.appendChild(compressItem);
+                            dropdownMenu.appendChild(renameItem);
+                            dropdownMenu.appendChild(deleteItem);
+
+                            moreContainer.appendChild(moreBtn);
+                            moreContainer.appendChild(dropdownMenu);
+
+                            overlay.appendChild(insertBtn);
+                            overlay.appendChild(moreContainer);
+                            imgWrapper.appendChild(overlay);
+
+                            // Show overlay on click
+                            imgWrapper.addEventListener('click', function(e) {
+                                // Hide all other overlays
+                                document.querySelectorAll('#loadImagesHere .d-grid > div > div[style*="position: absolute"]').forEach(function(el) {
+                                    el.style.display = 'none';
+                                });
+                                // Show this overlay
+                                overlay.style.display = 'flex';
+                            });
+
+                            // Hover effect
+                            imgWrapper.addEventListener('mouseenter', function() {
+                                if (overlay.style.display !== 'flex') {
+                                    imgWrapper.style.borderColor = '#0d6efd';
+                                }
+                            });
+                            imgWrapper.addEventListener('mouseleave', function() {
+                                imgWrapper.style.borderColor = 'transparent';
+                            });
+
+                            grid.appendChild(imgWrapper);
+                        });
+
+                        loadImagesContainer.appendChild(grid);
+                    } else {
+                        loadImagesContainer.innerHTML = '<p class="text-center text-muted">{{ _("No images found.") }}</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading media:', error);
+                    loadImagesContainer.innerHTML = '<p class="text-center text-danger">{{ _("Error loading images.") }}</p>';
+                });
+        }
+
+        // attach click handler to insertImage link which shows the dialog
+        if (insertImageLink && insertImageDialog) {
+            insertImageLink.addEventListener('click', function(e) {
+                e.preventDefault();
+
+                // Load images from API if not already loaded
+                if (loadImagesContainer.children.length === 0) {
+                    loadImageThumbnails();
+                }
+
+                insertImageDialog.showModal();
+            });
+
+            // Close button handler
+            dialogClose.addEventListener('click', function() {
+                insertImageDialog.close();
+            });
+
+            // Close on backdrop click
+            insertImageDialog.addEventListener('click', function(e) {
+                const rect = insertImageDialog.getBoundingClientRect();
+                const isInDialog = (rect.top <= e.clientY && e.clientY <= rect.top + rect.height &&
+                                   rect.left <= e.clientX && e.clientX <= rect.left + rect.width);
+                if (!isInDialog) {
+                    insertImageDialog.close();
+                }
+            });
+
+            // Upload functionality
+            const imageUploadInput = document.getElementById('imageUploadInput');
+            const imageUploadButton = document.getElementById('imageUploadButton');
+            const uploadStatus = document.getElementById('uploadStatus');
+
+            imageUploadButton.addEventListener('click', function() {
+                const file = imageUploadInput.files[0];
+                if (!file) {
+                    uploadStatus.innerHTML = '<p class="text-warning small">{{ _("Please select a file.") }}</p>';
+                    return;
+                }
+
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    uploadStatus.innerHTML = '<p class="text-danger small">{{ _("Please select an image file.") }}</p>';
+                    return;
+                }
+
+                // Show uploading status
+                uploadStatus.innerHTML = '<p class="text-info small">{{ _("Uploading...") }}</p>';
+                imageUploadButton.disabled = true;
+
+                // Create FormData and upload
+                const formData = new FormData();
+                formData.append('file', file);
+
+                fetch('/api/alpha/upload/image', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Upload failed');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    uploadStatus.innerHTML = '<p class="text-success small">{{ _("Upload successful!") }}</p>';
+                    imageUploadInput.value = '';
+                    imageUploadButton.disabled = false;
+
+                    // Reload the image grid after a short delay to allow object storage to propagate
+                    setTimeout(function() {
+                        loadImageThumbnails();
+                    }, 1000);
+
+                    // Clear upload status after 3 seconds
+                    setTimeout(function() {
+                        uploadStatus.innerHTML = '';
+                    }, 3000);
+                })
+                .catch(error => {
+                    console.error('Upload error:', error);
+                    uploadStatus.innerHTML = '<p class="text-danger small">{{ _("Upload failed. Please try again.") }}</p>';
+                    imageUploadButton.disabled = false;
+                });
+            });
+        }
     });
 </script>
 <div class="row">
@@ -132,7 +408,8 @@
             {% if not low_bandwidth -%}
                 <div class="row">
                     <div class="col-6">
-                        <a href="#" hx-post="{{ url_for('post.preview') }}" hx-target="#preview">{{ _('Preview') }}</a>
+                        <a href="#" hx-post="{{ url_for('post.preview') }}" hx-target="#preview">{{ _('Preview') }}</a> |
+                        <a href="#" id="insertImage">{{ _('Insert image') }}</a>
                     </div>
                     <div class="col-6 text-right">
                         {% if markdown_editor %}
@@ -277,4 +554,21 @@
     {% include "_side_pane.html" %}
 
 </div>
+<dialog id="insertImageDialog">
+    <div class="p-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">{{ _('Insert image') }}</h5>
+            <button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="insert_image_dialog_close"></button>
+        </div>
+        <div class="mb-3">
+            <div class="input-group">
+                <input type="file" class="form-control" id="imageUploadInput" accept="image/*">
+                <button class="btn btn-primary" type="button" id="imageUploadButton">{{ _('Upload') }}</button>
+            </div>
+            <div id="uploadStatus" class="mt-2"></div>
+        </div>
+        <hr>
+        <div id="loadImagesHere"></div>
+    </div>
+</dialog>
 {% endblock %}

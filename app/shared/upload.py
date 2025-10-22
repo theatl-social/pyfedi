@@ -7,7 +7,7 @@ from pillow_heif import register_heif_opener
 from sqlalchemy import text
 
 from app import db
-from app.models import File
+from app.models import File, user_file
 from app.utils import gibberish, ensure_directory_exists, store_files_in_s3, guess_mime_type
 
 
@@ -108,3 +108,14 @@ def process_upload(image_file, destination='posts', user_id=None):
         raise Exception('unable to process upload')
 
     return url
+
+
+def process_file_delete(url: str, user_id: int):
+    if user_id:
+        file = db.session.query(File).join(user_file).filter(user_file.c.file_id == File.id, user_file.c.user_id == user_id)\
+            .filter(File.source_url == url).first()
+        if file:
+            file.delete_from_disk()
+            db.session.execute(text('DELETE FROM "user_file" WHERE file_id = :file_id'), {'file_id': file.id})
+            db.session.delete(file)
+            db.session.commit()

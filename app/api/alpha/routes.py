@@ -24,11 +24,13 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
-from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image
+from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image, \
+    post_image_delete
 from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_count, get_user_replies, \
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
-    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details
+    put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details, \
+    get_user_media
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -1010,6 +1012,19 @@ def get_alpha_user_mentions(data):
     return UserMentionsResponse().load(resp)
 
 
+@user_bp.route('/user/media', methods=['GET'])
+@user_bp.doc(summary="Get media the current user has uploaded")
+@user_bp.arguments(UserMediaRequest, location="query")
+@user_bp.response(200, UserMediaResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def get_alpha_user_media(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = get_user_media(auth, data)
+    return UserMediaResponse().load(resp)
+
+
 @user_bp.route('/user/block', methods=['POST'])
 @user_bp.doc(summary="Block or unblock a person")
 @user_bp.arguments(UserBlockRequest)
@@ -1184,6 +1199,20 @@ def post_alpha_upload_user_image(files_data):
         image_file = files_data['file']
         resp = post_upload_user_image(auth, image_file)
         return ImageUploadResponse().load(resp)
+
+
+@upload_bp.route('/image/delete', methods=['POST'])
+@upload_bp.doc(summary="Delete a user image.")
+@upload_bp.arguments(ImageDeleteRequest, location="files")
+@upload_bp.response(200, ImageDeleteResponse)
+@upload_bp.alt_response(400, schema=DefaultError)
+@upload_bp.alt_response(429, schema=DefaultError)
+def post_alpha_user_image_delete(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_image_delete(auth, data)
+    return ImageDeleteResponse().load(resp)
 
 
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing

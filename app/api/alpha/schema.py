@@ -817,6 +817,23 @@ class UserMentionsResponse(DefaultSchema):
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
+class MediaView(DefaultSchema):
+    url = fields.String()
+    name = fields.String()
+
+
+class UserMediaRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(validate=validate.OneOf(comment_sort_list), metadata={"default": "New"})
+    unread_only = fields.Boolean(metadata={"default": True})
+
+
+class UserMediaResponse(DefaultSchema):
+    next_page = fields.String(allow_none=True)
+    media = fields.List(fields.Nested(MediaView), required=True)
+
+
 class UserBlockRequest(DefaultSchema):
     block = fields.Boolean(required=True)
     person_id = fields.Integer(required=True)
@@ -1286,6 +1303,14 @@ class ImageUploadResponse(DefaultSchema):
     liked_only = fields.Boolean()
     saved_only = fields.Boolean()
     q = fields.String()
+
+
+class ImageDeleteRequest(DefaultSchema):
+    file = fields.String(required=True)
+
+
+class ImageDeleteResponse(DefaultSchema):
+    result = fields.String(required=True)
 
 
 class ListPostsResponse(Schema):

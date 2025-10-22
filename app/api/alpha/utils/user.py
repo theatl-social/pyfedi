@@ -1,4 +1,6 @@
 from flask import current_app
+from flask_login import current_user
+from furl import furl
 from sqlalchemy import text, desc, func
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -8,7 +10,8 @@ from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
-from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair
+from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair, \
+    user_file
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country
 
@@ -237,6 +240,34 @@ def get_user_replies(auth, data, mentions=False):
     }
 
     return list_json
+
+
+def get_user_media(auth, data):
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 50
+
+    try:
+        user_id = authorise_api_user(auth)
+    except Exception:
+        if current_user.is_authenticated:
+            user_id = current_user.id
+        else:
+            raise Exception('incorrect_login')
+    files = File.query.join(user_file).filter(user_file.c.user_id == user_id).order_by(-File.id)
+
+    files = files.paginate(page=page, per_page=limit, error_out=False)
+    file_list = []
+    for file in files:
+        file_json = {}
+        file_json['name'] = file.file_name or str(furl(file.source_url).path).split('/')[-1]
+        file_json['url'] = file.source_url
+        file_list.append(file_json)
+
+    result_json = {
+        'media': file_list,
+        'next_page': str(files.next_num) if files.next_num else None
+    }
+    return result_json
 
 
 def post_user_mark_all_as_read(auth):
