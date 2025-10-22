@@ -1808,6 +1808,24 @@ a.unread, div.unread {
       }
     }
   }
+
+  img[align="left"] {
+    margin-right: 10px;
+    margin-bottom: 10px;
+    float: left;
+  }
+
+  img[align="right"] {
+    margin-left: 10px;
+    margin-bottom: 10px;
+    float: right;
+  }
+
+  img[align="middle"] {
+    display: block;
+    margin: 0 auto 10px auto;
+    float: none;
+  }
 }
 
 .skip-link:focus {

@@ -2150,6 +2150,21 @@ a.unread:before, div.unread:before {
 .post_body ol li > p, .post_body ul li > p, .comment_body ol li > p, .comment_body ul li > p, #preview ol li > p, #preview ul li > p, .reply_preview ol li > p, .reply_preview ul li > p, .accordion-body ol li > p, .accordion-body ul li > p, .post_col ol li > p, .post_col ul li > p {
   margin-bottom: 0;
 }
+.post_body img[align=left], .comment_body img[align=left], #preview img[align=left], .reply_preview img[align=left], .accordion-body img[align=left], .post_col img[align=left] {
+  margin-right: 10px;
+  margin-bottom: 10px;
+  float: left;
+}
+.post_body img[align=right], .comment_body img[align=right], #preview img[align=right], .reply_preview img[align=right], .accordion-body img[align=right], .post_col img[align=right] {
+  margin-left: 10px;
+  margin-bottom: 10px;
+  float: right;
+}
+.post_body img[align=middle], .comment_body img[align=middle], #preview img[align=middle], .reply_preview img[align=middle], .accordion-body img[align=middle], .post_col img[align=middle] {
+  display: block;
+  margin: 0 auto 10px auto;
+  float: none;
+}
 
 .skip-link:focus {
   top: 0;
