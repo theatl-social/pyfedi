@@ -221,6 +221,7 @@ class CreateLinkForm(CreatePostForm):
                                       'hx-get': '/community/check_url_already_posted',
                                       'hx-params': '*',
                                       'hx-target': '#urlUsed'})
+    image_alt_text = StringField(_l('Alt text (for links to images)'), validators=[Optional(), Length(min=3, max=1500)])
 
     def validate_link_url(self, field):
         if 'blogspot.com' in field.data:

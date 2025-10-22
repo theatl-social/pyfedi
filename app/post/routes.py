@@ -937,6 +937,7 @@ def post_edit(post_id: int):
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
+                form.image_alt_text.data = post.image.alt_text
             elif post_type == POST_TYPE_IMAGE:
                 # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
@@ -944,7 +945,7 @@ def post_edit(post_id: int):
                 # This is fallback for existing entries
                 if not path:
                     path = "app/" + post.image.source_url.replace(
-                        f"https://{current_app.config['SERVER_NAME']}/", ""
+                        f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/", ""
                     )
                 if not path.startswith('http'):
                     with open(path, "rb") as file:

@@ -455,7 +455,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url, hash=hash)
-            if uploaded_file and type == POST_TYPE_IMAGE:
+            if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
             db.session.add(file)
