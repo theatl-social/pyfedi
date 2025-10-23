@@ -36,5 +36,5 @@ else
   echo "Starting Gunicorn as user 'python'..."
   # Use 'exec' to replace the shell process with the Gunicorn process
   # Use 'gosu' to switch from root to the 'python' user
-  exec gosu python python3 -m gunicorn --config gunicorn.conf.py --preload pyfedi:app
+  exec gosu python python3 -m gunicorn --config gunicorn.conf.py pyfedi:app
 fi
