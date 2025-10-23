@@ -194,7 +194,7 @@ def domains_blocked_list():
     if search != '':
         domains = domains.filter(Domain.name.ilike(f'%{search}%'))
     domains = domains.order_by(Domain.name)
-    domains = domains.paginate(page=page, per_page=100, error_out=False)
+    domains = domains.paginate(page=page, per_page=1000, error_out=False)
 
     next_url = url_for('domain.domains', page=domains.next_num) if domains.has_next else None
     prev_url = url_for('domain.domains', page=domains.prev_num) if domains.has_prev and page != 1 else None
