@@ -31,7 +31,7 @@
                 hx-post="{{ url_for('post.preview') }}" 
                 hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
                 {{ _('Preview') }}
-            </a><a href="#" class="btn btn-outline-secondary mt-2 {{ 'd-none' if markdown_editor }}" id="insertImage_{{ comment_id }}">{{ _('Insert image') }}</a>
+            </a> <a href="#" class="btn btn-outline-secondary mt-2 {{ 'd-none' if markdown_editor }}" id="insertImage_{{ comment_id }}">{{ _('Insert image') }}</a>
         </div>
         <div class="col-4 text-right">
             <select name="language_id" 
