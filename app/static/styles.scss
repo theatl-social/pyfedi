@@ -2371,6 +2371,11 @@ form {
   }
 }
 
+.modlog_link {
+  float: right;
+  margin-top:5px;
+}
+
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;

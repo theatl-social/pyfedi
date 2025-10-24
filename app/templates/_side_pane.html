@@ -102,7 +102,7 @@
                     <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}
                 {% if len(mods) > 0 and not community.private_mods -%}
-                    <hr>
+                    <hr><a href="/modlog?communities={{ community.id }}" class="modlog_link">{{ _('Modlog') }}</a>
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
                         {% for mod in mods -%}
