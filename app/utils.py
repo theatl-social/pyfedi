@@ -3525,14 +3525,17 @@ def to_srgb(im: Image.Image, assume="sRGB"):
         im = im.convert("RGB")
     except AttributeError:
         # Fallback, older versions of PIL have a different attribute name
-        im = ImageCms.profileToProfile(
-            im, src, srgb_cms,
-            outputMode="RGB",
-            renderingIntent=0,
-            flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
-        )
-        # keep an sRGB tag just in case
-        im.info["icc_profile"] = srgb_wrap.tobytes()
+        try:
+            im = ImageCms.profileToProfile(
+                im, src, srgb_cms,
+                outputMode="RGB",
+                renderingIntent=0,
+                flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+            )
+            # keep an sRGB tag just in case
+            im.info["icc_profile"] = srgb_wrap.tobytes()
+        except ImageCms.PyCMSError:
+            pass
 
     return im
 
@@ -3548,3 +3551,15 @@ def expand_hex_color(text: str) -> str:
                 text[2] * 2 +
                 text[3] * 2)
     return new_text
+
+
+def human_filesize(size_bytes):
+    """Convert bytes to human-readable string (e.g. 1.2 MB)."""
+    if size_bytes == 0:
+        return "0 B"
+    units = ("B", "KB", "MB", "GB", "TB", "PB")
+    i = 0
+    while size_bytes >= 1024 and i < len(units) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.1f} {units[i]}"

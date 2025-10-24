@@ -183,7 +183,7 @@ def post_private_message_delete(auth, data):
 
 def post_private_message_report(auth, data):
     chat_message_id = data['private_message_id']
-    reason = data['reason']
+    reason = data['reason'][:255]
 
     user_id = authorise_api_user(auth)
 

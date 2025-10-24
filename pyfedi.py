@@ -18,7 +18,7 @@ from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore
+    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize
 
 app = create_app()
 cli.register(app)
@@ -70,7 +70,7 @@ with app.app_context():
     app.jinja_env.filters['shorten'] = shorten_string
     app.jinja_env.filters['shorten_url'] = shorten_url
     app.jinja_env.filters['remove_images'] = remove_images
-
+    app.jinja_env.filters["human_filesize"] = human_filesize
 
 @app.before_request
 def before_request():

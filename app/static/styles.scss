@@ -2360,6 +2360,17 @@ form {
   max-width: 1000px;
 }
 
+.media_list {
+  .media_list_image {
+    max-width: 150px;
+    aspect-ratio: 1 / 1;
+  }
+
+  tr td {
+    vertical-align: middle;
+  }
+}
+
 .post_teaser.reported, .comment.reported {
   border-style: solid !important;
   border-color: var(--bs-danger) !important;

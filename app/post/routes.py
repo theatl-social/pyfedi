@@ -937,7 +937,7 @@ def post_edit(post_id: int):
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
-                form.image_alt_text.data = post.image.alt_text
+                form.image_alt_text.data = post.image.alt_text if post.image_id else ''
             elif post_type == POST_TYPE_IMAGE:
                 # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
@@ -1814,7 +1814,7 @@ def post_block_image(post_id: int):
     return redirect(referrer())
 
 
-@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['POST'])
+@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['GET', 'POST'])
 @login_required
 @permission_required('change instance settings')
 def post_block_image_purge_posts(post_id: int):
