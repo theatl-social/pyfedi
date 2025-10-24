@@ -1814,7 +1814,7 @@ def post_block_image(post_id: int):
     return redirect(referrer())
 
 
-@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['POST'])
+@bp.route('/post/<int:post_id>/block_image_purge_posts', methods=['GET', 'POST'])
 @login_required
 @permission_required('change instance settings')
 def post_block_image_purge_posts(post_id: int):
