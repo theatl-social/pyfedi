@@ -937,7 +937,7 @@ def post_edit(post_id: int):
                 form.flair.data = [flair.id for flair in post.flair]
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = post.url
-                form.image_alt_text.data = post.image.alt_text
+                form.image_alt_text.data = post.image.alt_text if post.image_id else ''
             elif post_type == POST_TYPE_IMAGE:
                 # existing_image = True
                 form.image_alt_text.data = post.image.alt_text
