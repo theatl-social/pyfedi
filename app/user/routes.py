@@ -23,12 +23,14 @@ from app.ldap_utils import sync_user_to_ldap
 from app.models import Post, Community, CommunityMember, User, PostReply, PostVote, Notification, utcnow, File, Site, \
     Instance, Report, UserBlock, CommunityBan, CommunityJoinRequest, CommunityBlock, Filter, Domain, DomainBlock, \
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
-    UserExtraField, Feed, FeedMember, IpBan
+    UserExtraField, Feed, FeedMember, IpBan, user_file
 from app.shared.site import block_remote_instance
+from app.shared.upload import process_file_delete, process_upload
 from app.shared.user import subscribe_user
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
-    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm
+    FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm, DeleteFileForm, \
+    UploadFileForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -39,7 +41,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
-    patch_db_session, user_in_restricted_country
+    patch_db_session, user_in_restricted_country, referrer
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -2009,3 +2011,98 @@ def show_profile_rss(actor):
         return response
     else:
         abort(404)
+
+
+@bp.route('/user/files', methods=['GET', 'POST'])
+@login_required
+def user_files():
+    page = request.args.get('page', 1, type=int)
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+
+    total_size = 0
+    file_size_dict = defaultdict(int)
+    file_sizes = db.session.execute(text('SELECT file_id, size FROM "user_file" WHERE user_id = :user_id'),
+                                    {'user_id': current_user.id}).all()
+    for fs in file_sizes:
+        total_size += fs[1]
+        file_size_dict[fs[0]] = fs[1]
+
+    files = File.query.join(user_file).filter(user_file.c.file_id == File.id, user_file.c.user_id == current_user.id)
+
+    files = files.paginate(page=page, per_page=100, error_out=False)
+    next_url = url_for('user.user_files', page=files.next_num) if files.has_next else None
+    prev_url = url_for('user.user_files', page=files.prev_num) if files.has_prev and page != 1 else None
+
+    return render_template('user/files.html', title=_('Files'), files=files, file_sizes=file_size_dict,
+                           total_size=total_size, max_size=current_app.config['FILE_UPLOAD_QUOTA'],
+                           low_bandwidth=low_bandwidth, user=current_user,
+                           next_url=next_url, prev_url=prev_url)
+
+
+@bp.route('/user/files/delete/<int:file_id>', methods=['GET', 'POST'])
+@login_required
+def user_file_delete(file_id):
+    file = File.query.get_or_404(file_id)
+    form = DeleteFileForm()
+    if form.validate_on_submit():
+        process_file_delete(file.source_url, current_user.id)
+        return redirect(form.referrer.data)
+
+    form.referrer.data = referrer(url_for('user.user_files'))
+
+    return render_template('user/file_delete.html', form=form, file=file, user=current_user)
+
+
+@bp.route('/user/files/upload', methods=['GET', 'POST'])
+@login_required
+def user_file_upload():
+    form = UploadFileForm()
+    if form.validate_on_submit():
+        if form.urls.data.strip() != '':
+            urls = form.urls.data.strip().split('\n')
+            for url in urls:
+                if url and url.strip() != '':
+                    file = File(source_url=url)
+                    db.session.add(file)
+                    db.session.commit()
+                    db.session.execute(
+                        text('INSERT INTO "user_file" (file_id, user_id, size) VALUES (:file_id, :user_id, :size)'),
+                        {'file_id': file.id, 'user_id': current_user.id, 'size': 0})
+                    db.session.commit()
+
+        if form.file1.data:
+            process_upload(form.file1.data, user_id=current_user.id)
+        if form.file2.data:
+            process_upload(form.file2.data, user_id=current_user.id)
+        if form.file3.data:
+            process_upload(form.file3.data, user_id=current_user.id)
+        if form.file4.data:
+            process_upload(form.file4.data, user_id=current_user.id)
+        if form.file5.data:
+            process_upload(form.file5.data, user_id=current_user.id)
+        if form.file6.data:
+            process_upload(form.file6.data, user_id=current_user.id)
+        if form.file7.data:
+            process_upload(form.file7.data, user_id=current_user.id)
+        if form.file8.data:
+            process_upload(form.file8.data, user_id=current_user.id)
+        if form.file9.data:
+            process_upload(form.file9.data, user_id=current_user.id)
+        if form.file10.data:
+            process_upload(form.file10.data, user_id=current_user.id)
+
+        return redirect(form.referrer.data)
+
+    total_size = 0
+    file_sizes = db.session.execute(text('SELECT file_id, size FROM "user_file" WHERE user_id = :user_id'),
+                                    {'user_id': current_user.id}).all()
+    for fs in file_sizes:
+        total_size += fs[1]
+
+    if total_size > current_app.config['FILE_UPLOAD_QUOTA']:
+        flash(_('You have exceeded your storage quota.', 'error'))
+        return redirect(referrer())
+
+    form.referrer.data = referrer(url_for('user.user_files'))
+
+    return render_template('user/file_upload.html', form=form, user=current_user)

@@ -1,0 +1,47 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block app_content %}
+   <div class="row">
+    <main class="col main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active"><a href="/user/files">{{ _('Files') }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Upload') }}</li>
+          </ol>
+        </nav>
+        <h1 class="mt-2">
+           {{ _('Upload files') }}
+        </h1>
+        <p>{{ _('You can add files to your library by providing a list of urls or uploading them from your device.') }}</p>
+        <form method="post" enctype="multipart/form-data" id="add_local_community_form" role="form">
+            {{ form.csrf_token() }}
+            {{ render_field(form.referrer) }}
+            {{ render_field(form.urls) }}
+            <small class="field_hint">{{ _('Files added via url do not consume your quota as they are not copied into PieFed.') }}</small>
+
+            {{ render_field(form.file1) }}
+            {{ render_field(form.file2) }}
+            {{ render_field(form.file3) }}
+            {{ render_field(form.file4) }}
+            {{ render_field(form.file5) }}
+            {{ render_field(form.file6) }}
+            {{ render_field(form.file7) }}
+            {{ render_field(form.file8) }}
+            {{ render_field(form.file9) }}
+            {{ render_field(form.file10) }}
+            <div class="row mb-4">
+                <div class="col-auto">
+                    {{ render_field(form.submit) }}
+                </div>
+            </div>
+        </form>
+    </main>
+   </div>
+{% endblock %}

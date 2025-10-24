@@ -3551,3 +3551,15 @@ def expand_hex_color(text: str) -> str:
                 text[2] * 2 +
                 text[3] * 2)
     return new_text
+
+
+def human_filesize(size_bytes):
+    """Convert bytes to human-readable string (e.g. 1.2 MB)."""
+    if size_bytes == 0:
+        return "0 B"
+    units = ("B", "KB", "MB", "GB", "TB", "PB")
+    i = 0
+    while size_bytes >= 1024 and i < len(units) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.1f} {units[i]}"

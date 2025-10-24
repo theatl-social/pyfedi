@@ -120,6 +120,8 @@ class Config(object):
     MEDIA_IMAGE_THUMBNAIL_FORMAT = os.environ.get('MEDIA_IMAGE_THUMBNAIL_FORMAT') or 'WEBP'
     MEDIA_IMAGE_THUMBNAIL_QUALITY = int(os.environ.get('MEDIA_IMAGE_THUMBNAIL_QUALITY') or 93)
 
+    FILE_UPLOAD_QUOTA = int(os.environ.get('FILE_UPLOAD_QUOTA') or 52428800)   # default 50 MB
+
     # LDAP configuration - common config
     LDAP_SERVER = os.environ.get('LDAP_SERVER') or ''
     LDAP_PORT = int(os.environ.get('LDAP_PORT') or 389)
