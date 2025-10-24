@@ -2964,7 +2964,7 @@ def process_report(user, reported, request_json, session):
                         'reasons': reasons,
                         'description': description
                         }
-        report = Report(reasons=reasons, description=description,
+        report = Report(reasons=reasons[:255], description=description[:255],
                         type=type, reporter_id=user.id, suspect_user_id=reported.id,
                         source_instance_id=user.instance_id, targets=targets_data)
         session.add(report)
@@ -2998,7 +2998,7 @@ def process_report(user, reported, request_json, session):
                         'orig_post_title': reported.title,
                         'orig_post_body': reported.body
                         }
-        report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id,
+        report = Report(reasons=reasons[:255], description=description[:255], type=type, reporter_id=user.id,
                         suspect_user_id=reported.author.id, suspect_post_id=reported.id,
                         suspect_community_id=reported.community.id, in_community_id=reported.community.id,
                         source_instance_id=user.instance_id, targets=targets_data)
@@ -3032,7 +3032,7 @@ def process_report(user, reported, request_json, session):
                         'source_instance_domain': source_instance.domain,
                         'orig_comment_body': reported.body
                         }
-        report = Report(reasons=reasons, description=description, type=type, reporter_id=user.id,
+        report = Report(reasons=reasons[:255], description=description[:255], type=type, reporter_id=user.id,
                         suspect_post_id=post.id,
                         suspect_community_id=post.community.id,
                         suspect_user_id=reported.author.id, suspect_post_reply_id=reported.id,

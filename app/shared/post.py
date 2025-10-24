@@ -667,7 +667,7 @@ def report_post(post: Post, input, src, auth=None):
         'orig_post_body': post.body
     }
     # report.type 1 = 'post'
-    report = Report(reasons=reason, description=description, type=1, reporter_id=reporter_user.id, suspect_post_id=post.id,
+    report = Report(reasons=reason[:255], description=description[:255], type=1, reporter_id=reporter_user.id, suspect_post_id=post.id,
                     suspect_community_id=post.community_id,
                     suspect_user_id=post.user_id, in_community_id=post.community_id, source_instance_id=reporter_user.instance_id,
                     targets=targets_data)

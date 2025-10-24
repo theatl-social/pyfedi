@@ -47,7 +47,7 @@ class ReportPostForm(FlaskForm):
             for choice in self.reason_choices:
                 if choice[0] == reason_id:
                     result.append(str(choice[1]))
-        return ', '.join(result)
+        return ', '.join(result)[:255]
 
 
 class MeaCulpaForm(FlaskForm):
