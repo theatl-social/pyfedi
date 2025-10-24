@@ -766,30 +766,30 @@ def refresh_community_profile_task(community_id, activity_json):
                                     time.sleep(0.5)
                                     user = find_actor_or_create(actor)
                                     if user:
-                                        existing_membership = CommunityMember.query.filter_by(community_id=community.id,
-                                                                                              user_id=user.id).first()
+                                        existing_membership = session.query(CommunityMember).\
+                                            filter_by(community_id=community.id, user_id=user.id).first()
                                         if existing_membership:
                                             existing_membership.is_moderator = True
-                                            db.session.commit()
+                                            session.commit()
                                         else:
                                             new_membership = CommunityMember(community_id=community.id, user_id=user.id,
                                                                              is_moderator=True)
-                                            db.session.add(new_membership)
-                                            db.session.commit()
+                                            session.add(new_membership)
+                                            session.commit()
 
                                 # Remove people who are no longer mods
-                                for member in CommunityMember.query.filter_by(community_id=community.id, is_moderator=True).all():
-                                    member_user = User.query.get(member.user_id)
+                                for member in session.query(CommunityMember).filter_by(community_id=community.id, is_moderator=True).all():
+                                    member_user = session.query(User).get(member.user_id)
                                     is_mod = False
                                     for actor in mods_data['orderedItems']:
                                         if actor.lower() == member_user.profile_id().lower():
                                             is_mod = True
                                             break
                                     if not is_mod:
-                                        db.session.query(CommunityMember).filter_by(community_id=community.id,
-                                                                                    user_id=member_user.id,
-                                                                                    is_moderator=True).delete()
-                                        db.session.commit()
+                                        session.query(CommunityMember).filter_by(community_id=community.id,
+                                                                                 user_id=member_user.id,
+                                                                                 is_moderator=True).delete()
+                                        session.commit()
 
                     if community.ap_followers_url:
                         followers_request = get_request(community.ap_followers_url, headers={'Accept': 'application/activity+json'})
@@ -930,33 +930,33 @@ def refresh_feed_profile_task(feed_id):
                                     time.sleep(0.5)
                                     user = find_actor_or_create(actor)
                                     if user:
-                                        existing_membership = FeedMember.query.filter_by(feed_id=feed.id,
+                                        existing_membership = session.query(FeedMember).filter_by(feed_id=feed.id,
                                                                                          user_id=user.id).first()
                                         if existing_membership:
                                             existing_membership.is_owner = True
-                                            db.session.commit()
+                                            session.commit()
                                         else:
                                             new_membership = FeedMember(feed_id=feed.id, user_id=user.id,
                                                                         is_owner=True)
-                                            db.session.add(new_membership)
-                                            db.session.commit()
+                                            session.add(new_membership)
+                                            session.commit()
 
                                 # Remove people who are no longer mods
                                 # this should not get triggered as feeds just have the one owner
                                 # right now, but that may change later so this is here for 
                                 # future proofing
-                                for member in FeedMember.query.filter_by(feed_id=feed.id, is_owner=True).all():
-                                    member_user = User.query.get(member.user_id)
+                                for member in session.query(FeedMember).filter_by(feed_id=feed.id, is_owner=True).all():
+                                    member_user = session.query(User).get(member.user_id)
                                     is_owner = False
                                     for actor in owners_data['orderedItems']:
                                         if actor.lower() == member_user.profile_id().lower():
                                             is_owner = True
                                             break
                                     if not is_owner:
-                                        db.session.query(FeedMember).filter_by(feed_id=feed.id,
-                                                                               user_id=member_user.id,
-                                                                               is_owner=True).delete()
-                                        db.session.commit()
+                                        session.query(FeedMember).filter_by(feed_id=feed.id,
+                                                                            user_id=member_user.id,
+                                                                            is_owner=True).delete()
+                                        session.commit()
 
                     # also make sure we have all the feeditems from the /following collection
                     res = get_request(feed.ap_following_url)
@@ -968,8 +968,8 @@ def refresh_feed_profile_task(feed_id):
                         community = find_actor_or_create(community_ap_id, community_only=True)
                         if community and isinstance(community, Community):
                             feed_item = FeedItem(feed_id=feed.id, community_id=community.id)
-                            db.session.add(feed_item)
-                            db.session.commit()
+                            session.add(feed_item)
+                            session.commit()
 
     except Exception:
         session.rollback()
@@ -1535,7 +1535,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                         s3.close()
                                     session.commit()
 
-                                    site = Site.query.get(1)
+                                    site = session.query(Site).get(1)
                                     if site is None:
                                         site = Site()
 
@@ -1549,7 +1549,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                 image_text = ''
                                             if 'Anonymous' in image_text and (
                                                     'No.' in image_text or ' N0' in image_text):  # chan posts usually contain the text 'Anonymous' and ' No.12345'
-                                                post = Post.query.filter_by(image_id=file.id).first()
+                                                post = session.query(Post).filter_by(image_id=file.id).first()
                                                 targets_data = {'gen': '0',
                                                                 'post_id': post.id,
                                                                 'orig_post_title': post.title,
@@ -1713,7 +1713,7 @@ def new_instance_profile_task(instance_id: int):
                                     session.add(new_instance_role)
                                     session.commit()
                             # remove any InstanceRoles that are no longer part of instance-data['admins']
-                            for instance_admin in InstanceRole.query.filter_by(instance_id=instance.id):
+                            for instance_admin in session.query(InstanceRole).filter_by(instance_id=instance.id):
                                 if instance_admin.user.profile_id() not in admin_profile_ids:
                                     session.query(InstanceRole).filter(
                                         InstanceRole.user_id == instance_admin.user.id,
@@ -2239,13 +2239,13 @@ def notify_about_post_task(post_id):
     try:
         with patch_db_session(session):
             # get the post by id
-            post = Post.query.get(post_id)
+            post = session.query(Post).get(post_id)
 
             # get the author
-            author = User.query.get(post.user_id)
+            author = session.query(User).get(post.user_id)
 
             # get the community
-            community = Community.query.get(post.community_id)
+            community = session.query(Community).get(post.community_id)
 
             # Send notifications based on subscriptions
             notifications_sent_to = set()
@@ -2265,10 +2265,10 @@ def notify_about_post_task(post_id):
                                                     notif_type=NOTIF_USER,
                                                     subtype='new_post_from_followed_user',
                                                     targets=targets_data)
-                    db.session.add(new_notification)
-                    user = User.query.get(notify_id)
+                    session.add(new_notification)
+                    user = session.query(User).get(notify_id)
                     user.unread_notifications += 1
-                    db.session.commit()
+                    session.commit()
                     notifications_sent_to.add(notify_id)
 
             # NOTIF_COMMUNITY
@@ -2285,16 +2285,16 @@ def notify_about_post_task(post_id):
                                                     notif_type=NOTIF_COMMUNITY,
                                                     subtype='new_post_in_followed_community',
                                                     targets=targets_data)
-                    db.session.add(new_notification)
-                    user = User.query.get(notify_id)
+                    session.add(new_notification)
+                    user = session.query(User).get(notify_id)
                     user.unread_notifications += 1
-                    db.session.commit()
+                    session.commit()
                     notifications_sent_to.add(notify_id)
 
             # NOTIF_TOPIC    
             topic_send_notifs_to = notification_subscribers(post.community.topic_id, NOTIF_TOPIC)
             if post.community.topic_id:
-                topic = Topic.query.get(post.community.topic_id)
+                topic = session.query(Topic).get(post.community.topic_id)
             for notify_id in topic_send_notifs_to:
                 if notify_id != post.user_id and notify_id not in notifications_sent_to:
                     targets_data = {'gen': '0',
@@ -2309,15 +2309,15 @@ def notify_about_post_task(post_id):
                                                     notif_type=NOTIF_TOPIC,
                                                     subtype='new_post_in_followed_topic',
                                                     targets=targets_data)
-                    db.session.add(new_notification)
-                    user = User.query.get(notify_id)
+                    session.add(new_notification)
+                    user = session.query(User).get(notify_id)
                     user.unread_notifications += 1
-                    db.session.commit()
+                    session.commit()
                     notifications_sent_to.add(notify_id)
 
             # NOTIF_FEED
             # Get all the feeds that the post's community is in
-            community_feeds = Feed.query.join(FeedItem, FeedItem.feed_id == Feed.id).filter(
+            community_feeds = session.query(Feed).join(FeedItem, FeedItem.feed_id == Feed.id).filter(
                 FeedItem.community_id == post.community_id).all()
 
             for feed in community_feeds:
@@ -2336,10 +2336,10 @@ def notify_about_post_task(post_id):
                                                         notif_type=NOTIF_FEED,
                                                         subtype='new_post_in_followed_feed',
                                                         targets=targets_data)
-                        db.session.add(new_notification)
-                        user = User.query.get(notify_id)
+                        session.add(new_notification)
+                        user = session.query(User).get(notify_id)
                         user.unread_notifications += 1
-                        db.session.commit()
+                        session.commit()
                     notifications_sent_to.add(notify_id)
     except Exception:
         session.rollback()
