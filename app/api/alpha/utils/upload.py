@@ -18,7 +18,7 @@ def post_upload_image(auth, image_file=None):
 
     total_size = 0
     file_sizes = db.session.execute(text('SELECT file_id, size FROM "user_file" WHERE user_id = :user_id'),
-                                    {'user_id': current_user.id}).all()
+                                    {'user_id': user_id}).all()
     for fs in file_sizes:
         total_size += fs[1]
 
