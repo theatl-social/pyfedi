@@ -51,6 +51,12 @@ class DefaultSchema(Schema):
         datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
+class UserExtraField(DefaultSchema):
+    id = fields.Integer(required=True)
+    label = fields.String(required=True)
+    text = fields.String(required=True)
+
+
 class Person(DefaultSchema):
     actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
@@ -64,6 +70,7 @@ class Person(DefaultSchema):
     about_html = fields.String(metadata={"format": "html"})
     avatar = fields.String(allow_none=True, metadata={"format": "url"})
     banner = fields.String(allow_none=True, metadata={"format": "url"})
+    extra_fields = fields.List(fields.Nested(UserExtraField), validate=validate.Length(max=4))
     flair = fields.String()
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     title = fields.String(allow_none=True)
