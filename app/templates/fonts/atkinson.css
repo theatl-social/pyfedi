@@ -27,6 +27,6 @@
 }
 
 body, .form-control {
-    font-family: "Atkinson Hyperlegible", Arial, sans-serif;
+    font-family: "Atkinson Hyperlegible", Arial, sans-serif, "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
     letter-spacing: 0.5px;
 }

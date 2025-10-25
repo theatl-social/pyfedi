@@ -7,5 +7,5 @@
 }
 
 body, .form-control {
-    font-family: Inter, Arial, sans-serif;
+    font-family: Inter, Arial, sans-serif, "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
 }

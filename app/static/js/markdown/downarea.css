@@ -192,6 +192,7 @@
     padding: 8px;
     margin-bottom: 20px;
     resize: none;
+    font-family: inherit;
 }
 
 .downarea .downarea-bottom {
@@ -207,4 +208,85 @@
 
 .downarea.focused .downarea-bottom {
     border-top-color: var(--bs-secondary-text-emphasis);
+}
+
+/* Emoji Picker Styles */
+.downarea-toolbar .downarea-toolbar-tool .emoji-picker {
+    width: 320px;
+    max-height: 350px;
+    right: 0;
+    left: auto;
+}
+
+@media (max-width: 576px) {
+    .downarea-toolbar .downarea-toolbar-tool .emoji-picker {
+        width: 90vw;
+        max-width: 320px;
+        right: 0;
+        left: auto;
+    }
+}
+
+.emoji-categories {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px;
+    border-bottom: 1px solid var(--bs-border-color);
+    background: var(--bs-light-bg-subtle);
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.emoji-category {
+    background: transparent;
+    border: none;
+    padding: 6px 8px;
+    cursor: pointer;
+    font-size: 18px;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    flex: 0 0 auto;
+    font-family: "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji", sans-serif;
+}
+
+.emoji-category:hover {
+    background: var(--bs-secondary-bg);
+}
+
+.emoji-category.active {
+    background: var(--bs-secondary-bg);
+    box-shadow: 0 0 0 2px var(--bs-primary);
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 4px;
+    padding: 8px;
+    max-height: 250px;
+    overflow-y: auto;
+    background: var(--bs-light-bg-subtle);
+}
+
+.emoji-item {
+    background: transparent;
+    border: none;
+    padding: 6px;
+    cursor: pointer;
+    font-size: 20px;
+    border-radius: 4px;
+    transition: background-color 0.2s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji", sans-serif;
+}
+
+.emoji-item:hover {
+    background: var(--bs-secondary-bg);
+    transform: scale(1.2);
+}
+
+.emoji-item:active {
+    transform: scale(1.1);
 }
