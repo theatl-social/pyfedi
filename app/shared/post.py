@@ -492,6 +492,11 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         post.calculate_cross_posts(url_changed=url_changed)
     elif url and is_video_hosting_site(url):
         post.type = POST_TYPE_VIDEO
+    
+    if url and post.image:
+        file = File.query.get(post.image_id)
+        if file:
+            file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
 
     federate = True
     if type == POST_TYPE_POLL:
