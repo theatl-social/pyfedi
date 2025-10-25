@@ -214,7 +214,7 @@
 .downarea-toolbar .downarea-toolbar-tool .emoji-picker {
     width: 320px;
     max-height: 350px;
-    right: 0;
+    right: -54px;
     left: auto;
 }
 
@@ -222,7 +222,7 @@
     .downarea-toolbar .downarea-toolbar-tool .emoji-picker {
         width: 90vw;
         max-width: 320px;
-        right: 0;
+        right: -54px;
         left: auto;
     }
 }
