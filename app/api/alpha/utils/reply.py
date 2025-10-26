@@ -1,5 +1,7 @@
 from flask import g
 from sqlalchemy import desc, or_, text
+from sqlalchemy import select
+from sqlalchemy_searchable import search
 
 from app import db
 from app.api.alpha.views import reply_view, reply_report_view, post_view, community_view, user_view
@@ -25,6 +27,7 @@ def get_reply_list(auth, data, user_details=None):
 
     # user_id: the logged in user
     # person_id: the author of the posts being requested
+    query = data.get("q", None)
 
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 10
@@ -52,6 +55,12 @@ def get_reply_list(auth, data, user_details=None):
             replies = replies.filter(PostReply.id.in_(user_details['bookmarked_reply_ids']))
         is_reply_bookmarked = True
         by_saved_only = True
+    
+    if query:
+        if not replies:
+            replies = PostReply.query.search(query)
+        else:
+            replies = replies.search(query)
 
     # PERSON_ID
     add_creator_in_view = True
