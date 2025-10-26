@@ -257,6 +257,7 @@ def admin_misc():
         site.enable_nsfw = form.enable_nsfw.data
         site.enable_nsfl = form.enable_nsfl.data
         site.community_creation_admin_only = form.community_creation_admin_only.data
+        site.allow_default_user_add_remote_community = form.allow_default_user_add_remote_community.data
         site.reports_email_admins = form.reports_email_admins.data
         site.registration_mode = form.registration_mode.data
         site.application_question = form.application_question.data
@@ -296,6 +297,7 @@ def admin_misc():
         form.enable_nsfl.data = site.enable_nsfl
         form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
+        form.allow_default_user_add_remote_community.data = site.allow_default_user_add_remote_community
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question

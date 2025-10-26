@@ -37,6 +37,7 @@
             {{ render_field(form.nsfw_country_restriction) }}
             <p class="small field_hint">{{ _('Use 2-letter country codes, one per line, e.g. GB. Probably not necessary if NSFW communities is off.') }}</p>
             {{ render_field(form.community_creation_admin_only) }}
+            {{ render_field(form.allow_default_user_add_remote_community) }}
             {{ render_field(form.reports_email_admins) }}
             <div id="tom_select">
                 {{ render_field(form.language_id) }}
