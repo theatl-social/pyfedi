@@ -11,7 +11,7 @@ from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair, \
-    user_file
+    user_file, UserExtraField
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country
 
@@ -310,10 +310,9 @@ def put_user_save_user_settings(auth, data):
     show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
-    # avatar = data['avatar'] if 'avatar' in data else None
-    cover = data['cover'] if 'cover' in data else None
     default_sort = data['default_sort_type'] if 'default_sort' in data else None
     default_comment_sort = data['default_comment_sort_type'] if 'default_comment_sort' in data else None
+    extra_fields = data['extra_fields'] if 'extra_fields' in data else None
 
     if "avatar" in data:
         if not data["avatar"]:
@@ -409,6 +408,54 @@ def put_user_save_user_settings(auth, data):
         user.default_sort = default_sort.lower()
     if default_comment_sort is not None:
         user.default_comment_sort = default_comment_sort.lower()
+    
+    if extra_fields:
+        current_num_fields = user.extra_fields.count()
+        new_extra_fields = []
+        fields_to_remove = []
+
+        if current_num_fields > 0:
+            user_field_ids = [field.id for field in user.extra_fields]
+        else:
+            user_field_ids = []
+
+        for field in extra_fields:
+            if 'id' in field:
+                # Editing or deleting existing field
+                if field['id'] not in user_field_ids:
+                    raise Exception(f"Permission denied. Extra field {field['id']} belongs to different user")
+                
+                user_field = UserExtraField.query.get(field['id'])
+                label = field['label'] if 'label' in field else None
+                text = field['text'] if 'text' in field else None
+                
+                if not label or not text:
+                    # Mark field for deletion
+                    fields_to_remove.append(user_field)
+                    current_num_fields -= 1
+                else:
+                    # Edit existing field
+                    user_field.label = label
+                    user_field.text = text
+            
+            elif 'label' in field and 'text' in field:
+                # Create new field
+                label = field['label']
+                text = field['text']
+
+                if label and text:
+                    new_extra_fields.append(UserExtraField(label=label.strip(), text=text.strip()))
+                    current_num_fields += 1
+            
+        if current_num_fields <= 4:
+            # Remove fields
+            for field in fields_to_remove:
+                db.session.delete(field)
+            # Add new fields
+            for field in new_extra_fields:
+                user.extra_fields.append(field)
+        elif current_num_fields > 4:
+            raise Exception("Cannot have more than four extra fields")
 
     # save the change to the db
     db.session.commit()

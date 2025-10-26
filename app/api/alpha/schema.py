@@ -51,6 +51,12 @@ class DefaultSchema(Schema):
         datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
+class UserExtraField(DefaultSchema):
+    id = fields.Integer(required=True)
+    label = fields.String(required=True, metadata={"example": "Pronouns"})
+    text = fields.String(required=True, metadata={"example": "he/him, she/her, they/them, etc."})
+
+
 class Person(DefaultSchema):
     actor_id = fields.String(required=True, metadata={"example": "https://piefed.social/u/rimu"})
     banned = fields.Boolean(required=True)
@@ -64,6 +70,7 @@ class Person(DefaultSchema):
     about_html = fields.String(metadata={"format": "html"})
     avatar = fields.String(allow_none=True, metadata={"format": "url"})
     banner = fields.String(allow_none=True, metadata={"format": "url"})
+    extra_fields = fields.List(fields.Nested(UserExtraField), validate=validate.Length(max=4))
     flair = fields.String()
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     title = fields.String(allow_none=True)
@@ -867,12 +874,28 @@ class UserSetFlairResponse(DefaultSchema):
     person_view = fields.Nested(PersonView)
 
 
+class NewUserExtraField(DefaultSchema):
+    id = fields.Integer(
+        allow_none=True,
+        metadata={
+            "description": "Pass an id of an existing extra field with null/missing/empty label or text to remove a field. "
+            "Pass an id of an existing extra field with both label and text to edit an existing extra field."})
+    label = fields.String(
+        allow_none=True,
+        metadata={"description": "Pass a label and text without an id to create a new extra field."})
+    text = fields.String(
+        allow_none=True,
+        metadata={"description": "Pass a label and text without an id to create a new extra field."})
+
+
 class UserSaveSettingsRequest(DefaultSchema):
     avatar = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     bio = fields.String(metadata={"format": "markdown"})
     cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    extra_fields = fields.List(fields.Nested(NewUserExtraField),
+                               metadata={"description": "A user can't have more than four total extra fields."})
     show_nsfw = fields.Boolean()
     show_nsfl = fields.Boolean()
     show_read_posts = fields.Boolean()
