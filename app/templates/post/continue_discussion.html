@@ -16,7 +16,7 @@
             <div class="col">
                 <div id="replies" class="comments" role="tree">
                     {% for reply in replies %}
-                      {% with post_reply=reply['comment'], children=reply['replies'] %}
+                      {% with post_reply=reply['comment'], children=reply['replies'], has_continued=1 %}
                           {% include 'post/_post_reply_teaser.html' %}
                       {% endwith %}
                     {% endfor %}

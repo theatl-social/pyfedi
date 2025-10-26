@@ -2,7 +2,7 @@
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
 {% if replies -%}
 {% for reply in replies -%}
-  {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
+  {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce, has_continued=1 %}
       {% include 'post/_post_reply_teaser.html' %}
   {% endwith %}
 {% endfor -%}
