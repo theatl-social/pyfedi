@@ -204,12 +204,6 @@ def _base_list_communities_context():
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
     is_staff = current_user.is_authenticated and current_user.is_staff()
-
-    if not g.site.enable_nsfw:
-        nsfw = None
-    else:
-        if nsfw is None:
-            nsfw = 'all'
     return {
         "SUBSCRIPTION_PENDING": SUBSCRIPTION_PENDING,
         "SUBSCRIPTION_MEMBER": SUBSCRIPTION_MEMBER,
