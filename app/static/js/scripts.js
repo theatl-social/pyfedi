@@ -60,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupBasicAutoResize();
     setupEventTimes();
     setupUserMentionSuggestions();
+    setupScrollToComment();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -2037,4 +2038,41 @@ function setupEventTimes() {
             timeZoneName: "short"
         });
     });
+}
+
+function setupScrollToComment() {
+    // Check if user is navigating to a specific comment
+    if (window.location.hash && window.location.hash.startsWith('#comment_')) {
+        const targetHash = window.location.hash;
+
+        // Force immediate loading of comments
+        const lazyDiv = document.getElementById('lazy_load_replies');
+        if (lazyDiv) {
+            // Listen for when the comments finish loading
+            document.body.addEventListener('htmx:afterSwap', function scrollToComment(event) {
+                // Check if this was the lazy_load_replies being swapped
+                if (event.detail.target.id === 'lazy_load_replies' ||
+                    event.detail.target.closest('#post_replies')) {
+                    // Remove the event listener to avoid running again
+                    document.body.removeEventListener('htmx:afterSwap', scrollToComment);
+
+                    // Wait a brief moment for DOM to settle, then scroll to the target
+                    setTimeout(function() {
+                        const targetElement = document.querySelector(targetHash);
+                        if (targetElement) {
+                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            // Optionally highlight the comment briefly
+                            targetElement.style.transition = 'background-color 0.3s ease';
+                            targetElement.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
+                            setTimeout(function() {
+                                targetElement.style.backgroundColor = '';
+                            }, 2000);
+                        }
+                    }, 100);
+                }
+            });
+
+            htmx.trigger(lazyDiv, 'intersect');
+        }
+    }
 }
