@@ -2048,27 +2048,47 @@ function setupScrollToComment() {
         // Force immediate loading of comments
         const lazyDiv = document.getElementById('lazy_load_replies');
         if (lazyDiv) {
-            // Listen for when the comments finish loading
-            document.body.addEventListener('htmx:afterSwap', function scrollToComment(event) {
-                // Check if this was the lazy_load_replies being swapped
+            // Listen for when the comments finish loading and settle
+            document.body.addEventListener('htmx:afterSettle', function scrollToComment(event) {
+                // Check if this was the lazy_load_replies or post_replies being settled
                 if (event.detail.target.id === 'lazy_load_replies' ||
                     event.detail.target.closest('#post_replies')) {
-                    // Remove the event listener to avoid running again
-                    document.body.removeEventListener('htmx:afterSwap', scrollToComment);
 
-                    // Wait a brief moment for DOM to settle, then scroll to the target
-                    setTimeout(function() {
-                        const targetElement = document.querySelector(targetHash);
-                        if (targetElement) {
-                            targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            // Optionally highlight the comment briefly
-                            targetElement.style.transition = 'background-color 0.3s ease';
-                            targetElement.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
-                            setTimeout(function() {
-                                targetElement.style.backgroundColor = '';
-                            }, 2000);
-                        }
-                    }, 100);
+                    // Try to find the target element
+                    const targetElement = document.querySelector(targetHash);
+                    if (targetElement) {
+                        // Remove the event listener now that we found the element
+                        document.body.removeEventListener('htmx:afterSettle', scrollToComment);
+
+                        // Wait for images and other content to load before scrolling
+                        const images = targetElement.querySelectorAll('img');
+                        const imagePromises = Array.from(images).map(img => {
+                            if (img.complete) {
+                                return Promise.resolve();
+                            }
+                            return new Promise((resolve) => {
+                                img.addEventListener('load', resolve);
+                                img.addEventListener('error', resolve); // resolve even on error
+                                // Timeout after 2 seconds in case image fails to load
+                                setTimeout(resolve, 2000);
+                            });
+                        });
+
+                        // Wait for all images to load (or timeout), then scroll
+                        Promise.all(imagePromises).then(() => {
+                            // Use requestAnimationFrame to wait for layout to complete
+                            requestAnimationFrame(() => {
+                                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                // Optionally highlight the comment briefly
+                                targetElement.style.transition = 'background-color 0.3s ease';
+                                targetElement.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
+                                setTimeout(function() {
+                                    targetElement.style.backgroundColor = '';
+                                }, 2000);
+                            });
+                        });
+                    }
+                    // If element not found yet, keep listening for the next settle event
                 }
             });
 
