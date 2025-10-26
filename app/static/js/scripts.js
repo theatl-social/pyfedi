@@ -2076,15 +2076,27 @@ function setupScrollToComment() {
 
                         // Wait for all images to load (or timeout), then scroll
                         Promise.all(imagePromises).then(() => {
-                            // Use requestAnimationFrame to wait for layout to complete
+                            // Wait for setupShowMoreLinks and other dynamic content setup to complete
+                            // This may collapse tall comments which affects layout
                             requestAnimationFrame(() => {
-                                targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                // Optionally highlight the comment briefly
-                                targetElement.style.transition = 'background-color 0.3s ease';
-                                targetElement.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
-                                setTimeout(function() {
-                                    targetElement.style.backgroundColor = '';
-                                }, 2000);
+                                // If the target comment itself was collapsed, expand it
+                                const limitHeightContent = targetElement.querySelector('.limit_height');
+                                if (limitHeightContent && limitHeightContent.style.maxHeight === '400px') {
+                                    limitHeightContent.style.overflow = 'visible';
+                                    limitHeightContent.style.maxHeight = '';
+                                    limitHeightContent.classList.add('expanded');
+                                }
+
+                                // Wait one more frame for any layout changes to settle
+                                requestAnimationFrame(() => {
+                                    targetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    // Optionally highlight the comment briefly
+                                    targetElement.style.transition = 'background-color 0.3s ease';
+                                    targetElement.style.backgroundColor = 'rgba(255, 193, 7, 0.3)';
+                                    setTimeout(function() {
+                                        targetElement.style.backgroundColor = '';
+                                    }, 2000);
+                                });
                             });
                         });
                     }
