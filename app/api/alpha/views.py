@@ -260,7 +260,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 v1['flair'] = flair
         if user.extra_fields:
             v1['extra_fields'] = []
-            for field in user.extra_fields:
+            for field in user.extra_fields.limit(4):
                 user_field = {}
                 user_field['id'] = field.id
                 user_field['label'] = field.label
@@ -312,7 +312,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
     if variant == 6:
         extra_fields = []
         if user.extra_fields:
-            for field in user.extra_fields:
+            for field in user.extra_fields.limit(4):
                 user_field = {}
                 user_field['id'] = field.id
                 user_field['label'] = field.label
