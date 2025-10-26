@@ -40,6 +40,7 @@ var DownArea = (function () {
             _a['o-list'] = { fn: this.addOrderedList },
             _a['sl-code'] = { fn: this.addSingleLineCode },
             _a['code-block'] = { fn: this.addCodeBlock },
+            _a['spoiler'] = { fn: this.addSpoiler },
             _a);
         this.element = args.elem;
         this.attr = (_b = args.attr) !== null && _b !== void 0 ? _b : {};
@@ -186,6 +187,14 @@ var DownArea = (function () {
             codeBlockTool.title = 'Code Block';
             codeBlockTool.innerHTML = "<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 100 100\" version=\"1.1\"\n                         style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">\n                        <g transform=\"matrix(1.47619,0,0,1.37619,-9.78571,-21.5619)\">\n                            <path d=\"M29.5,65L9,65L9,72L29.5,72L29.5,65ZM61,54L9,54L9,61L61,61L61,54ZM50,43L9,43L9,50L50,50L50,43ZM72,32L9,32L9,39L72,39L72,32Z\"/>\n                        </g>\n                    </svg>";
             toolbar.appendChild(codeBlockTool);
+        }
+        if (this.hiddenTools.indexOf('spoiler') < 0) {
+            var spoilerTool = document.createElement('div');
+            spoilerTool.classList.add('downarea-toolbar-tool');
+            spoilerTool.dataset.action = 'spoiler';
+            spoilerTool.title = 'Spoiler';
+            spoilerTool.innerHTML = "<svg width=\"100%\" height=\"100%\" viewBox=\"0 0 100 100\" version=\"1.1\"\n                         style=\"fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;\">\n                        <g>\n                            <path d=\"M50,15L85,80L15,80Z\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"6\" stroke-linejoin=\"round\"/>\n                            <rect x=\"47\" y=\"35\" width=\"6\" height=\"25\" rx=\"2\" fill=\"currentColor\"/>\n                            <circle cx=\"50\" cy=\"70\" r=\"4\" fill=\"currentColor\"/>\n                        </g>\n                    </svg>";
+            toolbar.appendChild(spoilerTool);
         }
         if (this.hiddenTools.indexOf('emoji') < 0) {
             var emojiTool = document.createElement('div');
@@ -784,6 +793,29 @@ var DownArea = (function () {
         }
         self.textarea.value = "".concat(start).concat(code).concat(end);
         self.textarea.selectionStart = start.length + code.length - offset;
+        self.textarea.selectionEnd = self.textarea.selectionStart;
+        self.textarea.focus();
+    };
+    DownArea.prototype.addSpoiler = function (self) {
+        var start = self.textarea.value.substr(0, self.textarea.selectionStart);
+        var end = self.textarea.value.substr(self.textarea.selectionStart);
+        var spoiler = '::: spoiler spoiler\n___\n:::';
+        var offset = 4;
+        if (self.textarea.selectionStart != self.textarea.selectionEnd) {
+            end = self.textarea.value.substr(self.textarea.selectionEnd);
+            var range = self.textarea.value.slice(self.textarea.selectionStart, self.textarea.selectionEnd);
+            spoiler = "::: spoiler spoiler\n".concat(range, "\n:::");
+            offset = range.length + 5;
+        }
+        if (start.length && start[start.length - 1] != '\n') {
+            spoiler = "\n".concat(spoiler);
+        }
+        if (end.length && end[0] != '\n') {
+            spoiler = "".concat(spoiler, "\n");
+            offset += 1;
+        }
+        self.textarea.value = "".concat(start).concat(spoiler).concat(end);
+        self.textarea.selectionStart = start.length + spoiler.length - offset;
         self.textarea.selectionEnd = self.textarea.selectionStart;
         self.textarea.focus();
     };
