@@ -1558,8 +1558,7 @@ def make_image_sizes_async(file_id, thumbnail_width, medium_width, directory, to
                                                 notification = Notification(title='Review this',
                                                                             user_id=1,
                                                                             author_id=post.user_id,
-                                                                            url=url_for('activitypub.post_ap',
-                                                                                        post_id=post.id),
+                                                                            url=post.slug,
                                                                             notif_type=NOTIF_REPORT,
                                                                             subtype='post_with_suspicious_image',
                                                                             targets=targets_data)

@@ -1030,7 +1030,8 @@ def protocol_handler():
             return redirect(url_for('main.index'))
 
         if 'post' in resp:
-            return redirect(url_for('activitypub.post_ap', post_id=resp['post']['post']['id']))
+            post = Post.query.get(resp['post']['post']['id'])
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
         if 'comment' in resp:
             return redirect(url_for('activitypub.comment_ap', comment_id=resp['comment']['comment']['id']))
         if 'community' in resp:

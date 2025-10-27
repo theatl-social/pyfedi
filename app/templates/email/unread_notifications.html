@@ -11,7 +11,7 @@
 <p>Also here's a few recent posts:</p>
 <ul>
 {% for post in posts %}
-    <li><p><a href="{{ url_for('activitypub.post_ap', post_id=post.id, _external=True) }}">{{ post.title }}</a></p></li>
+    <li><p><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, _external=True) }}">{{ post.title }}</a></p></li>
 {% endfor %}
 </ul>
 {% endif %}

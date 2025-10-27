@@ -384,7 +384,7 @@
 
                         <ul>
                             {% for post in upvoted %}
-                                <li><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a></li>
+                                <li><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}">{{ post.title }}</a></li>
                             {% endfor %}
                         </ul>
 
