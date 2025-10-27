@@ -130,7 +130,11 @@ def after_request(response):
             response.headers.add('Link', f'<https://{current_app.config["SERVER_NAME"]}/rsl.xml>; rel="license"; type="application/rsl+xml"')
         if 'auth/register' not in request.path:
             if hasattr(g, 'nonce') and "api/alpha/swagger" not in request.path:
-                response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}'; object-src 'none'; base-uri 'none';"
+                # Don't set CSP header for htmx fragment requests - they use parent page's CSP
+                is_htmx = request.headers.get('HX-Request') == 'true'
+                if not is_htmx:
+                    # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
+                    response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
             response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:

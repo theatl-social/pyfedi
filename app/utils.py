@@ -67,6 +67,16 @@ def render_template(template_name: str, **context) -> Response:
     else:
         content = flask.render_template(template_name, **context)
 
+    # Add nonces to all script tags that don't have them (for CSP with strict-dynamic)
+    if hasattr(g, 'nonce') and g.nonce:
+        import re
+        # Find all <script tags with src= that don't have nonce=
+        content = re.sub(
+            r'<script\s+([^>]*?)src=(["\'][^"\']*["\'])(?![^>]*nonce=)',
+            rf'<script \1src=\2 nonce="{g.nonce}"',
+            content
+        )
+
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
     if current_user.is_anonymous:
