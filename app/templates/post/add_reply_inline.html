@@ -61,7 +61,7 @@
                 elem: document.querySelector('#textarea_in_reply_to_{{ comment_id }}'),
                 resize: DownArea.RESIZE_VERTICAL,
                 hide: ['heading', 'bold-italic'],
-                value: document.getElementById("body").value
+                value: document.getElementById("textarea_in_reply_to_{{ comment_id }}").value
             });
             setupAutoResize('textarea_in_reply_to_{{ comment_id }}');
         </script>

@@ -7,6 +7,10 @@
 {% from "_macros.html" import render_username, render_communityname, render_feedname %}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
 
+{% block end_scripts -%}
+    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}"></script>
+{% endblock -%}
+
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
@@ -29,5 +33,5 @@
         {% include "_side_pane.html" %}
     {% endwith -%}
 </div>
-
+{% include "_insert_image_dialog.html" %}
 {% endblock %}

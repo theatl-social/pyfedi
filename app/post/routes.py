@@ -780,7 +780,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_id=recipient_language_id,
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
-                               in_reply_to=in_reply_to, author_banned=author_banned)
+                               in_reply_to=in_reply_to, author_banned=author_banned,
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
