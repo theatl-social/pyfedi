@@ -18,6 +18,10 @@
             </h1>
         {% endif %}
         <form method="get">
+            <input type="hidden" name="page" value="{{ page }}">
+            {% for item in filters -%}
+                <input type="hidden" name="filters" value="{{ item }}">
+            {% endfor -%}
             <input type="search" name="search" value="{{ search }}">
             <input class="btn btn-primary btn-sm" type="submit" name="submit" value="{{ _('Search') }}">
             <a class="btn btn-sm btn-warning" href="{{ url_for('instance.list_instances') }}" aria-label="{{ _('Clear filters') }}" rel="nofollow noindex">
@@ -31,17 +35,17 @@
                 </button>
                 <ul class="dropdown-menu">
                     <li>
-                        <a class="dropdown-item{{ " active" if filter == "online" }}" href="{{ url_for('instance.list_instances', filter='online') }}" aria-label="{{ _('Online instances') }}" rel="nofollow noindex">
+                        <a class="dropdown-item{{ " active" if ("online" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['online'], search=search, page=page) }}" aria-label="{{ _('Online instances') }}" rel="nofollow noindex">
                             {{ _('Online') }}
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item{{ " active" if filter == "dormant" }}" href="{{ url_for('instance.list_instances', filter='dormant') }}" aria-label="{{ _('Dormant instances') }}" rel="nofollow noindex">
+                        <a class="dropdown-item{{ " active" if ("dormant" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['dormant'], search=search, page=page) }}" aria-label="{{ _('Dormant instances') }}" rel="nofollow noindex">
                             {{ _('Dormant') }}
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item{{ " active" if filter == "gone_forever" }}" href="{{ url_for('instance.list_instances', filter='gone_forever') }}" aria-label="{{ _('Gone forever instances') }}" rel="nofollow noindex">
+                        <a class="dropdown-item{{ " active" if ("gone_forever" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['gone_forever'], search=search, page=page) }}" aria-label="{{ _('Gone forever instances') }}" rel="nofollow noindex">
                             {{ _('Gone Forever') }}
                         </a>
                     </li>
@@ -54,26 +58,26 @@
                 <ul class="dropdown-menu">
                     {% if allowed -%}
                         <li>
-                            <a class="dropdown-item{{ " active" if filter == "allowed" }}" href="{{ url_for('instance.list_instances', filter='allowed') }}" aria-label="{{ _('Allowed instances') }}" rel="nofollow noindex">
+                            <a class="dropdown-item{{ " active" if ("allowed" in filters) }}" href="{{ url_for('instance.list_instances', filters=filters + ['allowed'], search=search, page=page) }}" aria-label="{{ _('Allowed instances') }}" rel="nofollow noindex">
                                 {{ _('Allowed') }}
                             </a>
                         </li>
                     {% endif -%}
                     {% if blocked -%}
                         <li>
-                            <a class="dropdown-item{{ " active" if filter == "blocked" }}" href="{{ url_for('instance.list_instances', filter='blocked') }}" aria-label="{{ _('Blocked instances') }}" rel="nofollow noindex">
+                            <a class="dropdown-item{{ " active" if ("blocked" in filters) }}" href="{{ url_for('instance.list_instances', filters=filters + ['blocked'], search=search, page=page) }}" aria-label="{{ _('Blocked instances') }}" rel="nofollow noindex">
                                 {{ _('Blocked') }}
                             </a>
                         </li>
                     {% endif -%}
                     <li>
-                        <a class="dropdown-item{{ " active" if filter == "federated" }}" href="{{ url_for('instance.list_instances', filter='federated') }}" aria-label="{{ _('Federated instances') }}" rel="nofollow noindex">
+                        <a class="dropdown-item{{ " active" if ("federated" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['federated'], search=search, page=page) }}" aria-label="{{ _('Federated instances') }}" rel="nofollow noindex">
                             {{ _('Federated') }}
                         </a>
                     </li>
                     {% if trusted -%}
                         <li>
-                            <a class="dropdown-item{{ " active" if filter == "trusted" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" aria-label="{{ _('Trusted instances') }}" rel="nofollow noindex">
+                            <a class="dropdown-item{{ " active" if ("trusted" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['trusted'], search=search, page=page) }}" aria-label="{{ _('Trusted instances') }}" rel="nofollow noindex">
                                 {{ _('Trusted') }}
                             </a>
                         </li>
@@ -83,32 +87,32 @@
         </div>
         <div class="d-none d-md-flex flex-row justify-content-between my-2">
             <div class="btn-group btn-group-sm" role="group">
-                <a class="btn btn-outline-primary{{ " active" if filter == "online" else "" }}" href="{{ url_for('instance.list_instances', filter='online') }}" rel="nofollow noindex">
+                <a class="btn btn-outline-primary {{ " active" if ("online" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['online'], search=search, page=page) }}" rel="nofollow noindex">
                     {{ _('Online') }}
                 </a>
-                <a class="btn btn-outline-primary{{ " active" if filter == "dormant" else "" }}" href="{{ url_for('instance.list_instances', filter='dormant') }}" rel="nofollow noindex">
+                <a class="btn btn-outline-primary{{ " active" if ("dormant" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['dormant'], search=search, page=page) }}" rel="nofollow noindex">
                     {{ _('Dormant') }}
                 </a>
-                <a class="btn btn-outline-primary{{ " active" if filter == "gone_forever" else "" }}" href="{{ url_for('instance.list_instances', filter='gone_forever') }}" rel="nofollow noindex">
+                <a class="btn btn-outline-primary{{ " active" if ("gone_forever" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['gone_forever'], search=search, page=page) }}" rel="nofollow noindex">
                     {{ _('Gone Forever') }}
                 </a>
             </div>
             <div class="btn-group btn-group-sm" role="group">
                 {% if allowed -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "allowed" else "" }}" href="{{ url_for('instance.list_instances', filter='allowed') }}" rel="nofollow noindex">
+                    <a class="btn btn-outline-primary{{ " active" if ("allowed" in filters) }}" href="{{ url_for('instance.list_instances', filters=filters + ['allowed'], search=search, page=page) }}" rel="nofollow noindex">
                         {{ _('Allowed') }}
                     </a>
                 {% endif -%}
                 {% if blocked -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "blocked" else "" }}" href="{{ url_for('instance.list_instances', filter='blocked') }}" rel="nofollow noindex">
+                    <a class="btn btn-outline-primary{{ " active" if ("blocked" in filters) }}" href="{{ url_for('instance.list_instances', filters=filters + ['blocked'], search=search, page=page) }}" rel="nofollow noindex">
                         {{ _('Blocked') }}
                     </a>
                 {% endif -%}
-                <a class="btn btn-outline-primary{{ " active" if filter == "federated" else "" }}" href="{{ url_for('instance.list_instances', filter='federated') }}" rel="nofollow noindex">
+                <a class="btn btn-outline-primary{{ " active" if ("federated" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['federated'], search=search, page=page) }}" rel="nofollow noindex">
                     {{ _('Federated') }}
                 </a>
                 {% if trusted -%}
-                    <a class="btn btn-outline-primary{{ " active" if filter == "trusted" else "" }}" href="{{ url_for('instance.list_instances', filter='trusted') }}" rel="nofollow noindex">
+                    <a class="btn btn-outline-primary{{ " active" if ("trusted" in filters) }}{{ " disabled" if allowed_or_blocked }}" href="{{ url_for('instance.list_instances', filters=filters + ['trusted'], search=search, page=page) }}" rel="nofollow noindex">
                         {{ _('Trusted') }}
                     </a>
                 {% endif -%}
