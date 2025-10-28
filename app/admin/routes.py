@@ -1211,7 +1211,7 @@ def admin_community_edit(community_id):
         community.show_all = form.show_all.data
         community.low_quality = form.low_quality.data
         community.content_retention = form.content_retention.data
-        community.topic_id = form.topic.data if form.topic.data != 0 else None
+        community.topic_id = form.topic.data if form.topic.data > 0 else None
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
@@ -1370,7 +1370,7 @@ def admin_topic_edit(topic_id):
         topic.num_communities = topic.communities.count()
         topic.machine_name = slugify(form.machine_name.data.strip())
         topic.show_posts_in_children = form.show_posts_in_children.data
-        if form.parent_id.data:
+        if form.parent_id.data > 0:
             topic.parent_id = form.parent_id.data
         else:
             topic.parent_id = None
