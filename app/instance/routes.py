@@ -19,50 +19,89 @@ from app.utils import render_template, blocked_domains, \
 def list_instances():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '')
-    filter = request.args.get('filter', '')
+    # filters can have duplicates because jinja is really picky about the python it will execute. So, a duplicated entry
+    # should be interpreted as disabling that filter
+    filters = request.args.getlist('filters')
+    print(f"filters: {filters}")
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    instances = Instance.query.order_by(Instance.domain)
-    allowed = AllowedInstances.query.order_by(AllowedInstances.domain)
-    blocked = BannedInstances.query.order_by(BannedInstances.domain)
-    if search:
-        instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+    # Fix up the filters list
+    clean_filters = []
+    cleaned_filters = False
+    if filters:
+        for filter in filters:
+            if filter not in clean_filters:
+                clean_filters.append(filter)
+            else:
+                clean_filters.remove(filter)
+                cleaned_filters = True
+    filters = clean_filters
+
+    # More fixing up the filter list because when using the blocked or allowed filter, some other filters don't work
+    if 'allowed' in filters or 'blocked' in filters:
+        allowed_or_blocked = True
+    else:
+        allowed_or_blocked = False
+    filters_to_remove = ['online', 'trusted', 'dormant', 'gone_forever', 'federated']
+    
+    if allowed_or_blocked:
+        # Remove filters that don't work when filtering this way and redirect
+        for item in filters_to_remove:
+            if item in filters:
+                filters.remove(item)
+                cleaned_filters = True
+        
+        if 'blocked' in filters:
+            flash(_("Limiting results to blocked instances disables filters other than search"), 'warning')
+        elif 'allowed' in filters:
+            flash(_("Limiting results to allowed instances disables filters other than search"), 'warning')
+    
+    if cleaned_filters:
+        # Redirect to a cleaner url if filter tidying up was needed
+        return redirect(url_for("instance.list_instances", page=page, search=search, filters=filters))
+
+    if 'allowed' in filters and 'blocked' in filters:
+        # Intentionally get empty query so it doesn't screw up pagination later on
+        instances = Instance.query.filter(False)
+    elif 'allowed' in filters:
+        instances = AllowedInstances.query.order_by(AllowedInstances.domain)
+        if search:
+            instances = instances.filter(AllowedInstances.domain.ilike(f"%{search}%"))
+    elif 'blocked' in filters:
+        instances = BannedInstances.query.order_by(BannedInstances.domain)
+        if search:
+            instances = instances.filter(BannedInstances.domain.ilike(f"%{search}%"))
+    else:
+        instances = Instance.query.order_by(Instance.domain)
+        if search:
+            instances = instances.filter(Instance.domain.ilike(f"%{search}%"))
+
     title = _('Instances')
-    if filter:
-        if filter == 'trusted':
+    
+    if filters and not allowed_or_blocked:
+        if 'trusted' in filters:
             instances = instances.filter(Instance.trusted == True)
-            title = _('Trusted instances')
-        elif filter == 'online':
+        if 'online' in filters:
             instances = instances.filter(Instance.dormant == False, Instance.gone_forever == False)
-            title = _('Online instances')
-        elif filter == 'dormant':
+        if 'dormant' in filters:
             instances = instances.filter(Instance.dormant == True, Instance.gone_forever == False)
-            title = _('Dormant instances')
-        elif filter == 'gone_forever':
+        if 'gone_forever' in filters:
             instances = instances.filter(Instance.gone_forever == True)
-            title = _('Gone forever instances')
-        elif filter == "allowed":
-            instances = allowed
-            title = _('Allowed instances')
-        elif filter == "blocked":
-            instances = blocked
-            title = _('Defederated instances')
-        elif filter == "federated":
+        if 'federated' in filters:
             instances = instances.filter(Instance.id != 1, Instance.gone_forever == False)
-            title = _('Federated instances')
 
     # Pagination
     instances = instances.paginate(page=page, per_page=50, error_out=False)
-    next_url = url_for('instance.list_instances', page=instances.next_num, filter=filter, search=search) if instances.has_next else None
-    prev_url = url_for('instance.list_instances', page=instances.prev_num, filter=filter, search=search) if instances.has_prev and page != 1 else None
+    next_url = url_for('instance.list_instances', page=instances.next_num, filters=filters, search=search) if instances.has_next else None
+    prev_url = url_for('instance.list_instances', page=instances.prev_num, filters=filters, search=search) if instances.has_prev and page != 1 else None
 
     allowed = db.session.execute(text('SELECT COUNT(id) FROM "allowed_instances"')).scalar() > 0
     blocked = db.session.execute(text('SELECT COUNT(id) FROM "banned_instances"')).scalar() > 0
     trusted = db.session.execute(text('SELECT COUNT(id) FROM "instance" WHERE trusted IS TRUE')).scalar() > 0
 
     return render_template('instance/list_instances.html', instances=instances, title=title, search=search,
-                           filter=filter, next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
-                           allowed=allowed, blocked=blocked, trusted=trusted)
+                           filters=filters, next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth,
+                           allowed=allowed, blocked=blocked, trusted=trusted, allowed_or_blocked=allowed_or_blocked)
 
 
 @bp.route('/instance/<instance_domain>', methods=['GET'])
