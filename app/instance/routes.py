@@ -22,7 +22,6 @@ def list_instances():
     # filters can have duplicates because jinja is really picky about the python it will execute. So, a duplicated entry
     # should be interpreted as disabling that filter
     filters = request.args.getlist('filters')
-    print(f"filters: {filters}")
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
     # Fix up the filters list
