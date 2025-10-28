@@ -1106,7 +1106,7 @@ form > .mb-3.required > label:after {
   color: var(--bs-link-color);
 }
 .post_teaser_title_a:visited {
-  color: color-mix(in srgb, var(--bs-link-color) 75%, white);
+  color: color-mix(in srgb, var(--bs-link-color) 65%, white);
 }
 
 .post_reply_form label {
@@ -3043,7 +3043,7 @@ form h5 {
 }
 
 [data-bs-theme=dark] .post_teaser_title_a:visited {
-  color: color-mix(in srgb, var(--bs-link-color) 75%, black);
+  color: color-mix(in srgb, var(--bs-link-color) 65%, black);
 }
 
 :root {
