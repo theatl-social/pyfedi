@@ -612,6 +612,12 @@ def continue_discussion(post_id, comment_id):
     event = None
     if post.type == POST_TYPE_EVENT:
         event = Event.query.filter_by(post_id=post.id).first()
+    
+    parent_id = None
+    if comment.parent_id:
+        parent_comment = PostReply.query.get(comment.parent_id)
+        if parent_comment and not parent_comment.deleted:
+            parent_id = comment.parent_id
 
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
                                post=post, mods=mod_list, event=event,
@@ -619,7 +625,7 @@ def continue_discussion(post_id, comment_id):
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted_replies=recently_upvoted_replies,
                                recently_downvoted_replies=recently_downvoted_replies,
-                               community=post.community,
+                               community=post.community, parent_id=parent_id,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
