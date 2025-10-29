@@ -1135,7 +1135,7 @@ def community_edit(community_id: int):
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
-            community.topic_id = form.topic.data if form.topic.data != 0 else None
+            community.topic_id = form.topic.data if form.topic.data > 0 else None
             community.default_layout = form.default_layout.data
             community.default_post_type = form.default_post_type.data
             community.downvote_accept_mode = form.downvote_accept_mode.data

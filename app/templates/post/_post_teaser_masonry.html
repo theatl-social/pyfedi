@@ -33,7 +33,7 @@
                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" title="{{ post_title }}" class="{{ 'blur' if blur_content }}"
                         loading="lazy" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
                 {% else %}
-                    <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"><img src="{{ post.image.thumbnail_url() }}" class="{{ 'blur' if blur_content }}"
+                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}"><img src="{{ post.image.thumbnail_url() }}" class="{{ 'blur' if blur_content }}"
                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="{{ 'lazy' if low_bandwidth else 'eager' }}" /></a>
                 {% endif %}
             </div>
@@ -50,11 +50,14 @@
                             {% include "post/_post_voting_buttons_masonry.html" %}
                         </div>
                         <div class="col col-8">
-                            <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
+                            <p><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
                         </div>
                         <div class="col col-2 reply_col">
-                            <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span></a>
-                            {% if post.reply_count %}<a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}">{{ post.reply_count }}</a>{% endif %}
+                            {% if post.slug %}
+                                <a href="{{ post.slug }}?sort={{ 'new' if sort == 'active' else ''}}#post_replies" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span> {{ post.reply_count }}</a>
+                            {% else -%}
+                                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span> {{ post.reply_count }}</a>
+                            {% endif -%}
                         </div>
                     </div>
 
@@ -71,7 +74,7 @@
                 </div>
             {% else %}
             <div class="masonry_info_no_image">
-                <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"></a></p>
+                <p><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}"></a></p>
             </div>
             {% endif %}
         {% endif %}
@@ -83,7 +86,7 @@
                     </div>
                 </div>
                 <div class="col col-8">
-                    <p><a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
+                    <p><a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" title="{{ post_title }}">{{ post_title }}</a></p>
                 </div>
                 <div class="col col-1 reply_col">
                     <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" aria-label="{{ _('View comments') }}" aria-hidden="true"><span class="fe fe-reply"></span></a>

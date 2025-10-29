@@ -17,18 +17,18 @@
         <meta name="csrf-token" content="{{ cs }}">
         <link rel="expect" blocking="render" href="#navbarSupportedContent">
         {% if current_user.is_anonymous -%}
-            <script rel="preload" src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high"></script>
+            <script rel="preload" src="/static/js/enable_low_bandwidth.js" type="text/javascript" fetchpriority="high" nonce="{{ nonce }}"></script>
         {% endif -%}
         {% if current_user.font == 'atkinson' -%}
-            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2">
-            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2">
-            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2">
-            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Regular.woff2" as="font" type="font/woff2" crossorigin>
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Italic.woff2" as="font" type="font/woff2" crossorigin>
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-Bold.woff2" as="font" type="font/woff2" crossorigin>
+            <link rel="preload" href="/static/fonts/atkinson/AtkinsonHyperlegible-BoldItalic.woff2" as="font" type="font/woff2" crossorigin>
         {% elif current_user.font == 'inter' -%}
-            <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/inter/InterVariable.woff2" as="font" type="font/woff2" crossorigin>
         {% elif current_user.font == 'roboto' -%}
-            <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2">
-            <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2">
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Regular.woff2" as="font" type="font/woff2" crossorigin>
+            <link rel="preload" href="/static/fonts/roboto/Roboto-Bold.woff2" as="font" type="font/woff2" crossorigin>
         {% endif -%}
         {% block styles -%}
             {{ bootstrap.load_css() }}
@@ -36,7 +36,7 @@
             <link href="{{ url_for('static', filename='styles.css', changed=getmtime('styles.css')) }}" type="text/css" rel="stylesheet" data-reload="true" />
             <link href="{{ url_for('static', filename='themes/high_contrast/styles.css') }}" type="text/css" rel="alternate stylesheet" title="High contrast" />
             {% if not low_bandwidth -%}
-                <link href="{{ url_for('static', filename='js/markdown/downarea.css') }}" type="text/css" rel="stylesheet" />
+                <link href="{{ url_for('static', filename='js/markdown/downarea.css', changed=getmtime('js/markdown/downarea.css')) }}" type="text/css" rel="stylesheet" />
                 <link href="{{ url_for('static', filename='js/lightbox/baguetteBox.css') }}" type="text/css" rel="stylesheet" />
                 {% if current_user.code_style -%}
                     <link href="{{ url_for('static', filename='pygments/' + current_user.code_style + '.css') }}" type="text/css" rel="stylesheet" />
@@ -97,9 +97,9 @@
       </style>
       {% endif -%}
     {% endblock -%}
-    <script src="{{ url_for('static', filename='js/set_theme.js', changed=getmtime('js/set_theme.js')) }}" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='js/set_theme.js', changed=getmtime('js/set_theme.js')) }}" type="text/javascript" nonce="{{ nonce }}"></script>
     {% if current_user.is_authenticated and current_user.theme == 'hlt-fruits' -%}
-      <script src="/static/themes/hlt-fruits/scripts.js" type="text/javascript"></script>
+      <script src="/static/themes/hlt-fruits/scripts.js" type="text/javascript" nonce="{{ nonce }}"></script>
     {% endif -%}
     {% block schema_org %}
     {% endblock %}
@@ -318,16 +318,16 @@
 
     {% block scripts -%}
     {% endblock -%}
-    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
-    <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/user-mentions.js', changed=getmtime('js/user-mentions.js')) }}"></script>
-    <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}"></script>
+    {{ bootstrap.load_js() }}
+    <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}" nonce="{{ nonce }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/user-mentions.js', changed=getmtime('js/user-mentions.js')) }}" nonce="{{ nonce }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}" nonce="{{ nonce }}"></script>
     {% if not low_bandwidth -%}
         {% if post_layout == 'masonry' or post_layout == 'masonry_wide' -%}
             <!-- -->
         {% endif -%}
         <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
-        <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}"></script>
+        <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}" nonce="{{ nonce }}"></script>
         {% if notif_server and current_user.is_authenticated -%}
             <script type="text/javascript" nonce="{{ nonce }}">
                 {% include "notifs.js" %}
@@ -335,7 +335,7 @@
         {% endif -%}
     {% endif -%}
     {% if theme() and file_exists('app/templates/themes/' + theme() + '/scripts.js') -%}
-        <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}"></script>
+        <script src="{{ url_for('static', filename='themes/' + theme() + '/scripts.js') }}" nonce="{{ nonce }}"></script>
     {% endif -%}
     {% block end_scripts -%}
 

@@ -229,17 +229,17 @@ def list_communities():
     topic_id = int(request.args.get('topic_id', 0))
     feed_id = int(request.args.get('feed_id', 0))
     language_id = int(request.args.get('language_id', 0))
-    nsfw = request.args.get('nsfw', None)
+    nsfw = request.args.get('nsfw', 'all')
     page = request.args.get('page', 1, type=int)
     instance = request.args.get('instance', '')
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
     sort_by = request.args.get('sort_by', 'post_reply_count desc')
 
     if not g.site.enable_nsfw:
-        nsfw = None
+        nsfw = 'no'
+        hide_nsfw = True
     else:
-        if nsfw is None:
-            nsfw = 'all'
+        hide_nsfw = False
 
     if request.args.get('prompt'):
         flash(_('You did not choose any topics. Would you like to choose individual communities instead?'))
@@ -252,8 +252,10 @@ def list_communities():
     else:
         communities = communities.filter(or_(Community.title.ilike(f"%{search_param}%"), Community.ap_id.ilike(f"%{search_param}%")))
 
-    if topic_id != 0:
+    if topic_id > 0:
         communities = communities.filter_by(topic_id=topic_id)
+    elif topic_id < 0:
+        communities = communities.filter_by(topic_id=None)
 
     if language_id != 0:
         communities = communities.join(community_language).filter(community_language.c.language_id == language_id)
@@ -313,7 +315,8 @@ def list_communities():
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
         if current_user.hide_nsfw == 1:
-            nsfw = None
+            nsfw = 'no'
+            hide_nsfw = True
             communities = communities.filter(Community.nsfw == False)
         else:
             if nsfw == 'no':
@@ -340,15 +343,27 @@ def list_communities():
                                                                           'post_reply_count', 'last_active', 'created_at',
                                                                           'active_weekly'}))
 
+    # dict used for pagination query parameters
+    args_dict = dict()
+    args_dict["search"] = search_param
+    args_dict["home_select"] = home_select
+    args_dict["subscribe_select"] = subscribe_select
+    args_dict["topic_id"] = topic_id
+    args_dict["feed_id"] = feed_id
+    args_dict["language_id"] = language_id
+    args_dict["nsfw"] = nsfw
+    args_dict["instance"] = instance
+
     # Pagination
     communities = communities.paginate(page=page,
                                        per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
                                        error_out=False)
     context = _base_list_communities_context()
     context["next_url"] = url_for('main.list_communities', page=communities.next_num, sort_by=sort_by,
-                       language_id=language_id) if communities.has_next else None
-    context["prev_url"] = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by,
-                       language_id=language_id) if communities.has_prev and page != 1 else None
+                       **args_dict) if communities.has_next else None
+    context["prev_url"] = url_for('main.list_communities', page=communities.prev_num, sort_by=sort_by, 
+                       **args_dict) if communities.has_prev and page != 1 else None
+
     context.update({
         "communities": communities,
         "search": search_param,
@@ -1081,7 +1096,8 @@ def protocol_handler():
             return redirect(url_for('main.index'))
 
         if 'post' in resp:
-            return redirect(url_for('activitypub.post_ap', post_id=resp['post']['post']['id']))
+            post = Post.query.get(resp['post']['post']['id'])
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
         if 'comment' in resp:
             return redirect(url_for('activitypub.comment_ap', comment_id=resp['comment']['comment']['id']))
         if 'community' in resp:

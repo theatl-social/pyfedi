@@ -258,6 +258,14 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             flair = user.community_flair(flair_community_id)
             if flair:
                 v1['flair'] = flair
+        if user.extra_fields:
+            v1['extra_fields'] = []
+            for field in user.extra_fields.limit(4):
+                user_field = {}
+                user_field['id'] = field.id
+                user_field['label'] = field.label
+                user_field['text'] = field.text
+                v1['extra_fields'].append(user_field)
 
         return v1
 
@@ -302,6 +310,15 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
 
     # Variant 6 - User Settings - api/user.dart saveUserSettings
     if variant == 6:
+        extra_fields = []
+        if user.extra_fields:
+            for field in user.extra_fields.limit(4):
+                user_field = {}
+                user_field['id'] = field.id
+                user_field['label'] = field.label
+                user_field['text'] = field.text
+                extra_fields.append(user_field)
+
         v6 = {
             "local_user_view": {
                 "local_user": {
@@ -329,6 +346,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "banner": user.cover.medium_url() if user.cover_id else None,
                     "about": user.about,
                     "about_html": user.about_html,
+                    "extra_fields": extra_fields,
                 },
                 "counts": {
                     "person_id": user.id,
@@ -349,6 +367,8 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
             del v6["local_user_view"]["person"]["about"]
         if not v6["local_user_view"]["person"]["about_html"]:
             del v6["local_user_view"]["person"]["about_html"]
+        if not v6["local_user_view"]["person"]["extra_fields"]:
+            del v6["local_user_view"]["person"]["extra_fields"]
 
         return v6
 

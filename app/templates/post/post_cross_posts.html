@@ -1,6 +1,6 @@
 {% for cross_post in cross_posts %}
   <li class="dropdown-item">
-    <a href="{{ url_for('activitypub.post_ap', post_id=cross_post.id) }}" class="no-underline" rel="nofollow">
+    <a href="{{ cross_post.slug if cross_post.slug else url_for('activitypub.post_ap', post_id=cross_post.id) }}" class="no-underline" rel="nofollow">
       <span class="fe fe-reply"></span>{{ cross_post.reply_count }} |
       {{ cross_post.community.name }}@{{ cross_post.community.ap_domain }}
     </a>

@@ -590,6 +590,14 @@ form {
   top: 4px;
 }
 
+.post_teaser_title_a {
+    color: var(--bs-link-color);
+
+    &:visited {
+      color: color-mix(in srgb, var(--bs-link-color) 65%, white);
+    }
+}
+
 .post_reply_form {
   label {
     display: none;
@@ -2699,6 +2707,13 @@ form {
 
 [data-bs-theme="dark"] .coolfieldset.collapsed legend{
 	background: #424549 url(/static/images/collapsed.gif) no-repeat center left;
+}
+
+[data-bs-theme="dark"] .post_teaser_title_a {
+
+    &:visited {
+      color: color-mix(in srgb, var(--bs-link-color) 65%, black);
+    }
 }
 
 @import "scss/compact";

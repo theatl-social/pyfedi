@@ -109,7 +109,7 @@
                                         <select name="topic_id" id="topic_id"
                                                 class="form-control-sm form-select"
                                                 aria-label="{{ _('Choose a topic to filter communities by') }}">
-                                            <option value="0">
+                                            <option value="0" {{ 'selected' if topic_id == 0 }}>
                                                 {{ _('All') }}
                                             </option>
                                             {% for topic in topics -%}
@@ -156,7 +156,7 @@
                                         </select>
                                     </div>
                                 {% endif -%}
-                                {% if nsfw is not none -%}
+                                {% if not hide_nsfw -%}
                                     <div class="col-12 col-sm-6 col-lg-4 mb-2 px-1">
                                         <label for="language_id">
                                             {{ _('NSFW') }}:

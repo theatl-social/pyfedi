@@ -186,16 +186,6 @@
                     <div class="mt-2">{{ _('Loading comments...') }}</div>
                 </div>
             </div>
-            <script nonce="{{ nonce }}">
-                // Check if user is navigating to a specific comment
-                if (window.location.hash && window.location.hash.startsWith('#comment_')) {
-                    // Force immediate loading of comments
-                    const lazyDiv = document.getElementById('lazy_load_replies');
-                    if (lazyDiv) {
-                        htmx.trigger(lazyDiv, 'intersect');
-                    }
-                }
-            </script>
         {% else -%}
             {% include "post/_post_replies.html" %}
         {% endif -%}

@@ -140,9 +140,9 @@ def show_post(post_id: int):
                 reply = make_reply(form, post, None, SRC_WEB)
             except Exception as ex:
                 flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
-                return redirect(url_for('activitypub.post_ap', post_id=post_id))
+                return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 
-            return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
+            return redirect(f'{post.slug}#comment_{reply.id}' if post.slug else url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
         else:
             if total_comments_on_post_and_cross_posts(post.id) < 100:   # if there are not many comments then we might as well load them with the post
                 lazy_load_replies = False
@@ -573,7 +573,7 @@ def poll_vote(post_id):
                 send_post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
                                   current_user.public_url() + '#main-key')
 
-    return redirect(url_for('activitypub.post_ap', post_id=post_id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')
@@ -612,6 +612,12 @@ def continue_discussion(post_id, comment_id):
     event = None
     if post.type == POST_TYPE_EVENT:
         event = Event.query.filter_by(post_id=post.id).first()
+    
+    parent_id = None
+    if comment.parent_id:
+        parent_comment = PostReply.query.get(comment.parent_id)
+        if parent_comment and not parent_comment.deleted:
+            parent_id = comment.parent_id
 
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
                                post=post, mods=mod_list, event=event,
@@ -619,7 +625,7 @@ def continue_discussion(post_id, comment_id):
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted_replies=recently_upvoted_replies,
                                recently_downvoted_replies=recently_downvoted_replies,
-                               community=post.community,
+                               community=post.community, parent_id=parent_id,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -690,7 +696,7 @@ def add_reply(post_id: int, comment_id: int):
 
     if not post.comments_enabled:
         flash(_('Comments have been disabled.'), 'warning')
-        return redirect(url_for('activitypub.post_ap', post_id=post_id))
+        return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 
     in_reply_to = PostReply.query.get_or_404(comment_id)
     mods = post.community.moderators()
@@ -703,7 +709,7 @@ def add_reply(post_id: int, comment_id: int):
 
     if in_reply_to.author.has_blocked_user(current_user.id):
         flash(_('You cannot reply to %(name)s', name=in_reply_to.author.display_name()))
-        return redirect(url_for('activitypub.post_ap', post_id=post_id))
+        return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 
     form = NewReplyForm()
     form.language_id.choices = languages_for_form()
@@ -716,12 +722,12 @@ def add_reply(post_id: int, comment_id: int):
         except Exception as ex:
             flash(_('Your reply was not accepted because %(reason)s', reason=str(ex)), 'error')
             if in_reply_to.depth <= constants.THREAD_CUTOFF_DEPTH:
-                return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{in_reply_to.id}'))
+                return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{in_reply_to.id}'))
             else:
                 return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=in_reply_to.parent_id))
 
         if reply.depth <= constants.THREAD_CUTOFF_DEPTH:
-            return redirect(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{reply.id}'))
         else:
             return redirect(url_for('post.continue_discussion', post_id=post_id, comment_id=reply.parent_id))
     else:
@@ -780,7 +786,8 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_id=recipient_language_id,
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
-                               in_reply_to=in_reply_to, author_banned=author_banned)
+                               in_reply_to=in_reply_to, author_banned=author_banned,
+                               low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
     else:
         content = request.form.get('body', '').strip()
         language_id = int(request.form.get('language_id'))
@@ -919,7 +926,7 @@ def post_edit(post_id: int):
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
                 abort(401)
 
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
         else:
             event_online = None
             form.title.data = post.title
@@ -1047,7 +1054,7 @@ def post_restore(post_id: int):
             mod_restore_post(post.id, SRC_WEB, None)
 
         flash(_('Post has been restored.'))
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/purge', methods=['POST'])
@@ -1327,7 +1334,7 @@ def post_mea_culpa(post_id: int):
         post.community.last_active = utcnow()
         post.last_active = utcnow()
         db.session.commit()
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
     return render_template('post/post_mea_culpa.html', title=_('I changed my mind'), form=form, post=post)
 
@@ -1342,7 +1349,7 @@ def post_sticky(post_id: int, mode):
         flash(_('%(name)s has been stickied.', name=post.title))
     else:
         flash(_('%(name)s has been un-stickied.', name=post.title))
-    return redirect(referrer(url_for('activitypub.post_ap', post_id=post.id)))
+    return redirect(referrer(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)))
 
 
 @bp.route('/post/<int:post_id>/set_flair', methods=['GET', 'POST'])
@@ -1475,7 +1482,7 @@ def post_reply_report(post_id: int, comment_id: int):
         report_reply(post_reply, form, SRC_WEB)
 
         flash(_('Comment has been reported, thank you!'))
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
     elif request.method == 'GET':
         form.report_remote.data = True
 
@@ -1501,7 +1508,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
 
         if "/post/" in curr_url:
             if post_reply.author.id != post.author.id:
-                resp.headers['HX-Redirect'] = url_for('activitypub.post_ap', post_id=post.id)
+                resp.headers['HX-Redirect'] = post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)
             else:
                 resp.headers['HX-Redirect'] = post.community.local_url()
         elif "/u/" in curr_url:
@@ -1513,7 +1520,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
 
     # todo: federate block to post_reply author instance
 
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/block_instance', methods=['POST'])
@@ -1540,7 +1547,7 @@ def post_reply_block_instance(post_id: int, comment_id: int):
 
         return resp
 
-    return redirect(url_for('activitypub.post_ap', post_id=post_id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/distinguish', methods=['POST'])
@@ -1555,7 +1562,7 @@ def post_reply_distinguish(post_id: int, comment_id: int):
         else:
             post_reply.distinguished = True
         db.session.commit()
-        return redirect(url_for('activitypub.post_ap', post_id=post.id))
+        return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
     else:
         abort(401)
 
@@ -1574,7 +1581,7 @@ def post_reply_edit(post_id: int, comment_id: int):
     if post_reply.user_id == current_user.id or post.community.is_moderator():
         if form.validate_on_submit():
             edit_reply(form, post_reply, post, SRC_WEB)
-            return redirect(url_for('activitypub.post_ap', post_id=post.id))
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
         else:
             form.body.data = post_reply.body
             form.notify_author.data = post_reply.notify_author
@@ -1645,7 +1652,7 @@ def post_reply_delete(post_id: int, comment_id: int):
                     num_deleted = 1
             if num_deleted > 0:
                 flash(_('Deleted %(num_deleted)s comments.', num_deleted=num_deleted))
-            return redirect(url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{comment_id}'))
+            return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, _anchor=f'comment_{comment_id}'))
         else:
             return render_template('generic_form.html', title=_('Are you sure you want to delete this comment?'),
                                    form=form)
@@ -1733,7 +1740,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                           link_text=f'comment on {shorten_string(post.title)}',
                           link=f'post/{post.id}#comment_{post_reply.id}')
 
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/purge', methods=['POST'])
@@ -1756,7 +1763,7 @@ def post_reply_purge(post_id: int, comment_id: int):
     else:
         abort(401)
 
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/notification', methods=['GET', 'POST'])
@@ -1909,7 +1916,7 @@ def post_fixup_from_remote(post_id: int):
             update_json = {'type': 'Update', 'object': remote_post_json}
             update_post_from_activity(post, update_json)
 
-    return redirect(url_for('activitypub.post_ap', post_id=post.id))
+    return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
 
 
 @bp.route('/post/<int:post_id>/cross-post', methods=['GET', 'POST'])

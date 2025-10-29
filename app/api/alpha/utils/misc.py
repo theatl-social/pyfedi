@@ -10,6 +10,7 @@ from app.activitypub.util import find_actor_or_create, remote_object_to_json, ac
 from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
+from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
 from app.community.util import search_for_community
 from app.models import Post, PostReply, User, Community, BannedInstances
@@ -35,6 +36,8 @@ def get_search(auth, data):
         search_json['posts'] = get_post_list(auth, data, search_type=type)['posts']
     elif type == 'Users':
         search_json['users'] = get_user_list(auth, data)['users']
+    elif type == 'Comments':
+        search_json['comments'] = get_reply_list(auth, data)['comments']
 
     return search_json
 
