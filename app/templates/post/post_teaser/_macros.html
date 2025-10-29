@@ -1,500 +1,326 @@
 {# Macros for post teaser components. We used to use include for this but import is much faster when deeply nested, as these are. #}
 {% from "_macros.html" import render_username, render_communityname %}
+
 {% macro render_title(post, sort=None, embed=False, show_post_community=True, low_bandwidth=False, current_user=None, request=None, locale=None, reported_posts=None, user_flair=None, admin_ids=None, user_notes=None) -%}
-    {% set POST_TYPE_LINK = 1 -%}
-    {% set POST_TYPE_ARTICLE = 2 -%}
-    {% set POST_TYPE_IMAGE = 3 -%}
-    {% set POST_TYPE_VIDEO = 4 -%}
-    {% set POST_TYPE_POLL = 5 -%}
-    {% set POST_TYPE_EVENT = 6 -%}
-    {% if embed -%}
-        <div class="embed_logo">
-            <a href="/" target="_blank" title="{{ g.site.name }}">
-                <img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}"
-                     alt="Logo"
-                     width="40"
-                     height="40">
-            </a>
-        </div>
+{% set POST_TYPE_LINK = 1 -%}
+{% set POST_TYPE_ARTICLE = 2 -%}
+{% set POST_TYPE_IMAGE = 3 -%}
+{% set POST_TYPE_VIDEO = 4 -%}
+{% set POST_TYPE_POLL = 5 -%}
+{% set POST_TYPE_EVENT = 6 -%}
+{% if embed -%}
+<div class="embed_logo">
+    <a href="/" target="_blank" title="{{ g.site.name }}"><img src="{{ g.site.logo if g.site.logo else '/static/images/piefed_logo_full_t_300x300.svg' }}" alt="Logo" width="40" height="40"></a>
+</div>
+{% endif -%}
+<h3 lang="{{ post.language_code() }}">{% if post.sticky -%}<span class="fe fe-sticky-left"></span>{% endif -%}<a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _external=embed) }}" {{ 'target="_blank"' if embed }} class="post_teaser_title_a" {% if not post.indexable %}rel="noindex"{% endif %} >{{ post.title }}</a>
+    {% if post.type == POST_TYPE_IMAGE -%}
+        <span class="fe fe-image" aria-hidden="true"> </span>
     {% endif -%}
-    <h3 lang="{{ post.language_code() }}">
-        {% if post.sticky -%}
-            <span class="fe fe-sticky-left"></span>
+    {% if post.type == POST_TYPE_EVENT -%}
+        <span class="fe fe-event" aria-hidden="true"> </span>
+    {% endif -%}
+    {% if post.domain_id and post.url -%}
+        {% if post.url.endswith('.mp3') -%}
+            <span class="fe fe-audio" aria-hidden="true"></span>
         {% endif -%}
-        <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _external=embed) }}" {{ 'target="_blank"' if embed }} class="post_teaser_title_a" {% if not post.indexable %}rel="noindex"{% endif %}>{{ post.title }}</a>
-        {% if post.type == POST_TYPE_IMAGE -%}
-            <span class="fe fe-image" aria-hidden="true"></span>
-        {% endif -%}
-        {% if post.type == POST_TYPE_EVENT -%}
-            <span class="fe fe-event" aria-hidden="true"></span>
-        {% endif -%}
-        {% if post.domain_id and post.url -%}
-            {% if post.url.endswith('.mp3') -%}
-                <span class="fe fe-audio" aria-hidden="true"></span>
-            {% endif -%}
-            {% if post.type == POST_TYPE_VIDEO -%}
+        {% if post.type == POST_TYPE_VIDEO -%}
                 <span class="fe fe-video" aria-hidden="true"></span>
+        {% endif -%}
+        {% if post.type == POST_TYPE_LINK and not embed -%}
+            <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}" aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)
+            {% if post.domain.post_warning -%}
+                    <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
             {% endif -%}
-            {% if post.type == POST_TYPE_LINK and not embed -%}
-                <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}"
-   aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)
-                    {% if post.domain.post_warning -%}
-                        <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
-                    {% endif -%}
-                </span>
-            {% endif -%}
+            </span>
         {% endif -%}
-        {% for flair in post.flair -%}
-            <span class="post_flair"
-                  style="color: {{ flair.text_color }};
-                         background-color: {{ flair.background_color }}"
-                  title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="/c/{{ post.community.link() }}?flair={{ flair.flair }}"
-   style="color: {{ flair.text_color }}">{{ flair.flair }}</a></span>
-        {% endfor -%}
-        {% if post.nsfw -%}
-            <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>
-        {% endif -%}
-        {% if post.nsfl -%}
-            <span class="warning_badge nsfl"
-                  title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>
-        {% endif -%}
-        {% if post.id in reported_posts -%}
-            <span class="red fe fe-report"
-                  title="{{ _('Reported. Check post for issues.') }}"></span>
-        {% endif -%}
-        {% if post.sticky -%}
-            <span class="fe fe-sticky-right"></span>
-        {% endif -%}
-        {% if post.deleted -%}
-            <span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>
-        {% endif -%}
-    </h3>
-    <div class="author small">
-        {% if show_post_community -%}
-            <a href="{{ url_for('activitypub.community_profile', actor=post.community.link() , _external=embed) }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
-                {% if post.community.icon_id and not low_bandwidth %}
-                    <img class="community_icon_small rounded-circle"
-                         src="{{ post.community.icon_image('tiny') }}"
-                         alt="Community icon" />
+    {% endif -%}
+    {% for flair in post.flair -%}
+        <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="/c/{{ post.community.link() }}?flair={{ flair.flair }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
+    {% endfor -%}
+    {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
+    {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
+    {% if post.id in reported_posts -%}
+        <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
+    {% endif -%}
+    {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
+    {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
+</h3>
+<div class="author small">{% if show_post_community -%}<a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), _external=embed) }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
+    {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}
+    c/{{ post.community.name }}</a><span class="community_instance text-muted {{ 'local' if post.community.is_local() }}">@{{ post.community.ap_domain }}</span> {% endif -%}
+    by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
+    <time datetime="{{ post.last_active }}" title="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time></div>
+{%- endmacro %}
+
+{% macro render_utilities_bar(post, sort=None, embed=False, low_bandwidth=False, current_user=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, moderated_community_ids=None) -%}
+{% set POST_TYPE_LINK = 1 -%}
+{% set POST_TYPE_ARTICLE = 2 -%}
+{% set POST_TYPE_IMAGE = 3 -%}
+{% set POST_TYPE_VIDEO = 4 -%}
+{% set POST_TYPE_POLL = 5 -%}
+<div class="post_utilities_bar">
+    <div class="post_replies_link">
+        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
+    </div>
+    <div class="voting_buttons_new" data-base-url="/post/{{ post.id }}" aria-live="assertive">
+        {% if current_user.is_authenticated and current_user.verified -%}
+                {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
+                        <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}" role="button" aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}" aria-live="assertive"
+                         hx-post="/post/{{ post.id }}/upvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
+                                <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted, post.id) else 'fe-arrow-up' }}"></span>
+                        </div>
                 {% endif -%}
-                c/{{ post.community.name }}</a><span class="community_instance text-muted {{ 'local' if post.community.is_local() }}">@{{ post.community.ap_domain }}</span>
-            {% endif -%}
-            by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id) , current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
-            {% if user_flair and post.author.id in user_flair %}
-                <span class="user_flair">{{ user_flair[post.author.id] }}</span>
-            {% endif %}
-            <time datetime="{{ post.last_active }}" title="{{ post.last_active }}">{{ post.posted_at_localized(sort, locale) }}</time>
-        </div>
-    {%- endmacro %}
-    {% macro render_utilities_bar(post, sort=None, embed=False, low_bandwidth=False, current_user=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, moderated_community_ids=None) -%}
-        {% set POST_TYPE_LINK = 1 -%}
-        {% set POST_TYPE_ARTICLE = 2 -%}
-        {% set POST_TYPE_IMAGE = 3 -%}
-        {% set POST_TYPE_VIDEO = 4 -%}
-        {% set POST_TYPE_POLL = 5 -%}
-        <div class="post_utilities_bar">
-            <div class="post_replies_link">
-                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, _anchor='post_replies') }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
-            </div>
-            <div class="voting_buttons_new"
-                 data-base-url="/post/{{ post.id }}"
-                 aria-live="assertive">
-                {% if current_user.is_authenticated and current_user.verified -%}
-                    {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-                        <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}"
-                             role="button"
-                             aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}"
-                             aria-live="assertive"
-                             hx-post="/post/{{ post.id }}/upvote/default"
-                             hx-trigger="click throttle:1s"
-                             hx-target="closest .voting_buttons_new"
-                             tabindex="0">
-                            <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted, post.id) else 'fe-arrow-up' }}"></span>
+                <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+                {%- if (can_downvote_here or can_downvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
+                        <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}" role="button" aria-label="{{ _('DownVote button, %(count)d downvotes so far.', count=post.down_votes) }}" aria-live="assertive"
+                         hx-post="/post/{{ post.id }}/downvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
+                                <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted, post.id) else 'fe-arrow-down' }}"></span>
                         </div>
-                    {% endif -%}
-                    <span class="score"
-                          title="{{ post.up_votes }}, {{ post.down_votes }}"
-                          aria-live="assertive"
-                          aria-label="{{ _("Score: ") }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
-                    {%- if (can_downvote_here or can_downvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-                        <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}"
-                             role="button"
-                             aria-label="{{ _('DownVote button, %(count)d downvotes so far.', count=post.down_votes) }}"
-                             aria-live="assertive"
-                             hx-post="/post/{{ post.id }}/downvote/default"
-                             hx-trigger="click throttle:1s"
-                             hx-target="closest .voting_buttons_new"
-                             tabindex="0">
-                            <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted, post.id) else 'fe-arrow-down' }}"></span>
-                        </div>
-                    {%- endif -%}
-                {% else -%}
-                    {% if not disable_voting -%}
-                        <div class="upvote_button digits_{{ digits(post.up_votes) }} {{ upvoted_class }} redirect_login">
-                            <span class="fe fe-arrow-up"></span>
-                        </div>
-                    {% endif -%}
-                    <span class="score"
-                          title="{{ post.up_votes }}, {{ post.down_votes }}"
-                          aria-live="assertive"
-                          aria-label="{{ _("Score: ") }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
-                    {%- if not disable_voting -%}
-                        <div class="downvote_button digits_{{ digits(post.down_votes) }} {{ downvoted_class }} redirect_login">
-                            <span class="fe fe-arrow-down"></span>
-                        </div>
-                    {%- endif -%}
-                {% endif -%}
-            </div>
-            {% if post.type == POST_TYPE_IMAGE and low_bandwidth -%}
-                <div class="preview_image">
-                    {% if post.image_id -%}
-                        <a href="{{ post.image.view_url() }}"
-                           rel="nofollow ugc"
-                           aria-label="{{ _('View image') }}"
-                           aria-hidden="true"><span class="fe fe-magnify"></span></a>
-                    {% else -%}
-                        <a href="{{ post.url }}"
-                           rel="nofollow ugc"
-                           target="_blank"
-                           aria-label="{{ _('View image') }}"
-                           aria-hidden="true"><span class="fe fe-magnify"></span></a>
-                    {% endif -%}
+                {%- endif -%}
+        {% else -%}
+            {% if not disable_voting -%}
+                <div class="upvote_button digits_{{ digits(post.up_votes) }} {{ upvoted_class }} redirect_login">
+                        <span class="fe fe-arrow-up"></span>
                 </div>
             {% endif -%}
-            {% if post.cross_posts and not embed -%}
-                <div class="cross_post_button">
-                    <div class="dropdown">
-                        <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}"
-                           aria-label="{{ _('Show cross-posts') }}"
-                           title="{{ _('Show cross-posts') }}"
-                           data-bs-toggle="dropdown"
-                           rel="nofollow">
-                            <span class="fe fe-layers"></span>
-                            <span aria-label="{{ _('Number of cross-posts:') }}">{{ post.cross_posts|length }}</span>
-                        </a>
-                        <ul class="dropdown-menu"
-                            style="width: 380px;
-                                   white-space: nowrap;
-                                   overflow: hidden">
-                            <div hx-get="{{ url_for('post.post_cross_posts', post_id=post.id) }}"
-                                 hx-trigger="intersect once"
-                                 hx-target="this"
-                                 hx-swap="outerHTML"></div>
-                        </ul>
-                    </div>
+            <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+            {%- if not disable_voting -%}
+                <div class="downvote_button digits_{{ digits(post.down_votes) }} {{ downvoted_class }} redirect_login">
+                        <span class="fe fe-arrow-down"></span>
                 </div>
-            {% endif -%}
-            {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or post.cross_posts|length == 0) -%}
-                <div class="post_cross_post_link">
-                    <a rel="nofollow"
-                       aria-label="{{ _('Cross-post') }}"
-                       href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
-                </div>
-            {% endif -%}
-            {% if not embed -%}
-                <div class="post_options_link pull-right">
-                    {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities %}
-                        <a class="small"
-                           rel="nofollow"
-                           title="{{ _('Join this community') }}"
-                           aria-label="{{ _('Join this community') }}"
-                           href="{{ url_for('community.subscribe', actor=post.community.link() ) }}">{{ _("Join") }}</a>
-                    {% endif -%}
-                    {% if (moderated_community_ids and post.community_id in moderated_community_ids) or current_user.get_id() in admin_ids -%}
-                        <div class="dropdown" id="flair_dropdown_{{ post.id }}">
-                            <a href='{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}'
-                               data-bs-toggle="dropdown"
-                               data-bs-auto-close="outside"
-                               rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
-                            <ul class="dropdown-menu dropdown-menu-end overflow-auto"
-                                style="width: 320px">
-                                <div hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
-                                     hx-trigger="intersect once"
-                                     hx-target="this"
-                                     hx-swap="outerHTML"></div>
-                            </ul>
-                        </div>
-                    {% endif -%}
-                    <div class="dropdown" id="post_options_dropdown_{{ post.id }}">
-                        <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
-                           data-bs-toggle="dropdown"
-                           rel="nofollow noindex"><span class="fe fe-options" title="Options"></span></a>
-                        <ul class="dropdown-menu" style="width: 320px">
-                            <div hx-get="{{ url_for('post.post_options', post_id=post.id) }}"
-                                 hx-trigger="intersect once"
-                                 hx-target="this"
-                                 hx-swap="outerHTML"></div>
-                        </ul>
-                    </div>
-                </div>
-            {% endif -%}
-        </div>
-    {%- endmacro %}
-    {% macro render_article(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
-        <div class="col post_teaser_body">
+            {%- endif -%}
+        {% endif -%}
+    </div>
+    {% if post.type == POST_TYPE_IMAGE and low_bandwidth -%}
+        <div class="preview_image">
             {% if post.image_id -%}
-                <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}"
-                     aria-hidden="true">
-                    {% if low_bandwidth -%}
-                        <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                           aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
-                    {% else -%}
-                        <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                           aria-label="{{ _('Read post') }}">
-                            <img src="{{ post.image.thumbnail_url() }}"
-                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                                 loading="lazy"
-                                 class="{{ 'blur' if blur_content }}" />
-                        </a>
-                    {% endif -%}
-                </div>
+                <a href="{{ post.image.view_url() }}" rel="nofollow ugc" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
+            {% else -%}
+                <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="{{ _('View image') }}" aria-hidden="true"><span class="fe fe-magnify"></span></a>
             {% endif -%}
-            {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-            {% if post.body_html -%}
-                <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}"
-                     lang="{{ post.language_code() }}">{{ first_paragraph(post.body_html) | safe }}</div>
-            {% endif -%}
-            {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
-        </div>
-    {%- endmacro %}
-    {% macro render_event(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
-        <div class="col post_teaser_body">
-            {% if post.image_id -%}
-                <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}"
-                     aria-hidden="true">
-                    {% if low_bandwidth -%}
-                        <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                           aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
-                    {% else -%}
-                        <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                           aria-label="{{ _('Read post') }}">
-                            <img src="{{ post.image.thumbnail_url() }}"
-                                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                                 loading="lazy"
-                                 class="{{ 'blur' if blur_content }}" />
-                        </a>
-                    {% endif -%}
-                </div>
-            {% endif -%}
-            {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-            {% if post.body_html -%}
-                <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}"
-                     lang="{{ post.language_code() }}">
-                    {% if post.event and post.event.start %}
-                        <time class="convert_to_local">{{ post.event.start.strftime("%Y-%m-%dT%H:%M:%SZ") }}</time>
-                    {% endif %}
-                    {{ first_paragraph(post.body_html) | safe }}
-                </div>
-            {% endif -%}
-            {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
-        </div>
-    {%- endmacro %}
-    {% macro render_link(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
-        <div class="col post_teaser_body">
-            {% if post.image_id -%}
-                <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}"
-                     aria-hidden="true">
-                    {% if low_bandwidth -%}
-                        <a href="{{ post.url }}"
-                           rel="nofollow ugc"
-                           class="post_link"
-                           target="_blank"
-                           aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
-                    {% else -%}
-                    <a href="{{ post.url }}"
-                       rel="nofollow ugc"
-                       class="post_link"
-                       target="_blank"
-                       aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span>
-                    <img src="{{ post.image.thumbnail_url() }}"
-                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                         loading="lazy"
-                         class="{{ 'blur' if blur_content }}" />
-                </a>
-            {% endif -%}
-        </div>
-    {% else %}
-        <div class="col_thumbnail" aria-hidden="true">
-            <a href="{{ post.url }}"
-               rel="nofollow ugc"
-               class="post_link"
-               target="_blank"
-               aria-label="{{ _('Follow link') }}"><span class="fe fe-external fe-external-noimg"></span></a>
         </div>
     {% endif -%}
+    {% if post.cross_posts and not embed -%}
+    <div class="cross_post_button">
+        <div class="dropdown">
+            <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
+               title="{{ _('Show cross-posts') }}" data-bs-toggle="dropdown" rel="nofollow">
+               <span class="fe fe-layers"></span>
+               <span aria-label="{{ _('Number of cross-posts:') }}">{{ post.cross_posts|length }}</span>
+            </a>
+            <ul class="dropdown-menu" style="width: 380px; white-space: nowrap; overflow: hidden">
+                <div
+                    hx-get="{{ url_for('post.post_cross_posts', post_id=post.id) }}"
+                    hx-trigger="intersect once"
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                ></div>
+            </ul>
+        </div>
+    </div>
+    {% endif -%}
+    {% if current_user.is_authenticated and post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or post.cross_posts|length == 0) -%}
+        <div class="post_cross_post_link">
+            <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
+        </div>
+    {% endif -%}
+    {% if not embed -%}
+        <div class="post_options_link pull-right">
+            {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities %}
+                <a class="small" rel="nofollow" title="{{ _('Join this community') }}" aria-label="{{ _('Join this community') }}" href="{{ url_for('community.subscribe', actor=post.community.link()) }}">{{ _('Join') }}</a>
+            {% endif -%}
+            {% if (moderated_community_ids and post.community_id in moderated_community_ids) or current_user.get_id() in admin_ids -%}
+              <div class="dropdown" id="flair_dropdown_{{ post.id }}">
+                <a href='{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}'
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
+                <ul class="dropdown-menu dropdown-menu-end overflow-auto" style="width: 320px;">
+                  <div
+                    hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
+                    hx-trigger="intersect once"
+                    hx-target="this"
+                    hx-swap="outerHTML"
+                  ></div>
+                </ul>
+              </div>
+            {% endif -%}
+            <div class="dropdown" id="post_options_dropdown_{{ post.id }}">
+                <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
+                   data-bs-toggle="dropdown"
+                   rel="nofollow noindex"><span class="fe fe-options" title="Options"></span></a>
+                <ul class="dropdown-menu" style="width: 320px">
+                    <div
+                        hx-get="{{ url_for('post.post_options', post_id=post.id) }}"
+                        hx-trigger="intersect once"
+                        hx-target="this"
+                        hx-swap="outerHTML"
+                    ></div>
+                </ul>
+            </div>
+        </div>
+    {% endif -%}
+</div>
+{%- endmacro %}
+
+{% macro render_article(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+<div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
+            {% else -%}
+                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% endif -%}
+
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.body_html -%}
-        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}"
-             lang="{{ post.language_code() }}">{{ first_paragraph(post.body_html) | safe }}</div>
+        <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
     {% endif -%}
     {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
 </div>
 {%- endmacro %}
-{% macro render_poll(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
-    <div class="col post_teaser_body">
-        {% if post.image_id -%}
-            <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}"
-                 aria-hidden="true">
-                {% if low_bandwidth -%}
-                    <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                       aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
-                {% else -%}
-                    <a href="{{ url_for('activitypub.post_ap', post_id=post.id) }}"
-                       aria-label="{{ _('Read post') }}">
-                        <img src="{{ post.image.thumbnail_url() }}"
-                             alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                             loading="lazy"
-                             class="{{ 'blur' if blur_content }}" />
-                    </a>
-                {% endif -%}
-            </div>
-        {% else -%}
-            <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}"
-                 aria-hidden="true">
-                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}"><span class="fe fe-poll"></span></a>
-            </div>
-        {% endif -%}
-        {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-        {% if post.body_html -%}
-            <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}"
-                 lang="{{ post.language_code() }}">{{ first_paragraph(post.body_html) | safe }}</div>
-        {% endif -%}
-        {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
-    </div>
-{%- endmacro %}
-{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None, compact_thumbs=False) -%}
-    <div class="col post_teaser_body {{ 'reported' if post.id in reported_posts }}">
-        {% if compact_thumbs and post.image_id -%}
-            <div class="col_thumbnail thumbnail">
-            <a href="{{ post.image.view_url() }}"
-               class="post_link"
-               rel="nofollow ugc"
-               aria-label="{{ _('View image') }}"
-               target="_blank"><span class="fe fe-image"></span>
-            <img src="{{ post.image.medium_url() }}"
-                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                 loading="lazy"
-                 class="{{ 'blur' if blur_content }}"
-                 width="{{ post.image.width }}"
-                 height="{{ post.image.height }}" />
-        </a>
-    </div>
-{% endif -%}
-{{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-{% if post.image_id and not low_bandwidth and not compact_thumbs -%}
-    <div class="post_teaser_image_preview">
-        <a href="{{ post.image.view_url() }}"
-           class="post_link"
-           rel="nofollow ugc"
-           aria-label="{{ _('View image') }}"
-           target="_blank">
-            <img src="{{ post.image.medium_url() }}"
-                 alt="{{ post.image.alt_text if post.image.alt_text else '' }}"
-                 loading="lazy"
-                 class="{{ 'blur' if blur_content }}"
-                 width="{{ post.image.width }}"
-                 height="{{ post.image.height }}" />
-        </a>
-    </div>
-{% endif -%}
-{% if post.body_html -%}
-    <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}"
-         lang="{{ post.language_code() }}">{{ first_paragraph(post.body_html) | safe }}</div>
-{% endif -%}
-{{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+
+{% macro render_event(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+<div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
+            {% else -%}
+                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% endif -%}
+
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if post.body_html -%}
+        <div class="post_teaser_article_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {% if post.event and post.event.start %}<time class="convert_to_local">{{ post.event.start.strftime('%Y-%m-%dT%H:%M:%SZ') }}</time>{% endif %}
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
 </div>
 {%- endmacro %}
+
+{% macro render_link(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+<div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
+            {% else -%}
+                <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}"
+                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% else %}
+        <div class="col_thumbnail" aria-hidden="true">
+            <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external fe-external-noimg"></span></a>
+        </div>
+    {% endif -%}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if post.body_html -%}
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+</div>
+{%- endmacro %}
+
+{% macro render_poll(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
+<div class="col post_teaser_body">
+    {% if post.image_id -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            {% if low_bandwidth -%}
+                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
+            {% else -%}
+                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                        alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
+            {% endif -%}
+        </div>
+    {% else -%}
+        <div class="col_thumbnail thumbnail{{ ' lbw' if low_bandwidth }}" aria-hidden="true">
+            <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}"><span class="fe fe-poll"></span></a>
+        </div>
+    {% endif -%}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if post.body_html -%}
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+</div>
+{%- endmacro %}
+
+{% macro render_image(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None, compact_thumbs=False) -%}
+<div class="col post_teaser_body {{ 'reported' if post.id in reported_posts }}">
+    {% if compact_thumbs and post.image_id -%}
+        <div class="col_thumbnail thumbnail">
+            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-image"></span><img src="{{ post.image.medium_url() }}"
+                    alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+        </div>
+    {% endif -%}
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if post.image_id and not low_bandwidth and not compact_thumbs -%}
+        <div class="post_teaser_image_preview">
+            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
+                    alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
+        </div>
+    {% endif -%}
+    {% if post.body_html -%}
+        <div class="post_teaser_link_preview small post_teaser_clickable {{ 'blur' if blur_content }}" lang="{{ post.language_code() }}">
+            {{ first_paragraph(post.body_html) | safe }}
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+</div>
+{%- endmacro %}
+
 {% macro render_video(post, show_post_community=show_post_community, low_bandwidth=False, blur_content=False, sort=None, autoplay=False, current_user=None, request=None, locale=None, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
-    <div class="col post_teaser_body">
-        {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
-        {% if not low_bandwidth %}
-            <div class="post_teaser_video_preview">
-                <div class="max_width_512">
-                    {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
-                        <p>
-                            <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'auto' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
-                                {% if post.url.endswith('.mp4') -%}
-                                    <source src="{{ post.url }}" type="video/mp4" />
-                                {% elif post.url.endswith('.webm') -%}
-                                    <source src="{{ post.url }}" type="video/webm" />
-                                {% endif -%}
-                            </video>
-                        </p>
-                    {% elif post.url.startswith('https://vimeo.com') -%}
-                        <div style="padding-bottom: 56.25%; position: relative;">
-                            <iframe loading="lazy"
-                                    style="position: absolute;
-                                           top: 0px;
-                                           left: 0px;
-                                           width: 100%;
-                                           height: 100%"
-                                    src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}"
-                                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                                    width="100%"
-                                    height="100%"
-                                    frameborder="0"></iframe>
-                        </div>
-                    {% elif post.url.startswith('https://streamable.com') -%}
-                        <div style="padding-bottom: 56.25%; position: relative;">
-                            <iframe loading="lazy"
-                                    style="position: absolute;
-                                           top: 0px;
-                                           left: 0px;
-                                           width: 100%;
-                                           height: 100%"
-                                    src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0"
-                                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                                    width="100%"
-                                    height="100%"
-                                    frameborder="0"></iframe>
-                        </div>
-                    {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
-                        <div style="padding-bottom: 56.25%; position: relative;">
-                            <iframe loading="lazy"
-                                    style="position: absolute;
-                                           top: 0px;
-                                           left: 0px;
-                                           width: 100%;
-                                           height: 100%"
-                                    src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}"
-                                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                                    width="100%"
-                                    height="100%"
-                                    frameborder="0"></iframe>
-                        </div>
-                    {% endif -%}
-                    {% if 'youtube.com' in post.url -%}
-                        <div class="video-wrapper"
-                             data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
-                            <a href="{{ url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}"
-                               rel="nofollow ugc"
-                               aria-label="{{ _('Read article') }}">
-                                <img src="https://img.youtube.com/vi/{{ post.youtube_video_id() }}/hqdefault.jpg"
-                                     alt="Video Thumbnail"
-                                     width="512"
-                                     height="288"
-                                     loading="lazy">
-                            </a>
-                        </div>
-                    {% endif -%}
-                    {% if 'videos/watch' in post.url -%}
-                        <div style="padding-bottom: 56.25%; position: relative;">
-                            <iframe loading="lazy"
-                                    style="position: absolute;
-                                           top: 0px;
-                                           left: 0px;
-                                           width: 100%;
-                                           height: 100%"
-                                    src="{{ post.peertube_embed() }}"
-                                    allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-                                    width="100%"
-                                    height="100%"
-                                    frameborder="0"></iframe>
-                        </div>
-                    {% endif -%}
-                </div>
+<div class="col post_teaser_body">
+    {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
+    {% if not low_bandwidth %}
+        <div class="post_teaser_video_preview">
+            <div class="max_width_512">
+                {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
+                    <p>
+                        <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'auto' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
+                        {% if post.url.endswith('.mp4') -%}
+                            <source src="{{ post.url }}" type="video/mp4" />
+                        {% elif post.url.endswith('.webm') -%}
+                            <source src="{{ post.url }}" type="video/webm" />
+                        {% endif -%}
+                        </video></p>
+                {% elif post.url.startswith('https://vimeo.com') -%}
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                {% elif post.url.startswith('https://streamable.com') -%}
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                {% endif -%}
+                {% if 'youtube.com' in post.url -%}
+                    <div class="video-wrapper" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
+                        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}" rel="nofollow ugc" aria-label="{{ _('Read article') }}">
+                            <img src="https://img.youtube.com/vi/{{ post.youtube_video_id() }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288" loading="lazy">
+                        </a>
+                    </div>                {% endif -%}
+                {% if 'videos/watch' in post.url -%}
+                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                {% endif -%}
             </div>
-        {% endif -%}
-        {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
-    </div>
+        </div>
+    {% endif -%}
+    {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
+</div>
 {%- endmacro %}

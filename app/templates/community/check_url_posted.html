@@ -1,16 +1,13 @@
 {% if communities -%}
-    <p>
-        {{ _("This link has already been posted to these communities:") }}
-        <br>
-        {% for community in communities -%}
-            {{ community.display_name() }}
-            <br>
-        {% endfor -%}
+    <p>{{ _('This link has already been posted to these communities:') }}<br>
+    {% for community in communities -%}
+        {{ community.display_name() }}<br>
+    {% endfor -%}
     </p>
 {% endif -%}
 {% if title -%}
-    <input id="retrieved_title"
-           type="hidden"
-           value="{{ title }}"
-           hx-swap-oob="true">
+<input id="retrieved_title" type="hidden" value="{{ title }}" hx-swap-oob="true">
+{% endif -%}
+{% if description -%}
+<input id="retrieved_description" type="hidden" value="{{ description }}" hx-swap-oob="true">
 {% endif -%}

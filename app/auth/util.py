@@ -138,11 +138,7 @@ def create_user_application(user: User, registration_answer: str):
 def notify_admins_of_registration(application):
     """Notify admins when a registration application is ready for review"""
 
-    # fire hook for use by plugins, commit is needed first so that db information available to plugin
-    db.session.commit()
-    application = plugins.fire_hook("new_registration_for_approval", application)
-
-    # commit once more in case any changes were made from the plugin
+    # commit is needed here first so that db information available later to plugin
     db.session.commit()
 
     targets_data = {
@@ -162,6 +158,8 @@ def notify_admins_of_registration(application):
         )
         admin.unread_notifications += 1
         db.session.add(notify)
+
+    plugins.fire_hook("new_registration_for_approval", application)
 
 
 def create_registration_application(user, answer):
@@ -432,7 +430,7 @@ def process_login(form: LoginForm):
     ip = ip_address()
     country = get_country(ip)
 
-    if current_app.config["LDAP_SERVER_LOGIN"]:
+    if current_app.config["LDAP_READ_ENABLE"]:
         user = validate_user_ldap_login(
             form.user_name.data.strip(), form.password.data.strip(), ip
         )
@@ -450,8 +448,11 @@ def process_login(form: LoginForm):
         if not validate_user_login(user, form.password.data.strip(), ip):
             return redirect(url_for("auth.login"))
 
-        if user.waiting_for_approval():
-            return redirect(url_for("auth.please_wait"))
+    if requires_email_verification(user):
+        return redirect(url_for("auth.check_email"))
+
+    if user.waiting_for_approval():
+        return redirect(url_for("auth.please_wait"))
 
     return log_user_in(user, form, ip, country, ldap_sync=ldap_sync)
 

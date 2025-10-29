@@ -262,6 +262,8 @@ def show_topic(topic_path):
                 if comments.has_prev and page != 1
                 else None
             )
+        else:
+            abort(400)
 
         sub_topics = (
             Topic.query.filter_by(parent_id=current_topic.id).order_by(Topic.name).all()
@@ -369,7 +371,12 @@ def show_topic_rss(topic_path):
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
-            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.slug:
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+            else:
+                fe.link(
+                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+                )
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith("text/"):

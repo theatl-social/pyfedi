@@ -36,7 +36,7 @@
     "theme_color": "#c6e2ff",
     "background_color": "#c6e2ff",
     "display": "standalone",
-    "orientation": "any",
+    "orientation": "default",
     "start_url": "/",
     "scope": "/",
     "piefed_manifest_version": "android",
@@ -48,6 +48,7 @@
     "share_target": {
         "action": "/share",
         "method": "GET",
+        "enctype": "application/x-www-form-urlencoded",
         "params": {
           "title": "title",
           "url": "url"

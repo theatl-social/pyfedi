@@ -150,6 +150,21 @@ class EditCommunityForm(FlaskForm):
         validators=[Optional()],
         render_kw={"class": "form-select"},
     )
+    post_types = [
+        ("link", _l("Link")),
+        ("discussion", _l("Discussion")),
+        ("image", _l("Image")),
+        ("video", _l("Video")),
+        ("poll", _l("Poll")),
+        ("event", _l("Event")),
+    ]
+    default_post_type = SelectField(
+        _l("Default post type"),
+        coerce=str,
+        choices=post_types,
+        validators=[Optional()],
+        render_kw={"class": "form-select"},
+    )
     submit = SubmitField(_l("Save"))
 
 
@@ -326,6 +341,10 @@ class CreateLinkForm(CreatePostForm):
             "hx-params": "*",
             "hx-target": "#urlUsed",
         },
+    )
+    image_alt_text = StringField(
+        _l("Alt text (for links to images)"),
+        validators=[Optional(), Length(min=3, max=1500)],
     )
 
     def validate_link_url(self, field):
@@ -670,7 +689,7 @@ class ReportCommunityForm(FlaskForm):
             for choice in self.reason_choices:
                 if choice[0] == reason_id:
                     result.append(str(choice[1]))
-        return ", ".join(result)
+        return ", ".join(result)[:255]
 
 
 class SetMyFlairForm(FlaskForm):

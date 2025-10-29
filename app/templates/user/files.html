@@ -1,0 +1,62 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% set active_child = 'bookmarks' %}
+{% from "_macros.html" import render_communityname %}
+{% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Files') }}</li>
+          </ol>
+        </nav>
+        <h1><a class="btn btn-primary" href="{{ url_for('user.user_file_upload') }}" style="float: right;">{{ _('Upload') }}</a>
+            {{ _('Files') }}</h1>
+
+        {% if total_size %}
+            <p>{{ _('You are using %(size)s out of a quota of %(max_size)s', size=total_size | human_filesize, max_size=max_size | human_filesize) }}</p>
+        {% endif %}
+        <div class="media_list">
+            <table class="table table-responsive">
+            {% for file in files.items -%}
+                <tr>
+                    <td><a href="{{ file.source_url }}"><img class="media_list_image" src="{{ file.source_url }}" loading="lazy"></a></td>
+                    <td>{{ file_sizes[file.id] | human_filesize if file_sizes[file.id] else '-' }}</td>
+                    <td><div class="dropdown">
+                          <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            {{ _('Actions') }}
+                          </button>
+                          <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{{ url_for('user.user_file_delete', file_id=file.id) }}">{{ _('Delete') }}</a></li>
+                          </ul>
+                        </div>
+                    </td>
+                </tr>
+            {% else -%}
+                <p>{{ _('No media has been uploaded yet.') }}</p>
+            {% endfor -%}
+            </table>
+        </div>
+
+        <nav aria-label="Pagination" class="mt-4" role="navigation">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                    </a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif %}
+        </nav>
+    </main>
+</div>
+{% endblock %}

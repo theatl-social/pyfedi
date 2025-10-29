@@ -53,6 +53,7 @@ from app.utils import (
     get_setting,
     set_setting,
     show_explore,
+    human_filesize,
 )
 
 app = create_app()
@@ -120,6 +121,7 @@ with app.app_context():
     app.jinja_env.filters["shorten"] = shorten_string
     app.jinja_env.filters["shorten_url"] = shorten_url
     app.jinja_env.filters["remove_images"] = remove_images
+    app.jinja_env.filters["human_filesize"] = human_filesize
 
 
 @app.before_request
@@ -200,9 +202,13 @@ def after_request(response):
             )
         if "auth/register" not in request.path:
             if hasattr(g, "nonce") and "api/alpha/swagger" not in request.path:
-                response.headers["Content-Security-Policy"] = (
-                    f"script-src 'self' 'nonce-{g.nonce}'; object-src 'none'; base-uri 'none';"
-                )
+                # Don't set CSP header for htmx fragment requests - they use parent page's CSP
+                is_htmx = request.headers.get("HX-Request") == "true"
+                if not is_htmx:
+                    # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
+                    response.headers["Content-Security-Policy"] = (
+                        f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
+                    )
             response.headers["Strict-Transport-Security"] = (
                 "max-age=63072000; includeSubDomains; preload"
             )

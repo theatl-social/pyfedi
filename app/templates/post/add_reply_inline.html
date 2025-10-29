@@ -2,38 +2,36 @@
     <div class="row">
         <div class="col">
             {% if recipient_language_name -%}
-                <div id="comment_language_warning_{{ comment_id }}"
-                     class="alert alert-warning d-none">
+                <div id="comment_language_warning_{{ comment_id }}" class="alert alert-warning d-none">
                     <i class="fas fa-language"></i>
-                    {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language) s)', language=recipient_language_name) }}
+                    {{ _('Warning: You are writing in a language that isn\'t the same as the user you are replying to uses! (%(language)s)', language=recipient_language_name) }}
                 </div>
             {% endif -%}
             {% if author_banned -%}
                 <div class="alert alert-warning">
-                    {{ _("The person you are replying to has been banned so they might not see your reply.") }}
+                    {{ _('The person you are replying to has been banned so they might not see your reply.') }}
                 </div>
             {% endif -%}
-            <textarea name="body"
-                      id="textarea_in_reply_to_{{ comment_id }}"
-                      class="form-control autoresize"
-                      rows="5"
-                      autofocus="autofocus"
-                      required="required"
-                      aria-required="true"
-                      placeholder="{{ in_reply_to.community.posting_warning if in_reply_to.community.posting_warning else '' }}"></textarea>
+            <textarea name="body" id="textarea_in_reply_to_{{ comment_id }}" class="form-control autoresize" rows="5"
+                    autofocus="autofocus" required="required" aria-required="true"
+                    placeholder="{{ in_reply_to.community.posting_warning if in_reply_to.community.posting_warning else '' }}"></textarea>
         </div>
     </div>
     <div class="row mb-3">
         <div class="col-8">
             <a href="#"
-               class="btn btn-primary mt-2"
-               hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id, nonce=nonce) }}"
-               hx-target="#reply_to_{{ comment_id }}"
-               hx-swap="outerHTML">{{ _("Comment") }}</a>
+                    class="btn btn-primary mt-2"
+                    hx-post="{{ url_for('post.add_reply_inline', post_id=post_id, comment_id=comment_id, nonce=nonce) }}"
+                    hx-target="#reply_to_{{ comment_id }}"
+                    hx-swap="outerHTML">
+                {{ _('Comment') }}
+            </a>
             <a href="#"
-               class="btn btn-outline mt-2"
-               hx-post="{{ url_for('post.preview') }}"
-               hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">{{ _("Preview") }}</a>
+                class="btn btn-outline-secondary mt-2"
+                hx-post="{{ url_for('post.preview') }}"
+                hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
+                {{ _('Preview') }}
+            </a> <a href="#" class="btn btn-outline-secondary mt-2 {{ 'd-none' if markdown_editor }}" id="insertImage_{{ comment_id }}">{{ _('Insert image') }}</a>
         </div>
         <div class="col-4 text-right">
             <select name="language_id"
@@ -42,8 +40,7 @@
                     data-recipient-language="{{ recipient_language_id }}"
                     data-warning-div-id="comment_language_warning_{{ comment_id }}">
                 {% for language in languages %}
-                    <option value="{{ language[0] }}" {{ 'selected' if language[0] == current_user.language_id }}>{{ language[1] }}
-                    </option>
+                    <option value="{{ language[0] }}" {{ 'selected' if language[0] == current_user.language_id }}>{{ language[1] }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -57,21 +54,56 @@
             undefined,
         )
     </script>
+
     {% if markdown_editor %}
         <script nonce="{{ nonce }}">
             var downarea = new DownArea({
                 elem: document.querySelector('#textarea_in_reply_to_{{ comment_id }}'),
                 resize: DownArea.RESIZE_VERTICAL,
                 hide: ['heading', 'bold-italic'],
-                value: document.getElementById("body").value
+                value: document.getElementById("textarea_in_reply_to_{{ comment_id }}").value
             });
             setupAutoResize('textarea_in_reply_to_{{ comment_id }}');
         </script>
     {% endif %}
+
+    <script nonce="{{ nonce }}">
+        // Initialize Media Library for this reply form
+        const mediaLibrary_{{ comment_id }} = new MediaLibrary({
+            dialogId: 'insertImageDialog',
+            dialogCloseId: 'insert_image_dialog_close',
+            triggerLinkId: 'insertImage_{{ comment_id }}',
+            loadContainerId: 'loadImagesHere',
+            targetTextareaId: 'textarea_in_reply_to_{{ comment_id }}',
+            uploadInputId: 'imageUploadInput',
+            uploadButtonId: 'imageUploadButton',
+            uploadStatusId: 'uploadStatus',
+            translations: {
+                loading: '{{ _("Loading...") }}',
+                noImages: '{{ _("No images found.") }}',
+                errorLoading: '{{ _("Error loading images.") }}',
+                insert: '{{ _("Insert") }}',
+                more: '{{ _("More") }}',
+                delete: '{{ _("Delete") }}',
+                confirmDelete: '{{ _("Are you sure you want to delete this image?") }}',
+                deleteError: '{{ _("Failed to delete image. Please try again.") }}',
+                selectFile: '{{ _("Please select a file.") }}',
+                selectImage: '{{ _("Please select an image file.") }}',
+                uploading: '{{ _("Uploading...") }}',
+                uploadSuccess: '{{ _("Upload successful!") }}',
+                uploadError: '{{ _("Upload failed. Please try again.") }}',
+                pasteUploadError: '{{ _("Failed to upload pasted image. Please try again.") }}'
+            }
+        });
+
+        {% if markdown_editor %}
+        // Override DownArea image button to use media library
+        mediaLibrary_{{ comment_id }}.overrideDownAreaImageButton('#textarea_in_reply_to_{{ comment_id }}');
+        {% endif %}
+    </script>
     <div class="row">
         <div class="col">
-            <div id="textarea_in_reply_to_preview_{{ comment_id }}"
-                 class="reply_preview"></div>
+            <div id="textarea_in_reply_to_preview_{{ comment_id }}" class="reply_preview"></div>
         </div>
     </div>
 {% endif -%}

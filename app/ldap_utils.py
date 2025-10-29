@@ -14,7 +14,7 @@ from ldap3.core.exceptions import LDAPException, LDAPBindError
 logger = logging.getLogger(__name__)
 
 
-def _get_ldap_connection() -> Optional[Connection]:
+def _bind_user(dn: str, password: str) -> Optional[Connection]:
     """
     Create and return an LDAP connection using configuration from Flask app.
     Returns None if LDAP is not configured or connection fails.
@@ -33,12 +33,7 @@ def _get_ldap_connection() -> Optional[Connection]:
         )
 
         # Create connection
-        conn = Connection(
-            server,
-            user=current_app.config.get("LDAP_BIND_DN"),
-            password=current_app.config.get("LDAP_BIND_PASSWORD"),
-            auto_bind=True,
-        )
+        conn = Connection(server, user=dn, password=password, auto_bind=True)
 
         # Enable TLS if configured
         if current_app.config.get("LDAP_USE_TLS", False):
@@ -57,93 +52,50 @@ def _get_ldap_connection() -> Optional[Connection]:
         return None
 
 
-def _get_ldap_connection_for_login() -> Optional[Connection]:
-    """
-    Create and return an LDAP connection using configuration from Flask app.
-    Returns None if LDAP is not configured or connection fails.
-    """
-    if not current_app.config.get("LDAP_SERVER_LOGIN"):
-        logger.info("LDAP_SERVER_LOGIN not configured, skipping LDAP operations")
-        return None
-
-    try:
-        # Create server object
-        server = Server(
-            current_app.config["LDAP_SERVER_LOGIN"],
-            port=current_app.config.get("LDAP_PORT_LOGIN", 389),
-            use_ssl=current_app.config.get("LDAP_USE_SSL_LOGIN", False),
-            get_info=ALL,
-        )
-
-        # Create connection
-        conn = Connection(
-            server,
-            user=current_app.config.get("LDAP_BIND_DN_LOGIN"),
-            password=current_app.config.get("LDAP_BIND_PASSWORD_LOGIN"),
-            auto_bind=True,
-        )
-
-        # Enable TLS if configured
-        if current_app.config.get("LDAP_USE_TLS_LOGIN", False):
-            conn.start_tls()
-
-        return conn
-
-    except LDAPBindError as e:
-        logger.error(f"LDAP bind failed: {e}")
-        return None
-    except LDAPException as e:
-        logger.error(f"LDAP connection error: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"Unexpected error connecting to LDAP: {e}")
-        return None
-
-
-def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
+def sync_user_to_ldap(username: str, email: str, password: Optional[str]) -> bool:
     """
     Synchronize user data to LDAP server.
 
     Args:
         username: User's username
         email: User's email address
-        password: User's plain text password
+        password: User's plain text password (optional)
 
     Returns:
         bool: True if sync was successful or skipped, False if failed
     """
-    username = username.lower()
-
-    # Skip if no password provided
-    if not password or not password.strip():
-        logger.info(f"No password provided for user {username}, skipping LDAP sync")
+    if not current_app.config.get("LDAP_WRITE_ENABLE"):
+        logger.info("LDAP_WRITE_ENABLE set to false, skipping LDAP writing operations")
         return True
 
-    conn = _get_ldap_connection()
+    username = username.lower()
+
+    conn = _bind_user(
+        current_app.config.get("LDAP_WRITE_BIND_DN"),
+        current_app.config.get("LDAP_WRITE_BIND_PASSWORD"),
+    )
     if not conn:
         return True
 
     try:
         base_dn = current_app.config.get("LDAP_BASE_DN", "")
         user_filter = current_app.config.get(
-            "LDAP_USER_FILTER", "(uid={username})"
+            "LDAP_WRITE_USER_FILTER", "(uid={username})"
         ).format(username=username)
+
+        username_attr = current_app.config.get("LDAP_WRITE_ATTR_USERNAME", "uid")
+        email_attr = current_app.config.get("LDAP_WRITE_ATTR_EMAIL", "mail")
+        password_attr = current_app.config.get(
+            "LDAP_WRITE_ATTR_PASSWORD", "userPassword"
+        )
 
         # Search for existing user
         conn.search(
             search_base=base_dn,
             search_filter=user_filter,
             search_scope=SUBTREE,
-            attributes=[
-                current_app.config.get("LDAP_ATTR_USERNAME", "uid"),
-                current_app.config.get("LDAP_ATTR_EMAIL", "mail"),
-                current_app.config.get("LDAP_ATTR_PASSWORD", "userPassword"),
-            ],
+            attributes=[username_attr, email_attr],
         )
-
-        username_attr = current_app.config.get("LDAP_ATTR_USERNAME", "uid")
-        email_attr = current_app.config.get("LDAP_ATTR_EMAIL", "mail")
-        password_attr = current_app.config.get("LDAP_ATTR_PASSWORD", "userPassword")
 
         if conn.entries:
             # User exists, update their attributes
@@ -155,8 +107,9 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
             if current_email != email:
                 changes[email_attr] = [(MODIFY_REPLACE, [email])]
 
-            # Always update password (assume it's hashed appropriately by LDAP server)
-            changes[password_attr] = [(MODIFY_REPLACE, [password])]
+            # Update password if given (assume it's hashed appropriately by LDAP server)
+            if password and password.strip():
+                changes[password_attr] = [(MODIFY_REPLACE, [password])]
 
             if changes:
                 success = conn.modify(user_dn, changes)
@@ -172,6 +125,13 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
                 logger.info(f"No changes needed for LDAP user {username}")
                 return True
         else:
+            # Skip if no password provided
+            if not password or not password.strip():
+                logger.info(
+                    f"No password provided for user {username}, couldn't create user"
+                )
+                return True
+
             # User doesn't exist, create new entry
             user_dn = f"{username_attr}={username},{base_dn}"
             attributes = {
@@ -203,48 +163,43 @@ def sync_user_to_ldap(username: str, email: str, password: str) -> bool:
 
 
 def login_with_ldap(user_name: str, password: str) -> str | bool:
-    conn = _get_ldap_connection_for_login()
+    if not current_app.config.get("LDAP_READ_ENABLE"):
+        logger.info("LDAP_READ_ENABLE set to false, skipping LDAP reading operations")
+        return False
+
+    base_dn = current_app.config.get("LDAP_BASE_DN", "")
+    user_name_attr = current_app.config.get("LDAP_READ_ATTR_USERNAME", "uid")
+
+    full_dn = f"{user_name_attr}={user_name},{base_dn}"
+
+    conn = _bind_user(full_dn, password)
     if not conn:
         return False
 
     try:
-        base_dn = current_app.config.get("LDAP_BASE_DN_LOGIN", "")
         user_filter = current_app.config.get(
-            "LDAP_USER_FILTER_LOGIN", "(uid={username})"
+            "LDAP_READ_USER_FILTER", "(uid={username})"
         ).format(username=user_name)
+        email_attr = current_app.config.get("LDAP_READ_ATTR_EMAIL", "mail")
 
-        # Search LDAP for user
         conn.search(
             search_base=base_dn,
             search_filter=user_filter,
             search_scope=SUBTREE,
-            attributes=[
-                current_app.config.get("LDAP_ATTR_USERNAME_LOGIN", "uid"),
-                current_app.config.get("LDAP_ATTR_EMAIL_LOGIN", "mail"),
-                current_app.config.get("LDAP_ATTR_PASSWORD_LOGIN", "userPassword"),
-            ],
-        )
-
-        email_attr = current_app.config.get("LDAP_ATTR_EMAIL_LOGIN", "mail")
-        password_attr = current_app.config.get(
-            "LDAP_ATTR_PASSWORD_LOGIN", "userPassword"
+            attributes=[email_attr],
         )
 
         if conn.entries:
-            for entry in conn.entries:
-                current_email = getattr(entry, email_attr, None)
-                current_password = getattr(entry, password_attr, None)
-                if isinstance(current_password.value, str):
-                    ldap_pw = current_password.value
-                else:
-                    ldap_pw = current_password.value.decode()
-                if password == ldap_pw:
-                    return current_email.value
+            email = getattr(conn.entries[0], email_attr)
+            return email.value
 
         return False
 
+    except LDAPException as e:
+        logger.error(f"LDAP error logging user {user_name} in: {e}")
+        return False
     except Exception as e:
-        logger.error(f"Unexpected error syncing user {user_name} to LDAP: {e}")
+        logger.error(f"Unexpected error logging user {user_name} in with LDAP: {e}")
         return False
     finally:
         if conn:
@@ -255,18 +210,10 @@ def test_ldap_connection() -> bool:
     """
     Test LDAP connection and return True if successful.
     """
-    conn = _get_ldap_connection()
-    if conn:
-        conn.unbind()
-        return True
-    return False
-
-
-def test_login_ldap_connection() -> bool:
-    """
-    Test LDAP connection and return True if successful.
-    """
-    conn = _get_ldap_connection_for_login()
+    conn = _bind_user(
+        current_app.config.get("LDAP_WRITE_BIND_DN"),
+        current_app.config.get("LDAP_WRITE_BIND_PASSWORD"),
+    )
     if conn:
         conn.unbind()
         return True

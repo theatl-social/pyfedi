@@ -5,52 +5,38 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
+
 {% block app_content -%}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <form method="post">
-                {{ form.csrf_token() }}
-                <input type="submit"
-                       class="btn btn-primary"
-                       value="{{ _('Delete %(count)s posts', count=posts|length) }}"
-                       style="float: right">
-                <h1>{{ _("Posts containing blocked images") }}</h1>
-                <table class="communities_table table table-striped table-hover w-100">
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ cs }}" />
+            <input type="submit" class="btn btn-primary" value="{{ _('Delete %(count)s posts', count=posts|length) }}" style="float: right;">
+            <h1>{{ _('Posts containing blocked images') }}</h1>
+            <table class="communities_table table table-striped table-hover w-100">
+                <tr>
+                    <th colspan="2" class="p-2"><input type="checkbox" name="select_all" id="select_all" checked="checked"> <label for="select_all"> {{ _('Select all') }}</label></th>
+                    <th>{{ _('Title') }}</th>
+                    <th>{{ _('Poster') }}</th>
+                    <th>{{ _('Date') }}</th>
+                </tr>
+                {% for p in posts %}
                     <tr>
-                        <th colspan="2" class="p-2">
-                            <input type="checkbox" name="select_all" id="select_all" checked="checked">
-                            <label for="select_all">{{ _("Select all") }}</label>
-                        </th>
-                        <th>{{ _("Title") }}</th>
-                        <th>{{ _("Poster") }}</th>
-                        <th>{{ _("Date") }}</th>
+                        <td valign="middle"><input type="checkbox" name="post_ids" class="can_select_all" value="{{ p.id }}" checked="checked"></td>
+                        <td class="blocked_image"><img src="{{ p.image.thumbnail_url() }}"></td>
+                        <td><a href="{{ url_for('activitypub.post_ap', post_id=p.id) }}">{{ p.title }}</a></td>
+                        <td>{{ render_username(p.author) }}</td>
+                        <td>{{ p.posted_at_localized('', locale) }}</td>
                     </tr>
-                    {% for p in posts %}
-                        <tr>
-                            <td valign="middle">
-                                <input type="checkbox"
-                                       name="post_ids"
-                                       class="can_select_all"
-                                       value="{{ p.id }}"
-                                       checked="checked">
-                            </td>
-                            <td class="blocked_image">
-                                <img src="{{ p.image.thumbnail_url() }}">
-                            </td>
-                            <td>
-                                <a href="{{ url_for('activitypub.post_ap', post_id=p.id) }}">{{ p.title }}</a>
-                            </td>
-                            <td>{{ render_username(p.author) }}</td>
-                            <td>{{ p.posted_at_localized('', locale) }}</td>
-                        </tr>
-                    {% endfor -%}
-                </table>
-            </form>
-        </main>
-        {% if post %}
-            {% with community = post.community -%}
-                {% include "_side_pane.html" %}
-            {% endwith -%}
-        {% endif %}
-    </div>
+                {% endfor -%}
+            </table>
+        </form>
+    </main>
+
+    {% if post %}
+        {% with community = post.community -%}
+            {% include "_side_pane.html" %}
+        {% endwith -%}
+    {% endif %}
+</div>
 {% endblock -%}
