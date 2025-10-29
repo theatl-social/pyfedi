@@ -1730,3 +1730,326 @@ class PostSetFlairRequest(DefaultSchema):
 
 class PostSetFlairResponse(PostView):
     pass
+
+
+# Admin API Schemas
+class AdminPrivateRegistrationRequest(DefaultSchema):
+    username = fields.String(
+        required=True,
+        validate=validate.Length(min=3, max=50),
+        metadata={
+            "description": "Username (3-50 characters, alphanumeric + underscore)"
+        },
+    )
+    email = fields.Email(required=True, metadata={"description": "Valid email address"})
+    display_name = fields.String(
+        validate=validate.Length(min=1, max=100),
+        metadata={"description": "Display name (1-100 characters)"},
+    )
+    password = fields.String(
+        validate=validate.Length(min=8, max=128),
+        metadata={
+            "description": "Password (8-128 characters). If omitted, a secure password will be generated"
+        },
+    )
+    auto_activate = fields.Boolean(
+        metadata={"description": "Skip email verification", "default": True}
+    )
+    send_welcome_email = fields.Boolean(
+        metadata={"description": "Send welcome email to user", "default": False}
+    )
+    bio = fields.String(
+        validate=validate.Length(max=5000),
+        metadata={"description": "User biography (max 5000 characters)"},
+    )
+    timezone = fields.String(
+        metadata={"description": "User timezone", "default": "UTC"}
+    )
+
+
+class AdminPrivateRegistrationResponse(DefaultSchema):
+    success = fields.Boolean(
+        required=True, metadata={"description": "Registration success status"}
+    )
+    user_id = fields.Integer(required=True, metadata={"description": "Created user ID"})
+    username = fields.String(
+        required=True, metadata={"description": "Created username"}
+    )
+    email = fields.String(required=True, metadata={"description": "User email address"})
+    display_name = fields.String(metadata={"description": "User display name"})
+    generated_password = fields.String(
+        metadata={
+            "description": "Generated password (only if password was not provided)"
+        }
+    )
+    activation_required = fields.Boolean(
+        required=True,
+        metadata={"description": "Whether email verification is required"},
+    )
+    message = fields.String(required=True, metadata={"description": "Success message"})
+
+
+class AdminPrivateRegistrationError(DefaultSchema):
+    success = fields.Boolean(
+        required=True, metadata={"description": "Always false for errors"}
+    )
+    error = fields.String(
+        required=True,
+        metadata={
+            "description": "Error type",
+            "enum": [
+                "invalid_secret",
+                "rate_limited",
+                "validation_failed",
+                "user_exists",
+                "feature_disabled",
+                "ip_unauthorized",
+            ],
+        },
+    )
+    message = fields.String(
+        required=True, metadata={"description": "Human readable error message"}
+    )
+    details = fields.Dict(
+        metadata={
+            "description": "Additional error details including field-specific errors"
+        }
+    )
+
+
+class AdminUserValidationRequest(DefaultSchema):
+    username = fields.String(required=True, validate=validate.Length(min=3, max=50))
+    email = fields.Email(required=True)
+
+
+class AdminUserValidationResponse(DefaultSchema):
+    username_available = fields.Boolean(required=True)
+    email_available = fields.Boolean(required=True)
+    username_suggestions = fields.List(
+        fields.String(),
+        metadata={"description": "Alternative username suggestions if taken"},
+    )
+    validation_errors = fields.Dict(
+        metadata={"description": "Field-specific validation errors"}
+    )
+
+
+class AdminUserListRequest(DefaultSchema):
+    local_only = fields.Boolean(
+        metadata={"description": "Filter to local users only", "default": True}
+    )
+    verified = fields.Boolean(metadata={"description": "Filter by verification status"})
+    active = fields.Boolean(metadata={"description": "Filter by active/banned status"})
+    search = fields.String(
+        validate=validate.Length(max=100),
+        metadata={"description": "Search username or email"},
+    )
+    sort = fields.String(
+        validate=validate.OneOf(
+            [
+                "created_desc",
+                "created_asc",
+                "username_asc",
+                "username_desc",
+                "last_seen_desc",
+                "last_seen_asc",
+                "post_count_desc",
+            ]
+        ),
+        metadata={"description": "Sort order", "default": "created_desc"},
+    )
+    page = fields.Integer(validate=validate.Range(min=1), metadata={"default": 1})
+    limit = fields.Integer(
+        validate=validate.Range(min=1, max=100), metadata={"default": 50}
+    )
+    last_seen_days = fields.Integer(
+        validate=validate.Range(min=1),
+        metadata={"description": "Users active within N days"},
+    )
+
+
+class AdminUserInfo(DefaultSchema):
+    id = fields.Integer(required=True)
+    username = fields.String(required=True)
+    email = fields.String(required=True)
+    display_name = fields.String()
+    created_at = fields.DateTime(required=True, format="iso")
+    last_seen = fields.DateTime(format="iso")
+    is_verified = fields.Boolean(required=True)
+    is_banned = fields.Boolean(required=True)
+    is_local = fields.Boolean(required=True)
+    post_count = fields.Integer(required=True)
+    comment_count = fields.Integer()
+    reputation = fields.Integer()
+    bio = fields.String()
+
+
+class AdminUserListPagination(DefaultSchema):
+    page = fields.Integer(required=True)
+    limit = fields.Integer(required=True)
+    total = fields.Integer(required=True)
+    total_pages = fields.Integer(required=True)
+    has_next = fields.Boolean(required=True)
+    has_prev = fields.Boolean(required=True)
+
+
+class AdminUserListResponse(DefaultSchema):
+    users = fields.List(fields.Nested(AdminUserInfo), required=True)
+    pagination = fields.Nested(AdminUserListPagination, required=True)
+
+
+class AdminUserLookupRequest(DefaultSchema):
+    username = fields.String(validate=validate.Length(min=1, max=50))
+    email = fields.Email()
+    id = fields.Integer(validate=validate.Range(min=1))
+
+    @validates_schema
+    def validate_at_least_one_field(self, data, **kwargs):
+        if not any([data.get("username"), data.get("email"), data.get("id")]):
+            raise ValidationError(
+                "At least one of username, email, or id must be provided"
+            )
+
+
+class AdminUserLookupResponse(DefaultSchema):
+    found = fields.Boolean(required=True)
+    user = fields.Nested(AdminUserInfo)
+
+
+class AdminHealthResponse(DefaultSchema):
+    private_registration = fields.Dict(required=True)
+    database = fields.String(required=True)
+    timestamp = fields.DateTime(required=True, format="iso")
+
+
+# Phase 2: User Management Schemas
+
+
+class AdminUserUpdateRequest(DefaultSchema):
+    display_name = fields.String(validate=validate.Length(min=1, max=100))
+    bio = fields.String(validate=validate.Length(max=2000))
+    timezone = fields.String(validate=validate.Length(max=50))
+    email = fields.Email()
+    verified = fields.Boolean()
+    newsletter = fields.Boolean()
+    searchable = fields.Boolean()
+
+
+class AdminUserUpdateResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+    user_id = fields.Integer(required=True)
+    message = fields.String(required=True)
+    updated_fields = fields.List(fields.String())
+
+
+class AdminUserActionRequest(DefaultSchema):
+    reason = fields.String(
+        validate=validate.Length(min=1, max=500),
+        metadata={"description": "Reason for action (required for ban/disable)"},
+    )
+    expires_at = fields.DateTime(
+        format="iso",
+        metadata={"description": "Optional expiry date for temporary actions"},
+    )
+    notify_user = fields.Boolean(
+        metadata={"description": "Send notification email to user", "default": False}
+    )
+
+
+class AdminUserActionResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+    user_id = fields.Integer(required=True)
+    action = fields.String(
+        required=True,
+        validate=validate.OneOf(
+            ["disabled", "enabled", "banned", "unbanned", "deleted"]
+        ),
+    )
+    message = fields.String(required=True)
+    performed_by = fields.String(metadata={"description": "Admin who performed action"})
+    timestamp = fields.DateTime(required=True, format="iso")
+
+
+class AdminBulkUserRequest(DefaultSchema):
+    operation = fields.String(
+        required=True,
+        validate=validate.OneOf(["disable", "enable", "ban", "unban", "delete"]),
+    )
+    user_ids = fields.List(
+        fields.Integer(validate=validate.Range(min=1)),
+        required=True,
+        validate=validate.Length(min=1, max=100),
+    )
+    reason = fields.String(validate=validate.Length(min=1, max=500))
+    notify_users = fields.Boolean(metadata={"default": False})
+
+
+class AdminBulkUserResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+    operation = fields.String(required=True)
+    total_requested = fields.Integer(required=True)
+    successful = fields.Integer(required=True)
+    failed = fields.Integer(required=True)
+    results = fields.List(fields.Dict(), metadata={"description": "Per-user results"})
+    message = fields.String(required=True)
+
+
+class AdminUserStatsResponse(DefaultSchema):
+    total_users = fields.Integer(required=True)
+    local_users = fields.Integer(required=True)
+    remote_users = fields.Integer(required=True)
+    verified_users = fields.Integer(required=True)
+    banned_users = fields.Integer(required=True)
+    active_24h = fields.Integer(required=True)
+    active_7d = fields.Integer(required=True)
+    active_30d = fields.Integer(required=True)
+    registrations_today = fields.Integer(required=True)
+    registrations_7d = fields.Integer(required=True)
+    registrations_30d = fields.Integer(required=True)
+    timestamp = fields.DateTime(required=True, format="iso")
+
+
+class AdminRegistrationStatsRequest(DefaultSchema):
+    days = fields.Integer(
+        validate=validate.Range(min=1, max=365),
+        metadata={"description": "Number of days to analyze", "default": 30},
+    )
+    include_hourly = fields.Boolean(
+        metadata={"description": "Include hourly breakdown", "default": False}
+    )
+
+
+class AdminRegistrationStatsResponse(DefaultSchema):
+    period_days = fields.Integer(required=True)
+    total_registrations = fields.Integer(required=True)
+    private_registrations = fields.Integer(required=True)
+    public_registrations = fields.Integer(required=True)
+    daily_breakdown = fields.List(
+        fields.Dict(), metadata={"description": "Daily registration counts"}
+    )
+    hourly_breakdown = fields.List(
+        fields.Dict(), metadata={"description": "Hourly breakdown (if requested)"}
+    )
+    timestamp = fields.DateTime(required=True, format="iso")
+
+
+class AdminUserExportRequest(DefaultSchema):
+    format = fields.String(
+        validate=validate.OneOf(["csv", "json"]),
+        metadata={"description": "Export format", "default": "csv"},
+    )
+    export_fields = fields.List(
+        fields.String(), metadata={"description": "Fields to include in export"}
+    )
+    filters = fields.Dict(
+        metadata={"description": "Same filters as user list endpoint"}
+    )
+
+
+class AdminUserExportResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+    format = fields.String(required=True)
+    total_records = fields.Integer(required=True)
+    download_url = fields.String(metadata={"description": "Temporary download URL"})
+    expires_at = fields.DateTime(format="iso")
+    message = fields.String(required=True)
