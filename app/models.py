@@ -3105,7 +3105,6 @@ class Site(db.Model):
     enable_nsfw = db.Column(db.Boolean, default=False)
     enable_nsfl = db.Column(db.Boolean, default=False)
     community_creation_admin_only = db.Column(db.Boolean, default=False)
-    allow_default_user_add_remote_community = db.Column(db.Boolean, default=True)
     reports_email_admins = db.Column(db.Boolean, default=True)
     registration_mode = db.Column(db.String(20), default='Closed')  # possible values: Open, RequireApplication, Closed
     application_question = db.Column(db.Text, default='')

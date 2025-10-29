@@ -200,7 +200,7 @@ def list_topics():
 
 def _base_list_communities_context():
     create_admin_only = g.site.community_creation_admin_only
-    default_user_add_remote = g.site.allow_default_user_add_remote_community
+    default_user_add_remote = get_setting("allow_default_user_add_remote_community", True) 
 
     is_admin = current_user.is_authenticated and current_user.is_admin()
     is_staff = current_user.is_authenticated and current_user.is_staff()
@@ -409,11 +409,6 @@ def list_local_communities():
     public_feeds = Feed.query.filter_by(public=True).order_by(Feed.title).all()
     if len(public_feeds) > 0:
         server_has_feeds = True
-
-    create_admin_only = g.site.community_creation_admin_only
-    allow_adding_remmote = g.site.allow_default_user_add_remote_community
-
-    is_admin = current_user.is_authenticated and current_user.is_admin()
 
     # if filtering by public feed
     # get all the ids of the communities
@@ -1019,7 +1014,7 @@ def communities_menu():
                            joined_communities=joined_communities(current_user.get_id()),
                            is_admin=current_user.is_authenticated and current_user.is_admin(),
                            is_staff=current_user.is_authenticated and current_user.is_staff(),
-                           default_user_add_remote=g.site.allow_default_user_add_remote_community
+                           default_user_add_remote=get_setting("allow_default_user_add_remote_community", True)
                            )
 
 

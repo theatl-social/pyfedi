@@ -157,7 +157,7 @@ def add_remote():
     except:
         site = Site.query.get(1)
     
-    if not (current_user.is_admin() or current_user.is_staff()) and not site.allow_default_user_add_remote_community:
+    if not (current_user.is_admin() or current_user.is_staff()) and not get_setting("allow_default_user_add_remote_community", True):
         flash(_('Adding remote community is restricted to admin and staff users only.'))
         return redirect(url_for('main.list_communities'))
 

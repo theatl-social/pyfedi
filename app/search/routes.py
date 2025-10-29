@@ -178,7 +178,7 @@ def run_search():
                                languages=languages, instance_software=instance_software,
                                is_admin=current_user.is_authenticated and current_user.is_admin(),
                                is_staff=current_user.is_authenticated and current_user.is_staff(),
-                               default_user_add_remote=g.site.allow_default_user_add_remote_community
+                               default_user_add_remote=get_setting("allow_default_user_add_remote_community", True)
                                )
 
 
