@@ -4394,3 +4394,31 @@ def human_filesize(size_bytes):
         size_bytes /= 1024.0
         i += 1
     return f"{size_bytes:.1f} {units[i]}"
+
+
+# Private Registration Utility Functions
+def is_private_registration_enabled():
+    """Check if private registration feature is enabled"""
+    # Check environment variable first, then fall back to database setting
+    env_value = os.environ.get("PRIVATE_REGISTRATION_ENABLED")
+    if env_value is not None:
+        return env_value.lower() == "true"
+    return get_setting("PRIVATE_REGISTRATION_ENABLED", "false").lower() == "true"
+
+
+def get_private_registration_secret():
+    """Get the private registration secret from environment"""
+    return os.environ.get("PRIVATE_REGISTRATION_SECRET", "")
+
+
+def get_private_registration_allowed_ips():
+    """Get list of allowed IP ranges for private registration"""
+    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
+    if not ips:
+        return []
+    return [ip.strip() for ip in ips.split(",") if ip.strip()]
+
+
+def should_log_private_registration_attempts():
+    """Check if registration attempts should be logged"""
+    return get_setting("PRIVATE_REGISTRATION_LOG_ATTEMPTS", "true").lower() == "true"
