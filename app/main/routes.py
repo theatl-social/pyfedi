@@ -115,12 +115,7 @@ from app.models import (
     FeedItem,
     CmsPage,
 )
-from app.ldap_utils import (
-    test_ldap_connection,
-    sync_user_to_ldap,
-    test_login_ldap_connection,
-    login_with_ldap,
-)
+from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
 
 
 @bp.route("/", methods=["HEAD", "GET", "POST"])
@@ -169,6 +164,11 @@ def home_page(sort, view_filter):
 
     # view filter - subscribed/local/all
     community_ids = [-1]
+    low_quality_filter = (
+        "AND c.low_quality is false"
+        if current_user.is_authenticated and current_user.hide_low_quality
+        else ""
+    )
     if current_user.is_authenticated:
         modded_communities = moderating_communities_ids(current_user.id)
     else:
@@ -183,16 +183,11 @@ def home_page(sort, view_filter):
             {"user_id": current_user.id},
         ).scalars()
     elif view_filter == "local":
-        if current_user.is_authenticated and current_user.hide_low_quality:
-            community_ids = db.session.execute(
-                text(
-                    "SELECT id FROM community as c WHERE c.instance_id = 1 AND c.low_quality is false"
-                )
-            ).scalars()
-        else:
-            community_ids = db.session.execute(
-                text("SELECT id FROM community as c WHERE c.instance_id = 1")
-            ).scalars()
+        community_ids = db.session.execute(
+            text(
+                f"SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}"
+            )
+        ).scalars()
     elif view_filter == "popular":
         if current_user.is_anonymous:
             community_ids = db.session.execute(
@@ -201,16 +196,11 @@ def home_page(sort, view_filter):
                 )
             ).scalars()
         else:
-            if current_user.hide_low_quality:
-                community_ids = db.session.execute(
-                    text(
-                        "SELECT id FROM community as c WHERE c.show_popular is true AND c.low_quality is false"
-                    )
-                ).scalars()
-            else:
-                community_ids = db.session.execute(
-                    text("SELECT id FROM community as c WHERE c.show_popular is true")
-                ).scalars()
+            community_ids = db.session.execute(
+                text(
+                    f"SELECT id FROM community as c WHERE c.show_popular is true {low_quality_filter}"
+                )
+            ).scalars()
     elif view_filter == "all" or current_user.is_anonymous:
         community_ids = [-1]  # Special value to indicate 'All'
     elif view_filter == "moderating":
@@ -380,17 +370,17 @@ def list_communities():
     topic_id = int(request.args.get("topic_id", 0))
     feed_id = int(request.args.get("feed_id", 0))
     language_id = int(request.args.get("language_id", 0))
-    nsfw = request.args.get("nsfw", None)
+    nsfw = request.args.get("nsfw", "all")
     page = request.args.get("page", 1, type=int)
     instance = request.args.get("instance", "")
     low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
     sort_by = request.args.get("sort_by", "post_reply_count desc")
 
     if not g.site.enable_nsfw:
-        nsfw = None
+        nsfw = "no"
+        hide_nsfw = True
     else:
-        if nsfw is None:
-            nsfw = "all"
+        hide_nsfw = False
 
     if request.args.get("prompt"):
         flash(
@@ -412,8 +402,10 @@ def list_communities():
             )
         )
 
-    if topic_id != 0:
+    if topic_id > 0:
         communities = communities.filter_by(topic_id=topic_id)
+    elif topic_id < 0:
+        communities = communities.filter_by(topic_id=None)
 
     if language_id != 0:
         communities = communities.join(community_language).filter(
@@ -475,7 +467,8 @@ def list_communities():
         if banned_from:
             communities = communities.filter(Community.id.not_in(banned_from))
         if current_user.hide_nsfw == 1:
-            nsfw = None
+            nsfw = "no"
+            hide_nsfw = True
             communities = communities.filter(Community.nsfw == False)
         else:
             if nsfw == "no":
@@ -521,6 +514,17 @@ def list_communities():
         )
     )
 
+    # dict used for pagination query parameters
+    args_dict = dict()
+    args_dict["search"] = search_param
+    args_dict["home_select"] = home_select
+    args_dict["subscribe_select"] = subscribe_select
+    args_dict["topic_id"] = topic_id
+    args_dict["feed_id"] = feed_id
+    args_dict["language_id"] = language_id
+    args_dict["nsfw"] = nsfw
+    args_dict["instance"] = instance
+
     # Pagination
     communities = communities.paginate(
         page=page,
@@ -528,22 +532,12 @@ def list_communities():
         error_out=False,
     )
     next_url = (
-        url_for(
-            "main.list_communities",
-            page=communities.next_num,
-            sort_by=sort_by,
-            language_id=language_id,
-        )
+        url_for("main.list_communities", page=communities.next_num, **args_dict)
         if communities.has_next
         else None
     )
     prev_url = (
-        url_for(
-            "main.list_communities",
-            page=communities.prev_num,
-            sort_by=sort_by,
-            language_id=language_id,
-        )
+        url_for("main.list_communities", page=communities.prev_num, **args_dict)
         if communities.has_prev and page != 1
         else None
     )
@@ -574,6 +568,7 @@ def list_communities():
         joined_communities=joined_or_modding_communities(current_user.get_id()),
         pending_communities=pending_communities(current_user.get_id()),
         low_bandwidth=low_bandwidth,
+        hide_nsfw=hide_nsfw,
         feed_id=feed_id,
         server_has_feeds=server_has_feeds,
         public_feeds=public_feeds,
@@ -1286,8 +1281,9 @@ def replay_inbox():
 @bp.route("/test")
 @debug_mode_only
 def test():
-    archive_post(800)
-    return "Done"
+    return markdown_to_html(
+        "Testing!\n\n![an image :: width=50](https://piefed.social/static/media/logo_8p7en.svg, https://media.piefed.social/posts/up/TR/upTRjfvFt2ma0hz.webp)\n\nthere we go"
+    )
 
     from flask import json
 
@@ -1555,8 +1551,11 @@ def protocol_handler():
             return redirect(url_for("main.index"))
 
         if "post" in resp:
+            post = Post.query.get(resp["post"]["post"]["id"])
             return redirect(
-                url_for("activitypub.post_ap", post_id=resp["post"]["post"]["id"])
+                post.slug
+                if post.slug
+                else url_for("activitypub.post_ap", post_id=post.id)
             )
         if "comment" in resp:
             return redirect(
@@ -1675,17 +1674,12 @@ def test_ldap():
 @debug_mode_only
 def test_ldap_login():
     try:
-        # Test LDAP connection
-        connection_result = test_login_ldap_connection()
-        if not connection_result:
-            return "LDAP test failed: Could not connect to LDAP server. Check configuration."
-
-        # Test user sync with dummy data using random password
+        # Test user login with given user name and password
         login_result = login_with_ldap(
             request.args.get("user_name"), request.args.get("password")
         )
 
-        return f"LDAP test results: Connection: {connection_result}, Login: {str(login_result is not False)}"
+        return f"LDAP test results: {str(login_result is not False)}"
     except Exception as e:
         return f"LDAP test failed: {str(e)}"
 

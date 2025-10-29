@@ -66,7 +66,7 @@ allowed_extensions = [
 ]
 
 
-def search_for_community(address: str) -> Community | None:
+def search_for_community(address: str, allow_fetch: bool = True) -> Community | None:
     if address.startswith("!"):
         name, server = address[1:].split("@")
 
@@ -85,6 +85,8 @@ def search_for_community(address: str) -> Community | None:
         already_exists = Community.query.filter_by(ap_id=address[1:]).first()
         if already_exists:
             return already_exists
+        elif not allow_fetch:
+            return None
 
         # Look up the profile address of the community using WebFinger
         try:

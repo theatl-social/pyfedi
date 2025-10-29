@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from flask import current_app, g
-from sqlalchemy import desc, text, and_, exists
+from sqlalchemy import desc, text, and_, exists, asc
 from sqlakeyset import get_page
 from sqlalchemy.exc import IntegrityError
 
@@ -80,6 +80,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
     limit = int(data["limit"]) if "limit" in data else 50
     liked_only = data["liked_only"] if "liked_only" in data else False
     saved_only = data["saved_only"] if "saved_only" in data else False
+    ignore_sticky = data["ignore_sticky"] if "ignore_sticky" in data else False
 
     query = data["q"] if "q" in data else ""
 
@@ -99,6 +100,11 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
     topic_id = int(data["topic_id"]) if "topic_id" in data else None
     community_name = data["community_name"] if "community_name" in data else None
     person_id = int(data["person_id"]) if "person_id" in data else None
+
+    if community_id or community_name:
+        search_by_community = True
+    else:
+        search_by_community = False
 
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
@@ -359,6 +365,9 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
         if len(filtered_out_community_ids):
             posts = posts.filter(Post.community_id.not_in(filtered_out_community_ids))
 
+    if search_by_community and not ignore_sticky:
+        posts = posts.order_by(desc(Post.sticky))
+
     if sort == "Hot":
         posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
     elif sort == "Top" or sort == "TopDay":
@@ -407,7 +416,7 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
         posts = posts.order_by(desc(Post.posted_at))
     elif sort == "Scaled":
         posts = (
-            posts.filter(Post.ranking_scaled != None)
+            posts.filter(Post.ranking_scaled != None, Post.from_bot == False)
             .order_by(desc(Post.ranking_scaled))
             .order_by(desc(Post.ranking))
             .order_by(desc(Post.posted_at))
@@ -415,6 +424,8 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
     elif sort == "Active":
         posts = posts.filter(Post.reply_count > 0)
         posts = posts.order_by(desc(Post.last_active))
+    elif sort == "Old":
+        posts = posts.order_by(asc(Post.posted_at))
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 

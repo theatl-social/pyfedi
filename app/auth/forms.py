@@ -43,7 +43,7 @@ class LoginForm(FlaskForm):
 class RegistrationForm(FlaskForm):
     user_name = StringField(
         _l("User name"),
-        validators=[DataRequired(), Length(max=50)],
+        validators=[DataRequired(), Length(min=3, max=50)],
         render_kw={"autofocus": True, "autocomplete": "username"},
     )
     email = HiddenField(_l("Email"))

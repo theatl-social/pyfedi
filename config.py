@@ -15,10 +15,6 @@ class Config(object):
         "DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "app.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
-    # Database connection pool settings (only used for PostgreSQL)
-    DB_POOL_SIZE = os.environ.get("DB_POOL_SIZE") or 10
-    DB_MAX_OVERFLOW = os.environ.get("DB_MAX_OVERFLOW") or 30
     MAIL_SERVER = os.environ.get("MAIL_SERVER") or None
     MAIL_PORT = int(os.environ.get("MAIL_PORT") or 25)
     MAIL_USE_TLS = os.environ.get("MAIL_USE_TLS") is not None
@@ -82,6 +78,9 @@ class Config(object):
 
     NUM_CPU = int(os.environ.get("NUM_CPU") or 0)
 
+    DB_POOL_SIZE = os.environ.get("DB_POOL_SIZE") or 10
+    DB_MAX_OVERFLOW = os.environ.get("DB_MAX_OVERFLOW") or 30
+
     LOG_ACTIVITYPUB_TO_DB = os.environ.get("LOG_ACTIVITYPUB_TO_DB") or False
     LOG_ACTIVITYPUB_TO_FILE = os.environ.get("LOG_ACTIVITYPUB_TO_FILE") or False
 
@@ -142,43 +141,41 @@ class Config(object):
         os.environ.get("MEDIA_IMAGE_THUMBNAIL_QUALITY") or 93
     )
 
-    # LDAP configuration - used to write to, so other services can use their instance credentials to log in
+    FILE_UPLOAD_QUOTA = int(
+        os.environ.get("FILE_UPLOAD_QUOTA") or 52428800
+    )  # default 50 MB
+
+    # LDAP configuration - common config
     LDAP_SERVER = os.environ.get("LDAP_SERVER") or ""
     LDAP_PORT = int(os.environ.get("LDAP_PORT") or 389)
     LDAP_USE_SSL = os.environ.get("LDAP_USE_SSL", "0") in ("1", "true", "True")
     LDAP_USE_TLS = os.environ.get("LDAP_USE_TLS", "0") in ("1", "true", "True")
-    LDAP_BIND_DN = os.environ.get("LDAP_BIND_DN") or ""
-    LDAP_BIND_PASSWORD = os.environ.get("LDAP_BIND_PASSWORD") or ""
     LDAP_BASE_DN = os.environ.get("LDAP_BASE_DN") or ""
-    LDAP_USER_FILTER = os.environ.get("LDAP_USER_FILTER") or "(uid={username})"
-    LDAP_ATTR_USERNAME = os.environ.get("LDAP_ATTR_USERNAME") or "uid"
-    LDAP_ATTR_EMAIL = os.environ.get("LDAP_ATTR_EMAIL") or "mail"
-    LDAP_ATTR_PASSWORD = os.environ.get("LDAP_ATTR_PASSWORD") or "userPassword"
+
+    # LDAP configuration - used to write to, so other services can use their instance credentials to log in
+    LDAP_WRITE_ENABLE = os.environ.get("LDAP_WRITE_ENABLE", "0") in (
+        "1",
+        "true",
+        "True",
+    )
+    LDAP_WRITE_BIND_DN = os.environ.get("LDAP_WRITE_BIND_DN") or ""
+    LDAP_WRITE_BIND_PASSWORD = os.environ.get("LDAP_WRITE_BIND_PASSWORD") or ""
+    LDAP_WRITE_USER_FILTER = (
+        os.environ.get("LDAP_WRITE_USER_FILTER") or "(uid={username})"
+    )
+    LDAP_WRITE_ATTR_USERNAME = os.environ.get("LDAP_WRITE_ATTR_USERNAME") or "uid"
+    LDAP_WRITE_ATTR_EMAIL = os.environ.get("LDAP_WRITE_ATTR_EMAIL") or "mail"
+    LDAP_WRITE_ATTR_PASSWORD = (
+        os.environ.get("LDAP_WRITE_ATTR_PASSWORD") or "userPassword"
+    )
 
     # LDAP configuration - used to log in to this instance
-    LDAP_SERVER_LOGIN = os.environ.get("LDAP_SERVER_LOGIN") or ""
-    LDAP_PORT_LOGIN = int(os.environ.get("LDAP_PORT_LOGIN") or 389)
-    LDAP_USE_SSL_LOGIN = os.environ.get("LDAP_USE_SSL_LOGIN", "0") in (
-        "1",
-        "true",
-        "True",
+    LDAP_READ_ENABLE = os.environ.get("LDAP_READ_ENABLE", "0") in ("1", "true", "True")
+    LDAP_READ_USER_FILTER = (
+        os.environ.get("LDAP_READ_USER_FILTER") or "(uid={username})"
     )
-    LDAP_USE_TLS_LOGIN = os.environ.get("LDAP_USE_TLS_LOGIN", "0") in (
-        "1",
-        "true",
-        "True",
-    )
-    LDAP_BIND_DN_LOGIN = os.environ.get("LDAP_BIND_DN_LOGIN") or ""
-    LDAP_BIND_PASSWORD_LOGIN = os.environ.get("LDAP_BIND_PASSWORD_LOGIN") or ""
-    LDAP_BASE_DN_LOGIN = os.environ.get("LDAP_BASE_DN_LOGIN") or ""
-    LDAP_USER_FILTER_LOGIN = (
-        os.environ.get("LDAP_USER_FILTER_LOGIN") or "(uid={username})"
-    )
-    LDAP_ATTR_USERNAME_LOGIN = os.environ.get("LDAP_ATTR_USERNAME_LOGIN") or "uid"
-    LDAP_ATTR_EMAIL_LOGIN = os.environ.get("LDAP_ATTR_EMAIL_LOGIN") or "mail"
-    LDAP_ATTR_PASSWORD_LOGIN = (
-        os.environ.get("LDAP_ATTR_PASSWORD_LOGIN") or "userPassword"
-    )
+    LDAP_READ_ATTR_USERNAME = os.environ.get("LDAP_READ_ATTR_USERNAME") or "uid"
+    LDAP_READ_ATTR_EMAIL = os.environ.get("LDAP_READ_ATTR_EMAIL") or "mail"
 
     VERSION = app.constants.VERSION
 
@@ -203,18 +200,3 @@ class Config(object):
     TRANSLATE_KEY = os.environ.get("TRANSLATE_KEY") or ""
 
     ALLOW_AI_CRAWLERS = os.environ.get("ALLOW_AI_CRAWLERS") or False
-
-
-# Set SQLALCHEMY_ENGINE_OPTIONS on Config class after it's defined
-# This must be done outside the class body so it can reference SQLALCHEMY_DATABASE_URI
-_db_uri = Config.SQLALCHEMY_DATABASE_URI
-if _db_uri and (_db_uri.startswith("postgresql") or _db_uri.startswith("postgres")):
-    Config.SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": int(Config.DB_POOL_SIZE),
-        "max_overflow": int(Config.DB_MAX_OVERFLOW),
-        "pool_pre_ping": True,  # Verify connections are alive before using
-        "pool_recycle": 3600,  # Recycle connections after 1 hour (was hardcoded in __init__.py)
-    }
-else:
-    # SQLite doesn't support connection pooling parameters
-    Config.SQLALCHEMY_ENGINE_OPTIONS = {}

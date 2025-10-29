@@ -28,6 +28,7 @@ import redis
 from bs4 import BeautifulSoup, MarkupResemblesLocatorWarning
 import orjson
 
+from app.markdown_extras import apply_enhanced_image_attributes
 from app.translation import LibreTranslateAPI
 
 warnings.filterwarnings("ignore", category=MarkupResemblesLocatorWarning)
@@ -106,6 +107,17 @@ def render_template(template_name: str, **context) -> Response:
         content = flask.render_template(f"themes/{theme}/{template_name}", **context)
     else:
         content = flask.render_template(template_name, **context)
+
+    # Add nonces to all script tags that don't have them (for CSP with strict-dynamic)
+    if hasattr(g, "nonce") and g.nonce:
+        import re
+
+        # Find all <script tags with src= that don't have nonce=
+        content = re.sub(
+            r'<script\s+([^>]*?)src=(["\'][^"\']*["\'])(?![^>]*nonce=)',
+            rf'<script \1src=\2 nonce="{g.nonce}"',
+            content,
+        )
 
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
@@ -608,8 +620,15 @@ def allowlist_html(html: str, a_target="_blank") -> str:
             tag.extract()
         else:
             # Filter and sanitize attributes
+            allowed_attrs = ["href", "src", "alt", "class"]
+            # Add image-specific attributes for enhanced-images markdown extra
+            if tag.name == "img":
+                allowed_attrs.extend(
+                    ["width", "height", "align", "title", "data-enhanced-img"]
+                )
+
             for attr in list(tag.attrs):
-                if attr not in ["href", "src", "alt", "class"]:
+                if attr not in allowed_attrs:
                     del tag[attr]
             # Remove some mastodon guff - spans with class "invisible"
             if (
@@ -822,9 +841,10 @@ def markdown_to_html(
         )  # To handle bold in two places in a sentence
         markdown_text = handle_lemmy_autocomplete(markdown_text)
 
+        markdown_text = markdown_text.replace("þ", "th")
+
         try:
-            raw_html = markdown2.markdown(
-                markdown_text,
+            md = markdown2.Markdown(
                 extras={
                     "middle-word-em": False,
                     "tables": True,
@@ -835,14 +855,17 @@ def markdown_to_html(
                     "breaks": {"on_newline": True, "on_backslash": True},
                     "tag-friendly": True,
                     "smarty-pants": True,
-                },
+                    "enhanced-images": True,
+                }
             )
+            raw_html = md.convert(markdown_text)
+            # Apply enhanced image attributes after markdown processing
+            raw_html = apply_enhanced_image_attributes(raw_html, md)
         except TypeError:
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
-                raw_html = markdown2.markdown(
-                    markdown_text,
+                md = markdown2.Markdown(
                     extras={
                         "middle-word-em": False,
                         "tables": True,
@@ -852,8 +875,12 @@ def markdown_to_html(
                         "breaks": {"on_newline": True, "on_backslash": True},
                         "tag-friendly": True,
                         "smarty-pants": True,
-                    },
+                        "enhanced-images": True,
+                    }
                 )
+                raw_html = md.convert(markdown_text)
+                # Apply enhanced image attributes after markdown processing
+                raw_html = apply_enhanced_image_attributes(raw_html, md)
             except:
                 raw_html = ""
 
@@ -1387,7 +1414,7 @@ def approval_required(func):
 def trustworthy_account_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if current_user.trustworthy():
+        if current_user.trustworthy() or current_user.get_id() in g.admin_ids:
             return func(*args, **kwargs)
         else:
             return redirect(url_for("auth.not_trustworthy"))
@@ -1398,7 +1425,10 @@ def trustworthy_account_required(func):
 def aged_account_required(func):
     @wraps(func)
     def decorated_view(*args, **kwargs):
-        if not current_user.created_very_recently():
+        if (
+            current_user.get_id() in g.admin_ids
+            or not current_user.created_very_recently()
+        ):
             return func(*args, **kwargs)
         else:
             return redirect(url_for("auth.not_trustworthy"))
@@ -2148,10 +2178,7 @@ def finalize_user_setup(user):
     db.session.commit()
 
     # fire hook for plugins to use upon a new user
-    user = plugins.fire_hook("new_user", user)
-
-    # commit once more in case any changes were made from the plugin
-    db.session.commit()
+    plugins.fire_hook("new_user", user)
 
 
 def notification_subscribers(entity_id: int, entity_type: int) -> List[int]:
@@ -3335,7 +3362,7 @@ def get_deduped_post_ids(
         post_id_sort = (
             "ORDER BY p.ranking_scaled DESC, p.ranking DESC, p.posted_at DESC"
         )
-        post_id_where.append("p.ranking_scaled is not null ")
+        post_id_where.append("p.ranking_scaled is not null AND p.from_bot is false ")
     elif sort.startswith("top"):
         if sort != "top_all":
             post_id_where.append("p.posted_at > :top_cutoff ")
@@ -3628,8 +3655,8 @@ def hash_matches_blocked_image(hash: str) -> bool:
         current_app.logger.warning(f"Invalid binary hash: {hash}")
         return False
 
-    sql = "SELECT id FROM blocked_image WHERE length(replace((hash # B:hash)::text, '0', '')) < 15"
-    blocked_images = db.session.execute(text(sql), {"hash": hash}).scalars().first()
+    sql = f"""SELECT id FROM blocked_image WHERE length(replace((hash # B'{hash}')::text, '0', '')) < 15;"""
+    blocked_images = db.session.execute(text(sql)).scalars().first()
     return blocked_images is not None
 
 
@@ -4315,27 +4342,34 @@ def to_srgb(im: Image.Image, assume="sRGB"):
         im = im.convert("RGB")
 
     try:
-        # Pillow 11+ changed FLAGS dict to Flags enum
-        try:
-            # Pillow 11+ uses Flags enum
-            flags = ImageCms.Flags.BLACKPOINTCOMPENSATION
-        except AttributeError:
-            # Pillow < 11 uses FLAGS dict
-            flags = ImageCms.FLAGS["BLACKPOINTCOMPENSATION"]
-
         im = ImageCms.profileToProfile(
             im,
             src,
             srgb_cms,
             outputMode="RGB",
             renderingIntent=0,
-            flags=flags,
+            flags=ImageCms.Flags["BLACKPOINTCOMPENSATION"],
         )
         # keep an sRGB tag just in case
         im.info["icc_profile"] = srgb_wrap.tobytes()
     except ImageCms.PyCMSError:
         # Fallback: just convert without ICC
         im = im.convert("RGB")
+    except AttributeError:
+        # Fallback, older versions of PIL have a different attribute name
+        try:
+            im = ImageCms.profileToProfile(
+                im,
+                src,
+                srgb_cms,
+                outputMode="RGB",
+                renderingIntent=0,
+                flags=ImageCms.FLAGS["BLACKPOINTCOMPENSATION"],
+            )
+            # keep an sRGB tag just in case
+            im.info["icc_profile"] = srgb_wrap.tobytes()
+        except ImageCms.PyCMSError:
+            pass
 
     return im
 
@@ -4345,51 +4379,18 @@ def show_explore():
     return num_topics() > 0 or num_feeds() > 0
 
 
-# Private Registration Configuration Helpers
-def is_private_registration_enabled():
-    """Check if private registration feature is enabled"""
-    # Check environment variable first, then fall back to database setting
-    env_value = os.environ.get("PRIVATE_REGISTRATION_ENABLED")
-    if env_value is not None:
-        return env_value.lower() == "true"
-    return get_setting("PRIVATE_REGISTRATION_ENABLED", "false").lower() == "true"
-
-
-def get_private_registration_secret():
-    """Get the private registration secret from environment"""
-    # Check environment variable first, then fall back to database setting
-    env_value = os.environ.get("PRIVATE_REGISTRATION_SECRET")
-    if env_value is not None:
-        return env_value
-    return get_setting("PRIVATE_REGISTRATION_SECRET", "")
-
-
-def get_private_registration_rate_limit():
-    """Get rate limit configuration"""
-    return get_setting("PRIVATE_REGISTRATION_RATE_LIMIT", "10/hour")
-
-
-def get_private_registration_allowed_ips():
-    """Get list of allowed IP ranges for private registration"""
-    ips = get_setting("PRIVATE_REGISTRATION_IPS", "")
-    if not ips:
-        return []
-    return [ip.strip() for ip in ips.split(",") if ip.strip()]
-
-
-def should_log_private_registration_attempts():
-    """Check if registration attempts should be logged"""
-    return get_setting("PRIVATE_REGISTRATION_LOG_ATTEMPTS", "true").lower() == "true"
-
-
-def should_require_verification():
-    """Check if email verification should be required for private registration"""
-    return (
-        get_setting("PRIVATE_REGISTRATION_REQUIRE_VERIFICATION", "false").lower()
-        == "true"
-    )
-
-
 def expand_hex_color(text: str) -> str:
     new_text = "#" + text[1] * 2 + text[2] * 2 + text[3] * 2
     return new_text
+
+
+def human_filesize(size_bytes):
+    """Convert bytes to human-readable string (e.g. 1.2 MB)."""
+    if size_bytes == 0:
+        return "0 B"
+    units = ("B", "KB", "MB", "GB", "TB", "PB")
+    i = 0
+    while size_bytes >= 1024 and i < len(units) - 1:
+        size_bytes /= 1024.0
+        i += 1
+    return f"{size_bytes:.1f} {units[i]}"

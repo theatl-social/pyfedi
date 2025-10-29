@@ -190,6 +190,75 @@ class TestAllowlistHtml(unittest.TestCase):
         result = person_link_to_href(text, server_name_override="instance.tld")
         self.assertEqual(result, correct_html)
 
+    def test_enhanced_image_width_attribute(self):
+        """Test that width attribute on img tag is preserved"""
+        html = '<img src="cat.jpg" alt="Cat" width="200px"/>'
+        result = allowlist_html(html)
+        self.assertIn('width="200px"', result)
+        self.assertIn('src="cat.jpg"', result)
+        self.assertIn('alt="Cat"', result)
+
+    def test_enhanced_image_height_attribute(self):
+        """Test that height attribute on img tag is preserved"""
+        html = '<img src="cat.jpg" alt="Cat" height="150px"/>'
+        result = allowlist_html(html)
+        self.assertIn('height="150px"', result)
+        self.assertIn('src="cat.jpg"', result)
+
+    def test_enhanced_image_align_attribute(self):
+        """Test that align attribute on img tag is preserved"""
+        html = '<img src="cat.jpg" alt="Cat" align="left"/>'
+        result = allowlist_html(html)
+        self.assertIn('align="left"', result)
+        self.assertIn('src="cat.jpg"', result)
+
+    def test_enhanced_image_all_attributes(self):
+        """Test that all enhanced image attributes are preserved"""
+        html = '<img src="cat.jpg" alt="Cat" width="200px" height="150px" align="right" class="thumbnail"/>'
+        result = allowlist_html(html)
+        self.assertIn('width="200px"', result)
+        self.assertIn('height="150px"', result)
+        self.assertIn('align="right"', result)
+        self.assertIn('class="thumbnail"', result)
+        self.assertIn('src="cat.jpg"', result)
+        self.assertIn('alt="Cat"', result)
+
+    def test_enhanced_image_title_attribute(self):
+        """Test that title attribute on img tag is preserved"""
+        html = '<img src="cat.jpg" alt="Cat" title="A cute cat"/>'
+        result = allowlist_html(html)
+        self.assertIn('title="A cute cat"', result)
+        self.assertIn('src="cat.jpg"', result)
+
+    def test_enhanced_image_with_anchor(self):
+        """Test that thumbnail wrapped in anchor preserves all attributes"""
+        html = '<a href="full.jpg"><img src="thumb.jpg" alt="Cat" width="200px" align="left"/></a>'
+        result = allowlist_html(html)
+        self.assertIn('<a href="full.jpg"', result)
+        self.assertIn('width="200px"', result)
+        self.assertIn('align="left"', result)
+        self.assertIn('src="thumb.jpg"', result)
+        # Anchor should have nofollow and target
+        self.assertIn('rel="nofollow ugc"', result)
+        self.assertIn('target="_blank"', result)
+
+    def test_enhanced_image_disallowed_attributes_removed(self):
+        """Test that disallowed attributes on img are removed"""
+        html = '<img src="cat.jpg" alt="Cat" width="200px" onclick="alert(\'xss\')" style="border:1px"/>'
+        result = allowlist_html(html)
+        self.assertIn('width="200px"', result)
+        self.assertIn('src="cat.jpg"', result)
+        # Dangerous attributes should be removed
+        self.assertNotIn("onclick", result)
+        self.assertNotIn("style", result)
+
+    def test_enhanced_image_loading_lazy_added(self):
+        """Test that loading=lazy is added to images"""
+        html = '<img src="cat.jpg" alt="Cat" width="200px"/>'
+        result = allowlist_html(html)
+        self.assertIn('loading="lazy"', result)
+        self.assertIn('width="200px"', result)
+
 
 if __name__ == "__main__":
     unittest.main()

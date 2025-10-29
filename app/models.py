@@ -16,6 +16,7 @@ from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
+from slugify import slugify
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
@@ -28,18 +29,6 @@ from sqlalchemy_utils.types import (
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
-
-
-# Helper function to conditionally create TSVector columns (PostgreSQL only)
-def create_tsvector_type(*args, **kwargs):
-    """Create TSVectorType for PostgreSQL, Text for SQLite (testing)"""
-    db_url = os.environ.get("DATABASE_URL", "")
-    if db_url.startswith("sqlite"):
-        # Use Text column for SQLite - full text search won't work but tests can run
-        return db.Text
-    return TSVectorType(*args, **kwargs)
-
-
 from app.constants import (
     SUBSCRIPTION_NONMEMBER,
     SUBSCRIPTION_MEMBER,
@@ -61,6 +50,16 @@ from app.constants import (
     POST_STATUS_REVIEWING,
     POST_STATUS_PUBLISHED,
 )
+
+
+# Helper function to conditionally create TSVector columns (PostgreSQL only)
+def create_tsvector_type(*args, **kwargs):
+    """Create TSVectorType for PostgreSQL, Text for SQLite (testing)"""
+    db_url = os.environ.get("DATABASE_URL", "")
+    if db_url.startswith("sqlite"):
+        # Use Text column for SQLite - full text search won't work but tests can run
+        return db.Text
+    return TSVectorType(*args, **kwargs)
 
 
 def utcnow(naive=True):
@@ -651,6 +650,7 @@ class Community(db.Model):
     content_retention = db.Column(db.Integer, default=-1)
     topic_id = db.Column(db.Integer, db.ForeignKey("topic.id"), index=True)
     default_layout = db.Column(db.String(15))
+    default_post_type = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(
         db.Integer, default=0
@@ -1073,6 +1073,15 @@ user_role = db.Table(
     db.PrimaryKeyConstraint("user_id", "role_id"),
 )
 
+
+user_file = db.Table(
+    "user_file",
+    db.Column("user_id", db.Integer, db.ForeignKey("user.id")),
+    db.Column("file_id", db.Integer, db.ForeignKey("file.id")),
+    db.Column("size", db.Integer),
+    db.PrimaryKeyConstraint("user_id", "file_id"),
+)
+
 # table to hold users' 'read' post ids
 read_posts = db.Table(
     "read_posts",
@@ -1208,6 +1217,7 @@ class User(UserMixin, db.Model):
     mastodon_oauth_id = db.Column(db.String(64), unique=True, index=True)
     discord_oauth_id = db.Column(db.String(64), unique=True, index=True)
     password_updated_at = db.Column(db.DateTime, default=utcnow)
+    code_style = db.Column(db.String(25), default="fruity")
 
     avatar = db.relationship(
         "File",
@@ -1794,6 +1804,16 @@ class User(UserMixin, db.Model):
                 db.session.delete(reply)
             db.session.commit()
 
+        files = File.query.join(user_file).filter(user_file.c.user_id == self.id).all()
+        for file in files:
+            file.delete_from_disk(purge_cdn=flush)
+            db.session.execute(
+                text('DELETE FROM "user_file" WHERE file_id = :file_id'),
+                {"file_id": file.id},
+            )
+            db.session.delete(file)
+            db.session.commit()
+
     def mention_tag(self):
         if self.ap_domain is None:
             return "@" + self.user_name + "@" + current_app.config["SERVER_NAME"]
@@ -2003,6 +2023,10 @@ class Post(db.Model):
     @classmethod
     def get_by_ap_id(cls, ap_id):
         return db.session.query(cls).filter_by(ap_id=ap_id).first()
+
+    @classmethod
+    def get_by_slug(cls, slug):
+        return db.session.query(cls).filter_by(slug=slug).first()
 
     @classmethod
     def new(
@@ -2505,6 +2529,8 @@ class Post(db.Model):
             db.session.add(vote)
             if user.is_local():
                 cache.delete_memoized(recently_upvoted_posts, user.id)
+
+            post.generate_slug(community)
             db.session.commit()
 
         return post
@@ -2718,6 +2744,25 @@ class Post(db.Model):
                 return f"{video_id}"
 
         return ""
+
+    def generate_ap_id(self, community: Community):
+        # Make the ActivityPub ID of a post in the format of instance.tld/c/community@instance/p/post_id/post-title-as-slug
+        # Use this for posts this instance is creating only - remote posts will already have an AP ID.
+        if self.ap_id is None or self.ap_id == "" or len(self.ap_id) == 10:
+            slug = slugify(
+                self.title, max_length=100 - len(current_app.config["SERVER_NAME"])
+            )
+            self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
+            self.slug = f"/c/{community.name}/p/{self.id}/{slug}"
+
+    def generate_slug(self, community: Community):
+        # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
+        # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
+        if self.slug is None or self.slug == "":
+            slug = slugify(
+                self.title, max_length=100 - len(current_app.config["SERVER_NAME"])
+            )
+            self.slug = f"/c/{community.name}/p/{self.id}/{slug}"
 
     def peertube_embed(self):
         if self.url:
@@ -4047,7 +4092,6 @@ class Site(db.Model):
     legal_information = db.Column(db.Text, default="")
     legal_information_html = db.Column(db.Text, default="")
     tos_url = db.Column(db.String(256))
-    privacy_url = db.Column(db.String(256))
     public_key = db.Column(db.Text)
     private_key = db.Column(db.Text)
     enable_downvotes = db.Column(db.Boolean, default=True)

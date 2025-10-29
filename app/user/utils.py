@@ -149,7 +149,7 @@ def unsubscribe_from_community(community, user):
     )
 
 
-def search_for_user(address: str):
+def search_for_user(address: str, allow_fetch: bool = True):
     if address.startswith("@"):
         address = address[1:]
     if "@" in address:
@@ -166,8 +166,11 @@ def search_for_user(address: str):
         already_exists = User.query.filter_by(ap_id=address).first()
     else:
         already_exists = User.query.filter_by(user_name=name, ap_id=None).first()
+
     if already_exists:
         return already_exists
+    elif not allow_fetch:
+        return None
 
     if not server:
         return None
