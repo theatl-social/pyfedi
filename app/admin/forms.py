@@ -63,7 +63,7 @@ class SiteMiscForm(FlaskForm):
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
     private_instance = BooleanField(_l('Private instance - require login to browse'))
     show_inoculation_block = BooleanField(_l('Show Rational Discourse Toolkit in sidebar'))
-    allow_default_user_add_remote_community = BooleanField(_l('Allow authorized user to add remote community.'))
+    allow_default_user_add_remote_community = BooleanField(_l('Allow non-admins to add remote communities'))
 
     submit = SubmitField(_l('Save'))
 
