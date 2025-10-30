@@ -587,7 +587,10 @@ def delete_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
-        user_id = current_user.id
+        if current_user:
+            user_id = current_user.id
+        else:
+            user_id = 1     # for remove_old_community_content()
 
     post = db.session.query(Post).get(post_id)
     if post.url:
