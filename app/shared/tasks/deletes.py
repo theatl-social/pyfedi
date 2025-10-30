@@ -176,10 +176,10 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
     if community.is_local():
         if is_restore:
             del undo['@context']
-            object=undo
+            object_json=undo
         else:
             del delete['@context']
-            object=delete
+            object_json=delete
 
         announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
@@ -188,7 +188,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
           'id': announce_id,
           'type': 'Announce',
           'actor': actor,
-          'object': object,
+          'object': object_json,
           '@context': default_context(),
           'to': to,
           'cc': cc
