@@ -457,7 +457,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             file = File(source_url=url, hash=hash)
             if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
                 # change this line when uploaded_file is supported in API
-                file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
+                file.alt_text = input.image_alt_text.data if input.image_alt_text.data else ''
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
@@ -496,7 +496,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     if url and post.image:
         file = File.query.get(post.image_id)
         if file:
-            file.alt_text = input.image_alt_text.data if input.image_alt_text.data else title
+            file.alt_text = input.image_alt_text.data if input.image_alt_text.data else ''
 
     federate = True
     if type == POST_TYPE_POLL:
