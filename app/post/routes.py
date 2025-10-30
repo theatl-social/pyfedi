@@ -1236,7 +1236,7 @@ def post_block_user(post_id: int):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             resp.headers['HX-Redirect'] = post.community.local_url()
         elif "/u/" in curr_url:
             resp.headers['HX-Redirect'] = url_for("main.index")
@@ -1266,7 +1266,7 @@ def post_block_domain(post_id: int):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             resp.headers['HX-Redirect'] = url_for("main.index")
         else:
             resp.headers['HX-Redirect'] = curr_url
@@ -1313,7 +1313,7 @@ def post_block_instance(post_id: int):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
 
-        if post.instance.domain in curr_url or "/post/" in curr_url:
+        if post.instance.domain in curr_url or "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             resp.headers["HX-Redirect"] = url_for("main.index")
         else:
             resp.headers["HX-Redirect"] = curr_url
@@ -1389,12 +1389,12 @@ def post_set_flair(post_id):
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector('edit_post', post_id=post.id)
 
-            if "/c/" in curr_url:
+            if "/c/" in curr_url and "/p/" not in curr_url:
                 show_post_community = False
             else:
                 show_post_community = True
 
-            if "/post/" in curr_url:
+            if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
                 resp = make_response()
                 resp.headers["HX-Redirect"] = curr_url
                 return resp
@@ -1431,7 +1431,7 @@ def post_flair_list(post_id):
     post = Post.query.get_or_404(post_id)
     if post.user_id == current_user.id or post.community.is_moderator(current_user) or current_user.is_staff() or current_user.is_admin():
         curr_url = request.headers.get("HX-Current-Url")
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post_preview = False
         else:
             post_preview = True
@@ -1506,7 +1506,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             if post_reply.author.id != post.author.id:
                 resp.headers['HX-Redirect'] = post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)
             else:
@@ -1536,7 +1536,7 @@ def post_reply_block_instance(post_id: int, comment_id: int):
 
         if post_reply.instance.domain in curr_url:
             resp.headers["HX-Redirect"] = url_for("main.index")
-        elif "/post/" in curr_url:
+        elif "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post = Post.query.get(post_id)
             if post is not None and post.instance_id == post_reply.instance_id:
                 resp.headers["HX-Redirect"] = url_for("main.index")

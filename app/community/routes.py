@@ -1415,7 +1415,7 @@ def community_block(community_id: int):
         resp = make_response()
         curr_url = request.headers.get('HX-Current-Url')
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post_id = request.args.get('post_id', None)
             if post_id:
                 post = Post.query.get_or_404(post_id)
