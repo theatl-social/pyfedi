@@ -14,14 +14,14 @@ Plugins can have their code executed by adding a @hook decorator to a function. 
  - `before_post_create` - as the name suggests, this is run before a post is created. The contents of the post is passed in through the parameters.
  Modify the data as you wish and `return` it.
 
-  - `after_post_create` - take a guess.
+  - `after_post_create` - this is run after a post is created and the `Post` object is passed as a parameter.
 
   - `cron_often` - is run at a periodic interval. The frequency is determined by how often the send_queue runs. The cron hooks are executed from a CLI task and do not run in a request context.
 
   - `cron_daily` - is run once a day in the daily_maintenance_task.
 
-  - `new_user` - is run when a new user is verified; meaning that they have completed any required email verification and their application has been accepted (if applicable). The newly created `User` object is passed to this hook as an argument. When this hook completes, it should return the `User` object again.
+  - `new_user` - is run when a new user is verified; meaning that they have completed any required email verification and their application has been accepted (if applicable). The newly created `User` object is passed to this hook as an argument.
 
-  - `new_registration_for_approval` - is run when a user has submitted an application and (if applicable) verified their email, but the application is awaiting admin approval. The `UserRegistration` object is passed to this plugin as an argument. When this hook completes, it should return the `UserRegistration` object again.
+  - `new_registration_for_approval` - is run when a user has submitted an application and (if applicable) verified their email, but the application is awaiting admin approval. The `UserRegistration` object is passed to this plugin as an argument.
 
 More hooks will be added over time, presently the plugin engine is still experimental and undergoing heavy development.

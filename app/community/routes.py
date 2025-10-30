@@ -1028,7 +1028,12 @@ def show_community_rss(actor):
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
-            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.slug:
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+            else:
+                fe.link(
+                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+                )
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith("text/"):
@@ -1391,11 +1396,11 @@ def join_then_add(actor):
 
 
 @bp.route("/<actor>/submit/<string:type>", methods=["GET", "POST"])
-@bp.route("/<actor>/submit", defaults={"type": "discussion"}, methods=["GET", "POST"])
+@bp.route("/<actor>/submit", methods=["GET", "POST"])
 @login_required
 @validation_required
 @approval_required
-def add_post(actor, type):
+def add_post(actor, type=None):
     if current_user.banned or current_user.ban_posts:
         return show_ban_message()
     if request.method == "GET":
@@ -1406,8 +1411,12 @@ def add_post(actor, type):
         else:
             community = actor_to_community(actor)
 
-    post_type = POST_TYPE_ARTICLE
+    if type is None:
+        type = community.default_post_type or "link"
+
+    post_type = POST_TYPE_LINK
     if type == "discussion":
+        post_type = POST_TYPE_ARTICLE
         form = CreateDiscussionForm()
     elif type == "link":
         post_type = POST_TYPE_LINK
@@ -1494,7 +1503,7 @@ def add_post(actor, type):
                 post.id, True, SRC_WEB
             )  # federating post's stickiness is separate from creating it
 
-        resp = make_response(redirect(f"/post/{post.id}"))
+        resp = make_response(redirect(post.slug))
         # remove cookies used to maintain state when switching post type
         resp.delete_cookie("post_title")
         resp.delete_cookie("post_description")
@@ -1646,8 +1655,9 @@ def community_edit(community_id: int):
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
-            community.topic_id = form.topic.data if form.topic.data != 0 else None
+            community.topic_id = form.topic.data if form.topic.data > 0 else None
             community.default_layout = form.default_layout.data
+            community.default_post_type = form.default_post_type.data
             community.downvote_accept_mode = form.downvote_accept_mode.data
 
             icon_file = request.files["icon_file"]
@@ -1719,6 +1729,7 @@ def community_edit(community_id: int):
             form.topic.data = community.topic_id if community.topic_id else None
             form.languages.data = community.language_ids()
             form.default_layout.data = community.default_layout
+            form.default_post_type.data = community.default_post_type
             form.downvote_accept_mode.data = community.downvote_accept_mode
         return render_template(
             "community/community_edit.html",
@@ -3481,10 +3492,12 @@ def check_url_already_posted():
             )
             .all()
         )
+        title, description = retrieve_metadata_of_url(url)
         return flask.render_template(
             "community/check_url_posted.html",
             communities=communities,
-            title=retrieve_title_of_url(url),
+            title=title,
+            description=description,
         )
     else:
         abort(404)
@@ -3510,7 +3523,9 @@ def get_sidebar(community_id):
     )
 
 
-def retrieve_title_of_url(url):
+def retrieve_metadata_of_url(url):
+    title = ""
+    description = ""
     try:
         response = httpx_client.get(url, timeout=10, follow_redirects=True)
         if response.status_code == 200:
@@ -3519,18 +3534,23 @@ def retrieve_title_of_url(url):
             # Try og:title first
             og_title = soup.find("meta", property="og:title")
             if og_title and og_title.get("content"):
-                return og_title.get("content").strip()
+                title = og_title.get("content").strip()
 
-            # Fall back to HTML title
-            title_tag = soup.find("title")
-            if title_tag:
-                return title_tag.get_text().strip()
+            if title == "":
+                # Fall back to HTML title
+                title_tag = soup.find("title")
+                if title_tag:
+                    title = title_tag.get_text().strip()
 
-            return ""
+            meta_description = soup.find("meta", {"name": "description"})
+            if meta_description and meta_description.get("content"):
+                description = meta_description.get("content").strip()
+
+            return title, description
         else:
-            return ""
+            return title, description
     except Exception:
-        return ""
+        return title, description
 
 
 @bp.route("/c/<actor>/fixup_from_remote")

@@ -4,117 +4,81 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 aria-label="{{ _('Navigation') }}">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/communities">{{ _("Communities") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Settings") }}</li>
-                </ol>
-            </nav>
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Settings') }}</li>
+            </ol>
+        </nav>
+        {% if community %}
+        {% include "community/_community_moderation_nav.html" %}
+        {% endif %}
+        <h1 class="mt-2">
             {% if community %}
-                {% include "community/_community_moderation_nav.html" %}
+                {{ _('Edit %(community)s', community=community.display_name()) }}
+            {% else %}
+                {{ _('Create community') }}
             {% endif %}
-            <h1 class="mt-2">
-                {% if community %}
-                    {{ _('Edit %(community)s', community=community.display_name() ) }}
-                {% else %}
-                    {{ _("Create community") }}
-                {% endif %}
-            </h1>
-            <p>{{ _("Edit and configure this community") }}</p>
-            <form method="post"
-                  enctype="multipart/form-data"
-                  id="add_local_community_form"
-                  role="form">
-                {{ form.csrf_token() }}
-                {{ render_field(form.title) }}
-                {{ render_field(form.description) }}
-                {{ render_field(form.posting_warning) }}
-                <small class="field_hint">{{ _("This is shown above the field where people compose their content. Only use this if really necessary.") }}</small>
-                {% if community.icon_id %}
-                    <!-- <img class="community_icon_big rounded-circle"
-      src="{{ community.icon_image() }}" /> -->
-                {% endif %}
-                {{ render_field(form.icon_file) }}
-                <small class="field_hint">Provide a square image that looks good when small.</small>
-                {% if community.image_id %}
-                    <!-- <a href="{{ community.header_image() }}"><img class="community_icon_big" src="{{ community.header_image() }}" /></a> -->
-                {% endif %}
-                {% if community.icon_id %}
-                    <p>
-                        <a href="{{ community.icon_image() }}"
-                           class="btn btn-sm btn-primary showElement"
-                           data-id="icon_image">{{ _("View image") }}</a>
-                        <a href="{{ url_for('community.remove_icon', community_id=community.id) }}"
-                           class="btn btn-sm btn-primary"
-                           hx-post="{{ url_for('community.remove_icon', community_id=community.id) }}"
-                           hx-target="#icon_image"
-                           hx-swap="outerHTML">{{ _("Delete image") }}</a>
-                    </p>
-                    <p>
-                        <img id="icon_image"
-                             class="community_icon_big rounded-circle"
-                             loading="lazy"
-                             style="display: none"
-                             src="{{ community.icon_image() }}"
-                             alt="{{ _('Profile pic') }}" />
-                    </p>
-                {% endif %}
-                {{ render_field(form.banner_file) }}
-                <small class="field_hint">Provide a wide image - letterbox orientation.</small>
-                {% if community.image_id %}
-                    <p>
-                        <a href="{{ community.header_image() }}"
-                           class="btn btn-sm btn-primary showElement"
-                           data-id="image_div">{{ _("View image") }}</a>
-                        <a href="{{ url_for('community.remove_header', community_id=community.id) }}"
-                           class="btn btn-sm btn-primary"
-                           hx-post="{{ url_for('community.remove_header', community_id=community.id) }}"
-                           hx-target="#image_div"
-                           hx-swap="outerHTML">{{ _("Delete image") }}</a>
-                    </p>
-                    <div id="image_div"
-                         class="community_header mb-4"
-                         style="display: none;
-                                height: 240px;
-                                background-image: url({{ community.header_image() }})"></div>
-                {% endif %}
-                {{ render_field(form.nsfw) }}
-                {{ render_field(form.restricted_to_mods) }}
-                {{ render_field(form.local_only) }}
-                {{ render_field(form.new_mods_wanted) }}
-                {{ render_field(form.downvote_accept_mode) }}
-                {{ render_field(form.topic) }}
-                {{ render_field(form.languages) }}
-                {{ render_field(form.default_layout) }}
-                <div class="row mb-4">
-                    <div class="col-auto">{{ render_field(form.submit) }}</div>
+        </h1>
+        <p>{{ _('Edit and configure this community') }}</p>
+        <form method="post" enctype="multipart/form-data" id="add_local_community_form" role="form">
+            {{ form.csrf_token() }}
+            {{ render_field(form.title) }}
+            {{ render_field(form.description) }}
+            {{ render_field(form.posting_warning) }}
+            <small class="field_hint">{{ _('This is shown above the field where people compose their content. Only use this if really necessary.') }}</small>
+            {% if community.icon_id %}
+                <!-- <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" /> -->
+            {% endif %}
+            {{ render_field(form.icon_file) }}
+            <small class="field_hint">Provide a square image that looks good when small.</small>
+            {% if community.image_id %}
+                <!-- <a href="{{ community.header_image() }}"><img class="community_icon_big" src="{{ community.header_image() }}" /></a> -->
+            {% endif %}
+            {% if community.icon_id %}
+                <p><a href="{{ community.icon_image() }}" class="btn btn-sm btn-primary showElement" data-id="icon_image">{{ _('View image') }}</a>
+                   <a href="{{ url_for('community.remove_icon', community_id=community.id) }}" class="btn btn-sm btn-primary" hx-post="{{ url_for('community.remove_icon', community_id=community.id) }}" hx-target="#icon_image" hx-swap="outerHTML">{{ _('Delete image') }}</a>
+                </p>
+                <p><img id="icon_image" class="community_icon_big rounded-circle" loading="lazy" style="display: none;" src="{{ community.icon_image() }}" alt="{{ _('Profile pic') }}" /></p>
+            {% endif %}
+            {{ render_field(form.banner_file) }}
+            <small class="field_hint">Provide a wide image - letterbox orientation.</small>
+            {% if community.image_id %}
+                <p><a href="{{ community.header_image() }}" class="btn btn-sm btn-primary showElement" data-id="image_div">{{ _('View image') }}</a>
+                   <a href="{{ url_for('community.remove_header', community_id=community.id) }}" class="btn btn-sm btn-primary"
+                      hx-post="{{ url_for('community.remove_header', community_id=community.id) }}"
+                      hx-target="#image_div" hx-swap="outerHTML">{{ _('Delete image') }}</a>
+                </p>
+                <div id="image_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ community.header_image() }});"></div>
+            {% endif %}
+            {{ render_field(form.nsfw) }}
+            {{ render_field(form.restricted_to_mods) }}
+            {{ render_field(form.local_only) }}
+            {{ render_field(form.new_mods_wanted) }}
+            {{ render_field(form.downvote_accept_mode) }}
+            {{ render_field(form.topic) }}
+            {{ render_field(form.languages) }}
+            {{ render_field(form.default_layout) }}
+            {{ render_field(form.default_post_type) }}
+            <div class="row mb-4">
+                <div class="col-auto">
+                    {{ render_field(form.submit) }}
                 </div>
-                <div class="row">
-                    <div class="col-auto pt-4">
-                        {% if community.is_local() and (community.is_owner() or current_user.is_admin()) %}
-                            <p>
-                                <a class="btn btn-primary btn-warning confirm_first send_post"
-                                   href="#"
-                                   data-url="{{ url_for('community.community_delete', community_id=community.id) }}"
-                                   rel="nofollow">Delete community</a>
-                            </p>
-                        {% endif %}
-                    </div>
+            </div>
+            <div class="row">
+                <div class="col-auto pt-4">
+                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) %}
+                    <p><a class="btn btn-primary btn-warning confirm_first send_post" href="#" data-url="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
+                {% endif %}
                 </div>
-            </form>
-        </main>
-    </div>
+            </div>
+        </form>
+    </main>
+</div>
 {% endblock %}

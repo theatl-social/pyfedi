@@ -50,6 +50,7 @@ post_sort_list = [
     "TopYear",
     "TopAll",
     "New",
+    "Old",
     "Scaled",
     "Active",
 ]
@@ -64,7 +65,7 @@ listing_type_list = [
     "ModeratorView",
 ]
 community_listing_type_list = ["All", "Local", "Subscribed"]
-content_type_list = ["Communities", "Posts", "Users", "Url"]
+content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = [
@@ -101,6 +102,14 @@ class DefaultSchema(Schema):
         datetimeformat = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
+class UserExtraField(DefaultSchema):
+    id = fields.Integer(required=True)
+    label = fields.String(required=True, metadata={"example": "Pronouns"})
+    text = fields.String(
+        required=True, metadata={"example": "he/him, she/her, they/them, etc."}
+    )
+
+
 class Person(DefaultSchema):
     actor_id = fields.String(
         required=True, metadata={"example": "https://piefed.social/u/rimu"}
@@ -114,8 +123,11 @@ class Person(DefaultSchema):
     user_name = fields.String(required=True)
     about = fields.String(metadata={"format": "markdown"})
     about_html = fields.String(metadata={"format": "html"})
-    avatar = fields.Url(allow_none=True)
-    banner = fields.Url(allow_none=True)
+    avatar = fields.String(allow_none=True, metadata={"format": "url"})
+    banner = fields.String(allow_none=True, metadata={"format": "url"})
+    extra_fields = fields.List(
+        fields.Nested(UserExtraField), validate=validate.Length(max=4)
+    )
     flair = fields.String()
     published = fields.String(
         validate=validate_datetime_string,
@@ -149,7 +161,7 @@ class Site(DefaultSchema):
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
     sidebar = fields.String(metadata={"format": "html"})
     sidebar_md = fields.String(metadata={"format": "markdown"})
@@ -177,9 +189,9 @@ class Community(DefaultSchema):
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
     banned = fields.Boolean()
-    banner = fields.Url(allow_none=True)
+    banner = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     posting_warning = fields.String(allow_none=True)
     updated = fields.String(
         validate=validate_datetime_string,
@@ -356,7 +368,7 @@ class MiniCrossPosts(DefaultSchema):
 
 
 class Post(DefaultSchema):
-    ap_id = fields.Url(required=True)
+    ap_id = fields.String(required=True)
     community_id = fields.Integer(required=True)
     deleted = fields.Boolean(required=True)
     id = fields.Integer(required=True)
@@ -375,8 +387,8 @@ class Post(DefaultSchema):
     user_id = fields.Integer(required=True)
     alt_text = fields.String()
     body = fields.String(metadata={"format": "markdown"})
-    small_thumbnail_url = fields.Url()
-    thumbnail_url = fields.Url()
+    small_thumbnail_url = fields.String()
+    thumbnail_url = fields.String()
     updated = fields.String(
         validate=validate_datetime_string,
         metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
@@ -455,6 +467,7 @@ class PostView(DefaultSchema):
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
     flair_list = fields.List(fields.Nested(CommunityFlair))
+    can_auth_user_moderate = fields.Boolean()
 
 
 class CommunityAggregates(DefaultSchema):
@@ -691,10 +704,10 @@ class CommunityFlairDeleteResponse(GetCommunityResponse):
 class CreateCommunityRequest(DefaultSchema):
     name = fields.String(required=True)
     title = fields.String(required=True)
-    banner_url = fields.Url(allow_none=True)
+    banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.Url(allow_none=True)
+    icon_url = fields.String(allow_none=True)
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
@@ -709,10 +722,10 @@ class CommunityResponse(DefaultSchema):
 class EditCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     title = fields.String(required=True)
-    banner_url = fields.Url(allow_none=True)
+    banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.Url(allow_none=True)
+    icon_url = fields.String(allow_none=True)
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
@@ -857,10 +870,10 @@ class FeedView(DefaultSchema):
     user_id = fields.Integer(
         required=True, metadata={"description": "user_id of the feed creator/owner"}
     )
-    banner = fields.Url(allow_none=True)
+    banner = fields.String(allow_none=True)
     description = fields.String(allow_none=True, metadata={"format": "markdown"})
     description_html = fields.String(allow_none=True, metadata={"format": "html"})
-    icon = fields.Url(allow_none=True)
+    icon = fields.String(allow_none=True)
     parent_feed_id = fields.Integer(allow_none=True)
 
 
@@ -1039,6 +1052,25 @@ class UserMentionsResponse(DefaultSchema):
     replies = fields.List(fields.Nested(CommentReplyView), required=True)
 
 
+class MediaView(DefaultSchema):
+    url = fields.String()
+    name = fields.String()
+
+
+class UserMediaRequest(DefaultSchema):
+    limit = fields.Integer(metadata={"default": 10})
+    page = fields.Integer(metadata={"default": 1})
+    sort = fields.String(
+        validate=validate.OneOf(comment_sort_list), metadata={"default": "New"}
+    )
+    unread_only = fields.Boolean(metadata={"default": True})
+
+
+class UserMediaResponse(DefaultSchema):
+    next_page = fields.String(allow_none=True)
+    media = fields.List(fields.Nested(MediaView), required=True)
+
+
 class UserBlockRequest(DefaultSchema):
     block = fields.Boolean(required=True)
     person_id = fields.Integer(required=True)
@@ -1079,6 +1111,28 @@ class UserSetFlairResponse(DefaultSchema):
     person_view = fields.Nested(PersonView)
 
 
+class NewUserExtraField(DefaultSchema):
+    id = fields.Integer(
+        allow_none=True,
+        metadata={
+            "description": "Pass an id of an existing extra field with null/missing/empty label or text to remove a field. "
+            "Pass an id of an existing extra field with both label and text to edit an existing extra field."
+        },
+    )
+    label = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Pass a label and text without an id to create a new extra field."
+        },
+    )
+    text = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Pass a label and text without an id to create a new extra field."
+        },
+    )
+
+
 class UserSaveSettingsRequest(DefaultSchema):
     avatar = fields.String(
         allow_none=True,
@@ -1099,6 +1153,12 @@ class UserSaveSettingsRequest(DefaultSchema):
         validate=validate.OneOf(default_comment_sorts_list)
     )
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    extra_fields = fields.List(
+        fields.Nested(NewUserExtraField),
+        metadata={
+            "description": "A user can't have more than four total extra fields."
+        },
+    )
     show_nsfw = fields.Boolean()
     show_nsfl = fields.Boolean()
     show_read_posts = fields.Boolean()
@@ -1209,7 +1269,6 @@ class UserMarkAllNotifsReadResponse(DefaultSchema):
     )
 
 
-# Upstream API Schemas - Added from merge
 class ListCommentsRequest(DefaultSchema):
     limit = fields.Integer(metadata={"default": 10})
     page = fields.Integer(metadata={"default": 1})
@@ -1361,6 +1420,316 @@ class PostLikeView(CommentLikeView):
 class ListPostLikesResponse(DefaultSchema):
     post_likes = fields.List(fields.Nested(PostLikeView), required=True)
     next_page = fields.String(allow_none=True)
+
+
+class GetPostRequest(DefaultSchema):
+    id = fields.Integer(required=True)
+
+
+class GetPostResponse(DefaultSchema):
+    post_view = fields.Nested(PostView, required=True)
+    community_view = fields.Nested(CommunityView)
+    moderators = fields.List(fields.Nested(CommunityModeratorView))
+    cross_posts = fields.List(fields.Nested(PostView))
+
+
+class LikePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    score = fields.Integer(required=True)
+    private = fields.Boolean()
+
+
+class SavePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    save = fields.Boolean(required=True)
+
+
+class SubscribePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    subscribe = fields.Boolean(required=True)
+
+
+class CreatePostRequest(DefaultSchema):
+    title = fields.String(required=True)
+    community_id = fields.Integer(required=True)
+    body = fields.String()
+    url = fields.String()
+    nsfw = fields.Boolean()
+    language_id = fields.Integer()
+
+
+class EditPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    title = fields.String()
+    body = fields.String()
+    url = fields.String(
+        allow_none=True,
+        metadata={"description": "Pass value of null to remove the post url"},
+    )
+    nsfw = fields.Boolean()
+    language_id = fields.Integer()
+
+
+class DeletePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+    description = fields.String()
+    report_remote = fields.Boolean(
+        metadata={
+            "default": True,
+            "description": "Also send report to originating instance",
+        }
+    )
+
+
+class PostReport(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    original_post_name = fields.String(required=True)
+    original_post_body = fields.String(required=True)
+    reason = fields.String(required=True)
+    resolved = fields.Boolean(required=True)
+    published = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+
+
+class PostReportView(DefaultSchema):
+    post_report = fields.Nested(PostReport, required=True)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+    creator = fields.Nested(Person, required=True)
+    post_creator = fields.Nested(Person, required=True)
+    counts = fields.Nested(PostAggregates, required=True)
+    creator_banned_from_community = fields.Boolean(required=True)
+    creator_is_moderator = fields.Boolean(required=True)
+    creator_is_admin = fields.Boolean(required=True)
+    creator_blocked = fields.Boolean(required=True)
+    subscribed = fields.String(
+        validate=validate.OneOf(subscribed_type_list), required=True
+    )
+    saved = fields.Boolean(required=True)
+
+
+class PostReportResponse(DefaultSchema):
+    post_report_view = fields.Nested(PostReportView, required=True)
+
+
+class LockPostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    locked = fields.Boolean(required=True)
+
+
+class FeaturePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    featured = fields.Boolean(required=True)
+    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
+
+
+class RemovePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    reason = fields.String()
+
+
+class MarkPostAsReadRequest(DefaultSchema):
+    read = fields.Boolean(required=True)
+    post_id = fields.Integer()
+    post_ids = fields.List(fields.Integer())
+
+
+class SuccessResponse(DefaultSchema):
+    success = fields.Boolean(required=True)
+
+
+class GetPostRepliesRequest(DefaultSchema):
+    post_id = fields.Integer()
+    parent_id = fields.Integer()
+    sort = fields.String(validate=validate.OneOf(comment_sort_list))
+    max_depth = fields.Integer()
+    page = fields.String()
+    limit = fields.Integer()
+    parent_id = fields.Integer()
+
+
+class PostReplyView(CommentView):
+    post = fields.Nested(Post)
+    community = fields.Nested(Community)
+    replies = fields.List(fields.Nested(lambda: PostReplyView))
+
+
+class GetPostRepliesResponse(DefaultSchema):
+    comments = fields.List(fields.Nested(PostReplyView))
+    next_page = fields.String(allow_none=True)
+
+
+class ListPostsRequest(Schema):
+    q = fields.String()
+    sort = fields.String(
+        validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"}
+    )
+    type_ = fields.String(
+        validate=validate.OneOf(listing_type_list), metadata={"default": "All"}
+    )
+    community_name = fields.String()
+    community_id = fields.Integer()
+    saved_only = fields.Boolean(metadata={"default": False})
+    person_id = fields.Integer()
+    limit = fields.Integer(metadata={"default": 50})
+    page = fields.Integer(metadata={"default": 1})
+    liked_only = fields.Boolean(metadata={"default": False})
+    feed_id = fields.Integer()
+    topic_id = fields.Integer()
+    ignore_sticky = fields.Boolean(
+        metadata={
+            "default": False,
+            "description": "If filtering by community, ignores a post's sticky state",
+        }
+    )
+
+
+class ListPostsRequest2(ListPostsRequest):
+    page = fields.String(metadata={"default": ""})
+
+
+# Private Message Schemas
+class PrivateMessage(DefaultSchema):
+    id = fields.Integer(required=True)
+    creator_id = fields.Integer(required=True)
+    recipient_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+    deleted = fields.Boolean(required=True)
+    read = fields.Boolean(required=True)
+    published = fields.String(
+        validate=validate_datetime_string,
+        required=True,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    ap_id = fields.Url(required=True)
+    local = fields.Boolean(required=True)
+
+
+class PrivateMessageView(DefaultSchema):
+    private_message = fields.Nested(PrivateMessage, required=True)
+    creator = fields.Nested(Person, required=True)
+    recipient = fields.Nested(Person, required=True)
+    conversation_id = fields.Integer()
+
+
+class PrivateMessageResponse(DefaultSchema):
+    private_message_view = fields.Nested(PrivateMessageView, required=True)
+
+
+class ListPrivateMessagesRequest(DefaultSchema):
+    page = fields.Integer()
+    limit = fields.Integer()
+    unread_only = fields.Boolean()
+
+
+class ListPrivateMessagesResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class GetPrivateMessageConversationRequest(DefaultSchema):
+    person_id = fields.Integer(
+        metadata={
+            "description": "One of either person_id or conversation_id must be specified"
+        }
+    )
+    conversation_id = fields.Integer(
+        metadata={
+            "description": "One of either person_id or conversation_id must be specified"
+        }
+    )
+    page = fields.Integer(metadata={"default": 1})
+    limit = fields.Integer(metadata={"default": 10})
+
+    @validates_schema
+    def validate_input(self, data, **kwargs):
+        if "person_id" not in data and "conversation_id" not in data:
+            raise ValidationError(
+                "One of either person_id or conversation_id must be specified"
+            )
+
+
+class GetPrivateMessageConversationResponse(DefaultSchema):
+    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
+
+
+class LeaveConversationRequest(DefaultSchema):
+    conversation_id = fields.Integer(required=True)
+
+
+class CreatePrivateMessageRequest(DefaultSchema):
+    content = fields.String(required=True)
+    recipient_id = fields.Integer(required=True)
+
+
+class EditPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    content = fields.String(required=True)
+
+
+class MarkPrivateMessageAsReadRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    read = fields.Boolean(required=True)
+
+
+class DeletePrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    deleted = fields.Boolean(required=True)
+
+
+class ReportPrivateMessageRequest(DefaultSchema):
+    private_message_id = fields.Integer(required=True)
+    reason = fields.String(required=True)
+
+
+# Upload Schemas
+class ImageUploadRequest(DefaultSchema):
+    file = fields.Raw(required=True, metadata={"type": "string", "format": "binary"})
+
+
+class ImageUploadResponse(DefaultSchema):
+    url = fields.String(required=True)
+    liked_only = fields.Boolean()
+    saved_only = fields.Boolean()
+    q = fields.String()
+
+
+class ImageDeleteRequest(DefaultSchema):
+    file = fields.String(required=True)
+
+
+class ImageDeleteResponse(DefaultSchema):
+    result = fields.String(required=True)
+
+
+class ListPostsResponse(Schema):
+    posts = fields.List(fields.Nested(PostView), required=True)
+    next_page = fields.String(allow_none=True)
+
+
+class PostSetFlairRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    flair_id_list = fields.List(
+        fields.Integer(),
+        allow_none=True,
+        metadata={
+            "description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"
+        },
+    )
+
+
+class PostSetFlairResponse(PostView):
+    pass
 
 
 # Admin API Schemas
@@ -1684,296 +2053,3 @@ class AdminUserExportResponse(DefaultSchema):
     download_url = fields.String(metadata={"description": "Temporary download URL"})
     expires_at = fields.DateTime(format="iso")
     message = fields.String(required=True)
-
-
-class GetPostRequest(DefaultSchema):
-    id = fields.Integer(required=True)
-
-
-class GetPostResponse(DefaultSchema):
-    post_view = fields.Nested(PostView, required=True)
-    community_view = fields.Nested(CommunityView)
-    moderators = fields.List(fields.Nested(CommunityModeratorView))
-    cross_posts = fields.List(fields.Nested(PostView))
-
-
-class LikePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    score = fields.Integer(required=True)
-    private = fields.Boolean()
-
-
-class SavePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    save = fields.Boolean(required=True)
-
-
-class SubscribePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    subscribe = fields.Boolean(required=True)
-
-
-class CreatePostRequest(DefaultSchema):
-    title = fields.String(required=True)
-    community_id = fields.Integer(required=True)
-    body = fields.String()
-    url = fields.Url()
-    nsfw = fields.Boolean()
-    language_id = fields.Integer()
-
-
-class EditPostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    title = fields.String()
-    body = fields.String()
-    url = fields.Url()
-    nsfw = fields.Boolean()
-    language_id = fields.Integer()
-
-
-class DeletePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    deleted = fields.Boolean(required=True)
-
-
-class ReportPostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    reason = fields.String(required=True)
-    description = fields.String()
-    report_remote = fields.Boolean(
-        metadata={
-            "default": True,
-            "description": "Also send report to originating instance",
-        }
-    )
-
-
-class PostReport(DefaultSchema):
-    id = fields.Integer(required=True)
-    creator_id = fields.Integer(required=True)
-    post_id = fields.Integer(required=True)
-    original_post_name = fields.String(required=True)
-    original_post_body = fields.String(required=True)
-    reason = fields.String(required=True)
-    resolved = fields.Boolean(required=True)
-    published = fields.String(
-        validate=validate_datetime_string,
-        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
-    )
-
-
-class PostReportView(DefaultSchema):
-    post_report = fields.Nested(PostReport, required=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
-    creator = fields.Nested(Person, required=True)
-    post_creator = fields.Nested(Person, required=True)
-    counts = fields.Nested(PostAggregates, required=True)
-    creator_banned_from_community = fields.Boolean(required=True)
-    creator_is_moderator = fields.Boolean(required=True)
-    creator_is_admin = fields.Boolean(required=True)
-    creator_blocked = fields.Boolean(required=True)
-    subscribed = fields.String(
-        validate=validate.OneOf(subscribed_type_list), required=True
-    )
-    saved = fields.Boolean(required=True)
-
-
-class PostReportResponse(DefaultSchema):
-    post_report_view = fields.Nested(PostReportView, required=True)
-
-
-class LockPostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    locked = fields.Boolean(required=True)
-
-
-class FeaturePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    featured = fields.Boolean(required=True)
-    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
-
-
-class RemovePostRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    removed = fields.Boolean(required=True)
-    reason = fields.String()
-
-
-class MarkPostAsReadRequest(DefaultSchema):
-    read = fields.Boolean(required=True)
-    post_id = fields.Integer()
-    post_ids = fields.List(fields.Integer())
-
-
-class SuccessResponse(DefaultSchema):
-    success = fields.Boolean(required=True)
-
-
-class GetPostRepliesRequest(DefaultSchema):
-    post_id = fields.Integer()
-    parent_id = fields.Integer()
-    sort = fields.String(validate=validate.OneOf(comment_sort_list))
-    max_depth = fields.Integer()
-    page = fields.String()
-    limit = fields.Integer()
-    parent_id = fields.Integer()
-
-
-class PostReplyView(CommentView):
-    post = fields.Nested(Post)
-    community = fields.Nested(Community)
-    replies = fields.List(fields.Nested(lambda: PostReplyView))
-
-
-class GetPostRepliesResponse(DefaultSchema):
-    comments = fields.List(fields.Nested(PostReplyView))
-    next_page = fields.String(allow_none=True)
-
-
-class ListPostsRequest(Schema):
-    q = fields.String()
-    sort = fields.String(
-        validate=validate.OneOf(post_sort_list), metadata={"default": "Hot"}
-    )
-    type_ = fields.String(
-        validate=validate.OneOf(listing_type_list), metadata={"default": "All"}
-    )
-    community_name = fields.String()
-    community_id = fields.Integer()
-    saved_only = fields.Boolean(metadata={"default": False})
-    person_id = fields.Integer()
-    limit = fields.Integer(metadata={"default": 50})
-    page = fields.Integer(metadata={"default": 1})
-    liked_only = fields.Boolean(metadata={"default": False})
-    feed_id = fields.Integer()
-    topic_id = fields.Integer()
-
-
-class ListPostsRequest2(ListPostsRequest):
-    page = fields.String(metadata={"default": ""})
-
-
-# Private Message Schemas
-class PrivateMessage(DefaultSchema):
-    id = fields.Integer(required=True)
-    creator_id = fields.Integer(required=True)
-    recipient_id = fields.Integer(required=True)
-    content = fields.String(required=True)
-    deleted = fields.Boolean(required=True)
-    read = fields.Boolean(required=True)
-    published = fields.String(
-        validate=validate_datetime_string,
-        required=True,
-        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
-    )
-    ap_id = fields.Url(required=True)
-    local = fields.Boolean(required=True)
-
-
-class PrivateMessageView(DefaultSchema):
-    private_message = fields.Nested(PrivateMessage, required=True)
-    creator = fields.Nested(Person, required=True)
-    recipient = fields.Nested(Person, required=True)
-    conversation_id = fields.Integer()
-
-
-class PrivateMessageResponse(DefaultSchema):
-    private_message_view = fields.Nested(PrivateMessageView, required=True)
-
-
-class ListPrivateMessagesRequest(DefaultSchema):
-    page = fields.Integer()
-    limit = fields.Integer()
-    unread_only = fields.Boolean()
-
-
-class ListPrivateMessagesResponse(DefaultSchema):
-    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
-
-
-class GetPrivateMessageConversationRequest(DefaultSchema):
-    person_id = fields.Integer(
-        metadata={
-            "description": "One of either person_id or conversation_id must be specified"
-        }
-    )
-    conversation_id = fields.Integer(
-        metadata={
-            "description": "One of either person_id or conversation_id must be specified"
-        }
-    )
-    page = fields.Integer(metadata={"default": 1})
-    limit = fields.Integer(metadata={"default": 10})
-
-    @validates_schema
-    def validate_input(self, data, **kwargs):
-        if "person_id" not in data and "conversation_id" not in data:
-            raise ValidationError(
-                "One of either person_id or conversation_id must be specified"
-            )
-
-
-class GetPrivateMessageConversationResponse(DefaultSchema):
-    private_messages = fields.List(fields.Nested(PrivateMessageView), required=True)
-
-
-class LeaveConversationRequest(DefaultSchema):
-    conversation_id = fields.Integer(required=True)
-
-
-class CreatePrivateMessageRequest(DefaultSchema):
-    content = fields.String(required=True)
-    recipient_id = fields.Integer(required=True)
-
-
-class EditPrivateMessageRequest(DefaultSchema):
-    private_message_id = fields.Integer(required=True)
-    content = fields.String(required=True)
-
-
-class MarkPrivateMessageAsReadRequest(DefaultSchema):
-    private_message_id = fields.Integer(required=True)
-    read = fields.Boolean(required=True)
-
-
-class DeletePrivateMessageRequest(DefaultSchema):
-    private_message_id = fields.Integer(required=True)
-    deleted = fields.Boolean(required=True)
-
-
-class ReportPrivateMessageRequest(DefaultSchema):
-    private_message_id = fields.Integer(required=True)
-    reason = fields.String(required=True)
-
-
-# Upload Schemas
-class ImageUploadRequest(DefaultSchema):
-    file = fields.Raw(required=True, metadata={"type": "string", "format": "binary"})
-
-
-class ImageUploadResponse(DefaultSchema):
-    url = fields.Url(required=True)
-    liked_only = fields.Boolean()
-    saved_only = fields.Boolean()
-    q = fields.String()
-
-
-class ListPostsResponse(Schema):
-    posts = fields.List(fields.Nested(PostView), required=True)
-    next_page = fields.String(allow_none=True)
-
-
-class PostSetFlairRequest(DefaultSchema):
-    post_id = fields.Integer(required=True)
-    flair_id_list = fields.List(
-        fields.Integer(),
-        allow_none=True,
-        metadata={
-            "description": "A list of all the flair id to assign to the post. Either pass an empty list or null to remove flair"
-        },
-    )
-
-
-class PostSetFlairResponse(PostView):
-    pass

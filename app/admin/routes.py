@@ -207,19 +207,24 @@ def admin_site():
         site.about = form.about.data
         if form.about.data:
             site.about_html = markdown_to_html(form.about.data, a_target="")
+        else:
+            site.about_html = ""
 
         site.sidebar = form.sidebar.data
         if form.sidebar.data:
             site.sidebar_html = markdown_to_html(form.sidebar.data, a_target="")
+        else:
+            site.sidebar_html = ""
 
         site.legal_information = form.legal_information.data
         if form.legal_information.data:
             site.legal_information_html = markdown_to_html(
                 form.legal_information.data, a_target=""
             )
+        else:
+            site.legal_information_html = ""
 
         site.tos_url = form.tos_url.data
-        site.privacy_url = form.privacy_url.data
         site.updated = utcnow()
         site.contact_email = form.contact_email.data
         if site.id is None:
@@ -333,7 +338,6 @@ def admin_site():
             site.legal_information if site.legal_information is not None else ""
         )
         form.tos_url.data = site.tos_url
-        form.privacy_url.data = site.privacy_url
         form.contact_email.data = site.contact_email
         form.announcement.data = get_setting("announcement", "")
     return render_template("admin/site.html", title=_("Site profile"), form=form)
@@ -1595,7 +1599,7 @@ def admin_community_edit(community_id):
         community.show_all = form.show_all.data
         community.low_quality = form.low_quality.data
         community.content_retention = form.content_retention.data
-        community.topic_id = form.topic.data if form.topic.data != 0 else None
+        community.topic_id = form.topic.data if form.topic.data > 0 else None
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
@@ -1778,7 +1782,7 @@ def admin_topic_edit(topic_id):
         topic.num_communities = topic.communities.count()
         topic.machine_name = slugify(form.machine_name.data.strip())
         topic.show_posts_in_children = form.show_posts_in_children.data
-        if form.parent_id.data:
+        if form.parent_id.data > 0:
             topic.parent_id = form.parent_id.data
         else:
             topic.parent_id = None

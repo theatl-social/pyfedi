@@ -67,8 +67,10 @@ from app.models import (
     Feed,
     FeedMember,
     IpBan,
+    user_file,
 )
 from app.shared.site import block_remote_instance
+from app.shared.upload import process_file_delete, process_upload
 from app.shared.user import subscribe_user
 from app.user import bp
 from app.user.forms import (
@@ -82,6 +84,8 @@ from app.user.forms import (
     ImportExportForm,
     UserNoteForm,
     BanUserForm,
+    DeleteFileForm,
+    UploadFileForm,
 )
 from app.user.utils import (
     purge_user_then_delete,
@@ -127,6 +131,7 @@ from app.utils import (
     get_task_session,
     patch_db_session,
     user_in_restricted_country,
+    referrer,
 )
 
 
@@ -225,29 +230,25 @@ def _get_user_posts_and_replies(user, page):
     ):
         # Admins see everything
         post_select = (
-            "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id"
+            f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
         )
-        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id"
-        query_params = {"user_id": user_id}
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
-        post_select = "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id AND (deleted = 'False' OR deleted_by = :user_id)"
-        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id AND (deleted = 'False' OR deleted_by = :user_id)"
-        query_params = {"user_id": user_id}
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
     else:
         # Everyone else sees only non-deleted posts/replies
-        post_select = "SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = :user_id AND deleted = 'False' and status > :reviewing_status"
-        reply_select = "SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = :user_id AND deleted = 'False'"
-        query_params = {"user_id": user_id, "reviewing_status": POST_STATUS_REVIEWING}
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
 
     full_query = (
         post_select
         + " UNION "
         + reply_select
-        + " ORDER BY posted_at DESC LIMIT :limit OFFSET :offset"
+        + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
     )
-    query_params.update({"limit": per_page + 1, "offset": offset_val})
-    query_result = db.session.execute(text(full_query), query_params)
+    query_result = db.session.execute(text(full_query))
 
     for row in query_result:
         if row.type == "post":
@@ -577,19 +578,18 @@ def edit_profile(actor):
 
         db.session.commit()
 
-        # Sync to LDAP if password was provided
-        if password_updated:
-            try:
-                sync_user_to_ldap(
-                    current_user.user_name,
-                    current_user.email,
-                    form.password.data.strip(),
-                )
-            except Exception as e:
-                # Log error but don't fail the profile update
-                current_app.logger.error(
-                    f"LDAP sync failed for user {current_user.user_name}: {e}"
-                )
+        # Sync to LDAP
+        try:
+            sync_user_to_ldap(
+                current_user.user_name,
+                current_user.email,
+                form.password.data.strip() if password_updated else None,
+            )
+        except Exception as e:
+            # Log error but don't fail the profile update
+            current_app.logger.error(
+                f"LDAP sync failed for user {current_user.user_name}: {e}"
+            )
 
         flash(_("Your changes have been saved."), "success")
 
@@ -843,6 +843,7 @@ def user_settings():
         current_user.read_language_ids = form.read_languages.data
         current_user.accept_private_messages = form.accept_private_messages.data
         current_user.font = form.font.data
+        current_user.code_style = form.code_style.data
         current_user.additional_css = form.additional_css.data
         session["ui_language"] = form.interface_language.data
         current_user.vote_privately = not form.federate_votes.data
@@ -892,6 +893,7 @@ def user_settings():
         form.compaction.data = request.cookies.get("compact_level", "")
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
+        form.code_style.data = current_user.code_style or "fruity"
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
 
@@ -2886,7 +2888,12 @@ def show_profile_rss(actor):
 
             fe = fg.add_entry()
             fe.title(post.title.strip())
-            fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+            if post.slug:
+                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+            else:
+                fe.link(
+                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+                )
             if post.url:
                 if post.url in already_added:
                     continue
@@ -2909,3 +2916,123 @@ def show_profile_rss(actor):
         return response
     else:
         abort(404)
+
+
+@bp.route("/user/files", methods=["GET", "POST"])
+@login_required
+def user_files():
+    page = request.args.get("page", 1, type=int)
+    low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
+
+    total_size = 0
+    file_size_dict = defaultdict(int)
+    file_sizes = db.session.execute(
+        text('SELECT file_id, size FROM "user_file" WHERE user_id = :user_id'),
+        {"user_id": current_user.id},
+    ).all()
+    for fs in file_sizes:
+        total_size += fs[1]
+        file_size_dict[fs[0]] = fs[1]
+
+    files = File.query.join(user_file).filter(
+        user_file.c.file_id == File.id, user_file.c.user_id == current_user.id
+    )
+
+    files = files.paginate(page=page, per_page=100, error_out=False)
+    next_url = (
+        url_for("user.user_files", page=files.next_num) if files.has_next else None
+    )
+    prev_url = (
+        url_for("user.user_files", page=files.prev_num)
+        if files.has_prev and page != 1
+        else None
+    )
+
+    return render_template(
+        "user/files.html",
+        title=_("Files"),
+        files=files,
+        file_sizes=file_size_dict,
+        total_size=total_size,
+        max_size=current_app.config["FILE_UPLOAD_QUOTA"],
+        low_bandwidth=low_bandwidth,
+        user=current_user,
+        next_url=next_url,
+        prev_url=prev_url,
+    )
+
+
+@bp.route("/user/files/delete/<int:file_id>", methods=["GET", "POST"])
+@login_required
+def user_file_delete(file_id):
+    file = File.query.get_or_404(file_id)
+    form = DeleteFileForm()
+    if form.validate_on_submit():
+        process_file_delete(file.source_url, current_user.id)
+        return redirect(form.referrer.data)
+
+    form.referrer.data = referrer(url_for("user.user_files"))
+
+    return render_template(
+        "user/file_delete.html", form=form, file=file, user=current_user
+    )
+
+
+@bp.route("/user/files/upload", methods=["GET", "POST"])
+@login_required
+def user_file_upload():
+    form = UploadFileForm()
+    if form.validate_on_submit():
+        if form.urls.data.strip() != "":
+            urls = form.urls.data.strip().split("\n")
+            for url in urls:
+                if url and url.strip() != "":
+                    file = File(source_url=url)
+                    db.session.add(file)
+                    db.session.commit()
+                    db.session.execute(
+                        text(
+                            'INSERT INTO "user_file" (file_id, user_id, size) VALUES (:file_id, :user_id, :size)'
+                        ),
+                        {"file_id": file.id, "user_id": current_user.id, "size": 0},
+                    )
+                    db.session.commit()
+
+        if form.file1.data:
+            process_upload(form.file1.data, user_id=current_user.id)
+        if form.file2.data:
+            process_upload(form.file2.data, user_id=current_user.id)
+        if form.file3.data:
+            process_upload(form.file3.data, user_id=current_user.id)
+        if form.file4.data:
+            process_upload(form.file4.data, user_id=current_user.id)
+        if form.file5.data:
+            process_upload(form.file5.data, user_id=current_user.id)
+        if form.file6.data:
+            process_upload(form.file6.data, user_id=current_user.id)
+        if form.file7.data:
+            process_upload(form.file7.data, user_id=current_user.id)
+        if form.file8.data:
+            process_upload(form.file8.data, user_id=current_user.id)
+        if form.file9.data:
+            process_upload(form.file9.data, user_id=current_user.id)
+        if form.file10.data:
+            process_upload(form.file10.data, user_id=current_user.id)
+
+        return redirect(form.referrer.data)
+
+    total_size = 0
+    file_sizes = db.session.execute(
+        text('SELECT file_id, size FROM "user_file" WHERE user_id = :user_id'),
+        {"user_id": current_user.id},
+    ).all()
+    for fs in file_sizes:
+        total_size += fs[1]
+
+    if total_size > current_app.config["FILE_UPLOAD_QUOTA"]:
+        flash(_("You have exceeded your storage quota.", "error"))
+        return redirect(referrer())
+
+    form.referrer.data = referrer(url_for("user.user_files"))
+
+    return render_template("user/file_upload.html", form=form, user=current_user)

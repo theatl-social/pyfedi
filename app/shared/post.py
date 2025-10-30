@@ -13,7 +13,7 @@ from flask_login import current_user
 from pillow_heif import register_heif_opener
 from sqlalchemy import text, Integer
 
-from app import db, cache
+from app import db, cache, plugins
 from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
 from app.constants import *
@@ -298,7 +298,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     community.last_active = g.site.last_active = utcnow()
     user.post_count += 1
 
-    post.ap_id = f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+    post.generate_ap_id(community)
+
     vote = PostVote(user_id=user.id, post_id=post.id, author_id=user.id, effect=1)
     db.session.add(vote)
     db.session.commit()
@@ -316,6 +317,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 
     if post.status == POST_STATUS_PUBLISHED:
         notify_about_post(post)
+
+    plugins.fire_hook("after_post_create")
 
     if src == SRC_API:
         return user.id, post
@@ -601,7 +604,7 @@ def edit_post(
         thumbnail_url, embed_url = fixup_url(url)
         if is_image_url(url):
             file = File(source_url=url, hash=hash)
-            if uploaded_file and type == POST_TYPE_IMAGE:
+            if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
                 # change this line when uploaded_file is supported in API
                 file.alt_text = (
                     input.image_alt_text.data if input.image_alt_text.data else title
@@ -650,6 +653,13 @@ def edit_post(
         post.calculate_cross_posts(url_changed=url_changed)
     elif url and is_video_hosting_site(url):
         post.type = POST_TYPE_VIDEO
+
+    if url and post.image:
+        file = File.query.get(post.image_id)
+        if file:
+            file.alt_text = (
+                input.image_alt_text.data if input.image_alt_text.data else title
+            )
 
     federate = True
     if type == POST_TYPE_POLL:
@@ -837,8 +847,8 @@ def report_post(post: Post, input, src, auth=None):
     }
     # report.type 1 = 'post'
     report = Report(
-        reasons=reason,
-        description=description,
+        reasons=reason[:255],
+        description=description[:255],
         type=1,
         reporter_id=reporter_user.id,
         suspect_post_id=post.id,
@@ -921,7 +931,7 @@ def report_post(post: Post, input, src, auth=None):
             user_id=reporter_user.id,
             post_id=post.id,
             summary=summary,
-            instance_ids=remote_instance_ids,
+            instance_ids=list(remote_instance_ids),
         )
 
     if src == SRC_API:

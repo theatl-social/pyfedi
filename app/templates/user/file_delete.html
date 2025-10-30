@@ -1,0 +1,26 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_form %}
+
+{% block app_content %}
+   <div class="row">
+    <main class="col main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Files') }}</li>
+          </ol>
+        </nav>
+        <h1 class="mt-2">{{ _('Delete %(username)s', username=file.filename) }}</h1>
+        <form method='post' role="form" class="media_list">
+            <p class="btn-warning">{{ _('Are you sure you want to delete this file?') }}</p>
+            <p><img src="{{ file.source_url }}" class="media_list_image"></p>
+            {{ render_form(form) }}
+        </form>
+    </main>
+   </div>
+{% endblock %}

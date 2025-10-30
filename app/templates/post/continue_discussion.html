@@ -6,27 +6,44 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname %}
 {% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
+
+{% block end_scripts -%}
+    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}"></script>
+{% endblock -%}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            {% include 'post/_post_full.html' %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        {% include 'post/_post_full.html' %}
+        <hr class="mt-3">
+        <p>
+            <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}#replies">
+                <span class="fe fe-angles-up"></span> {{ _('Back to main discussion') }}
+            </a>
+        </p>
+        {% if parent_id -%}
             <p>
-                <a href="{{ url_for('activitypub.post_ap', post_id=post.id, _anchor='replies') }}">Back to main discussion</a>
+                <a href="{{ url_for('post.continue_discussion', post_id=post.id, comment_id=parent_id) }}">
+                    <span class="fe fe-chevron-up"></span> {{ _('Parent comment') }}
+                </a>
             </p>
-            <div class="row post_replies">
-                <div class="col">
-                    <div id="replies" class="comments" role="tree">
-                        {% for reply in replies %}
-                            {% with post_reply=reply['comment'], children=reply['replies'] %}
-                                {% include 'post/_post_reply_teaser.html' %}
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
+        {% endif -%}
+        <div class="row post_replies">
+            <div class="col">
+                <div id="replies" class="comments" role="tree">
+                    {% for reply in replies %}
+                      {% with post_reply=reply['comment'], children=reply['replies'], has_continued=1 %}
+                          {% include 'post/_post_reply_teaser.html' %}
+                      {% endwith %}
+                    {% endfor %}
                 </div>
             </div>
-        </main>
-        {% with community = post.community -%}
-            {% include "_side_pane.html" %}
-        {% endwith -%}
-    </div>
+        </div>
+    </main>
+
+    {% with community = post.community -%}
+        {% include "_side_pane.html" %}
+    {% endwith -%}
+</div>
+{% include "_insert_image_dialog.html" %}
 {% endblock %}

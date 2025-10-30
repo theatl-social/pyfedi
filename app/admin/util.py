@@ -152,7 +152,7 @@ def send_newsletter(form):
 
 
 def topics_for_form(current_topic: int) -> List[Tuple[int, str]]:
-    result = [(0, _("None"))]
+    result = [(-1, _("None"))]
     topics = topic_tree()
     for topic in topics:
         if topic["topic"].id != current_topic:

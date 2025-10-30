@@ -118,6 +118,10 @@ inoculation = [
                 "title": "Dicto Simpliciter fallacy",
                 "href": "https://www.thoughtco.com/dicto-simpliciter-logical-fallacy-1690451",
             },
+            {
+                "title": "24 common cognitive biases",
+                "href": "https://www.openculture.com/2019/03/24-common-cognitive-biases.html",
+            },
         ],
     },
     {

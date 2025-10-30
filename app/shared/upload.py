@@ -4,7 +4,10 @@ import boto3
 from PIL import Image, ImageOps
 from flask import current_app
 from pillow_heif import register_heif_opener
+from sqlalchemy import text
 
+from app import db
+from app.models import File, user_file
 from app.utils import (
     gibberish,
     ensure_directory_exists,
@@ -13,7 +16,7 @@ from app.utils import (
 )
 
 
-def process_upload(image_file, destination="posts"):
+def process_upload(image_file, destination="posts", user_id=None):
     # should have errored earlier if no upload, but just to be paranoid
     if not image_file or image_file.filename == "":
         raise Exception("file not uploaded")
@@ -52,6 +55,7 @@ def process_upload(image_file, destination="posts"):
     final_place = os.path.join(directory, new_filename + file_ext)
     image_file.seek(0)
     image_file.save(final_place)
+    file_size = os.path.getsize(final_place)
 
     final_ext = file_ext  # track file extension for conversion
 
@@ -92,6 +96,8 @@ def process_upload(image_file, destination="posts"):
                 kwargs["quality"] = int(image_quality)
 
             img.save(final_place, optimize=True, **kwargs)
+
+            file_size = os.path.getsize(final_place)
 
             url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
         else:
@@ -134,7 +140,39 @@ def process_upload(image_file, destination="posts"):
         s3.close()
         os.unlink(final_place)
 
+    # associate file with uploader. Only provide user_id to this function when the image is not being used for a community icon, user avatar, etc where there is some other way to associate the image with the user.
+    if user_id:
+        file = File(source_url=url)
+        db.session.add(file)
+        db.session.commit()
+        db.session.execute(
+            text(
+                'INSERT INTO "user_file" (file_id, user_id, size) VALUES (:file_id, :user_id, :size)'
+            ),
+            {"file_id": file.id, "user_id": user_id, "size": file_size},
+        )
+        db.session.commit()
+
     if not url:
         raise Exception("unable to process upload")
 
     return url
+
+
+def process_file_delete(url: str, user_id: int):
+    if user_id:
+        file = (
+            db.session.query(File)
+            .join(user_file)
+            .filter(user_file.c.file_id == File.id, user_file.c.user_id == user_id)
+            .filter(File.source_url == url)
+            .first()
+        )
+        if file:
+            file.delete_from_disk()
+            db.session.execute(
+                text('DELETE FROM "user_file" WHERE file_id = :file_id'),
+                {"file_id": file.id},
+            )
+            db.session.delete(file)
+            db.session.commit()

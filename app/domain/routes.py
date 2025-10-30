@@ -217,9 +217,14 @@ def show_domain_rss(domain_id):
             for post in posts:
                 fe = fg.add_entry()
                 fe.title(post.title)
-                fe.link(
-                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-                )
+                if post.slug:
+                    fe.link(
+                        href=f"https://{current_app.config['SERVER_NAME']}{post.slug}"
+                    )
+                else:
+                    fe.link(
+                        href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
+                    )
                 if post.url:
                     if post.url in already_added:
                         continue
@@ -294,13 +299,15 @@ def domains_blocked_list():
     if search != "":
         domains = domains.filter(Domain.name.ilike(f"%{search}%"))
     domains = domains.order_by(Domain.name)
-    domains = domains.paginate(page=page, per_page=100, error_out=False)
+    domains = domains.paginate(page=page, per_page=5000, error_out=False)
 
     next_url = (
-        url_for("domain.domains", page=domains.next_num) if domains.has_next else None
+        url_for("domain.domains_blocked_list", page=domains.next_num)
+        if domains.has_next
+        else None
     )
     prev_url = (
-        url_for("domain.domains", page=domains.prev_num)
+        url_for("domain.domains_blocked_list", page=domains.prev_num)
         if domains.has_prev and page != 1
         else None
     )

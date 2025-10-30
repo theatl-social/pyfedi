@@ -1,21 +1,20 @@
 {% include 'user/alerts/_filter.html' %}
 <div class="post_list">
-    <h2>{{ _("You will be notified of replies to these comments") }}</h2>
-    {% for reply in entities.items %}
-        <div class="h-entry post_teaser tabindex="0">
-            <div class="row">
-                <div class="col">
-                    <a href="{{ url_for('activitypub.post_ap', post_id=reply.post_id, _anchor='comment_' + str(reply.id) ) }}"
-                       aria-label="{{ _('Read replies') }}">{{ reply.body }}</a>
-                </div>
-                <div class="col col-1">
-                    {% with comment=dict(comment=reply) %}
-                        {% include 'post/_reply_notification_toggle.html' %}
-                    {% endwith %}
-                </div>
-            </div>
+  <h2>{{ _('You will be notified of replies to these comments') }}</h2>
+  {% for reply in entities.items %}
+    <div class="h-entry post_teaser tabindex="0">
+      <div class="row">
+        <div class="col">
+          <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=reply.post_id) }}#comment_{{ reply.id }}" aria-label="{{ _('Read replies') }}">{{ reply.body }}</a>
         </div>
-    {% else %}
-        <p>{{ _("You have not subscribed to any comments. Use the bell icon on each comment to do so.") }}</p>
-    {% endfor %}
+        <div class="col col-1">
+          {% with comment=dict(comment=reply) %}
+            {% include 'post/_reply_notification_toggle.html' %}
+          {% endwith %}
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <p>{{ _('You have not subscribed to any comments. Use the bell icon on each comment to do so.') }}</p>
+  {% endfor %}
 </div>

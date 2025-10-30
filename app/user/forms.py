@@ -227,6 +227,32 @@ class SettingsForm(FlaskForm):
         coerce=str,
         render_kw={"class": "form-select"},
     )
+    code_styles = [
+        "autumn",
+        "borland",
+        "bw",
+        "colorful",
+        "default",
+        "emacs",
+        "friendly",
+        "fruity",
+        "manni",
+        "monokai",
+        "murphy",
+        "native",
+        "pastie",
+        "perldoc",
+        "tango",
+        "trac",
+        "vim",
+        "vs",
+    ]
+    code_style = SelectField(
+        _l("Code syntax highlighting color scheme"),
+        choices=code_styles,
+        coerce=str,
+        render_kw={"class": "form-select"},
+    )
     accept_from = [
         ("0", _l("None")),
         ("1", _l("This instance")),
@@ -294,7 +320,7 @@ class ReportUserForm(FlaskForm):
             for choice in self.reason_choices:
                 if choice[0] == reason_id:
                     result.append(str(choice[1]))
-        return ", ".join(result)
+        return ", ".join(result)[:255]
 
 
 class FilterForm(FlaskForm):
@@ -375,3 +401,27 @@ class RemoteFollowForm(FlaskForm):
 class UserNoteForm(FlaskForm):
     note = StringField(_l("User note"), validators=[Optional(), Length(max=50)])
     submit = SubmitField(_l("Save note"))
+
+
+class DeleteFileForm(FlaskForm):
+    referrer = HiddenField()
+    submit = SubmitField(_l("Delete"), render_kw={"autofocus": True})
+
+
+class UploadFileForm(FlaskForm):
+    referrer = HiddenField()
+    urls = TextAreaField(
+        _l("URLs to files (one per line)"), validators=[Length(max=10000)]
+    )
+    file1 = FileField(_l("File 1"), render_kw={"accept": "image/*"})
+    file2 = FileField(_l("File 2"), render_kw={"accept": "image/*"})
+    file3 = FileField(_l("File 3"), render_kw={"accept": "image/*"})
+    file4 = FileField(_l("File 4"), render_kw={"accept": "image/*"})
+    file5 = FileField(_l("File 5"), render_kw={"accept": "image/*"})
+    file6 = FileField(_l("File 6"), render_kw={"accept": "image/*"})
+    file7 = FileField(_l("File 7"), render_kw={"accept": "image/*"})
+    file8 = FileField(_l("File 8"), render_kw={"accept": "image/*"})
+    file9 = FileField(_l("File 9"), render_kw={"accept": "image/*"})
+    file10 = FileField(_l("File 10"), render_kw={"accept": "image/*"})
+
+    submit = SubmitField(_l("Upload"))
