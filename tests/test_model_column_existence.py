@@ -5,8 +5,13 @@ This test catches issues where:
 1. Model has a column defined but migration wasn't run
 2. Migration exists but wasn't applied to the database
 3. Merge conflicts caused migrations to be skipped
+
+NOTE: These tests require PostgreSQL and won't work with SQLite due to
+TSVector columns and PostgreSQL-specific functions. They are skipped in CI
+but should be run manually against a PostgreSQL database.
 """
 
+import os
 import pytest
 from sqlalchemy import inspect
 
@@ -15,11 +20,21 @@ from app.models import User, Post, Community, PostReply
 from config import Config
 
 
+# Skip all tests in this module if using SQLite
+pytestmark = pytest.mark.skipif(
+    os.environ.get("DATABASE_URL", "").startswith("sqlite"),
+    reason="These tests require PostgreSQL (TSVector columns not supported in SQLite)",
+)
+
+
 class TestConfig(Config):
-    """Test configuration"""
+    """Test configuration - requires PostgreSQL"""
 
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+    # Use environment DATABASE_URL or skip tests
+    SQLALCHEMY_DATABASE_URI = os.environ.get(
+        "DATABASE_URL", "postgresql://localhost/test"
+    )
     WTF_CSRF_ENABLED = False
 
 
