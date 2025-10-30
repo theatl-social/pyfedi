@@ -248,6 +248,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         notify_author = input['notify_author']
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
+        image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
         tags = []
         flair = []
         scheduled_for = None
@@ -276,6 +277,10 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         scheduled_for = input.scheduled_for.data
         repeat = input.repeat.data
         timezone = input.timezone.data
+        image_alt_text = input.image_alt_text.data if input.imagee_alt_text else ''
+
+    # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
+
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -457,7 +462,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             file = File(source_url=url, hash=hash)
             if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
                 # change this line when uploaded_file is supported in API
-                file.alt_text = input.image_alt_text.data if input.image_alt_text.data else ''
+                file.alt_text = image_alt_text
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
@@ -496,10 +501,11 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     if url and post.image:
         file = File.query.get(post.image_id)
         if file:
-            file.alt_text = input.image_alt_text.data if input.image_alt_text.data else ''
+            file.alt_text = image_alt_text
 
     federate = True
     if type == POST_TYPE_POLL:
+        # When the API supports polls and events we will no longer be able to use the input object as it could be a dict or a form object.
         post.type = POST_TYPE_POLL
         for i in range(1, 10):
             # change this line when polls are supported in API
