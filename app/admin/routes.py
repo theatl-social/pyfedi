@@ -274,6 +274,7 @@ def admin_misc():
             db.session.add(site)
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
+        set_setting("allow_default_user_add_remote_community", form.allow_default_user_add_remote_community.data)
         set_setting('meme_comms_low_quality', form.meme_comms_low_quality.data)
         set_setting('public_modlog', form.public_modlog.data)
         set_setting('email_verification', form.email_verification.data)
@@ -296,6 +297,7 @@ def admin_misc():
         form.enable_nsfl.data = site.enable_nsfl
         form.nsfw_country_restriction.data = get_setting('nsfw_country_restriction', '').upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
+        form.allow_default_user_add_remote_community.data = get_setting("allow_default_user_add_remote_community", True) 
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question

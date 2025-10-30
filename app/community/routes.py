@@ -151,6 +151,16 @@ def add_remote():
         return show_ban_message()
     form = SearchRemoteCommunity()
     new_community = None
+    
+    try:
+        site = g.site
+    except:
+        site = Site.query.get(1)
+    
+    if not (current_user.is_admin() or current_user.is_staff()) and not get_setting("allow_default_user_add_remote_community", True):
+        flash(_('Adding remote community is restricted to admin and staff users only.'))
+        return redirect(url_for('main.list_communities'))
+
     if form.validate_on_submit():
         address = form.address.data.strip().lower()
         if address.startswith('!') and '@' in address:

@@ -3132,6 +3132,7 @@ class Site(db.Model):
     additional_js = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer)
+     
 
     @staticmethod
     def admins() -> List[User]:
