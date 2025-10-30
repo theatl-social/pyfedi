@@ -11,7 +11,7 @@ from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
 from app.utils import render_template, blocked_domains, blocked_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, blocked_communities, \
-    show_ban_message, login_required, login_required_if_private_instance, moderating_communities_ids
+    show_ban_message, login_required, login_required_if_private_instance, moderating_communities_ids, get_setting
 
 
 @bp.route('/search', methods=['GET', 'POST'])
