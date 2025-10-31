@@ -1710,6 +1710,8 @@ def find_liked_object(ap_id) -> Union[Post, PostReply, None]:
             return post
         elif obj_type == 'PostReply':
             return db.session.get(PostReply, obj_id)
+    else:
+        cache.delete_memoized(_find_liked_object_id, ap_id)
 
     return None
 
