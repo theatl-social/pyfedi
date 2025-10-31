@@ -277,7 +277,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         scheduled_for = input.scheduled_for.data
         repeat = input.repeat.data
         timezone = input.timezone.data
-        image_alt_text = input.image_alt_text.data if input.imagee_alt_text else ''
+        image_alt_text = input.image_alt_text.data if input.image_alt_text else ''
 
     # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
 
