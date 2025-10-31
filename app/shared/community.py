@@ -271,7 +271,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
     icon_url_changed = banner_url_changed = False
 
     if not from_scratch:
-        if not (community.is_owner(user) or community.is_moderator(user) or community.is_instance_admin(user)):
+        if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin()):
             raise Exception('incorrect_login')
 
         if community.icon_id and icon_url != community.icon.source_url:

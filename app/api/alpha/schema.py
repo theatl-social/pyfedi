@@ -571,7 +571,7 @@ class CommunityResponse(DefaultSchema):
 
 class EditCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    title = fields.String(required=True)
+    title = fields.String()
     banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
