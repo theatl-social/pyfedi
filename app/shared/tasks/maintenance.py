@@ -748,10 +748,7 @@ def archive_old_posts():
             '''
             post_ids = session.execute(text(sql), {'cutoff': cutoff}).scalars()
             for post_id in post_ids:
-                if current_app.debug:
-                    archive_post(post_id)
-                else:
-                    archive_post.delay(post_id)
+                archive_post(post_id)
 
         except Exception:
             session.rollback()

@@ -3292,7 +3292,6 @@ def is_valid_xml_utf8(pystring):
     return True
 
 
-@celery.task
 def archive_post(post_id: int):
     from app import redis_client
     import os
