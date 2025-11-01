@@ -15,7 +15,7 @@ from app.shared.community import join_community, leave_community, block_communit
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community
 from app.shared.tasks import task_selector
-from app.utils import authorise_api_user, communities_banned_from_all_users
+from app.utils import authorise_api_user, communities_banned_from_all_users, moderating_communities_ids
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities, expand_hex_color
 
@@ -41,6 +41,8 @@ def get_community_list(auth, data):
             CommunityMember.user_id == user_id)
     elif type_ == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
+    elif type_ == 'ModeratorView':
+        communities = Community.query.filter(Community.id.in_(moderating_communities_ids(user_id)))
     else:
         communities = Community.query.filter_by(banned=False)
 
