@@ -138,7 +138,7 @@ def remove_old_community_content():
                 ).filter(Post.posted_at < cut_off).all()
 
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id, reason=None)
+                    post_delete_post(community, post, post.user_id, reason=None, federate_deletion=False)
 
         session.commit()
     except Exception:
