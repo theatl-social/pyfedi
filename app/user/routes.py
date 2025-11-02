@@ -542,11 +542,13 @@ def user_settings():
     form.theme.choices = theme_list()
     form.interface_language.choices = [
         ('', _l('Auto-detect')),
+        ('eu', _l('Basque')),
         ('ca', _l('Catalan')),
         ('zh', _l('Chinese')),
         ('en', _l('English')),
         ('fr', _l('French')),
         ('de', _l('German')),
+        ('hi', _l('Hindi')),
         ('ja', _l('Japanese')),
         ('es', _l('Spanish')),
     ]
