@@ -298,6 +298,13 @@ post_flair = db.Table('post_flair', db.Column('post_id', db.Integer, db.ForeignK
                       )
 
 
+post_file = db.Table('post_file', db.Column('post_id', db.Integer, db.ForeignKey('post.id')),
+                      db.Column('file_id', db.Integer, db.ForeignKey('file.id')),
+                      db.Column('weight', db.Integer),
+                      db.PrimaryKeyConstraint('post_id', 'file_id')
+                      )
+
+
 class File(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     file_path = db.Column(db.String(255))
@@ -1494,6 +1501,7 @@ class Post(db.Model):
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
     event = db.relationship('Event', uselist=False, backref='post')
+    gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
