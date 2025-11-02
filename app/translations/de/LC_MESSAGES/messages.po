@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2025-09-24 21:47+0000\n"
+"PO-Revision-Date: 2025-09-27 19:47+0000\n"
 "Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
 "Language-Team: German <http://translate.piefed.social/projects/piefed/"
 "main-web-app/de/>\n"
@@ -366,8 +366,9 @@ msgid "Question to ask people applying for an account"
 msgstr "Frage an Personen, die sich um ein Konto bewerben"
 
 #: app/admin/forms.py:44
+#, fuzzy
 msgid "Registration approved email"
-msgstr "Durch Registrierung genehmigte Email"
+msgstr "Email um eine genehmigte Registrierung"
 
 #: app/admin/forms.py:46
 msgid "Provide a list of topics to subscribe to"

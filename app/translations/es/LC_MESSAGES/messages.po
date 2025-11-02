@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: tkz@tkz.es\n"
 "POT-Creation-Date: 2025-08-28 19:42+1200\n"
-"PO-Revision-Date: 2025-09-19 10:47+0000\n"
+"PO-Revision-Date: 2025-09-27 19:47+0000\n"
 "Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
 "Language-Team: Spanish <http://translate.piefed.social/projects/piefed/"
 "main-web-app/es/>\n"
@@ -240,7 +240,7 @@ msgid "Reply to %(post_title)s"
 msgstr "Responder a %(post_title)s"
 
 #: app/activitypub/util.py:2192
-#, python-format
+#, fuzzy, python-format
 msgid "Reply to comment on %(post_title)s"
 msgstr "Responder a un comentario en %(post_title)s"
 
@@ -377,9 +377,8 @@ msgid "Question to ask people applying for an account"
 msgstr "Pregunta que se hace a las personas que solicitan una cuenta"
 
 #: app/admin/forms.py:44
-#, fuzzy
 msgid "Registration approved email"
-msgstr "Registro aprobado."
+msgstr ""
 
 #: app/admin/forms.py:46
 msgid "Provide a list of topics to subscribe to"

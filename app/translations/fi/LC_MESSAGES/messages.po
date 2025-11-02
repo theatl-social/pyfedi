@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-09-18 15:04+1200\n"
-"PO-Revision-Date: 2025-09-25 22:47+0000\n"
+"PO-Revision-Date: 2025-10-04 01:10+0000\n"
 "Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
 "Language-Team: Finnish <http://translate.piefed.social/projects/piefed/"
 "main-web-app/fi/>\n"
@@ -27,12 +27,12 @@ msgstr "Sivulle pääsy vaatii sisäänkirjautumisen."
 #: app/cli.py:560
 #, python-format
 msgid "Reminder: %(title)s"
-msgstr ""
+msgstr "Muistutus: %(title)s"
 
 #: app/cli.py:565
 #, python-format
 msgid "Reminder: comment on %(title)s"
-msgstr ""
+msgstr "Muistutus: kommentti tullut aiheeseen %(title)s"
 
 #: app/cli.py:763 app/main/routes.py:921
 msgid "[PieFed] You have unread notifications"
@@ -41,7 +41,7 @@ msgstr "[PieFed] Sinulla on ilmoituksia lukematta"
 #: app/cli.py:906 app/shared/post.py:139
 #, python-format
 msgid "Replies to my post %(post_title)s"
-msgstr "Vastaukset julkaisuuni %(post_title)s"
+msgstr "Vastaukset julkaisuusi %(post_title)s"
 
 #: app/cli.py:916 app/models.py:2353 app/shared/reply.py:116
 #, python-format
@@ -50,7 +50,7 @@ msgstr "Vastaukset kommenttiini %(post_title)s"
 
 #: app/email.py:22
 msgid "Check the console for a link."
-msgstr ""
+msgstr "Löydät linkin terminaalista."
 
 #: app/email.py:24
 msgid "[PieFed] Reset Your Password"
@@ -70,7 +70,7 @@ msgstr "Tämän julkaisun kommentointi on estetty"
 
 #: app/models.py:2286
 msgid "Banned from commenting"
-msgstr ""
+msgstr "Kommentointioikeutesi on poistettu"
 
 #: app/models.py:2309
 msgid "Blocked phrase in comment"
@@ -78,11 +78,11 @@ msgstr "Kommentti sisältää kielletyn ilmauksen"
 
 #: app/models.py:2316
 msgid "Replier blocked"
-msgstr ""
+msgstr "Vastaaja on estetty"
 
 #: app/models.py:2319
 msgid "Duplicate reply"
-msgstr ""
+msgstr "Tämä on vastauksen toisinto"
 
 #: app/models.py:2327
 msgid "Gif comment ignored"
@@ -110,11 +110,11 @@ msgstr ""
 
 #: app/models.py:2995
 msgid "Deleted post"
-msgstr ""
+msgstr "Poistettu julkaisu"
 
 #: app/models.py:2996
 msgid "Un-deleted post"
-msgstr ""
+msgstr "Palautettu julkaisu"
 
 #: app/models.py:2997
 msgid "Deleted comment"
@@ -125,7 +125,6 @@ msgid "Un-deleted comment"
 msgstr "Kommentti palautettu"
 
 #: app/models.py:2999
-#, fuzzy
 msgid "Deleted community"
 msgstr "Yhteisö poistettu"
 
@@ -139,7 +138,7 @@ msgstr "Tili palautettu"
 
 #: app/models.py:3002
 msgid "Banned account"
-msgstr ""
+msgstr "Estetty tili"
 
 #: app/models.py:3003
 msgid "Un-banned account"
@@ -246,7 +245,7 @@ msgstr "Vastaus aloitukseen %(post_title)s"
 #: app/activitypub/util.py:2353
 #, python-format
 msgid "Reply to comment on %(post_title)s"
-msgstr ""
+msgstr "Vastaus kommenttiin keskustelussa %(post_title)s"
 
 #: app/activitypub/util.py:2957 app/post/routes.py:1337 app/shared/post.py:679
 msgid "A post has been reported"
@@ -265,9 +264,8 @@ msgid "Tagline"
 msgstr ""
 
 #: app/admin/forms.py:16
-#, fuzzy
 msgid "Icon"
-msgstr "Ikoni"
+msgstr "Pikkukuva"
 
 #: app/admin/forms.py:18
 msgid "Sidebar"
@@ -277,7 +275,7 @@ msgstr "Sivupalkki"
 #: app/templates/base.html:262 app/templates/instance/people.html:25
 #: app/templates/themes/dillo/base.html:205
 msgid "About"
-msgstr ""
+msgstr "Tietoja"
 
 #: app/admin/forms.py:20
 msgid "Announcement at top of home page"
@@ -347,7 +345,7 @@ msgstr ""
 
 #: app/admin/forms.py:37
 msgid "Only admins can create new local communities"
-msgstr "Vain ylläpitäjät voivat perustaa uusia yhteisöjä"
+msgstr "Vain ylläpitäjät voivat perustaa uusia yhteisöjä tälle instanssille"
 
 #: app/admin/forms.py:38
 msgid "Notify admins about reports, not just moderators"
@@ -383,11 +381,11 @@ msgstr "Kysymys uutta tiliä luoville"
 
 #: app/admin/forms.py:44
 msgid "Registration approved email"
-msgstr ""
+msgstr "Sähköpostiviesti hyväksytystä rekisteröitymisestä"
 
 #: app/admin/forms.py:46
 msgid "Provide a list of topics to subscribe to"
-msgstr "Anna tilattavat aiheet"
+msgstr "Anna lista tilattavista aihepiireistä"
 
 #: app/admin/forms.py:47
 msgid "Trump Musk filter setup"
@@ -528,7 +526,7 @@ msgid ""
 "Discard all posts and comments by users with these phrases in their bio "
 "(one per line)"
 msgstr ""
-"Hylkää kaikki julkaisutja kommentit käyttäjiltä, joiden kuvaus sisältää "
+"Hylkää kaikki julkaisut ja kommentit käyttäjiltä, joiden kuvaus sisältää "
 "näitä sanoja (yksi per rivi)"
 
 #: app/admin/forms.py:90
@@ -609,7 +607,7 @@ msgstr "Kuvaus"
 #: app/admin/forms.py:123 app/community/forms.py:29 app/community/forms.py:78
 #: app/feed/forms.py:19 app/feed/forms.py:71
 msgid "Icon image"
-msgstr "Ikonikuva"
+msgstr "Ryhmän pikkukuva"
 
 #: app/admin/forms.py:124 app/community/forms.py:30 app/community/forms.py:79
 #: app/feed/forms.py:20 app/feed/forms.py:72
@@ -622,7 +620,7 @@ msgstr "Säännöt"
 
 #: app/admin/forms.py:126 app/community/forms.py:80
 msgid "NSFW community"
-msgstr ""
+msgstr "Yhteisön sisältö ei sovellu työpaikalle (NSFW)"
 
 #: app/admin/forms.py:127
 msgid "Banned - no new posts accepted"
@@ -630,7 +628,7 @@ msgstr "Estetty – uusia julkaisuja ei hyväksytä"
 
 #: app/admin/forms.py:128 app/community/forms.py:81
 msgid "Only accept posts from current instance"
-msgstr ""
+msgstr "Julkaisuoikeus vain tämän instanssin käyttäjille"
 
 #: app/admin/forms.py:129 app/community/forms.py:82
 msgid "Only moderators can post"
@@ -638,7 +636,7 @@ msgstr "Vain moderaattorit voivat julkaista"
 
 #: app/admin/forms.py:130 app/community/forms.py:83
 msgid "New moderators wanted"
-msgstr "Uusia valvojia tarvitaan"
+msgstr "Uusi moderaattori haussa"
 
 #: app/admin/forms.py:131
 msgid "Posts can be popular"
@@ -706,7 +704,7 @@ msgstr "Säilytä sisältö"
 #: app/templates/admin/communities.html:99
 #: app/templates/list_communities.html:105
 msgid "Topic"
-msgstr "Aihe"
+msgstr "Aihepiiri"
 
 #: app/admin/forms.py:148 app/community/forms.py:95
 #: app/templates/community/_community_nav.html:132
@@ -718,11 +716,11 @@ msgstr "Lista"
 
 #: app/admin/forms.py:149 app/community/forms.py:96
 msgid "Masonry"
-msgstr "Muuraus"
+msgstr "Tiiliseinä"
 
 #: app/admin/forms.py:150 app/community/forms.py:97
 msgid "Wide masonry"
-msgstr ""
+msgstr "Leveä tiiliseinä"
 
 #: app/admin/forms.py:151 app/community/forms.py:98
 #: app/templates/admin/communities.html:68
@@ -736,7 +734,7 @@ msgstr "Asettelu"
 #: app/admin/forms.py:152 app/admin/forms.py:186 app/community/forms.py:28
 #: app/community/forms.py:77
 msgid "Posting warning"
-msgstr ""
+msgstr "Varoitusteksti julkaisijalle"
 
 #: app/admin/forms.py:153 app/community/forms.py:34 app/community/forms.py:93
 msgid "Languages"
@@ -771,7 +769,7 @@ msgstr "Nimi"
 
 #: app/admin/forms.py:173
 msgid "Human readable name for the topic."
-msgstr ""
+msgstr "Ihmisten luettavissa oleva nimi aihepiirille."
 
 #: app/admin/forms.py:174 app/community/forms.py:105
 msgid "Slug"
@@ -783,11 +781,11 @@ msgstr ""
 
 #: app/admin/forms.py:175
 msgid "Parent topic"
-msgstr ""
+msgstr "Aihepiirin yläkäsite"
 
 #: app/admin/forms.py:176
 msgid "Show posts from child topics"
-msgstr ""
+msgstr "Näytä aihepiirin alakäsitteiden julkaisut"
 
 #: app/admin/forms.py:181
 msgid "Vote weight"
@@ -977,11 +975,11 @@ msgstr ""
 
 #: app/admin/forms.py:289
 msgid "Ban posts"
-msgstr ""
+msgstr "Estä julkaisut"
 
 #: app/admin/forms.py:290
 msgid "Ban comments"
-msgstr ""
+msgstr "Estä kommentointi"
 
 #: app/admin/forms.py:304
 msgid "Remove avatar"
@@ -993,11 +991,11 @@ msgstr ""
 
 #: app/admin/forms.py:310
 msgid "Subject"
-msgstr ""
+msgstr "Aihe"
 
 #: app/admin/forms.py:311
 msgid "Body (text)"
-msgstr ""
+msgstr "Leipäteksti"
 
 #: app/admin/forms.py:312
 msgid "Body (html)"
@@ -1103,7 +1101,7 @@ msgstr ""
 
 #: app/admin/routes.py:914
 msgid "Admin settings saved"
-msgstr ""
+msgstr "Ylläpitoasetukset tallennettu"
 
 #: app/admin/routes.py:930
 msgid "Federation settings"
@@ -1154,7 +1152,7 @@ msgstr "Yhteisöt"
 
 #: app/admin/routes.py:1157
 msgid "Communities with no topic"
-msgstr ""
+msgstr "Aihepiirittömät yhteisöt"
 
 #: app/admin/routes.py:1179
 msgid "Communities with low_quality == True"
@@ -1193,23 +1191,23 @@ msgstr "Yhteisö poistettu"
 #: app/templates/topic/show_topic.html:17
 #: app/templates/user/alerts/_type.html:5
 msgid "Topics"
-msgstr ""
+msgstr "Aihepiirit"
 
 #: app/admin/routes.py:1352 app/templates/admin/topics.html:33
 msgid "Add topic"
-msgstr ""
+msgstr "Lisää aihepiiri"
 
 #: app/admin/routes.py:1380
 msgid "Edit topic"
-msgstr ""
+msgstr "Muokkaa aihepiiriä"
 
 #: app/admin/routes.py:1391
 msgid "Topic deleted"
-msgstr ""
+msgstr "Aihepiiri poistettu"
 
 #: app/admin/routes.py:1393
 msgid "Cannot delete topic with communities assigned to it."
-msgstr ""
+msgstr "Et voi poistaa yhteisöillä käytössä olevaa aihepiiriä."
 
 #: app/admin/routes.py:1434 app/templates/admin/_nav.html:13
 #: app/templates/admin/_tabbed_nav.html:14
@@ -1224,11 +1222,11 @@ msgstr "Huonot / Eniten alaääniä"
 
 #: app/admin/routes.py:1464
 msgid "Likely spam"
-msgstr ""
+msgstr "Todennäköisesti roskapostia"
 
 #: app/admin/routes.py:1476
 msgid "Deleted content"
-msgstr ""
+msgstr "Poistettu sisältö"
 
 #: app/admin/routes.py:1549
 msgid "Registration approved."
@@ -1254,23 +1252,23 @@ msgstr ""
 
 #: app/admin/routes.py:1647
 msgid "Edit user"
-msgstr ""
+msgstr "Muokkaa käyttäjää"
 
 #: app/admin/routes.py:1702
 msgid "User added"
-msgstr ""
+msgstr "Käyttäjä lisätty"
 
 #: app/admin/routes.py:1705
 msgid "Add user"
-msgstr ""
+msgstr "Lisää käyttäjä"
 
 #: app/admin/routes.py:1713
 msgid "This user cannot be deleted."
-msgstr ""
+msgstr "Käyttäjätunnusta ei voida poistaa."
 
 #: app/admin/routes.py:1736
 msgid "User deleted"
-msgstr ""
+msgstr "Käyttäjä poistettu"
 
 #: app/admin/routes.py:1765 app/templates/admin/reports.html:15
 #: app/templates/admin/users.html:56 app/templates/admin/users.html:92
@@ -1278,7 +1276,7 @@ msgstr ""
 #: app/templates/community/community_moderate.html:22
 #: app/templates/community/community_moderate_subscribers.html:138
 msgid "Reports"
-msgstr ""
+msgstr "Ilmiannot"
 
 #: app/admin/routes.py:1776
 msgid "Newsletter sent"
@@ -1294,7 +1292,7 @@ msgstr ""
 
 #: app/admin/routes.py:1893
 msgid "Edit instance"
-msgstr ""
+msgstr "Muokkaa instanssia"
 
 #: app/admin/routes.py:1911
 msgid "Problem adding instance to database"
@@ -1349,11 +1347,11 @@ msgstr "%(count)s julkaisua poistettu."
 #: app/admin/routes.py:2052 app/post/routes.py:2079
 #: app/templates/post/post_block_image_purge_posts.html:15
 msgid "Posts containing blocked images"
-msgstr ""
+msgstr "Estettyjä kuvia sisältävät julkaisut"
 
 #: app/admin/routes.py:2065
 msgid "Blocked image deleted"
-msgstr ""
+msgstr "Estetty kuva poistettu"
 
 #: app/admin/routes.py:2076
 msgid "CMS Pages"
@@ -1361,7 +1359,7 @@ msgstr ""
 
 #: app/admin/routes.py:2089 app/admin/routes.py:2110
 msgid "Page saved."
-msgstr ""
+msgstr "Sivu tallennettu."
 
 #: app/admin/routes.py:2092
 msgid "Add CMS Page"
@@ -1369,15 +1367,15 @@ msgstr ""
 
 #: app/admin/routes.py:2113
 msgid "Edit page"
-msgstr ""
+msgstr "Muokkaa sivua"
 
 #: app/admin/routes.py:2123
 msgid "Page deleted."
-msgstr ""
+msgstr "Sivu poistettu."
 
 #: app/admin/util.py:96
 msgid "No recipients"
-msgstr ""
+msgstr "Ei vastaanottajia"
 
 #: app/admin/util.py:120 app/community/forms.py:172 app/feed/util.py:18
 #: app/user/forms.py:113
@@ -1471,7 +1469,7 @@ msgstr ""
 
 #: app/auth/forms.py:124
 msgid "Choose some topics you are interested in"
-msgstr ""
+msgstr "Valitse itseäsi kiinnostavia aihepiirejä"
 
 #: app/auth/forms.py:130
 msgid "Set email"
@@ -1512,12 +1510,16 @@ msgid ""
 "You have joined some communities relating to those interests. Find more "
 "on the Topics menu or browse the home page."
 msgstr ""
+"Sinut on liitettyä joihinkin kiinnostuksiasi koskeviin yhteisöihin. Lisää "
+"aihepiirejä löydät Aihepiirit-valikosta tai selaamalla aloitussivua."
 
 #: app/auth/onboarding.py:64 app/main/routes.py:223 app/main/routes.py:1326
 msgid ""
 "You did not choose any topics. Would you like to choose individual "
 "communities instead?"
 msgstr ""
+"Et valinnut lainkaan aihepiirejä. Haluaisitko silti valita yksittäisiä "
+"yhteisöjä?"
 
 #: app/auth/onboarding.py:70
 msgid ""
@@ -1814,20 +1816,20 @@ msgstr ""
 
 #: app/community/forms.py:85 app/community/forms.py:109
 msgid "Community members"
-msgstr ""
+msgstr "Yhteisön jäsenet"
 
 #: app/community/forms.py:86 app/user/forms.py:114
 msgid "This instance"
-msgstr ""
+msgstr "Tämä instanssi"
 
 #: app/community/forms.py:87 app/instance/routes.py:34
 #: app/templates/instance/list_instances.html:76 app/user/forms.py:115
 msgid "Trusted instances"
-msgstr ""
+msgstr "Luotetut instanssit"
 
 #: app/community/forms.py:90
 msgid "Accept downvotes from"
-msgstr ""
+msgstr "Salli alaäänet näiltä:"
 
 #: app/community/forms.py:106 app/community/forms.py:160 app/post/forms.py:15
 msgid "Body"
@@ -2193,7 +2195,7 @@ msgstr ""
 
 #: app/community/forms.py:446
 msgid "Abandoned by moderators"
-msgstr ""
+msgstr "Moderaattoriensa hylkäämä"
 
 #: app/community/forms.py:447
 msgid "Cult"
@@ -2430,7 +2432,7 @@ msgstr ""
 #: app/templates/community/community_mod_list.html:43
 #, python-format
 msgid "Moderators for %(community)s"
-msgstr ""
+msgstr "Yhteisön %(community)s moderaattorit"
 
 #: app/community/routes.py:1306
 msgid ""
@@ -2602,7 +2604,7 @@ msgstr ""
 
 #: app/dev/forms.py:21
 msgid "Delete Topics"
-msgstr ""
+msgstr "Poista aihepiirejä"
 
 #: app/dev/routes.py:146
 #, python-format
@@ -2784,7 +2786,7 @@ msgstr ""
 #: app/templates/themes/dillo/base.html:93
 #: app/templates/themes/dillo/base.html:118 app/templates/topics_menu.html:9
 msgid "Browse by topic"
-msgstr ""
+msgstr "Selaa aihepiirin mukaan"
 
 #: app/main/routes.py:437
 msgid "Local Communities"
@@ -2961,6 +2963,8 @@ msgid ""
 "Moderators have already assessed reports regarding this post, no further "
 "reports are necessary."
 msgstr ""
+"Moderaattorit ovat jo käsitelleet julkaisua koskevia ilmiantoja, "
+"lisäilmiantoja ei tarvita."
 
 #: app/post/routes.py:1310 app/shared/post.py:650
 msgid "Post has already been reported, thank you!"
@@ -3013,6 +3017,8 @@ msgid ""
 "Moderators have already assessed reports regarding this comment, no "
 "further reports are necessary."
 msgstr ""
+"Moderaattorit ovat jo käsitelleet tätä viestiä koskevia ilmiantoja, "
+"lisäilmiantoja ei tarvita."
 
 #: app/post/routes.py:1647 app/shared/reply.py:299
 msgid "Comment has already been reported, thank you!"
@@ -3068,6 +3074,8 @@ msgid ""
 "All posts that use this image will be deleted and future posts of the "
 "image will be rejected."
 msgstr ""
+"Kaikki tämän kuvan sisältävät julkaisut poistetaan ja kuvan julkaiseminen "
+"jatkossa estetään."
 
 #: app/post/routes.py:2098 app/post/routes.py:2119
 msgid "Voting Activity"
@@ -3510,7 +3518,7 @@ msgstr ""
 #: app/templates/community/description.html:11
 #: app/templates/themes/dillo/_side_pane.html:48
 msgid "Moderators have not been active recently."
-msgstr ""
+msgstr "Moderaattorit eivät ole toimineet viime aikoina."
 
 #: app/templates/_side_pane.html:117
 #, python-format
@@ -3930,7 +3938,7 @@ msgstr ""
 #: app/templates/explore_menu.html:43 app/templates/themes/dillo/base.html:91
 #: app/templates/themes/dillo/base.html:116 app/templates/topics_menu.html:7
 msgid "More topics"
-msgstr ""
+msgstr "Lisää aihepiirejä"
 
 #: app/templates/index.html:29 app/templates/themes/dillo/index.html:32
 msgid "No posts yet. Join some communities to see more."
@@ -4007,7 +4015,7 @@ msgstr ""
 #: app/templates/search/results.html:86
 #: app/templates/themes/dillo/_side_pane.html:121
 msgid "Browse topics"
-msgstr ""
+msgstr "Selaa aihepiirejä"
 
 #: app/templates/keyboard_shortcuts.html:11
 msgid "Most shortcuts are the same as what reddit has."
@@ -4118,7 +4126,7 @@ msgstr ""
 
 #: app/templates/list_communities.html:109
 msgid "Choose a topic to filter communities by"
-msgstr ""
+msgstr "Anna aihepiiri yhteisöjen suodattamiseksi"
 
 #: app/templates/list_communities.html:124
 msgid "Feed"
@@ -4197,11 +4205,11 @@ msgstr ""
 
 #: app/templates/list_topics.html:25
 msgid "Choose a topic"
-msgstr ""
+msgstr "Valitse aihepiiri"
 
 #: app/templates/list_topics.html:38 app/templates/topic/suggest_topics.html:14
 msgid "Suggest a topic"
-msgstr ""
+msgstr "Ehdota aihepiiriä"
 
 #: app/templates/modlog.html:17
 msgid "Moderation log"
@@ -4662,7 +4670,7 @@ msgstr ""
 #: app/templates/admin/edit_topic.html:13
 #, python-format
 msgid "Edit %(topic_name)s"
-msgstr ""
+msgstr "Muokkaa: %(topic_name)s"
 
 #: app/templates/admin/edit_user.html:12
 #, python-format
@@ -5001,11 +5009,11 @@ msgstr ""
 
 #: app/templates/auth/choose_topics.html:14
 msgid "Please choose at least 3 topics that interest you."
-msgstr ""
+msgstr "Valitse ainakin 3 kiinnostuksenkohdetta."
 
 #: app/templates/auth/choose_topics.html:15
 msgid "Proceed without choosing any topics"
-msgstr ""
+msgstr "Jatka valitsematta aihepiirejä"
 
 #: app/templates/auth/instance_chooser.html:22
 #, python-format
@@ -5248,13 +5256,15 @@ msgstr ""
 #: app/templates/post/post_options.html:79
 #: app/templates/post/post_reply_options.html:89
 msgid "Report to moderators"
-msgstr ""
+msgstr "Ilmianna moderaattoreille"
 
 #: app/templates/chat/chat_options.html:15
 msgid ""
 "If you are reporting abuse then do not delete the conversation - "
 "moderators will not be able to read it if you delete it."
 msgstr ""
+"Mikäli ilmoitat väärinkäytöksestä, ethän poista keskustelua – moderaattorit "
+"eivät voi lukea sitä, jos poistat sen."
 
 #: app/templates/chat/conversation.html:42
 #: app/templates/instance/list_instances.html:149
@@ -5322,7 +5332,7 @@ msgstr ""
 #: app/templates/community/_community_moderation_nav.html:11
 #: app/templates/community/community_mod_list.html:35
 msgid "Moderators"
-msgstr ""
+msgstr "Moderaattorit"
 
 #: app/templates/community/_community_moderation_nav.html:20
 #: app/templates/community/community_wiki_list.html:17
@@ -5487,18 +5497,22 @@ msgid ""
 "This is shown above the field where people compose their content. Only "
 "use this if really necessary."
 msgstr ""
+"Näytetään julkaisun kirjoittamiseen käytettävän tekstikentän yllä. Täytä "
+"tämä vain, jos se on täysin välttämätöntä."
 
 #: app/templates/community/add_local.html:27
 #: app/templates/feed/feed_copy.html:29 app/templates/feed/feed_edit.html:34
 #: app/templates/feed/feed_new.html:29
 msgid "Provide a square image that looks good when small. SVG is allowed."
 msgstr ""
+"Käytä neliskanttista kuvaa, joka näyttää hyvältä myös pienenä. Se voi olla "
+"myös SVG-muodossa."
 
 #: app/templates/community/add_local.html:29
 #: app/templates/feed/feed_copy.html:31 app/templates/feed/feed_edit.html:36
 #: app/templates/feed/feed_new.html:31 app/templates/user/edit_profile.html:94
 msgid "Provide a wide image - letterbox orientation."
-msgstr ""
+msgstr "Valitse leveä ja matala, osapuilleen kirjeluukun muotoinen kuva."
 
 #: app/templates/community/add_local.html:32
 #, python-format
@@ -5605,7 +5619,7 @@ msgstr ""
 
 #: app/templates/community/community_edit.html:29
 msgid "Edit and configure this community"
-msgstr ""
+msgstr "Muokkaa tämän yhteisön asetuksia"
 
 #: app/templates/community/community_edit.html:45
 #: app/templates/community/community_edit.html:53
@@ -5620,12 +5634,12 @@ msgstr ""
 #: app/templates/user/edit_profile.html:85
 #: app/templates/user/edit_profile.html:96
 msgid "View image"
-msgstr ""
+msgstr "Näytä kuva"
 
 #: app/templates/community/community_edit.html:46
 #: app/templates/community/community_edit.html:56
 msgid "Delete image"
-msgstr ""
+msgstr "Poista kuva"
 
 #: app/templates/community/community_edit.html:48
 #: app/templates/user/edit_profile.html:91
@@ -5662,7 +5676,7 @@ msgstr ""
 
 #: app/templates/community/community_mod_list.html:47
 msgid "See and change who moderates this community"
-msgstr ""
+msgstr "Tämän yhteisön moderaattoreiden tarkastelu ja muokkaus"
 
 #: app/templates/community/community_mod_list.html:88
 msgid "Remove mod"
@@ -5790,7 +5804,7 @@ msgstr ""
 
 #: app/templates/community/community_modlog.html:26
 msgid "See things moderators have done in this community."
-msgstr ""
+msgstr "Katsele, mitä moderaattorit ovat tehneet yhteisössä."
 
 #: app/templates/community/community_modlog.html:57
 msgid "This community has had no moderation actions yet."
@@ -5894,6 +5908,8 @@ msgid ""
 "Use these buttons to quickly generate some testing topics and communities"
 " to use during development."
 msgstr ""
+"Näillä painikkeilla voit kokeilumielessä luoda nopeasti aihepiirejä ja "
+"yhteisöjä kehitystyötä varten."
 
 #: app/templates/dev/tools.html:16
 msgid "Add Dev Communities"
@@ -5901,7 +5917,7 @@ msgstr ""
 
 #: app/templates/dev/tools.html:26
 msgid "Add Dev Topics"
-msgstr ""
+msgstr "Luo devausaihepiirejä"
 
 #: app/templates/dev/tools.html:38
 msgid "Delete Dev Communities"
@@ -6688,7 +6704,7 @@ msgstr ""
 
 #: app/templates/post/post_options.html:44
 msgid "I made a mistake with this post and have changed my mind about the topic"
-msgstr ""
+msgstr "Tein virheen julkaisussa ja muutin mieleni aihepiiristä"
 
 #: app/templates/post/post_options.html:46
 #: app/templates/post/post_reply_options.html:59
@@ -6980,29 +6996,31 @@ msgstr ""
 #: app/templates/topic/_notification_toggle.html:5
 msgid "Notify about every new post. Not advisable in high traffic topics!"
 msgstr ""
+"Ilmoita kaikista uusista julkaisuista. Ei suositella suosituille "
+"aihepiireille!"
 
 #: app/templates/topic/show_topic.html:29
 msgid "Sub-topics"
-msgstr ""
+msgstr "Aihepiirin alakäsitteet"
 
 #: app/templates/topic/show_topic.html:59
 msgid "No posts in this topic yet."
-msgstr ""
+msgstr "Aihepiiriin kuuluvia julkaisuja ei vielä ole."
 
 #: app/templates/topic/show_topic.html:104
 msgid "Topic communities"
-msgstr ""
+msgstr "Aihepiiriä käsittelevät yhteisöt"
 
 #: app/templates/topic/suggestion_denied.html:16
 msgid ""
 "You have not been using PieFed long enough to be allowed to suggest "
 "Topics."
-msgstr ""
+msgstr "Et ole käyttänyt PieFediä riittävän pitkään ehdottaaksesi aihepiirejä."
 
 #: app/templates/topic/topic_create_post.html:13
 #, python-format
 msgid "Which community within %(topic)s to post in?"
-msgstr ""
+msgstr "Mihin aihepiirin %(topic)s yhteisöön julkaiset?"
 
 #: app/templates/user/_notification_toggle.html:5
 msgid "Notify about every new post by this person."
@@ -7732,7 +7750,7 @@ msgstr ""
 
 #: app/templates/user/alerts/_topics.html:2
 msgid "You will be notified of new posts in communities covered by these topics"
-msgstr ""
+msgstr "Saat ilmoituksen uusista tätä aihepiiriä koskevista julkaisuista"
 
 #: app/templates/user/alerts/_topics.html:7
 msgid "Visit Topic"
@@ -7743,6 +7761,8 @@ msgid ""
 "You have not subscribed to any topics. Use the bell icon on each topic to"
 " do so."
 msgstr ""
+"Et ole tilannut yhtäkään aihepiiriä. Tilaaminen tapahtuu aihepiirin "
+"kelloikonitse."
 
 #: app/templates/user/alerts/_users.html:2
 msgid "You will be notified of new posts by these users"
@@ -7772,7 +7792,7 @@ msgstr ""
 
 #: app/templates/user/notifs/2.html:11
 msgid "New Post in followed topic "
-msgstr ""
+msgstr "Uusi julkaisu seuraamastasi aihepiiristä "
 
 #: app/templates/user/notifs/20.html:4
 msgid "Post Reported"
@@ -7858,7 +7878,7 @@ msgstr ""
 
 #: app/topic/forms.py:8
 msgid "New topic name"
-msgstr ""
+msgstr "Uuden aihepiirin nimi"
 
 #: app/topic/forms.py:9
 msgid "New topic name here..."
@@ -7876,11 +7896,11 @@ msgstr ""
 msgid ""
 "Thank you for the topic suggestion, it has been sent to the site "
 "administrator(s)."
-msgstr ""
+msgstr "Kiitos aihepiirin ehdottamisesta; se on lähetetty ylläpidolle."
 
 #: app/topic/routes.py:292
 msgid "Suggest a topic\""
-msgstr ""
+msgstr "Ehdota aihepiiriä\""
 
 #: app/user/forms.py:12
 msgid "Display name"
@@ -8307,6 +8327,8 @@ msgid ""
 "Moderators have already assessed reports regarding this person, no "
 "further reports are necessary."
 msgstr ""
+"Moderaattorit ovat jo käsitelleet tätä käyttäjää koskevia ilmiantoja, "
+"lisäilmiantoja ei tarvita."
 
 #: app/user/routes.py:949
 #, python-format
@@ -8382,7 +8404,7 @@ msgstr ""
 
 #: app/user/routes.py:1657
 msgid "Topic Alerts"
-msgstr ""
+msgstr "Aihepiirihälytykset"
 
 #: app/user/routes.py:1663
 msgid "Feed Alerts"
