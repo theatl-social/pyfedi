@@ -557,6 +557,10 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    #p = Post.query.get(42)
+    #p.delete_dependencies()
+    #db.session.delete(p)
+    #db.session.commit()
     return markdown_to_html('Testing!\n\n![an image :: width=50](https://piefed.social/static/media/logo_8p7en.svg, https://media.piefed.social/posts/up/TR/upTRjfvFt2ma0hz.webp)\n\nthere we go')
 
     from flask import json

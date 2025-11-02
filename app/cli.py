@@ -389,7 +389,6 @@ def register(app):
         process_expired_bans()
         remove_old_community_content()
         update_hashtag_counts()
-        delete_old_soft_deleted_content()
         update_community_stats()
         cleanup_old_voting_data()
         unban_expired_users()
@@ -399,11 +398,12 @@ def register(app):
         recalculate_user_attitudes()
         calculate_community_activity_stats()
         cleanup_old_activitypub_logs()
-        archive_old_posts()
-        archive_old_users()
         if get_setting('auto_add_remote_communities', False):
             add_remote_communities()
         clean_up_tmp()
+        delete_old_soft_deleted_content()
+        archive_old_posts()
+        archive_old_users()
 
     @app.cli.command('archive-old-posts')
     def archive_old_p():
