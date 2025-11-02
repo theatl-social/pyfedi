@@ -519,6 +519,7 @@ class Community(db.Model):
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
+    average_rating = db.Column(db.Float)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -3481,6 +3482,14 @@ class Reminder(db.Model):
     remind_at = db.Column(db.DateTime)
     reminder_type = db.Column(db.Integer)
     reminder_destination = db.Column(db.Integer)
+
+
+class Rating(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
+    created_at = db.Column(db.DateTime, index=True, default=utcnow)
+    rating = db.Column(db.Float)
 
 
 def _large_community_subscribers() -> float:
