@@ -371,7 +371,39 @@ def register(app):
 
     @app.cli.command('daily-maintenance')
     def daily_maintenance():
-        daily_maintenance_celery()
+        from app.shared.tasks.maintenance import (
+            cleanup_old_notifications, cleanup_send_queue, process_expired_bans,
+            remove_old_community_content, update_hashtag_counts, delete_old_soft_deleted_content,
+            update_community_stats, cleanup_old_voting_data, unban_expired_users,
+            sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
+            recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
+            archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser,
+            clean_up_tmp
+        )
+
+        if get_setting('enable_instance_chooser', False):
+            refresh_instance_chooser()
+        cleanup_old_notifications()
+        cleanup_old_read_posts()
+        cleanup_send_queue()
+        process_expired_bans()
+        remove_old_community_content()
+        update_hashtag_counts()
+        delete_old_soft_deleted_content()
+        update_community_stats()
+        cleanup_old_voting_data()
+        unban_expired_users()
+        sync_defederation_subscriptions()
+        check_instance_health()
+        monitor_healthy_instances()
+        recalculate_user_attitudes()
+        calculate_community_activity_stats()
+        cleanup_old_activitypub_logs()
+        archive_old_posts()
+        archive_old_users()
+        if get_setting('auto_add_remote_communities', False):
+            add_remote_communities()
+        clean_up_tmp()
 
     @app.cli.command('archive-old-posts')
     def archive_old_p():

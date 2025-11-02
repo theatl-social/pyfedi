@@ -965,7 +965,7 @@ class User(UserMixin, db.Model):
     posts = db.relationship('Post', lazy='dynamic', cascade="all, delete-orphan")
     post_replies = db.relationship('PostReply', lazy='dynamic', cascade="all, delete-orphan")
     extra_fields = db.relationship('UserExtraField', lazy='dynamic', cascade="all, delete-orphan")
-    roles = db.relationship('Role', secondary=user_role, lazy='dynamic', cascade="all, delete")
+    roles = db.relationship('Role', secondary=user_role, lazy='dynamic')
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user')
     modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author')
@@ -1493,16 +1493,19 @@ class Post(db.Model):
 
     search_vector = db.Column(TSVectorType('title', 'body', weights={"title": "A", "body": "B"}, auto_index=False))
 
-    image = db.relationship(File, lazy='joined', foreign_keys=[image_id])
+    image = db.relationship(File, lazy='joined', foreign_keys=[image_id], cascade='all, delete')
     domain = db.relationship('Domain', lazy='joined', foreign_keys=[domain_id])
     author = db.relationship('User', lazy='joined', overlaps='posts', foreign_keys=[user_id])
     community = db.relationship('Community', lazy='joined', overlaps='posts', foreign_keys=[community_id])
-    replies = db.relationship('PostReply', lazy='dynamic', backref='post')
+    replies = db.relationship('PostReply', lazy='dynamic', backref='post', cascade='all, delete-orphan')
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
-    event = db.relationship('Event', uselist=False, backref='post')
+    event = db.relationship('Event', uselist=False, backref='post', cascade='all, delete-orphan')
     gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
+    votes = db.relationship('PostVote', lazy='dynamic', backref='post', cascade='all, delete-orphan', passive_deletes=True)
+    bookmarks = db.relationship('PostBookmark', backref='post', cascade='all, delete-orphan')
+    poll = db.relationship('Poll', uselist=False, backref='post', cascade='all, delete-orphan')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
@@ -1932,55 +1935,31 @@ class Post(db.Model):
         db.session.commit()
 
     def delete_dependencies(self):
-        db.session.query(PostBookmark).filter(PostBookmark.post_id == self.id).delete()
-        db.session.query(PollChoiceVote).filter(PollChoiceVote.post_id == self.id).delete()
-        db.session.query(PollChoice).filter(PollChoice.post_id == self.id).delete()
-        db.session.query(Poll).filter(Poll.post_id == self.id).delete()
-        db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
-        db.session.query(Event).filter(Event.post_id == self.id).delete()
+        # Handle non-cascading deletes and special cleanup
+
+        # ModLog entries should be preserved with NULL post_id
         db.session.query(ModLog).filter(ModLog.post_id == self.id).update({ModLog.post_id: None})
+
+        # Reports should be deleted
         db.session.query(Report).filter(Report.suspect_post_id == self.id).delete()
+
+        # Reminders should be deleted
         db.session.query(Reminder).filter(Reminder.reminder_destination == self.id, Reminder.reminder_type == 1).delete()
-        db.session.execute(text('DELETE FROM "post_vote" WHERE post_id = :post_id'), {'post_id': self.id})
 
-        reply_ids = db.session.execute(text('SELECT id FROM "post_reply" WHERE post_id = :post_id'),
-                                       {'post_id': self.id}).scalars()
-        reply_ids = tuple(reply_ids)
-        if reply_ids:
-            # Handle file deletions for reply images first
-            reply_image_ids = db.session.execute(text('SELECT image_id FROM "post_reply" WHERE post_id = :post_id AND image_id IS NOT NULL'),
-                                                 {'post_id': self.id}).scalars()
-            for image_id in reply_image_ids:
-                file = db.session.query(File).get(image_id)
-                if file:
-                    file.delete_from_disk(purge_cdn=False)
-            
-            # Delete all reply-related data
-            db.session.execute(text('DELETE FROM "post_reply_vote" WHERE post_reply_id IN :reply_ids'),
-                               {'reply_ids': reply_ids})
-            db.session.execute(text('DELETE FROM "post_reply_bookmark" WHERE post_reply_id IN :reply_ids'),
-                               {'reply_ids': reply_ids})
-            db.session.execute(text('DELETE FROM "report" WHERE suspect_post_reply_id IN :reply_ids'),
-                               {'reply_ids': reply_ids})
+        # Delete event_user entries (association table, no cascade relationship)
+        db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
+
+        # Handle file deletions from disk before cascade deletes the File records
+        if self.image_id and self.image:
+            self.image.delete_from_disk(purge_cdn=False)
+
+        for reply in self.replies:
+            if reply.image_id and reply.image:
+                reply.image.delete_from_disk(purge_cdn=False)
             # Update ModLog entries to remove references to deleted replies
-            db.session.execute(text('UPDATE "mod_log" SET reply_id = NULL WHERE reply_id IN :reply_ids'),
-                               {'reply_ids': reply_ids})
-            # Finally delete all the replies
-            db.session.execute(text('DELETE FROM "post_reply" WHERE post_id = :post_id'), {'post_id': self.id})
-
-        if self.image_id:
-            # Check if any other Posts reference this File
-            other_posts_count = db.session.execute(
-                text("SELECT COUNT(*) FROM post WHERE image_id = :image_id AND id != :post_id"),
-                {"image_id": self.image_id, "post_id": self.id}).scalar()
-            
-            # Only delete the File if no other Posts reference it
-            if other_posts_count == 0:
-                file = db.session.query(File).get(self.image_id)
-                if file:
-                    file.delete_from_disk(purge_cdn=False)
-                    db.session.delete(file)
-            self.image_id = None
+            db.session.query(ModLog).filter(ModLog.reply_id == reply.id).update({ModLog.reply_id: None})
+            # Delete reports for this reply
+            db.session.query(Report).filter(Report.suspect_post_reply_id == reply.id).delete()
 
         if self.archived:
             if self.archived.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
@@ -2303,7 +2282,10 @@ class PostReply(db.Model):
     author = db.relationship('User', lazy='joined', foreign_keys=[user_id], single_parent=True, overlaps="post_replies")
     community = db.relationship('Community', lazy='joined', overlaps='replies', foreign_keys=[community_id])
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
+    image = db.relationship('File', foreign_keys=[image_id], cascade='all, delete')
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.reply_id", back_populates='reply')
+    votes = db.relationship('PostReplyVote', lazy='dynamic', backref='reply', cascade='all, delete-orphan', passive_deletes=True)
+    bookmarks = db.relationship('PostReplyBookmark', backref='reply', cascade='all, delete-orphan')
 
     __table_args__ = (
         db.Index(
@@ -2490,27 +2472,22 @@ class PostReply(db.Model):
 
     def delete_dependencies(self):
         """
-        The first loop doesn't seem to ever be invoked with the current behaviour.
-        For replies with their own replies: functions which deal with removal don't set reply.deleted and don't call this, and
-        because reply.deleted isn't set, the cli task 7 days later doesn't call this either.
-
-        The plan is to set reply.deleted whether there's child replies or not (as happens with the API call), so I've commented
-        it out so the current behaviour isn't changed.
-
-        for child_reply in self.child_replies():
-            child_reply.delete_dependencies()
-            db.session.delete(child_reply)
+        Handle non-cascading deletes and special cleanup.
+        Note: PostReplyBookmark and PostReplyVote are now handled by cascade='all, delete-orphan'
         """
 
-        db.session.query(PostReplyBookmark).filter(PostReplyBookmark.post_reply_id == self.id).delete()
+        # Reminders should be deleted (no relationship defined, small table)
         db.session.query(Reminder).filter(Reminder.reminder_destination == self.id, Reminder.reminder_type == 2).delete()
+
+        # ModLog entries should be preserved with NULL reply_id
         db.session.query(ModLog).filter(ModLog.reply_id == self.id).update({ModLog.reply_id: None})
+
+        # Reports should be deleted (small table, not worth adding cascade)
         db.session.query(Report).filter(Report.suspect_post_reply_id == self.id).delete()
-        db.session.execute(text('DELETE FROM post_reply_vote WHERE post_reply_id = :post_reply_id'),
-                           {'post_reply_id': self.id})
-        if self.image_id:
-            file = db.session.query(File).get(self.image_id)
-            file.delete_from_disk(purge_cdn=False)
+
+        # Handle file deletion from disk before cascade deletes the File record
+        if self.image_id and self.image:
+            self.image.delete_from_disk(purge_cdn=False)
 
     def child_replies(self):
         return db.session(PostReply).filter_by(parent_id=self.id).all()
@@ -2821,7 +2798,6 @@ class PostVote(db.Model):
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
     effect = db.Column(db.Float, index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
-    post = db.relationship('Post', foreign_keys=[post_id])
 
     __table_args__ = (
         Index('ix_post_vote_user_id_id_desc', 'user_id', desc('id')),
@@ -2952,6 +2928,8 @@ class Poll(db.Model):
     local_only = db.Column(db.Boolean)
     latest_vote = db.Column(db.DateTime)
 
+    choices = db.relationship('PollChoice', backref='poll', cascade='all, delete-orphan', foreign_keys='PollChoice.post_id', primaryjoin='Poll.post_id==PollChoice.post_id')
+
     def has_voted(self, user_id):
         existing_vote = PollChoiceVote.query.filter(PollChoiceVote.user_id == user_id,
                                                     PollChoiceVote.post_id == self.post_id).first()
@@ -2979,6 +2957,8 @@ class PollChoice(db.Model):
     choice_text = db.Column(db.String(200))
     sort_order = db.Column(db.Integer)
     num_votes = db.Column(db.Integer, default=0)
+
+    votes = db.relationship('PollChoiceVote', backref='choice', cascade='all, delete-orphan')
 
     def percentage(self, poll_total_votes):
         return math.floor(self.num_votes / poll_total_votes * 100)
