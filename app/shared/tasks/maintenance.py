@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy import text
 
 from app import celery, cache, httpx_client
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, find_language_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, InstanceChooser, \
@@ -856,7 +856,7 @@ def refresh_instance_chooser():
                     
                     # Map API response to InstanceChooser fields
                     if 'language' in chooser_data and 'id' in chooser_data['language']:
-                        instance_chooser.language_id = chooser_data['language']['id']
+                        instance_chooser.language_id = find_language_or_create(chooser_data['language']['code'], chooser_data['language']['name'])
                     
                     instance_chooser.nsfw = chooser_data.get('nsfw', False)
                     instance_chooser.newbie_friendly = chooser_data.get('newbie_friendly', True)
