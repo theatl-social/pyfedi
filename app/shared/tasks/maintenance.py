@@ -856,7 +856,7 @@ def refresh_instance_chooser():
                     
                     # Map API response to InstanceChooser fields
                     if 'language' in chooser_data and 'id' in chooser_data['language']:
-                        instance_chooser.language_id = find_language_or_create(chooser_data['language']['code'], chooser_data['language']['name'])
+                        instance_chooser.language_id = find_language_or_create(chooser_data['language']['code'], chooser_data['language']['name']).id
                     
                     instance_chooser.nsfw = chooser_data.get('nsfw', False)
                     instance_chooser.newbie_friendly = chooser_data.get('newbie_friendly', True)
