@@ -381,6 +381,9 @@ def register(app):
             clean_up_tmp
         )
 
+        if not current_app.debug:
+            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+
         if get_setting('enable_instance_chooser', False):
             refresh_instance_chooser()
         cleanup_old_notifications()
