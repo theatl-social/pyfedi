@@ -82,6 +82,7 @@ def webfinger():
                 ]
             }
             resp = jsonify(webfinger_data)
+            resp.content_type = 'application/jrd+json'
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
@@ -133,6 +134,7 @@ def webfinger():
             })
         resp = jsonify(webfinger_data)
         resp.headers.add_header('Access-Control-Allow-Origin', '*')
+        resp.content_type = 'application/jrd+json'
         return resp
     else:
         abort(404)
