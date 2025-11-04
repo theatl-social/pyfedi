@@ -663,8 +663,6 @@ def recalculate_user_attitudes():
 def calculate_community_activity_stats():
     """Calculate active users for day/week/month/half year for local communities"""
     session = get_task_session()
-    batch_size = 50
-    processed = 0
 
     try:
         # Timing settings
@@ -673,68 +671,105 @@ def calculate_community_activity_stats():
         month = utcnow() - timedelta(weeks=4)
         half_year = utcnow() - timedelta(weeks=26)
 
-        # Get community IDs
-        comm_ids = session.query(Community.id).filter(Community.banned == False, Community.last_active > day).all()
-        comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
+        print("Creating temporary table for community activity...")
 
-        total_communities = len(comm_ids)
-        print(f"Calculating activity stats for {total_communities} communities...")
+        # Create a temporary table with all activity data
+        # This collects all user activity in one pass
+        session.execute(text('''
+            CREATE TEMPORARY TABLE temp_community_activity (
+                user_id INTEGER,
+                community_id INTEGER,
+                activity_date TIMESTAMP
+            ) ON COMMIT DROP
+        '''))
 
-        # Process communities in batches
-        for i in range(0, total_communities, batch_size):
-            batch_ids = comm_ids[i:i + batch_size]
+        print("Collecting activity data from posts...")
+        session.execute(text('''
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT p.user_id, p.community_id, p.posted_at
+            FROM "post" p
+            WHERE p.posted_at > :half_year
+                AND p.from_bot = False
+                AND p.community_id IS NOT NULL
+        '''), {'half_year': half_year})
 
-            # Fetch communities for this batch
-            communities = {c.id: c for c in session.query(Community).filter(Community.id.in_(batch_ids)).all()}
+        print("Collecting activity data from post replies...")
+        session.execute(text('''
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT pr.user_id, pr.community_id, pr.posted_at
+            FROM "post_reply" pr
+            WHERE pr.posted_at > :half_year
+                AND pr.from_bot = False
+                AND pr.community_id IS NOT NULL
+        '''), {'half_year': half_year})
 
-            for community_id in batch_ids:
-                community = communities.get(community_id)
-                if not community:
-                    continue
+        print("Collecting activity data from post votes...")
+        session.execute(text('''
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT pv.user_id, p.community_id, pv.created_at
+            FROM "post_vote" pv
+            INNER JOIN "user" u ON pv.user_id = u.id
+            INNER JOIN "post" p ON pv.post_id = p.id
+            WHERE pv.created_at > :half_year
+                AND u.bot = False
+                AND p.community_id IS NOT NULL
+        '''), {'half_year': half_year})
 
-                # Calculate all intervals at once for this community
-                for interval, field_name in [(day, 'active_daily'), (week, 'active_weekly'),
-                                              (month, 'active_monthly'), (half_year, 'active_6monthly')]:
-                    count = session.execute(text('''
-                        SELECT count(*) FROM
-                        (
-                            SELECT p.user_id FROM "post" p
-                            WHERE p.posted_at > :time_interval
-                                AND p.from_bot = False
-                                AND p.community_id = :community_id
-                            UNION
-                            SELECT pr.user_id FROM "post_reply" pr
-                            WHERE pr.posted_at > :time_interval
-                                AND pr.from_bot = False
-                                AND pr.community_id = :community_id
-                            UNION
-                            SELECT pv.user_id FROM "post_vote" pv
-                            INNER JOIN "user" u ON pv.user_id = u.id
-                            INNER JOIN "post" p ON pv.post_id = p.id
-                            WHERE pv.created_at > :time_interval
-                                AND u.bot = False
-                                AND p.community_id = :community_id
-                            UNION
-                            SELECT prv.user_id FROM "post_reply_vote" prv
-                            INNER JOIN "user" u ON prv.user_id = u.id
-                            INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
-                            INNER JOIN "post" p ON pr.post_id = p.id
-                            WHERE prv.created_at > :time_interval
-                                AND u.bot = False
-                                AND p.community_id = :community_id
-                        ) AS activity
-                    '''), {'time_interval': interval, 'community_id': community_id}).scalar()
+        print("Collecting activity data from post reply votes...")
+        session.execute(text('''
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT prv.user_id, p.community_id, prv.created_at
+            FROM "post_reply_vote" prv
+            INNER JOIN "user" u ON prv.user_id = u.id
+            INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+            INNER JOIN "post" p ON pr.post_id = p.id
+            WHERE prv.created_at > :half_year
+                AND u.bot = False
+                AND p.community_id IS NOT NULL
+        '''), {'half_year': half_year})
 
-                    # Update the community stats
-                    setattr(community, field_name, count)
+        print("Creating index on temporary table...")
+        session.execute(text('''
+            CREATE INDEX idx_temp_activity ON temp_community_activity(community_id, activity_date)
+        '''))
 
-                processed += 1
+        print("Calculating activity stats for all communities...")
 
-            # Commit after each batch
-            session.commit()
-            print(f"  Progress: {processed}/{total_communities} communities processed ({processed/total_communities*100:.1f}%)")
+        # Now calculate all stats in a single query and update communities
+        # This aggregates the data for each community and time interval
+        stats_results = session.execute(text('''
+            SELECT
+                community_id,
+                COUNT(DISTINCT CASE WHEN activity_date > :day THEN user_id END) as active_daily,
+                COUNT(DISTINCT CASE WHEN activity_date > :week THEN user_id END) as active_weekly,
+                COUNT(DISTINCT CASE WHEN activity_date > :month THEN user_id END) as active_monthly,
+                COUNT(DISTINCT CASE WHEN activity_date > :half_year THEN user_id END) as active_6monthly
+            FROM temp_community_activity
+            GROUP BY community_id
+        '''), {'day': day, 'week': week, 'month': month, 'half_year': half_year})
 
-        print(f"Completed: {processed} communities processed")
+        # Update communities with the calculated stats
+        print("Updating community statistics...")
+        updated_count = 0
+        for row in stats_results:
+            session.execute(text('''
+                UPDATE "community"
+                SET active_daily = :daily,
+                    active_weekly = :weekly,
+                    active_monthly = :monthly,
+                    active_6monthly = :six_monthly
+                WHERE id = :community_id
+            '''), {
+                'community_id': row.community_id,
+                'daily': row.active_daily,
+                'weekly': row.active_weekly,
+                'monthly': row.active_monthly,
+                'six_monthly': row.active_6monthly
+            })
+            updated_count += 1
+
+        session.commit()
+        print(f"Completed: Updated stats for {updated_count} communities")
 
     except Exception:
         session.rollback()
