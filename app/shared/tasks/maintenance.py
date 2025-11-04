@@ -631,24 +631,29 @@ def recalculate_user_attitudes():
 
     try:
         with patch_db_session(session):
-            # Get total count for logging
-            total_users = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).count()
+            # First, fetch just the user IDs (lightweight query)
+            user_ids = [u[0] for u in session.query(User.id).filter(
+                User.last_seen > utcnow() - timedelta(days=1)
+            ).all()]
+
+            total_users = len(user_ids)
             print(f"Recalculating attitudes for {total_users} recent users in batches of {batch_size}...")
 
-            # Process users in batches using yield_per to avoid loading all into memory
-            query = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).yield_per(batch_size)
+            # Process users in batches
+            for i in range(0, total_users, batch_size):
+                batch_ids = user_ids[i:i + batch_size]
 
-            for user in query:
-                user.recalculate_attitude()
-                processed += 1
+                # Fetch users for this batch
+                users = session.query(User).filter(User.id.in_(batch_ids)).all()
 
-                # Commit every batch_size users
-                if processed % batch_size == 0:
-                    session.commit()
-                    print(f"  Progress: {processed}/{total_users} users processed ({processed/total_users*100:.1f}%)")
+                for user in users:
+                    user.recalculate_attitude()
+                    processed += 1
 
-            # Final commit for remaining users
-            session.commit()
+                # Commit after each batch
+                session.commit()
+                print(f"  Progress: {processed}/{total_users} users processed ({processed/total_users*100:.1f}%)")
+
             print(f"Completed: {processed} users processed")
     except Exception:
         session.rollback()
