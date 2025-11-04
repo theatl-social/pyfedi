@@ -661,7 +661,7 @@ def recalculate_user_attitudes():
 
 @celery.task
 def calculate_community_activity_stats():
-    """Calculate active users for day/week/month/half year for local communities"""
+    """Calculate active users for day/week/month/half year for communities"""
     session = get_task_session()
 
     try:
@@ -671,7 +671,7 @@ def calculate_community_activity_stats():
         month = utcnow() - timedelta(weeks=4)
         half_year = utcnow() - timedelta(weeks=26)
 
-        print("Creating temporary table for community activity...")
+        # print("Creating temporary table for community activity...")
 
         # Create a temporary table with all activity data
         # This collects all user activity in one pass
@@ -683,7 +683,7 @@ def calculate_community_activity_stats():
             ) ON COMMIT DROP
         '''))
 
-        print("Collecting activity data from posts...")
+        # print("Collecting activity data from posts...")
         session.execute(text('''
             INSERT INTO temp_community_activity (user_id, community_id, activity_date)
             SELECT p.user_id, p.community_id, p.posted_at
@@ -693,7 +693,7 @@ def calculate_community_activity_stats():
                 AND p.community_id IS NOT NULL
         '''), {'half_year': half_year})
 
-        print("Collecting activity data from post replies...")
+        # print("Collecting activity data from post replies...")
         session.execute(text('''
             INSERT INTO temp_community_activity (user_id, community_id, activity_date)
             SELECT pr.user_id, pr.community_id, pr.posted_at
@@ -703,7 +703,7 @@ def calculate_community_activity_stats():
                 AND pr.community_id IS NOT NULL
         '''), {'half_year': half_year})
 
-        print("Collecting activity data from post votes...")
+        # print("Collecting activity data from post votes...")
         session.execute(text('''
             INSERT INTO temp_community_activity (user_id, community_id, activity_date)
             SELECT pv.user_id, p.community_id, pv.created_at
@@ -715,7 +715,7 @@ def calculate_community_activity_stats():
                 AND p.community_id IS NOT NULL
         '''), {'half_year': half_year})
 
-        print("Collecting activity data from post reply votes...")
+        # print("Collecting activity data from post reply votes...")
         session.execute(text('''
             INSERT INTO temp_community_activity (user_id, community_id, activity_date)
             SELECT prv.user_id, p.community_id, prv.created_at
@@ -728,16 +728,15 @@ def calculate_community_activity_stats():
                 AND p.community_id IS NOT NULL
         '''), {'half_year': half_year})
 
-        print("Creating index on temporary table...")
+        # print("Creating index on temporary table...")
         session.execute(text('''
             CREATE INDEX idx_temp_activity ON temp_community_activity(community_id, activity_date)
         '''))
 
-        print("Calculating activity stats for recently active communities...")
+        # print("Calculating activity stats for recently active communities...")
 
         # Now calculate all stats in a single query and update communities
         # This aggregates the data for each community and time interval
-        # Only for non-banned communities that have been active in the last day
         stats_results = session.execute(text('''
             SELECT
                 tca.community_id,
@@ -753,7 +752,7 @@ def calculate_community_activity_stats():
         '''), {'day': day, 'week': week, 'month': month, 'half_year': half_year})
 
         # Update communities with the calculated stats
-        print("Updating community statistics...")
+        # print("Updating community statistics...")
         updated_count = 0
         for row in stats_results:
             session.execute(text('''
@@ -773,7 +772,7 @@ def calculate_community_activity_stats():
             updated_count += 1
 
         session.commit()
-        print(f"Completed: Updated stats for {updated_count} communities")
+        # print(f"Completed: Updated stats for {updated_count} communities")
 
     except Exception:
         session.rollback()

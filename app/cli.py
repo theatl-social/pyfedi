@@ -413,7 +413,7 @@ def register(app):
         print(f'14 {datetime.now()}')
         recalculate_user_attitudes()
         print(f'15 {datetime.now()}')
-        calculate_community_activity_stats()    #26 mins
+        calculate_community_activity_stats()
         print(f'16 {datetime.now()}')
         cleanup_old_activitypub_logs()
         print(f'17 {datetime.now()}')
