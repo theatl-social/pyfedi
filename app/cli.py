@@ -411,7 +411,7 @@ def register(app):
         print(f'13 {datetime.now()}')
         monitor_healthy_instances.delay()
         print(f'14 {datetime.now()}')
-        recalculate_user_attitudes()    # 45 mins
+        recalculate_user_attitudes()
         print(f'15 {datetime.now()}')
         calculate_community_activity_stats()    #26 mins
         print(f'16 {datetime.now()}')

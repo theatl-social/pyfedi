@@ -637,7 +637,6 @@ def recalculate_user_attitudes():
             ).all()]
 
             total_users = len(user_ids)
-            print(f"Recalculating attitudes for {total_users} recent users in batches of {batch_size}...")
 
             # Process users in batches
             for i in range(0, total_users, batch_size):
@@ -652,9 +651,7 @@ def recalculate_user_attitudes():
 
                 # Commit after each batch
                 session.commit()
-                print(f"  Progress: {processed}/{total_users} users processed ({processed/total_users*100:.1f}%)")
 
-            print(f"Completed: {processed} users processed")
     except Exception:
         session.rollback()
         raise
@@ -666,6 +663,9 @@ def recalculate_user_attitudes():
 def calculate_community_activity_stats():
     """Calculate active users for day/week/month/half year for local communities"""
     session = get_task_session()
+    batch_size = 50
+    processed = 0
+
     try:
         # Timing settings
         day = utcnow() - timedelta(hours=24)
@@ -677,50 +677,64 @@ def calculate_community_activity_stats():
         comm_ids = session.query(Community.id).filter(Community.banned == False, Community.last_active > day).all()
         comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
-        for community_id in comm_ids:
-            for interval in [day, week, month, half_year]:
-                count = session.execute(text('''
-                    SELECT count(*) FROM
-                    (
-                        SELECT p.user_id FROM "post" p
-                        WHERE p.posted_at > :time_interval 
-                            AND p.from_bot = False
-                            AND p.community_id = :community_id
-                        UNION
-                        SELECT pr.user_id FROM "post_reply" pr
-                        WHERE pr.posted_at > :time_interval
-                            AND pr.from_bot = False
-                            AND pr.community_id = :community_id   
-                        UNION
-                        SELECT pv.user_id FROM "post_vote" pv
-                        INNER JOIN "user" u ON pv.user_id = u.id
-                        INNER JOIN "post" p ON pv.post_id = p.id
-                        WHERE pv.created_at > :time_interval
-                            AND u.bot = False
-                            AND p.community_id = :community_id                            
-                        UNION
-                        SELECT prv.user_id FROM "post_reply_vote" prv
-                        INNER JOIN "user" u ON prv.user_id = u.id
-                        INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
-                        INNER JOIN "post" p ON pr.post_id = p.id
-                        WHERE prv.created_at > :time_interval
-                            AND u.bot = False
-                            AND p.community_id = :community_id
-                    ) AS activity
-                '''), {'time_interval': interval, 'community_id': community_id}).scalar()
+        total_communities = len(comm_ids)
+        print(f"Calculating activity stats for {total_communities} communities...")
 
-                # Update the community stats
-                community = session.query(Community).get(community_id)
-                if community:
-                    if interval == day:
-                        community.active_daily = count
-                    elif interval == week:
-                        community.active_weekly = count
-                    elif interval == month:
-                        community.active_monthly = count
-                    elif interval == half_year:
-                        community.active_6monthly = count
-                    session.commit()
+        # Process communities in batches
+        for i in range(0, total_communities, batch_size):
+            batch_ids = comm_ids[i:i + batch_size]
+
+            # Fetch communities for this batch
+            communities = {c.id: c for c in session.query(Community).filter(Community.id.in_(batch_ids)).all()}
+
+            for community_id in batch_ids:
+                community = communities.get(community_id)
+                if not community:
+                    continue
+
+                # Calculate all intervals at once for this community
+                for interval, field_name in [(day, 'active_daily'), (week, 'active_weekly'),
+                                              (month, 'active_monthly'), (half_year, 'active_6monthly')]:
+                    count = session.execute(text('''
+                        SELECT count(*) FROM
+                        (
+                            SELECT p.user_id FROM "post" p
+                            WHERE p.posted_at > :time_interval
+                                AND p.from_bot = False
+                                AND p.community_id = :community_id
+                            UNION
+                            SELECT pr.user_id FROM "post_reply" pr
+                            WHERE pr.posted_at > :time_interval
+                                AND pr.from_bot = False
+                                AND pr.community_id = :community_id
+                            UNION
+                            SELECT pv.user_id FROM "post_vote" pv
+                            INNER JOIN "user" u ON pv.user_id = u.id
+                            INNER JOIN "post" p ON pv.post_id = p.id
+                            WHERE pv.created_at > :time_interval
+                                AND u.bot = False
+                                AND p.community_id = :community_id
+                            UNION
+                            SELECT prv.user_id FROM "post_reply_vote" prv
+                            INNER JOIN "user" u ON prv.user_id = u.id
+                            INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+                            INNER JOIN "post" p ON pr.post_id = p.id
+                            WHERE prv.created_at > :time_interval
+                                AND u.bot = False
+                                AND p.community_id = :community_id
+                        ) AS activity
+                    '''), {'time_interval': interval, 'community_id': community_id}).scalar()
+
+                    # Update the community stats
+                    setattr(community, field_name, count)
+
+                processed += 1
+
+            # Commit after each batch
+            session.commit()
+            print(f"  Progress: {processed}/{total_communities} communities processed ({processed/total_communities*100:.1f}%)")
+
+        print(f"Completed: {processed} communities processed")
 
     except Exception:
         session.rollback()
