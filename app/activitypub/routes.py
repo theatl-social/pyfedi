@@ -750,6 +750,8 @@ def process_inbox_request(request_json, store_ap_json):
                 saved_json = request_json if store_ap_json else None
                 id = request_json['id']
                 actor_id = request_json['actor']
+                if isinstance(actor_id, dict):  # Discourse does this
+                    actor_id = actor_id['id']
                 feed = community = None
                 if request_json['type'] == 'Announce' or request_json['type'] == 'Accept' or request_json['type'] == 'Reject':
                     community = find_actor_or_create_cached(actor_id, community_only=True, create_if_not_found=False)
