@@ -733,19 +733,23 @@ def calculate_community_activity_stats():
             CREATE INDEX idx_temp_activity ON temp_community_activity(community_id, activity_date)
         '''))
 
-        print("Calculating activity stats for all communities...")
+        print("Calculating activity stats for recently active communities...")
 
         # Now calculate all stats in a single query and update communities
         # This aggregates the data for each community and time interval
+        # Only for non-banned communities that have been active in the last day
         stats_results = session.execute(text('''
             SELECT
-                community_id,
-                COUNT(DISTINCT CASE WHEN activity_date > :day THEN user_id END) as active_daily,
-                COUNT(DISTINCT CASE WHEN activity_date > :week THEN user_id END) as active_weekly,
-                COUNT(DISTINCT CASE WHEN activity_date > :month THEN user_id END) as active_monthly,
-                COUNT(DISTINCT CASE WHEN activity_date > :half_year THEN user_id END) as active_6monthly
-            FROM temp_community_activity
-            GROUP BY community_id
+                tca.community_id,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :day THEN tca.user_id END) as active_daily,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :week THEN tca.user_id END) as active_weekly,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :month THEN tca.user_id END) as active_monthly,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :half_year THEN tca.user_id END) as active_6monthly
+            FROM temp_community_activity tca
+            INNER JOIN "community" c ON c.id = tca.community_id
+            WHERE c.banned = FALSE
+                AND c.last_active > :half_year
+            GROUP BY tca.community_id
         '''), {'day': day, 'week': week, 'month': month, 'half_year': half_year})
 
         # Update communities with the calculated stats
