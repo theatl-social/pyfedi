@@ -626,14 +626,30 @@ def monitor_healthy_instances():
 def recalculate_user_attitudes():
     """Recalculate recent active user attitudes"""
     session = get_task_session()
+    batch_size = 100
+    processed = 0
+
     try:
         with patch_db_session(session):
-            recent_users = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).all()
+            # Get total count for logging
+            total_users = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).count()
+            print(f"Recalculating attitudes for {total_users} recent users in batches of {batch_size}...")
 
-            for user in recent_users:
+            # Process users in batches using yield_per to avoid loading all into memory
+            query = session.query(User).filter(User.last_seen > utcnow() - timedelta(days=1)).yield_per(batch_size)
+
+            for user in query:
                 user.recalculate_attitude()
+                processed += 1
 
+                # Commit every batch_size users
+                if processed % batch_size == 0:
+                    session.commit()
+                    print(f"  Progress: {processed}/{total_users} users processed ({processed/total_users*100:.1f}%)")
+
+            # Final commit for remaining users
             session.commit()
+            print(f"Completed: {processed} users processed")
     except Exception:
         session.rollback()
         raise
@@ -653,7 +669,7 @@ def calculate_community_activity_stats():
         half_year = utcnow() - timedelta(weeks=26)
 
         # Get community IDs
-        comm_ids = session.query(Community.id).filter(Community.banned == False).all()
+        comm_ids = session.query(Community.id).filter(Community.banned == False, Community.last_active > day).all()
         comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
         for community_id in comm_ids:

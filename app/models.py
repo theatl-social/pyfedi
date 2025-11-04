@@ -1229,11 +1229,11 @@ class User(UserMixin, db.Model):
 
         # Update attitude
         db.session.execute(text("""
-            UPDATE "user" 
+            UPDATE "user"
             SET attitude = :attitude
             WHERE id = :user_id
         """), {"attitude": new_attitude, "user_id": self.id})
-        db.session.commit()
+        # Note: Caller is responsible for committing
 
     def get_num_upvotes(self):
         post_votes = db.session.execute(

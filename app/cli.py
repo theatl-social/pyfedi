@@ -411,9 +411,9 @@ def register(app):
         print(f'13 {datetime.now()}')
         monitor_healthy_instances.delay()
         print(f'14 {datetime.now()}')
-        recalculate_user_attitudes()
+        recalculate_user_attitudes()    # 45 mins
         print(f'15 {datetime.now()}')
-        calculate_community_activity_stats()
+        calculate_community_activity_stats()    #26 mins
         print(f'16 {datetime.now()}')
         cleanup_old_activitypub_logs()
         print(f'17 {datetime.now()}')
@@ -422,9 +422,9 @@ def register(app):
             print(f'18 {datetime.now()}')
         clean_up_tmp()
         print(f'19 {datetime.now()}')
-        delete_old_soft_deleted_content()
+        delete_old_soft_deleted_content()   # 35 mins
         print(f'20 {datetime.now()}')
-        archive_old_posts()
+        archive_old_posts()                 # 2 hours
         print(f'21 {datetime.now()}')
         archive_old_users()
         print(f'Finished {datetime.now()}')
