@@ -3,7 +3,7 @@
         <div class="row">
             {% if user.avatar_id -%}
             <div class="col-6 preview_avatar_image">
-                <img src="{{ user.avatar_image() }}" alt="" loading="lazy" />
+                <img src="{{ user.avatar_image() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_image().endswith('.gif') }}" />
             </div>
             <div class="col-6">
             {% else -%}
