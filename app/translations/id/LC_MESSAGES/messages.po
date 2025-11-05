@@ -1,4 +1,4 @@
-# Dutch translations for PROJECT.
+# Indonesian translations for PROJECT.
 # Copyright (C) 2025 ORGANIZATION
 # This file is distributed under the same license as the PROJECT project.
 # FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
@@ -8,12 +8,11 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-11-05 15:45+1300\n"
-"PO-Revision-Date: 2025-06-24 07:47+0000\n"
-"Last-Translator: Ruud <ruud@schilders.email>\n"
-"Language: nl\n"
-"Language-Team: Dutch <http://translate.piefed.social/projects/piefed"
-"/main-web-app/nl/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"PO-Revision-Date: 2025-11-05 15:44+1300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: id\n"
+"Language-Team: id <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -21,7 +20,7 @@ msgstr ""
 
 #: app/__init__.py:52
 msgid "Please log in to access this page."
-msgstr "Log aub. in om deze pagina te openen."
+msgstr ""
 
 #: app/cli.py:623
 #, python-format
@@ -35,7 +34,7 @@ msgstr ""
 
 #: app/cli.py:826 app/main/routes.py:673
 msgid "[PieFed] You have unread notifications"
-msgstr "[PieFed] U heeft ongelezen meldingen"
+msgstr ""
 
 #: app/cli.py:969 app/shared/post.py:137
 #, python-format
@@ -8683,127 +8682,4 @@ msgstr ""
 #: app/user/subscription.py:162
 msgid "Your donation has been cancelled."
 msgstr ""
-
-#~ msgid "Throwaway email used for account %(username)s"
-#~ msgstr ""
-
-#~ msgid "Login failed due to a problem with Google."
-#~ msgstr ""
-
-#~ msgid "Url is already used by another feed."
-#~ msgstr ""
-
-#~ msgid "This post is scheduled to be published at %(when)s UTC"
-#~ msgstr ""
-
-#~ msgid "Most upvotes in the last 6h"
-#~ msgstr ""
-
-#~ msgid "Most upvotes in the last 12h"
-#~ msgstr ""
-
-#~ msgid "Use 2-letter country codes, one per line. Requires IPinfo API."
-#~ msgstr ""
-
-#~ msgid "HTML is allowed in this field."
-#~ msgstr ""
-
-#~ msgid "Sort by top"
-#~ msgstr ""
-
-#~ msgid "Remove"
-#~ msgstr ""
-
-#~ msgid "Blocked domains"
-#~ msgstr ""
-
-#~ msgid "Blocked domains containing \"%(search)s\""
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Banning this domain will delete all "
-#~ "posts linking to this domain and "
-#~ "prevent future posts linking to that "
-#~ "domain."
-#~ msgstr ""
-
-#~ msgid "Block author @%(author_name)s"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Votes will be sent to <a "
-#~ "href=\"/instances?filter=trusted\">untrusted instances</a> "
-#~ "using an alt"
-#~ msgstr ""
-
-#~ msgid "Vote privately"
-#~ msgstr ""
-
-#~ msgid "Days to cache images from remote instances for"
-#~ msgstr ""
-
-#~ msgid "0 means cache forever"
-#~ msgstr ""
-
-#~ msgid "Please"
-#~ msgstr ""
-
-#~ msgid "Skip to:"
-#~ msgstr ""
-
-#~ msgid "Sent to"
-#~ msgstr ""
-
-#~ msgid "Label"
-#~ msgstr ""
-
-#~ msgid "Join mode"
-#~ msgstr ""
-
-#~ msgid "Defederated instances"
-#~ msgstr ""
-
-#~ msgid "Local Communities"
-#~ msgstr ""
-
-#~ msgid "Joined Communities"
-#~ msgstr ""
-
-#~ msgid "Not Joined Communities"
-#~ msgstr ""
-
-#~ msgid "Reported content"
-#~ msgstr ""
-
-#~ msgid "Post restored."
-#~ msgstr ""
-
-#~ msgid "Communities on this server"
-#~ msgstr ""
-
-#~ msgid "Not Joined communities"
-#~ msgstr ""
-
-#~ msgid "Not Joined"
-#~ msgstr ""
-
-#~ msgid "Sort by number of active users"
-#~ msgstr ""
-
-#~ msgid ""
-#~ "Use this to scan a remote lemmy"
-#~ " server and \"pre-load\" it's "
-#~ "communities, as ranked by posts and "
-#~ "activity. NSFW communities and communities "
-#~ "from banned instances are excluded."
-#~ msgstr ""
-
-#~ msgid "No - expand images"
-#~ msgstr ""
-
-#~ msgid "Yes - thumbnails only"
-#~ msgstr ""
-
-#~ msgid "YEESSS - no images, only text"
-#~ msgstr ""
 

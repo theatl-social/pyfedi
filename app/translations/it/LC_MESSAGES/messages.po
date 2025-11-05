@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-11-02 14:04+1300\n"
+"POT-Creation-Date: 2025-11-05 15:45+1300\n"
 "PO-Revision-Date: 2025-09-26 14:34+1200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: it\n"
@@ -22,26 +22,26 @@ msgstr ""
 msgid "Please log in to access this page."
 msgstr ""
 
-#: app/cli.py:567
+#: app/cli.py:623
 #, python-format
 msgid "Reminder: %(title)s"
 msgstr ""
 
-#: app/cli.py:572
+#: app/cli.py:628
 #, python-format
 msgid "Reminder: comment on %(title)s"
 msgstr ""
 
-#: app/cli.py:770 app/main/routes.py:669
+#: app/cli.py:826 app/main/routes.py:673
 msgid "[PieFed] You have unread notifications"
 msgstr ""
 
-#: app/cli.py:913 app/shared/post.py:137
+#: app/cli.py:969 app/shared/post.py:137
 #, python-format
 msgid "Replies to my post %(post_title)s"
 msgstr ""
 
-#: app/cli.py:923 app/models.py:2405 app/shared/reply.py:116
+#: app/cli.py:979 app/models.py:2396 app/shared/reply.py:116
 #, python-format
 msgid "Replies to my comment on %(post_title)s"
 msgstr ""
@@ -62,99 +62,99 @@ msgstr ""
 msgid "Your application has been approved - welcome to PieFed"
 msgstr ""
 
-#: app/models.py:2333
+#: app/models.py:2324
 msgid "Comments are disabled on this post"
 msgstr ""
 
-#: app/models.py:2336
+#: app/models.py:2327
 msgid "Banned from commenting"
 msgstr ""
 
-#: app/models.py:2361
+#: app/models.py:2352
 msgid "Blocked phrase in comment"
 msgstr ""
 
-#: app/models.py:2368
+#: app/models.py:2359
 msgid "Replier blocked"
 msgstr ""
 
-#: app/models.py:2371
+#: app/models.py:2362
 msgid "Duplicate reply"
 msgstr ""
 
-#: app/models.py:2379
+#: app/models.py:2370
 msgid "Gif comment ignored"
 msgstr ""
 
-#: app/models.py:2382
+#: app/models.py:2373
 msgid "Low quality reply"
 msgstr ""
 
-#: app/models.py:3047
+#: app/models.py:3036
 msgid "Added moderator"
 msgstr ""
 
-#: app/models.py:3048
+#: app/models.py:3037
 msgid "Removed moderator"
 msgstr ""
 
-#: app/models.py:3049
+#: app/models.py:3038
 msgid "Featured post"
 msgstr ""
 
-#: app/models.py:3050
+#: app/models.py:3039
 msgid "Unfeatured post"
 msgstr ""
 
-#: app/models.py:3051
+#: app/models.py:3040
 msgid "Deleted post"
 msgstr ""
 
-#: app/models.py:3052
+#: app/models.py:3041
 msgid "Un-deleted post"
 msgstr ""
 
-#: app/models.py:3053
+#: app/models.py:3042
 msgid "Deleted comment"
 msgstr ""
 
-#: app/models.py:3054
+#: app/models.py:3043
 msgid "Un-deleted comment"
 msgstr ""
 
-#: app/models.py:3055
+#: app/models.py:3044
 msgid "Deleted community"
 msgstr ""
 
-#: app/models.py:3056
+#: app/models.py:3045
 msgid "Deleted account"
 msgstr ""
 
-#: app/models.py:3057
+#: app/models.py:3046
 msgid "Restored account"
 msgstr ""
 
-#: app/models.py:3058
+#: app/models.py:3047
 msgid "Banned account"
 msgstr ""
 
-#: app/models.py:3059
+#: app/models.py:3048
 msgid "Un-banned account"
 msgstr ""
 
-#: app/models.py:3060
+#: app/models.py:3049
 msgid "Lock post"
 msgstr ""
 
-#: app/models.py:3061
+#: app/models.py:3050
 msgid "Un-lock post"
 msgstr ""
 
-#: app/models.py:3062
+#: app/models.py:3051
 msgid "Lock comment"
 msgstr ""
 
-#: app/models.py:3063
+#: app/models.py:3052
 msgid "Un-lock comment"
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "A Feed with this url already exists."
 msgstr ""
 
-#: app/activitypub/routes.py:523 app/activitypub/routes.py:527
+#: app/activitypub/routes.py:525 app/activitypub/routes.py:529
 msgid "Community not found on this instance"
 msgstr ""
 
@@ -243,7 +243,7 @@ msgstr ""
 msgid "Reply to comment on %(post_title)s"
 msgstr ""
 
-#: app/activitypub/util.py:3107 app/shared/post.py:699
+#: app/activitypub/util.py:3107 app/shared/post.py:698
 msgid "A post has been reported"
 msgstr ""
 
@@ -1500,7 +1500,7 @@ msgid ""
 "on the Topics menu or browse the home page."
 msgstr ""
 
-#: app/auth/onboarding.py:64 app/main/routes.py:245 app/main/routes.py:1098
+#: app/auth/onboarding.py:64 app/main/routes.py:245 app/main/routes.py:1102
 msgid ""
 "You did not choose any topics. Would you like to choose individual "
 "communities instead?"
@@ -2305,7 +2305,7 @@ msgid "Adding remote communities is restricted to admin and staff users only."
 msgstr ""
 
 #: app/community/routes.py:166 app/community/routes.py:2419
-#: app/feed/routes.py:130 app/feed/routes.py:1150 app/user/routes.py:1871
+#: app/feed/routes.py:130 app/feed/routes.py:1150 app/user/routes.py:1873
 msgid ""
 "Sorry, that instance is blocked, check https://gui.fediseer.com/ for "
 "reasons."
@@ -2800,20 +2800,20 @@ msgstr ""
 msgid "Moderation Log"
 msgstr ""
 
-#: app/main/routes.py:754
+#: app/main/routes.py:758
 #, python-format
 msgid "Failed to look up %(url)s"
 msgstr ""
 
-#: app/main/routes.py:768
+#: app/main/routes.py:772
 msgid "Protocol handler"
 msgstr ""
 
-#: app/main/routes.py:900
+#: app/main/routes.py:904
 msgid "Please click the link in your email inbox to verify your account."
 msgstr ""
 
-#: app/main/routes.py:1071
+#: app/main/routes.py:1075
 msgid "Content warning"
 msgstr ""
 
@@ -2917,8 +2917,8 @@ msgid "This comment cannot be replied to."
 msgstr ""
 
 #: app/post/routes.py:924 app/shared/reply.py:216 app/user/routes.py:334
-#: app/user/routes.py:584 app/user/routes.py:701 app/user/routes.py:1447
-#: app/user/routes.py:1490 app/user/routes.py:1517 app/user/routes.py:1833
+#: app/user/routes.py:586 app/user/routes.py:703 app/user/routes.py:1449
+#: app/user/routes.py:1492 app/user/routes.py:1519 app/user/routes.py:1835
 msgid "Your changes have been saved."
 msgstr ""
 
@@ -2991,7 +2991,7 @@ msgstr ""
 msgid "Posts linking to %(name)s will be hidden."
 msgstr ""
 
-#: app/post/routes.py:1310 app/post/routes.py:1531 app/user/routes.py:880
+#: app/post/routes.py:1310 app/post/routes.py:1531 app/user/routes.py:882
 #, python-format
 msgid "Content from %(name)s will be hidden."
 msgstr ""
@@ -3116,12 +3116,12 @@ msgstr ""
 msgid "Moderator removed"
 msgstr ""
 
-#: app/shared/post.py:773
+#: app/shared/post.py:772
 #, python-format
 msgid "%(name)s has been locked."
 msgstr ""
 
-#: app/shared/post.py:777
+#: app/shared/post.py:776
 #, python-format
 msgid "%(name)s has been unlocked."
 msgstr ""
@@ -3142,7 +3142,7 @@ msgstr ""
 msgid "Comment has been unlocked."
 msgstr ""
 
-#: app/shared/user.py:27 app/user/routes.py:839
+#: app/shared/user.py:27 app/user/routes.py:841
 msgid "You cannot block yourself."
 msgstr ""
 
@@ -3150,7 +3150,7 @@ msgstr ""
 msgid "You cannot block admin or staff."
 msgstr ""
 
-#: app/shared/user.py:68 app/user/routes.py:914
+#: app/shared/user.py:68 app/user/routes.py:916
 msgid "You cannot unblock yourself."
 msgstr ""
 
@@ -3738,7 +3738,7 @@ msgstr ""
 
 #: app/templates/base.html:143 app/templates/base.html:232
 #: app/templates/themes/dillo/base.html:79
-#: app/templates/user/notifications.html:20 app/user/routes.py:1208
+#: app/templates/user/notifications.html:20 app/user/routes.py:1210
 msgid "Notifications"
 msgstr ""
 
@@ -3779,7 +3779,7 @@ msgstr ""
 
 #: app/templates/base.html:201 app/templates/themes/dillo/base.html:153
 #: app/templates/user/bookmarks.html:17 app/templates/user/bookmarks.html:20
-#: app/templates/user/bookmarks_comments.html:17 app/user/routes.py:1585
+#: app/templates/user/bookmarks_comments.html:17 app/user/routes.py:1587
 msgid "Bookmarks"
 msgstr ""
 
@@ -3788,7 +3788,7 @@ msgid "Activity Alerts"
 msgstr ""
 
 #: app/templates/base.html:203 app/templates/user/scheduled_posts.html:15
-#: app/user/routes.py:1714
+#: app/user/routes.py:1716
 msgid "Scheduled posts"
 msgstr ""
 
@@ -7162,7 +7162,7 @@ msgid "Blocks & Filters"
 msgstr ""
 
 #: app/templates/user/_user_nav.html:8 app/templates/user/_user_nav.html:26
-#: app/user/routes.py:704
+#: app/user/routes.py:706
 msgid "Import & Export"
 msgstr ""
 
@@ -7173,7 +7173,7 @@ msgstr ""
 
 #: app/templates/user/_user_nav.html:10 app/templates/user/_user_nav.html:32
 #: app/templates/user/connect_oauth.html:17
-#: app/templates/user/connect_oauth.html:20 app/user/routes.py:654
+#: app/templates/user/connect_oauth.html:20 app/user/routes.py:656
 msgid "Connect OAuth"
 msgstr ""
 
@@ -7293,7 +7293,7 @@ msgstr ""
 #: app/templates/user/edit_settings.html:17
 #: app/templates/user/edit_settings.html:20
 #: app/templates/user/import_export.html:17
-#: app/templates/user/import_export.html:20 app/user/routes.py:616
+#: app/templates/user/import_export.html:20 app/user/routes.py:618
 msgid "Change settings"
 msgstr ""
 
@@ -7334,13 +7334,13 @@ msgstr ""
 msgid "Filters"
 msgstr ""
 
-#: app/templates/user/edit_filters.html:18 app/user/routes.py:1529
+#: app/templates/user/edit_filters.html:18 app/user/routes.py:1531
 msgid "Edit filter"
 msgstr ""
 
 #: app/templates/user/edit_filters.html:20
 #: app/templates/user/edit_filters.html:27 app/templates/user/filters.html:40
-#: app/user/routes.py:1493
+#: app/user/routes.py:1495
 msgid "Add filter"
 msgstr ""
 
@@ -7490,7 +7490,7 @@ msgstr ""
 #: app/templates/user/file_delete.html:15
 #: app/templates/user/file_upload.html:15 app/templates/user/files.html:17
 #: app/templates/user/files.html:21 app/templates/user/show_profile.html:306
-#: app/user/routes.py:2036
+#: app/user/routes.py:2038
 msgid "Files"
 msgstr ""
 
@@ -7653,7 +7653,7 @@ msgid "No passkeys created yet."
 msgstr ""
 
 #: app/templates/user/read_posts.html:17 app/templates/user/read_posts.html:20
-#: app/user/routes.py:1795
+#: app/user/routes.py:1797
 msgid "Read posts"
 msgstr ""
 
@@ -7734,7 +7734,7 @@ msgid "Lemmyverse.link"
 msgstr ""
 
 #: app/templates/user/show_profile.html:134
-#: app/templates/user/user_preview.html:59 app/user/routes.py:1842
+#: app/templates/user/user_preview.html:59 app/user/routes.py:1844
 msgid "Edit note"
 msgstr ""
 
@@ -7820,7 +7820,7 @@ msgid ""
 "made to your account."
 msgstr ""
 
-#: app/templates/user/user_ban.html:9 app/user/routes.py:791
+#: app/templates/user/user_ban.html:9 app/user/routes.py:793
 #, python-format
 msgid "Ban %(name)s"
 msgstr ""
@@ -8428,216 +8428,224 @@ msgid "Auto-detect"
 msgstr ""
 
 #: app/user/routes.py:545
-msgid "Catalan"
+msgid "Basque"
 msgstr ""
 
 #: app/user/routes.py:546
-msgid "Chinese"
+msgid "Catalan"
 msgstr ""
 
 #: app/user/routes.py:547
-msgid "English"
+msgid "Chinese"
 msgstr ""
 
 #: app/user/routes.py:548
-msgid "French"
+msgid "English"
 msgstr ""
 
 #: app/user/routes.py:549
-msgid "German"
+msgid "French"
 msgstr ""
 
 #: app/user/routes.py:550
-msgid "Japanese"
+msgid "German"
 msgstr ""
 
 #: app/user/routes.py:551
+msgid "Hindi"
+msgstr ""
+
+#: app/user/routes.py:552
+msgid "Japanese"
+msgstr ""
+
+#: app/user/routes.py:553
 msgid "Spanish"
 msgstr ""
 
-#: app/user/routes.py:651
+#: app/user/routes.py:653
 #, python-format
 msgid "Your %(provider)s account has been disconnected."
 msgstr ""
 
-#: app/user/routes.py:672
+#: app/user/routes.py:674
 msgid "Export Complete."
 msgstr ""
 
-#: app/user/routes.py:697
+#: app/user/routes.py:699
 msgid ""
 "Your subscriptions and blocks are being imported. If you have many it "
 "could take a few minutes."
 msgstr ""
 
-#: app/user/routes.py:729
+#: app/user/routes.py:731
 msgid "You cannot ban yourself."
 msgstr ""
 
-#: app/user/routes.py:740 app/user/routes.py:1151
+#: app/user/routes.py:742 app/user/routes.py:1153
 msgid "Purged user was a remote instance admin."
 msgstr ""
 
-#: app/user/routes.py:742 app/user/routes.py:1153
+#: app/user/routes.py:744 app/user/routes.py:1155
 msgid "Purged user with role permissions."
 msgstr ""
 
-#: app/user/routes.py:748 app/user/routes.py:1159
+#: app/user/routes.py:750 app/user/routes.py:1161
 #, python-format
 msgid ""
 "%(actor)s has been banned, deleted and all their content deleted. This "
 "might take a few minutes."
 msgstr ""
 
-#: app/user/routes.py:759 app/user/routes.py:1167
+#: app/user/routes.py:761 app/user/routes.py:1169
 #, python-format
 msgid "%(actor)s has been banned, deleted and all their content deleted."
 msgstr ""
 
-#: app/user/routes.py:766
+#: app/user/routes.py:768
 msgid "Banned user was a remote instance admin."
 msgstr ""
 
-#: app/user/routes.py:768
+#: app/user/routes.py:770
 msgid "Banned user with role permissions."
 msgstr ""
 
-#: app/user/routes.py:770
+#: app/user/routes.py:772
 #, python-format
 msgid "%(actor)s has been banned."
 msgstr ""
 
-#: app/user/routes.py:808
+#: app/user/routes.py:810
 msgid "You cannot unban yourself."
 msgstr ""
 
-#: app/user/routes.py:816
+#: app/user/routes.py:818
 #, python-format
 msgid "%(actor)s has been unbanned."
 msgstr ""
 
-#: app/user/routes.py:854
+#: app/user/routes.py:856
 #, python-format
 msgid "%(actor)s has been blocked."
 msgstr ""
 
-#: app/user/routes.py:925
+#: app/user/routes.py:927
 #, python-format
 msgid "%(actor)s has been unblocked."
 msgstr ""
 
-#: app/user/routes.py:949
+#: app/user/routes.py:951
 msgid ""
 "Moderators have already assessed reports regarding this person, no "
 "further reports are necessary."
 msgstr ""
 
-#: app/user/routes.py:956
+#: app/user/routes.py:958
 #, python-format
 msgid "%(user_name)s has already been reported, thank you!"
 msgstr ""
 
-#: app/user/routes.py:991
+#: app/user/routes.py:993
 #, python-format
 msgid "%(user_name)s has been reported, thank you!"
 msgstr ""
 
-#: app/user/routes.py:997
+#: app/user/routes.py:999
 msgid "Report user"
 msgstr ""
 
-#: app/user/routes.py:1011
+#: app/user/routes.py:1013
 msgid "You cannot delete yourself."
 msgstr ""
 
-#: app/user/routes.py:1025
+#: app/user/routes.py:1027
 msgid "Deleted user was a remote instance admin."
 msgstr ""
 
-#: app/user/routes.py:1027
+#: app/user/routes.py:1029
 msgid "Deleted user with role permissions."
 msgstr ""
 
-#: app/user/routes.py:1028
+#: app/user/routes.py:1030
 #, python-format
 msgid "%(actor)s has been deleted."
 msgstr ""
 
-#: app/user/routes.py:1045
+#: app/user/routes.py:1047
 #, python-format
 msgid "%(community_name)s has been unblocked."
 msgstr ""
 
-#: app/user/routes.py:1089
+#: app/user/routes.py:1091
 msgid "Account deletion in progress. Give it a few minutes."
 msgstr ""
 
-#: app/user/routes.py:1096
+#: app/user/routes.py:1098
 msgid "Delete my account"
 msgstr ""
 
-#: app/user/routes.py:1143
+#: app/user/routes.py:1145
 msgid "You cannot purge yourself."
 msgstr ""
 
-#: app/user/routes.py:1288
+#: app/user/routes.py:1290
 msgid "All notifications marked as read."
 msgstr ""
 
-#: app/user/routes.py:1431
+#: app/user/routes.py:1433
 msgid "NSFW content will be hidden due to legal restrictions in your country."
 msgstr ""
 
-#: app/user/routes.py:1544
+#: app/user/routes.py:1546
 msgid "Filter deleted."
 msgstr ""
 
-#: app/user/routes.py:1612
+#: app/user/routes.py:1614
 msgid "Comment bookmarks"
 msgstr ""
 
-#: app/user/routes.py:1640
+#: app/user/routes.py:1642
 msgid "Reply Alerts"
 msgstr ""
 
-#: app/user/routes.py:1662
+#: app/user/routes.py:1664
 msgid "Community Alerts"
 msgstr ""
 
-#: app/user/routes.py:1668
+#: app/user/routes.py:1670
 msgid "Topic Alerts"
 msgstr ""
 
-#: app/user/routes.py:1674
+#: app/user/routes.py:1676
 msgid "Feed Alerts"
 msgstr ""
 
-#: app/user/routes.py:1680
+#: app/user/routes.py:1682
 msgid "User Alerts"
 msgstr ""
 
-#: app/user/routes.py:1696
+#: app/user/routes.py:1698
 msgid "Post Alerts"
 msgstr ""
 
-#: app/user/routes.py:1732
+#: app/user/routes.py:1734
 msgid "Lemmy can't follow profiles, sorry"
 msgstr ""
 
-#: app/user/routes.py:1805
+#: app/user/routes.py:1807
 msgid "Reading history has been deleted"
 msgstr ""
 
-#: app/user/routes.py:1873
+#: app/user/routes.py:1875
 #, python-format
 msgid "That person could not be retreived or is banned from %(site)s."
 msgstr ""
 
-#: app/user/routes.py:1883
+#: app/user/routes.py:1885
 msgid "Searching for remote people requires login"
 msgstr ""
 
-#: app/user/routes.py:2103
+#: app/user/routes.py:2105
 msgid "You have exceeded your storage quota."
 msgstr ""
 
