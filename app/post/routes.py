@@ -608,6 +608,20 @@ def continue_discussion(post_id, comment_id):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
+    # Polls
+    poll_results = False
+    poll_choices = []
+    poll_data = None
+    poll_total_votes = 0
+    has_voted = False
+    if post.type == POST_TYPE_POLL:
+        poll_data = Poll.query.get(post.id)
+        if poll_data:
+            poll_choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
+            poll_total_votes = poll_data.total_votes()
+            if current_user.is_authenticated:
+                has_voted = poll_data.has_voted(current_user.id)
+
     # Events
     event = None
     if post.type == POST_TYPE_EVENT:
@@ -620,7 +634,10 @@ def continue_discussion(post_id, comment_id):
             parent_id = comment.parent_id
 
     response = render_template('post/continue_discussion.html', title=_('Discussing %(title)s', title=post.title),
-                               post=post, mods=mod_list, event=event,
+                               post=post, mods=mod_list, has_voted=has_voted, poll_results=poll_results,
+                               poll_data=poll_data,
+                               poll_choices=poll_choices, poll_total_votes=poll_total_votes,
+                               event=event,
                                is_moderator=is_moderator, comment=comment, replies=replies,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
                                recently_upvoted_replies=recently_upvoted_replies,
