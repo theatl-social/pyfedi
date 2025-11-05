@@ -299,7 +299,7 @@
                                     {% endif -%}
                                 {% endfor -%}
                             </ul>
-                            {{ form.csrf_token() }}
+                            <input type="hidden" name="csrf_token" value="{{ cs }}" />
                             <input type="submit" class="btn btn-primary" value="{{ _('Vote') }}"> <a href="#" id="viewPollResults" class="small">{{ _('View results') }}</a>
                             </form>
                         </div>
