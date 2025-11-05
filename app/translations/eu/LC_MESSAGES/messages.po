@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-11-02 14:04+1300\n"
-"PO-Revision-Date: 2025-10-18 17:29+0000\n"
+"PO-Revision-Date: 2025-11-05 02:42+0000\n"
 "Last-Translator: Thadah Denyse <thadahdenyse@protonmail.com>\n"
+"Language-Team: Basque <http://translate.piefed.social/projects/piefed/"
+"main-web-app/eu/>\n"
 "Language: eu\n"
-"Language-Team: Basque <http://translate.piefed.social/projects/piefed"
-"/main-web-app/eu/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -29,9 +30,9 @@ msgid "Reminder: %(title)s"
 msgstr ""
 
 #: app/cli.py:572
-#, fuzzy, python-format
+#, python-format
 msgid "Reminder: comment on %(title)s"
-msgstr "%(post_title)s argitalpeneko nire iruzkinaren erantzunak"
+msgstr "Oroigarria: iruzkindu %(title)s-(e)n"
 
 #: app/cli.py:770 app/main/routes.py:669
 msgid "[PieFed] You have unread notifications"
@@ -284,7 +285,7 @@ msgstr "Lege-informazioa"
 
 #: app/admin/forms.py:22
 msgid "Terms of service url"
-msgstr ""
+msgstr "Zerbitzu-baldintzen urla"
 
 #: app/admin/forms.py:23
 msgid "General instance contact email address"
@@ -328,7 +329,7 @@ msgstr "Onartu tokiko irudien argitalpenak"
 
 #: app/admin/forms.py:34
 msgid "Allow NSFW communities"
-msgstr ""
+msgstr "Baimendu NSFW komunitateak"
 
 #: app/admin/forms.py:35
 msgid "Allow NSFL communities and posts"
@@ -376,7 +377,7 @@ msgstr "Kontu bat eskatzen duten pertsonei egin beharreko galdera"
 
 #: app/admin/forms.py:44
 msgid "Registration approved email"
-msgstr ""
+msgstr "Erregistroa onartutako helbide elektronikoa"
 
 #: app/admin/forms.py:46
 msgid "Provide a list of topics to subscribe to"
@@ -438,7 +439,7 @@ msgstr ""
 
 #: app/admin/forms.py:60 app/user/forms.py:96
 msgid "Default home filter"
-msgstr ""
+msgstr "Hasierako iragazki lehenetsia"
 
 #: app/admin/forms.py:62
 msgid "Log ActivityPub JSON for debugging"
@@ -538,7 +539,7 @@ msgstr "Iragarkia hasierako orriaren goialdean"
 
 #: app/admin/forms.py:97
 msgid "Yes, close my instance"
-msgstr ""
+msgstr "Bai, itxi nire instantzia"
 
 #: app/admin/forms.py:101 app/admin/forms.py:107
 msgid "Number of Communities to add"
@@ -635,7 +636,7 @@ msgstr "Moderatzaileek bakarrik argitaratu dezakete"
 
 #: app/admin/forms.py:131 app/community/forms.py:83
 msgid "New moderators wanted"
-msgstr ""
+msgstr "Moderatzaile berriak behar dira"
 
 #: app/admin/forms.py:132
 msgid "Posts can be popular"
@@ -751,7 +752,7 @@ msgstr "Argitalpen zaharrak artxibatu daitezke"
 
 #: app/admin/forms.py:163 app/community/forms.py:42 app/feed/forms.py:31
 msgid "Url is required."
-msgstr ""
+msgstr "URLa beharrezkoa da."
 
 #: app/admin/forms.py:174 app/community/forms.py:25 app/feed/forms.py:12
 #: app/feed/forms.py:64 app/templates/admin/approve_registrations.html:23
@@ -815,7 +816,7 @@ msgstr ""
 
 #: app/admin/forms.py:186
 msgid "Hide from instance chooser"
-msgstr ""
+msgstr "Ezkutatu instantzien hautatzailetik"
 
 #: app/admin/forms.py:188
 msgid "Inbox"
@@ -823,7 +824,7 @@ msgstr ""
 
 #: app/admin/forms.py:193
 msgid "Domain (not including https://)"
-msgstr ""
+msgstr "Domeinua (https:// barne hartu gabe)"
 
 #: app/admin/forms.py:198 app/admin/forms.py:206
 #: app/templates/admin/blocked_images.html:19
@@ -866,7 +867,7 @@ msgstr ""
 
 #: app/admin/forms.py:220 app/user/forms.py:31
 msgid "Matrix User ID"
-msgstr ""
+msgstr "Matrix Erabiltzaile IDa"
 
 #: app/admin/forms.py:221 app/user/forms.py:33
 msgid "Avatar image"
@@ -874,7 +875,7 @@ msgstr ""
 
 #: app/admin/forms.py:222 app/user/forms.py:34
 msgid "Top banner image"
-msgstr ""
+msgstr "Goiko banner irudia"
 
 #: app/admin/forms.py:223 app/admin/forms.py:285 app/user/forms.py:35
 msgid "This profile is a bot"
@@ -918,12 +919,12 @@ msgstr "Ezkutatu bot-en argitalpenak"
 #: app/admin/forms.py:233 app/admin/forms.py:296 app/user/forms.py:60
 #: app/user/forms.py:183
 msgid "Show NSFW posts"
-msgstr ""
+msgstr "Erakutsi NSFW mezuak"
 
 #: app/admin/forms.py:235 app/admin/forms.py:298 app/user/forms.py:61
 #: app/user/forms.py:185
 msgid "Show NSFL posts"
-msgstr ""
+msgstr "Erakutsi NSFL argitalpenak"
 
 #: app/admin/forms.py:239 app/admin/forms.py:301
 #: app/templates/admin/permissions.html:21
@@ -1017,7 +1018,7 @@ msgstr ""
 
 #: app/admin/forms.py:320
 msgid "Set new owner"
-msgstr ""
+msgstr "Ezarri jabe berria"
 
 #: app/admin/forms.py:321 app/templates/list_communities.html:83
 #: app/templates/post/_flair_choices.html:16 app/topic/forms.py:12
@@ -1072,6 +1073,8 @@ msgid ""
 "Settings saved. It might take up to 24 hours before other instances show "
 "your changes."
 msgstr ""
+"Ezarpenak gordeta. 24 ordu igaro daitezke beste instantzia batzuek aldaketak "
+"erakusteko."
 
 #: app/admin/routes.py:418
 #, python-format
@@ -1115,7 +1118,7 @@ msgstr "Inportazioak debekatzeko eskatu da, baina ez da JSONik eman."
 
 #: app/admin/routes.py:922
 msgid "Admin settings saved"
-msgstr ""
+msgstr "Administratzailearen ezarpenak gordeta"
 
 #: app/admin/routes.py:938
 msgid "Federation settings"
@@ -1346,7 +1349,7 @@ msgstr ""
 
 #: app/admin/routes.py:2014
 msgid "Edit blocked image"
-msgstr ""
+msgstr "Editatu blokeatutako irudia"
 
 #: app/admin/routes.py:2038
 msgid ""
@@ -1359,12 +1362,12 @@ msgstr ""
 #: app/admin/routes.py:2040 app/templates/admin/blocked_images.html:14
 #: app/templates/admin/edit_blocked_image.html:15
 msgid "Add blocked image"
-msgstr ""
+msgstr "Gehitu blokeatutako irudia"
 
 #: app/admin/routes.py:2054 app/post/routes.py:1835
 #, python-format
 msgid "%(count)s posts deleted."
-msgstr ""
+msgstr "%(count)s mezu ezabatu dira."
 
 #: app/admin/routes.py:2060 app/post/routes.py:1847
 #: app/templates/post/post_block_image_purge_posts.html:15
@@ -1373,7 +1376,7 @@ msgstr "Blokeatutako irudiak dituzten argitalpenak"
 
 #: app/admin/routes.py:2073
 msgid "Blocked image deleted"
-msgstr ""
+msgstr "Blokeatutako irudia ezabatuta"
 
 #: app/admin/routes.py:2084
 msgid "CMS Pages"
@@ -1385,7 +1388,7 @@ msgstr ""
 
 #: app/admin/routes.py:2100
 msgid "Add CMS Page"
-msgstr ""
+msgstr "Gehitu CMS orria"
 
 #: app/admin/routes.py:2121
 msgid "Edit page"
@@ -1415,7 +1418,7 @@ msgstr "Gutxieneko luzera 8, gehienez 128"
 
 #: app/auth/forms.py:20 app/user/forms.py:65
 msgid "Low bandwidth mode"
-msgstr ""
+msgstr "Banda-zabalera txikiko modua"
 
 #: app/auth/forms.py:22
 msgid "Log In"
@@ -1439,7 +1442,7 @@ msgstr ""
 
 #: app/auth/forms.py:36
 msgid "Enter captcha code"
-msgstr ""
+msgstr "Sartu captcha kodea"
 
 #: app/auth/forms.py:39 app/auth/util.py:353 app/templates/base.html:182
 #: app/templates/themes/dillo/base.html:108
@@ -1467,7 +1470,7 @@ msgstr "Pasahitzaren gehienezko luzera 128 karakterekoa da."
 
 #: app/auth/forms.py:104
 msgid "Request password reset"
-msgstr ""
+msgstr "Eskatu pasahitza berrezartzea"
 
 #: app/auth/forms.py:110
 msgid "Set password"
@@ -1483,7 +1486,7 @@ msgstr "Pixka bat ondo dago"
 
 #: app/auth/forms.py:116
 msgid "Bring it on"
-msgstr ""
+msgstr "Aurerra!"
 
 #: app/auth/forms.py:118
 msgid "How tired of Trump and Musk news are you?"
@@ -1559,7 +1562,7 @@ msgstr ""
 
 #: app/auth/routes.py:82
 msgid "Account under review"
-msgstr ""
+msgstr "Kontua berrikusten ari da"
 
 #: app/auth/routes.py:87 app/templates/auth/permission_denied.html:12
 #: app/templates/chat/blocked.html:13 app/templates/chat/denied.html:14
@@ -1577,7 +1580,7 @@ msgstr ""
 
 #: app/auth/routes.py:92 app/templates/auth/check_email.html:12
 msgid "Check your email"
-msgstr ""
+msgstr "Begiratu zure posta elektronikoa"
 
 #: app/auth/routes.py:105
 msgid "Sorry, you cannot use that email address."
@@ -1737,12 +1740,12 @@ msgstr "Gorrotoa / genozidioa sustatzea"
 #: app/chat/forms.py:20 app/post/forms.py:30
 #: app/templates/user/user_ban.html:18 app/user/forms.py:151
 msgid "Misinformation / disinformation"
-msgstr ""
+msgstr "Desinformazioa"
 
 #: app/chat/forms.py:21 app/post/forms.py:31
 #: app/templates/user/user_ban.html:19 app/user/forms.py:152
 msgid "Racism, sexism, transphobia"
-msgstr ""
+msgstr "Arrazismoa, sexismoa, transfobia"
 
 #: app/chat/forms.py:22 app/post/forms.py:33
 #: app/templates/user/user_ban.html:20 app/user/forms.py:155
@@ -1752,7 +1755,7 @@ msgstr "Adingabeei tratu txarrak edo sexualizazioa"
 #: app/chat/forms.py:23 app/post/forms.py:34
 #: app/templates/user/user_ban.html:21 app/user/forms.py:156
 msgid "Non-consensual intimate media"
-msgstr ""
+msgstr "Baimenik gabeko multimedia intimoak"
 
 #: app/chat/forms.py:24 app/post/forms.py:35
 #: app/templates/user/user_ban.html:22 app/user/forms.py:157
@@ -1777,7 +1780,7 @@ msgstr ""
 #: app/chat/forms.py:26 app/post/forms.py:37
 #: app/templates/user/user_ban.html:26 app/user/forms.py:159
 msgid "Self-harm or suicide"
-msgstr ""
+msgstr "Autolesioa edo suizidioa"
 
 #: app/chat/forms.py:27 app/community/forms.py:461 app/post/forms.py:38
 #: app/user/forms.py:160
@@ -1803,7 +1806,7 @@ msgstr ""
 #: app/chat/routes.py:64
 #, python-format
 msgid "Chat with %(name)s"
-msgstr ""
+msgstr "Txateatu %(name)s-rekin"
 
 #: app/chat/routes.py:85
 msgid "Send"
@@ -1871,7 +1874,7 @@ msgstr ""
 
 #: app/community/forms.py:90
 msgid "Accept downvotes from"
-msgstr ""
+msgstr "Onartu boto negatiboak hemendik:"
 
 #: app/community/forms.py:100 app/templates/community/add_post.html:13
 #: app/templates/search/start.html:45
@@ -1914,7 +1917,7 @@ msgstr ""
 
 #: app/community/forms.py:116
 msgid "Mods and admins"
-msgstr ""
+msgstr "Moderatzaileak eta administratzaileak"
 
 #: app/community/forms.py:117
 msgid "Trusted accounts"
@@ -1926,7 +1929,7 @@ msgstr ""
 
 #: app/community/forms.py:121
 msgid "Who can edit"
-msgstr ""
+msgstr "Nork edita dezake"
 
 #: app/community/forms.py:128 app/community/forms.py:159
 msgid "Find"
@@ -2031,7 +2034,7 @@ msgstr ""
 #: app/templates/post/_reply_notification_toggle.html:4
 #: app/templates/post/reply/_macros.html:35
 msgid "Notify about replies"
-msgstr ""
+msgstr "Erantzunen berri eman"
 
 #: app/community/forms.py:177 app/post/forms.py:19
 #: app/templates/auth/instance_chooser.html:26
@@ -2137,7 +2140,7 @@ msgstr "Blokeatu argitalpena"
 
 #: app/community/forms.py:325
 msgid "Maximum number of attendees"
-msgstr ""
+msgstr "Gehienezko parte-hartzaile kopurua"
 
 #: app/community/forms.py:326 app/templates/admin/instances.html:23
 #: app/templates/admin/instances.html:107
@@ -2184,23 +2187,23 @@ msgstr "Izen hau dagoeneko erabiltzen da."
 
 #: app/community/forms.py:365
 msgid "Start must be less than end."
-msgstr ""
+msgstr "Hasiera amaiera baino txikiagoa izan behar da."
 
 #: app/community/forms.py:371
 msgid "Online link is required for online events."
-msgstr ""
+msgstr "Online ekitaldietarako online esteka beharrezkoa da."
 
 #: app/community/forms.py:376
 msgid "Address is required for physical events."
-msgstr ""
+msgstr "Helbidea beharrezkoa da ekitaldi fisikoetarako."
 
 #: app/community/forms.py:379
 msgid "City is required for physical events."
-msgstr ""
+msgstr "Hiria beharrezkoa da ekitaldi fisikoetarako."
 
 #: app/community/forms.py:382
 msgid "Country is required for physical events."
-msgstr ""
+msgstr "Herrialdea beharrezkoa da ekitaldi fisikoetarako."
 
 #: app/community/forms.py:405
 msgid "Mode"
@@ -2251,7 +2254,7 @@ msgstr ""
 
 #: app/community/forms.py:417
 msgid "End voting in"
-msgstr ""
+msgstr "Amaitu bozketa hemen"
 
 #: app/community/forms.py:419
 msgid "Accept votes from this instance only"
@@ -2271,11 +2274,11 @@ msgstr "Gutxienez bi aukera eman"
 
 #: app/community/forms.py:455
 msgid "Breaks instance rules"
-msgstr ""
+msgstr "Instantziaren arauak hausten ditu"
 
 #: app/community/forms.py:456
 msgid "Abandoned by moderators"
-msgstr ""
+msgstr "Moderatzaileek abandonatua"
 
 #: app/community/forms.py:457
 msgid "Cult"
@@ -2291,7 +2294,7 @@ msgstr ""
 
 #: app/community/forms.py:460 app/post/forms.py:29
 msgid "Hate / genocide"
-msgstr ""
+msgstr "Gorrotoa / genozidioa"
 
 #: app/community/forms.py:483 app/community/routes.py:1256
 msgid "Delete community"
@@ -2365,6 +2368,8 @@ msgstr ""
 #: app/community/routes.py:156
 msgid "Adding remote communities is restricted to admin and staff users only."
 msgstr ""
+"Urruneko komunitateak gehitzea administratzaile eta pertsonalaren "
+"erabiltzaileentzat soilik mugatuta dago."
 
 #: app/community/routes.py:166 app/community/routes.py:2419
 #: app/feed/routes.py:130 app/feed/routes.py:1150 app/user/routes.py:1871
@@ -2377,7 +2382,7 @@ msgstr ""
 
 #: app/community/routes.py:180 app/community/routes.py:2422
 msgid "Community not found."
-msgstr ""
+msgstr "Komunitatea ez da aurkitu."
 
 #: app/community/routes.py:182 app/community/routes.py:2425
 msgid ""
@@ -2396,7 +2401,7 @@ msgstr "Komunitate hori %(site)s-tik debekatuta dago."
 #: app/templates/communities_menu.html:14
 #: app/templates/list_communities.html:22 app/templates/search/start.html:100
 msgid "Add remote community"
-msgstr ""
+msgstr "Gehitu urruneko komunitatea"
 
 #: app/community/routes.py:238 app/community/routes.py:243
 msgid "This community is only visible to logged in users."
@@ -2468,6 +2473,8 @@ msgid ""
 "This instance no longer online, so posts and comments will only be "
 "visible locally"
 msgstr ""
+"Instantzia hau jada ez da linean, beraz, argitalpenak eta iruzkinak bakarrik "
+"lokalki egongo dira ikusgai"
 
 #: app/community/routes.py:776 app/shared/tasks/follows.py:49
 msgid "You cannot join this community"
@@ -2678,12 +2685,11 @@ msgstr "Urruneko komunitateak bilatzeko saioa hasi behar da"
 
 #: app/community/routes.py:2509
 msgid "This function is only for admins"
-msgstr ""
+msgstr "Funtzio hau administratzaileentzat bakarrik da"
 
 #: app/community/routes.py:2515
-#, fuzzy
 msgid "This is a local community"
-msgstr "Komunitatea mugitzeko eskaera bat da hau"
+msgstr "Hau tokiko komunitate bat da"
 
 #: app/dev/forms.py:12
 msgid "Populate Communities"
@@ -2798,7 +2804,7 @@ msgstr "%(feed_title)s-(e)ra harpidetu zara"
 #: app/feed/routes.py:1003
 #, python-format
 msgid "You have left %(feed_title)s"
-msgstr ""
+msgstr "%(feed_title)s utzi duzu"
 
 #: app/feed/routes.py:1159
 #, python-format
@@ -2816,10 +2822,14 @@ msgstr "Urruneko jarioak bilatzeko saioa hasi behar da"
 #: app/instance/routes.py:54
 msgid "Limiting results to blocked instances disables filters other than search"
 msgstr ""
+"Emaitzak blokeatutako instantzietara mugatzeak bilaketa ez diren beste "
+"iragazkiak desgaitzen ditu"
 
 #: app/instance/routes.py:56
 msgid "Limiting results to allowed instances disables filters other than search"
 msgstr ""
+"Emaitzak baimendutako instantzietara mugatzeak bilaketa ez diren beste "
+"iragazkiak desgaitzen ditu"
 
 #: app/instance/routes.py:78 app/instance/routes.py:214
 #: app/templates/admin/_nav.html:26 app/templates/admin/_tabbed_nav.html:28
@@ -2851,7 +2861,7 @@ msgstr "%(instance_domain)s-ko edukia ezkutatuko da."
 #: app/instance/routes.py:256
 #, python-format
 msgid "%(instance_domain)s has been unblocked."
-msgstr ""
+msgstr "%(instance_domain)s desblokeatu da."
 
 #: app/main/forms.py:9 app/post/forms.py:58
 msgid "Community to post this link to"
@@ -2882,7 +2892,7 @@ msgstr ""
 #: app/main/routes.py:754
 #, python-format
 msgid "Failed to look up %(url)s"
-msgstr ""
+msgstr "%(url)s bilatzeak huts egin du"
 
 #: app/main/routes.py:768
 msgid "Protocol handler"
@@ -2900,7 +2910,7 @@ msgstr ""
 
 #: app/post/forms.py:18
 msgid "Distinguish as moderator comment"
-msgstr ""
+msgstr "Moderatzailearen iruzkin gisa bereizi"
 
 #: app/post/forms.py:28 app/user/forms.py:146
 msgid "Breaks community rules"
@@ -2913,7 +2923,7 @@ msgstr "Informazio pertsonala partekatzea - doxing"
 #: app/post/forms.py:54 app/post/routes.py:1339
 #: app/templates/post/post_mea_culpa.html:13
 msgid "I changed my mind"
-msgstr ""
+msgstr "Iritziz aldatu dut"
 
 #: app/post/forms.py:64 app/post/forms.py:70 app/post/forms.py:76
 #: app/templates/admin/instances.html:98
@@ -2926,13 +2936,12 @@ msgid "Also delete replies to this comment"
 msgstr "Ezabatu iruzkin honen erantzunak ere"
 
 #: app/post/forms.py:88
-#, fuzzy
 msgid "When would you like to be reminded?"
-msgstr "Zergatik nahi zenuke gune honetan sartu?"
+msgstr "Noiz nahi duzu gogoraraztea?"
 
 #: app/post/forms.py:89
 msgid "e.g. 'in 2 weeks'"
-msgstr ""
+msgstr "adibidez, '2 aste barru'"
 
 #: app/post/forms.py:102 app/post/forms.py:104
 msgid "Invalid."
@@ -2974,11 +2983,11 @@ msgstr "Zure erantzuna ez da onartu %(reason)s dela eta"
 #: app/post/routes.py:487 app/templates/post/post_embed_code.html:23
 #, python-format
 msgid "Embed code for %(post_title)s"
-msgstr ""
+msgstr "Txertatu kodea %(post_title)s-rentzat"
 
 #: app/post/routes.py:546
 msgid "Vote has been cast."
-msgstr ""
+msgstr "Botoa eman da."
 
 #: app/post/routes.py:622 app/post/routes.py:737
 #, python-format
@@ -2987,7 +2996,7 @@ msgstr ""
 
 #: app/post/routes.py:698 app/post/routes.py:760
 msgid "Comments have been disabled."
-msgstr ""
+msgstr "Iruzkinak desgaitu dira."
 
 #: app/post/routes.py:711 app/post/routes.py:765
 #, python-format
@@ -3028,7 +3037,7 @@ msgstr ""
 
 #: app/post/routes.py:1056
 msgid "Post has been restored."
-msgstr ""
+msgstr "Argitalpena berreskuratu da."
 
 #: app/post/routes.py:1070
 msgid "Post purged."
@@ -3037,17 +3046,19 @@ msgstr ""
 #: app/post/routes.py:1120 app/post/routes.py:1145
 #, python-format
 msgid "Reminder added for %(when)s"
-msgstr ""
+msgstr "Abisua gehitu da %(when)s-rako"
 
 #: app/post/routes.py:1125
 #, python-format
 msgid "Creating a reminder about \"%(post_title)s\""
-msgstr ""
+msgstr "\"%(post_title)s\"-ri buruzko abisua sortzen"
 
 #: app/post/routes.py:1150
-#, fuzzy, python-format
+#, python-format
 msgid "Creating a reminder about comment by %(author)s on \"%(post_title)s\""
-msgstr "%(post_title)s argitalpeneko nire iruzkinaren erantzunak"
+msgstr ""
+"\"%(post_title)s\"-(e)n %(author)s-ek egindako iruzkinari buruzko abisua "
+"sortzen"
 
 #: app/post/routes.py:1208
 msgid ""
@@ -3072,7 +3083,7 @@ msgstr ""
 #: app/post/routes.py:1232 app/post/routes.py:1502
 #, python-format
 msgid "%(name)s has been blocked."
-msgstr ""
+msgstr "%(name)s blokeatu da."
 
 #: app/post/routes.py:1263
 #, python-format
@@ -3087,17 +3098,17 @@ msgstr "%(name)s-(r)en edukia ezkutatuko da."
 #: app/post/routes.py:1349
 #, python-format
 msgid "%(name)s has been stickied."
-msgstr ""
+msgstr "%(name)s itsatsi da."
 
 #: app/post/routes.py:1351
 #, python-format
 msgid "%(name)s has been un-stickied."
-msgstr ""
+msgstr "%(name)s itsasketa kendu da."
 
 #: app/post/routes.py:1423
 #, python-format
 msgid "Set flair for %(post_title)s"
-msgstr ""
+msgstr "Ezarri %(post_title)s-(r)en bereizgarria"
 
 #: app/post/routes.py:1474
 msgid ""
@@ -3124,9 +3135,8 @@ msgid "Edit comment"
 msgstr ""
 
 #: app/post/routes.py:1614
-#, fuzzy
 msgid "Delete all my comments in this chain"
-msgstr "Ezabatu kontu honetako eduki guztia"
+msgstr "Ezabatu kate honetako nire iruzkin guztiak"
 
 #: app/post/routes.py:1654
 #, python-format
@@ -3176,7 +3186,7 @@ msgstr ""
 #: app/search/routes.py:158
 #, python-format
 msgid "Search results for %(q)s"
-msgstr ""
+msgstr "%(q)s-ren bilaketaren emaitzak"
 
 #: app/search/routes.py:196
 msgid "Post not found."
@@ -3194,7 +3204,7 @@ msgstr "Komunitatea utzi duzu"
 #: app/shared/community.py:381
 #, python-format
 msgid "New posts in %(community_name)s"
-msgstr ""
+msgstr "Mezu berriak %(community_name)s-en"
 
 #: app/shared/community.py:465
 msgid "Moderator added"
@@ -3212,12 +3222,12 @@ msgstr ""
 #: app/shared/post.py:773
 #, python-format
 msgid "%(name)s has been locked."
-msgstr ""
+msgstr "%(name)s blokeatu egin da."
 
 #: app/shared/post.py:777
 #, python-format
 msgid "%(name)s has been unlocked."
-msgstr ""
+msgstr "%(name)s desblokeatu da."
 
 #: app/shared/reply.py:179
 msgid "Your comment has been added."
@@ -3229,15 +3239,15 @@ msgstr ""
 
 #: app/shared/reply.py:476
 msgid "Comment has been locked."
-msgstr ""
+msgstr "Iruzkina blokeatu da."
 
 #: app/shared/reply.py:480
 msgid "Comment has been unlocked."
-msgstr ""
+msgstr "Iruzkina desblokeatu da."
 
 #: app/shared/user.py:27 app/user/routes.py:839
 msgid "You cannot block yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua blokeatu."
 
 #: app/shared/user.py:36
 msgid "You cannot block admin or staff."
@@ -3245,7 +3255,7 @@ msgstr "Ezin dituzu administratzaileak edo pertsonala blokeatu."
 
 #: app/shared/user.py:68 app/user/routes.py:914
 msgid "You cannot unblock yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua desblokeatu."
 
 #: app/shared/tasks/follows.py:63
 msgid "Community is on banned or blocked instance"
@@ -3334,7 +3344,7 @@ msgstr ""
 #: app/templates/_home_nav.html:15 app/templates/_home_nav.html:101
 #: app/templates/user/_user_nav.html:8 app/templates/user/_user_nav.html:9
 msgid "Trending in niche communities"
-msgstr ""
+msgstr "Joera komunitate txikietan"
 
 #: app/templates/_home_nav.html:16 app/templates/_home_nav.html:102
 #: app/user/forms.py:79
@@ -3433,7 +3443,7 @@ msgstr ""
 #: app/templates/community/_community_nav.html:288
 #: app/templates/feed/_feed_nav.html:54
 msgid "Most upvotes all time"
-msgstr ""
+msgstr "Aldeko boto gehien inoiz"
 
 #: app/templates/_home_nav.html:41 app/templates/_home_nav.html:91
 #: app/templates/community/_community_nav.html:101
@@ -3488,14 +3498,14 @@ msgstr ""
 #: app/templates/post/post_embed.html:23
 #: app/templates/themes/dillo/_macros.html:36
 msgid "Very low reputation. Beware."
-msgstr ""
+msgstr "Oso ospe txarra. Kontuz."
 
 #: app/templates/_macros.html:43
 #: app/templates/post/add_reply_inline_result.html:33
 #: app/templates/post/post_embed.html:24
 #: app/templates/themes/dillo/_macros.html:37
 msgid "Very low reputation. Beware!"
-msgstr ""
+msgstr "Oso ospe txarra. Kontuz!"
 
 #: app/templates/_macros.html:45
 #: app/templates/admin/approve_registrations.html:53
@@ -3516,12 +3526,12 @@ msgstr ""
 #: app/templates/themes/dillo/_macros.html:54
 #, python-format
 msgid "Go to community %(name)s"
-msgstr ""
+msgstr "Joan %(name)s komunitatera"
 
 #: app/templates/_macros.html:75 app/templates/themes/dillo/_macros.html:65
 #, python-format
 msgid "Go to feed %(name)s"
-msgstr ""
+msgstr "Joan %(name)s jariora"
 
 #: app/templates/_side_pane.html:11
 #: app/templates/community/_community_nav.html:168
@@ -3644,7 +3654,7 @@ msgstr "Ikusi komunitatea jatorrizko zerbitzarian"
 #: app/templates/_side_pane.html:123
 #, python-format
 msgid "Move community to %(instance_domain)s"
-msgstr ""
+msgstr "Mugitu komunitatea %(instance_domain)s-ra"
 
 #: app/templates/_side_pane.html:125
 #: app/templates/themes/dillo/_side_pane.html:54
@@ -3653,7 +3663,7 @@ msgstr "Jatorrizko zerbitzaritik mezu bat berreskuratu"
 
 #: app/templates/_side_pane.html:130
 msgid "Refresh community information from remote"
-msgstr ""
+msgstr "Komunitateko informazioa urrunetik freskatu"
 
 #: app/templates/_side_pane.html:135
 #: app/templates/community/_community_moderation_nav.html:14
@@ -3734,7 +3744,7 @@ msgstr "Erabiltzaile aktiboak azken 6 hilabetetan"
 
 #: app/templates/_side_pane.html:146
 msgid "Users / 6 Months"
-msgstr ""
+msgstr "Erabiltzaileak / 6 hilabete"
 
 #: app/templates/_side_pane.html:158
 #: app/templates/themes/dillo/_side_pane.html:70
@@ -3769,18 +3779,18 @@ msgstr ""
 #: app/templates/_view_filter_nav.html:7 app/templates/_view_filter_nav.html:20
 #: app/templates/themes/dillo/_view_filter_nav.html:4
 msgid "Posts from joined communities"
-msgstr ""
+msgstr "Batutako komunitateetako argitalpenak"
 
 #: app/templates/_view_filter_nav.html:9 app/templates/_view_filter_nav.html:22
 #: app/templates/themes/dillo/_view_filter_nav.html:8
 msgid "Posts on this instance"
-msgstr ""
+msgstr "Instantzia honetako argitalpenak"
 
 #: app/templates/_view_filter_nav.html:10
 #: app/templates/_view_filter_nav.html:24
 #: app/templates/themes/dillo/_view_filter_nav.html:11
 msgid "Posts from popular communities"
-msgstr ""
+msgstr "Komunitate ezagunetako argitalpenak"
 
 #: app/templates/_view_filter_nav.html:11
 #: app/templates/_view_filter_nav.html:26
@@ -4205,7 +4215,7 @@ msgstr "Komuniatea"
 
 #: app/templates/list_communities.html:48
 msgid "Filter based on whether the community is local or remote"
-msgstr ""
+msgstr "Iragazi komunitatea lokala edo urrunekoa den arabera"
 
 #: app/templates/auth/instance_chooser.html:28
 #: app/templates/list_communities.html:50
@@ -4222,9 +4232,8 @@ msgid "Subscription Status"
 msgstr ""
 
 #: app/templates/list_communities.html:67
-#, fuzzy
 msgid "Filter based on community subscription status"
-msgstr "Ordenatu komunitatearen sorrera-dataren arabera"
+msgstr "Iragazi komunitateko harpidetza egoeraren arabera"
 
 #: app/templates/list_communities.html:75
 msgid "Not Subscribed"
@@ -4277,9 +4286,8 @@ msgid "Sort by name"
 msgstr ""
 
 #: app/templates/list_communities.html:221
-#, fuzzy
 msgid "Sort by number of active users in the past week"
-msgstr "Ordenatu erabiltzaile aktiboen kopuruaren arabera"
+msgstr "Ordenatu azken astean erabiltzaile aktibo kopuruaren arabera"
 
 #: app/templates/list_communities.html:223
 msgid "Active People"
@@ -4288,12 +4296,12 @@ msgstr ""
 #: app/templates/admin/communities.html:51
 #: app/templates/list_communities.html:233
 msgid "Sort by post count"
-msgstr ""
+msgstr "Ordenatu argitalpen kopuruaren arabera"
 
 #: app/templates/admin/communities.html:88
 #: app/templates/list_communities.html:257
 msgid "Sort by recent activity"
-msgstr ""
+msgstr "Ordenatu azken jardueraren arabera"
 
 #: app/templates/list_communities.html:269
 msgid "Sort by community creation date"
@@ -4410,11 +4418,14 @@ msgid ""
 " open it in PieFed. This is possible by registering \"web+ap\" as a type "
 "of link that PieFed will open."
 msgstr ""
+"Lemmy orrialde bat irekitzean, URLaren https zatia web+ap bihurtu PieFed-en "
+"irekitzeko. Horretarako, \"web+ap\" PieFed-ek irekiko duen esteka mota gisa "
+"erregistratu behar da."
 
 #: app/templates/protocol_handler.html:13
 #, python-format
 msgid "Open web+ap links using %(domain)s"
-msgstr ""
+msgstr "Ireki web+ap estekak %(domain)s erabiliz"
 
 #: app/templates/protocol_handler.html:14
 msgid "Un-register protocol handler"
@@ -4527,7 +4538,7 @@ msgstr ""
 #: app/templates/admin/approve_registrations.html:84
 #: app/templates/user/show_profile.html:152
 msgid "IP and country code"
-msgstr ""
+msgstr "IP eta herrialde kodea"
 
 #: app/templates/admin/approve_registrations.html:29
 #: app/templates/admin/approve_registrations.html:85
@@ -4647,7 +4658,7 @@ msgstr ""
 
 #: app/templates/admin/cms_page_delete.html:46
 msgid "Yes, Delete This Page"
-msgstr ""
+msgstr "Bai, ezabatu orrialde hau"
 
 #: app/templates/admin/cms_page_delete.html:47
 msgid "Cancel"
@@ -4717,7 +4728,7 @@ msgstr "Ez da orrialderik sortu oraindik."
 #: app/templates/admin/communities.html:57
 #: app/templates/admin/communities.html:101
 msgid "Number of known subscribers"
-msgstr ""
+msgstr "Harpidedun ezagunen kopurua"
 
 #: app/templates/admin/communities.html:58
 #: app/templates/themes/dillo/_side_pane.html:36
@@ -4736,7 +4747,7 @@ msgstr ""
 #: app/templates/admin/communities.html:70
 #: app/templates/admin/communities.html:104
 msgid "Posts can be popular."
-msgstr ""
+msgstr "Argitalpenak ospetsuak izan daitezke."
 
 #: app/templates/admin/communities.html:76
 #: app/templates/admin/communities.html:105
@@ -4773,7 +4784,7 @@ msgstr ""
 #: app/templates/community/community_move.html:20
 #, python-format
 msgid "Move %(community)s to %(instance_domain)s"
-msgstr ""
+msgstr "Mugitu %(community)s %(instance_domain)s-ra"
 
 #: app/templates/admin/content.html:49
 msgid "No posts."
@@ -4803,7 +4814,7 @@ msgstr "Ez du urruneko zerbitzariak gainidatziko"
 
 #: app/templates/admin/edit_community.html:69
 msgid "Convert to local community"
-msgstr ""
+msgstr "Tokiko komunitate bihurtu"
 
 #: app/templates/admin/edit_instance.html:13
 #, python-format
@@ -4822,23 +4833,22 @@ msgstr ""
 
 #: app/templates/admin/federation.html:22
 msgid "Import / Export Bans"
-msgstr ""
+msgstr "Inportatu / Esportatu debekuak"
 
 #: app/templates/admin/federation.html:46
 msgid "Remote server scan"
 msgstr ""
 
 #: app/templates/admin/federation.html:47
-#, fuzzy
 msgid ""
 "Use this to scan a remote PieFed or Lemmy server and \"pre-load\" its "
 "communities, as ranked by posts and activity. NSFW communities and "
 "communities from banned instances are excluded."
 msgstr ""
-"Erabili hau urruneko lemmy zerbitzari bat eskaneatzeko eta bere "
+"Erabili hau urruneko PieFed edo Lemmy zerbitzari bat eskaneatzeko eta bere "
 "komunitateak \"aurrekargatzeko\", argitalpen eta jardueraren arabera "
-"sailkatuta. NSFW komunitateak eta debekatutako instantzietako "
-"komunitateak baztertuta daude."
+"sailkatuta. NSFW komunitateak eta debekatutako instantzietako komunitateak "
+"baztertuta daude."
 
 #: app/templates/admin/federation.html:48
 msgid "Input should be in the form of <strong>https://server-name.tld</strong>"
@@ -4937,13 +4947,15 @@ msgstr ""
 
 #: app/templates/admin/instance_chooser.html:22
 msgid "Instance strength / maturity"
-msgstr ""
+msgstr "Instantziaren indarra / heldutasuna"
 
 #: app/templates/admin/instance_chooser.html:23
 msgid ""
 "These are used to create the Maturity indicator. More is better but none "
 "are required."
 msgstr ""
+"Hauek heldutasun adierazlea sortzeko erabiltzen dira. Gehiago gehituz "
+"hobetzen da, baina ez da beharrezkoa."
 
 #: app/templates/admin/instances.html:19
 msgid "Create offline instance"
@@ -5070,12 +5082,12 @@ msgstr "Hau haien eskaera onartu ondoren bidaliko da. Erabili markdown."
 
 #: app/templates/admin/misc.html:75
 msgid "Danger Zone! - Instance Deletion"
-msgstr ""
+msgstr "Arrisku-eremua! - Instantziaren ezabaketa"
 
 #: app/templates/admin/misc.html:81
 #, python-format
 msgid "You are about to close the instance \"<strong>%(domain)s</strong>.\""
-msgstr ""
+msgstr "\"<strong>%(domain)s</strong>\" instantzia ixtear zaude."
 
 #: app/templates/admin/misc.html:82
 msgid ""
@@ -5083,12 +5095,18 @@ msgid ""
 " new user registration will be closed and an announcement added to the "
 "home page."
 msgstr ""
+"Itxi botoia sakatzen duzunean, beste instantzia guztiek edukia hona "
+"bidaltzeari utziko diote, erabiltzaile berrien erregistroa itxiko da eta "
+"iragarki bat gehituko da hasierako orrialdean."
 
 #: app/templates/admin/misc.html:83
 msgid ""
 "This action should be taken a few days before going offline and only "
 "after plenty of earlier warning, so communities have time to move, etc."
 msgstr ""
+"Ekintza hau lineaz kanpo utzi baino egun batzuk lehenago egin beharko "
+"litzateke, eta abisu asko eman ondoren bakarrik, komunitateek mugitzeko "
+"denbora izan dezaten, etab."
 
 #: app/templates/admin/misc.html:84 app/templates/user/delete_account.html:23
 #: app/templates/user/edit_profile.html:120
@@ -5231,7 +5249,7 @@ msgstr ""
 
 #: app/templates/auth/instance_chooser.html:38
 msgid "Choose your own adventure"
-msgstr ""
+msgstr "Aukeratu zure abentura propioa"
 
 #: app/templates/auth/instance_chooser.html:44
 msgid "I don't care"
@@ -5333,15 +5351,15 @@ msgstr "Hasi saioa passkey batekin"
 
 #: app/templates/auth/login.html:35 app/templates/auth/register.html:18
 msgid "Log in with Google"
-msgstr ""
+msgstr "Hasi saioa Google-rekin"
 
 #: app/templates/auth/login.html:42 app/templates/auth/register.html:25
 msgid "Log in with Mastodon"
-msgstr ""
+msgstr "Hasi saioa Mastodon-ekin"
 
 #: app/templates/auth/login.html:49 app/templates/auth/register.html:32
 msgid "Log in with Discord"
-msgstr ""
+msgstr "Hasi saioa Discord-ekin"
 
 #: app/templates/auth/login.html:56
 msgid "New User?"
@@ -5503,7 +5521,7 @@ msgstr ""
 
 #: app/templates/chat/conversation.html:82
 msgid "The other participant has left the chat."
-msgstr ""
+msgstr "Beste parte-hartzaileak txata utzi du."
 
 #: app/templates/chat/conversation.html:93
 #: app/templates/community/_community_nav.html:122
@@ -5535,7 +5553,7 @@ msgstr ""
 #: app/templates/chat/report.html:14
 #, python-format
 msgid "Report conversation with \"%(member_names)s\""
-msgstr ""
+msgstr "Salatu \"%(member_names)s\"-rekin izandako elkarrizketa"
 
 #: app/templates/community/_community_moderation_nav.html:7
 #: app/templates/community/_community_nav.html:12
@@ -5667,7 +5685,7 @@ msgstr ""
 
 #: app/templates/community/_community_nav.html:174
 msgid "Invite people to join"
-msgstr ""
+msgstr "Gonbidatu jendea bat egitera"
 
 #: app/templates/community/_community_nav.html:184
 msgid "About community"
@@ -5784,13 +5802,13 @@ msgstr "Esteka hau dagoeneko argitaratu da komunitate hauetan:"
 #: app/templates/post/_post_full.html:9
 #: app/templates/post/post_teaser/_macros.html:41
 msgid "Not safe for work"
-msgstr ""
+msgstr "Ez da segurua lanerako (NSFW)"
 
 #: app/templates/community/community.html:42
 #: app/templates/community/community.html:79
 #: app/templates/community/community.html:113
 msgid "Not safe for life"
-msgstr ""
+msgstr "Ez da segurua bizitzarako (NSFL)"
 
 #: app/templates/community/community.html:156
 msgid "No posts in this community yet."
@@ -5803,7 +5821,7 @@ msgstr "Ez dago iruzkinik komunitate honetan oraindik."
 #: app/templates/community/community_ban_user.html:13
 #, python-format
 msgid "Ban \"%(user_name)s\" from %(community_name)s"
-msgstr ""
+msgstr "Debekatu \"%(user_name)s\" %(community_name)s-etik"
 
 #: app/templates/community/community_delete.html:13
 #, python-format
@@ -5927,7 +5945,7 @@ msgstr ""
 #: app/templates/community/community_moderate_comments.html:30
 #, python-format
 msgid "Review comments in %(community)s"
-msgstr ""
+msgstr "Berrikusi iruzkinak %(community)s-en"
 
 #: app/templates/community/community_moderate_comments.html:40
 #: app/templates/user/show_profile.html:270
@@ -5941,7 +5959,7 @@ msgstr ""
 
 #: app/templates/community/community_moderate_report_escalate.html:13
 msgid "Escalate report to admins"
-msgstr ""
+msgstr "Txostena administratzaileei eskalatu"
 
 #: app/templates/community/community_moderate_report_escalate.html:14
 msgid ""
@@ -5986,7 +6004,7 @@ msgstr ""
 
 #: app/templates/community/community_moderate_subscribers.html:168
 msgid "No banned people yet"
-msgstr ""
+msgstr "Ez dago debekatutako jenderik oraindik"
 
 #: app/templates/community/community_moderate_subscribers.html:170
 msgid "Ban a user"
@@ -6000,7 +6018,7 @@ msgstr "Sortu debekua %(community)s-(e)tik"
 #: app/templates/community/community_modlog.html:24
 #, python-format
 msgid "Moderation actions in %(community)s"
-msgstr ""
+msgstr "Moderazio ekintzak %(community)s-n"
 
 #: app/templates/community/community_modlog.html:26
 msgid "See things moderators have done in this community."
@@ -6076,7 +6094,7 @@ msgstr ""
 #: app/templates/community/community_wiki_list.html:23
 #, python-format
 msgid "Wiki pages for %(community)s"
-msgstr ""
+msgstr "%(community)s-ren wiki orriak"
 
 #: app/templates/community/community_wiki_list.html:49
 msgid "View page"
@@ -6192,7 +6210,7 @@ msgstr "Zenbat aldiz argitaratu da zerbait domeinu honetan"
 #: app/templates/domain/domains_blocked.html:14
 #, python-format
 msgid "Banned domains containing \"%(search)s\""
-msgstr ""
+msgstr "\"%(search)s\" duten debekatutako domeinuak"
 
 #: app/templates/domain/domains_blocked.html:46
 msgid "Unbanning this domain allows future posts linking to that domain."
@@ -6202,7 +6220,7 @@ msgstr ""
 
 #: app/templates/errors/401.html:12
 msgid "Sorry, access is denied"
-msgstr ""
+msgstr "Barkatu, sarbidea ukatuta dago"
 
 #: app/templates/errors/401.html:15
 msgid "You cannot access this area."
@@ -6215,7 +6233,7 @@ msgstr ""
 
 #: app/templates/errors/404.html:2
 msgid "Ooops, something is broken!"
-msgstr ""
+msgstr "Ups, zerbait hautsi da!"
 
 #: app/templates/errors/404.html:3
 msgid "The page your browser tried to load could not be found."
@@ -6380,7 +6398,7 @@ msgstr ""
 
 #: app/templates/feed/public_feeds.html:92
 msgid "No Public Feeds yet..."
-msgstr ""
+msgstr "Ez dago jario publikorik oraindik..."
 
 #: app/templates/feed/show_feed.html:33 app/templates/feed/show_feed.html:62
 #: app/templates/feed/show_feed.html:88
@@ -6472,7 +6490,7 @@ msgstr ""
 
 #: app/templates/instance/list_instances.html:195
 msgid "No results to show."
-msgstr ""
+msgstr "Ez dago emaitzarik erakusteko."
 
 #: app/templates/instance/overview.html:19
 #, python-format
@@ -6494,11 +6512,11 @@ msgstr ""
 #: app/templates/user/show_profile.html:128
 #, python-format
 msgid "Block everyone from %(instance_name)s"
-msgstr ""
+msgstr "Blokeatu guztiak %(instance_name)s-tik"
 
 #: app/templates/instance/people.html:51 app/templates/user/people.html:32
 msgid "No people to show"
-msgstr ""
+msgstr "Ez dago erakusteko inor"
 
 #: app/templates/instance/posts.html:27
 msgid "No posts from this instance yet."
@@ -6557,7 +6575,7 @@ msgstr ""
 #: app/templates/post/_post_full.html:14
 #: app/templates/post/post_teaser/_macros.html:42
 msgid "Potentially emotionally scarring content"
-msgstr ""
+msgstr "Emozionalki zaurigarriak izan daitezkeen edukiak"
 
 #: app/templates/post/_post_full.html:29
 #: app/templates/post/post_teaser/_macros.html:44
@@ -6603,9 +6621,8 @@ msgid "The poll has finished, yet no votes were cast."
 msgstr "Galdetegia amaitu da, baina ez da botorik eman."
 
 #: app/templates/post/_post_full.html:274
-#, fuzzy
 msgid "No votes have been cast yet."
-msgstr "Ez da orrialderik sortu oraindik."
+msgstr "Ez da botorik eman oraindik."
 
 #: app/templates/post/_post_full.html:276
 msgid "Show voting form"
@@ -6686,7 +6703,7 @@ msgstr ""
 
 #: app/templates/post/_post_replies.html:31
 msgid "Comments from other communities"
-msgstr ""
+msgstr "Beste komunitateetako iruzkinak"
 
 #: app/templates/post/_post_replies.html:36
 #, python-format
@@ -6853,24 +6870,23 @@ msgstr "Erabiltzailea"
 
 #: app/templates/post/add_reply_inline.html:88 app/templates/post/post.html:44
 #: app/templates/post/post_edit.html:106
-#, fuzzy
 msgid "Are you sure you want to delete this image?"
-msgstr "Ziur zaude orrialde hau ezabatu nahi duzula?"
+msgstr "Ziur zaude irudi hau ezabatu nahi duzula?"
 
 #: app/templates/post/add_reply_inline.html:89 app/templates/post/post.html:45
 #: app/templates/post/post_edit.html:107
 msgid "Failed to delete image. Please try again."
-msgstr ""
+msgstr "Irudia ezabatzeak huts egin du. Saiatu berriro."
 
 #: app/templates/post/add_reply_inline.html:90 app/templates/post/post.html:46
 #: app/templates/post/post_edit.html:108
 msgid "Please select a file."
-msgstr ""
+msgstr "Mesedez, hautatu fitxategi bat."
 
 #: app/templates/post/add_reply_inline.html:91 app/templates/post/post.html:47
 #: app/templates/post/post_edit.html:109
 msgid "Please select an image file."
-msgstr ""
+msgstr "Mesedez, hautatu irudi-fitxategi bat."
 
 #: app/templates/post/add_reply_inline.html:92 app/templates/post/post.html:48
 #: app/templates/post/post_edit.html:110
@@ -6885,16 +6901,16 @@ msgstr ""
 #: app/templates/post/add_reply_inline.html:94 app/templates/post/post.html:50
 #: app/templates/post/post_edit.html:112
 msgid "Upload failed. Please try again."
-msgstr ""
+msgstr "Kargatzeak huts egin du. Saiatu berriro."
 
 #: app/templates/post/add_reply_inline.html:95 app/templates/post/post.html:51
 #: app/templates/post/post_edit.html:113
 msgid "Failed to upload pasted image. Please try again."
-msgstr ""
+msgstr "Itsatsitako irudia kargatzeak huts egin du. Saiatu berriro."
 
 #: app/templates/post/continue_discussion.html:21
 msgid "Back to main discussion"
-msgstr ""
+msgstr "Eztabaida nagusira itzuli"
 
 #: app/templates/post/continue_discussion.html:27
 #, fuzzy
@@ -6917,7 +6933,7 @@ msgstr "Egiaztatu zure helbide elektronikoa iruzkintzeko"
 
 #: app/templates/post/post.html:172
 msgid "Log in to comment"
-msgstr ""
+msgstr "Hasi saioa iruzkintzeko"
 
 #: app/templates/post/post.html:175
 msgid "Comments are disabled."
@@ -7057,17 +7073,17 @@ msgstr ""
 #: app/templates/post/post_options.html:46
 #: app/templates/post/post_reply_options.html:59
 msgid "Remind me about this"
-msgstr ""
+msgstr "Gogorarazi iezadazu hau"
 
 #: app/templates/post/post_options.html:50
 msgid "Cross-post to another community"
-msgstr ""
+msgstr "Bidali argitalpenak beste komunitate batera modu gurutzatuan"
 
 #: app/templates/post/post_options.html:52
 #: app/templates/post/post_options.html:53
 #, python-format
 msgid "Block post author @%(author_name)s"
-msgstr ""
+msgstr "Blokeatu @%(author_name)s argitalpenaren egilea"
 
 #: app/templates/post/post_options.html:58
 #, python-format
@@ -7088,13 +7104,13 @@ msgstr "Ezkutatu egilearen instantziatik mezu guztiak: %(name)s"
 
 #: app/templates/post/post_options.html:71
 msgid "Ban image everywhere forever"
-msgstr ""
+msgstr "Debekatu irudia nonahi betiko"
 
 #: app/templates/post/post_options.html:76
 #: app/templates/post/post_reply_options.html:86
 #, python-format
 msgid "View original on %(domain)s"
-msgstr ""
+msgstr "Ikusi jatorrizkoa %(domain)s-en"
 
 #: app/templates/post/post_options.html:81
 msgid "Get embed code"
@@ -7120,7 +7136,7 @@ msgstr ""
 #: app/templates/post/post_reply_options.html:65
 #, python-format
 msgid "Ban @%(author_name)s from %(community_name)s"
-msgstr ""
+msgstr "Debekatu @%(author_name)s %(community_name)s-etik"
 
 #: app/templates/post/post_reply_options.html:68
 #: app/templates/post/post_reply_options.html:69
@@ -7136,7 +7152,7 @@ msgstr "Salatu %(reply_name)s-ek idatzitako \"%(post_title)s\"-ri buruzko iruzki
 #: app/templates/post/post_reply_voting_activity.html:11
 #, python-format
 msgid "Voting Activity for \"%(reply_text)s\""
-msgstr ""
+msgstr "\"%(reply_text)s\"-ren bozketa-jarduera"
 
 #: app/templates/post/post_report.html:14
 #, python-format
@@ -7146,19 +7162,23 @@ msgstr ""
 #: app/templates/post/post_voting_activity.html:11
 #, python-format
 msgid "Voting Activity for \"%(post_title)s\""
-msgstr ""
+msgstr "\"%(post_title)s\"-ren bozketa-jarduera"
 
 #: app/templates/post/post_voting_activity.html:12
 msgid ""
 "This is sensitive information and should only be used for detecting vote "
 "manipulation, brigading and support for harmful content."
 msgstr ""
+"Hau informazio sentikorra da eta botoen manipulazioa, \"brigading\" eta "
+"eduki kaltegarrien babesa detektatzeko soilik erabili behar da."
 
 #: app/templates/post/post_voting_activity.html:13
 msgid ""
 "Do not share screenshots of this information publicly or use it for "
 "personal vendettas."
 msgstr ""
+"Ez partekatu informazio honen pantaila-argazkiak publikoki eta ez erabili "
+"mendeku pertsonaletarako."
 
 #: app/templates/post/post_teaser/_macros.html:31
 msgid "All posts about this domain"
@@ -7210,7 +7230,7 @@ msgstr ""
 
 #: app/templates/search/start.html:20
 msgid "What to search for: "
-msgstr ""
+msgstr "Zer bilatu behar den: "
 
 #: app/templates/search/start.html:30
 msgid "Keyword"
@@ -7474,7 +7494,7 @@ msgstr "Mesedez, aukeratu beheko planetako bat."
 
 #: app/templates/user/choose_plan.html:21
 msgid "Manage existing donation plan"
-msgstr ""
+msgstr "Kudeatu uneko dohaintza-planak"
 
 #: app/templates/user/choose_plan.html:25
 msgid "Cancel regular donation"
@@ -7490,7 +7510,7 @@ msgstr ""
 
 #: app/templates/user/choose_plan.html:29
 msgid "Update credit card details"
-msgstr ""
+msgstr "Eguneratu kreditu txartelaren xehetasunak"
 
 #: app/templates/user/choose_plan.html:51
 msgid "Generous donation"
@@ -7626,7 +7646,7 @@ msgstr ""
 
 #: app/templates/user/edit_filters.html:33
 msgid "Filter in these places"
-msgstr ""
+msgstr "Iragazi leku hauetan"
 
 #: app/templates/user/edit_filters.html:39
 msgid "One per line. Case does not matter."
@@ -7639,7 +7659,7 @@ msgstr "Utzi iragazki hau aplikatzeari data honen ondoren. Aukerakoa."
 #: app/templates/user/edit_note.html:13
 #, python-format
 msgid "Edit note for \"%(user_name)s\""
-msgstr ""
+msgstr "Editatu \"%(user_name)s\"-ren oharra"
 
 #: app/templates/user/edit_note.html:15
 msgid "Emoji quick access"
@@ -7656,7 +7676,7 @@ msgstr ""
 #: app/templates/user/edit_profile.html:23
 #, python-format
 msgid "Edit profile of %(name)s"
-msgstr ""
+msgstr "Editatu %(name)s-ren profila"
 
 #: app/templates/user/edit_profile.html:56
 msgid "Extra fields"
@@ -7677,7 +7697,7 @@ msgstr ""
 
 #: app/templates/user/edit_profile.html:111
 msgid "Danger Zone! - Account Deletion"
-msgstr ""
+msgstr "Arrisku-eremua! - Kontua ezabatzea"
 
 #: app/templates/user/edit_settings.html:24
 msgid "Mail Settings"
@@ -7705,7 +7725,7 @@ msgstr ""
 
 #: app/templates/user/edit_settings.html:54
 msgid "Go here to preview the different code styles"
-msgstr ""
+msgstr "Joan hona kode estilo desberdinak aurreikusteko"
 
 #: app/templates/user/edit_settings.html:59
 msgid "Do not blindly copy and paste CSS from random strangers on the internet."
@@ -7741,7 +7761,7 @@ msgstr ""
 
 #: app/templates/user/edit_settings.html:77
 msgid "Set up web+ap links"
-msgstr ""
+msgstr "Konfiguratu web+ap estekak"
 
 #: app/templates/user/email_notifs_unsubscribed.html:13
 #: app/templates/user/newsletter_unsubscribed.html:13
@@ -7765,7 +7785,7 @@ msgstr ""
 #: app/templates/user/fediverse_redirect.html:17
 #: app/templates/user/fediverse_redirect.html:20
 msgid "Follow on remote instance"
-msgstr ""
+msgstr "Jarraitu urruneko instantzian"
 
 #: app/templates/user/fediverse_redirect.html:21
 msgid ""
@@ -7783,9 +7803,8 @@ msgid "Files"
 msgstr ""
 
 #: app/templates/user/file_delete.html:20
-#, fuzzy
 msgid "Are you sure you want to delete this file?"
-msgstr "Ziur zaude orrialde hau ezabatu nahi duzula?"
+msgstr "Ziur zaude fitxategi hau ezabatu nahi duzula?"
 
 #: app/templates/user/file_upload.html:20
 msgid "Upload files"
@@ -7796,22 +7815,25 @@ msgid ""
 "You can add files to your library by providing a list of urls or "
 "uploading them from your device."
 msgstr ""
+"Fitxategiak zure liburutegian gehitu ditzakezu, urlen zerrenda bat emanez "
+"edo gailutik igota."
 
 #: app/templates/user/file_upload.html:27
 msgid ""
 "Files added via url do not consume your quota as they are not copied into"
 " PieFed."
 msgstr ""
+"URL bidez gehitutako fitxategiek ez dute zure kuota kontsumitzen, ez baitira "
+"PieFed-en kopiatzen."
 
 #: app/templates/user/files.html:24
 #, python-format
 msgid "You are using %(size)s out of a quota of %(max_size)s"
-msgstr ""
+msgstr "%(max_size)s kuotatik %(size)s erabiltzen ari zara"
 
 #: app/templates/user/files.html:43
-#, fuzzy
 msgid "No media has been uploaded yet."
-msgstr "Ez da orrialderik sortu oraindik."
+msgstr "Ez da multimediarik igo oraindik."
 
 #: app/templates/user/filters.html:28
 msgid "Collapse replies with a score at or below this level - click to view."
@@ -7853,7 +7875,7 @@ msgstr ""
 
 #: app/templates/user/filters.html:66
 msgid "No filters defined yet."
-msgstr ""
+msgstr "Ez da iragazkirik definitu oraindik."
 
 #: app/templates/user/filters.html:70
 msgid ""
@@ -7861,12 +7883,18 @@ msgid ""
 "Blocking them means you will no longer see any posts associated with "
 "them."
 msgstr ""
+"Kudeatu blokeatu nahi dituzun erabiltzaileak, komunitateak, domeinuak edo "
+"instantziak. Blokeatzeak esan nahi du ez duzula haiekin lotutako "
+"argitalpenik ikusiko."
 
 #: app/templates/user/filters.html:71
 msgid ""
 "Add new blocks when you see content you don't like - click the 3 dot menu"
 " on the post or comment to see blocking options."
 msgstr ""
+"Gehitu blokeo berriak gustuko ez duzun edukia ikusten duzunean - egin klik "
+"argitalpenean edo iruzkinean dauden 3 puntuko menuan blokeatzeko aukerak "
+"ikusteko."
 
 #: app/templates/user/filters.html:96 app/templates/user/show_profile.html:117
 #, python-format
@@ -7909,7 +7937,7 @@ msgstr ""
 
 #: app/templates/user/notifications.html:19
 msgid "Mark all as read"
-msgstr ""
+msgstr "Markatu dena irakurrita bezala"
 
 #: app/templates/user/notifications.html:23
 msgid "Filter notifications"
@@ -7917,7 +7945,7 @@ msgstr ""
 
 #: app/templates/user/notifications.html:52
 msgid "No notifications to show."
-msgstr ""
+msgstr "Ez dago jakinarazpenik erakusteko."
 
 #: app/templates/user/notifications.html:60
 #: app/templates/user/read_posts.html:49
@@ -7949,7 +7977,7 @@ msgstr ""
 
 #: app/templates/user/passkeys.html:44
 msgid "No passkeys created yet."
-msgstr ""
+msgstr "Ez da pasahitzik sortu oraindik."
 
 #: app/templates/user/read_posts.html:17 app/templates/user/read_posts.html:20
 #: app/user/routes.py:1795
@@ -7999,7 +8027,7 @@ msgstr "Bidali mezua matrix txatarekin"
 
 #: app/templates/user/show_profile.html:96
 msgid "Send message using Matrix"
-msgstr ""
+msgstr "Bidali mezua Matrix erabiliz"
 
 #: app/templates/user/show_profile.html:100
 msgid "Follow"
@@ -8029,7 +8057,7 @@ msgstr ""
 
 #: app/templates/user/show_profile.html:132
 msgid "Look up in modlog"
-msgstr ""
+msgstr "Bilatu modlog-ean"
 
 #: app/templates/user/show_profile.html:133
 msgid "Lemmyverse.link"
@@ -8300,11 +8328,11 @@ msgstr ""
 
 #: app/templates/user/notifs/20.html:85
 msgid "Post From Suspicious Domain"
-msgstr ""
+msgstr "Domeinu susmagarri batetik bidalitako argitalpena"
 
 #: app/templates/user/notifs/20.html:113
 msgid "Post With Suspicious Image"
-msgstr ""
+msgstr "Irudi susmagarridun argitalpena"
 
 #: app/templates/user/notifs/3.html:8
 msgid "replied to post"
@@ -8362,7 +8390,7 @@ msgstr ""
 
 #: app/topic/forms.py:9
 msgid "New topic name here..."
-msgstr ""
+msgstr "Gaiaren izen berria hemen..."
 
 #: app/topic/forms.py:10
 msgid "Suggested communities"
@@ -8406,7 +8434,7 @@ msgstr "1. eremu gehigarria - testua"
 
 #: app/user/forms.py:20
 msgid "he/him, she/her, they/them, etc"
-msgstr ""
+msgstr "hura, haiek, edozein/denak, izenordainik ez..."
 
 #: app/user/forms.py:21
 msgid "Extra field 2 - label"
@@ -8414,7 +8442,7 @@ msgstr "2. eremu gehigarria - etiketa"
 
 #: app/user/forms.py:22
 msgid "What I care about"
-msgstr ""
+msgstr "Zer axola zaidan"
 
 #: app/user/forms.py:23
 msgid "Extra field 2 - text"
@@ -8430,7 +8458,7 @@ msgstr "3. eremu gehigarria - etiketa"
 
 #: app/user/forms.py:26
 msgid "People who influence me"
-msgstr ""
+msgstr "Niri eragiten didaten pertsonak"
 
 #: app/user/forms.py:27
 msgid "Extra field 3 - text"
@@ -8534,11 +8562,11 @@ msgstr ""
 
 #: app/user/forms.py:100
 msgid "Not compact - expand images"
-msgstr ""
+msgstr "Ez txikitu - zabaldu irudiak"
 
 #: app/user/forms.py:101
 msgid "More compact - only thumbnails for images"
-msgstr ""
+msgstr "Txikiagoa - irudien miniaturak bakarrik"
 
 #: app/user/forms.py:102
 #, fuzzy
@@ -8551,7 +8579,7 @@ msgstr ""
 
 #: app/user/forms.py:105
 msgid "Theme default - fastest"
-msgstr ""
+msgstr "Gaiaren lehenetsia - azkarrena"
 
 #: app/user/forms.py:106
 msgid "Atkinson Hyperlegible - low vision"
@@ -8571,7 +8599,7 @@ msgstr ""
 
 #: app/user/forms.py:114
 msgid "Code syntax highlighting color scheme"
-msgstr ""
+msgstr "Kodearen sintaxia nabarmentzeko kolore-eskema"
 
 #: app/user/forms.py:120
 msgid "All instances"
@@ -8579,7 +8607,7 @@ msgstr ""
 
 #: app/user/forms.py:122
 msgid "Accept private messages from"
-msgstr ""
+msgstr "Onartu mezu pribatuak hauengandik:"
 
 #: app/user/forms.py:124 app/user/forms.py:190
 msgid "Save settings"
@@ -8591,7 +8619,7 @@ msgstr "Inportatu komunitateko harpidetzak eta erabiltzaileen blokeoak Lemmy-tik
 
 #: app/user/forms.py:134
 msgid "Yes, delete my account"
-msgstr ""
+msgstr "Bai, ezabatu nire kontua"
 
 #: app/user/forms.py:139
 msgid "Ban IP address"
@@ -8691,7 +8719,7 @@ msgstr ""
 
 #: app/user/forms.py:234
 msgid "URLs to files (one per line)"
-msgstr ""
+msgstr "Fitxategietarako URLak (lerro bakoitzeko bat)"
 
 #: app/user/forms.py:235
 msgid "File 1"
@@ -8806,7 +8834,7 @@ msgstr ""
 
 #: app/user/routes.py:729
 msgid "You cannot ban yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua debekatu."
 
 #: app/user/routes.py:740 app/user/routes.py:1151
 msgid "Purged user was a remote instance admin."
@@ -8841,26 +8869,26 @@ msgstr "Rol baimenak dituen erabiltzailea debekatuta."
 #: app/user/routes.py:770
 #, python-format
 msgid "%(actor)s has been banned."
-msgstr ""
+msgstr "%(actor)s debekatua izan da."
 
 #: app/user/routes.py:808
 msgid "You cannot unban yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua debekutik kendu."
 
 #: app/user/routes.py:816
 #, python-format
 msgid "%(actor)s has been unbanned."
-msgstr ""
+msgstr "%(actor)s-(r)en debekua kendu da."
 
 #: app/user/routes.py:854
 #, python-format
 msgid "%(actor)s has been blocked."
-msgstr ""
+msgstr "%(actor)s blokeatu da."
 
 #: app/user/routes.py:925
 #, python-format
 msgid "%(actor)s has been unblocked."
-msgstr ""
+msgstr "%(actor)s desblokeatu da."
 
 #: app/user/routes.py:949
 msgid ""
@@ -8886,7 +8914,7 @@ msgstr ""
 
 #: app/user/routes.py:1011
 msgid "You cannot delete yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua ezabatu."
 
 #: app/user/routes.py:1025
 msgid "Deleted user was a remote instance admin."
@@ -8899,12 +8927,12 @@ msgstr "Rol baimenak dituen erabiltzailea ezabatuta."
 #: app/user/routes.py:1028
 #, python-format
 msgid "%(actor)s has been deleted."
-msgstr ""
+msgstr "%(actor)s ezabatu da."
 
 #: app/user/routes.py:1045
 #, python-format
 msgid "%(community_name)s has been unblocked."
-msgstr ""
+msgstr "%(community_name)s desblokeatu da."
 
 #: app/user/routes.py:1089
 msgid "Account deletion in progress. Give it a few minutes."
@@ -8916,7 +8944,7 @@ msgstr ""
 
 #: app/user/routes.py:1143
 msgid "You cannot purge yourself."
-msgstr ""
+msgstr "Ezin duzu zeure burua garbitu."
 
 #: app/user/routes.py:1288
 msgid "All notifications marked as read."
@@ -8979,7 +9007,7 @@ msgstr "Urruneko pertsonak bilatzeko saioa hasi behar da"
 
 #: app/user/routes.py:2103
 msgid "You have exceeded your storage quota."
-msgstr ""
+msgstr "Biltegiratze-kuota gainditu duzu."
 
 #: app/user/subscription.py:18
 #, python-format
@@ -8992,7 +9020,7 @@ msgstr ""
 
 #: app/user/subscription.py:21
 msgid "Choose a donation plan"
-msgstr ""
+msgstr "Aukeratu dohaintza-plan bat"
 
 #: app/user/subscription.py:30
 #, python-format
@@ -9005,7 +9033,7 @@ msgstr ""
 
 #: app/user/subscription.py:156
 msgid "You are not donating"
-msgstr ""
+msgstr "Ez zaude dohaintzarik ematen"
 
 #: app/user/subscription.py:156
 msgid "There are no regular donations set to occur in the future."
@@ -9133,4 +9161,3 @@ msgstr "Zure dohaintza bertan behera utzi da."
 
 #~ msgid "Yes - thumbnails only"
 #~ msgstr ""
-
