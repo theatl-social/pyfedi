@@ -23,7 +23,7 @@
         </p>
         {% if parent_id -%}
             <p>
-                <a href="{{ url_for('post.continue_discussion', post_id=post.id, comment_id=parent_id) }}">
+                <a href="{{ url_for('post.continue_discussion', post_id=post.id, comment_id=parent_id) }}#replies">
                     <span class="fe fe-chevron-up"></span> {{ _('Parent comment') }}
                 </a>
             </p>
