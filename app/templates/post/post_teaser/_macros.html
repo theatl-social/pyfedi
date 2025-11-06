@@ -295,7 +295,7 @@
             <div class="max_width_512">
                 {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
                     <p>
-                        <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'auto' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
+                        <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
                         {% if post.url.endswith('.mp4') -%}
                             <source src="{{ post.url }}" type="video/mp4" />
                         {% elif post.url.endswith('.webm') -%}
