@@ -429,7 +429,7 @@ def modlog():
         else:
             modlog_entries = modlog_entries.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
     else:
-        modlog_entries = ModLog.query.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
+        modlog_entries = modlog_entries.filter(ModLog.public == True).order_by(desc(ModLog.created_at))
 
     # Pagination
     modlog_entries = modlog_entries.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
