@@ -2224,8 +2224,18 @@ def site_language_id(site=None):
     if g and hasattr(g, 'site') and g.site.language_id:
         return g.site.language_id
     else:
-        english = Language.query.filter(Language.code == 'en').first()
+        english = db.session.query(Language).filter(Language.code == 'en').first()
         return english.id if english else None
+
+
+def site_language_code(site=None):
+    if site is not None and site.language_id:
+        return db.session.query(Language).get(site.language_id).code
+    if g and hasattr(g, 'site') and g.site.language_id:
+        return db.session.query(Language).get(g.site.language_id).code
+    else:
+        english = db.session.query(Language).filter(Language.code == 'en').first()
+        return english.code if english else ''
 
 
 def read_language_choices() -> List[tuple]:

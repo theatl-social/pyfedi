@@ -57,7 +57,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    instance_gone_forever
+    instance_gone_forever, site_language_code
 
 
 @login_required_if_private_instance
@@ -1098,7 +1098,7 @@ def post_teaser_translate(post_id: int):
     if current_app.config['TRANSLATE_ENDPOINT']:
         recipient_language = get_recipient_language(current_user.id)
         source = post.language.code if post.language_id and post.language.code != 'und' else 'auto'
-        if source != 'auto' and post.community.always_translate:
+        if source == site_language_code():
             source = 'auto'
         result_title = libretranslate_string(post.title,
                                              source=source,
@@ -1114,7 +1114,7 @@ def post_translate(post_id: int):
     if current_app.config['TRANSLATE_ENDPOINT']:
         recipient_language = get_recipient_language(current_user.id)
         source = post.language.code if post.language_id and post.language.code != 'und' else 'auto'
-        if source != 'auto' and post.community.always_translate:
+        if source == site_language_code():  # If the source is the same as the default then there's a chance the author didn't specify a language, so just use 'auto'
             source = 'auto'
         result = libretranslate_string(post.body_html,
                                        source=source,
@@ -1132,7 +1132,7 @@ def post_reply_translate(post_reply_id: int):
     if current_app.config['TRANSLATE_ENDPOINT']:
         recipient_language = get_recipient_language(current_user.id)
         source = post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto'
-        if source != 'auto' and post_reply.community.always_translate:
+        if source == site_language_code():
             source = 'auto'
         result = libretranslate_string(post_reply.body_html,
                                        source=source,
