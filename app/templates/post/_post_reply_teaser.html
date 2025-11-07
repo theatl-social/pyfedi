@@ -105,7 +105,7 @@
                 {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
-        {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and current_user.language_id != post_reply.language_id -%}
+        {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and (current_user.language_id != post_reply.language_id or post.community.always_translate) -%}
             <div class="post_translate_icon">
                 <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
                    hx-post="{{ url_for('post.post_reply_translate', post_reply_id=post_reply.id) }}"

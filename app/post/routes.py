@@ -1091,14 +1091,33 @@ def post_purge(post_id: int):
     return redirect(url_for('user.show_profile_by_id', user_id=post.user_id))
 
 
+@bp.route('/post_teaser/<int:post_id>/translate', methods=['POST'])
+@login_required
+def post_teaser_translate(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if current_app.config['TRANSLATE_ENDPOINT']:
+        recipient_language = get_recipient_language(current_user.id)
+        source = post.language.code if post.language_id and post.language.code != 'und' else 'auto'
+        if source != 'auto' and post.community.always_translate:
+            source = 'auto'
+        result_title = libretranslate_string(post.title,
+                                             source=source,
+                                             target=recipient_language)
+        post_url = post.slug if post.slug else f"/post/{post.id}"
+        return f'<h3><a href="{post_url}" class="post_teaser_title_a">{result_title}</a></h3>'
+
+
 @bp.route('/post/<int:post_id>/translate', methods=['POST'])
 @login_required
 def post_translate(post_id: int):
     post = Post.query.get_or_404(post_id)
     if current_app.config['TRANSLATE_ENDPOINT']:
         recipient_language = get_recipient_language(current_user.id)
+        source = post.language.code if post.language_id and post.language.code != 'und' else 'auto'
+        if source != 'auto' and post.community.always_translate:
+            source = 'auto'
         result = libretranslate_string(post.body_html,
-                                       source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                       source=source,
                                        target=recipient_language)
         result_title = libretranslate_string(post.title,
                                              source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
@@ -1112,8 +1131,11 @@ def post_reply_translate(post_reply_id: int):
     post_reply = PostReply.query.get_or_404(post_reply_id)
     if current_app.config['TRANSLATE_ENDPOINT']:
         recipient_language = get_recipient_language(current_user.id)
+        source = post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto'
+        if source != 'auto' and post_reply.community.always_translate:
+            source = 'auto'
         result = libretranslate_string(post_reply.body_html,
-                                       source=post_reply.language.code if post_reply.language_id and post_reply.language.code != 'und' else 'auto',
+                                       source=source,
                                        target=recipient_language)
         return f'<div class="col-12 pr-0" lang="{recipient_language}">' + result + "</div>"
 

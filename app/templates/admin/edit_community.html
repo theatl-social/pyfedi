@@ -56,6 +56,7 @@
                 {{ render_field(form.topic) }}
                 {{ render_field(form.default_layout) }}
                 {{ render_field(form.ignore_remote_language) }}
+                {{ render_field(form.always_translate) }}
                 {{ render_field(form.can_be_archived) }}
             {% if not community.is_local() %}
             </fieldset>

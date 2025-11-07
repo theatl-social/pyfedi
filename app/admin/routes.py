@@ -1217,6 +1217,7 @@ def admin_community_edit(community_id):
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
+        community.always_translate = form.always_translate.data
         community.can_be_archived = form.can_be_archived.data
 
         icon_file = request.files['icon_file']
@@ -1275,6 +1276,7 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
+        form.always_translate.data = community.always_translate
         form.can_be_archived.data = community.can_be_archived
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 

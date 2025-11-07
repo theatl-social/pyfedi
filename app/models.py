@@ -520,6 +520,7 @@ class Community(db.Model):
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     average_rating = db.Column(db.Float)
+    always_translate = db.Column(db.Boolean)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
