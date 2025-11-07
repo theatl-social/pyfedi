@@ -2,6 +2,13 @@
 <h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
 <div class="row">
     <div class="col">
+        {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
+            <div class="post_translate_all_icon">
+                <a rel="nofollow noindex" title="{{ _('Translate all comments') }}" href="#" id="translateAllComments">
+                    <span class="fe fe-translate"></span>
+                </a>
+            </div>
+        {% endif -%}
         {% if not post.archived -%}
             <div class="btn-group mt-1 mb-2">
                 <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">

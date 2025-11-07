@@ -61,6 +61,7 @@ document.addEventListener("DOMContentLoaded", function () {
     setupEventTimes();
     setupUserMentionSuggestions();
     setupScrollToComment();
+    setupTranslateAll();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -1527,6 +1528,7 @@ function setupDynamicContent() {
     setupPopupTooltips();
     setupBasicAutoResize();
     setupUserMentionSuggestions();
+    setupTranslateAll();
     
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -2106,5 +2108,21 @@ function setupScrollToComment() {
 
             htmx.trigger(lazyDiv, 'intersect');
         }
+    }
+}
+
+function setupTranslateAll() {
+    var triggerElement = document.getElementById('translateAllComments');
+    if(triggerElement && !triggerElement.dataset.listenerAdded) {
+        triggerElement.addEventListener('click', async function(event) {
+            event.preventDefault();
+            const anchors = document.querySelectorAll('div.post_translate_icon a');
+              for (const a of anchors) {
+                a.click();
+                // don't flood the server
+                await new Promise(resolve => setTimeout(resolve, 500));
+              }
+        });
+        triggerElement.dataset.listenerAdded = 'true'; // mark as initialized
     }
 }

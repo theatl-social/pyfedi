@@ -2784,6 +2784,12 @@ form h5 {
   padding-top: 0.12rem !important;
 }
 
+.post_translate_all_icon {
+  float: right;
+  margin-top: 8px;
+  margin-right: 8px;
+}
+
 .render_username {
   position: relative;
 }
