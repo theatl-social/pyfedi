@@ -21,7 +21,7 @@ from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap, login_with_ldap
 from app.models import IpBan, Notification, Site, User, UserRegistration, utcnow, Role
 from app.utils import banned_ip_addresses, blocked_referrers, finalize_user_setup, get_request, get_setting, gibberish, \
-    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned
+    ip_address, markdown_to_html, render_template, user_cookie_banned, user_ip_banned, role_access
 
 
 # Return a random string of 6 letter/digits.
@@ -114,6 +114,15 @@ def notify_admins_of_registration(application):
                               targets=targets_data)
         admin.unread_notifications += 1
         db.session.add(notify)
+    if role_access('approve registrations', 3):
+        for admin in Site.staff():
+            notify = Notification(title='New registration',
+                                  url=f'/admin/approve_registrations?account={application.user_id}', user_id=admin.id,
+                                  author_id=application.user_id, notif_type=NOTIF_REGISTRATION,
+                                  subtype='new_registration_for_approval',
+                                  targets=targets_data)
+            admin.unread_notifications += 1
+            db.session.add(notify)
     
     plugins.fire_hook("new_registration_for_approval", application)
 
