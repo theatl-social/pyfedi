@@ -528,22 +528,22 @@ def _feed_add_community(community_id: int, current_feed_id: int, feed_id: int, u
 
 
 def _feed_remove_community(community_id: int, current_feed_id: int):
-    current_feed_item = FeedItem.query.filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
+    current_feed_item = db.session.query(FeedItem).filter_by(feed_id=current_feed_id).filter_by(community_id=community_id).first()
     db.session.delete(current_feed_item)
     db.session.commit()
 
     # also update the num_communities for the old feed
-    current_feed = Feed.query.get(current_feed_id)
+    current_feed = db.session.query(Feed).get(current_feed_id)
     current_feed.num_communities = current_feed.num_communities - 1
     db.session.add(current_feed)
     db.session.commit()
 
-    community = Community.query.get(community_id)
-    community_members = CommunityMember.query.filter_by(community_id=community.id).all()
+    community = db.session.query(Community).get(community_id)
+    community_members = db.session.query(CommunityMember).filter_by(community_id=community.id).all()
     # make all local users un-follow the community - if user.feed_auto_leave, and the user joined the community
     # as a result of adding it to a feed
     for cm in community_members:
-        user = User.query.get(cm.user_id)
+        user = db.session.query(User).get(cm.user_id)
         if user.is_local() and user.feed_auto_leave and cm.joined_via_feed is not None and cm.joined_via_feed:
             subscription = community_membership(user, community)
             if subscription != SUBSCRIPTION_OWNER:
@@ -553,8 +553,8 @@ def _feed_remove_community(community_id: int, current_feed_id: int):
                     if not community.instance.gone_forever:
                         follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == 'ovo.st':
-                            join_request = CommunityJoinRequest.query.filter_by(user_id=user.id,
-                                                                                community_id=community.id).first()
+                            join_request = db.session.query(CommunityJoinRequest).filter_by(user_id=user.id,
+                                                                                            community_id=community.id).first()
                             if join_request:
                                 follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
                         undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
