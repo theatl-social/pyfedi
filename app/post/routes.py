@@ -1120,7 +1120,7 @@ def post_translate(post_id: int):
                                        source=source,
                                        target=recipient_language)
         result_title = libretranslate_string(post.title,
-                                             source=post.language.code if post.language_id and post.language.code != 'und' else 'auto',
+                                             source=source,
                                              target=recipient_language)
         return f'<div class="post_body">{result}</div><h1 class="mt-2 post_title" hx-swap-oob="outerHTML:h1.post_title">{result_title}</h1>'
 
