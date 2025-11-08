@@ -1458,7 +1458,7 @@ class Post(db.Model):
     deleted_by = db.Column(db.Integer, index=True)
     mea_culpa = db.Column(db.Boolean, default=False)
     has_embed = db.Column(db.Boolean, default=False)
-    reply_count = db.Column(db.Integer, default=0)
+    reply_count = db.Column(db.Integer, default=0, index=True)
     score = db.Column(db.Integer, default=0, index=True)  # used for 'top' ranking
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
