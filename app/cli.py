@@ -32,7 +32,7 @@ from app.models import Settings, BannedInstances, Role, User, RolePermission, Do
     Community, SendQueue, _store_files_in_s3, PostVote, Poll, \
     ActivityBatch, Reminder
 from app.shared.tasks import task_selector
-from app.shared.tasks.maintenance import add_remote_communities
+from app.shared.tasks.maintenance import add_remote_communities, remove_old_bot_content
 from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
     shorten_string, get_request, blocked_communities, gibberish, \
     recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, \
@@ -396,6 +396,7 @@ def register(app):
         process_expired_bans()
         print(f'6 {datetime.now()}')
         remove_old_community_content()
+        remove_old_bot_content()
         print(f'7 {datetime.now()}')
         update_hashtag_counts()
         print(f'8 {datetime.now()}')

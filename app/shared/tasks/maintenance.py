@@ -148,6 +148,29 @@ def remove_old_community_content():
         session.close()
 
 
+def remove_old_bot_content():
+    """Remove old posts by bots with no replies"""
+    session = get_task_session()
+    try:
+
+        with patch_db_session(session):
+            cut_off = utcnow() - timedelta(days=28 * 6)
+            old_posts_query = session.query(Post).filter_by(
+                deleted=False,
+                sticky=False,
+                from_bot=True
+            ).filter(Post.posted_at < cut_off).yield_per(100)
+
+            for post in old_posts_query:
+                post_delete_post(post.community, post, post.user_id, reason=None, federate_deletion=post.author.is_local())
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 @celery.task
 def update_hashtag_counts():
     """Ensure accurate count of posts associated with each hashtag"""
