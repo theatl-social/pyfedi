@@ -155,15 +155,22 @@ def remove_old_bot_content():
 
         with patch_db_session(session):
             cut_off = utcnow() - timedelta(days=28 * 6)
-            old_posts_query = session.query(Post).filter_by(
+            # First, fetch just the post IDs (lightweight query)
+            post_ids = [p[0] for p in session.query(Post.id).filter_by(
                 deleted=False,
                 sticky=False,
                 from_bot=True,
                 reply_count=0
-            ).filter(Post.posted_at < cut_off).yield_per(100)
+            ).filter(Post.posted_at < cut_off).all()]
 
-            for post in old_posts_query:
-                post_delete_post(post.community, post, post.user_id, reason=None, federate_deletion=post.author.is_local())
+            # Process posts in batches of 100
+            batch_size = 100
+            for i in range(0, len(post_ids), batch_size):
+                batch_ids = post_ids[i:i + batch_size]
+                posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
+
+                for post in posts:
+                    post_delete_post(post.community, post, post.user_id, reason=None, federate_deletion=post.author.is_local())
 
     except Exception:
         session.rollback()
