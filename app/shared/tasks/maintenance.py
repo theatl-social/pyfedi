@@ -1042,7 +1042,10 @@ def add_remote_community_from_post(post_data):
         from app.community.util import search_for_community
         for cl in set(community_lookup):
             if f"@{current_app.config['SERVER_NAME']}" not in cl:
-                search_for_community(cl)
+                try:
+                    search_for_community(cl)
+                except Exception as e:
+                    pass
 
 
 @celery.task
