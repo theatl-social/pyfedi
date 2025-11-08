@@ -171,3 +171,4 @@ media/
 pgdata/
 logs/
 tmp/
+/app/plugins/piefed_onboarding/

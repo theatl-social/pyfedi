@@ -170,10 +170,7 @@ def verify_email(token):
                 # send_welcome_email(user) #not written yet
 
             login_user(user, remember=True)
-            if len(user.communities()) == 0:
-                return redirect(url_for('auth.trump_musk'))
-            else:
-                return redirect(url_for('main.index'))
+            return redirect(url_for('auth.trump_musk'))
 
 
 @bp.route('/validation_required')
