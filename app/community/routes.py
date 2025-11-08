@@ -136,7 +136,7 @@ def add_local():
         cache.delete_memoized(moderating_communities, current_user.id)
         return redirect('/c/' + community.name)
     else:
-        form.publicize.data = True
+        form.publicize.data = not current_app.debug
 
     return render_template('community/add_local.html', title=_('Create community'), form=form,
                            current_app=current_app)
