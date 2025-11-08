@@ -244,3 +244,27 @@ class UploadFileForm(FlaskForm):
     file10 = FileField(_l('File 10'), render_kw={'accept': 'image/*'})
 
     submit = SubmitField(_l('Upload'))
+
+
+class BlockUserForm(FlaskForm):
+    username = StringField(_l('Username or ActivityPub ID'), validators=[DataRequired(), Length(min=1, max=255)],
+                          render_kw={'placeholder': _l('e.g. @user@example.com or user')})
+    submit = SubmitField(_l('Block user'))
+
+
+class BlockCommunityForm(FlaskForm):
+    community_name = StringField(_l('Community name or ActivityPub ID'), validators=[DataRequired(), Length(min=1, max=255)],
+                                render_kw={'placeholder': _l('e.g. !community@example.com or community')})
+    submit = SubmitField(_l('Block community'))
+
+
+class BlockDomainForm(FlaskForm):
+    domain_name = StringField(_l('Domain name'), validators=[DataRequired(), Length(min=1, max=255)],
+                             render_kw={'placeholder': _l('e.g. example.com')})
+    submit = SubmitField(_l('Block domain'))
+
+
+class BlockInstanceForm(FlaskForm):
+    instance_domain = StringField(_l('Instance domain'), validators=[DataRequired(), Length(min=1, max=255)],
+                                 render_kw={'placeholder': _l('e.g. lemmy.example.com')})
+    submit = SubmitField(_l('Block instance'))

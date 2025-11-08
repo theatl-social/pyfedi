@@ -84,6 +84,9 @@
         </nav>
         <div class="tab-content" id="myTabContent">
           <div class="tab-pane fade show active" id="people-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+              <div class="rh_action_buttons">
+                  <a class="btn btn-primary" href="{{ url_for('user.user_settings_block_user') }}">{{ _('Add block') }}</a>
+              </div>
               {% if blocked_users %}
                 <table class="table table-responsive">
                     <tr>
@@ -102,6 +105,9 @@
               {% endif %}
           </div>
           <div class="tab-pane fade show" id="communities-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+              <div class="rh_action_buttons">
+                  <a class="btn btn-primary" href="{{ url_for('user.user_settings_block_community') }}">{{ _('Add block') }}</a>
+              </div>
               {% if blocked_communities %}
                 <table class="table table-responsive">
                     <tr>
@@ -120,6 +126,9 @@
               {% endif %}
           </div>
           <div class="tab-pane fade show" id="domains-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+              <div class="rh_action_buttons">
+                  <a class="btn btn-primary" href="{{ url_for('user.user_settings_block_domain') }}">{{ _('Add block') }}</a>
+              </div>
               {% if blocked_domains %}
                 <table class="table table-responsive">
                     <tr>
@@ -138,6 +147,9 @@
               {% endif %}
           </div>
           <div class="tab-pane fade show" id="instances-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
+              <div class="rh_action_buttons">
+                  <a class="btn btn-primary" href="{{ url_for('user.user_settings_block_instance') }}">{{ _('Add block') }}</a>
+              </div>
               {% if blocked_instances %}
                 <table class="table table-responsive">
                     <tr>
