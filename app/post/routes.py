@@ -1826,8 +1826,11 @@ def post_reply_notification(post_reply_id: int):
 @bp.route('/post/<int:post_id>/cross_posts', methods=['GET'])
 def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
-    cross_posts = Post.query.filter(Post.id.in_(post.cross_posts))
-    return render_template('post/post_cross_posts.html', cross_posts=cross_posts)
+    if post.cross_posts:
+        cross_posts = Post.query.filter(Post.id.in_(post.cross_posts))
+        return render_template('post/post_cross_posts.html', cross_posts=cross_posts)
+    else:
+        abort(404)
 
 
 @bp.route('/post/<int:post_id>/block_image', methods=['GET', 'POST'])
