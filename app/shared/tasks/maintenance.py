@@ -158,7 +158,8 @@ def remove_old_bot_content():
             old_posts_query = session.query(Post).filter_by(
                 deleted=False,
                 sticky=False,
-                from_bot=True
+                from_bot=True,
+                reply_count=0
             ).filter(Post.posted_at < cut_off).yield_per(100)
 
             for post in old_posts_query:
