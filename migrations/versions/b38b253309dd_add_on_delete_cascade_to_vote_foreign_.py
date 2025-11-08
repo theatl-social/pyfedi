@@ -18,19 +18,20 @@ depends_on = None
 
 def upgrade():
     # Add ON DELETE CASCADE to post_vote.post_id foreign key
-    op.drop_constraint('post_vote_post_id_fkey', 'post_vote', type_='foreignkey')
-    op.create_foreign_key('post_vote_post_id_fkey', 'post_vote', 'post', ['post_id'], ['id'], ondelete='CASCADE')
+    # Use raw SQL because op.create_foreign_key with ondelete='CASCADE' doesn't actually create CASCADE
+    op.execute('ALTER TABLE post_vote DROP CONSTRAINT IF EXISTS post_vote_post_id_fkey')
+    op.execute('ALTER TABLE post_vote ADD CONSTRAINT post_vote_post_id_fkey FOREIGN KEY (post_id) REFERENCES post(id) ON DELETE CASCADE')
 
     # Add ON DELETE CASCADE to post_reply_vote.post_reply_id foreign key
-    op.drop_constraint('post_reply_vote_post_reply_id_fkey', 'post_reply_vote', type_='foreignkey')
-    op.create_foreign_key('post_reply_vote_post_reply_id_fkey', 'post_reply_vote', 'post_reply', ['post_reply_id'], ['id'], ondelete='CASCADE')
+    op.execute('ALTER TABLE post_reply_vote DROP CONSTRAINT IF EXISTS post_reply_vote_post_reply_id_fkey')
+    op.execute('ALTER TABLE post_reply_vote ADD CONSTRAINT post_reply_vote_post_reply_id_fkey FOREIGN KEY (post_reply_id) REFERENCES post_reply(id) ON DELETE CASCADE')
 
 
 def downgrade():
     # Revert post_vote.post_id foreign key to no cascade
-    op.drop_constraint('post_vote_post_id_fkey', 'post_vote', type_='foreignkey')
-    op.create_foreign_key('post_vote_post_id_fkey', 'post_vote', 'post', ['post_id'], ['id'])
+    op.execute('ALTER TABLE post_vote DROP CONSTRAINT IF EXISTS post_vote_post_id_fkey')
+    op.execute('ALTER TABLE post_vote ADD CONSTRAINT post_vote_post_id_fkey FOREIGN KEY (post_id) REFERENCES post(id)')
 
     # Revert post_reply_vote.post_reply_id foreign key to no cascade
-    op.drop_constraint('post_reply_vote_post_reply_id_fkey', 'post_reply_vote', type_='foreignkey')
-    op.create_foreign_key('post_reply_vote_post_reply_id_fkey', 'post_reply_vote', 'post_reply', ['post_reply_id'], ['id'])
+    op.execute('ALTER TABLE post_reply_vote DROP CONSTRAINT IF EXISTS post_reply_vote_post_reply_id_fkey')
+    op.execute('ALTER TABLE post_reply_vote ADD CONSTRAINT post_reply_vote_post_reply_id_fkey FOREIGN KEY (post_reply_id) REFERENCES post_reply(id)')

@@ -30,6 +30,9 @@ Any OS that runs Python 3.9+
 
 If your server will be used by more than 10 people, double the CPU and RAM.
 
+PieFed is quite frugal with storage usage but it will grow over time. After 18 months of operation PieFed.social uses 100 GB of space, for example.
+
+
 <div id="choose-path"></div>
 
 ## Do you want this the easy way or the hard way?
@@ -53,19 +56,6 @@ whether your OS is compatible with what PieFed needs:
  - PostgreSQL 13+
  - Redis 6.x
 
-#### Hardware requirements
-
-It really depends on how many communities you will be subscribing to and how many users you have.
-
-Minimum:
- - 2 CPU cores
- - 3 GB of RAM
-
-Recommended:
- - 4 CPU cores
- - 5+ GB of RAM
-
-PieFed is quite frugal with storage usage but it will grow over time. After 18 months of operation PieFed.social uses 100 GB of space, for example.
 
 <div id="setup-database"></div>
 
