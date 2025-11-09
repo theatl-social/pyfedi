@@ -693,14 +693,94 @@ All other urls have no special behaviour and will just display the page.
 
 ## Push notifications
 
-To have realtime popup notifications your instance needs to install another web app: [https://codeberg.org/PieFed/piefed-notifs](https://codeberg.org/PieFed/piefed-notifs)
+To have realtime popup notifications your instance needs to run another service using systemd, similar to the pyfedi service from earlier.
 
-This service needs to have access to the same redis service that the main PieFed app uses so putting it on the same server is simplest.
+Create a file called `/etc/systemd/system/piefed-notifs.service`:
+
+```
+[Unit]
+Description=Uvicorn service to serve PieFed notifications
+After=network.target
+
+[Service]
+User=rimu
+Group=rimu
+WorkingDirectory=/home/rimu/pyfedi/
+Environment="PATH=/home/rimu/pyfedi/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin"
+ExecStart=/home/rimu/pyfedi/venv/bin/uvicorn fastapi_server:app --host 0.0.0.0 --port 8000
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=always
+
+KillSignal=SIGTERM
+TimeoutStopSec=5
+KillMode=control-group
+
+
+[Install]
+WantedBy=multi-user.target
+```
+
+This is basically the same as the pyfedi.service file from earlier, with a different ExecStart and a couple of extras.
+
+Then enable it:
+
+```bash
+sudo systemctl enable piefed-notifs.service
+
+sudo systemctl start piefed-notifs.service
+```
+
+Check status of service:
+
+```bash
+sudo systemctl status piefed-notifs.service
+```
 
 You need to configure Nginx on the main PieFed app server to proxy requests to /notifications/stream through to the piefed-notifs service.
-See [the readme](https://codeberg.org/PieFed/piefed-notifs/src/branch/main/README.md) for more details. If you do this then you
-can set the `NOTIF_SERVER` environment variable to the same url as your instance. If you want to run piefed-notifs on an entirely different
-server then you can set `NOTIF_SERVER` to that url instead but I expect most will not need to -  Piefed-notifs is very lightweight.
+
+To do that, add this to your nginx config:
+
+```
+upstream notif_server {
+    server 127.0.0.1:8000 fail_timeout=0;
+    keepalive 6000;
+}
+```
+
+also, within the `server` block:
+
+```
+    location /notifications/stream {
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_set_header Host $http_host;
+            proxy_http_version 1.1;
+            proxy_set_header Connection "";
+            proxy_pass http://notif_server;
+
+            # Disable buffering and allow long-lived connections
+            proxy_buffering off;
+            proxy_cache off;
+            proxy_redirect off;
+            proxy_read_timeout 3600s;
+            proxy_send_timeout 3600s;
+            send_timeout 3600s;
+
+            # For nginx event-based connection handling
+            chunked_transfer_encoding on;
+            keepalive_requests 10000;
+
+            # Disable Nginx response buffering (important!)
+            gzip off;
+            tcp_nopush on;
+   }
+
+```
+
+In .env, set the `NOTIF_SERVER` environment variable to the same url as your instance, e.g. `NOTIF_SERVER = 'https://piefed.social'` 
+(no slash on the end, https:// on the start).
+
+The piefed-notifs service also significantly improves the efficiency of federation if your instance has busy local communities.
 
 ---
 
