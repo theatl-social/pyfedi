@@ -585,6 +585,9 @@ fieldset legend {
   background-color: #d8e5ee;
 }
 
+.community_rating {
+  margin-bottom: 12px;
+}
 .community_rating .stars {
   display: inline-flex;
   gap: 0;
