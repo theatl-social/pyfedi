@@ -109,8 +109,8 @@
                             <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                         {% endfor -%}
                     </ul>
-                    {% if community.average_rating -%}
-                        <div class="community_rating">
+                    <div class="community_rating">
+                        {% if community.average_rating -%}
                             <a href="{{ url_for('community.community_ratings', actor=community.link()) }}">
                                 <span class="stars">
                                   {% set rating = community.average_rating %}
@@ -133,10 +133,10 @@
                             {% if current_user.is_authenticated -%}
                                 <a href="{{ url_for('community.rate_moderation', actor=community.link()) }}">{{ _('Rate moderation') }}</a>
                             {% endif -%}
-                        </div>
-                    {% endif -%}
+                        {% endif -%}
+                    </div>
                     {% if un_moderated -%}
-                    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
+                        <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                     {% endif -%}
                 {% endif -%}
                 {% if community.content_retention != -1 -%}
