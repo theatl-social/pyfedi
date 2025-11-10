@@ -14,7 +14,7 @@ from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
-    Community, Language, File, CommunityFlair
+    Community, Language, File, CommunityFlair, Rating
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
@@ -393,7 +393,7 @@ def delete_community(community_id: int, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
-        user = current_user.id
+        user = current_user
 
     community = db.session.query(Community).filter_by(id=community_id).one()
     if not (community.is_owner(user) or community.is_moderator(user) or user.is_admin_or_staff()):
@@ -585,3 +585,32 @@ def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
     flair_dict["blurImages"] = flair.blur_images
 
     return flair_dict
+
+
+def rate_community_moderation(community_id: int, rating: int, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    community = db.session.query(Community).filter_by(id=community_id).one()
+
+    if community_membership(user, community) >= SUBSCRIPTION_MEMBER or user.is_admin_or_staff():
+
+        db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
+                           {'user_id': user.id,
+                            'community_id': community.id})
+        db.session.add(Rating(user_id=user.id, community_id=community.id, rating=rating))
+        db.session.commit()
+        db.session.execute(text("""
+                            UPDATE "community"
+                            SET average_rating = (
+                                SELECT AVG(rating)
+                                FROM "rating"
+                                WHERE community_id = :community_id
+                            )
+                            WHERE id = :community_id
+                        """), {'community_id': community.id})
+        db.session.commit()
+    else:
+        raise Exception('community_members_only')

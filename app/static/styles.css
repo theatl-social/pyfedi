@@ -585,6 +585,62 @@ fieldset legend {
   background-color: #d8e5ee;
 }
 
+.community_rating .stars {
+  display: inline-flex;
+  gap: 0;
+  font-size: 1.4em;
+  line-height: 1;
+}
+.community_rating .star {
+  position: relative;
+  display: inline-block;
+}
+.community_rating .full {
+  color: gold;
+}
+.community_rating .empty {
+  color: lightgray;
+}
+.community_rating .half {
+  position: relative;
+  display: inline-block;
+}
+.community_rating .half .filled {
+  color: gold;
+  position: absolute;
+  overflow: hidden;
+  width: 50%;
+}
+.community_rating .half .empty {
+  color: lightgray;
+}
+
+.rating_form {
+  /* highlight selected stars */
+  /* highlight on hover */
+}
+.rating_form .rating {
+  direction: rtl; /* Highest value on the left */
+  unicode-bidi: bidi-override;
+  display: inline-flex;
+}
+.rating_form .rating > input[type=radio] {
+  display: none; /* hide radio buttons */
+}
+.rating_form .rating > label {
+  font-size: 2em;
+  color: lightgray;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.rating_form .rating > input:checked ~ label {
+  color: gold;
+}
+.rating_form .rating > label:hover,
+.rating_form .rating > label:hover ~ label {
+  color: gold;
+}
+
 @view-transition {
   navigation: auto;
 }

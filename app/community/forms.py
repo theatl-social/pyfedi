@@ -10,7 +10,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField, IntegerField, DateTimeLocalField
+    DateField, IntegerField, DateTimeLocalField, RadioField
 
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional
 
@@ -516,3 +516,19 @@ class EditCommunityFlairForm(FlaskForm):
     background_color = StringField(_l('Background color'), render_kw={"type": "color"})
     blur_images = BooleanField(_l('Blur images and thumbnails for posts with this flair'))
     submit = SubmitField(_l('Save'))
+
+
+class RateCommunityModsForm(FlaskForm):
+    rating = RadioField(
+        'Rate this community:',
+        choices=[
+            ('5', '★'),
+            ('4', '★'),
+            ('3', '★'),
+            ('2', '★'),
+            ('1', '★')
+        ],
+        validators=[DataRequired()],
+        coerce=int  # ensures it becomes an int (optional)
+    )
+    submit = SubmitField(_l('Rate'))

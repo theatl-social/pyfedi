@@ -1,0 +1,48 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from "_macros.html" import render_username %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+                <li class="breadcrumb-item active">{{ _('Ratings') }}</li>
+            </ol>
+        </nav>
+        {% if current_user.is_authenticated -%}
+            <div style="float: right;"><a href="{{ url_for('community.rate_moderation', actor=community.link()) }}"
+                                        class="btn btn-primary">{{ _('Rate moderation') }}</a></div>
+        {% endif -%}
+        <h1 class="mt-2">
+                {{ _('%(community_name)s moderation ratings', community_name=community.display_name()) }}
+        </h1>
+        <table class="table table-striped mt-1">
+            <thead>
+                <tr>
+                    <th>{{ _('Rating') }}</th>
+                    <th>{{ _('When') }}</th>
+                    {% if is_admin_or_staff -%}<th>{{ _('Who') }}</th>{% endif -%}
+                </tr>
+            </thead>
+            <tbody>
+                {% for rating in ratings -%}
+                    <tr>
+                        <td>{{ rating.rating }}</td>
+                        <td>{{ arrow.get(rating.created_at).humanize(locale=locale) }}</td>
+                        {% if is_admin_or_staff -%}
+                            <td>{{ render_username(rating.author) }}</td>
+                        {% endif -%}
+                    </tr>
+                {% endfor -%}
+            </tbody>
+        </table>
+    </main>
+</div>
+{% endblock %}
