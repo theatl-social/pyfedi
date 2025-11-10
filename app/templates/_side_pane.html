@@ -130,9 +130,9 @@
                                   {% endfor %}
                                 </span>
                             </a>
-                            {% if current_user.is_authenticated -%}
-                                <a href="{{ url_for('community.rate_moderation', actor=community.link()) }}">{{ _('Rate moderation') }}</a>
-                            {% endif -%}
+                        {% endif -%}
+                        {% if current_user.is_authenticated -%}
+                            <a href="{{ url_for('community.rate_moderation', actor=community.link()) }}">{{ _('Rate moderation') }}</a>
                         {% endif -%}
                     </div>
                     {% if un_moderated -%}
