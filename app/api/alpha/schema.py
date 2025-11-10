@@ -71,6 +71,7 @@ class Person(DefaultSchema):
     avatar = fields.String(allow_none=True, metadata={"format": "url"})
     banner = fields.String(allow_none=True, metadata={"format": "url"})
     extra_fields = fields.List(fields.Nested(UserExtraField), validate=validate.Length(max=4))
+    note = fields.String(validate=validate.Length(max=50))
     flair = fields.String()
     published = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     title = fields.String(allow_none=True)
@@ -870,11 +871,22 @@ class UserSubscribeResponse(DefaultSchema):
 
 class UserSetFlairRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    flair_text = fields.String(allow_none=True, metadata={"description": "Either omit or set to null to remove existing flair"})
+    flair_text = fields.String(allow_none=True, validate=validate.Length(max=50),
+                               metadata={"description": "Either omit or set to null to remove existing flair"})
 
 
 class UserSetFlairResponse(DefaultSchema):
     person_view = fields.Nested(PersonView)
+
+
+class UserSetNoteRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    note = fields.String(required=True, allow_none=True, validate=validate.Length(max=50),
+                         metadata={"description": "Pass a value of null to remove existing note"})
+
+
+class UserSetNoteResponse(UserSetFlairResponse):
+    pass
 
 
 class NewUserExtraField(DefaultSchema):
