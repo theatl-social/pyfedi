@@ -11,7 +11,7 @@ from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.views import user_view, reply_view, post_view, community_view
 from app.constants import *
 from app.models import Conversation, ChatMessage, Notification, PostReply, User, Post, Community, File, UserFlair, \
-    user_file, UserExtraField
+    user_file, UserExtraField, UserNote
 from app.shared.user import block_another_user, unblock_another_user, subscribe_user
 from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country
 
@@ -551,7 +551,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_USER
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
@@ -566,7 +566,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_COMMUNITY
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['community'] = community_view(community, variant=1)
@@ -581,7 +581,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_TOPIC
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
@@ -596,7 +596,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_POST
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
@@ -613,7 +613,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_REPLY
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['comment'] = reply_view(comment, variant=1)
@@ -630,7 +630,7 @@ def _process_notification_item(item):
         notification_json['notif_id'] = item.id
         notification_json['notif_type'] = NOTIF_FEED
         notification_json['notif_subtype'] = item.subtype
-        notification_json['author'] = user_view(user=author.id, variant=1)
+        notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
         notification_json['post'] = post_view(post, variant=2)
         notification_json['post_id'] = post.id
         notification_json['notif_body'] = post.body if post.body else ''
@@ -642,7 +642,7 @@ def _process_notification_item(item):
         if item.subtype == 'post_mention':
             author = User.query.get(item.author_id)
             post = Post.query.get(item.targets['post_id'])
-            notification_json['author'] = user_view(user=author.id, variant=1)
+            notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
             notification_json['post'] = post_view(post, variant=2)
             notification_json['post_id'] = post.id
             notification_json['notif_id'] = item.id
@@ -654,7 +654,7 @@ def _process_notification_item(item):
         if item.subtype == 'comment_mention':
             author = User.query.get(item.author_id)
             comment = PostReply.query.get(item.targets['comment_id'])
-            notification_json['author'] = user_view(user=author.id, variant=1)
+            notification_json['author'] = user_view(user=author.id, variant=1, user_id=item.user_id)
             notification_json['comment'] = reply_view(comment, variant=1)
             notification_json['comment_id'] = comment.id
             notification_json['notif_id'] = item.id
@@ -759,3 +759,28 @@ def post_user_set_flair(auth, data):
             db.session.commit()
 
     return user_view(user=user, variant=5, flair_community_id=community_id)
+
+
+def post_user_set_note(auth, data):
+    user = authorise_api_user(auth, return_type='model')
+    target_user_id = data["person_id"]
+    note_text = data["note"] if "note" in data else None
+
+    # target_user = User.query.get(target_user_id)
+
+    if note_text:
+        note_text = note_text.strip()
+        existing_note = UserNote.query.filter(UserNote.target_id == target_user_id, UserNote.user_id == user.id).first()
+        if existing_note:
+            existing_note.body = note_text
+        else:
+            usernote = UserNote(target_id=target_user_id, user_id=user.id, body=note_text)
+            db.session.add(usernote)
+    else:
+        existing_note = UserNote.query.filter(UserNote.target_id == target_user_id, UserNote.user_id == user.id).first()
+        if existing_note:
+            db.session.delete(existing_note)
+    
+    db.session.commit()
+    
+    return user_view(user=target_user_id, variant=5, user_id=user.id)

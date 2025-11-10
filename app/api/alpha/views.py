@@ -8,7 +8,8 @@ from app import cache, db
 from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
-    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair
+    AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
+    UserNote
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
     moderating_communities_ids_all_users
@@ -174,7 +175,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
         
         v2['flair_list'] = post_flair
 
-        creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id)
+        creator = user_view(user=post.author, variant=1, stub=True, flair_community_id=post.community_id, user_id=user_id)
         community = community_view(community=post.community, variant=1, stub=True)
         if user_id:
             if hasattr(g, 'user'):
@@ -266,20 +267,23 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 user_field['label'] = field.label
                 user_field['text'] = field.text
                 v1['extra_fields'].append(user_field)
+        if user_id:
+            usernote = UserNote.query.filter(UserNote.target_id == user.id, UserNote.user_id == user_id).first()
+            if usernote:
+                v1['note'] = usernote.body
 
         return v1
 
     # Variant 2 - views/person_view.dart
     if variant == 2:
         counts = {'person_id': user.id, 'post_count': user.post_count, 'comment_count': user.post_reply_count}
-        v2 = {'person': user_view(user=user, variant=1), 'counts': counts, 'is_admin': user.is_admin()}
         user_sub = False
         if user_id and user_id != user.id:
             user_sub = db.session.execute(text(
                 'SELECT user_id FROM "notification_subscription" WHERE type = :type and entity_id = :entity_id and user_id = :user_id'),
                                           {'type': NOTIF_USER, 'entity_id': user.id, 'user_id': user_id}).scalar()
         activity_alert = True if user_sub else False
-        v2 = {'person': user_view(user=user, variant=1, flair_community_id=flair_community_id), 'activity_alert': activity_alert, 'counts': counts,
+        v2 = {'person': user_view(user=user, variant=1, flair_community_id=flair_community_id, user_id=user_id), 'activity_alert': activity_alert, 'counts': counts,
               'is_admin': user.is_admin()}
         return v2
 
@@ -682,7 +686,8 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
             'can_auth_user_moderate': can_auth_user_moderate
         }
         if add_creator_in_view:
-            v3['creator'] = user_view(user=reply.author, variant=1, stub=True, flair_community_id=reply.community_id)
+            v3['creator'] = user_view(user=reply.author, variant=1, stub=True, flair_community_id=reply.community_id,
+                                      user_id=user_id)
         if add_post_in_view:
             v3['post'] = post_view(post=reply.post, variant=1)
         if add_community_in_view:
@@ -732,8 +737,8 @@ def reply_report_view(report, reply_id, user_id) -> dict:
                              is_creator_banned_from_community=is_creator_banned_from_community,
                              is_creator_moderator=is_creator_moderator,
                              is_creator_admin=is_creator_admin)
-    report_json['comment_creator'] = user_view(user=report.suspect_user_id, variant=1, stub=True)
-    report_json['creator'] = user_view(user=user_id, variant=1, stub=True)
+    report_json['comment_creator'] = user_view(user=report.suspect_user_id, variant=1, stub=True, user_id=user_id)
+    report_json['creator'] = user_view(user=user_id, variant=1, stub=True, user_id=user_id)
 
     report_json['comment_report'] = {
         'id': report.id,
@@ -786,8 +791,8 @@ def post_report_view(report, post_id, user_id) -> dict:
             },
             'post': post_json['post'],
             'community': community_json,
-            'creator': user_view(user=user_id, variant=1, stub=True),
-            'post_creator': user_view(user=report.suspect_user_id, variant=1, stub=True),
+            'creator': user_view(user=user_id, variant=1, stub=True, user_id=user_id),
+            'post_creator': user_view(user=report.suspect_user_id, variant=1, stub=True, user_id=user_id),
             'counts': post_json['counts'],
             'creator_banned_from_community': creator_banned_from_community,
             'creator_is_moderator': creator_is_moderator,

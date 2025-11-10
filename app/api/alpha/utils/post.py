@@ -1019,7 +1019,7 @@ def get_post_like_list(auth, data):
                 'score': like.effect,
                 'creator_banned_from_community': like.user_id in banned_from_community_user_ids,
                 'creator_banned': like.user_id in banned_from_site_user_ids,
-                'creator': user_view(user=like.user_id, variant=1, stub=True)
+                'creator': user_view(user=like.user_id, variant=1, stub=True, user_id=user.id)
             })
         response_json = {
             'next_page': str(likes.next_num) if likes.next_num is not None else None,

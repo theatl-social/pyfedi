@@ -30,7 +30,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     post_user_mark_all_as_read, put_user_subscribe, put_user_save_user_settings, \
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details, \
-    get_user_media
+    get_user_media, post_user_set_note
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -1150,6 +1150,18 @@ def post_alpha_user_set_flair(data):
     auth = request.headers.get('Authorization')
     resp = post_user_set_flair(auth, data)
     return UserSetFlairResponse().load(resp)
+
+@user_bp.route('/user/note', methods=['POST'])
+@user_bp.doc(summary="Set a note for a user")
+@user_bp.arguments(UserSetNoteRequest)
+@user_bp.response(200, UserSetNoteResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_note(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_user_set_note(auth, data)
+    return UserSetNoteResponse().load(resp)
 
 
 # Upload
