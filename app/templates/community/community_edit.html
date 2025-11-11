@@ -37,7 +37,7 @@
                 <!-- <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" /> -->
             {% endif %}
             {{ render_field(form.icon_file) }}
-            <small class="field_hint">Provide a square image that looks good when small.</small>
+            <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
             {% if community.image_id %}
                 <!-- <a href="{{ community.header_image() }}"><img class="community_icon_big" src="{{ community.header_image() }}" /></a> -->
             {% endif %}
@@ -66,6 +66,15 @@
             {{ render_field(form.languages) }}
             {{ render_field(form.default_layout) }}
             {{ render_field(form.default_post_type) }}
+            {{ render_field(form.post_url_type) }}
+            <ul>
+                <li>
+                    <small class="field_hint">{{ _('Friendly urls are of the form /c/community_name/p/1234/post_title') }}</small>
+                </li>
+                <li>
+                    <small class="field_hint">{{ _('Post id urls are of the form /post/1234') }}</small>
+                </li>
+            </ul>
             <div class="row mb-4">
                 <div class="col-auto">
                     {{ render_field(form.submit) }}
