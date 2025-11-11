@@ -37,7 +37,7 @@ class ReportPostForm(FlaskForm):
                       ('13', _l('Self-harm or suicide')),
                       ('14', _l('Other'))]
     reasons = MultiCheckboxField(_l('Reason'), choices=reason_choices)
-    description = StringField(_l('More info'))
+    description = StringField(_l('More info'), validators=[Length(max=256)])
     report_remote = BooleanField('Also send report to originating instance')
     submit = SubmitField(_l('Report'))
 
