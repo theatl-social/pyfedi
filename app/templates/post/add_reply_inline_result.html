@@ -4,85 +4,63 @@
    it does not inherit from base.html where the macro is normally defined.
 #}
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, inline=False) -%}
-    <div class="render_username">
-        {% if user.deleted -%}
-            {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-                <a href="/u/{{ user.link() }}"
-                   title="{{ user.ap_id if user.ap_id != none else user.user_name }}"
-                   aria-label="{{ _('Author') }}">[deleted]</a>
-            {% else -%}
-                [deleted]
-            {% endif -%}
+<div class="render_username">
+    {% if user.deleted -%}
+        {% if current_user.is_authenticated and current_user.get_id() in admin_ids -%}
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">[deleted]</a>
         {% else -%}
-            <a href="/u/{{ user.link() }}"
-               aria-label="{{ _('Author') }}"
-               class="author_link"
-               title=""
-               rel="author">
-                {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                    <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" />
-                {% endif -%}
-                {{ user.display_name() }}
-                {% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
-            </a>
-            {% if user.created_recently() -%}
-                <span class="fe fe-new-account" title="New account"></span>
+            [deleted]
+        {% endif -%}
+    {% else -%}
+        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+            {% if user.avatar_id and not low_bandwidth and not collapsed -%}
+                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" />
             {% endif -%}
-            {% if user.bot -%}
-                <span class="fe fe-bot-account" title="Bot account"></span>
-            {% endif -%}
-            {% if user_flair and user.id in user_flair %}<span class="user_flair">{{ user_flair[user.id] }}</span>{% endif %}
-            {% if user.id != current_user.id -%}
-                {% if user.reputation < -12 -%}
-                    <span class="fe fe-warning red"
-                          title="{{ _('Very low reputation. Beware.') }}"></span>
-                    <span class="fe fe-warning red"
-                          title="{{ _('Very low reputation. Beware!') }}"></span>
-                {% elif user.reputation < -3 -%}
-                    <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"></span>
-                {% endif -%}
-            {% endif -%}
-            {% if current_user.is_authenticated -%}
-                {% set user_note = user.get_note(current_user) %}
-                {% if user_note -%}
-                    <span class="user_note"
-                          title="{{ _('User note: %(note)s', note=user_note) }}">{{ user_note | truncate(12, True) }}</span>
-                {% endif -%}
+            {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
+        </a>
+        {% if user.created_recently() -%}
+            <span class="fe fe-new-account" title="New account"> </span>
+        {% endif -%}
+        {% if user.bot -%}
+            <span class="fe fe-bot-account" title="Bot account"> </span>
+        {% endif -%}
+        {% if user_flair and user.id in user_flair %}
+            <span class="user_flair">{{ user_flair[user.id] }}</span>
+        {% endif %}
+        {% if user.id != current_user.id -%}
+            {% if user.reputation < -12 -%}
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware.') }}"> </span>
+                <span class="fe fe-warning red" title="{{ _('Very low reputation. Beware!') }}"> </span>
+            {% elif user.reputation < -3 -%}
+                <span class="fe fe-warning orangered" title="{{ _('Low reputation.') }}"> </span>
             {% endif -%}
         {% endif -%}
-    </div>
+        {% if current_user.is_authenticated -%}
+            {% set user_note = user.get_note(current_user) %}
+            {% if user_note -%}
+                <span class="user_note" title="{{ _('User note: %(note)s', note=user_note) }}">{{ user_note | truncate(12, True) }}</span>
+            {% endif -%}
+        {% endif -%}
+    {% endif -%}
+</div>
 {% endmacro -%}
 {% set collapsed = false -%}
-<div class="replies hidable depth_{{ post_reply.depth }}"
-     role="group"
-     aria-live="polite">
-    <div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}"
-         id="comment_{{ post_reply.id }}"
-         {% if post_reply.language_id and post_reply.language.code != 'en' %}lang="{{ post_reply.language.code }}"{% endif %}
-         aria-level="{{ post_reply.depth+1 }}"
-         role="treeitem">
+<div class="replies hidable depth_{{ post_reply.depth }}" role="group" aria-live="polite">
+    <div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
         <div class="row">
             <div class="col-auto comment_author">
                 <span class="visually-hidden">by</span>
-                {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id) ) }}
+                {{ render_username(post_reply.author, htmx_redirect_back_to=request.path + '#comment_' + str(post_reply.id)) }}
                 {% if post_reply.author.id == post_reply.post.author.id -%}
-                    <span title="Submitter of original post"
-                          aria-label="{{ _('Post creator') }}"
-                          class="user_flair original_poster">OP</span>
+                    <span title="Submitter of original post" aria-label="{{ _('Post creator') }}" class="user_flair original_poster">OP</span>
                 {% endif -%}
             </div>
             <div class="col-auto text-muted small pt-05">
-                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}"
-                      title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
-                {% if post_reply.edited_at -%}
-                    , edited <time datetime="{{ arrow.get(post_reply.posted_at) }}"
-       title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
-                {% endif -%}
+                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
             </div>
             <div class="col-auto">
                 {% if post_reply.has_been_reported() -%}
-                    <span class="red fe fe-report"
-                          title="{{ _('Reported. Check comment for issues.') }}"></span>
+                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
                 {% endif -%}
             </div>
             <div class="col-auto">
@@ -94,8 +72,11 @@
                 <a class="unhide" href="#"><span class="fe fe-expand"></span></a>
             </div>
         </div>
+
         <div class="row comment_body hidable{% if post_reply.has_been_reported() %} reported{% endif %}">
-            <div class="col-12 pr-0">{{ post_reply.body_html | community_links | feed_links | person_links | safe }}</div>
+            <div class="col-12 pr-0">
+                {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
+            </div>
         </div>
         <div class="comment_actions hidable">
             <div class="post_replies_link">
@@ -103,10 +84,9 @@
                    hx-get="{{ url_for('post.add_reply_inline', post_id=post_reply.post.id, comment_id=post_reply.id, nonce=nonce) }}"
                    hx-target="#reply_to_{{ post_reply.id }}"
                    hx-swap="innerHTML"
-                   rel="nofollow noindex"><span class="fe fe-reply"></span> <span class="hide_skinny_mobile">{{ _("reply") }}</span></a>
+                   rel="nofollow noindex"><span class="fe fe-reply"></span> <span class="hide_skinny_mobile">{{ _('reply') }}</span></a>
             </div>
-            <div class="voting_buttons_new"
-                 data-base-url="/comment/{{ post_reply.id }}">
+            <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
                 {% with comment=post_reply, community=post_reply.post.community -%}
                     {% include "post/_comment_voting_buttons.html" -%}
                 {% endwith -%}
@@ -127,17 +107,19 @@
             </div>
             <div class="comment_actions_link">
                 <div class="dropdown">
-                    <a href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                       data-bs-toggle="dropdown"
-                       rel="nofollow noindex"
-                       aria-label="{{ _('Comment options') }}">
-                        <span class="fe fe-options" title="Options"></span>
+                    <a
+                        href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
+                        data-bs-toggle="dropdown" rel="nofollow noindex"
+                        aria-label="{{ _('Comment options') }}">
+                        <span class="fe fe-options" title="Options"> </span>
                     </a>
                     <ul class="dropdown-menu" style="width: 320px">
-                        <div hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
-                             hx-trigger="intersect once"
-                             hx-target="this"
-                             hx-swap="outerHTML"></div>
+                        <div
+                            hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
+                            hx-trigger="intersect once"
+                            hx-target="this"
+                            hx-swap="outerHTML"
+                        ></div>
                     </ul>
                 </div>
             </div>

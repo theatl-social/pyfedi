@@ -32,7 +32,7 @@ from app.activitypub.util import (
     local_posts,
     local_comments,
     post_to_activity,
-    find_actor_or_create,
+    find_actor_or_create_cached,
     find_liked_object,
     lemmy_site_data,
     is_activitypub_request,
@@ -173,6 +173,7 @@ def webfinger():
                 ],
             }
             resp = jsonify(webfinger_data)
+            resp.content_type = "application/jrd+json"
             resp.headers.add_header("Access-Control-Allow-Origin", "*")
             return resp
 
@@ -235,6 +236,7 @@ def webfinger():
             )
         resp = jsonify(webfinger_data)
         resp.headers.add_header("Access-Control-Allow-Origin", "*")
+        resp.content_type = "application/jrd+json"
         return resp
     else:
         abort(404)
@@ -831,7 +833,7 @@ def shared_inbox():
             )
             return "", 200
     else:
-        actor = find_actor_or_create(request_json["actor"])
+        actor = find_actor_or_create_cached(request_json["actor"])
 
     if not actor:
         actor_name = request_json["actor"]
@@ -1027,7 +1029,7 @@ def replay_inbox_request(request_json):
             )
             return
     else:
-        actor = find_actor_or_create(request_json["actor"])
+        actor = find_actor_or_create_cached(request_json["actor"])
 
     if not actor:
         actor_name = request_json["actor"]
@@ -1066,7 +1068,7 @@ def process_inbox_request(request_json, store_ap_json):
         session = get_task_session()
         try:
             # patch_db_session makes all db.session.whatever() use the session created with get_task_session, to guarantee proper connection clean-up at the end of the task.
-            # although process_inbox_request uses session instead of db.session, many of the functions it calls, like find_actor_or_create, do not which makes this necessary.
+            # although process_inbox_request uses session instead of db.session, many of the functions it calls, like find_actor_or_create_cached, do not which makes this necessary.
             with patch_db_session(session):
                 from app import redis_client
 
@@ -1079,17 +1081,19 @@ def process_inbox_request(request_json, store_ap_json):
                 saved_json = request_json if store_ap_json else None
                 id = request_json["id"]
                 actor_id = request_json["actor"]
+                if isinstance(actor_id, dict):  # Discourse does this
+                    actor_id = actor_id["id"]
                 feed = community = None
                 if (
                     request_json["type"] == "Announce"
                     or request_json["type"] == "Accept"
                     or request_json["type"] == "Reject"
                 ):
-                    community = find_actor_or_create(
+                    community = find_actor_or_create_cached(
                         actor_id, community_only=True, create_if_not_found=False
                     )
                     if not community:
-                        feed = find_actor_or_create(
+                        feed = find_actor_or_create_cached(
                             actor_id, feed_only=True, create_if_not_found=False
                         )
                     if not community and not feed:
@@ -1102,7 +1106,7 @@ def process_inbox_request(request_json, store_ap_json):
                         )
                         return
                 else:
-                    actor = find_actor_or_create(actor_id)
+                    actor = find_actor_or_create_cached(actor_id)
                     if actor and isinstance(actor, User):
                         user = actor
                         # Update user's last_seen in a separate transaction to avoid deadlocks
@@ -1220,7 +1224,7 @@ def process_inbox_request(request_json, store_ap_json):
 
                     if not feed:
                         user_ap_id = request_json["object"]["actor"]
-                        user = find_actor_or_create(user_ap_id)
+                        user = find_actor_or_create_cached(user_ap_id)
                         if user and isinstance(user, User):
                             if user.banned:
                                 log_incoming_ap(
@@ -1266,7 +1270,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity["type"] == "Follow":
                     target_ap_id = core_activity["object"]
                     follow_id = core_activity["id"]
-                    target = find_actor_or_create(target_ap_id)
+                    target = find_actor_or_create_cached(target_ap_id)
                     if not target:
                         log_incoming_ap(
                             id,
@@ -1514,7 +1518,7 @@ def process_inbox_request(request_json, store_ap_json):
                             user = session.query(User).get(join_request.user_id)
                     elif core_activity["object"]["type"] == "Follow":
                         user_ap_id = core_activity["object"]["actor"]
-                        user = find_actor_or_create(user_ap_id)
+                        user = find_actor_or_create_cached(user_ap_id)
                         if user and user.banned:
                             log_incoming_ap(
                                 id,
@@ -1609,7 +1613,7 @@ def process_inbox_request(request_json, store_ap_json):
                 if core_activity["type"] == "Reject":
                     if core_activity["object"]["type"] == "Follow":
                         user_ap_id = core_activity["object"]["actor"]
-                        user = find_actor_or_create(user_ap_id)
+                        user = find_actor_or_create_cached(user_ap_id)
                         if not user:
                             log_incoming_ap(
                                 id,
@@ -1836,7 +1840,7 @@ def process_inbox_request(request_json, store_ap_json):
                         and core_activity["object"]["type"] == "Feed"
                     ):
                         # find the user in the traffic
-                        user = find_actor_or_create(actor_id)
+                        user = find_actor_or_create_cached(actor_id)
                         # find the feed
                         feed = (
                             session.query(Feed)
@@ -2074,7 +2078,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if not announced and not feed:
                         community = find_community(core_activity)
                     if feed and "id" in core_activity["object"]:
-                        community_to_add = find_actor_or_create(
+                        community_to_add = find_actor_or_create_cached(
                             core_activity["object"]["id"], community_only=True
                         )
                         # if community found or created - add the FeedItem and update Feed info
@@ -2140,7 +2144,9 @@ def process_inbox_request(request_json, store_ap_json):
                                 )
                             return
                         if target == moderators_url:
-                            new_mod = find_actor_or_create(core_activity["object"])
+                            new_mod = find_actor_or_create_cached(
+                                core_activity["object"]
+                            )
                             if new_mod:
                                 existing_membership = (
                                     session.query(CommunityMember)
@@ -2218,7 +2224,7 @@ def process_inbox_request(request_json, store_ap_json):
                     if not announced and not feed:
                         community = find_community(core_activity)
                     if feed and "id" in core_activity["object"]:
-                        community_to_remove = find_actor_or_create(
+                        community_to_remove = find_actor_or_create_cached(
                             core_activity["object"]["id"], community_only=True
                         )
                         # if community found or created - remove the FeedItem and update Feed info
@@ -2370,7 +2376,9 @@ def process_inbox_request(request_json, store_ap_json):
                                 )
                             return
                         if target == moderators_url:
-                            old_mod = find_actor_or_create(core_activity["object"])
+                            old_mod = find_actor_or_create_cached(
+                                core_activity["object"]
+                            )
                             if old_mod:
                                 existing_membership = (
                                     session.query(CommunityMember)
@@ -2538,7 +2546,7 @@ def process_inbox_request(request_json, store_ap_json):
                             community = (
                                 community
                                 if community
-                                else find_actor_or_create(
+                                else find_actor_or_create_cached(
                                     target,
                                     create_if_not_found=False,
                                     community_only=True,
@@ -2593,7 +2601,7 @@ def process_inbox_request(request_json, store_ap_json):
                         core_activity["object"]["type"] == "Follow"
                     ):  # Unsubscribe from a community or user
                         target_ap_id = core_activity["object"]["object"]
-                        target = find_actor_or_create(target_ap_id)
+                        target = find_actor_or_create_cached(target_ap_id)
                         if isinstance(target, Community):
                             community = target
                             member = (
@@ -2919,7 +2927,9 @@ def process_inbox_request(request_json, store_ap_json):
                             community = (
                                 community
                                 if community
-                                else find_actor_or_create(target, community_only=True)
+                                else find_actor_or_create_cached(
+                                    target, community_only=True
+                                )
                             )
                             if not community:
                                 log_incoming_ap(
@@ -3655,7 +3665,7 @@ def process_chat(user, store_ap_json, core_activity, session):
     ):
         return False
     recipient_ap_id = core_activity["object"]["to"][0]
-    recipient = find_actor_or_create(recipient_ap_id)
+    recipient = find_actor_or_create_cached(recipient_ap_id)
     if recipient and recipient.is_local():
         if sender.created_very_recently():
             log_incoming_ap(

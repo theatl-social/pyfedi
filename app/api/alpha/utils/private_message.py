@@ -89,11 +89,18 @@ def get_private_message_conversation(auth, data):
     pm_list = []
     next_page = None
     if conversation_ids and joined_conversations:
-        private_messages = ChatMessage.query.filter(
-            ChatMessage.conversation_id.in_(conversation_ids),
-            ChatMessage.conversation_id.in_(joined_conversations),
-            or_(ChatMessage.recipient_id == user_id, ChatMessage.sender_id == user_id),
-        ).order_by(desc(ChatMessage.created_at))
+        private_messages = (
+            ChatMessage.query.filter(
+                ChatMessage.conversation_id.in_(conversation_ids),
+                ChatMessage.conversation_id.in_(joined_conversations),
+                or_(
+                    ChatMessage.recipient_id == user_id,
+                    ChatMessage.sender_id == user_id,
+                ),
+            )
+            .filter(ChatMessage.recipient_id != None)
+            .order_by(desc(ChatMessage.created_at))
+        )
         private_messages = private_messages.paginate(
             page=page, per_page=limit, error_out=False
         )

@@ -86,6 +86,10 @@ from app.user.forms import (
     BanUserForm,
     DeleteFileForm,
     UploadFileForm,
+    BlockUserForm,
+    BlockCommunityForm,
+    BlockDomainForm,
+    BlockInstanceForm,
 )
 from app.user.utils import (
     purge_user_then_delete,
@@ -816,11 +820,13 @@ def user_settings():
     form.theme.choices = theme_list()
     form.interface_language.choices = [
         ("", _l("Auto-detect")),
+        ("eu", _l("Basque")),
         ("ca", _l("Catalan")),
         ("zh", _l("Chinese")),
         ("en", _l("English")),
         ("fr", _l("French")),
         ("de", _l("German")),
+        ("hi", _l("Hindi")),
         ("ja", _l("Japanese")),
         ("es", _l("Spanish")),
     ]
@@ -2196,6 +2202,203 @@ def user_settings_filters_delete(filter_id):
     cache.delete_memoized(user_filters_replies, current_user.id)
     flash(_("Filter deleted."))
     return redirect(url_for("user.user_settings_filters"))
+
+
+@bp.route("/user/settings/block/user", methods=["GET", "POST"])
+@login_required
+def user_settings_block_user():
+    form = BlockUserForm()
+    if form.validate_on_submit():
+        username = form.username.data.strip()
+
+        # Try to find the user - handle both local usernames and ActivityPub IDs
+        user_to_block = None
+
+        # Check if it's an ActivityPub ID (contains @ or is a URL)
+        if "@" in username or username.startswith("http"):
+            # Try to find or create the remote user
+            user_to_block = find_actor_or_create(username)
+            if user_to_block and not isinstance(user_to_block, User):
+                user_to_block = None
+        else:
+            # Local username lookup
+            user_to_block = User.query.filter_by(
+                user_name=username, deleted=False
+            ).first()
+
+        if not user_to_block:
+            flash(_("User not found: %(username)s", username=username), "error")
+            return render_template("user/block_user.html", form=form, user=current_user)
+
+        if user_to_block.id == current_user.id:
+            flash(_("You cannot block yourself."), "error")
+            return render_template("user/block_user.html", form=form, user=current_user)
+
+        # Check if already blocked
+        existing = UserBlock.query.filter_by(
+            blocker_id=current_user.id, blocked_id=user_to_block.id
+        ).first()
+        if existing:
+            flash(
+                _("%(name)s is already blocked.", name=user_to_block.display_name()),
+                "warning",
+            )
+        else:
+            db.session.add(
+                UserBlock(blocker_id=current_user.id, blocked_id=user_to_block.id)
+            )
+            db.session.commit()
+            cache.delete_memoized(blocked_users, current_user.id)
+            flash(
+                _("%(name)s has been blocked.", name=user_to_block.display_name()),
+                "success",
+            )
+
+        return redirect(url_for("user.user_settings_filters"))
+
+    return render_template("user/block_user.html", form=form, user=current_user)
+
+
+@bp.route("/user/settings/block/community", methods=["GET", "POST"])
+@login_required
+def user_settings_block_community():
+    form = BlockCommunityForm()
+    if form.validate_on_submit():
+        community_name = form.community_name.data.strip()
+
+        # Try to find the community
+        community_to_block = None
+
+        # Check if it's an ActivityPub ID (contains ! or @ or is a URL)
+        if (
+            "!" in community_name
+            or "@" in community_name
+            or community_name.startswith("http")
+        ):
+            # Remove leading ! if present
+            if community_name.startswith("!"):
+                community_name = community_name[1:]
+            # Try to find or create the remote community
+            community_to_block = find_actor_or_create(
+                community_name, create_if_not_found=False, community_only=True
+            )
+            if community_to_block and not isinstance(community_to_block, Community):
+                community_to_block = None
+        else:
+            # Local community lookup
+            community_to_block = Community.query.filter_by(name=community_name).first()
+
+        if not community_to_block:
+            flash(_("Community not found: %(name)s", name=community_name), "error")
+            return render_template(
+                "user/block_community.html", form=form, user=current_user
+            )
+
+        # Check if already blocked
+        existing = CommunityBlock.query.filter_by(
+            user_id=current_user.id, community_id=community_to_block.id
+        ).first()
+        if existing:
+            flash(
+                _(
+                    "%(name)s is already blocked.",
+                    name=community_to_block.display_name(),
+                ),
+                "warning",
+            )
+        else:
+            db.session.add(
+                CommunityBlock(
+                    user_id=current_user.id, community_id=community_to_block.id
+                )
+            )
+            db.session.commit()
+            cache.delete_memoized(blocked_communities, current_user.id)
+            flash(
+                _(
+                    "Posts in %(name)s will be hidden.",
+                    name=community_to_block.display_name(),
+                ),
+                "success",
+            )
+
+        return redirect(url_for("user.user_settings_filters"))
+
+    return render_template("user/block_community.html", form=form, user=current_user)
+
+
+@bp.route("/user/settings/block/domain", methods=["GET", "POST"])
+@login_required
+def user_settings_block_domain():
+    form = BlockDomainForm()
+    if form.validate_on_submit():
+        domain_name = form.domain_name.data.strip().lower()
+
+        # Remove protocol if present
+        domain_name = domain_name.replace("https://", "").replace("http://", "")
+        # Remove trailing slash if present
+        domain_name = domain_name.rstrip("/")
+
+        # Find or create the domain
+        domain = Domain.query.filter_by(name=domain_name).first()
+        if not domain:
+            domain = Domain(name=domain_name)
+            db.session.add(domain)
+            db.session.commit()
+
+        # Check if already blocked
+        existing = DomainBlock.query.filter_by(
+            user_id=current_user.id, domain_id=domain.id
+        ).first()
+        if existing:
+            flash(_("%(name)s is already blocked.", name=domain_name), "warning")
+        else:
+            db.session.add(DomainBlock(user_id=current_user.id, domain_id=domain.id))
+            db.session.commit()
+            cache.delete_memoized(blocked_domains, current_user.id)
+            flash(
+                _("Posts linking to %(name)s will be hidden.", name=domain_name),
+                "success",
+            )
+
+        return redirect(url_for("user.user_settings_filters"))
+
+    return render_template("user/block_domain.html", form=form, user=current_user)
+
+
+@bp.route("/user/settings/block/instance", methods=["GET", "POST"])
+@login_required
+def user_settings_block_instance():
+    form = BlockInstanceForm()
+    if form.validate_on_submit():
+        instance_domain = form.instance_domain.data.strip().lower()
+
+        # Remove protocol if present
+        instance_domain = instance_domain.replace("https://", "").replace("http://", "")
+        # Remove trailing slash if present
+        instance_domain = instance_domain.rstrip("/")
+
+        # Find the instance
+        instance = Instance.query.filter_by(domain=instance_domain).first()
+        if not instance:
+            flash(_("Instance not found: %(domain)s", domain=instance_domain), "error")
+            return render_template(
+                "user/block_instance.html", form=form, user=current_user
+            )
+
+        # Use the existing block_remote_instance function
+        try:
+            block_remote_instance(instance.id, SRC_WEB)
+            flash(
+                _("Content from %(name)s will be hidden.", name=instance_domain),
+                "success",
+            )
+        except Exception as e:
+            flash(_("Error blocking instance: %(error)s", error=str(e)), "error")
+
+        return redirect(url_for("user.user_settings_filters"))
+
+    return render_template("user/block_instance.html", form=form, user=current_user)
 
 
 @bp.route("/user/newsletter/<int:user_id>/<token>/unsubscribe", methods=["GET", "POST"])

@@ -64,7 +64,7 @@
                 </div>
             {% elif post.url and (post.url.endswith('.mp4') or post.url.endswith('.webm')) -%}
                 <div class="masonry_thumb" title="{{ post_title }}">
-                    <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="auto" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
+                    <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="metadata" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
                         {% if post.url.endswith('.mp4') -%}
                             <source src="{{ post.url }}" type="video/mp4" />
                         {% elif post.url.endswith('.webm') -%}

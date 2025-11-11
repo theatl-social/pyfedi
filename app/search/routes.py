@@ -1,5 +1,5 @@
 from flask import request, flash, url_for, redirect, abort
-from flask_babel import _
+from flask_babel import _, g
 from flask_login import current_user
 from sqlalchemy import or_, desc, text
 
@@ -22,6 +22,7 @@ from app.utils import (
     login_required,
     login_required_if_private_instance,
     moderating_communities_ids,
+    get_setting,
 )
 
 
@@ -257,6 +258,11 @@ def run_search():
             communities=communities.all(),
             languages=languages,
             instance_software=instance_software,
+            is_admin=current_user.is_authenticated and current_user.is_admin(),
+            is_staff=current_user.is_authenticated and current_user.is_staff(),
+            default_user_add_remote=get_setting(
+                "allow_default_user_add_remote_community", True
+            ),
         )
 
 

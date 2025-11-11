@@ -41,6 +41,7 @@ from app.utils import (
     render_template,
     user_cookie_banned,
     user_ip_banned,
+    role_access,
 )
 
 
@@ -158,6 +159,19 @@ def notify_admins_of_registration(application):
         )
         admin.unread_notifications += 1
         db.session.add(notify)
+    if role_access("approve registrations", 3):
+        for admin in Site.staff():
+            notify = Notification(
+                title="New registration",
+                url=f"/admin/approve_registrations?account={application.user_id}",
+                user_id=admin.id,
+                author_id=application.user_id,
+                notif_type=NOTIF_REGISTRATION,
+                subtype="new_registration_for_approval",
+                targets=targets_data,
+            )
+            admin.unread_notifications += 1
+            db.session.add(notify)
 
     plugins.fire_hook("new_registration_for_approval", application)
 
