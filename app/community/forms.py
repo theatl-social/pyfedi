@@ -461,7 +461,7 @@ class ReportCommunityForm(FlaskForm):
                       ('7', _l('Other')),
                       ]
     reasons = MultiCheckboxField(_l('Reason'), choices=reason_choices)
-    description = StringField(_l('More info'))
+    description = StringField(_l('More info'), validators=[Length(max=256)])
     report_remote = BooleanField('Also send report to originating instance')
     submit = SubmitField(_l('Report'))
 
