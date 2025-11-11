@@ -50,14 +50,24 @@ def get_ip_address() -> str:
     return ip
 
 
-db = SQLAlchemy(
-    session_options={"autoflush": False},
-    engine_options={
-        "pool_size": Config.DB_POOL_SIZE,
-        "max_overflow": Config.DB_MAX_OVERFLOW,
-        "pool_recycle": 3600,
-    },
-)
+# Configure database with connection pooling for PostgreSQL
+# SQLite doesn't support pool_size/max_overflow parameters
+db_url = os.environ.get("DATABASE_URL", "")
+if db_url.startswith("sqlite"):
+    # SQLite configuration - no pooling parameters
+    db = SQLAlchemy(
+        session_options={"autoflush": False},
+    )
+else:
+    # PostgreSQL configuration - with connection pooling
+    db = SQLAlchemy(
+        session_options={"autoflush": False},
+        engine_options={
+            "pool_size": Config.DB_POOL_SIZE,
+            "max_overflow": Config.DB_MAX_OVERFLOW,
+            "pool_recycle": 3600,
+        },
+    )
 make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
@@ -346,6 +356,12 @@ def create_app(config_class=Config):
     from app.plugins import load_plugins
 
     load_plugins()
+
+    # Run startup validations to fix any data integrity issues
+    from app.startup_validation import run_startup_validations
+
+    with app.app_context():
+        run_startup_validations()
 
     return app
 
