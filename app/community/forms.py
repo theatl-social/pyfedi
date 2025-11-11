@@ -106,6 +106,10 @@ class EditCommunityForm(FlaskForm):
                  ]
     default_post_type = SelectField(_l('Default post type'), coerce=str, choices=post_types, validators=[Optional()],
                                  render_kw={'class': 'form-select'})
+    url_types = [('friendly', _l('Friendly urls')),
+                 ('post_id', _l('Post ids only'))]
+    post_url_type = SelectField(_l('Post url structure to use in this community'), choices=url_types, coerce=str,
+                                validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 

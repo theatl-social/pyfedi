@@ -1134,6 +1134,7 @@ def community_edit(community_id: int):
             community.default_layout = form.default_layout.data
             community.default_post_type = form.default_post_type.data
             community.downvote_accept_mode = form.downvote_accept_mode.data
+            community.post_url_type = form.post_url_type.data
 
             icon_file = request.files['icon_file']
             if icon_file and icon_file.filename != '':
@@ -1190,6 +1191,7 @@ def community_edit(community_id: int):
             form.default_layout.data = community.default_layout
             form.default_post_type.data = community.default_post_type
             form.downvote_accept_mode.data = community.downvote_accept_mode
+            form.post_url_type.data = community.post_url_type if community.post_url_type else 'friendly'
         return render_template('community/community_edit.html', title=_('Edit community'), form=form,
                                current_app=current_app, current="edit_settings",
                                community=community)

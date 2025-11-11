@@ -521,6 +521,7 @@ class Community(db.Model):
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     average_rating = db.Column(db.Float)
     always_translate = db.Column(db.Boolean)
+    post_url_type = db.Column(db.String(15))
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -2019,19 +2020,30 @@ class Post(db.Model):
         return ''
 
     def generate_ap_id(self, community: Community):
-        # Make the ActivityPub ID of a post in the format of instance.tld/c/community@instance/p/post_id/post-title-as-slug
-        # Use this for posts this instance is creating only - remote posts will already have an AP ID.
-        if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
-            slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
-            self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
+        if not community.post_url_type or community.post_url_type == 'friendly':
+            # Make the ActivityPub ID of a post in the format of instance.tld/c/community@instance/p/post_id/post-title-as-slug
+            # Use this for posts this instance is creating only - remote posts will already have an AP ID.
+            if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
+                slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
+                self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
+                self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
+        else:
+            # Make the ActivityPub ID of a post in the format of instance.tld/post/post_id
+            if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
+                self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                self.slug = f'/post/{self.id}'
 
     def generate_slug(self, community: Community):
-        # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
-        # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
-        if self.slug is None or self.slug == '':
-            slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
-            self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
+        if not community.post_url_type or community.post_url_type == 'friendly':
+            # Make the slug of a post in the format of /c/community@instance/p/post_id/post-title-as-slug
+            # This should only be used for incoming remote posts. Locally-made posts will have a slug from generate_ap_id()
+            if self.slug is None or self.slug == '':
+                slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
+                self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
+        else:
+            # Make the slug use the old format of /post/post_id
+            if self.slug is None or self.slug == '':
+                self.slug = f'/post/{self.id}'
 
     def peertube_embed(self):
         if self.url:
