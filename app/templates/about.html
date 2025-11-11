@@ -10,7 +10,7 @@
         <h1>{{ _('About %(site_name)s', site_name=g.site.name) }}</h1>
         <p> This site is a <a href="https://join.piefed.social/">PieFed</a> instance created on
             {{instance.created_at.strftime('%d-%m-%Y')}}. It is home to <a href="/people">{{user_amount}} users</a>
-            (of which {{mau}} were active in the last month). In <a href="/communities/local"> {{community_amount}} communities</a>
+            (of which {{mau}} were active in the last month). In <a href="/communities?home_select=local"> {{community_amount}} communities</a>
             we discussed content from <a href="/domains">{{domains_amount}}</a> websites and made
             {{posts_amount}} posts.</p>
         <h2>{{ _('Team') }}</h2>
