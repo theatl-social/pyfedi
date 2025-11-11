@@ -2241,7 +2241,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                                        language_id=language_id, distinguished=distinguished, request_json=request_json,
                                        announce_id=announce_id)
             for lutn in local_users_to_notify:
-                recipient = User.query.filter_by(ap_profile_id=lutn, ap_id=None).first()
+                recipient = db.session.query(User).filter_by(ap_profile_id=lutn, ap_id=None).first()
                 if not recipient:
                     continue
                 if post_reply.instance.software == 'mbin' or post_reply.instance.software in MICROBLOG_APPS:
