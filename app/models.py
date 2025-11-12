@@ -971,7 +971,7 @@ class User(UserMixin, db.Model):
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user')
     modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author')
-    ratings = db.relationship('Rating', lazy='dynamic', foreign_keys="Rating.user_id", cascade="all, delete-orphan")
+    ratings = db.relationship('Rating', lazy='dynamic', foreign_keys="Rating.user_id", cascade="all, delete-orphan", back_populates='author')
 
     hide_read_posts = db.Column(db.Boolean, default=False)
     # db relationship tracked by the "read_posts" table
@@ -3535,7 +3535,7 @@ class Rating(db.Model):
     created_at = db.Column(db.DateTime, index=True, default=utcnow)
     rating = db.Column(db.Float)
 
-    author = db.relationship('User', lazy='joined')
+    author = db.relationship('User', lazy='joined', back_populates='ratings')
 
 
 def _large_community_subscribers() -> float:
