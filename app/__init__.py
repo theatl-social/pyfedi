@@ -50,7 +50,24 @@ def get_ip_address() -> str:
     return ip
 
 
-db = SQLAlchemy(session_options={"autoflush": False})
+# Configure database with connection pooling for PostgreSQL
+# SQLite doesn't support pool_size/max_overflow parameters
+db_url = os.environ.get("DATABASE_URL", "")
+if db_url.startswith("sqlite"):
+    # SQLite configuration - no pooling parameters
+    db = SQLAlchemy(
+        session_options={"autoflush": False},
+    )
+else:
+    # PostgreSQL configuration - with connection pooling
+    db = SQLAlchemy(
+        session_options={"autoflush": False},
+        engine_options={
+            "pool_size": Config.DB_POOL_SIZE,
+            "max_overflow": Config.DB_MAX_OVERFLOW,
+            "pool_recycle": 3600,
+        },
+    )
 make_searchable(db.metadata)
 migrate = Migrate()
 login = LoginManager()
@@ -106,13 +123,7 @@ def create_app(config_class=Config):
                         "type": "http",
                         "scheme": "bearer",
                         "bearerFormat": "JWT",
-                    },
-                    "PrivateRegistrationSecret": {
-                        "type": "apiKey",
-                        "in": "header",
-                        "name": "X-PieFed-Secret",
-                        "description": "Private registration secret for admin endpoints",
-                    },
+                    }
                 }
             },
             "servers": [
@@ -170,7 +181,6 @@ def create_app(config_class=Config):
             "app.shared.tasks.maintenance.*": {"queue": "background"},
             "app.admin.routes.*": {"queue": "background"},
             "app.admin.util.*": {"queue": "background"},
-            "app.utils.archive_post": {"queue": "background"},
         }
     )
 
@@ -291,7 +301,6 @@ def create_app(config_class=Config):
         user_bp,
         reply_bp,
         post_bp,
-        admin_bp,
         upload_bp,
         private_message_bp,
     )
@@ -304,7 +313,6 @@ def create_app(config_class=Config):
     rest_api.register_blueprint(user_bp)
     rest_api.register_blueprint(reply_bp)
     rest_api.register_blueprint(post_bp)
-    rest_api.register_blueprint(admin_bp)
     rest_api.register_blueprint(upload_bp)
     rest_api.register_blueprint(private_message_bp)
 
@@ -350,9 +358,9 @@ def create_app(config_class=Config):
     load_plugins()
 
     # Run startup validations to fix any data integrity issues
-    with app.app_context():
-        from app.startup_validation import run_startup_validations
+    from app.startup_validation import run_startup_validations
 
+    with app.app_context():
         run_startup_validations()
 
     return app

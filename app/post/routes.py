@@ -194,6 +194,7 @@ from app.utils import (
     libretranslate_string,
     user_in_restricted_country,
     instance_gone_forever,
+    site_language_code,
 )
 
 
@@ -965,6 +966,24 @@ def continue_discussion(post_id, comment_id):
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
+    # Polls
+    poll_results = False
+    poll_choices = []
+    poll_data = None
+    poll_total_votes = 0
+    has_voted = False
+    if post.type == POST_TYPE_POLL:
+        poll_data = Poll.query.get(post.id)
+        if poll_data:
+            poll_choices = (
+                PollChoice.query.filter_by(post_id=post.id)
+                .order_by(PollChoice.sort_order)
+                .all()
+            )
+            poll_total_votes = poll_data.total_votes()
+            if current_user.is_authenticated:
+                has_voted = poll_data.has_voted(current_user.id)
+
     # Events
     event = None
     if post.type == POST_TYPE_EVENT:
@@ -981,6 +1000,11 @@ def continue_discussion(post_id, comment_id):
         title=_("Discussing %(title)s", title=post.title),
         post=post,
         mods=mod_list,
+        has_voted=has_voted,
+        poll_results=poll_results,
+        poll_data=poll_data,
+        poll_choices=poll_choices,
+        poll_total_votes=poll_total_votes,
         event=event,
         is_moderator=is_moderator,
         comment=comment,
@@ -1630,25 +1654,46 @@ def post_purge(post_id: int):
     return redirect(url_for("user.show_profile_by_id", user_id=post.user_id))
 
 
+@bp.route("/post_teaser/<int:post_id>/translate", methods=["POST"])
+@login_required
+def post_teaser_translate(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if current_app.config["TRANSLATE_ENDPOINT"]:
+        recipient_language = get_recipient_language(current_user.id)
+        source = (
+            post.language.code
+            if post.language_id and post.language.code != "und"
+            else "auto"
+        )
+        if source == site_language_code():
+            source = "auto"
+        result_title = libretranslate_string(
+            post.title, source=source, target=recipient_language
+        )
+        post_url = post.slug if post.slug else f"/post/{post.id}"
+        return f'<h3><a href="{post_url}" class="post_teaser_title_a">{result_title}</a></h3>'
+
+
 @bp.route("/post/<int:post_id>/translate", methods=["POST"])
 @login_required
 def post_translate(post_id: int):
     post = Post.query.get_or_404(post_id)
     if current_app.config["TRANSLATE_ENDPOINT"]:
         recipient_language = get_recipient_language(current_user.id)
-        result = libretranslate_string(
-            post.body_html,
-            source=post.language.code
+        source = (
+            post.language.code
             if post.language_id and post.language.code != "und"
-            else "auto",
-            target=recipient_language,
+            else "auto"
+        )
+        if (
+            source == site_language_code()
+        ):  # If the source is the same as the default then there's a chance the author didn't specify a language, so just use 'auto'
+            source = "auto"
+        result = libretranslate_string(
+            post.body_html, source=source, target=recipient_language
         )
         result_title = libretranslate_string(
-            post.title,
-            source=post.language.code
-            if post.language_id and post.language.code != "und"
-            else "auto",
-            target=recipient_language,
+            post.title, source=source, target=recipient_language
         )
         return f'<div class="post_body">{result}</div><h1 class="mt-2 post_title" hx-swap-oob="outerHTML:h1.post_title">{result_title}</h1>'
 
@@ -1659,12 +1704,15 @@ def post_reply_translate(post_reply_id: int):
     post_reply = PostReply.query.get_or_404(post_reply_id)
     if current_app.config["TRANSLATE_ENDPOINT"]:
         recipient_language = get_recipient_language(current_user.id)
-        result = libretranslate_string(
-            post_reply.body_html,
-            source=post_reply.language.code
+        source = (
+            post_reply.language.code
             if post_reply.language_id and post_reply.language.code != "und"
-            else "auto",
-            target=recipient_language,
+            else "auto"
+        )
+        if source == site_language_code():
+            source = "auto"
+        result = libretranslate_string(
+            post_reply.body_html, source=source, target=recipient_language
         )
         return (
             f'<div class="col-12 pr-0" lang="{recipient_language}">' + result + "</div>"
@@ -1869,7 +1917,7 @@ def post_block_user(post_id: int):
         resp = make_response()
         curr_url = request.headers.get("HX-Current-Url")
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             resp.headers["HX-Redirect"] = post.community.local_url()
         elif "/u/" in curr_url:
             resp.headers["HX-Redirect"] = url_for("main.index")
@@ -1901,7 +1949,7 @@ def post_block_domain(post_id: int):
         resp = make_response()
         curr_url = request.headers.get("HX-Current-Url")
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             resp.headers["HX-Redirect"] = url_for("main.index")
         else:
             resp.headers["HX-Redirect"] = curr_url
@@ -1952,7 +2000,11 @@ def post_block_instance(post_id: int):
         resp = make_response()
         curr_url = request.headers.get("HX-Current-Url")
 
-        if post.instance.domain in curr_url or "/post/" in curr_url:
+        if (
+            post.instance.domain in curr_url
+            or "/post/" in curr_url
+            or ("/c/" in curr_url and "/p/" in curr_url)
+        ):
             resp.headers["HX-Redirect"] = url_for("main.index")
         else:
             resp.headers["HX-Redirect"] = curr_url
@@ -2045,12 +2097,12 @@ def post_set_flair(post_id):
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector("edit_post", post_id=post.id)
 
-            if "/c/" in curr_url:
+            if "/c/" in curr_url and "/p/" not in curr_url:
                 show_post_community = False
             else:
                 show_post_community = True
 
-            if "/post/" in curr_url:
+            if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
                 resp = make_response()
                 resp.headers["HX-Redirect"] = curr_url
                 return resp
@@ -2101,7 +2153,7 @@ def post_flair_list(post_id):
         or current_user.is_admin()
     ):
         curr_url = request.headers.get("HX-Current-Url")
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post_preview = False
         else:
             post_preview = True
@@ -2209,7 +2261,7 @@ def post_reply_block_user(post_id: int, comment_id: int):
         resp = make_response()
         curr_url = request.headers.get("HX-Current-Url")
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             if post_reply.author.id != post.author.id:
                 resp.headers["HX-Redirect"] = (
                     post.slug
@@ -2247,7 +2299,7 @@ def post_reply_block_instance(post_id: int, comment_id: int):
 
         if post_reply.instance.domain in curr_url:
             resp.headers["HX-Redirect"] = url_for("main.index")
-        elif "/post/" in curr_url:
+        elif "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post = Post.query.get(post_id)
             if post is not None and post.instance_id == post_reply.instance_id:
                 resp.headers["HX-Redirect"] = url_for("main.index")
@@ -2582,8 +2634,11 @@ def post_reply_notification(post_reply_id: int):
 @bp.route("/post/<int:post_id>/cross_posts", methods=["GET"])
 def post_cross_posts(post_id: int):
     post = Post.query.get_or_404(post_id)
-    cross_posts = Post.query.filter(Post.id.in_(post.cross_posts))
-    return render_template("post/post_cross_posts.html", cross_posts=cross_posts)
+    if post.cross_posts:
+        cross_posts = Post.query.filter(Post.id.in_(post.cross_posts))
+        return render_template("post/post_cross_posts.html", cross_posts=cross_posts)
+    else:
+        abort(404)
 
 
 @bp.route("/post/<int:post_id>/block_image", methods=["GET", "POST"])

@@ -2777,8 +2777,18 @@ def site_language_id(site=None):
     if g and hasattr(g, "site") and g.site.language_id:
         return g.site.language_id
     else:
-        english = Language.query.filter(Language.code == "en").first()
+        english = db.session.query(Language).filter(Language.code == "en").first()
         return english.id if english else None
+
+
+def site_language_code(site=None):
+    if site is not None and site.language_id:
+        return db.session.query(Language).get(site.language_id).code
+    if g and hasattr(g, "site") and g.site.language_id:
+        return db.session.query(Language).get(g.site.language_id).code
+    else:
+        english = db.session.query(Language).filter(Language.code == "en").first()
+        return english.code if english else ""
 
 
 def read_language_choices() -> List[tuple]:
@@ -4024,7 +4034,6 @@ def is_valid_xml_utf8(pystring):
     return True
 
 
-@celery.task
 def archive_post(post_id: int):
     from app import redis_client
     import os
@@ -4382,6 +4391,47 @@ def show_explore():
 def expand_hex_color(text: str) -> str:
     new_text = "#" + text[1] * 2 + text[2] * 2 + text[3] * 2
     return new_text
+
+
+def scale_gif(path, scale, new_path=None):
+    # from https://stackoverflow.com/a/69850807
+    gif = Image.open(path)
+    if not new_path:
+        new_path = path
+    old_gif_information = {
+        "loop": bool(gif.info.get("loop", 1)),
+        "duration": gif.info.get("duration", 40),
+        "background": gif.info.get("background", 223),
+        "extension": gif.info.get("extension", (b"NETSCAPE2.0")),
+        "transparency": gif.info.get("transparency", 223),
+    }
+    new_frames = get_new_frames(gif, scale)
+    save_new_gif(new_frames, old_gif_information, new_path)
+
+
+def get_new_frames(gif, scale):
+    new_frames = []
+    actual_frames = gif.n_frames
+    for frame in range(actual_frames):
+        gif.seek(frame)
+        new_frame = Image.new("RGBA", gif.size)
+        new_frame.paste(gif)
+        new_frame.thumbnail(scale)
+        new_frames.append(new_frame)
+    return new_frames
+
+
+def save_new_gif(new_frames, old_gif_information, new_path):
+    new_frames[0].save(
+        new_path,
+        save_all=True,
+        append_images=new_frames[1:],
+        duration=old_gif_information["duration"],
+        loop=old_gif_information["loop"],
+        background=old_gif_information["background"],
+        extension=old_gif_information["extension"],
+        transparency=old_gif_information["transparency"],
+    )
 
 
 def human_filesize(size_bytes):

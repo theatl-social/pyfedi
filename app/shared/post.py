@@ -309,11 +309,10 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
             input, post, type, src, user, auth, uploaded_file, from_scratch=True
         )
     except Exception as e:
-        if str(e) == "This image is blocked":
-            db.session.delete(vote)
-            db.session.delete(post)
-            db.session.commit()
-            raise e
+        db.session.delete(vote)
+        db.session.delete(post)
+        db.session.commit()
+        raise e
 
     if post.status == POST_STATUS_PUBLISHED:
         notify_about_post(post)
@@ -348,6 +347,7 @@ def edit_post(
         notify_author = input["notify_author"]
         language_id = input["language_id"]
         timezone = input["timezone"] if "timezone" in input else user.timezone
+        image_alt_text = input["image_alt_text"] if "image_alt_text" in input else ""
         tags = []
         flair = []
         scheduled_for = None
@@ -376,6 +376,14 @@ def edit_post(
         scheduled_for = input.scheduled_for.data
         repeat = input.repeat.data
         timezone = input.timezone.data
+        image_alt_text = (
+            input.image_alt_text.data
+            if hasattr(input, "image_alt_text") and input.image_alt_text
+            else ""
+        )
+
+    # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
+
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
@@ -606,9 +614,7 @@ def edit_post(
             file = File(source_url=url, hash=hash)
             if (uploaded_file and type == POST_TYPE_IMAGE) or type == POST_TYPE_LINK:
                 # change this line when uploaded_file is supported in API
-                file.alt_text = (
-                    input.image_alt_text.data if input.image_alt_text.data else title
-                )
+                file.alt_text = image_alt_text
             db.session.add(file)
             db.session.commit()
             post.image_id = file.id
@@ -657,12 +663,11 @@ def edit_post(
     if url and post.image:
         file = File.query.get(post.image_id)
         if file:
-            file.alt_text = (
-                input.image_alt_text.data if input.image_alt_text.data else title
-            )
+            file.alt_text = image_alt_text
 
     federate = True
     if type == POST_TYPE_POLL:
+        # When the API supports polls and events we will no longer be able to use the input object as it could be a dict or a form object.
         post.type = POST_TYPE_POLL
         for i in range(1, 10):
             # change this line when polls are supported in API
@@ -753,7 +758,10 @@ def delete_post(post_id: int, src, auth):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
     else:
-        user_id = current_user.id
+        if current_user:
+            user_id = current_user.id
+        else:
+            user_id = 1  # for remove_old_community_content()
 
     post = db.session.query(Post).get(post_id)
     if post.url:

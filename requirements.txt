@@ -17,7 +17,7 @@ SQLAlchemy-Searchable==2.1.0
 SQLAlchemy-Utils==0.41.1
 cryptography==44.0.2
 Bootstrap-Flask==2.5.0
-arrow==1.2.3
+arrow~=1.4.0
 pyld==2.0.4
 boto3~=1.39.0
 markdown2==2.5.3

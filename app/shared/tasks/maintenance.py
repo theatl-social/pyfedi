@@ -10,7 +10,7 @@ from flask import current_app
 from sqlalchemy import text
 
 from app import celery, cache, httpx_client
-from app.activitypub.util import find_actor_or_create
+from app.activitypub.util import find_actor_or_create, find_language_or_create
 from app.constants import NOTIF_UNBAN
 from app.models import (
     Notification,
@@ -183,9 +183,52 @@ def remove_old_community_content():
                 )
 
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id, reason=None)
+                    post_delete_post(
+                        community,
+                        post,
+                        post.user_id,
+                        reason=None,
+                        federate_deletion=False,
+                    )
 
         session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+def remove_old_bot_content():
+    """Remove old posts by bots with no replies"""
+    session = get_task_session()
+    try:
+        with patch_db_session(session):
+            cut_off = utcnow() - timedelta(days=28 * 6)
+            # First, fetch just the post IDs (lightweight query)
+            post_ids = [
+                p[0]
+                for p in session.query(Post.id)
+                .filter_by(deleted=False, sticky=False, from_bot=True, reply_count=0)
+                .filter(Post.posted_at < cut_off)
+                .all()
+            ]
+
+            # Process posts in batches of 100
+            batch_size = 100
+            for i in range(0, len(post_ids), batch_size):
+                batch_ids = post_ids[i : i + batch_size]
+                posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
+
+                for post in posts:
+                    post_delete_post(
+                        post.community,
+                        post,
+                        post.user_id,
+                        reason=None,
+                        federate_deletion=post.author.is_local(),
+                    )
+
     except Exception:
         session.rollback()
         raise
@@ -779,18 +822,35 @@ def monitor_healthy_instances():
 def recalculate_user_attitudes():
     """Recalculate recent active user attitudes"""
     session = get_task_session()
+    batch_size = 100
+    processed = 0
+
     try:
         with patch_db_session(session):
-            recent_users = (
-                session.query(User)
+            # First, fetch just the user IDs (lightweight query)
+            user_ids = [
+                u[0]
+                for u in session.query(User.id)
                 .filter(User.last_seen > utcnow() - timedelta(days=1))
                 .all()
-            )
+            ]
 
-            for user in recent_users:
-                user.recalculate_attitude()
+            total_users = len(user_ids)
 
-            session.commit()
+            # Process users in batches
+            for i in range(0, total_users, batch_size):
+                batch_ids = user_ids[i : i + batch_size]
+
+                # Fetch users for this batch
+                users = session.query(User).filter(User.id.in_(batch_ids)).all()
+
+                for user in users:
+                    user.recalculate_attitude()
+                    processed += 1
+
+                # Commit after each batch
+                session.commit()
+
     except Exception:
         session.rollback()
         raise
@@ -800,8 +860,9 @@ def recalculate_user_attitudes():
 
 @celery.task
 def calculate_community_activity_stats():
-    """Calculate active users for day/week/month/half year for local communities"""
+    """Calculate active users for day/week/month/half year for communities"""
     session = get_task_session()
+
     try:
         # Timing settings
         day = utcnow() - timedelta(hours=24)
@@ -809,57 +870,130 @@ def calculate_community_activity_stats():
         month = utcnow() - timedelta(weeks=4)
         half_year = utcnow() - timedelta(weeks=26)
 
-        # Get community IDs
-        comm_ids = session.query(Community.id).filter(Community.banned == False).all()
-        comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
+        # print("Creating temporary table for community activity...")
 
-        for community_id in comm_ids:
-            for interval in [day, week, month, half_year]:
-                count = session.execute(
-                    text("""
-                    SELECT count(*) FROM
-                    (
-                        SELECT p.user_id FROM "post" p
-                        WHERE p.posted_at > :time_interval
-                            AND p.from_bot = False
-                            AND p.community_id = :community_id
-                        UNION
-                        SELECT pr.user_id FROM "post_reply" pr
-                        WHERE pr.posted_at > :time_interval
-                            AND pr.from_bot = False
-                            AND pr.community_id = :community_id
-                        UNION
-                        SELECT pv.user_id FROM "post_vote" pv
-                        INNER JOIN "user" u ON pv.user_id = u.id
-                        INNER JOIN "post" p ON pv.post_id = p.id
-                        WHERE pv.created_at > :time_interval
-                            AND u.bot = False
-                            AND p.community_id = :community_id
-                        UNION
-                        SELECT prv.user_id FROM "post_reply_vote" prv
-                        INNER JOIN "user" u ON prv.user_id = u.id
-                        INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
-                        INNER JOIN "post" p ON pr.post_id = p.id
-                        WHERE prv.created_at > :time_interval
-                            AND u.bot = False
-                            AND p.community_id = :community_id
-                    ) AS activity
-                """),
-                    {"time_interval": interval, "community_id": community_id},
-                ).scalar()
+        # Create a temporary table with all activity data
+        # This collects all user activity in one pass
+        session.execute(
+            text("""
+            CREATE TEMPORARY TABLE temp_community_activity (
+                user_id INTEGER,
+                community_id INTEGER,
+                activity_date TIMESTAMP
+            ) ON COMMIT DROP
+        """)
+        )
 
-                # Update the community stats
-                community = session.query(Community).get(community_id)
-                if community:
-                    if interval == day:
-                        community.active_daily = count
-                    elif interval == week:
-                        community.active_weekly = count
-                    elif interval == month:
-                        community.active_monthly = count
-                    elif interval == half_year:
-                        community.active_6monthly = count
-                    session.commit()
+        # print("Collecting activity data from posts...")
+        session.execute(
+            text("""
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT p.user_id, p.community_id, p.posted_at
+            FROM "post" p
+            WHERE p.posted_at > :half_year
+                AND p.from_bot = False
+                AND p.community_id IS NOT NULL
+        """),
+            {"half_year": half_year},
+        )
+
+        # print("Collecting activity data from post replies...")
+        session.execute(
+            text("""
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT pr.user_id, pr.community_id, pr.posted_at
+            FROM "post_reply" pr
+            WHERE pr.posted_at > :half_year
+                AND pr.from_bot = False
+                AND pr.community_id IS NOT NULL
+        """),
+            {"half_year": half_year},
+        )
+
+        # print("Collecting activity data from post votes...")
+        session.execute(
+            text("""
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT pv.user_id, p.community_id, pv.created_at
+            FROM "post_vote" pv
+            INNER JOIN "user" u ON pv.user_id = u.id
+            INNER JOIN "post" p ON pv.post_id = p.id
+            WHERE pv.created_at > :half_year
+                AND u.bot = False
+                AND p.community_id IS NOT NULL
+        """),
+            {"half_year": half_year},
+        )
+
+        # print("Collecting activity data from post reply votes...")
+        session.execute(
+            text("""
+            INSERT INTO temp_community_activity (user_id, community_id, activity_date)
+            SELECT prv.user_id, p.community_id, prv.created_at
+            FROM "post_reply_vote" prv
+            INNER JOIN "user" u ON prv.user_id = u.id
+            INNER JOIN "post_reply" pr ON prv.post_reply_id = pr.id
+            INNER JOIN "post" p ON pr.post_id = p.id
+            WHERE prv.created_at > :half_year
+                AND u.bot = False
+                AND p.community_id IS NOT NULL
+        """),
+            {"half_year": half_year},
+        )
+
+        # print("Creating index on temporary table...")
+        session.execute(
+            text("""
+            CREATE INDEX idx_temp_activity ON temp_community_activity(community_id, activity_date)
+        """)
+        )
+
+        # print("Calculating activity stats for recently active communities...")
+
+        # Now calculate all stats in a single query and update communities
+        # This aggregates the data for each community and time interval
+        stats_results = session.execute(
+            text("""
+            SELECT
+                tca.community_id,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :day THEN tca.user_id END) as active_daily,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :week THEN tca.user_id END) as active_weekly,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :month THEN tca.user_id END) as active_monthly,
+                COUNT(DISTINCT CASE WHEN tca.activity_date > :half_year THEN tca.user_id END) as active_6monthly
+            FROM temp_community_activity tca
+            INNER JOIN "community" c ON c.id = tca.community_id
+            WHERE c.banned = FALSE
+                AND c.last_active > :half_year
+            GROUP BY tca.community_id
+        """),
+            {"day": day, "week": week, "month": month, "half_year": half_year},
+        )
+
+        # Update communities with the calculated stats
+        # print("Updating community statistics...")
+        updated_count = 0
+        for row in stats_results:
+            session.execute(
+                text("""
+                UPDATE "community"
+                SET active_daily = :daily,
+                    active_weekly = :weekly,
+                    active_monthly = :monthly,
+                    active_6monthly = :six_monthly
+                WHERE id = :community_id
+            """),
+                {
+                    "community_id": row.community_id,
+                    "daily": row.active_daily,
+                    "weekly": row.active_weekly,
+                    "monthly": row.active_monthly,
+                    "six_monthly": row.active_6monthly,
+                },
+            )
+            updated_count += 1
+
+        session.commit()
+        # print(f"Completed: Updated stats for {updated_count} communities")
 
     except Exception:
         session.rollback()
@@ -910,10 +1044,7 @@ def archive_old_posts():
             """
             post_ids = session.execute(text(sql), {"cutoff": cutoff}).scalars()
             for post_id in post_ids:
-                if current_app.debug:
-                    archive_post(post_id)
-                else:
-                    archive_post.delay(post_id)
+                archive_post(post_id)
 
         except Exception:
             session.rollback()
@@ -1037,7 +1168,10 @@ def refresh_instance_chooser():
 
                     # Map API response to InstanceChooser fields
                     if "language" in chooser_data and "id" in chooser_data["language"]:
-                        instance_chooser.language_id = chooser_data["language"]["id"]
+                        instance_chooser.language_id = find_language_or_create(
+                            chooser_data["language"]["code"],
+                            chooser_data["language"]["name"],
+                        ).id
 
                     instance_chooser.nsfw = chooser_data.get("nsfw", False)
                     instance_chooser.newbie_friendly = chooser_data.get(
@@ -1132,7 +1266,10 @@ def add_remote_community_from_post(post_data):
 
         for cl in set(community_lookup):
             if f"@{current_app.config['SERVER_NAME']}" not in cl:
-                search_for_community(cl)
+                try:
+                    search_for_community(cl)
+                except Exception:
+                    pass
 
 
 @celery.task

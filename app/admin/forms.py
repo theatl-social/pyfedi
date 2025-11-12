@@ -42,7 +42,6 @@ class SiteProfileForm(FlaskForm):
     announcement = TextAreaField(_l("Announcement at top of home page"))
     legal_information = TextAreaField(_l("Legal information"))
     tos_url = StringField(_l("Terms of service url"), validators=[Length(max=255)])
-    privacy_url = StringField(_l("Privacy policy url"), validators=[Length(max=255)])
     contact_email = EmailField(
         _l("General instance contact email address"),
         validators=[DataRequired(), Length(min=5, max=255)],
@@ -137,6 +136,9 @@ class SiteMiscForm(FlaskForm):
     private_instance = BooleanField(_l("Private instance - require login to browse"))
     show_inoculation_block = BooleanField(
         _l("Show Rational Discourse Toolkit in sidebar")
+    )
+    allow_default_user_add_remote_community = BooleanField(
+        _l("Allow non-admins to add remote communities")
     )
 
     submit = SubmitField(_l("Save"))
@@ -288,6 +290,7 @@ class EditCommunityForm(FlaskForm):
         render_kw={"class": "form-select"},
     )
     ignore_remote_language = BooleanField(_l("Override remote language setting"))
+    always_translate = BooleanField(_l("Always show translation icon on posts"))
     can_be_archived = BooleanField(_l("Old posts can be archived"))
     submit = SubmitField(_l("Save"))
 

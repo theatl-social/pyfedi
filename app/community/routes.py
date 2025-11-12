@@ -289,7 +289,7 @@ def add_local():
         cache.delete_memoized(moderating_communities, current_user.id)
         return redirect("/c/" + community.name)
     else:
-        form.publicize.data = True
+        form.publicize.data = not current_app.debug
 
     return render_template(
         "community/add_local.html",
@@ -308,6 +308,16 @@ def add_remote():
         return show_ban_message()
     form = SearchRemoteCommunity()
     new_community = None
+
+    if (
+        get_setting("allow_default_user_add_remote_community", True) is False
+        and not current_user.is_admin_or_staff()
+    ):
+        flash(
+            _("Adding remote communities is restricted to admin and staff users only.")
+        )
+        return redirect(url_for("main.list_communities"))
+
     if form.validate_on_submit():
         address = form.address.data.strip().lower()
         if address.startswith("!") and "@" in address:
@@ -2009,7 +2019,7 @@ def community_block(community_id: int):
         resp = make_response()
         curr_url = request.headers.get("HX-Current-Url")
 
-        if "/post/" in curr_url:
+        if "/post/" in curr_url or ("/c/" in curr_url and "/p/" in curr_url):
             post_id = request.args.get("post_id", None)
             if post_id:
                 post = Post.query.get_or_404(post_id)

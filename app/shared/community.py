@@ -385,9 +385,7 @@ def edit_community(
 
     if not from_scratch:
         if not (
-            community.is_owner(user)
-            or community.is_moderator(user)
-            or community.is_instance_admin(user)
+            community.is_owner(user) or community.is_moderator(user) or user.is_admin()
         ):
             raise Exception("incorrect_login")
 

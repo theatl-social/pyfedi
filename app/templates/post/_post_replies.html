@@ -1,110 +1,92 @@
 {% if replies or more_replies -%}
-    <h2 class="visually-hidden">{{ post.reply_count }} {{ _("Comments") }}</h2>
-    <div class="row">
-        <div class="col">
-            {% if not post.archived -%}
-                <div class="btn-group mt-1 mb-2">
-                    <a href="?sort=hot#post_replies"
-                       title="{{ _('Sort by magic') }}"
-                       class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}"
-                       rel="nofollow noindex">{{ _("Hot") }}</a>
-                    <a href="?sort=top#post_replies"
-                       title="{{ _('Comments with the most upvotes') }}"
-                       class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}"
-                       rel="nofollow noindex">{{ _("Top") }}</a>
-                    <a href="?sort=new#post_replies"
-                       title="{{ _('Show newest first') }}"
-                       class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}"
-                       rel="nofollow noindex">{{ _("New") }}</a>
-                    <a href="?sort=old#post_replies"
-                       title="{{ _('Show oldest first') }}"
-                       class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}"
-                       rel="nofollow noindex">{{ _("Old") }}</a>
-                </div>
-            {% endif -%}
-            <div id="replies"
-                 class="comments"
-                 role="tree"
-                 aria-label="{{ _('Comments') }}"
-                 aria-expanded="true">
-                {% for reply in replies -%}
-                    {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
-                        {% include 'post/_post_reply_teaser.html' %}
-                    {% endwith %}
-                {% endfor -%}
+<h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
+<div class="row">
+    <div class="col">
+        {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
+            <div class="post_translate_all_icon">
+                <a rel="nofollow noindex" title="{{ _('Translate all comments') }}" href="#" id="translateAllComments">
+                    <span class="fe fe-translate"></span>
+                </a>
             </div>
-            {% if more_replies -%}
-                <h2 class="visually-hidden">{{ _("Comments from other communities") }}</h2>
-                <div id="more_replies"
-                     class="comments"
-                     role="tree"
-                     aria-label="{{ _('Comments') }}"
-                     aria-expanded="true">
-                    {% for community, replies in more_replies.items() -%}
-                        <div class="row mt-4">
-                            <div class="col-10">
-                                <h4 class="mt-1">
-                                    <a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name() ) }}</a>
-                                    {% if community.description %}
-                                        <a data-id="{{ community.id }}"
-                                           href="/community/get_sidebar/{{ community.id }}"
-                                           class="showPopupCommunitySidebar"><span class="small fe fe-rules"></span></a>
-                                    {% endif -%}
-                                </h4>
-                            </div>
-                            <div class="col-2" style="text-align: right; padding-right: 20px;">
-                                {% if current_user.is_authenticated -%}
-                                    <div class="community_actions_link">
-                                        <div class="dropdown">
-                                            <a href="{{ url_for('post.post_reply_options', post_id=1, comment_id=1) if low_bandwidth else '#' }}"
-                                               data-bs-toggle="dropdown"
-                                               rel="nofollow noindex"
-                                               aria-label="{{ _('Community options') }}">
-                                                <span class="fe fe-options" title="Options"></span>
-                                            </a>
-                                            <ul class="dropdown-menu" style="width: 320px">
-                                                {% if community_membership(current_user, community) not in [SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
-                                                    <li>
-                                                        <a href="{{ url_for('community.subscribe', actor=community.link() ) }}"
-                                                           class="dropdown-item no-underline white-space-normal"
-                                                           rel="nofollow">
-                                                            <span class="fe fe-plus"></span> {{ _("Join") }}</a>
-                                                    </li>
-                                                    <li>
-                                                        <hr class="dropdown-divider">
-                                                    </li>
-                                                {% endif -%}
-                                                <li>
-                                                    <a href="/community/get_sidebar/{{ community.id }}"
-                                                       class="dropdown-item no-underline white-space-normal"
-                                                       rel="nofollow">
-                                                        <span class="fe fe-rules"></span> {{ _("Community description") }}</a>
-                                                </li>
-                                                <li>
-                                                    <a class="dropdown-item no-underline"
-                                                       role="button"
-                                                       style="white-space: normal"
-                                                       aria-label="{{ _('Block community %(community_name)s', community_name=community.display_name() ) }}"
-                                                       hx-post="{{ url_for('community.community_block', community_id=community.id, post_id=post.id) }}"
-                                                       hx-trigger="click throttle:1s"
-                                                       tabindex="0">
-                                                        <span class="fe fe-block"></span> {{ _('Block community %(community_name)s', community_name=community.display_name() ) }}
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                {% endif -%}
-                            </div>
-                        </div>
-                        {% for reply in replies -%}
-                            {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
-                                {% include 'post/_post_reply_teaser.html' %}
-                            {% endwith %}
-                        {% endfor -%}
-                    {% endfor -%}
-                </div>
-            {% endif -%}
+        {% endif -%}
+        {% if not post.archived -%}
+            <div class="btn-group mt-1 mb-2">
+                <a href="?sort=hot#post_replies" title="{{ _('Sort by magic') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'hot' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Hot') }}
+                </a>
+                <a href="?sort=top#post_replies" title="{{ _('Comments with the most upvotes') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'top' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Top') }}
+                </a>
+                <a href="?sort=new#post_replies" title="{{ _('Show newest first') }}" class="btn  btn-sm {{ 'btn-primary' if sort == 'new' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('New') }}
+                </a>
+                <a href="?sort=old#post_replies" title="{{ _('Show oldest first') }}" class="btn btn-sm {{ 'btn-primary' if sort == 'old' else 'btn-outline-secondary' }}" rel="nofollow noindex">
+                    {{ _('Old') }}
+                </a>
+            </div>
+        {% endif -%}
+
+        <div id="replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
+            {% for reply in replies -%}
+              {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
+                  {% include 'post/_post_reply_teaser.html' %}
+              {% endwith %}
+            {% endfor -%}
         </div>
+
+        {% if more_replies -%}
+        <h2 class="visually-hidden">{{ _('Comments from other communities') }}</h2>
+        <div id="more_replies" class="comments" role="tree" aria-label="{{ _('Comments') }}" aria-expanded="true">
+            {% for community, replies in more_replies.items() -%}
+                <div class="row mt-4">
+                    <div class="col-10">
+                        <h4 class="mt-1"><a href="/post/{{ replies[0]['comment'].post_id }}#post_replies">{{ _('Comments in %(name)s', name=community.display_name()) }}</a>
+                            {% if community.description %}<a data-id="{{ community.id }}" href="/community/get_sidebar/{{ community.id }}" class="showPopupCommunitySidebar"><span class="small fe fe-rules"></span></a>{% endif -%}
+                        </h4>
+                    </div>
+                    <div class="col-2" style="text-align: right; padding-right: 20px;">
+                        {% if current_user.is_authenticated -%}
+                        <div class="community_actions_link">
+                            <div class="dropdown">
+                                <a
+                                    href="{{ url_for('post.post_reply_options', post_id=1, comment_id=1) if low_bandwidth else '#' }}"
+                                    data-bs-toggle="dropdown" rel="nofollow noindex"
+                                    aria-label="{{ _('Community options') }}">
+                                    <span class="fe fe-options" title="Options"> </span>
+                                </a>
+                                <ul class="dropdown-menu" style="width: 320px">
+                                    {% if community_membership(current_user, community) not in [SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
+                                         <li><a href="{{ url_for('community.subscribe', actor=community.link()) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
+                                             <span class="fe fe-plus"></span> {{ _('Join') }}</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                    {% endif -%}
+                                    <li><a href="/community/get_sidebar/{{ community.id }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
+                                        <span class="fe fe-rules"></span> {{ _('Community description') }}</a></li>
+                                    <li>
+                                        <a class="dropdown-item no-underline"
+                                                role="button" style="white-space: normal"
+                                                aria-label="{{ _('Block community %(community_name)s', community_name=community.display_name()) }}"
+                                                hx-post="{{ url_for('community.community_block', community_id=community.id, post_id=post.id) }}"
+                                                hx-trigger="click throttle:1s"tabindex="0">
+                                            <span class="fe fe-block"></span> {{ _('Block community %(community_name)s', community_name=community.display_name()) }}
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+
+                        </div>
+                        {% endif -%}
+                    </div>
+                </div>
+
+                {% for reply in replies -%}
+                  {% with post_reply=reply['comment'], children=reply['replies'], nonce=nonce %}
+                      {% include 'post/_post_reply_teaser.html' %}
+                  {% endwith %}
+                {% endfor -%}
+            {% endfor -%}
+        </div>
+        {% endif -%}
     </div>
+</div>
 {% endif -%}

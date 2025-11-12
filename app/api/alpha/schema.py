@@ -64,7 +64,7 @@ listing_type_list = [
     "Moderating",
     "ModeratorView",
 ]
-community_listing_type_list = ["All", "Local", "Subscribed"]
+community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
@@ -617,7 +617,13 @@ class CommentView(DefaultSchema):
     creator_is_moderator = fields.Boolean(required=True)
     post = fields.Nested(Post, required=True)
     saved = fields.Boolean(required=True)
-    subscribed = fields.String(required=True)
+    subscribed = fields.String(
+        required=True,
+        metadata={
+            "description": "Indicates whether auth'ed user is subscribed to the community this comment is in or not."
+        },
+        validate=validate.OneOf(subscribed_type_list),
+    )
     my_vote = fields.Integer()
     can_auth_user_moderate = fields.Boolean()
 
@@ -721,7 +727,7 @@ class CommunityResponse(DefaultSchema):
 
 class EditCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    title = fields.String(required=True)
+    title = fields.String()
     banner_url = fields.String(allow_none=True)
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())

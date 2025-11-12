@@ -395,6 +395,10 @@ def admin_misc():
             db.session.add(site)
         db.session.commit()
         cache.delete_memoized(blocked_referrers)
+        set_setting(
+            "allow_default_user_add_remote_community",
+            form.allow_default_user_add_remote_community.data,
+        )
         set_setting("meme_comms_low_quality", form.meme_comms_low_quality.data)
         set_setting("public_modlog", form.public_modlog.data)
         set_setting("email_verification", form.email_verification.data)
@@ -423,6 +427,9 @@ def admin_misc():
             "nsfw_country_restriction", ""
         ).upper()
         form.community_creation_admin_only.data = site.community_creation_admin_only
+        form.allow_default_user_add_remote_community.data = get_setting(
+            "allow_default_user_add_remote_community", True
+        )
         form.reports_email_admins.data = site.reports_email_admins
         form.registration_mode.data = site.registration_mode
         form.application_question.data = site.application_question
@@ -1603,6 +1610,7 @@ def admin_community_edit(community_id):
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
+        community.always_translate = form.always_translate.data
         community.can_be_archived = form.can_be_archived.data
 
         icon_file = request.files["icon_file"]
@@ -1670,6 +1678,7 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
+        form.always_translate.data = community.always_translate
         form.can_be_archived.data = community.can_be_archived
     return render_template(
         "admin/edit_community.html",
@@ -1756,7 +1765,7 @@ def admin_topic_add():
             num_communities=0,
             show_posts_in_children=form.show_posts_in_children.data,
         )
-        if form.parent_id.data:
+        if form.parent_id.data and form.parent_id.data != -1:
             topic.parent_id = form.parent_id.data
         else:
             topic.parent_id = None
