@@ -178,8 +178,6 @@
                                     <div class="dropdown-menu communities_menu" hx-get="{{ url_for('main.explore_menu') }}" hx-trigger="intersect once" hx-target="this" hx-swap="innerHTML"></div>
                                 </li>
                             {% endif -%}
-                            <li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
-                            <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>
                             <li class="nav-item"><a class="nav-link" href="/donate">{{ _('Donate') }}</a></li>
                         {% else %}
                             <li class="nav-item dropdown{% if active_parent == 'communities' %} active{% endif %} communities_menu_parent">
@@ -239,8 +237,10 @@
                             </li>
                         {% endif %}
                         <li class="nav-item {% if current_user.is_anonymous %}right{% endif %} content-center" aria-label="{{ _('Search') }}"><a class="nav-link" id="search" href="/search" tabindex="" title="{{ _('Search') }}"><span class="fe fe-search"></span></a></li>
-                        <li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>
                         <li class="nav-item content-center"  aria-label="{{ _('Color mode') }}"><a class="nav-link" id="color_mode" href="#" tabindex="" title="{{ _('Color mode') }}"><span id="color_mode_icon" class="fe fe-eye"></span></a></li>
+                        {% if current_user.is_anonymous %}<li class="nav-item"><a class="nav-link" href="/auth/login">{{ _('Log in') }}</a></li>
+                            <li class="nav-item"><a class="nav-link" href="/auth/instance_chooser">{{ _('Register') }}</a></li>{% endif %}
+                        {% if current_user.is_authenticated %}<li class="nav-item content-center"  aria-label="{{ _('Settings') }}"><a class="nav-link" href="/user/settings" tabindex="" title="{{ _('Settings') }}"><span class="fe fe-settings"></span></a></li>{% endif %}
                     </ul>
             </div>
 
