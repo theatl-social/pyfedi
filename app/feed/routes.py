@@ -233,7 +233,7 @@ def feed_edit(feed_id: int):
             _feed_add_community(added_community, 0, feed_to_edit.id, current_user.id)
 
         for removed_community in removed_communities:
-            _feed_remove_community(removed_community, feed_to_edit.id, current_user.id)
+            _feed_remove_community(removed_community, feed_to_edit.id)
 
         flash(_('Settings saved.'))
         if url_changed and old_url is not None:

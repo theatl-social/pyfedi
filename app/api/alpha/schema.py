@@ -13,7 +13,7 @@ default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
 post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWeek", "TopDay", "TopMonth",
                   "TopThreeMonths", "TopSixMonths", "TopNineMonths", "TopYear", "TopAll", "New", "Old", "Scaled", "Active"]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "New", "Active"]
+community_sort_list = ["Hot", "Top", "TopAll", "New", "Active"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]

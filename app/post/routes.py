@@ -972,8 +972,11 @@ def post_edit(post_id: int):
                         f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/", ""
                     )
                 if not path.startswith('http'):
-                    with open(path, "rb") as file:
-                        form.image_file.data = file.read()
+                    try:
+                        with open(path, "rb") as file:
+                            form.image_file.data = file.read()
+                    except FileNotFoundError as e:
+                        pass
 
             elif post_type == POST_TYPE_VIDEO:
                 form.video_url.data = post.url
