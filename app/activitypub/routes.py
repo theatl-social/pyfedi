@@ -2200,7 +2200,8 @@ def process_poll_vote(user, store_ap_json, request_json, announced):
         return
     if not instance_banned(user.instance.domain):
         poll = db.session.query(Poll).get(post.id)
-        choice = db.session.query(PollChoice).filter(PollChoice.choice_text == choice_text).first()
+        choice = db.session.query(PollChoice).filter(PollChoice.choice_text == choice_text,
+                                                     PollChoice.post_id == post.id).first()
         if choice:
             poll.vote_for_choice(choice.id, user.id)
             log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
