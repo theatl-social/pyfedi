@@ -34,7 +34,7 @@
             <tbody>
                 {% for rating in ratings -%}
                     <tr>
-                        <td>{{ rating.rating }}</td>
+                        <td>{{ rating.rating | int }}</td>
                         <td>{{ arrow.get(rating.created_at).humanize(locale=locale) }}</td>
                         {% if is_admin_or_staff -%}
                             <td>{{ render_username(rating.author) }}</td>
