@@ -42,7 +42,7 @@ def vote_for_reply(send_async, user_id, reply_id, vote_to_undo, vote_direction, 
 def send_vote(user_id, object, vote_to_undo, vote_direction):
     session = get_task_session()
     try:
-        user = session.query(User).filter_by(id=user_id).one()
+        user = session.query(User).get(user_id)
         community = object.community
         if community.local_only or not community.instance.online():
             return

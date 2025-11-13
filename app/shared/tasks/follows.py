@@ -38,7 +38,7 @@ sync:
 def join_community(send_async, user_id, community_id, src):
     session = get_task_session()
     try:
-        user = session.query(User).filter_by(id=user_id).one()
+        user = session.query(User).get(user_id)
         community = session.query(Community).filter_by(id=community_id).one()
 
         pre_load_message = {}
@@ -110,7 +110,7 @@ def join_community(send_async, user_id, community_id, src):
 def leave_community(send_async, user_id, community_id):
     session = get_task_session()
     try:
-        user = session.query(User).filter_by(id=user_id).one()
+        user = session.query(User).get(user_id)
         community = session.query(Community).filter_by(id=community_id).one()
 
         cache.delete_memoized(community_membership, user, community)

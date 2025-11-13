@@ -116,7 +116,7 @@ def restore_community(send_async, user_id, community_id):
 
 
 def delete_object(user_id, object, is_post=False, is_restore=False, reason=None, session=None):
-    user = session.query(User).filter_by(id=user_id).one()
+    user = session.query(User).get(user_id)
     if isinstance(object, Community):
         community = object
     else:

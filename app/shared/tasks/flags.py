@@ -52,7 +52,7 @@ def report_post(send_async, user_id, post_id, summary, instance_ids):
 
 
 def report_object(session, user_id, object, summary, instance_ids):
-    user = session.query(User).filter_by(id=user_id).one()
+    user = session.query(User).get(user_id)
     community = object.community
     if community.local_only or not community.instance.online():
         return

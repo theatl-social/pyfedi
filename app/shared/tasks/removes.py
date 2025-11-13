@@ -54,7 +54,7 @@ def remove_mod(send_async, user_id, mod_id, community_id):
 
 
 def remove_object(session, user_id, object, community_id=None):
-    user = session.query(User).filter_by(id=user_id).one()
+    user = session.query(User).get(user_id)
     if not community_id:
         community = object.community
     else:
