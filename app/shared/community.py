@@ -619,5 +619,8 @@ def rate_community(community_id: int, rating: int, src, auth=None):
                             WHERE id = :community_id
                         """), {'community_id': community.id})
         db.session.commit()
+
+        task_selector('rate_community', user_id=user.id, community_id=community_id, rating=rating)
+
     else:
         raise Exception('community_members_only')
