@@ -425,7 +425,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
     if variant == 2:
         # counts - models/community/community_aggregates
         include = ['id', 'subscriptions_count', 'total_subscriptions_count', 'post_count', 'post_reply_count',
-                   'active_daily', 'active_weekly', 'active_monthly', 'active_6monthly']
+                   'active_daily', 'active_weekly', 'active_monthly', 'active_6monthly', 'average_rating']
         counts = {column.name: getattr(community, column.name) for column in community.__table__.columns if
                   column.name in include}
         if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:

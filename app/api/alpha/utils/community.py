@@ -13,7 +13,7 @@ from app.models import Community, CommunityMember, User, CommunityBan, Notificat
     NotificationSubscription, Post, CommunityFlair, utcnow
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
-    remove_mod_from_community
+    remove_mod_from_community, rate_community
 from app.shared.tasks import task_selector
 from app.utils import authorise_api_user, communities_banned_from_all_users, moderating_communities_ids
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
@@ -119,6 +119,15 @@ def post_community_follow(auth, data):
     follow = data['follow']
 
     user_id = join_community(community_id, SRC_API, auth) if follow else leave_community(community_id, SRC_API, auth)
+    community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
+    return community_json
+
+
+def post_community_rate(auth, data):
+    community_id = data['community_id']
+    rating = data['rating']
+
+    rate_community(community_id, rating, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
     return community_json
 

@@ -367,6 +367,7 @@ class CommunityAggregates(DefaultSchema):
     active_weekly = fields.Integer()
     active_monthly = fields.Integer()
     active_6monthly = fields.Integer()
+    average_rating = fields.Float(allow_none=True)
 
 
 class CommunityView(DefaultSchema):
@@ -607,6 +608,11 @@ class ListCommunitiesResponse(DefaultSchema):
 class FollowCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     follow = fields.Boolean(required=True)
+
+
+class RateCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    rating = fields.Integer(required=True)
 
 
 class BlockCommunityRequest(DefaultSchema):
