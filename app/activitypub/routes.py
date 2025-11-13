@@ -1184,6 +1184,10 @@ def process_inbox_request(request_json, store_ap_json):
                     process_downvote(user, store_ap_json, request_json, announced)
                     return
 
+                if core_activity['type'] == 'Rate':     # Rate community
+                    process_rate(user, store_ap_json, request_json, announced)
+                    return
+
                 if core_activity['type'] == 'Flag':  # Reported content
                     reported = find_reported_object(core_activity['object'])
                     if reported:
@@ -2158,6 +2162,26 @@ def process_downvote(user, store_ap_json, request_json, announced):
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
+
+
+def process_rate(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+    community = find_actor_or_create_cached(ap_id, create_if_not_found=False, community_only=True)
+    if community is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        community.rate(user, request_json['rating'])
+        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        if not announced:
+            announce_activity_to_followers(community, user, request_json)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
+
 
 
 # Private Messages, for both Create / ChatMessage (PieFed / Lemmy), and Create / Note (Mastodon, NodeBB)

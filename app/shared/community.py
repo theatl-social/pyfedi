@@ -604,21 +604,7 @@ def rate_community(community_id: int, rating: int, src, auth=None):
             if cm and cm.created_at + timedelta(days=1) > utcnow():
                 raise Exception('wait_one_day')
 
-        db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
-                           {'user_id': user.id,
-                            'community_id': community.id})
-        db.session.add(Rating(user_id=user.id, community_id=community.id, rating=rating))
-        db.session.commit()
-        db.session.execute(text("""
-                            UPDATE "community"
-                            SET average_rating = (
-                                SELECT AVG(rating)
-                                FROM "rating"
-                                WHERE community_id = :community_id
-                            )
-                            WHERE id = :community_id
-                        """), {'community_id': community.id})
-        db.session.commit()
+        community.rate(user, rating)
 
         task_selector('rate_community', user_id=user.id, community_id=community_id, rating=rating)
 

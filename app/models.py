@@ -811,6 +811,23 @@ class Community(db.Model):
         
         return result
 
+    def rate(self, user, rating):
+        db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
+                           {'user_id': user.id,
+                            'community_id': self.id})
+        db.session.add(Rating(user_id=user.id, community_id=self.id, rating=rating))
+        db.session.commit()
+        db.session.execute(text("""
+                            UPDATE "community"
+                            SET average_rating = (
+                                SELECT AVG(rating)
+                                FROM "rating"
+                                WHERE community_id = :community_id
+                            )
+                            WHERE id = :community_id
+                        """), {'community_id': self.id})
+        db.session.commit()
+
     def delete_dependencies(self):
         from app import redis_client
         for post in db.session.query(Post).filter_by(community_id=self.id):

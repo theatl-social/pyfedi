@@ -158,7 +158,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction):
 
 
 @celery.task
-def rate_community(user_id, community_id, rating):
+def rate_community(user_id, community_id, rating, send_async=None):
     session = get_task_session()
     try:
         user = session.query(User).get(user_id)

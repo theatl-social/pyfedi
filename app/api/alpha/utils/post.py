@@ -1005,7 +1005,7 @@ def get_post_like_list(auth, data):
     limit = data['limit'] if 'limit' in data else 50
 
     user = authorise_api_user(auth, return_type='model')
-    post = Post.query.filter_by(id=post_id).one()
+    post = Post.query.get(post_id)
 
     if post.community.is_moderator(user) or user.is_admin() or user.is_staff():
         banned_from_site_user_ids = list(db.session.execute(text('SELECT id FROM "user" WHERE banned = true')).scalars())
