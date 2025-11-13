@@ -1188,6 +1188,9 @@ def process_inbox_request(request_json, store_ap_json):
                     process_rate(user, store_ap_json, request_json, announced)
                     return
 
+                if core_activity['type'] == 'PollVote': # Vote in a poll
+                    process_poll_vote(user, store_ap_json, request_json, announced)
+
                 if core_activity['type'] == 'Flag':  # Reported content
                     reported = find_reported_object(core_activity['object'])
                     if reported:
@@ -2179,6 +2182,32 @@ def process_rate(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
         if not announced:
             announce_activity_to_followers(community, user, request_json)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
+
+
+def process_poll_vote(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    choice_text = request_json['choice_text'] if not announced else request_json['object']['choice_text']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+
+    post = Post.get_by_ap_id(ap_id)
+    if post is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        poll = db.session.query(Poll).get(post.id)
+        choice = db.session.query(PollChoice).filter(PollChoice.choice_text == choice_text).first()
+        if choice:
+            poll.vote_for_choice(choice.id, user.id)
+            log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+            if not announced:
+                announce_activity_to_followers(post.community, user, request_json)
+        else:
+            log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound poll choice ' + choice_text)
     else:
         log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
 

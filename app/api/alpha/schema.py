@@ -1411,3 +1411,11 @@ class PostSetFlairRequest(DefaultSchema):
 
 class PostSetFlairResponse(PostView):
     pass
+
+
+class PollVoteRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+
+
+class PollVoteResponse(PostView):
+    pass

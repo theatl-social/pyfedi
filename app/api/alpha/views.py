@@ -23,7 +23,9 @@ from app.shared.post import get_post_flair_list
 def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, communities_moderating=None, banned_from=None,
               bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict:
     if isinstance(post, int):
-        post = Post.query.filter_by(id=post, deleted=False).one()
+        post = Post.query.get(post)
+        if post.deleted:
+            raise NoResultFound
 
     # Variant 1 - models/post/post.dart
     if variant == 1:

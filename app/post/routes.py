@@ -40,7 +40,8 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
-    vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post
+    vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
+    vote_for_poll
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply
 from app.shared.site import block_remote_instance
@@ -536,42 +537,11 @@ def comment_vote(comment_id, vote_direction, federate):
 @validation_required
 @approval_required
 def poll_vote(post_id):
+    post = Post.query.get_or_404(post_id)
     poll_data = Poll.query.get_or_404(post_id)
-    if poll_data.mode == 'single':
-        choice_id = int(request.form.get('poll_choice'))
-        poll_data.vote_for_choice(choice_id, current_user.id)
-    else:
-        for choice_id in request.form.getlist('poll_choice[]'):
-            poll_data.vote_for_choice(int(choice_id), current_user.id)
+    votes = int(request.form.get('poll_choice')) if poll_data.mode == 'single' else request.form.getlist('poll_choice[]')
+    vote_for_poll(post_id, votes, SRC_WEB)
     flash(_('Vote has been cast.'))
-
-    post = Post.query.get(post_id)
-    if post:
-        if post.author.is_local():
-            post.edited_at = utcnow()
-            db.session.commit()
-            task_selector('edit_post', post_id=post.id)
-        else:
-            poll_votes = PollChoice.query.join(PollChoiceVote, PollChoiceVote.choice_id == PollChoice.id).filter(
-                PollChoiceVote.post_id == post.id, PollChoiceVote.user_id == current_user.id).all()
-            for pv in poll_votes:
-                pollvote_json = {
-                    '@context': default_context(),
-                    'actor': current_user.public_url(),
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
-                    'object': {
-                        'attributedTo': current_user.public_url(),
-                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/vote/{gibberish(15)}",
-                        'inReplyTo': post.profile_id(),
-                        'name': pv.choice_text,
-                        'to': post.author.public_url(),
-                        'type': 'Note'
-                    },
-                    'to': post.author.public_url(),
-                    'type': 'Create'
-                }
-                send_post_request(post.author.ap_inbox_url, pollvote_json, current_user.private_key,
-                                  current_user.public_url() + '#main-key')
 
     return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post_id))
 

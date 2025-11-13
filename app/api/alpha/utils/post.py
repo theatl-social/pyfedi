@@ -10,9 +10,10 @@ from app.api.alpha.views import post_view, post_report_view, reply_view, communi
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
 from app.models import Post, Community, CommunityMember, utcnow, User, Feed, FeedItem, Topic, PostReply, PostVote, \
-    CommunityFlair, read_posts
+    CommunityFlair, read_posts, Poll
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
-    delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read
+    delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read, \
+    vote_for_poll
 from app.post.util import post_replies, get_comment_branch
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
@@ -1058,7 +1059,7 @@ def put_post_set_flair(auth, data):
     post_id = data['post_id']
     flair_list = data['flair_id_list'] if 'flair_id_list' in data else []
 
-    post = Post.query.filter_by(id=post_id).one()
+    post = Post.query.get(post_id)
     user = authorise_api_user(auth, return_type='model')
     
     if post.community.is_moderator(user) or user.is_admin_or_staff() or post.user_id == user.id:
@@ -1079,6 +1080,17 @@ def put_post_set_flair(auth, data):
         if post.status == POST_STATUS_PUBLISHED:
             task_selector('edit_post', post_id=post.id)
         
-        return post_view(post=post, variant=2, stub=False)
+        return post_view(post=post, variant=2, stub=False, user_id=user.id)
     else:
         raise Exception("Insufficient permissions")
+
+
+def post_poll_vote(auth, data):
+    post_id = data['post_id']
+    choice_id = data['choice_id']
+
+    user_id = authorise_api_user(auth)
+
+    vote_for_poll(post_id, choice_id, SRC_API)
+
+    return post_view(post=post_id, variant=2, stub=False, user_id=user_id)

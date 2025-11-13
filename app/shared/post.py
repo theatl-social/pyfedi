@@ -969,3 +969,21 @@ def get_post_flair_list(post: Post | int) -> list:
         flair_list = post.flair
     
     return flair_list
+
+
+def vote_for_poll(post_id, votes, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    poll = Poll.query.get_or_404(post_id)
+    if poll.mode == 'single':
+        poll.vote_for_choice(votes, user.id)
+        task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
+                      choice_text=PollChoice.query.get(votes).choice_text)
+    else:
+        for choice_id in votes:
+            poll.vote_for_choice(int(choice_id), user.id)
+            task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
+                          choice_text=PollChoice.query.get(int(choice_id)).choice_text)

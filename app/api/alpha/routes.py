@@ -14,7 +14,7 @@ from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2
+    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2, post_poll_vote
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report, post_leave_conversation
@@ -633,6 +633,19 @@ def post_alpha_post_set_flair(data):
     auth = request.headers.get('Authorization')
     resp = put_post_set_flair(auth, data)
     return PostSetFlairResponse().load(resp)
+
+
+@post_bp.route('/post/poll_vote', methods=['POST'])
+@post_bp.doc(summary="Vote in a poll")
+@post_bp.arguments(PollVoteRequest)
+@post_bp.response(200, PollVoteResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_poll_vote(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_poll_vote(auth, data)
+    return PollVoteResponse().load(resp)
 
 
 # Reply

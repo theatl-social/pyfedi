@@ -3024,7 +3024,7 @@ class Poll(db.Model):
             db.session.add(new_vote)
             choice = PollChoice.query.get(choice_id)
             choice.num_votes += 1
-            self.latest_vote = datetime.utcnow()
+            self.latest_vote = utcnow()
             db.session.commit()
 
     def total_votes(self):

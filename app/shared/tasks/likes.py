@@ -1,6 +1,7 @@
 from app import celery
 from app.activitypub.signature import default_context, send_post_request, HttpSignature
-from app.models import CommunityBan, Post, PostReply, User, ActivityBatch, Community
+from app.models import CommunityBan, Post, PostReply, User, ActivityBatch, Community, PollChoiceVote, PollChoice, utcnow
+from app.shared.tasks import task_selector
 from app.utils import gibberish, instance_banned, get_task_session, patch_db_session
 
 from flask import current_app, json
@@ -221,6 +222,70 @@ def rate_community(user_id, community_id, rating, send_async=None):
                 send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
         else:
             send_post_request(community.ap_inbox_url, payload, user.private_key, public_actor + '#main-key')
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
+@celery.task
+def vote_for_poll(send_async, user_id, post_id, choice_text):
+    session = get_task_session()
+    try:
+        post = session.query(Post).get(post_id)
+        user = session.query(User).get(user_id)
+        if post:
+            type = 'PollVote'
+            poll_vote_id = f"https://{current_app.config['SERVER_NAME']}/activities/{type.lower()}/{gibberish(15)}"
+
+            # public actor URL
+            public_actor = user.public_url()
+
+            # Vote payload
+            payload = {
+                'id': poll_vote_id,
+                'type': type,
+                'actor': public_actor,
+                'object': post.public_url(),
+                'choice_text': choice_text,
+                '@context': default_context(),
+                'audience': post.community.public_url()
+            }
+
+            if post.community.is_local():
+                # Select the appropriate payload
+
+                # Remove context for inner object
+                del payload['@context']
+
+                # Create announcement with the selected payload
+                announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+                actor = post.community.public_url()
+                to = ["https://www.w3.org/ns/activitystreams#Public"]
+                cc = [post.community.ap_followers_url]
+                announce = {
+                    'id': announce_id,
+                    'type': 'Announce',
+                    'actor': actor,
+                    'object': payload,
+                    '@context': default_context(),
+                    'to': to,
+                    'cc': cc
+                }
+
+                # For local communities, we need to sends announcements to each instance
+                for instance in post.community.following_instances():
+                    if not (instance.inbox and instance.online() and
+                            not user.has_blocked_instance(instance.id) and
+                            not instance_banned(instance.domain)):
+                        continue
+
+                    send_post_request(instance.inbox, announce, post.community.private_key,
+                                      post.community.public_url() + '#main-key')
+            else:
+                send_post_request(post.community.ap_inbox_url, payload, user.private_key, public_actor + '#main-key')
+
     except:
         session.rollback()
         raise
