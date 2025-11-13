@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from datetime import timedelta
+
 from flask import current_app, flash, render_template
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
@@ -14,7 +16,7 @@ from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
-    Community, Language, File, CommunityFlair, Rating
+    Community, Language, File, CommunityFlair, Rating, utcnow
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
@@ -587,7 +589,7 @@ def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
     return flair_dict
 
 
-def rate_community_moderation(community_id: int, rating: int, src, auth=None):
+def rate_community(community_id: int, rating: int, src, auth=None):
     if src == SRC_API:
         user = authorise_api_user(auth, return_type='model')
     else:
@@ -596,6 +598,11 @@ def rate_community_moderation(community_id: int, rating: int, src, auth=None):
     community = db.session.query(Community).filter_by(id=community_id).one()
 
     if community_membership(user, community) >= SUBSCRIPTION_MEMBER or user.is_admin_or_staff():
+
+        if not user.is_admin_or_staff():
+            cm = CommunityMember.query.filter(CommunityMember.user_id == user.id, CommunityMember.community_id == community_id).first()
+            if cm and cm.created_at + timedelta(days=1) > utcnow():
+                raise Exception('wait_one_day')
 
         db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
                            {'user_id': user.id,

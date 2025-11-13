@@ -17,11 +17,11 @@
             </ol>
         </nav>
         {% if current_user.is_authenticated -%}
-            <div style="float: right;"><a href="{{ url_for('community.rate_moderation', actor=community.link()) }}"
-                                        class="btn btn-primary">{{ _('Rate moderation') }}</a></div>
+            <div style="float: right;"><a href="{{ url_for('community.rate', actor=community.link()) }}"
+                                        class="btn btn-primary">{{ _('Rate community') }}</a></div>
         {% endif -%}
         <h1 class="mt-2">
-                {{ _('%(community_name)s moderation ratings', community_name=community.display_name()) }}
+                {{ _('%(community_name)s ratings', community_name=community.display_name()) }}
         </h1>
         <table class="table table-striped mt-1">
             <thead>
@@ -43,6 +43,9 @@
                 {% endfor -%}
             </tbody>
         </table>
+        {% if is_admin_or_staff -%}
+        <p>{{ _('Only admins and staff can see who made each rating.') }}</p>
+        {% endif -%}
     </main>
 </div>
 {% endblock %}

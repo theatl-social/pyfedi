@@ -824,7 +824,7 @@ def domain_from_url(url: str, create=True) -> Domain:
         find_this = parsed_url.hostname.lower()
         if find_this == 'youtu.be':
             find_this = 'youtube.com'
-        domain = Domain.query.filter_by(name=find_this).first()
+        domain = db.session.query(Domain).filter_by(name=find_this).first()
         if create and domain is None:
             domain = Domain(name=find_this)
             db.session.add(domain)

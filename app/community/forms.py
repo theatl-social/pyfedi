@@ -522,7 +522,7 @@ class EditCommunityFlairForm(FlaskForm):
     submit = SubmitField(_l('Save'))
 
 
-class RateCommunityModsForm(FlaskForm):
+class RateCommunityForm(FlaskForm):
     rating = RadioField(
         'Rate this community:',
         choices=[
