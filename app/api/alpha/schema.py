@@ -287,6 +287,39 @@ class MiniCrossPosts(DefaultSchema):
     community_name = fields.String()
 
 
+class PostEvent(DefaultSchema):
+    start = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    end = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    timezone = fields.String(metadata={"example": "America/New_York"})
+    max_attendees = fields.Integer(metadata={"default": 0})
+    participant_count = fields.Integer(metadata={"default": 0})
+    full = fields.Boolean(metadata={"default": False})
+    online_link = fields.String(allow_none=True)
+    join_mode = fields.String(metadata={"example": "free", "description": "free, restricted, external, invite"})
+    external_participation_url = fields.String(allow_none=True)
+    anonymous_participation = fields.Boolean(metadata={"default": False})
+    online = fields.Boolean(metadata={"default": False})
+    buy_tickets_link = fields.String(allow_none=True)
+    event_fee_currency = fields.String(metadata={"example": "USD"})
+    event_fee_amount = fields.Float(metadata={"default": 0})
+    location = fields.Dict(allow_none=True, metadata={"description": "JSON object containing location details"})
+
+
+class PollChoice(DefaultSchema):
+    id = fields.Integer(required=True)
+    choice_text = fields.String(required=True)
+    sort_order = fields.Integer(required=True)
+    num_votes = fields.Integer(required=True, metadata={"default": 0})
+
+
+class PostPoll(DefaultSchema):
+    end_poll = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    mode = fields.String(required=True, metadata={"example": "single", "description": "single or multiple - determines whether people can vote for one or multiple options"})
+    local_only = fields.Boolean(metadata={"default": False})
+    latest_vote = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    choices = fields.List(fields.Nested(PollChoice), required=True)
+
+
 class Post(DefaultSchema):
     ap_id = fields.String(required=True)
     community_id = fields.Integer(required=True)
@@ -310,6 +343,8 @@ class Post(DefaultSchema):
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
+    event = fields.Nested(PostEvent, allow_none=True)
+    poll = fields.Nested(PostPoll, allow_none=True)
 
 
 class PostAggregates(DefaultSchema):
@@ -1137,6 +1172,8 @@ class CreatePostRequest(DefaultSchema):
     url = fields.String()
     nsfw = fields.Boolean()
     language_id = fields.Integer()
+    event = fields.Nested(PostEvent, allow_none=True)
+    poll = fields.Nested(PostPoll, allow_none=True)
 
 
 class EditPostRequest(DefaultSchema):
@@ -1146,6 +1183,8 @@ class EditPostRequest(DefaultSchema):
     url = fields.String(allow_none=True, metadata={"description": "Pass value of null to remove the post url"})
     nsfw = fields.Boolean()
     language_id = fields.Integer()
+    event = fields.Nested(PostEvent, allow_none=True)
+    poll = fields.Nested(PostPoll, allow_none=True)
 
 
 class DeletePostRequest(DefaultSchema):

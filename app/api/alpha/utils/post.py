@@ -205,9 +205,6 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
                                                                               blocked_instance_ids))
             content_filters = user_filters_home(user_id) if user_id else {}
 
-    # change when polls and events are supported
-    posts = posts.filter(Post.type != POST_TYPE_POLL).filter(Post.type != POST_TYPE_EVENT)
-
     if query:
         if search_type == 'Url':
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
@@ -880,12 +877,26 @@ def post_post(auth, data):
     if language_id < 2:
         language_id = site_language_id()
 
-    # change when Polls are supported
-    type = POST_TYPE_ARTICLE
-    if url:
+    # Determine post type based on data provided
+    if 'event' in data and data['event']:
+        type = POST_TYPE_EVENT
+    elif 'poll' in data and data['poll']:
+        type = POST_TYPE_POLL
+    elif url:
         type = POST_TYPE_LINK
+    else:
+        type = POST_TYPE_ARTICLE
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+
+    # Add event data if present
+    if 'event' in data and data['event']:
+        input['event'] = data['event']
+
+    # Add poll data if present
+    if 'poll' in data and data['poll']:
+        input['poll'] = data['poll']
+
     community = Community.query.filter_by(id=community_id).one()
     user_id, post = make_post(input, community, type, SRC_API, auth)
 
@@ -905,12 +916,25 @@ def put_post(auth, data):
     if language_id < 2:
         language_id = site_language_id()
 
-    # change when Polls are supported
-    type = POST_TYPE_ARTICLE
-    if url:
-        type = POST_TYPE_LINK
+    # Determine post type - keep existing type unless explicitly changed
+    type = post.type
+    # Only infer type change if URL is being changed
+    if 'url' in data:
+        if url:
+            type = POST_TYPE_LINK
+        else:
+            type = POST_TYPE_ARTICLE
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+
+    # Add event data if present
+    if 'event' in data and data['event']:
+        input['event'] = data['event']
+
+    # Add poll data if present
+    if 'poll' in data and data['poll']:
+        input['poll'] = data['poll']
+
     user_id, post = edit_post(input, post, type, SRC_API, auth=auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)

@@ -9,7 +9,7 @@ from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
-    UserNote
+    UserNote, Poll, Event, PollChoice
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
     moderating_communities_ids_all_users
@@ -186,6 +186,66 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
             v2.update({'can_auth_user_moderate': can_auth_user_moderate})
 
         v2.update({'creator': creator, 'community': community})
+
+        # Add event and poll data when not stub
+        if not stub:
+            # Event data
+            if post.type == POST_TYPE_EVENT:
+                event = Event.query.filter_by(post_id=post.id).first()
+                if event:
+                    event_data = {
+                        'start': event.start.isoformat(timespec="microseconds") + 'Z',
+                        'timezone': event.timezone,
+                        'max_attendees': event.max_attendees,
+                        'participant_count': event.participant_count,
+                        'full': event.full,
+                        'join_mode': event.join_mode,
+                        'anonymous_participation': event.anonymous_participation,
+                        'online': event.online
+                    }
+                    if event.end:
+                        event_data['end'] = event.end.isoformat(timespec="microseconds") + 'Z'
+                    if event.online_link:
+                        event_data['online_link'] = event.online_link
+                    if event.external_participation_url:
+                        event_data['external_participation_url'] = event.external_participation_url
+                    if event.buy_tickets_link:
+                        event_data['buy_tickets_link'] = event.buy_tickets_link
+                    if event.event_fee_currency:
+                        event_data['event_fee_currency'] = event.event_fee_currency
+                    if event.event_fee_amount:
+                        event_data['event_fee_amount'] = event.event_fee_amount
+                    if event.location:
+                        event_data['location'] = event.location
+
+                    v2['post']['event'] = event_data
+
+            # Poll data
+            if post.type == POST_TYPE_POLL:
+                poll = Poll.query.filter_by(post_id=post.id).first()
+                if poll:
+                    poll_data = {
+                        'mode': poll.mode,
+                        'local_only': poll.local_only,
+                        'choices': []
+                    }
+                    if poll.end_poll:
+                        poll_data['end_poll'] = poll.end_poll.isoformat(timespec="microseconds") + 'Z'
+                    if poll.latest_vote:
+                        poll_data['latest_vote'] = poll.latest_vote.isoformat(timespec="microseconds") + 'Z'
+
+                    # Get poll choices
+                    choices = PollChoice.query.filter_by(post_id=post.id).order_by(PollChoice.sort_order).all()
+                    for choice in choices:
+                        choice_data = {
+                            'id': choice.id,
+                            'choice_text': choice.choice_text,
+                            'sort_order': choice.sort_order,
+                            'num_votes': choice.num_votes
+                        }
+                        poll_data['choices'].append(choice_data)
+
+                    v2['post']['poll'] = poll_data
 
         return v2
 
