@@ -1415,6 +1415,7 @@ class PostSetFlairResponse(PostView):
 
 class PollVoteRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
+    choice_id = fields.Integer(required=True)
 
 
 class PollVoteResponse(PostView):
