@@ -1226,6 +1226,7 @@ ul.form-multicheck-columns li {
   font-size: 110%;
   margin-top: 4px;
   margin-bottom: 0;
+  overflow: hidden;
 }
 .post_list .post_teaser .meta_row a, .post_list .post_teaser .main_row a, .post_list .post_teaser .utilities_row a {
   text-decoration: none;
