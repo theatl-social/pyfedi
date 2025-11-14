@@ -618,6 +618,10 @@ fieldset legend {
   color: lightgray;
 }
 
+.communities_table .community_rating .stars {
+  font-size: 1em;
+}
+
 .rating_form {
   /* highlight selected stars */
   /* highlight on hover */

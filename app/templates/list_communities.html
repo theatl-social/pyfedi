@@ -217,6 +217,18 @@
                                     form="searchCommunities"
                                     hx-boost="true"
                                     name="sort_by"
+                                    value="average_rating{{ ' desc' if sort_by == 'average_rating asc' else ' asc' }}"
+                                    title="{{ _('Sort by rating') }}"
+                                    class="btn text-nowrap">
+                                {{ _('Rating') }}
+                                <span class="{{ 'fe fe-chevron-up' if sort_by == 'average_rating asc' }}{{ 'fe fe-chevron-down' if sort_by == 'average_rating desc' }}"></span>
+                            </button>
+                        </th>
+                        <th scope="col">
+                            <button
+                                    form="searchCommunities"
+                                    hx-boost="true"
+                                    name="sort_by"
                                     value="active_weekly{{ ' asc' if sort_by == 'active_weekly desc' else ' desc' }}"
                                     title="{{ _('Sort by number of active users in the past week') }}"
                                     class="btn text-nowrap">
@@ -314,6 +326,27 @@
                                     {{ community.display_name() }}
                                 </a>
                             </th>
+                            <td align="center" class="community_rating">
+                                {% if community.average_rating -%}
+                                <span class="stars">
+                                  {% set rating = community.average_rating %}
+                                  {% for i in range(1, 6) %}
+                                    <span class="star">
+                                      {% if rating >= i %}
+                                        <span class="full">★</span>
+                                      {% elif rating >= i - 0.5 %}
+                                        <span class="half">
+                                          <span class="filled">★</span>
+                                          <span class="empty">★</span>
+                                        </span>
+                                      {% else %}
+                                        <span class="empty">★</span>
+                                      {% endif %}
+                                    </span>
+                                  {% endfor %}
+                                </span>
+                                {% endif -%}
+                            </td>
                             <td align="center">
                                 {{ community.active_weekly }}
                             </td>

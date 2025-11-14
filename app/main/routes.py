@@ -341,7 +341,7 @@ def list_communities():
 
     communities = communities.order_by(safe_order_by(sort_by, Community, {'title', 'subscriptions_count', 'post_count',
                                                                           'post_reply_count', 'last_active', 'created_at',
-                                                                          'active_weekly'}))
+                                                                          'active_weekly', 'average_rating'}))
 
     # dict used for pagination query parameters
     args_dict = dict()
