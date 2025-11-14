@@ -1043,7 +1043,7 @@ form > .mb-3.required > label:after {
 .mobilenav .fe {
   font-size: 150%;
 }
-@media (max-width: 340px) {
+@media (max-width: 350px) {
   .mobilenav a {
     font-size: 80%;
     padding-left: 0;
