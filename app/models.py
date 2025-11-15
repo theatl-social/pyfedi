@@ -3078,7 +3078,7 @@ class Poll(db.Model):
 
     def total_votes(self):
         return db.session.execute(text('SELECT SUM(num_votes) as s FROM "poll_choice" WHERE post_id = :post_id'),
-                                  {'post_id': self.post_id}).scalar()
+                                  {'post_id': self.post_id}).scalar() or 0
 
 
 class PollChoice(db.Model):
