@@ -71,12 +71,12 @@
                         <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
                         <td>
                             {% if can_see_names %}
-                                {{ render_username(modlog_entry.author) }}
+                                {{ render_username(modlog_entry.author) if modlog_entry.author else '' }}
                             {% else %}
                                 {% if modlog_entry.community_id %}
                                     {{ instances[modlog_entry.community.instance_id] }} mod
                                 {% else %}
-                                    {{ instances[modlog_entry.author.instance_id] }} admin
+                                    {{ instances[modlog_entry.author.instance_id] if modlog_entry.author else '' }} admin
                                 {% endif %}
                             {% endif %}
                         </td>
