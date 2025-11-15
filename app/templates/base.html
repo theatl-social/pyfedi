@@ -210,12 +210,12 @@
                                   {% endif -%}
                                 </ul>
                             </li>
-                            {% if current_user.is_staff() or current_user.is_admin() %}
+                            {% if current_user.is_admin_or_staff() %}
                                 <li class="nav-item dropdown{% if active_parent == 'admin' %} active{% endif %} admin_menu_parent">
                                     <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/admin/" aria-haspopup="true" aria-expanded="false">{{ _('Admin') }}</a>
                                     <ul class="dropdown-menu text-end text-lg-start">
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_site' }}" href="{{ url_for('admin.admin_home') }}">{{ _('Home') }}</a></li>
-                                      {% if user_access('', current_user.id) -%}
+                                      {% if user_access('manage users', current_user.id) -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'admin_content' }}" href="{{ url_for('admin.admin_content', show='spammy', days='3') }}">{{ _('Spam') }}</a></li>
                                       {% endif -%}
                                       <li><a class="dropdown-item{{ ' active' if active_child == 'modlog' }}" href="{{ url_for('main.modlog') }}">{{ _('Modlog') }}</a></li>
