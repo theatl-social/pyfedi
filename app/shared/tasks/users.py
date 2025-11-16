@@ -66,8 +66,6 @@ def check_user_application(application_id, send_async=True):
                     timeout=5
                 )
 
-
-
                 if email_response.status_code == 200:
                     email_results = email_response.json()
                     # Check the result at the index where real email was inserted

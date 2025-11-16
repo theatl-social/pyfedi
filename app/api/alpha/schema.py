@@ -343,8 +343,8 @@ class Post(DefaultSchema):
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
-    tags = fields.String()
-    flair = fields.String()
+    tags = fields.String(allow_none=True)
+    flair = fields.String(allow_none=True)
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
 
