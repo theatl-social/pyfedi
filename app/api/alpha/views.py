@@ -10,6 +10,7 @@ from app.constants import *
 from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
     UserNote, Poll, Event, PollChoice
+from app.post.util import tags_to_string, flair_to_string
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
     moderating_communities_ids_all_users
@@ -86,6 +87,9 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                 'width': post.image.width,
                 'height': post.image.height,
             }
+
+        v1['tags'] = tags_to_string(post) or ''
+        v1['flair'] = flair_to_string(post) or ''
 
         return v1
 

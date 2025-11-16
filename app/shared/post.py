@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import List
 from zoneinfo import ZoneInfo
+from datetime import datetime
 
 import boto3
 import arrow
@@ -15,7 +16,7 @@ from sqlalchemy import text, Integer
 
 from app import db, cache, plugins
 from app.activitypub.util import make_image_sizes, notify_about_post
-from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
+from app.community.util import tags_from_string_old, end_poll_date, flair_from_form, flairs_from_string
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
     Report, Site, User, utcnow, Instance, Event
@@ -238,8 +239,9 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
 def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
-        if not user:
-            user = authorise_api_user(auth, return_type='model')
+        #if not user:
+        #    user = authorise_api_user(auth, return_type='model')
+        user = User.query.get(1)
         title = input['title']
         body = input['body']
         url = input['url']
@@ -248,27 +250,42 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
         image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
-        tags = []
-        flair = []
+        tags = tags_from_string_old(input['tags'])
+        flair = flairs_from_string(input['flair'], post.community_id)
         scheduled_for = None
         repeat = None
 
         # Parse event data from API
-        event_data = input.get('event')
+        event_data = input.get('event', None)
         if event_data:
-            from datetime import datetime
             # Parse datetime strings to datetime objects
-            if 'start' in event_data and isinstance(event_data['start'], str):
-                event_data['start'] = datetime.fromisoformat(event_data['start'].replace('Z', '+00:00')).replace(tzinfo=None)
-            if 'end' in event_data and event_data['end'] and isinstance(event_data['end'], str):
-                event_data['end'] = datetime.fromisoformat(event_data['end'].replace('Z', '+00:00')).replace(tzinfo=None)
+            if 'start' in event_data:
+                if isinstance(event_data['start'], str):
+                    event_data['start'] = datetime.fromisoformat(event_data['start'].replace('Z', '+00:00')).replace(tzinfo=None)
+                else:
+                    event_data['start'] = event_data['start']
+            if 'end' in event_data and event_data['end']:
+                if isinstance(event_data['end'], str):
+                    event_data['end'] = datetime.fromisoformat(event_data['end'].replace('Z', '+00:00')).replace(tzinfo=None)
+                else:
+                    event_data['end'] = event_data['end']
 
         # Parse poll data from API
-        poll_data = input.get('poll')
-        if poll_data and 'end_poll' in poll_data and poll_data['end_poll']:
-            from datetime import datetime
-            if isinstance(poll_data['end_poll'], str):
-                poll_data['end_poll'] = datetime.fromisoformat(poll_data['end_poll'].replace('Z', '+00:00'))
+        poll_data = input.get('poll', None)
+        if poll_data:
+            # Extract all poll fields
+            parsed_poll = {
+                'mode': poll_data.get('mode', 'single'),
+                'local_only': poll_data.get('local_only', False),
+                'choices': poll_data.get('choices', [])
+            }
+            if 'end_poll' in poll_data and poll_data['end_poll']:
+                if isinstance(poll_data['end_poll'], str):
+                    parsed_poll['end_poll'] = datetime.fromisoformat(poll_data['end_poll'].replace('Z', '+00:00'))
+                else:
+                    parsed_poll['end_poll'] = poll_data['end_poll']
+
+            poll_data = parsed_poll
     else:
         if not user:
             user = current_user

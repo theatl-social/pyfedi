@@ -252,6 +252,11 @@ def tags_to_string(post: Post) -> str:
         return ', '.join([tag.display_as for tag in post.tags])
 
 
+def flair_to_string(post: Post) -> str:
+    if len(post.flair) > 0:
+        return ', '.join([flair.flair for flair in post.flair])     # flair flair flair flair flfl flfl flflflfl
+
+
 def body_has_no_archive_link(body):
     if body:
         return 'https://archive.' not in body and 'https://12ft.io' not in body

@@ -343,6 +343,8 @@ class Post(DefaultSchema):
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
+    tags = fields.String()
+    flair = fields.String()
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
 
@@ -387,7 +389,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
-    flair_list = fields.List(fields.Nested(CommunityFlair))
+    flair_list = fields.List(fields.Nested(CommunityFlair), metadata={"description": "See also the simpler 'flair' on post which can be used when editing"})
     can_auth_user_moderate = fields.Boolean()
 
 
@@ -1185,6 +1187,8 @@ class EditPostRequest(DefaultSchema):
     language_id = fields.Integer()
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
+    tags = fields.String(allow_none=True, metadata={"description": "Hashtags, separated by commas with no hash character"})
+    flair = fields.String(allow_none=True, metadata={"description": "Flair, separated by commas with no hash character"})
 
 
 class DeletePostRequest(DefaultSchema):
