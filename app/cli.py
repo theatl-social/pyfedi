@@ -449,7 +449,7 @@ def register(app):
                         with redis_client.lock("lock:send-queue", timeout=300, blocking_timeout=1):
                             # Check size of redis memory. Abort if > 200 MB used
                             try:
-                                if redis_client and current_app.config['REDIS_MEMORY_LIMIT'] != 0 and \
+                                if redis_client and current_app.config['REDIS_MEMORY_LIMIT'] != -1 and \
                                         redis_client.memory_stats()['total.allocated'] > current_app.config['REDIS_MEMORY_LIMIT']:
                                     print('Redis memory is quite full - stopping send queue to avoid making it worse.')
                                     redis_client.set("pause_federation", "1", ex=600)   # this also stops incoming federation
