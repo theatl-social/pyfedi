@@ -250,8 +250,14 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
         image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
-        tags = tags_from_string_old(input['tags'])
-        flair = flairs_from_string(input['flair'], post.community_id)
+        if 'tags' in input:
+            tags = tags_from_string_old(input['tags'])
+        else:
+            tags = []
+        if 'flair' in input:
+            flair = flairs_from_string(input['flair'], post.community_id)
+        else:
+            flair = []
         scheduled_for = None
         repeat = None
 
