@@ -1419,7 +1419,7 @@ class PostSetFlairResponse(PostView):
 
 class PollVoteRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
-    choice_id = fields.Integer(required=True)
+    choice_id = fields.List(fields.Integer(), required=True, metadata={"description": "Must have a length of 1 for a poll in single vote mode."})
 
 
 class PollVoteResponse(PostView):

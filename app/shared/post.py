@@ -1002,9 +1002,14 @@ def vote_for_poll(post_id, votes, src, auth=None):
 
     poll = Poll.query.get_or_404(post_id)
     if poll.mode == 'single':
-        poll.vote_for_choice(votes, user.id)
-        task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
-                      choice_text=PollChoice.query.get(votes).choice_text)
+        if len(votes) != 1:
+            raise Exception("Poll is in single vote mode, only a single choice is allowed.")
+        if not poll.has_voted(user.id):
+            poll.vote_for_choice(votes[0], user.id)
+            task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
+                        choice_text=PollChoice.query.get(votes[0]).choice_text)
+        else:
+            raise Exception("User has already voted.")
     else:
         for choice_id in votes:
             poll.vote_for_choice(int(choice_id), user.id)
