@@ -167,3 +167,5 @@ class Config(object):
     ALLOW_AI_CRAWLERS = os.environ.get('ALLOW_AI_CRAWLERS') or False
 
     DETECT_AI_ENDPOINT = os.environ.get('DETECT_AI_ENDPOINT') or ''
+
+    REDIS_MEMORY_LIMIT = int(os.environ.get('REDIS_MEMORY_LIMIT') or 200000000)
