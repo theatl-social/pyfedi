@@ -883,6 +883,10 @@ def post_post(auth, data):
         type = POST_TYPE_EVENT
     elif 'poll' in data and data['poll']:
         type = POST_TYPE_POLL
+        if 'end_poll' not in data['poll']:
+            # Default to ending the poll in three days
+            end_poll = utcnow() + timedelta(days=3)
+            data['poll']['end_poll'] = end_poll.isoformat(timespec="microseconds")
     elif url:
         type = POST_TYPE_LINK
     else:
@@ -1094,6 +1098,6 @@ def post_poll_vote(auth, data):
 
     user_id = authorise_api_user(auth)
 
-    vote_for_poll(post_id, choice_id, SRC_API)
+    vote_for_poll(post_id, choice_id, SRC_API, auth=auth)
 
     return post_view(post=post_id, variant=2, stub=False, user_id=user_id)
