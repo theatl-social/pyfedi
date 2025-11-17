@@ -1270,6 +1270,9 @@ ul.form-multicheck-columns li {
   width: 100%;
   position: relative;
 }
+.post_list .post_teaser .thumbnail .fe {
+  z-index: 2;
+}
 .post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
   display: block;
   position: absolute;
