@@ -250,8 +250,14 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
         image_alt_text = input['image_alt_text'] if 'image_alt_text' in input else ''
-        tags = tags_from_string_old(input['tags'])
-        flair = flairs_from_string(input['flair'], post.community_id)
+        if 'tags' in input:
+            tags = tags_from_string_old(input['tags'])
+        else:
+            tags = []
+        if 'flair' in input:
+            flair = flairs_from_string(input['flair'], post.community_id)
+        else:
+            flair = []
         scheduled_for = None
         repeat = None
 
@@ -993,12 +999,22 @@ def vote_for_poll(post_id, votes, src, auth=None):
         user = authorise_api_user(auth, return_type='model')
     else:
         user = current_user
+    
+    if isinstance(votes, int):
+        votes = [votes]
 
     poll = Poll.query.get_or_404(post_id)
     if poll.mode == 'single':
-        poll.vote_for_choice(votes, user.id)
-        task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
-                      choice_text=PollChoice.query.get(votes).choice_text)
+        if len(votes) != 1:
+            if src == SRC_API:
+                raise Exception("Poll is in single vote mode, only a single choice is allowed.")
+        if not poll.has_voted(user.id):
+            poll.vote_for_choice(votes[0], user.id)
+            task_selector('vote_for_poll', post_id=post_id, user_id=user.id,
+                        choice_text=PollChoice.query.get(votes[0]).choice_text)
+        else:
+            if src == SRC_API:
+                raise Exception("User has already voted.")
     else:
         for choice_id in votes:
             poll.vote_for_choice(int(choice_id), user.id)

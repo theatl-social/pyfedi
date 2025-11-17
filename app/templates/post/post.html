@@ -81,7 +81,7 @@
                                 {% else -%}
                                     {% if author_banned -%}
                                         <div id="author_banned_notice" class="alert alert-message mb-0">
-                                            {{ _('The author of this post has been banned so they might not see your reply.') }}
+                                            {{ _('The author of this post has been banned/deleted so they might not see your reply.') }}
                                         </div>
                                     {% endif -%}
                                     {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id -%}

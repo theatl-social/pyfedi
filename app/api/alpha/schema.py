@@ -309,7 +309,7 @@ class PollChoice(DefaultSchema):
     id = fields.Integer(required=True)
     choice_text = fields.String(required=True)
     sort_order = fields.Integer(required=True)
-    num_votes = fields.Integer(required=True, metadata={"default": 0})
+    num_votes = fields.Integer(metadata={"default": 0, "description": "Value is ignored when creating/editing a poll"})
 
 
 class PostPoll(DefaultSchema):
@@ -317,7 +317,8 @@ class PostPoll(DefaultSchema):
     mode = fields.String(required=True, metadata={"example": "single", "description": "single or multiple - determines whether people can vote for one or multiple options"})
     local_only = fields.Boolean(metadata={"default": False})
     latest_vote = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    choices = fields.List(fields.Nested(PollChoice), required=True)
+    choices = fields.List(fields.Nested(PollChoice), required=True, validate=validate.Length(max=10))
+    my_votes = fields.List(fields.Integer())
 
 
 class Post(DefaultSchema):
@@ -1419,7 +1420,7 @@ class PostSetFlairResponse(PostView):
 
 class PollVoteRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
-    choice_id = fields.Integer(required=True)
+    choice_id = fields.List(fields.Integer(), required=True, metadata={"description": "Must have a length of 1 for a poll in single vote mode."})
 
 
 class PollVoteResponse(PostView):

@@ -250,6 +250,11 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                             'num_votes': choice.num_votes
                         }
                         poll_data['choices'].append(choice_data)
+                    
+                    if user_id:
+                        my_poll_votes = poll.user_votes(user_id)
+                        if my_poll_votes:
+                            poll_data['my_votes'] = [vote.choice_id for vote in my_poll_votes]
 
                     v2['post']['poll'] = poll_data
 
