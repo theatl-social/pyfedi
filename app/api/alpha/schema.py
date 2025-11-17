@@ -318,6 +318,7 @@ class PostPoll(DefaultSchema):
     local_only = fields.Boolean(metadata={"default": False})
     latest_vote = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     choices = fields.List(fields.Nested(PollChoice), required=True, validate=validate.Length(max=10))
+    my_votes = fields.List(fields.Integer())
 
 
 class Post(DefaultSchema):

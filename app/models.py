@@ -3075,6 +3075,15 @@ class Poll(db.Model):
             choice.num_votes += 1
             self.latest_vote = utcnow()
             db.session.commit()
+    
+    def user_votes(self, user_id):
+        existing_votes = PollChoiceVote.query.filter(PollChoiceVote.user_id == user_id,
+                                                     PollChoiceVote.post_id == self.post_id).all()
+        
+        if not existing_votes:
+            existing_votes = []
+        
+        return existing_votes
 
     def total_votes(self):
         return db.session.execute(text('SELECT SUM(num_votes) as s FROM "poll_choice" WHERE post_id = :post_id'),
