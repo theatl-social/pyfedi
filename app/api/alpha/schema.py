@@ -309,7 +309,7 @@ class PollChoice(DefaultSchema):
     id = fields.Integer(required=True)
     choice_text = fields.String(required=True)
     sort_order = fields.Integer(required=True)
-    num_votes = fields.Integer(required=True, metadata={"default": 0})
+    num_votes = fields.Integer(metadata={"default": 0, "description": "Value is ignored when creating/editing a poll"})
 
 
 class PostPoll(DefaultSchema):
@@ -317,7 +317,8 @@ class PostPoll(DefaultSchema):
     mode = fields.String(required=True, metadata={"example": "single", "description": "single or multiple - determines whether people can vote for one or multiple options"})
     local_only = fields.Boolean(metadata={"default": False})
     latest_vote = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    choices = fields.List(fields.Nested(PollChoice), required=True)
+    choices = fields.List(fields.Nested(PollChoice), required=True, validate=validate.Length(max=10))
+    my_votes = fields.List(fields.Integer())
 
 
 class Post(DefaultSchema):
@@ -343,6 +344,8 @@ class Post(DefaultSchema):
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
+    tags = fields.String(allow_none=True)
+    flair = fields.String(allow_none=True)
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
 
@@ -387,7 +390,7 @@ class PostView(DefaultSchema):
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
     my_vote = fields.Integer()
-    flair_list = fields.List(fields.Nested(CommunityFlair))
+    flair_list = fields.List(fields.Nested(CommunityFlair), metadata={"description": "See also the simpler 'flair' on post which can be used when editing"})
     can_auth_user_moderate = fields.Boolean()
 
 
@@ -1185,6 +1188,8 @@ class EditPostRequest(DefaultSchema):
     language_id = fields.Integer()
     event = fields.Nested(PostEvent, allow_none=True)
     poll = fields.Nested(PostPoll, allow_none=True)
+    tags = fields.String(allow_none=True, metadata={"description": "Hashtags, separated by commas with no hash character"})
+    flair = fields.String(allow_none=True, metadata={"description": "Flair, separated by commas with no hash character"})
 
 
 class DeletePostRequest(DefaultSchema):
@@ -1415,7 +1420,7 @@ class PostSetFlairResponse(PostView):
 
 class PollVoteRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
-    choice_id = fields.Integer(required=True)
+    choice_id = fields.List(fields.Integer(), required=True, metadata={"description": "Must have a length of 1 for a poll in single vote mode."})
 
 
 class PollVoteResponse(PostView):

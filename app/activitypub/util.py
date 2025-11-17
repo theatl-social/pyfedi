@@ -490,6 +490,13 @@ def find_flair_or_create(flair: dict, community_id: int, session=None) -> Commun
             return None
 
 
+def find_flair(flair: str, community_id: int, session=None) -> CommunityFlair | None:
+    if session is None:
+        session = db.session
+    return session.query(CommunityFlair).\
+        filter(CommunityFlair.flair == flair, CommunityFlair.community_id == community_id).first()
+
+
 def update_community_flair_from_tags(community: Community, flair_tags: list, session=None):
     """Update community flair from activity_json tags, preserving existing post associations."""
     if session is None:

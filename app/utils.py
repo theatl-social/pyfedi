@@ -2300,7 +2300,7 @@ def authorise_api_user(auth, return_type=None, id_match=None) -> User | dict | i
         user = User.query.get(user_id)
         if user is None:
             raise Exception('incorrect_login')
-        if not (user.ap_id is None and user.verified is True and user.banned is False and user.deleted is False):
+        if user.ap_id is not None or user.verified is False or user.banned is True or user.deleted is True:
             raise Exception('incorrect_login')
         if user.password_updated_at:
             issued_at_time = decoded['iat']

@@ -1387,7 +1387,8 @@ def import_settings_task(user_id, filename):
 
                 for instance_domain in contents_json['blocked_instances'] if 'blocked_instances' in contents_json else []:
                     instance = Instance.query.filter(Instance.domain == instance_domain).first()
-                    session.add(InstanceBlock(user_id=user.id, instance_id=instance.id))
+                    if instance:
+                        session.add(InstanceBlock(user_id=user.id, instance_id=instance.id))
 
                 for ap_id in contents_json['saved_posts'] if 'saved_posts' in contents_json else []:
                     try:

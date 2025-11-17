@@ -15,7 +15,7 @@ from psycopg2 import IntegrityError
 from app import db, cache, celery
 from app.activitypub.signature import post_request, default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, actor_json_to_model, \
-    find_hashtag_or_create, create_post, remote_object_to_json
+    find_hashtag_or_create, create_post, remote_object_to_json, find_flair
 from app.community.forms import CreateLinkForm
 from app.constants import SRC_WEB, POST_TYPE_LINK
 from app.models import Community, File, PostReply, Post, utcnow, CommunityMember, Site, \
@@ -365,6 +365,24 @@ def flair_from_form(tag_ids) -> List[CommunityFlair]:
     if tag_ids is None:
         return []
     return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
+
+
+def flairs_from_string(flairs: str, community_id: int) -> List[Tag]:
+    return_value = []
+    if flairs is None:
+        return []
+    flairs = flairs.strip()
+    if flairs == '':
+        return []
+    if flairs[-1:] == ',':
+        flairs = flairs[:-1]
+    flair_list = flairs.split(',')
+    flair_list = [tag.strip() for tag in flair_list]
+    for f in flair_list:
+        flair_to_append = find_flair(f, community_id)
+        if flair_to_append and flair_to_append not in return_value:
+            return_value.append(flair_to_append)
+    return return_value
 
 
 def delete_post_from_community(post_id):

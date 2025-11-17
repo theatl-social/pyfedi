@@ -14,7 +14,7 @@ from app.models import Post, Community, CommunityMember, utcnow, User, Feed, Fee
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read, \
     vote_for_poll
-from app.post.util import post_replies, get_comment_branch
+from app.post.util import post_replies, get_comment_branch, tags_to_string, flair_to_string
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, joined_or_modding_communities, \
@@ -883,6 +883,10 @@ def post_post(auth, data):
         type = POST_TYPE_EVENT
     elif 'poll' in data and data['poll']:
         type = POST_TYPE_POLL
+        if 'end_poll' not in data['poll']:
+            # Default to ending the poll in three days
+            end_poll = utcnow() + timedelta(days=3)
+            data['poll']['end_poll'] = end_poll.isoformat(timespec="microseconds")
     elif url:
         type = POST_TYPE_LINK
     else:
@@ -914,6 +918,8 @@ def put_post(auth, data):
     url = data['url'] if 'url' in data else post.url
     nsfw = data['nsfw'] if 'nsfw' in data else post.nsfw
     language_id = data['language_id'] if 'language_id' in data else post.language_id
+    tags = data['tags'] if 'tags' in data else tags_to_string(post) or ''
+    flair = data['flair'] if 'flair' in data else flair_to_string(post) or ''
     if language_id < 2:
         language_id = site_language_id()
 
@@ -926,7 +932,8 @@ def put_post(auth, data):
         else:
             type = POST_TYPE_ARTICLE
 
-    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True,
+             'tags': tags, 'flair': flair}
 
     # Add event data if present
     if 'event' in data and data['event']:
@@ -1091,6 +1098,6 @@ def post_poll_vote(auth, data):
 
     user_id = authorise_api_user(auth)
 
-    vote_for_poll(post_id, choice_id, SRC_API)
+    vote_for_poll(post_id, choice_id, SRC_API, auth=auth)
 
     return post_view(post=post_id, variant=2, stub=False, user_id=user_id)
