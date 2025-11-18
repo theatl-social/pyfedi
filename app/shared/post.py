@@ -228,7 +228,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     if post.status == POST_STATUS_PUBLISHED:
         notify_about_post(post)
 
-    plugins.fire_hook('after_post_create')
+    plugins.fire_hook('after_post_create', post)
 
     if src == SRC_API:
         return user.id, post

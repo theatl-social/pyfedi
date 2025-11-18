@@ -16,7 +16,8 @@ def example_before_post_creation(post_data):
 def example_after_post_creation(post_data):
     """Hook that runs after a post is created"""
     if int(os.environ.get('FLASK_DEBUG', '0')) and post_data:
-        print(f"[PLUGIN DEBUG] Post created successfully: {post_data.get('title', 'No title')}")
+        if hasattr(post_data, "title"):
+            print(f"[PLUGIN DEBUG] Post created successfully: {post_data.title}")
     return post_data
 
 
