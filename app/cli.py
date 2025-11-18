@@ -634,7 +634,7 @@ def register(app):
                     db.session.delete(pending_reminder)
                     db.session.commit()
                     continue
-            notify = Notification(title=title, url=url,
+            notify = Notification(title=shorten_string(title, 140), url=url,
                                   user_id=pending_reminder.user_id,
                                   author_id=pending_reminder.user_id, notif_type=NOTIF_REMINDER,
                                   subtype=None,
