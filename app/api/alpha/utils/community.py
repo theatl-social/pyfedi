@@ -127,6 +127,8 @@ def post_community_rate(auth, data):
     community_id = data['community_id']
     rating = data['rating']
 
+    user_id = authorise_api_user(auth) if auth else None
+
     rate_community(community_id, rating, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
     return community_json

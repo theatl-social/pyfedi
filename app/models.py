@@ -830,6 +830,26 @@ class Community(db.Model):
                 })
         
         return result
+    
+    def can_rate(self, user):
+        if isinstance(user, int):
+            user = User.query.get(user)
+        
+        if not user:
+            return [False, "no user provided"]
+
+        # Returns [boolean, message] if the provided user is able to rate the community
+        if user.is_admin_or_staff():
+            return [True, ""]
+        
+        if not user.subscribed(self.id):
+            return [False, "community members only"]
+        else:
+            cm = CommunityMember.query.filter(CommunityMember.user_id == user.id, CommunityMember.community_id == self.id).first()
+            if cm and cm.created_at + timedelta(days=1) > utcnow():
+                return [False, "not subscribed for long enough"]
+            
+        return [True, ""]
 
     def rate(self, user, rating):
         db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
@@ -847,6 +867,15 @@ class Community(db.Model):
                             WHERE id = :community_id
                         """), {'community_id': self.id})
         db.session.commit()
+    
+    def total_ratings(self):
+        num_ratings = db.session.execute(text('SELECT COUNT(id) FROM "rating" WHERE community_id = :community_id AND rating is not null'),
+                                         {'community_id': self.id}).first()
+        
+        if num_ratings:
+            return int(num_ratings[0])
+        else:
+            return 0
 
     def delete_dependencies(self):
         from app import redis_client

@@ -406,6 +406,7 @@ class CommunityAggregates(DefaultSchema):
     active_monthly = fields.Integer()
     active_6monthly = fields.Integer()
     average_rating = fields.Float(allow_none=True)
+    total_ratings = fields.Integer(allow_none=True)
 
 
 class CommunityView(DefaultSchema):
@@ -415,6 +416,8 @@ class CommunityView(DefaultSchema):
     counts = fields.Nested(CommunityAggregates, required=True)
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
     flair_list = fields.List(fields.Nested(CommunityFlair))
+    can_rate = fields.Boolean()
+    my_rating = fields.Integer(allow_none=True)
 
 
 class CommunityFlairCreateRequest(DefaultSchema):
@@ -650,7 +653,7 @@ class FollowCommunityRequest(DefaultSchema):
 
 class RateCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
-    rating = fields.Integer(required=True)
+    rating = fields.Integer(required=True, allow_none=True, metadata={"description": "Providing a null value removes your rating"})
 
 
 class BlockCommunityRequest(DefaultSchema):
