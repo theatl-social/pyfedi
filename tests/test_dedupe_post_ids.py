@@ -11,17 +11,17 @@ class TestDudupePostIds(unittest.TestCase):
         """Test basic dedupe with no cross-posts"""
         mock_low_value.return_value = set()
         params = [(1, None, 1, 10), (2, None, 1, 10)]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [1, 2])
 
     @patch('app.utils.low_value_reposters')
     def test_empty_input(self, mock_low_value):
         """Test with empty input"""
         mock_low_value.return_value = set()
-        result = dedupe_post_ids([], True)
+        result = dedupe_post_ids([], limit_to_visible=False)
         self.assertEqual(result, [])
         
-        result = dedupe_post_ids(None, True)
+        result = dedupe_post_ids(None, limit_to_visible=False)
         self.assertEqual(result, [])
 
     @patch('app.utils.low_value_reposters')
@@ -34,7 +34,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1, 3], 101, 10), # Cross-post 1
             (3, [1, 2], 102, 15)  # Cross-post 2
         ]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [1])  # Only first post should remain
 
     @patch('app.utils.low_value_reposters')
@@ -47,7 +47,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1, 3], 101, 10), # Cross-post 1 (10 replies)
             (3, [1, 2], 102, 15)  # Cross-post 2 (15 replies) - should win
         ]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [3])  # Post with most replies should remain
 
     @patch('app.utils.low_value_reposters')
@@ -64,7 +64,7 @@ class TestDudupePostIds(unittest.TestCase):
             (6, [5, 7], 201, 20),  # Cross-post 1 (20 replies) - should win
             (7, [5, 6], 202, 15)   # Cross-post 2 (15 replies)
         ]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [1, 2, 6])  # Regular post, first cross-post group, best from low-value group
 
     @patch('app.utils.low_value_reposters')
@@ -76,7 +76,7 @@ class TestDudupePostIds(unittest.TestCase):
             (1, [99], 100, 5),  # Cross-post ID 99 doesn't exist in params
             (2, None, 101, 10)
         ]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [2])  # Only post 2 should remain
 
     @patch('app.utils.low_value_reposters')
@@ -89,7 +89,7 @@ class TestDudupePostIds(unittest.TestCase):
             (2, [1], 101, 10),   # Should be kept (prioritized)
             (3, [2], 102, 15)    # Should not filter out post 2 since it's prioritized
         ]
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         self.assertEqual(result, [2, 3])  # Both 2 and 3 should remain
 
     @patch('app.utils.low_value_reposters')
@@ -124,7 +124,7 @@ class TestDudupePostIds(unittest.TestCase):
         
         # Time the execution
         start_time = time.time()
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         end_time = time.time()
         
         execution_time = end_time - start_time
@@ -167,7 +167,7 @@ class TestDudupePostIds(unittest.TestCase):
         
         # Time the execution
         start_time = time.time()
-        result = dedupe_post_ids(params, True)
+        result = dedupe_post_ids(params, limit_to_visible=False)
         end_time = time.time()
         
         execution_time = end_time - start_time
@@ -179,6 +179,114 @@ class TestDudupePostIds(unittest.TestCase):
         self.assertLess(execution_time, 2.0, "Function should complete within 2 seconds even in worst case")
         self.assertGreater(len(result), 0, "Should return some posts")
         self.assertLess(len(result), 1000, "Should deduplicate some posts")
+
+    # Tests for is_all_view=False behavior
+    @patch('app.utils.low_value_reposters')
+    def test_basic_dedupe_not_all_view(self, mock_low_value):
+        """Test basic dedupe with no cross-posts when is_all_view=False"""
+        mock_low_value.return_value = set()
+        params = [(1, None, 1, 10), (2, None, 1, 10)]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        self.assertEqual(result, [1, 2])
+
+    @patch('app.utils.low_value_reposters')
+    def test_regular_cross_posts_not_all_view(self, mock_low_value):
+        """Test cross-posts from regular users when is_all_view=False - first post wins"""
+        mock_low_value.return_value = set()
+        
+        params = [
+            (1, [2, 3], 100, 5),  # Original post
+            (2, [1, 3], 101, 10), # Cross-post 1
+            (3, [1, 2], 102, 15)  # Cross-post 2
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        self.assertEqual(result, [1])  # Only first post should remain
+
+    @patch('app.utils.low_value_reposters')
+    def test_low_value_reposter_ignored_not_all_view(self, mock_low_value):
+        """Test that low-value reposter logic still works when limit_to_visible=True if alternatives are visible"""
+        mock_low_value.return_value = {100}  # User 100 is low-value
+        
+        params = [
+            (1, [2, 3], 100, 5),  # Low-value reposter post (would normally be deprioritized)
+            (2, [1, 3], 101, 10), # Cross-post 1 (10 replies)
+            (3, [1, 2], 102, 15)  # Cross-post 2 (15 replies) - should win since it's visible and has most replies
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        self.assertEqual(result, [3])  # Post 3 should win because alternatives are visible and it has most replies
+
+    @patch('app.utils.low_value_reposters')
+    def test_mixed_scenarios_not_all_view(self, mock_low_value):
+        """Test mix of scenarios when limit_to_visible=True - low-value reposter logic works with visible alternatives"""
+        mock_low_value.return_value = {200}
+        
+        params = [
+            (1, None, 100, 5),     # Regular post, no cross-posts
+            (2, [3, 4], 101, 8),   # Regular user with cross-posts
+            (3, [2, 4], 102, 12),  # Cross-post of above
+            (4, [2, 3], 103, 6),   # Cross-post of above
+            (5, [6, 7], 200, 3),   # Low-value reposter
+            (6, [5, 7], 201, 20),  # Cross-post 1 (20 replies) - should win since it's visible and has most replies
+            (7, [5, 6], 202, 15)   # Cross-post 2 (15 replies)
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        # Regular posts win by first occurrence, low-value reposter replaced by best visible alternative
+        self.assertEqual(result, [1, 2, 6])
+
+    # Tests for limit_to_visible behavior specifically
+    @patch('app.utils.low_value_reposters')
+    def test_limit_to_visible_true_with_invisible_alternatives(self, mock_low_value):
+        """Test that when limit_to_visible=True, invisible alternatives are not chosen"""
+        mock_low_value.return_value = {100}  # User 100 is low-value
+        
+        params = [
+            (1, [2, 3], 100, 5),  # Low-value reposter post, cross-posts 2,3 not in visible list
+            (4, None, 101, 10),   # Regular post
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        # Post 1 should remain because alternatives 2,3 are not visible
+        self.assertEqual(result, [1, 4])
+
+    @patch('app.utils.low_value_reposters')
+    def test_limit_to_visible_true_with_visible_alternatives(self, mock_low_value):
+        """Test that when limit_to_visible=True, visible alternatives are chosen"""
+        mock_low_value.return_value = {100}  # User 100 is low-value
+        
+        params = [
+            (1, [2, 3], 100, 5),  # Low-value reposter post
+            (2, [1, 3], 101, 10), # Cross-post 1 (10 replies) - visible
+            (3, [1, 2], 102, 15), # Cross-post 2 (15 replies) - visible, should win
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        # Post 3 should win because it has most replies and is visible
+        self.assertEqual(result, [3])
+
+    @patch('app.utils.low_value_reposters')
+    def test_limit_to_visible_false_with_invisible_alternatives(self, mock_low_value):
+        """Test that when limit_to_visible=False, invisible alternatives can be chosen"""
+        mock_low_value.return_value = {100}  # User 100 is low-value
+        
+        params = [
+            (1, [99, 98], 100, 5),  # Low-value reposter post, cross-posts 99,98 not in visible list
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=False)
+        # Post 1 should be filtered out even though alternatives are not visible
+        # (but since they're not in the list, there's no actual alternative to choose)
+        # In this case, post 1 gets filtered but no replacement is found
+        self.assertEqual(result, [])
+
+    @patch('app.utils.low_value_reposters')
+    def test_limit_to_visible_mixed_visibility(self, mock_low_value):
+        """Test mix of visible and invisible alternatives with limit_to_visible=True"""
+        mock_low_value.return_value = {100}
+        
+        params = [
+            (1, [2, 99], 100, 5),  # Low-value reposter, cross-post 2 visible, 99 invisible
+            (2, [1, 99], 101, 20), # Cross-post with 20 replies (visible)
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=True)
+        # Should choose post 2 since it's visible and has more replies
+        self.assertEqual(result, [2])
 
 
 if __name__ == '__main__':

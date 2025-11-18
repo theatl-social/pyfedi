@@ -2587,7 +2587,7 @@ def jaccard_similarity(user1_upvoted: set, user2_id: int):
         return 0
 
 
-def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], is_all_view: bool) -> List[int]:
+def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], limit_to_visible: bool = True) -> List[int]:
     # Remove duplicate posts based on cross-posting rules
     # post_ids is a list of tuples: (post_id, cross_post_ids, user_id, reply_count)
     result = []
@@ -2597,16 +2597,20 @@ def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], i
     seen_before = set()  # Track which post IDs we've already processed to avoid duplicates
     priority = set()     # Track post IDs that should be prioritized (kept over their cross-posts)
     lvp = low_value_reposters()
+    visible_post_ids = {p[0] for p in post_ids}  # Set of all post IDs that are visible to the user
 
     for post_id in post_ids:
-        # If this post has cross-posts AND the author is a low-value reposter
-        # Only applies to 'All' feed to avoid suppressing posts when alternatives aren't viewable to user
-        if post_id[1] and is_all_view and post_id[2] in lvp:
-            # Mark this post as seen (will be filtered out)
-            seen_before.add(post_id[0])
-            # Find the cross-post with the most replies and prioritize only that one
+        # If this post has cross-posts AND the author is a bot
+        if post_id[1] and post_id[2] in lvp:
             cross_posts = list(post_id[1])
+            # If limit_to_visible=True, only consider cross-posts that are actually visible
+            if limit_to_visible:
+                cross_posts = [cp for cp in cross_posts if cp in visible_post_ids]
+            
+            # Only proceed with replacement if we have viable alternatives
             if cross_posts:
+                # Mark this post as seen (will be filtered out)
+                seen_before.add(post_id[0])
                 # Find reply counts for each cross-post from remaining tuples
                 cross_post_replies = {}
                 for other_post in post_ids:
@@ -2759,7 +2763,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()
-    post_ids = dedupe_post_ids(post_ids, community_ids[0] == -1)
+    post_ids = dedupe_post_ids(post_ids, limit_to_visible=(community_ids[0] != -1))
 
     if current_user.is_authenticated:
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)  # 86400 is 1 day
