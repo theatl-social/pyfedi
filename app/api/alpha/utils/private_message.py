@@ -103,6 +103,8 @@ def post_leave_conversation(auth, data):
         db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
                            {"state": False, "person_id": user.id, "conversation_id": conversation_id})
         db.session.commit()
+
+        conversation.delete_if_abandoned()
     
     return
 

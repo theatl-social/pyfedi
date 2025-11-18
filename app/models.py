@@ -200,6 +200,26 @@ class Conversation(db.Model):
             if member.instance.id != 1 and member.instance not in retval:
                 retval.append(member.instance)
         return retval
+    
+    def delete_if_abandoned(self):
+        # Delete the conversation if all the participants are either remote or have left the conversation
+        keep_convo = False
+        for member in self.members:
+            if member.is_local():
+                joined = db.session.execute(text("SELECT joined FROM conversation_member WHERE user_id = :person_id AND conversation_id = :conversation_id"),
+                                            {"person_id": member.id, "conversation_id": self.id}).first()
+                
+                # Returns None or a tuple, need to make it into a bool
+                if joined and any(joined):
+                    # There is still a local user joined to this conversation, just break and don't delete the convo
+                    keep_convo = True
+                    break
+        
+        if not keep_convo:
+            # Delete the conversation
+            Report.query.filter(Report.suspect_conversation_id == self.id).delete()
+            db.session.delete(self)
+            db.session.commit()
 
     def last_ap_id(self, sender_id):
         for message in self.messages.filter(ChatMessage.sender_id == sender_id).order_by(
