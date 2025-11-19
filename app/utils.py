@@ -2779,7 +2779,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         post_id_sort = 'ORDER BY p.last_active DESC'
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()
-    post_ids = dedupe_post_ids(post_ids, community_ids[0] == -1)
+    post_ids = dedupe_post_ids(post_ids, limit_to_visible=(community_ids[0] != -1))
 
     if current_user.is_authenticated:
         redis_client.set(result_id, json.dumps(post_ids), ex=86400)  # 86400 is 1 day
