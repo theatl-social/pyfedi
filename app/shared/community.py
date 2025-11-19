@@ -601,9 +601,14 @@ def rate_community(community_id: int, rating: int, src, auth=None):
     if can_rate[0]:
         community.rate(user, rating)
         task_selector('rate_community', user_id=user.id, community_id=community_id, rating=rating)
-        if rating is not None:
-            community.total_ratings += 1
-        else:
-            community.total_ratings -= 1
+        existing_rating = db.session.query(Rating).filter_by(community_id=community_id, user_id=user.id)
+
+        if not existing_rating:
+            if rating is not None:
+                community.total_ratings += 1
+            else:
+                community.total_ratings -= 1
+        
+            db.session.commit()
     else:
         raise Exception(can_rate[1])
