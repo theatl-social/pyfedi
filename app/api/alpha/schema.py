@@ -416,8 +416,6 @@ class CommunityView(DefaultSchema):
     counts = fields.Nested(CommunityAggregates, required=True)
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
     flair_list = fields.List(fields.Nested(CommunityFlair))
-    can_rate = fields.Boolean()
-    my_rating = fields.Integer(allow_none=True)
 
 
 class CommunityFlairCreateRequest(DefaultSchema):
@@ -578,6 +576,8 @@ class GetCommunityResponse(DefaultSchema):
     community_view = fields.Nested(CommunityView, required=True)
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    can_rate = fields.Boolean()
+    my_rating = fields.Integer(allow_none=True)
     site = fields.Nested(Site)
 
 

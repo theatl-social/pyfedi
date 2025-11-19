@@ -526,14 +526,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         v2 = {'community': community_view(community=community, variant=1, stub=stub), 'subscribed': subscribe_type,
               'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,}
         
-        if user_id:
-            # Fetch user info for ratings
-            v2['can_rate'] = community.can_rate(user_id)[0]
-            my_rating = Rating.query.filter(Rating.user_id == user_id, Rating.community_id == community.id).first()
-            v2['my_rating'] = my_rating.rating
-        
         comm_flair = []
-        
         flair_list = get_comm_flair_list(community)
         for flair in flair_list:
             comm_flair.append(flair_view(flair))
@@ -548,6 +541,12 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
         v3 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
               'moderators': modlist, 'discussion_languages': []}
+        
+        if user_id:
+            # Fetch user info for ratings
+            v3['can_rate'] = community.can_rate(user_id)[0]
+            my_rating = Rating.query.filter(Rating.user_id == user_id, Rating.community_id == community.id).first()
+            v3['my_rating'] = my_rating.rating
         
         return v3
 

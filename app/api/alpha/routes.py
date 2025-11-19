@@ -212,14 +212,14 @@ def post_alpha_community_follow(data):
 @comm_bp.route("/community/rate", methods=["POST"])
 @comm_bp.doc(summary="Rate a community.")
 @comm_bp.arguments(RateCommunityRequest)
-@comm_bp.response(200, CommunityResponse)
+@comm_bp.response(200, GetCommunityResponse)
 @comm_bp.alt_response(400, schema=DefaultError)
 def post_alpha_community_rate(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = post_community_rate(auth, data)
-    return CommunityResponse().load(resp)
+    return GetCommunityResponse().load(resp)
 
 
 @comm_bp.route("/community/block", methods=["POST"])

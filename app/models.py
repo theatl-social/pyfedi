@@ -831,6 +831,7 @@ class Community(db.Model):
         
         return result
     
+    @cache.memoize(timeout=300)
     def can_rate(self, user):
         if isinstance(user, int):
             user = User.query.get(user)
