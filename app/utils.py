@@ -2621,32 +2621,31 @@ def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], l
                 # Filter all_related_posts to only include posts we found in post_ids
                 all_related_posts = [pid for pid in all_related_posts if pid in related_post_info]
 
-                # If we don't have any valid related posts, skip this post
-                if not all_related_posts:
-                    continue
+                # Only perform deduplication if we have at least 2 related posts
+                # (if we only have 1, it's just the current post with no actual alternatives)
+                if len(all_related_posts) >= 2:
+                    # If current post is from a bot, try to find a non-bot alternative
+                    current_is_bot = post_id[2] in lvp
+                    if current_is_bot:
+                        # Separate into bot and non-bot posts
+                        non_bot_posts = [pid for pid in all_related_posts if not related_post_info[pid][1]]
 
-                # If current post is from a bot, try to find a non-bot alternative
-                current_is_bot = post_id[2] in lvp
-                if current_is_bot:
-                    # Separate into bot and non-bot posts
-                    non_bot_posts = [pid for pid in all_related_posts if not related_post_info[pid][1]]
-
-                    if non_bot_posts:
-                        # Choose the non-bot post with the most replies
-                        best_post = max(non_bot_posts, key=lambda x: related_post_info[x][0])
+                        if non_bot_posts:
+                            # Choose the non-bot post with the most replies
+                            best_post = max(non_bot_posts, key=lambda x: related_post_info[x][0])
+                        else:
+                            # No non-bot alternatives, choose the bot post with the most replies
+                            best_post = max(all_related_posts, key=lambda x: related_post_info[x][0])
                     else:
-                        # No non-bot alternatives, choose the bot post with the most replies
+                        # Current post is not from a bot, choose post with most replies (regardless of bot status)
                         best_post = max(all_related_posts, key=lambda x: related_post_info[x][0])
-                else:
-                    # Current post is not from a bot, choose post with most replies (regardless of bot status)
-                    best_post = max(all_related_posts, key=lambda x: related_post_info[x][0])
 
-                priority.add(best_post)
+                    priority.add(best_post)
 
-                # Mark all other related posts as seen to avoid duplicates
-                for related_post in all_related_posts:
-                    if related_post != best_post:
-                        seen_before.add(related_post)
+                    # Mark all other related posts as seen to avoid duplicates
+                    for related_post in all_related_posts:
+                        if related_post != best_post:
+                            seen_before.add(related_post)
 
         # Only add the post to results if we haven't seen it before
         if post_id[0] not in seen_before:

@@ -408,6 +408,32 @@ class TestDudupePostIds(unittest.TestCase):
         self.assertEqual(result, [3], "When replacing bot, choose non-bot with most replies")
 
     @patch('app.utils.low_value_reposters')
+    def test_post_with_no_valid_alternatives_not_hidden(self, mock_low_value):
+        """Test that posts with cross-post references that don't exist are not hidden"""
+        mock_low_value.return_value = set()
+
+        params = [
+            (1, [999, 998], 100, 10),  # Has cross-posts but they don't exist in dataset
+            (2, None, 101, 20),         # Regular post
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=False)
+        # Both posts should remain (post 1 shouldn't be hidden just because its cross-posts don't exist)
+        self.assertEqual(result, [1, 2], "Posts with non-existent cross-posts should not be hidden")
+
+    @patch('app.utils.low_value_reposters')
+    def test_bot_post_with_no_valid_alternatives_not_hidden(self, mock_low_value):
+        """Test that bot posts with no valid alternatives are not hidden"""
+        mock_low_value.return_value = {100}  # User 100 is a bot
+
+        params = [
+            (1, [999], 100, 10),  # Bot with cross-post that doesn't exist
+            (2, None, 101, 20),    # Regular post
+        ]
+        result = dedupe_post_ids(params, limit_to_visible=False)
+        # Both posts should remain (bot post shouldn't be hidden just because its cross-post doesn't exist)
+        self.assertEqual(result, [1, 2], "Bot posts with no valid alternatives should not be hidden")
+
+    @patch('app.utils.low_value_reposters')
     def test_bug_order_matters_for_non_bots(self, mock_low_value):
         """BUG: Order of posts affects which one is chosen for non-bots"""
         mock_low_value.return_value = set()
