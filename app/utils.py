@@ -2585,7 +2585,7 @@ def jaccard_similarity(user1_upvoted: set, user2_id: int):
         return 0
 
 
-def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], is_all_view: bool) -> List[int]:
+def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], limit_to_visible: bool = True) -> List[int]:
     # Remove duplicate posts based on cross-posting rules
     # post_ids is a list of tuples: (post_id, cross_post_ids, user_id, reply_count)
     result = []
@@ -2594,34 +2594,56 @@ def dedupe_post_ids(post_ids: List[Tuple[int, Optional[List[int]], int, int]], i
 
     seen_before = set()  # Track which post IDs we've already processed to avoid duplicates
     priority = set()     # Track post IDs that should be prioritized (kept over their cross-posts)
-    lvp = low_value_reposters()
+    lvp = low_value_reposters()  # Get set of bot user IDs
+    visible_post_ids = {p[0] for p in post_ids}  # Set of all post IDs that are visible to the user
 
     for post_id in post_ids:
-        # If this post has cross-posts AND the author is a low-value reposter
-        # Only applies to 'All' feed to avoid suppressing posts when alternatives aren't viewable to user
-        if post_id[1] and is_all_view and post_id[2] in lvp:
-            # Mark this post as seen (will be filtered out)
-            seen_before.add(post_id[0])
-            # Find the cross-post with the most replies and prioritize only that one
-            cross_posts = list(post_id[1])
-            if cross_posts:
-                # Find reply counts for each cross-post from remaining tuples
-                cross_post_replies = {}
-                for other_post in post_ids:
-                    if other_post[0] in cross_posts:
-                        cross_post_replies[other_post[0]] = other_post[3]
-
-                # Prioritize the cross-post with most replies
-                best_cross_post = max(cross_posts, key=lambda x: cross_post_replies.get(x, 0))
-                priority.add(best_cross_post)
-                # Mark all other cross-posts as seen to avoid duplicates
-                seen_before.update(cp for cp in cross_posts if cp != best_cross_post)
         # If this post has cross-posts AND it's not already prioritized or seen
-        elif post_id[1] and post_id[0] not in priority and post_id[0] not in seen_before:
-            # Mark all its cross-posts as seen (they'll be filtered out)
-            seen_before.update(post_id[1])
-            # Remove cross-posts from priority set (this post takes precedence)
-            priority.difference_update(post_id[1])
+        if post_id[1] and post_id[0] not in priority and post_id[0] not in seen_before:
+            # Get all cross-posts including the current post
+            all_related_posts = [post_id[0]] + list(post_id[1])
+
+            # If limit_to_visible=True, only consider cross-posts that are actually visible
+            if limit_to_visible:
+                all_related_posts = [cp for cp in all_related_posts if cp in visible_post_ids]
+
+            # Only proceed if we have posts to consider
+            if all_related_posts:
+                # Find reply counts and author info for each related post
+                # Only include posts that actually exist in post_ids
+                related_post_info = {}  # Maps post_id -> (reply_count, is_bot)
+                for other_post in post_ids:
+                    if other_post[0] in all_related_posts:
+                        related_post_info[other_post[0]] = (other_post[3], other_post[2] in lvp)
+
+                # Filter all_related_posts to only include posts we found in post_ids
+                all_related_posts = [pid for pid in all_related_posts if pid in related_post_info]
+
+                # Only perform deduplication if we have at least 2 related posts
+                # (if we only have 1, it's just the current post with no actual alternatives)
+                if len(all_related_posts) >= 2:
+                    # If current post is from a bot, try to find a non-bot alternative
+                    current_is_bot = post_id[2] in lvp
+                    if current_is_bot:
+                        # Separate into bot and non-bot posts
+                        non_bot_posts = [pid for pid in all_related_posts if not related_post_info[pid][1]]
+
+                        if non_bot_posts:
+                            # Choose the non-bot post with the most replies
+                            best_post = max(non_bot_posts, key=lambda x: related_post_info[x][0])
+                        else:
+                            # No non-bot alternatives, choose the bot post with the most replies
+                            best_post = max(all_related_posts, key=lambda x: related_post_info[x][0])
+                    else:
+                        # Current post is not from a bot, choose post with most replies (regardless of bot status)
+                        best_post = max(all_related_posts, key=lambda x: related_post_info[x][0])
+
+                    priority.add(best_post)
+
+                    # Mark all other related posts as seen to avoid duplicates
+                    for related_post in all_related_posts:
+                        if related_post != best_post:
+                            seen_before.add(related_post)
 
         # Only add the post to results if we haven't seen it before
         if post_id[0] not in seen_before:
