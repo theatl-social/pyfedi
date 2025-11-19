@@ -161,6 +161,9 @@ def chat_leave(conversation_id):
         db.session.execute(text("UPDATE conversation_member SET joined = :state WHERE user_id = :person_id AND conversation_id = :conversation_id"),
                            {"state": False, "person_id": current_user.id, "conversation_id": conversation_id})
         db.session.commit()
+
+        conversation.delete_if_abandoned()
+
     return redirect(url_for('chat.chat_home'))
 
 
