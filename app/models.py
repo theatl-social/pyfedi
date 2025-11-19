@@ -540,6 +540,7 @@ class Community(db.Model):
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     average_rating = db.Column(db.Float)
+    total_ratings = db.Column(db.Integer)
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
 
@@ -868,15 +869,6 @@ class Community(db.Model):
                             WHERE id = :community_id
                         """), {'community_id': self.id})
         db.session.commit()
-    
-    def total_ratings(self):
-        num_ratings = db.session.execute(text('SELECT COUNT(id) FROM "rating" WHERE community_id = :community_id AND rating is not null'),
-                                         {'community_id': self.id}).first()
-        
-        if num_ratings:
-            return int(num_ratings[0])
-        else:
-            return 0
 
     def delete_dependencies(self):
         from app import redis_client

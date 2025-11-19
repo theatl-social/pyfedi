@@ -502,7 +502,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:
             counts['total_subscriptions_count'] = counts['subscriptions_count']
         counts.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z'})
-        counts.update({'total_ratings': community.total_ratings()})
+        counts.update({'total_ratings': community.total_ratings})
         
         # Return zero if stats are None
         stats_list = ['active_daily', 'active_weekly', 'active_monthly', 'active_6monthly']
