@@ -21,6 +21,8 @@ subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
+nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
+private_message_list = ["None", "Local", "Trusted", "All"]
 
 
 def validate_datetime_string(text):
@@ -156,12 +158,30 @@ class InstanceBlockView(DefaultSchema):
 
 
 class LocalUser(DefaultSchema):
+    accept_private_messages = fields.String(required=True, validate=validate.OneOf(private_message_list),
+                                            metadata={"description": 'Accept private messages from nobody, local users only, "trusted" instances, or any instance'})
+    bot_visibility = fields.String(required=True, validate=validate.OneOf(nsfw_visibility_list))
+    community_keyword_filter = fields.List(fields.String(),
+                                           metadata={"description": "Filter out communities with these words in their name"})
     default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
     default_listing_type = fields.String(required=True, validate=validate.OneOf(listing_type_list))
     default_sort_type = fields.String(validate=validate.OneOf(sort_list))
-    show_bot_accounts = fields.Boolean(required=True)
-    show_nsfl = fields.Boolean(required=True)
-    show_nsfw = fields.Boolean(required=True)
+    email_unread = fields.Boolean(required=True, metadata={"description": "Receive email about missed notifications (if set up by local admin)"})
+    federate_votes = fields.Boolean(required=True, metadata={"description": "If false, votes are only counted on local instance instead of federated remotely"})
+    feed_auto_follow = fields.Boolean(required=True, metadata={"description": "Automatically follow communities in a subscribed feed"})
+    feed_auto_leave = fields.Boolean(required=True, metadata={"description": "Automatically leave communities when unsubscribing from a feed. Does not impact communities joined outside of a feed auto-follow."})
+    hide_low_quality = fields.Boolean(required=True, 
+                                      metadata={"description": "Hide posts from communities marked as low-quality by the local instance admin"})
+    indexable = fields.Boolean(required=True, metadata={"description": "If posts can show up in search results"})
+    newsletter = fields.Boolean(required=True, metadata={"description": "Subscribe to the email newsletter that the local instance admin can send"})
+    nsfl_visibility = fields.String(required=True, validate=validate.OneOf(nsfw_visibility_list))
+    nsfw_visibility = fields.String(required=True, validate=validate.OneOf(nsfw_visibility_list))
+    reply_collapse_threshold = fields.Integer(required=True, metadata={"description": "Collapse replies with a score at or below this level"})
+    reply_hide_threshold = fields.Integer(required=True, metadata={"description": "Hide replies with a score at or below this level"})
+    searchable = fields.Boolean(required=True, metadata={"description": "If profile shows up in the user list on the instance"})
+    show_bot_accounts = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
+    show_nsfl = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
+    show_nsfw = fields.Boolean(required=True, metadata={"description": "True for any visibility option other than Hide"})
     show_read_posts = fields.Boolean(required=True)
     show_scores = fields.Boolean(required=True)
 
@@ -951,16 +971,36 @@ class NewUserExtraField(DefaultSchema):
 
 
 class UserSaveSettingsRequest(DefaultSchema):
+    accept_private_messages = fields.String(validate=validate.OneOf(private_message_list),
+                                            metadata={"description": 'Accept private messages from nobody, local users only, "trusted" instances, or any instance'})
     avatar = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     bio = fields.String(metadata={"format": "markdown"})
+    bot = fields.Boolean(metadata={"description": "This user is a bot"})
+    bot_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
+    community_keyword_filter = fields.List(fields.String(), allow_none=True,
+                                           metadata={"description": "Filter out communities with these words in their name. Pass null to remove any filters."})
     cover = fields.String(allow_none=True, metadata={"format": "url", "description": "Pass a null value to remove the image"})
     default_comment_sort_type = fields.String(validate=validate.OneOf(default_comment_sorts_list))
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    email_unread = fields.Boolean(metadata={"description": "Receive email about missed notifications (if set up by local admin)"})
     extra_fields = fields.List(fields.Nested(NewUserExtraField),
                                metadata={"description": "A user can't have more than four total extra fields."})
+    federate_votes = fields.Boolean(metadata={"description": "If false, votes are only counted on local instance instead of federated remotely"})
+    feed_auto_follow = fields.Boolean(metadata={"description": "Automatically follow communities in a subscribed feed"})
+    feed_auto_leave = fields.Boolean(metadata={"description": "Automatically leave communities when unsubscribing from a feed. Does not impact communities joined outside of a feed auto-follow."})
+    hide_low_quality = fields.Boolean(metadata={"description": "Hide posts from communities marked as low-quality by the local instance admin"})
+    indexable = fields.Boolean(metadata={"description": "If posts can show up in search results"})
+    newsletter = fields.Boolean(metadata={"description": "Subscribe to the email newsletter that the local instance admin can send"})
+    nsfl_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list),
+                                    metadata={"description": "Overrides the show_nsfl field if provided"})
+    nsfw_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list),
+                                    metadata={"description": "Overrides the show_nsfw field if provided"})
+    reply_collapse_threshold = fields.Integer(metadata={"description": "Collapse replies with a score at or below this level"})
+    reply_hide_threshold = fields.Integer(metadata={"description": "Hide replies with a score at or below this level"})
     show_nsfw = fields.Boolean()
     show_nsfl = fields.Boolean()
     show_read_posts = fields.Boolean()
+    searchable = fields.Boolean(metadata={"description": "If profile shows up in the user list on the instance"})
 
 
 class UserSaveSettingsResponse(DefaultSchema):

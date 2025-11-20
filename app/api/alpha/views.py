@@ -393,18 +393,36 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                 user_field['label'] = field.label
                 user_field['text'] = field.text
                 extra_fields.append(user_field)
+        
+        visibility_options = ["Show", "Hide", "Blur", "Transparent"]
+        private_message_options = ["None", "Local", "Trusted", "All"]
 
         v6 = {
             "local_user_view": {
                 "local_user": {
                     "show_nsfw": not user.hide_nsfw == 1,
+                    "nsfw_visibility": visibility_options[user.hide_nsfw],
                     "show_nsfl": not user.hide_nsfl == 1,
+                    "nsfl_visibility": visibility_options[user.hide_nsfl],
                     "default_sort_type": user.default_sort.capitalize() if user.default_comment_sort else 'Hot',
                     "default_comment_sort_type": user.default_comment_sort.capitalize() if user.default_comment_sort else 'Hot',
                     "default_listing_type": user.default_filter.capitalize() if user.default_filter else 'Popular',
                     "show_scores": True,
                     "show_bot_accounts": not user.ignore_bots == 1,
-                    "show_read_posts": not user.hide_read_posts == True
+                    "show_read_posts": not user.hide_read_posts == True,
+                    "reply_collapse_threshold": user.reply_collapse_threshold,
+                    "reply_hide_threshold": user.reply_hide_threshold,
+                    "hide_low_quality": user.hide_low_quality,
+                    "community_keyword_filter": user.community_keyword_filter.split(", ") if user.community_keyword_filter else [],
+                    "bot_visibility": visibility_options[user.ignore_bots],
+                    "accept_private_messages": private_message_options[user.accept_private_messages],
+                    "newsletter": user.newsletter,
+                    "email_unread": user.email_unread,
+                    "searchable": user.searchable,
+                    "indexable": user.indexable,
+                    "federate_votes": not user.vote_privately == True,
+                    "feed_auto_follow": user.feed_auto_follow,
+                    "feed_auto_leave": user.feed_auto_leave,
                 },
                 "person": {
                     "id": user.id,
