@@ -685,6 +685,9 @@ class Community(db.Model):
             return instance_role is not None
         else:
             return False
+    
+    def is_admin_or_staff(self, user):
+        return user.is_admin_or_staff()
 
     def user_is_banned(self, user):
         # use communities_banned_from() instead of this method, where possible. Redis caches the result of communities_banned_from()
