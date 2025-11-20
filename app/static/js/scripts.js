@@ -400,12 +400,16 @@ function findOutermostParent(element, className) {
 
 function setupAutoResize(element) {
     const elem = document.getElementById(element);
-    elem.addEventListener("keyup", function(event) {
+
+    const resizeHandler = function(event) {
         const outerWrapper = findOutermostParent(elem, 'downarea');
         elem.style.height = 'auto'; // Reset height to auto to calculate scrollHeight accurately
         elem.style.height = (elem.scrollHeight + 2) + 'px'; // Add 2px to avoid cutting off text
         outerWrapper.style.height = (elem.scrollHeight + 61) + 'px';
-    });
+    };
+
+    elem.addEventListener("keyup", resizeHandler);
+    elem.addEventListener("focus", resizeHandler);
 
 }
 
