@@ -3,7 +3,7 @@ from collections import namedtuple
 from random import randint
 from typing import List
 
-from flask import g, current_app, request, redirect, url_for, flash, abort
+from flask import g, current_app, request, redirect, url_for, flash, abort, make_response
 from markupsafe import Markup
 from flask_babel import _
 from flask_login import current_user
@@ -734,7 +734,7 @@ def show_feed(feed):
             communities_banned_from_list = []
             content_filters = {}
 
-        return render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
+        resp = make_response(render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
                                sort=sort, owner=owner,
                                page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
                                feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
@@ -754,7 +754,11 @@ def show_feed(feed):
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                               )
+                               ))
+        if current_user.is_anonymous:
+            resp.headers.set('Cache-Control', 'public, max-age=30')
+
+        return resp
     else:
         abort(404)
 

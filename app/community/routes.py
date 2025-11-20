@@ -598,7 +598,7 @@ def show_community(community: Community):
     else:
         is_dead = False
 
-    return render_template('community/community.html', community=community, title=community.title,
+    resp = make_response(render_template('community/community.html', community=community, title=community.title,
                            breadcrumbs=breadcrumbs, is_dead=is_dead,
                            is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
                            comments=comments, upcoming_events=upcoming_events, has_events=has_events,
@@ -626,7 +626,11 @@ def show_community(community: Community):
                            inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                            post_layout=post_layout, content_type=content_type, current_app=current_app,
                            user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts)
+                           current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
+    if current_user.is_anonymous:
+        resp.headers.set('Cache-Control', 'public, max-age=30')
+
+    return resp
 
 
 # RSS feed of the community

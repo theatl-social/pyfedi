@@ -139,6 +139,19 @@ def after_request(response):
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
                 response.headers['X-Frame-Options'] = 'DENY'
+
+    # Caching headers for html pages - pages are automatically translated and should not be cached while logged in.
+    if response.content_type.startswith('text/html'):
+        if current_user.is_authenticated:
+            response.headers.setdefault(
+                'Cache-Control',
+                'no-store, no-cache, must-revalidate, private'
+            )
+            response.headers.setdefault('Vary', 'Accept-Language, Cookie')
+        else:
+            response.headers.setdefault('Vary', 'Accept-Language')
+            if 'Set-Cookie' in response.headers:
+                del response.headers['Set-Cookie']
     return response
 
 
