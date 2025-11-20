@@ -3,6 +3,7 @@
 from datetime import datetime
 import os
 
+import flask
 from flask_babel import get_locale
 from flask_login import current_user
 from flask_wtf.csrf import generate_csrf
@@ -149,9 +150,13 @@ def after_request(response):
             )
             response.headers.setdefault('Vary', 'Accept-Language, Cookie')
         else:
-            response.headers.setdefault('Vary', 'Accept-Language')
-            if 'Set-Cookie' in response.headers:
-                del response.headers['Set-Cookie']
+            response.headers.setdefault('Vary', 'Accept-Language, Cookie')
+            # Prevent Flask from setting session cookie for anonymous users
+            # This must be done by marking session as not modified, since Flask sets
+            # the cookie after after_request handlers run
+            if 'session' in dir(flask):
+                from flask import session
+                session.modified = False
     return response
 
 
