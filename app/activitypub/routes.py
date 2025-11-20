@@ -1692,7 +1692,7 @@ def process_delete_request(request_json, store_ap_json):
                 user_ap_id = request_json['actor']
                 user = session.query(User).filter_by(ap_profile_id=user_ap_id.lower()).first()
                 if user:
-                    if 'removeData' in request_json and request_json['removeData'] is True:
+                    if ('removeData' in request_json and request_json['removeData'] is True) or user.created_very_recently():
                         user.purge_content()
                     user.deleted = True
                     user.deleted_by = user.id
