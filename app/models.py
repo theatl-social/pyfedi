@@ -540,6 +540,7 @@ class Community(db.Model):
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     average_rating = db.Column(db.Float)
+    total_ratings = db.Column(db.Integer)
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
 
@@ -830,6 +831,27 @@ class Community(db.Model):
                 })
         
         return result
+    
+    @cache.memoize(timeout=300)
+    def can_rate(self, user):
+        if isinstance(user, int):
+            user = User.query.get(user)
+        
+        if not user:
+            return [False, "no user provided"]
+
+        # Returns [boolean, message] if the provided user is able to rate the community
+        if user.is_admin_or_staff():
+            return [True, ""]
+        
+        if not user.subscribed(self.id):
+            return [False, "community members only"]
+        else:
+            cm = CommunityMember.query.filter(CommunityMember.user_id == user.id, CommunityMember.community_id == self.id).first()
+            if cm and cm.created_at + timedelta(days=1) > utcnow():
+                return [False, "not subscribed for long enough"]
+            
+        return [True, ""]
 
     def rate(self, user, rating):
         db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),

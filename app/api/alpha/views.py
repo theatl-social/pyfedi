@@ -9,7 +9,7 @@ from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
-    UserNote, Poll, Event, PollChoice
+    UserNote, Poll, Event, PollChoice, Rating
 from app.post.util import tags_to_string, flair_to_string
 from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
@@ -502,6 +502,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         if counts['total_subscriptions_count'] == None or counts['total_subscriptions_count'] == 0:
             counts['total_subscriptions_count'] = counts['subscriptions_count']
         counts.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z'})
+        counts.update({'total_ratings': community.total_ratings})
         
         # Return zero if stats are None
         stats_list = ['active_daily', 'active_weekly', 'active_monthly', 'active_6monthly']
@@ -526,7 +527,6 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
               'blocked': blocked, 'activity_alert': activity_alert, 'counts': counts,}
         
         comm_flair = []
-        
         flair_list = get_comm_flair_list(community)
         for flair in flair_list:
             comm_flair.append(flair_view(flair))
@@ -540,8 +540,14 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
         modlist = cached_modlist_for_community(community.id)
 
         v3 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
-              'moderators': modlist,
-              'discussion_languages': []}
+              'moderators': modlist, 'discussion_languages': []}
+        
+        if user_id:
+            # Fetch user info for ratings
+            v3['can_rate'] = community.can_rate(user_id)[0]
+            my_rating = Rating.query.filter(Rating.user_id == user_id, Rating.community_id == community.id).first()
+            v3['my_rating'] = my_rating.rating
+        
         return v3
 
     # Variant 4 - models/community/community_response.dart - /community/follow api endpoint

@@ -596,17 +596,19 @@ def rate_community(community_id: int, rating: int, src, auth=None):
         user = current_user
 
     community = db.session.query(Community).filter_by(id=community_id).one()
+    can_rate = community.can_rate(user)
 
-    if community_membership(user, community) >= SUBSCRIPTION_MEMBER or user.is_admin_or_staff():
-
-        if not user.is_admin_or_staff():
-            cm = CommunityMember.query.filter(CommunityMember.user_id == user.id, CommunityMember.community_id == community_id).first()
-            if cm and cm.created_at + timedelta(days=1) > utcnow():
-                raise Exception('wait_one_day')
-
+    if can_rate[0]:
         community.rate(user, rating)
-
         task_selector('rate_community', user_id=user.id, community_id=community_id, rating=rating)
+        existing_rating = db.session.query(Rating).filter_by(community_id=community_id, user_id=user.id)
 
+        if not existing_rating:
+            if rating is not None:
+                community.total_ratings += 1
+            else:
+                community.total_ratings -= 1
+        
+            db.session.commit()
     else:
-        raise Exception('community_members_only')
+        raise Exception(can_rate[1])
