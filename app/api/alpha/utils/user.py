@@ -307,12 +307,28 @@ def put_user_subscribe(auth, data):
 def put_user_save_user_settings(auth, data):
     user: User = authorise_api_user(auth, return_type='model')
     show_nsfw = data['show_nsfw'] if 'show_nsfw' in data else None
+    nsfw_visibility = data['nsfw_visibility'] if 'nsfw_visibility' in data else None
     show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
+    nsfl_visibility = data['nsfl_visibility'] if 'nsfl_visibility' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
     default_sort = data['default_sort_type'] if 'default_sort' in data else None
     default_comment_sort = data['default_comment_sort_type'] if 'default_comment_sort' in data else None
     extra_fields = data['extra_fields'] if 'extra_fields' in data else None
+    reply_collapse_threshold = data['reply_collapse_threshold'] if 'reply_collapse_threshold' in data else None
+    reply_hide_threshold = data['reply_hide_threshold'] if 'reply_hide_threshold' in data else None
+    hide_low_quality = data['hide_low_quality'] if 'hide_low_quality' in data else None
+    community_keyword_filter = data['community_keyword_filter'] if 'community_keyword_filter' in data else []
+    bot_visibility = data['bot_visibility'] if 'bot_visibility' in data else None
+    accept_private_messages = data['accept_private_messages'] if 'accept_private_messages' in data else None
+    newsletter = data['newsletter'] if 'newsletter' in data else None
+    email_unread = data['email_unread'] if 'email_unread' in data else None
+    searchable = data['searchable'] if 'searchable' in data else None
+    indexable = data['indexable'] if 'indexable' in data else None
+    federate_votes = data['federate_votes'] if 'federate_votes' in data else None
+    feed_auto_follow = data['feed_auto_follow'] if 'feed_auto_follow' in data else None
+    feed_auto_leave = data['feed_auto_leave'] if 'feed_auto_leave' in data else None
+    bot = data['bot'] if 'bot' in data else None
 
     if "avatar" in data:
         if not data["avatar"]:
@@ -340,19 +356,49 @@ def put_user_save_user_settings(auth, data):
         cover = None
         remove_cover = False
 
-    # english is fun, so lets do the reversing and update the user settings
-    if show_nsfw == True:
-        user.hide_nsfw = 0
-    elif show_nsfw == False:
-        user.hide_nsfw = 1
-    if show_nsfl == True:
-        user.hide_nsfl = 0
-    elif show_nsfl == False:
-        user.hide_nsfl = 1
+    if nsfw_visibility:
+        if nsfw_visibility == "Show":
+            user.hide_nsfw = 0
+        elif nsfw_visibility == "Hide":
+            user.hide_nsfw = 1
+        elif nsfw_visibility == "Blur":
+            user.hide_nsfw = 2
+        elif nsfw_visibility == "Transparent":
+            user.hide_nsfw = 3
+    else:
+        if show_nsfw == True:
+                user.hide_nsfw = 0
+        elif show_nsfw == False:
+            user.hide_nsfw = 1
+    
+    if nsfl_visibility:
+        if nsfl_visibility == "Show":
+            user.hide_nsfl = 0
+        elif nsfl_visibility == "Hide":
+            user.hide_nsfl = 1
+        elif nsfl_visibility == "Blur":
+            user.hide_nsfl = 2
+        elif nsfl_visibility == "Transparent":
+            user.hide_nsfl = 3
+    else:
+        if show_nsfl == True:
+            user.hide_nsfl = 0
+        elif show_nsfl == False:
+            user.hide_nsfl = 1
 
     if user_in_restricted_country(user):
         user.hide_nsfw = 1  # Hide nsfw
         user.hide_nsfl = 1
+    
+    if bot_visibility:
+        if bot_visibility == "Show":
+            user.ignore_bots = 0
+        elif bot_visibility == "Hide":
+            user.ignore_bots = 1
+        elif bot_visibility == "Blur":
+            user.ignore_bots = 2
+        elif bot_visibility == "Transparent":
+            user.ignore_bots = 3
 
     if show_read_posts == True:
         user.hide_read_posts = False
@@ -456,6 +502,72 @@ def put_user_save_user_settings(auth, data):
                 user.extra_fields.append(field)
         elif current_num_fields > 4:
             raise Exception("Cannot have more than four extra fields")
+    
+    if reply_collapse_threshold:
+        user.reply_collapse_threshold = reply_collapse_threshold
+    
+    if reply_hide_threshold:
+        user.reply_hide_threshold = reply_hide_threshold
+    
+    if hide_low_quality == True:
+        user.hide_low_quality = True
+    elif hide_low_quality == False:
+        user.hide_low_quality = False
+    
+    if community_keyword_filter:
+        user.community_keyword_filter = ", ".join(community_keyword_filter)
+    elif community_keyword_filter is None:
+        user.community_keyword_filter = ""
+    
+    if accept_private_messages:
+        if accept_private_messages == "None":
+            user.accept_private_messages = 0
+        elif accept_private_messages == "Local":
+            user.accept_private_messages = 1
+        elif accept_private_messages == "Trusted":
+            user.accept_private_messages = 2
+        elif accept_private_messages == "All":
+            user.accept_private_messages = 3
+    
+    if newsletter == True:
+        user.newsletter = True
+    elif newsletter == False:
+        user.newsletter = False
+    
+    if email_unread == True:
+        user.email_unread = True
+    elif email_unread == False:
+        user.email_unread = False
+    
+    if searchable == True:
+        user.searchable = True
+    elif searchable == False:
+        user.searchable = False
+    
+    if indexable == True:
+        user.indexable = True
+    elif indexable == False:
+        user.indexable = False
+    
+    if federate_votes == True:
+        user.vote_privately = False
+    elif federate_votes == False:
+        user.vote_privately = True
+    
+    if feed_auto_follow == True:
+        user.feed_auto_follow = True
+    elif feed_auto_follow == False:
+        user.feed_auto_follow = False
+    
+    if feed_auto_leave == True:
+        user.feed_auto_leave = True
+    elif feed_auto_leave == False:
+        user.feed_auto_leave = False
+    
+    if bot == True:
+        user.bot = True
+    elif bot == False:
+        user.bot = False
 
     # save the change to the db
     db.session.commit()
