@@ -1089,7 +1089,7 @@ def put_alpha_user_subscribe(data):
     return UserSubscribeResponse().load(resp)
 
 
-# not all settings implemented yet, nor all choices for settings (eg. blur nsfw)
+# not all settings implemented yet, nor all choices for settings
 @user_bp.route('/user/save_user_settings', methods=['PUT'])
 @user_bp.doc(summary="Save your user settings")
 @user_bp.arguments(UserSaveSettingsRequest)
