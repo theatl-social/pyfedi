@@ -1999,3 +1999,41 @@ def show_post_ical(post_id: int):
         resp.headers['Cache-Control'] = 'public, max-age=3600'  # cache for 1 hour
         resp.mimetype = 'text/calendar'
         return resp
+
+
+@bp.route('/post/<int:post_id>/check_ai', methods=['POST'])
+def post_check_ai(post_id):
+    post = Post.query.get(post_id)
+    if current_app.config['DETECT_AI_ENDPOINT']:
+        if len(post.body) > 100:
+            is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
+            if is_ai and is_ai.status_code == 200:
+                is_ai_result = is_ai.json()
+                output = ''
+                output += is_ai_result['detection_result'].upper()
+                output += '<br>'
+                output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                return output
+        else:
+            return _('Body text is too short to be sure.')
+    else:
+        return _('Not configured.')
+
+
+@bp.route('/post_reply/<int:post_reply_id>/check_ai', methods=['POST'])
+def post_reply_check_ai(post_reply_id):
+    post_reply = PostReply.query.get(post_reply_id)
+    if current_app.config['DETECT_AI_ENDPOINT']:
+        if len(post_reply.body) > 100:
+            is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post_reply.ap_id}")
+            if is_ai and is_ai.status_code == 200:
+                is_ai_result = is_ai.json()
+                output = ''
+                output += is_ai_result['detection_result'].upper()
+                output += '<br>'
+                output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                return output
+        else:
+            return _('Body text is too short to be sure.')
+    else:
+        return _('Not configured.')

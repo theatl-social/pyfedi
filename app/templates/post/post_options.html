@@ -31,6 +31,10 @@
             <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
+            <li><a href="#" hx-post="{{ url_for('post.post_check_ai', post_id=post.id) }}"
+                   hx-trigger="click throttle:1s" hx-target=".post_title" hx-swap="afterend"
+                   style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-bot-account"></span>
+                {{ _('Written by AI?') }}</a></li>
     {% endif -%}
     {% if existing_bookmark -%}
         <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Remove bookmark') }}"
