@@ -13,6 +13,9 @@ User-Agent: *
   Disallow: /static/media/users/
   Disallow: /post/*/options
 
+User-agent: Applebot
+Disallow: /
+
 User-agent: GPTBot
 Disallow: /
 
