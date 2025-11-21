@@ -121,8 +121,9 @@ def after_request(response):
     # Don't set cookies for static resources or ActivityPub responses to make them cachable
     if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/') or response.content_type == 'application/activity+json':
         # Remove session cookies that mess up caching
-        if 'Set-Cookie' in response.headers:
-            del response.headers['Set-Cookie']
+        if 'session' in dir(flask):
+            from flask import session
+            session.modified = False
         # Cache headers for static resources
         if request.path.startswith('/static/') or request.path.startswith('/bootstrap/static/'):
             response.headers['Cache-Control'] = 'public, max-age=31536000'  # 1 year
@@ -135,7 +136,8 @@ def after_request(response):
                 is_htmx = request.headers.get('HX-Request') == 'true'
                 if not is_htmx:
                     # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
-                    response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
+                    if current_user.is_authenticated:
+                        response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
             response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
