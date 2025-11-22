@@ -1466,5 +1466,5 @@ class PollVoteRequest(DefaultSchema):
     choice_id = fields.List(fields.Integer(), required=True, metadata={"description": "Must have a length of 1 for a poll in single vote mode."})
 
 
-class PollVoteResponse(PostView):
-    pass
+class PollVoteResponse(DefaultSchema):
+    post_view = fields.Nested(PostView, required=True)
