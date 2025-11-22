@@ -32,7 +32,7 @@
     <hr>
 {% endif -%}
 {% if current_user.is_anonymous or not something_displayed -%}
-    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities/local">{{ _('Local communities') }}</a>
+    <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities?home_select=local">{{ _('Local communities') }}</a>
     <a class="dropdown-item{% if active_child == 'list_communities' %} active{% endif %}" href="/communities">{{ _('All communities') }}</a>
     <a class="dropdown-item{% if active_child == 'public_feeds' %} active{% endif %}" href="/feeds">{{ _('Feeds') }}</a>
 {% endif %}

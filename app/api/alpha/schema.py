@@ -55,15 +55,8 @@ post_sort_list = [
     "Active",
 ]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "New", "Active"]
-listing_type_list = [
-    "All",
-    "Local",
-    "Subscribed",
-    "Popular",
-    "Moderating",
-    "ModeratorView",
-]
+community_sort_list = ["Hot", "Top", "TopAll", "New", "Active"]
+listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
 community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]

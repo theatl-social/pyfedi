@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-11-05 15:45+1300\n"
-"PO-Revision-Date: 2025-09-01 06:34+0000\n"
+"PO-Revision-Date: 2025-11-11 16:59+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
+"Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ja/>\n"
 "Language: ja\n"
-"Language-Team: Japanese <http://translate.piefed.social/projects/piefed"
-"/main-web-app/ja/>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -2036,7 +2036,7 @@ msgstr "URL"
 
 #: app/community/forms.py:224
 msgid "Alt text (for links to images)"
-msgstr ""
+msgstr "代替テキスト(リンクのイメージ)"
 
 #: app/community/forms.py:228 app/community/forms.py:232
 #: app/community/forms.py:340 app/community/forms.py:344
@@ -2071,9 +2071,8 @@ msgid "End"
 msgstr "終了日時"
 
 #: app/community/forms.py:320
-#, fuzzy
 msgid "Banner"
-msgstr "アクセス禁止(BAN)"
+msgstr "バナー"
 
 #: app/community/forms.py:321
 msgid "More information link"
@@ -2626,9 +2625,8 @@ msgid "This function is only for admins"
 msgstr ""
 
 #: app/community/routes.py:2515
-#, fuzzy
 msgid "This is a local community"
-msgstr "ローカルコミュニティの作成"
+msgstr "これはローカルコミュニティです"
 
 #: app/dev/forms.py:12
 msgid "Populate Communities"
@@ -3381,9 +3379,8 @@ msgstr "理性的な議論ツール"
 #: app/templates/_insert_image_dialog.html:4
 #: app/templates/post/add_reply_inline.html:34 app/templates/post/post.html:116
 #: app/templates/post/post_edit.html:175
-#, fuzzy
 msgid "Insert image"
-msgstr "バナー画像"
+msgstr "画像の追加"
 
 #: app/templates/_insert_image_dialog.html:5
 #: app/templates/auth/instance_chooser.html:137 app/templates/base.html:297
@@ -3393,9 +3390,8 @@ msgstr "閉じる"
 #: app/templates/_insert_image_dialog.html:10
 #: app/templates/user/file_upload.html:16 app/templates/user/files.html:20
 #: app/user/forms.py:246
-#, fuzzy
 msgid "Upload"
-msgstr "賛成済み"
+msgstr "アップロード"
 
 #: app/templates/_macros.html:11 app/templates/_macros.html:18
 #: app/templates/community/community_wiki_revisions.html:31
@@ -3525,7 +3521,7 @@ msgstr "%(flair_name)s のみを表示"
 #: app/templates/_side_pane.html:54 app/templates/feed/show_feed.html:177
 #: app/templates/topic/show_topic.html:110
 msgid "Explore Tag Cloud"
-msgstr ""
+msgstr "タグクラウドを見る"
 
 #: app/templates/_side_pane.html:66 app/templates/index.html:90
 #, fuzzy
@@ -4135,14 +4131,12 @@ msgid "Any"
 msgstr "全て"
 
 #: app/templates/list_communities.html:56
-#, fuzzy
 msgid "Remote"
-msgstr "通報"
+msgstr "リモート"
 
 #: app/templates/list_communities.html:63
-#, fuzzy
 msgid "Subscription Status"
-msgstr "連合状態"
+msgstr "参加状態"
 
 #: app/templates/list_communities.html:67
 #, fuzzy
@@ -4150,19 +4144,16 @@ msgid "Filter based on community subscription status"
 msgstr "コミュニティ作成日でソート"
 
 #: app/templates/list_communities.html:75
-#, fuzzy
 msgid "Not Subscribed"
-msgstr "購読解除"
+msgstr "不参加"
 
 #: app/templates/list_communities.html:88
-#, fuzzy
 msgid "Clear Filters"
 msgstr "フィルターをクリア"
 
 #: app/templates/list_communities.html:98
-#, fuzzy
 msgid "Advanced Search"
-msgstr "ユーザーを追加"
+msgstr "詳細検索"
 
 #: app/templates/list_communities.html:111
 msgid "Choose a topic to filter communities by"
@@ -4189,13 +4180,12 @@ msgid "No"
 msgstr "No"
 
 #: app/templates/list_communities.html:179
-#, fuzzy
 msgid "Home instance"
-msgstr "このインスタンスのみ"
+msgstr "ホームインスタンス"
 
 #: app/templates/list_communities.html:183
 msgid "e.g. piefed.social"
-msgstr ""
+msgstr "例：piefed.social"
 
 #: app/templates/admin/communities.html:39
 #: app/templates/list_communities.html:209
@@ -7578,7 +7568,6 @@ msgstr "フォローしたいインスタンスを選択してください。そ
 #: app/templates/user/file_upload.html:15 app/templates/user/files.html:17
 #: app/templates/user/files.html:21 app/templates/user/show_profile.html:306
 #: app/user/routes.py:2038
-#, fuzzy
 msgid "Files"
 msgstr "ファイル"
 
@@ -7607,7 +7596,7 @@ msgstr ""
 #: app/templates/user/files.html:24
 #, python-format
 msgid "You are using %(size)s out of a quota of %(max_size)s"
-msgstr ""
+msgstr "現在 %(size)s 使用しています、最大 %(max_size)s までアップロード可能です"
 
 #: app/templates/user/files.html:43
 #, fuzzy
@@ -9148,4 +9137,3 @@ msgstr "寄付がキャンセルされました。"
 
 #~ msgid "Yes - thumbnails only"
 #~ msgstr "適用：サムネイルで表示"
-

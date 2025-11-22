@@ -2932,6 +2932,11 @@ form h5 {
   padding-right: 3px;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .render_username a .gif {
+    display: none !important;
+  }
+}
 .accordion-button {
   padding: 7px 12px;
 }

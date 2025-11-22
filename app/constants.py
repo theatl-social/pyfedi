@@ -1,4 +1,4 @@
-VERSION = "1.3.0"
+VERSION = '1.3.3'
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -62,9 +62,7 @@ NOTIF_REMINDER = 11  # A reminder that the user set before
 NOTIF_REPORT = 20  # a user, post, comment, or community have been reported
 
 # --- admin level ---
-NOTIF_REPORT_ESCALATION = (
-    40  # a USER, POST, or COMMENT report has been escalated from mods to admins
-)
+NOTIF_REPORT_ESCALATION = 40  # a USER, POST, or COMMENT report has been escalated from mods to admins
 NOTIF_REGISTRATION = 41  # a new registration / sign up has been generated
 
 # --model/db default--
@@ -88,36 +86,36 @@ SRC_PLG = 5  # plugins
 
 APLOG_IN = True
 
-APLOG_MONITOR = (True, "Debug this")
+APLOG_MONITOR = (True, 'Debug this')
 
-APLOG_SUCCESS = (True, "success")
-APLOG_FAILURE = (True, "failure")
-APLOG_IGNORED = (True, "ignored")
-APLOG_PROCESSING = (True, "processing")
+APLOG_SUCCESS = (True, 'success')
+APLOG_FAILURE = (True, 'failure')
+APLOG_IGNORED = (True, 'ignored')
+APLOG_PROCESSING = (True, 'processing')
 
-APLOG_NOTYPE = (True, "Unknown")
-APLOG_DUPLICATE = (True, "Duplicate")
-APLOG_FOLLOW = (True, "Follow")
-APLOG_ACCEPT = (True, "Accept")
-APLOG_DELETE = (True, "Delete")
-APLOG_CHATMESSAGE = (True, "Create ChatMessage")
-APLOG_CREATE = (True, "Create")
-APLOG_UPDATE = (True, "Update")
-APLOG_LIKE = (True, "Like")
-APLOG_DISLIKE = (True, "Dislike")
-APLOG_REPORT = (True, "Report")
-APLOG_USERBAN = (True, "User Ban")
-APLOG_LOCK = (True, "Post Lock")
+APLOG_NOTYPE = (True, 'Unknown')
+APLOG_DUPLICATE = (True, 'Duplicate')
+APLOG_FOLLOW = (True, 'Follow')
+APLOG_ACCEPT = (True, 'Accept')
+APLOG_DELETE = (True, 'Delete')
+APLOG_CHATMESSAGE = (True, 'Create ChatMessage')
+APLOG_CREATE = (True, 'Create')
+APLOG_UPDATE = (True, 'Update')
+APLOG_LIKE = (True, 'Like')
+APLOG_DISLIKE = (True, 'Dislike')
+APLOG_REPORT = (True, 'Report')
+APLOG_USERBAN = (True, 'User Ban')
+APLOG_LOCK = (True, 'Post Lock')
 
-APLOG_UNDO_FOLLOW = (True, "Undo Follow")
-APLOG_UNDO_DELETE = (True, "Undo Delete")
-APLOG_UNDO_VOTE = (True, "Undo Vote")
-APLOG_UNDO_USERBAN = (True, "Undo User Ban")
+APLOG_UNDO_FOLLOW = (True, 'Undo Follow')
+APLOG_UNDO_DELETE = (True, 'Undo Delete')
+APLOG_UNDO_VOTE = (True, 'Undo Vote')
+APLOG_UNDO_USERBAN = (True, 'Undo User Ban')
 
-APLOG_ADD = (True, "Add")
-APLOG_REMOVE = (True, "Remove")
+APLOG_ADD = (True, 'Add')
+APLOG_REMOVE = (True, 'Remove')
 
-APLOG_ANNOUNCE = (True, "Announce")
-APLOG_PT_VIEW = (True, "PeerTube View")
+APLOG_ANNOUNCE = (True, 'Announce')
+APLOG_PT_VIEW = (True, 'PeerTube View')
 
 REQUEST_TIMEOUT = 2

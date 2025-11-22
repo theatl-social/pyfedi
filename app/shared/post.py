@@ -962,7 +962,7 @@ def lock_post(post_id: int, locked, src, auth=None):
         comments_enabled = True
         modlog_type = "unlock_post"
 
-    if post.community.is_moderator(user) or post.community.is_instance_admin(user):
+    if post.community.is_moderator(user) or post.community.is_admin_or_staff(user):
         post.comments_enabled = comments_enabled
         db.session.commit()
         add_to_modlog(
