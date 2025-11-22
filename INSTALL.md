@@ -450,6 +450,8 @@ Inspect log files at:
 You need a reverse proxy that sends all traffic to port 5000. Something like:
 
 ```
+proxy_cache_path /dev/shm/nginx levels=1:2 keys_zone=mycache:20m max_size=1g inactive=100m;
+
 upstream app_server {
     # fail_timeout=0 means we always retry an upstream even if it failed
     # to return a good HTTP response
@@ -479,6 +481,14 @@ server {
         proxy_set_header Connection "";
         proxy_pass http://app_server;
         ssi off;
+        
+        # Enable caching
+        proxy_cache mycache;
+        proxy_cache_bypass   $http_cache_control;
+        proxy_no_cache       $http_cache_control;
+
+        proxy_cache_valid any 0;    # default: don't override app TTLs
+
     }
 
     # Serve static files directly with nginx
@@ -493,6 +503,8 @@ server {
 
 **_The above is not a complete configuration_** - you will want to add more settings for SSL, etc. See also
 https://codeberg.org/rimu/pyfedi/issues/136#issuecomment-1726739
+
+Change the `proxy_cache_path` to `/var/cache/nginx` if you don't have much RAM.
 
 Recommended anti-scraper (they use fake user agent strings) config:
 
@@ -567,14 +579,13 @@ In your `.env` you need to set the AWS region you're using for SES. Something li
 
 #### CDN
 
-A CDN like Cloudflare is recommended for instances with more than a handful of users. [Recommended caching settings](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
+A CDN like Cloudflare is helpful for instances with more than a handful of users.
 
 Some Cloudflare tips:
 
 - Ensure you exclude the URL "/inbox" from the Cloudflare WAF [as shown here](https://join.piefed.social/wp-content/uploads/2024/10/disable-waf-on-inbox.png). If you don't do this there will be federation issues.
 - Under Speed -> Optimization -> Content Optimization, turn everything off especially "Rocket Loader" to avoid JavaScript problems.
 - Under Speed -> Optimization -> Protocol Optimization, turn off HTTP/3 to avoid problems with Firefox.
-- Paying careful attention to the caching settings can sharply reduce the load on your server - see [these Cloudflare caching tips](https://join.piefed.social/2024/02/20/how-much-difference-does-a-cdn-make-to-a-fediverse-instance/).
 - Cloudflare's bot protection / AI scraper blocker tends to play havoc with the API, you'll have a much better time if you turn this off entirely.
 
 PieFed has the capability to automatically remove file copies from the Cloudflare cache whenever
@@ -582,6 +593,14 @@ PieFed has the capability to automatically remove file copies from the Cloudflar
 
 - `CLOUDFLARE_API_TOKEN` - go to https://dash.cloudflare.com/profile/api-tokens and create a "Zone.Cache Purge" token.
 - `CLOUDFLARE_ZONE_ID` - this can be found in the right hand column of your Cloudflare dashboard in the API section.
+
+If you do NOT use a CDN that does compression, add this to your nginx configuration:
+
+```
+    gzip on;
+    gzip_types text/css application/javascript image/svg+xml;
+    gzip_vary on;
+```
 
 #### S3 (object storage)
 
