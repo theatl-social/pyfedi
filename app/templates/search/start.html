@@ -95,7 +95,7 @@
                             </tr>
                         </table>
                         {% if default_user_add_remote or (is_staff or is_admin) %}            
-                            <h6 class="mt-5">{{ _('Trying to add a communitiy or post from another instance?') }} </h6>
+                            <h6 class="mt-5">{{ _('Trying to add a community or post from another instance?') }} </h6>
                             <p>{{ _('In many types of federated platforms you can put a URL of a post or community into the search in order to add it to your local instance. In PieFed the search is just for searching.') }}</p>
                             <p><a href="{{ url_for('community.add_remote') }}" class="btn btn-primary">{{ _('Add remote community') }}</a></p>
                             <p><a href="{{ url_for('search.retrieve_remote_post') }}" class="btn btn-primary">{{ _('Retrieve remote post') }}</a></p>
