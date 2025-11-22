@@ -13,6 +13,9 @@ User-Agent: *
   Disallow: /static/media/users/
   Disallow: /post/*/options
 
+User-agent: Applebot
+Disallow: /
+
 User-agent: GPTBot
 Disallow: /
 
@@ -56,6 +59,21 @@ User-Agent: ImagesiftBot
 Crawl-delay: 5
 
 User-Agent: VelenPublicWebCrawler
+Disallow: /
+
+User-agent: Baiduspider
+User-agent: 360Spider
+User-agent: Yisouspider
+User-agent: PetalBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Sogou web spider
+Disallow: /
+
+User-agent: Sogou inst spider
 Disallow: /
 
 User-Agent: PerplexityBot
