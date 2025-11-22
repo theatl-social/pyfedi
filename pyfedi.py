@@ -145,7 +145,7 @@ def after_request(response):
 
     # Caching headers for html pages - pages are automatically translated and should not be cached while logged in.
     if response.content_type.startswith('text/html'):
-        if current_user.is_authenticated or request.path.startswith('/auth/'):
+        if current_user.is_authenticated or request.path.startswith('/auth/') or "api/alpha/swagger" in request.path:
             response.headers.setdefault(
                 'Cache-Control',
                 'no-store, no-cache, must-revalidate, private'
