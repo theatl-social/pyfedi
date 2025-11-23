@@ -210,7 +210,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if search_type == 'Url':
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
         else:
-            posts = posts.filter(Post.title.ilike(f"%{query}%"))
+            posts = posts.search(query, sort=sort == 'Relevance')
 
     if user_id:
         if liked_only:
@@ -223,7 +223,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         else:
             u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
                                           {"user_id": user_id}).scalars())
-            if user.hide_read_posts:
+            if user.hide_read_posts and not query:
                 # Alias the read_posts table
                 rp = read_posts.alias()
 
@@ -288,6 +288,8 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         posts = posts.order_by(desc(Post.last_active))
     elif sort == "Old":
         posts = posts.order_by(asc(Post.posted_at))
+    elif sort == "Relevance":
+        pass    # sorting by relevance is already done by posts = posts.search(query, sort=True)
 
     posts = posts.paginate(page=page, per_page=limit, error_out=False)
 
