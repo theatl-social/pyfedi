@@ -58,9 +58,9 @@ def get_reply_list(auth, data, user_details=None):
     
     if query:
         if not replies:
-            replies = PostReply.query.search(query)
+            replies = PostReply.query.search(query, sort=sort == 'Relevance')
         else:
-            replies = replies.search(query)
+            replies = replies.search(query, sort=sort == 'Relevance')
 
     # PERSON_ID
     add_creator_in_view = True
