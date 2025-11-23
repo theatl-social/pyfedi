@@ -1958,7 +1958,7 @@ class Post(db.Model):
             db.session.commit()
 
             # check new accounts to see if their comments are AI generated
-            if current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(post.body) > 20:
+            if current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(post.body) > 250:
                 from app.utils import get_request, notify_admin
                 is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
                 if is_ai and is_ai.status_code == 200:
@@ -2566,7 +2566,7 @@ class PostReply(db.Model):
                             }
             notify_admin('Used em-dash in comment - likely AI', f'/u/{user.link()}', 1,
                          NOTIF_REPORT, 'user_reported', targets_data)
-        elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) > 20:
+        elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) >= 250:
             # Use API to check new accounts to see if their comments are AI generated
             from app.utils import get_request, notify_admin
             is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={reply.ap_id}")
