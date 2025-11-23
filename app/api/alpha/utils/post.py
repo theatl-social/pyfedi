@@ -1102,4 +1102,4 @@ def post_poll_vote(auth, data):
 
     vote_for_poll(post_id, choice_id, SRC_API, auth=auth)
 
-    return post_view(post=post_id, variant=2, stub=False, user_id=user_id)
+    return {"post_view": post_view(post=post_id, variant=2, stub=False, user_id=user_id)}
