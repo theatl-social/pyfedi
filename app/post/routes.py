@@ -2015,10 +2015,15 @@ def post_check_ai(post_id):
             is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
             if is_ai and is_ai.status_code == 200:
                 is_ai_result = is_ai.json()
-                output = ''
+                if is_ai_result['detection_result'] == 'ai':
+                    result_type = 'alert-warning'
+                else:
+                    result_type = 'alert-success'
+                output = f'<div class="w-100 alert {result_type}">'
                 output += is_ai_result['detection_result'].upper()
                 output += '<br>'
                 output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                output += '</div>'
                 return output
         else:
             return _('Body text is too short to be sure.')
@@ -2034,10 +2039,15 @@ def post_reply_check_ai(post_reply_id):
             is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post_reply.ap_id}")
             if is_ai and is_ai.status_code == 200:
                 is_ai_result = is_ai.json()
-                output = ''
+                if is_ai_result['detection_result'] == 'ai':
+                    result_type = 'alert-warning'
+                else:
+                    result_type = 'alert-success'
+                output = f'<div class="w-100 mb-0 mt-2 alert {result_type}">'
                 output += is_ai_result['detection_result'].upper()
                 output += '<br>'
                 output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                output += '</div>'
                 return output
         else:
             return _('Body text is too short to be sure.')

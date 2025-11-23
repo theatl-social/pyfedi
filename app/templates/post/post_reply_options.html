@@ -77,10 +77,12 @@
             <li><a href="#" data-url="{{ url_for('post.post_reply_lock', post_id=post_reply.post_id, post_reply_id=post_reply.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
                 {{ _('Unlock') }}</a></li>
         {% endif -%}
+        {% if len(post_reply.body) >= 100 -%}
         <li><a href="#" hx-post="{{ url_for('post.post_reply_check_ai', post_reply_id=post_reply.id) }}"
-                   hx-trigger="click throttle:1s" hx-target="closest .comment_actions" hx-swap="beforebegin"
+                   hx-trigger="click throttle:1s" hx-target="#post_reply_ai_check_{{ post_reply.id }}"
                    style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-bot-account"></span>
                 {{ _('Written by AI?') }}</a></li>
+        {% endif -%}
     <li><a href="{{ url_for('post.post_reply_view_voting_activity', comment_id=post_reply.id) }}" class="dropdown-item no-underline" rel="nofollow"><span class="fe fe-sticky-left"></span>
                 {{ _('View Voting Activity') }}</a></li>
     {% endif -%}
