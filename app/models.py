@@ -2551,8 +2551,23 @@ class PostReply(db.Model):
         session.execute(text('UPDATE "site" SET last_active = NOW()'))
         session.commit()
 
-        # check new accounts to see if their comments are AI generated
-        if current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) > 20:
+        # LLM Detection
+        if reply.body and '—' in reply.body and user.created_very_recently():
+            # usage of em-dash is highly suspect.
+            from app.utils import notify_admin
+            # notify admin
+            targets_data = {'gen': '0',
+                            'suspect_user_id': user.id,
+                            'suspect_user_user_name': user.ap_id if user.ap_id else user.user_name,
+                            'source_instance_id': 1,
+                            'source_instance_domain': '',
+                            'reporter_id': 1,
+                            'reporter_user_name': 'automated'
+                            }
+            notify_admin('Used em-dash in comment - likely AI', f'/u/{user.link()}', 1,
+                         NOTIF_REPORT, 'user_reported', targets_data)
+        elif current_app.config['DETECT_AI_ENDPOINT'] and user.created_very_recently() and len(reply.body) > 20:
+            # Use API to check new accounts to see if their comments are AI generated
             from app.utils import get_request, notify_admin
             is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={reply.ap_id}")
             if is_ai and is_ai.status_code == 200:
