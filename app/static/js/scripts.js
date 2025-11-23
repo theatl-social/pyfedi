@@ -348,14 +348,16 @@ function setupLightDark() {
 
     const showActiveTheme = (theme) => {
         if (theme === 'dark') {
-            elem.setAttribute('aria-label', 'TEXT 1');
-            elem.setAttribute('title', 'TEXT 2');
+            elem.setAttribute('aria-label', 'Light mode');
+            elem.setAttribute('title', 'Light mode');
+            elem.setAttribute('data-bs-original-title', 'Light mode');
             elem.setAttribute('data-bs-theme-value', 'light');
             icon.classList.remove('fe-moon');
             icon.classList.add('fe-sun');
         } else {
-            elem.setAttribute('aria-label', 'TEXT 3');
-            elem.setAttribute('title', 'TEXT 4');
+            elem.setAttribute('aria-label', 'Dark mode');
+            elem.setAttribute('title', 'Dark mode');
+            elem.setAttribute('data-bs-original-title', 'Dark mode');
             elem.setAttribute('data-bs-theme-value', 'dark');
             icon.classList.remove('fe-sun');
             icon.classList.add('fe-moon');
