@@ -564,7 +564,10 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
             # Fetch user info for ratings
             v3['can_rate'] = community.can_rate(user_id)[0]
             my_rating = Rating.query.filter(Rating.user_id == user_id, Rating.community_id == community.id).first()
-            v3['my_rating'] = my_rating.rating
+            if my_rating:
+                v3['my_rating'] = my_rating.rating
+            else:
+                v3['my_rating'] = None
         
         return v3
 
