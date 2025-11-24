@@ -25,16 +25,16 @@ class TestDudupePostIds(unittest.TestCase):
 
     @patch("app.utils.low_value_reposters")
     def test_regular_cross_posts(self, mock_low_value):
-        """Test cross-posts from regular users - first post wins"""
+        """Test cross-posts from regular users - highest reply count wins"""
         mock_low_value.return_value = set()
 
         params = [
-            (1, [2, 3], 100, 5),  # Original post
-            (2, [1, 3], 101, 10),  # Cross-post 1
-            (3, [1, 2], 102, 15),  # Cross-post 2
+            (1, [2, 3], 100, 5),  # Original post (5 replies)
+            (2, [1, 3], 101, 10),  # Cross-post 1 (10 replies)
+            (3, [1, 2], 102, 15),  # Cross-post 2 (15 replies) - should win
         ]
         result = dedupe_post_ids(params, True)
-        self.assertEqual(result, [1])  # Only first post should remain
+        self.assertEqual(result, [3])  # Post with most replies should remain
 
     @patch("app.utils.low_value_reposters")
     def test_low_value_reposter_cross_posts(self, mock_low_value):
@@ -56,17 +56,17 @@ class TestDudupePostIds(unittest.TestCase):
 
         params = [
             (1, None, 100, 5),  # Regular post, no cross-posts
-            (2, [3, 4], 101, 8),  # Regular user with cross-posts
-            (3, [2, 4], 102, 12),  # Cross-post of above
-            (4, [2, 3], 103, 6),  # Cross-post of above
-            (5, [6, 7], 200, 3),  # Low-value reposter
+            (2, [3, 4], 101, 8),  # Regular user with cross-posts (8 replies)
+            (3, [2, 4], 102, 12),  # Cross-post of above (12 replies) - should win for group
+            (4, [2, 3], 103, 6),  # Cross-post of above (6 replies)
+            (5, [6, 7], 200, 3),  # Low-value reposter (3 replies)
             (6, [5, 7], 201, 20),  # Cross-post 1 (20 replies) - should win
             (7, [5, 6], 202, 15),  # Cross-post 2 (15 replies)
         ]
         result = dedupe_post_ids(params, True)
         self.assertEqual(
-            result, [1, 2, 6]
-        )  # Regular post, first cross-post group, best from low-value group
+            result, [1, 3, 6]
+        )  # Regular post, highest reply count from cross-post group, best from low-value group
 
     @patch("app.utils.low_value_reposters")
     def test_no_cross_posts_found(self, mock_low_value):
@@ -74,11 +74,11 @@ class TestDudupePostIds(unittest.TestCase):
         mock_low_value.return_value = {100}
 
         params = [
-            (1, [99], 100, 5),  # Cross-post ID 99 doesn't exist in params
+            (1, [99], 100, 5),  # Cross-post ID 99 doesn't exist in params - post 1 kept since no valid alternatives
             (2, None, 101, 10),
         ]
         result = dedupe_post_ids(params, True)
-        self.assertEqual(result, [2])  # Only post 2 should remain
+        self.assertEqual(result, [1, 2])  # Both posts should remain since no valid cross-posts found
 
     @patch("app.utils.low_value_reposters")
     def test_priority_prevents_filtering(self, mock_low_value):

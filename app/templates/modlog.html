@@ -5,36 +5,27 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form -%}
 {% from "_macros.html" import render_username -%}
-{% set active_child = "modlog" -%}
+{% set active_child = 'modlog' -%}
 {% from "_macros.html" import render_username %}
+
 {% block extra_css %}
-    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}"
-          type="text/css"
-          rel="stylesheet" />
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
 {% endblock %}
+
 {% block app_content -%}
     <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
-    <h1>{{ _("Moderation log") }}</h1>
+    <h1>{{ _('Moderation log') }}</h1>
     <form method="get" class="mb-3 d-flex gap-3 align-items-center">
         <select name="mod_action" class="form-select">
-            <option value="">{{ _("Type of action") }}</option>
-            <option value="ban_user" {{ 'selected' if mod_action == 'ban_user' }}>{{ _("Ban user") }}
-            </option>
-            <option value="delete_user" {{ 'selected' if mod_action == 'delete_user' }}>{{ _("Delete user") }}
-            </option>
-            <option value="add_mod" {{ 'selected' if mod_action == 'add_mod' }}>{{ _("Add moderator") }}
-            </option>
-            <option value="remove_mod" {{ 'selected' if mod_action == 'remove_mod' }}>{{ _("Remove moderator") }}
-            </option>
-            <option value="delete_post" {{ 'selected' if mod_action == 'delete_post' }}>{{ _("Delete post") }}
-            </option>
-            <option value="delete_post_reply" {{ 'selected' if mod_action == 'delete_post_reply' }}>{{ _("Delete comment") }}
-            </option>
+            <option value="">{{ _('Type of action') }}</option>
+            <option value="ban_user" {{ 'selected' if mod_action == 'ban_user' }}>{{ _('Ban user') }}</option>
+            <option value="delete_user" {{ 'selected' if mod_action == 'delete_user' }}>{{ _('Delete user') }}</option>
+            <option value="add_mod" {{ 'selected' if mod_action == 'add_mod' }}>{{ _('Add moderator') }}</option>
+            <option value="remove_mod" {{ 'selected' if mod_action == 'remove_mod' }}>{{ _('Remove moderator') }}</option>
+            <option value="delete_post" {{ 'selected' if mod_action == 'delete_post' }}>{{ _('Delete post') }}</option>
+            <option value="delete_post_reply" {{ 'selected' if mod_action == 'delete_post_reply' }}>{{ _('Delete comment') }}</option>
         </select>
-        <input type="search"
-               name="suspect_user_name"
-               placeholder="{{ _('user@instance') }}"
-               value="{{ suspect_user_name }}"
+        <input type="search" name="suspect_user_name" placeholder="{{ _('user@instance') }}" value="{{ suspect_user_name }}"
                class="form-control"
                list="suspect_suggestions"
                hx-post="/modlog/search_suggestions"
@@ -44,16 +35,15 @@
                autocomplete="off">
         <datalist id="suspect_suggestions"></datalist>
         <select name="communities" id="communities" class="form-select">
-            <option value="">{{ _("All communities") }}</option>
+            <option value="">{{ _('All communities') }}</option>
             {% for value, label in communities.items() %}
-                <option value="{{ value }}" {% if value == community_id %}selected{% endif %}>{{ label }}</option>
+                <option value="{{ value }}" {% if value == community_id %}selected{% endif %}>
+                    {{ label }}
+                </option>
             {% endfor %}
         </select>
         {% if is_admin %}
-            <input type="search"
-                   name="user_name"
-                   placeholder="{{ _('Moderator user@instance') }}"
-                   value="{{ user_name }}"
+            <input type="search" name="user_name" placeholder="{{ _('Moderator user@instance') }}" value="{{ user_name }}"
                    class="form-control"
                    list="mod_suggestions"
                    hx-post="/modlog/search_suggestions"
@@ -63,72 +53,70 @@
                    autocomplete="off">
             <datalist id="mod_suggestions"></datalist>
         {% endif -%}
-        <input type="submit" name="submit" value="Search" class="btn btn-primary" />
+        <input type="submit" name="submit" value="Search" class="btn btn-primary"/>
     </form>
     <div class="table-responsive-md mt-4">
         {% if modlog_entries.items %}
-            <table class="table table-responsive">
-                <thead>
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th>{{ _('When') }}</th>
+                    <th>{{ _('Moderator') }}</th>
+                    <th>{{ _('Action') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for modlog_entry in modlog_entries.items %}
                     <tr>
-                        <th>{{ _("When") }}</th>
-                        <th>{{ _("Moderator") }}</th>
-                        <th>{{ _("Action") }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for modlog_entry in modlog_entries.items %}
-                        <tr>
-                            <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
-                            <td>
-                                {% if can_see_names %}
-                                    {{ render_username(modlog_entry.author) }}
+                        <td>{{ arrow.get(modlog_entry.created_at).humanize(locale=locale) }}</td>
+                        <td>
+                            {% if can_see_names %}
+                                {{ render_username(modlog_entry.author) if modlog_entry.author else '' }}
+                            {% else %}
+                                {% if modlog_entry.community_id %}
+                                    {{ instances[modlog_entry.community.instance_id] }} mod
                                 {% else %}
-                                    {% if modlog_entry.community_id %}
-                                        {{ instances[modlog_entry.community.instance_id] }} mod
-                                    {% else %}
-                                        {{ instances[modlog_entry.author.instance_id] }} admin
-                                    {% endif %}
+                                    {{ instances[modlog_entry.author.instance_id] if modlog_entry.author else '' }} admin
                                 {% endif %}
-                            </td>
-                            <td>
-                                {{ modlog_entry.action_to_str() }}
-                                {% if modlog_entry.link and modlog_entry.link_text -%}
-                                    <a href="/{{ modlog_entry.get_correct_link() }}">
-                                        {% if modlog_entry.action == 'ban_user' or modlog_entry.action == 'delete_user' -%}
-                                            {{ modlog_entry.link.replace('u/', '') }}
-                                        {% else -%}
-                                            {{ modlog_entry.link_text }}
-                                        {% endif -%}
-                                    </a>
-                                {% elif modlog_entry.link_text -%}
-                                    {{ modlog_entry.link_text }}
-                                {% endif -%}
-                                {% if modlog_entry.community_id -%}
-                                    <a href="/c/{{ modlog_entry.community.link() }}">{{ _(' in %(community_name)s', community_name='' + modlog_entry.community.display_name() ) }}</a>
-                                {% endif -%}
-                                {% if modlog_entry.reason -%}
-                                    <br>
-                                    {{ _("Reason:") }} {{ modlog_entry.reason }}
-                                {% endif -%}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            {% endif %}
+                        </td>
+                        <td>{{ modlog_entry.action_to_str() }}
+                            {% if modlog_entry.link and modlog_entry.link_text -%}
+                                <a href="/{{ modlog_entry.get_correct_link() }}">
+                                    {% if modlog_entry.action == 'ban_user' or modlog_entry.action == 'delete_user' -%}
+                                        {{ modlog_entry.link.replace('u/', '') }}
+                                    {% else -%}
+                                        {{ modlog_entry.link_text}}
+                                    {% endif -%}
+                                </a>
+                            {% elif modlog_entry.link_text -%}
+                                {{ modlog_entry.link_text }}
+                            {% endif -%}
+                            {% if modlog_entry.community_id -%}
+                                <a href="/c/{{ modlog_entry.community.link() }}">{{ _(' in %(community_name)s', community_name='' + modlog_entry.community.display_name()) }}</a>
+                            {% endif -%}
+                            {% if modlog_entry.reason -%}
+                                <br>{{ _('Reason:') }} {{ modlog_entry.reason }}
+                            {% endif -%}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
         {% else -%}
-            <p>{{ _("There are no moderation actions to show.") }}</p>
+            <p>{{ _('There are no moderation actions to show.') }}</p>
         {% endif -%}
     </div>
     <nav aria-label="Pagination" class="mt-4" role="navigation">
-        {% if prev_url -%}
-            <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
-                <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
-            </a>
-        {% endif -%}
-        {% if next_url -%}
-            <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
-                {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
-            </a>
-        {% endif -%}
+            {% if prev_url -%}
+                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                </a>
+            {% endif -%}
+            {% if next_url -%}
+                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                </a>
+            {% endif -%}
     </nav>
 {% endblock -%}
