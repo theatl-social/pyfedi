@@ -1827,8 +1827,10 @@ def user_alerts(type='posts', filter='all'):
 
     elif type == 'users':
         # ignore filter
-        entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
-            filter_by(type=NOTIF_USER, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        entities = User.query.filter_by(deleted=False). \
+            join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
+            filter_by(type=NOTIF_USER, user_id=current_user.id). \
+            order_by(desc(NotificationSubscription.created_at))
         title = _('User Alerts')
 
     else:  # default to 'posts' type
