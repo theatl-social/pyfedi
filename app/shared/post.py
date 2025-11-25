@@ -242,7 +242,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         #if not user:
         #    user = authorise_api_user(auth, return_type='model')
         user = User.query.get(1)
-        title = input['title']
+        title = input['title'].strip()
         body = input['body']
         url = input['url']
         nsfw = input['nsfw']
