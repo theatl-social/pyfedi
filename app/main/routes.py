@@ -25,6 +25,7 @@ from flask_babel import _, get_locale
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
@@ -562,6 +563,7 @@ def replay_inbox():
 @bp.route('/test')
 @debug_mode_only
 def test():
+    refresh_instance_chooser()
     #p = Post.query.get(42)
     #p.delete_dependencies()
     #db.session.delete(p)
