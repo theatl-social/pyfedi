@@ -927,6 +927,10 @@ def refresh_instance_chooser():
         
         # Shuffle the nodes list so instances are processed in random order each time
         nodes = response_data['data']['nodes']
+        # fediverse.observer does not include tarte for some reason.
+        nodes.append({'domain': 'tarte.nuage-libre.fr',
+                      'uptime_alltime': 99.0,
+                      'monthsmonitored': 28})
         random.shuffle(nodes)
         
         # Process each domain from fediverse.observer
