@@ -1,6 +1,6 @@
 # The PieFed Database
 
-The metaphorical heart and soul of a PieFed instance is the PostgreSQL database that contains all of the data that the rest of the code saves data to and serves data from. The code interfaces with this database in one of two ways; either through the [sqlalchemy](https://www.sqlalchemy.org/) python library that acts [the ORM](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping) for PieFed, or through manually written SQL statements (that are then executed via `sqlalchemy`).
+The metaphorical heart and soul of a PieFed instance is the PostgreSQL database that contains all of the data that the rest of the code saves data to and serves data from. The code interfaces with this database in one of two ways; either through the [sqlalchemy](https://www.sqlalchemy.org/) python library that acts as the [the ORM](https://en.wikipedia.org/wiki/Object%E2%80%93relational_mapping) for PieFed, or through manually written SQL statements (that are then executed via `sqlalchemy`).
 
 This guide is meant to help developers understand some of the basic ways that database interactions are implemented in PieFed. It is not exhaustive of all the types of interactions or means by which to interact with the database. For help with more advanced workflows (joins, etc.), please feel free to reach out with questions!
 
@@ -8,7 +8,7 @@ This guide is meant to help developers understand some of the basic ways that da
 
 The database schema are all defined in the [models.py file](https://codeberg.org/rimu/pyfedi/src/branch/main/app/models.py). The `sqlalchemy` structure (which they refer to as [declarative mapping](https://docs.sqlalchemy.org/en/20/orm/mapping_styles.html#orm-declarative-mapping)) interprets each python `class` as an object that corresponds to a table in the database, and attributes of that class as columns in the corresponding table. All of this is meant to make it easy to query the database elsewhere in the codebase.
 
-As an example, if I wanted to query how many posts a user with an `id` of 351 has made, then I can do it in a easily readable and comprehensible way with two lines of code using the ORM flow:
+As an example, if I wanted to query how many posts a user with an `id` of 351 has made, then I can do it in a easily comprehensible  way with two lines of code using the ORM flow:
 
 ```python
 # Fetch user with id=351, return object of class User
