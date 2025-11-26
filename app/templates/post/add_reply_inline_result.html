@@ -46,7 +46,7 @@
 {% endmacro -%}
 {% set collapsed = false -%}
 <div class="replies hidable depth_{{ post_reply.depth }}" role="group" aria-live="polite">
-    <div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+    <div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports > 0 and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
         <div class="row">
             <div class="col-auto comment_author">
                 <span class="visually-hidden">by</span>

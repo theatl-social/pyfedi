@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports > 0 and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -44,7 +44,7 @@
                     <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
                 {% endif -%}
             </a></span>
-            {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
+            {% if post_reply.reports > 0 and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
                     <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
             {% endif -%}
             {% if post_reply.deleted -%}
