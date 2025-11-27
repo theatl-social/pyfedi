@@ -592,7 +592,7 @@ form {
 
 .post_teaser_title_a {
   color: var(--bs-link-color);
-  word-break: break-word;
+  overflow-wrap: break-word;
 
   &:visited {
     color: color-mix(in srgb, var(--bs-link-color) 65%, white);
