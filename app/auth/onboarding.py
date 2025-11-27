@@ -8,7 +8,7 @@ from app.auth import bp
 from app.auth.forms import ChooseTopicsForm, ChooseTrumpMuskForm
 from app.constants import SUBSCRIPTION_NONMEMBER
 from app.models import User, Topic, Community, CommunityJoinRequest, CommunityMember, Filter, InstanceChooser, Language
-from app.utils import render_template, joined_communities, community_membership, get_setting
+from app.utils import render_template, joined_communities, community_membership, get_setting, num_topics
 
 
 @bp.route('/instance_chooser')
@@ -50,7 +50,7 @@ def trump_musk():
 @bp.route('/choose_topics', methods=['GET', 'POST'])
 @login_required
 def choose_topics():
-    if get_setting('choose_topics', True):
+    if get_setting('choose_topics', True) and num_topics() > 0:
         form = ChooseTopicsForm()
         form.chosen_topics.choices = topics_for_form()
         if form.validate_on_submit():
