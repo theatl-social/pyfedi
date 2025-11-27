@@ -1267,6 +1267,7 @@ ul.form-multicheck-columns li {
 
 .post_teaser_body {
   position: relative;
+  overflow: hidden;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
