@@ -1104,6 +1104,7 @@ form > .mb-3.required > label:after {
 
 .post_teaser_title_a {
   color: var(--bs-link-color);
+  word-break: break-word;
 }
 .post_teaser_title_a:visited {
   color: color-mix(in srgb, var(--bs-link-color) 65%, white);
@@ -1267,7 +1268,6 @@ ul.form-multicheck-columns li {
 
 .post_teaser_body {
   position: relative;
-  overflow: hidden;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {

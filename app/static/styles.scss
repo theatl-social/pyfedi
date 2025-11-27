@@ -591,11 +591,12 @@ form {
 }
 
 .post_teaser_title_a {
-    color: var(--bs-link-color);
+  color: var(--bs-link-color);
+  word-break: break-word;
 
-    &:visited {
-      color: color-mix(in srgb, var(--bs-link-color) 65%, white);
-    }
+  &:visited {
+    color: color-mix(in srgb, var(--bs-link-color) 65%, white);
+  }
 }
 
 .post_reply_form {
@@ -786,7 +787,6 @@ ul.form-multicheck-columns {
 
 .post_teaser_body {
   position: relative;
-  overflow: hidden;
 }
 
 .post_teaser_article_preview, .post_teaser_link_preview {
