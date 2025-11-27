@@ -1104,7 +1104,7 @@ form > .mb-3.required > label:after {
 
 .post_teaser_title_a {
   color: var(--bs-link-color);
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 .post_teaser_title_a:visited {
   color: color-mix(in srgb, var(--bs-link-color) 65%, white);
