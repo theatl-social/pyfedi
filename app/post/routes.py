@@ -35,7 +35,8 @@ from app.models import Post, PostReply, PostReplyValidationError, \
     Reminder
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
-    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm
+    ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm, \
+    ShareMastodonForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
@@ -2073,3 +2074,16 @@ def post_reply_unchoose_answer(post_reply_id):
         return _('Done')
     else:
         abort(403)
+
+
+@bp.route('/post/<int:post_id>/share_mastodon', methods=['GET', 'POST'])
+def post_share_mastodon(post_id):
+    post = Post.query.get_or_404(post_id)
+    form = ShareMastodonForm()
+    if form.validate_on_submit():
+        resp = make_response(redirect(f"https://{form.domain.data}/share?text={post.title}&url=https://{current_app.config['SERVER_NAME']}{post.slug}"))
+        resp.set_cookie('mastodon_share', form.domain.data, expires=datetime(year=2099, month=12, day=30))
+        return resp
+
+    form.domain.data = request.cookies.get('mastodon_share', 'mastodon.social')
+    return render_template('generic_form.html', form=form, title=_('Share on Mastodon'))

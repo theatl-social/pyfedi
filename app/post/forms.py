@@ -102,3 +102,8 @@ class NewReminderForm(FlaskForm):
                 raise ValidationError(_l('Invalid.'))
         except Exception:
             raise ValidationError(_l('Invalid.'))
+
+
+class ShareMastodonForm(FlaskForm):
+    domain = StringField(_l('Mastodon instance domain name'), validators=[Length(max=512)])
+    submit = SubmitField(_l('Share'))

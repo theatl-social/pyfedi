@@ -81,6 +81,8 @@
     <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
         {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
 {% endif -%}
+<li><a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-share"></span>
+        {{ _('Share on Mastodon') }}</a></li>
 <li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-report"></span>
         {{ _('Report to moderators') }}</a></li>
 <li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-embed"></span>
