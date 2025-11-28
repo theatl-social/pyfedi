@@ -377,6 +377,12 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     post.repeat = repeat
     post.timezone = timezone
 
+    if post.url:
+        if post.url.startswith('https://pixelfed.social/') or post.url.startswith('https://pixelfed.uno/'):
+            post.type = POST_TYPE_IMAGE
+        elif post.url.startswith('https://loops.video/'):
+            post.type = POST_TYPE_VIDEO
+
     if scheduled_for:
         date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
         if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
@@ -557,6 +563,28 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
                 make_image_sizes(post.image_id, 512, 1200, 'posts', post.community.low_quality)
                 post.type = POST_TYPE_IMAGE
                 post.url = url
+        elif url.startswith('https://pixelfed.social') or url.startswith('pixelfed.uno'):
+            post.type = POST_TYPE_IMAGE
+            opengraph = opengraph_parse(thumbnail_url)
+            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                if not filename.startswith('/'):
+                    file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                    post.image = file
+                    db.session.add(file)
+            post.url = url
+            post.body += '\n\nSource: '
+        elif url.startswith('https://loops.video'):
+            post.type = POST_TYPE_VIDEO
+            opengraph = opengraph_parse(thumbnail_url)
+            if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                if not filename.startswith('/'):
+                    filename = filename.replace('.jpg', '.720p.mp4')
+                    file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                    post.image = file
+                    db.session.add(file)
+            post.url = url
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):

@@ -1754,6 +1754,25 @@ class Post(db.Model):
                 post.image = image
             elif is_video_url(post.url) or is_video_hosting_site(post.url):
                 post.type = constants.POST_TYPE_VIDEO
+            elif post.url.startswith('https://pixelfed.social') or post.url.startswith('pixelfed.uno'):
+                post.type = constants.POST_TYPE_IMAGE
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
+            elif post.url.startswith('https://loops.video'):
+                post.type = constants.POST_TYPE_VIDEO
+                opengraph = opengraph_parse(thumbnail_url)
+                if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                    filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                    if not filename.startswith('/'):
+                        filename = filename.replace('.jpg', '.720p.mp4')
+                        file = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                        post.image = file
+                        db.session.add(file)
             else:
                 post.type = constants.POST_TYPE_LINK
             if 'blogspot.com' in post.url:
