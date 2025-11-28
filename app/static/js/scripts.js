@@ -11,57 +11,99 @@ if(!setTheme) {
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
     let low_bandwidth = document.body.classList.contains('low_bandwidth');
+    
+    // Critical setup functions that must run immediately
+    const criticalSetups = [
+        setupMobileNav,
+        setupLightDark,
+        setupConfirmFirst,
+        setupSendPost,
+        setupDynamicContentObserver
+    ];
+    
+    // High priority setup functions
+    const highPrioritySetups = [
+        setupVotingLongPress,
+        setupVotingDialogHandlers,
+        setupKeyboardShortcuts,
+        setupCommunityNameInput,
+        setupShowMoreLinks,
+        setupSubmitOnInputChange
+    ];
+    
+    // Lower priority setup functions that can be deferred
+    const deferredSetups = [
+        setupTopicChooser,
+        setupTimeTracking,
+        setupConversationChooser,
+        setupMarkdownEditorEnabler,
+        setupPolls,
+        setupShowElementLinks,
+        setupPostTeaserHandler,
+        setupPostTypeSwitcher,
+        setupSelectNavigation,
+        setupUserPopup,
+        preventDoubleFormSubmissions,
+        setupSelectAllCheckbox,
+        setupFontSizeChangers,
+        setupAddPassKey,
+        setupFancySelects,
+        setupImagePreview,
+        setupNotificationPermission,
+        setupFederationModeToggle,
+        setupPopupCommunitySidebar,
+        setupVideoSpoilers,
+        setupCommunityFilter,
+        setupPopupTooltips,
+        setupPasswordEye,
+        setupBasicAutoResize,
+        setupEventTimes,
+        setupUserMentionSuggestions,
+        setupScrollToComment,
+        setupTranslateAll
+    ];
+    
+    // Run critical setups immediately
+    criticalSetups.forEach(setup => setup());
+    
+    // Run high priority setups in next frame
+    requestAnimationFrame(() => {
+        highPrioritySetups.forEach(setup => setup());
+        
+        // Setup lightbox if not low bandwidth
+        if (!low_bandwidth) {
+            requestAnimationFrame(() => {
+                setupLightboxTeaser();
+                setupLightboxPostBody();
+            });
+        }
+    });
+    
+    // Defer remaining setups to avoid blocking
+    let setupIndex = 0;
+    function runDeferredSetups() {
+        const batchSize = 3; // Process 3 setups per frame
+        const endIndex = Math.min(setupIndex + batchSize, deferredSetups.length);
+        
+        for (let i = setupIndex; i < endIndex; i++) {
+            deferredSetups[i]();
+        }
+        
+        setupIndex = endIndex;
+        if (setupIndex < deferredSetups.length) {
+            requestAnimationFrame(runDeferredSetups);
+        }
+    }
+    requestAnimationFrame(runDeferredSetups);
+
     if(navigator.getBattery) {
         navigator.getBattery().then(function(battery) {
             // Only load youtube videos in teasers if there is plenty of power available
             if (battery.charging) {
-                setupYouTubeLazyLoad();
+                requestAnimationFrame(setupYouTubeLazyLoad);
             }
         });
     }
-    setupVotingLongPress();
-    setupVotingDialogHandlers();
-    setupCommunityNameInput();
-    setupShowMoreLinks();
-    setupConfirmFirst();
-    setupSendPost();
-    setupSubmitOnInputChange();
-    setupTimeTracking();
-    setupMobileNav();
-    setupLightDark();
-    setupKeyboardShortcuts();
-    setupTopicChooser();
-    setupConversationChooser();
-    setupMarkdownEditorEnabler();
-    setupPolls();
-    setupShowElementLinks();
-    if (!low_bandwidth) {
-      setupLightboxTeaser();
-      setupLightboxPostBody();
-    }
-    setupPostTeaserHandler();
-    setupPostTypeSwitcher();
-    setupSelectNavigation();
-    setupUserPopup();
-    preventDoubleFormSubmissions();
-    setupSelectAllCheckbox();
-    setupFontSizeChangers();
-    setupAddPassKey();
-    setupFancySelects();
-    setupImagePreview();
-    setupNotificationPermission();
-    setupFederationModeToggle();
-    setupPopupCommunitySidebar();
-    setupVideoSpoilers();
-    setupDynamicContentObserver();
-    setupCommunityFilter();
-    setupPopupTooltips();
-    setupPasswordEye();
-    setupBasicAutoResize();
-    setupEventTimes();
-    setupUserMentionSuggestions();
-    setupScrollToComment();
-    setupTranslateAll();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -71,7 +113,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // iOS doesn't support beforeinstallprompt, so detect iOS and show PWA button manually
     if(/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+        const btnAddHomeScreen = document.getElementById('btn_add_home_screen');
+        if (btnAddHomeScreen) {
+            btnAddHomeScreen.style.display = 'inline-block';
+        }
         document.body.classList.add('ios');
     }
 
@@ -1448,44 +1493,55 @@ function setupVideoSpoilers() {
 
 // Setup MutationObserver to detect dynamically loaded content (e.g., from htmx)
 function setupDynamicContentObserver() {
+    let setupTimeout = null;
+    const SETUP_DELAY = 100; // Debounce delay in ms
+    
     const observer = new MutationObserver(function(mutations) {
         let shouldResetup = false;
         
-        mutations.forEach(function(mutation) {
-            // Check if new nodes were added
+        // Use a more efficient check - only look for specific class patterns
+        const targetClasses = [
+            'send_post', 'confirm_first', 'showElement', 'show-more',
+            'user_preview', 'hide_button', 'unhide', 'comment', 'autoresize'
+        ];
+        
+        for (const mutation of mutations) {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(function(node) {
-                    // Only process element nodes (not text nodes)
+                for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                        // Check if the added content contains elements that need event handlers
-                        if (node.querySelector && (
-                            node.querySelector('.send_post') ||
-                            node.querySelector('.confirm_first') ||
-                            node.querySelector('.showElement') ||
-                            node.querySelector('.show-more') ||
-                            node.querySelector('.user_preview') ||
-                            node.querySelector('.hide_button') ||
-                            node.querySelector('.unhide') ||
-                            node.querySelector('.comment') ||
-                            node.querySelector('.autoresize') ||
-                            node.classList.contains('send_post') ||
-                            node.classList.contains('confirm_first') ||
-                            node.classList.contains('showElement') ||
-                            node.classList.contains('hide_button') ||
-                            node.classList.contains('unhide') ||
-                            node.classList.contains('comment') ||
-                            node.classList.contains('autoresize')
-                        )) {
-                            shouldResetup = true;
+                        // Quick check - does the node or any descendant have target classes?
+                        if (node.className && typeof node.className === 'string') {
+                            if (targetClasses.some(cls => node.className.includes(cls))) {
+                                shouldResetup = true;
+                                break;
+                            }
+                        }
+                        
+                        // Only do expensive querySelector if basic check didn't match
+                        if (!shouldResetup && node.querySelector) {
+                            const hasTargetElements = targetClasses.some(cls => 
+                                node.querySelector('.' + cls) !== null
+                            );
+                            if (hasTargetElements) {
+                                shouldResetup = true;
+                                break;
+                            }
                         }
                     }
-                });
+                }
+                if (shouldResetup) break;
             }
-        });
+        }
         
-        // Re-run setup functions for the new content
+        // Debounce the setup to avoid excessive calls
         if (shouldResetup) {
-            setupDynamicContent();
+            if (setupTimeout) {
+                clearTimeout(setupTimeout);
+            }
+            setupTimeout = setTimeout(() => {
+                setupDynamicContent();
+                setupTimeout = null;
+            }, SETUP_DELAY);
         }
     });
     
