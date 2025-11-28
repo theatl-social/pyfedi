@@ -514,7 +514,7 @@ def post_reply_mark_as_answer(auth, data):
         vote_effect=vote_effect,
         is_reply_subscribed=reply.id in user_details['subscribed_reply_ids'],
         is_user_moderator=reply.community_id in user_details['moderated_community_ids'])
-    reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id] if read else [])
+    reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id])
     reply_json['recipient'] = recipient
     return {'comment_reply_view': reply_json}
 

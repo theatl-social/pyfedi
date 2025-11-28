@@ -660,9 +660,12 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
                         add_creator_in_view=True,
                         add_post_in_view=True,
                         add_community_in_view=True,
-                        read_comment_ids=[]) -> dict:
+                        read_comment_ids=None) -> dict:
     if isinstance(reply, int):
-        reply = PostReply.query.filter_by(id=reply).one()
+        reply = PostReply.query.get(reply)
+
+    if read_comment_ids is None:
+        read_comment_ids = []
 
     # Variant 1 - Comment model
     if variant == 1:
