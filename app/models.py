@@ -16,6 +16,7 @@ from flask_babel import _, lazy_gettext as _l
 from flask_babel import force_locale, gettext
 from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
+from furl import furl
 from slugify import slugify
 from sqlalchemy import or_, text, desc, Index
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
@@ -2130,6 +2131,9 @@ class Post(db.Model):
                 return f'{video_id}'
 
         return ''
+
+    def url_domain(self):
+        return 'https://' + furl(self.url).host + '/'
 
     def generate_ap_id(self, community: Community):
         if not community.post_url_type or community.post_url_type == 'friendly':
