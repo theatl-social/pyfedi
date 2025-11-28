@@ -19,8 +19,9 @@ from app.api.alpha.utils.private_message import get_private_message_list, post_p
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report, post_leave_conversation
 from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply_save, put_reply_subscribe, post_reply, \
-    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, post_reply_lock, \
-    get_reply_like_list
+    put_reply, post_reply_delete, post_reply_report, post_reply_remove, post_reply_mark_as_read, get_reply, \
+    post_reply_lock, \
+    get_reply_like_list, post_reply_mark_as_answer
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
     get_site_instance_chooser_search, get_site_version
 from app.api.alpha.utils.topic import get_topic_list
@@ -779,6 +780,19 @@ def post_alpha_comment_mark_as_read(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = post_reply_mark_as_read(auth, data)
+    return GetCommentReplyResponse().load(resp)
+
+
+@reply_bp.route('/comment/mark_as_answer', methods=['POST'])
+@reply_bp.doc(summary="Mark a comment as the preferred answer to a question.")
+@reply_bp.arguments(MarkCommentAsAnswerRequest)
+@reply_bp.response(200, GetCommentReplyResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_mark_as_answer(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_reply_mark_as_answer(auth, data)
     return GetCommentReplyResponse().load(resp)
 
 

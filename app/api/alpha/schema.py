@@ -496,6 +496,7 @@ class Comment(Schema):
     distinguished = fields.Boolean()
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     locked = fields.Boolean()
+    answer = fields.Boolean()
 
     class Meta:
         unknown = INCLUDE # let the not-consistent-with-anything 'repliesEnabled' through for Boost
@@ -627,6 +628,7 @@ class CreateCommunityRequest(DefaultSchema):
     icon_url = fields.String(allow_none=True, metadata={"format": "url"})
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
+    question_answer = fields.Boolean()
     restricted_to_mods = fields.Boolean()
     rules = fields.String()
 
@@ -1142,6 +1144,11 @@ class RemoveCommentRequest(DefaultSchema):
 class MarkCommentAsReadRequest(DefaultSchema):
     comment_reply_id = fields.Integer(required=True)
     read = fields.Boolean(required=True)
+
+
+class MarkCommentAsAnswerRequest(DefaultSchema):
+    comment_reply_id = fields.Integer(required=True)
+    answer = fields.Boolean(required=True)
 
 
 class GetCommentReplyResponse(DefaultSchema):

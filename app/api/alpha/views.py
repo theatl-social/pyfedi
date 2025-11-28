@@ -666,7 +666,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
 
     # Variant 1 - Comment model
     if variant == 1:
-        include = ['id', 'user_id', 'post_id', 'body', 'deleted']
+        include = ['id', 'user_id', 'post_id', 'body', 'deleted', 'answer']
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
 
         v1.update({'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',

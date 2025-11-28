@@ -9,7 +9,8 @@ from app.constants import *
 from app.models import Notification, PostReply, Post, User, PostReplyVote
 from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, make_reply, \
     edit_reply, \
-    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply, lock_post_reply
+    delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply, lock_post_reply, choose_answer, \
+    unchoose_answer
 from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
     communities_banned_from, in_sorted_list
 
@@ -467,6 +468,38 @@ def post_reply_mark_as_read(auth, data):
                 {"id": user_id})
         db.session.commit()
 
+    recipient = user_view(user=user_id, variant=1)
+    vote_effect = 0
+    if in_sorted_list(user_details['upvoted_reply_ids'], reply_id):
+        vote_effect = 1
+    elif in_sorted_list(user_details['downvoted_reply_ids'], reply_id):
+        vote_effect = -1
+    reply_json = reply_view(reply=reply, variant=3, user_id=user_id,
+        is_user_banned_from_community=reply.community_id in user_details['user_ban_community_ids'],
+        is_user_following_community=reply.community_id in user_details['followed_community_ids'],
+        is_reply_bookmarked=reply.id in user_details['bookmarked_reply_ids'],
+        is_creator_blocked=reply.user_id in user_details['blocked_creator_ids'],
+        vote_effect=vote_effect,
+        is_reply_subscribed=reply.id in user_details['subscribed_reply_ids'],
+        is_user_moderator=reply.community_id in user_details['moderated_community_ids'])
+    reply_json['comment_reply'] = reply_view(reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id] if read else [])
+    reply_json['recipient'] = recipient
+    return {'comment_reply_view': reply_json}
+
+
+def post_reply_mark_as_answer(auth, data):
+    reply_id = data['comment_reply_id']
+    answer = data['answer']
+
+    user_details = authorise_api_user(auth, return_type='dict')
+    user_id = user_details['id']
+
+    if answer:
+        choose_answer(reply_id, SRC_API, auth)
+    else:
+        unchoose_answer(reply_id, SRC_API, auth)
+
+    reply = PostReply.query.get(reply_id)
     recipient = user_view(user=user_id, variant=1)
     vote_effect = 0
     if in_sorted_list(user_details['upvoted_reply_ids'], reply_id):
