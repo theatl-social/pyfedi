@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports > 0 and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.has_been_reported() %} reported{% endif %}{% if post_reply.answer %} answer{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -46,6 +46,9 @@
             </a></span>
             {% if post_reply.has_been_reported() -%}
                     <a href="{{ url_for('community.community_moderate', actor=post_reply.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span></a>
+            {% endif -%}
+            {% if post_reply.answer -%}
+                <span class="green fe fe-answer" title="{{ _('OP prefers this answer') }}"></span>
             {% endif -%}
             {% if post_reply.deleted -%}
                     <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
@@ -106,6 +109,13 @@
                 {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
+        {% if not post_reply.answer and post_reply.community.question_answer -%}
+            <div class="choose_answer_icon">
+                <a rel="nofollow noindex" title="{{ _('Choose answer') }}" href="#"
+                   hx-post="{{ url_for('post.post_reply_choose_answer', post_reply_id=post_reply.id) }}"
+                   hx-trigger="click throttle:1s" hx-target="closest .choose_answer_icon" hx-swap="innerHTML"><span class="fe fe-answer"></span></a>
+            </div>
+        {% endif -%}
         {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and (current_user.language_id != post_reply.language_id or post_reply.community.always_translate) -%}
             <div class="post_translate_icon">
                 <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"

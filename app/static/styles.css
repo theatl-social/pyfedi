@@ -511,6 +511,14 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e933";
 }
 
+.fe-answer::before {
+  content: "\e92b";
+  color: var(--bs-form-valid-border-color);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
 a.no-underline {
   text-decoration: none;
 }
@@ -2752,6 +2760,13 @@ form h5 {
 
 .post_type_image.reported img, .post_teaser_body.reported img, .masonry_thumb.reported img {
   filter: grayscale(100%) blur(6px) !important;
+}
+
+.comment.answer {
+  border-style: solid !important;
+  border-color: var(--bs-form-valid-border-color) !important;
+  border-width: 2px !important;
+  background-color: var(--bs-info-bg-subtle);
 }
 
 .blocked_image img {

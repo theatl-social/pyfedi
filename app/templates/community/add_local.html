@@ -32,6 +32,8 @@
                         <small class="field_hint">{{ _('Only people using %(name)s can post or reply', name=current_app.config['SERVER_NAME']) }}.</small>
                         {{ render_field(form.publicize) }}
                         <small class="field_hint">{{ _('Do not publicize test communities.') }}</small>
+                        {{ render_field(form.question_answer) }}
+                        <small class="field_hint">{{ _('Comments can be designated as the answer.') }}</small>
                         {{ render_field(form.languages) }}
                         {{ render_field(form.submit) }}
                     </form>

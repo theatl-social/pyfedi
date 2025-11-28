@@ -31,6 +31,7 @@ class AddCommunityForm(FlaskForm):
     nsfw = BooleanField('NSFW')
     local_only = BooleanField('Local only')
     publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
+    question_answer = BooleanField('Question & answer community')
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))
@@ -79,6 +80,7 @@ class EditCommunityForm(FlaskForm):
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField(_l('NSFW community'))
     local_only = BooleanField(_l('Only accept posts from current instance'))
+    question_answer = BooleanField('Question & answer community')
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
     downvote_accept_modes = [(DOWNVOTE_ACCEPT_ALL, _l('Everyone')),

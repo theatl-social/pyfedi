@@ -126,6 +126,7 @@ class Community(DefaultSchema):
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
     banned = fields.Boolean()
+    question_answer = fields.Boolean()
     banner = fields.String(allow_none=True, metadata={"format": "url"})
     description = fields.String(metadata={"format": "markdown"})
     icon = fields.String(allow_none=True, metadata={"format": "url"})
@@ -645,6 +646,7 @@ class EditCommunityRequest(DefaultSchema):
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
+    question_answer = fields.Boolean()
     rules = fields.String()
 
 

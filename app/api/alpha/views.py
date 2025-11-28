@@ -483,7 +483,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
-        include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods']
+        include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods', 'question_answer']
         v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if
               column.name in include}
         v1.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z',

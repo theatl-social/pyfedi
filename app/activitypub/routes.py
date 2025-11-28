@@ -472,6 +472,7 @@ def community_profile(actor):
                           "featured": f"https://{server}/c/{actor}/featured",
                           "attributedTo": f"https://{server}/c/{actor}/moderators",
                           "postingRestrictedToMods": community.restricted_to_mods or community.local_only,
+                          "questionAnswer": community.question_answer,
                           "newModsWanted": community.new_mods_wanted,
                           "privateMods": community.private_mods,
                           "url": f"https://{server}/c/{actor}",

@@ -182,6 +182,7 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         restricted_to_mods = input['restricted_to_mods']
         local_only = input['local_only']
         discussion_languages = input['discussion_languages']
+        question_answer = input['question_answer']
         user = authorise_api_user(auth, return_type='model')
     else:
         if input.url.data.strip().lower().startswith('/c/'):
@@ -194,6 +195,7 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
         restricted_to_mods = input.restricted_to_mods.data
         local_only = input.local_only.data
         discussion_languages = input.languages.data
+        question_answer = input.question_answer.data
         user = current_user
 
     if user.verified is False or user.private_key is None:
@@ -218,7 +220,8 @@ def make_community(input, src, auth=None, uploaded_icon_file=None, uploaded_bann
                           ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name,
                           ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + name + '/followers',
                           ap_domain=current_app.config['SERVER_NAME'],
-                          subscriptions_count=1, instance_id=1, low_quality='memes' in name)
+                          subscriptions_count=1, instance_id=1, low_quality='memes' in name,
+                          question_answer=question_answer)
     try:
         db.session.add(community)
         db.session.commit()
@@ -257,6 +260,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
         restricted_to_mods = input['restricted_to_mods']
         local_only = input['local_only']
         discussion_languages = input['discussion_languages']
+        question_answer = input['question_answer']
         user = authorise_api_user(auth, return_type='model')
     else:
         title = input.community_name.data
@@ -268,6 +272,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
         restricted_to_mods = input.restricted_to_mods.data
         local_only = input.local_only.data
         discussion_languages = input.languages.data
+        question_answer = input.question_answer.data
         user = current_user
 
     icon_url_changed = banner_url_changed = False
@@ -319,6 +324,7 @@ def edit_community(input, community, src, auth=None, uploaded_icon_file=None, up
     community.description_html = markdown_to_html(description)
     community.restricted_to_mods = restricted_to_mods
     community.local_only = local_only
+    community.question_answer = question_answer
     db.session.commit()
 
     if not from_scratch:

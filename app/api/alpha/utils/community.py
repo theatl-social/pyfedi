@@ -154,11 +154,12 @@ def post_community(auth, data):
     restricted_to_mods = data['restricted_to_mods'] if 'restricted_to_mods' in data else False
     local_only = data['local_only'] if 'local_only' in data else False
     discussion_languages = data['discussion_languages'] if 'discussion_languages' in data else [2]  # FIXME: use site language
+    question_answer = data['question_answer'] if 'question_answer' in data else False
 
     input = {'name': name, 'title': title, 'description': description, 'rules': rules,
              'icon_url': icon_url, 'banner_url': banner_url,
              'nsfw': nsfw, 'restricted_to_mods': restricted_to_mods, 'local_only': local_only,
-             'discussion_languages': discussion_languages}
+             'discussion_languages': discussion_languages, 'question_answer': question_answer}
 
     user_id, community_id = make_community(input, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, user_id=user_id)
@@ -185,6 +186,7 @@ def put_community(auth, data):
     else:
         banner_url = None
     nsfw = data['nsfw'] if 'nsfw' in data else community.nsfw
+    question_answer = data['question_answer'] if 'question_answer' in data else community.question_answer
     restricted_to_mods = data['restricted_to_mods'] if 'restricted_to_mods' in data else community.restricted_to_mods
     local_only = data['local_only'] if 'local_only' in data else community.local_only
     if 'discussion_languages' in data:
@@ -197,7 +199,7 @@ def put_community(auth, data):
     input = {'community_id': community_id, 'title': title, 'description': description, 'rules': rules,
              'icon_url': icon_url, 'banner_url': banner_url,
              'nsfw': nsfw, 'restricted_to_mods': restricted_to_mods, 'local_only': local_only,
-             'discussion_languages': discussion_languages}
+             'discussion_languages': discussion_languages, 'question_answer': question_answer}
 
     user_id = edit_community(input, community, SRC_API, auth)
     community_json = community_view(community=community, variant=4, user_id=user_id)

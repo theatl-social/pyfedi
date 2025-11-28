@@ -543,6 +543,7 @@ class Community(db.Model):
     total_ratings = db.Column(db.Integer)
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
+    question_answer = db.Column(db.Boolean, default=False)     # if this is a stackoverflow-style question and answer community
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)
@@ -2404,6 +2405,7 @@ class PostReply(db.Model):
     language_id = db.Column(db.Integer, db.ForeignKey('language.id'), index=True)
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
+    answer = db.Column(db.Boolean, default=False)   # this comment was designated as the best answer to a question
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))

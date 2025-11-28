@@ -2053,3 +2053,25 @@ def post_reply_check_ai(post_reply_id):
             return _('Body text is too short to be sure.')
     else:
         return _('Not configured.')
+
+
+@bp.route('/post_reply/<int:post_reply_id>/choose_answer', methods=['POST'])
+def post_reply_choose_answer(post_reply_id):
+    post_reply = PostReply.query.get(post_reply_id)
+    if current_user.is_authenticated and (current_user.is_admin_or_staff() or post_reply.user_id == current_user.id or post_reply.community.is_moderator()):
+        post_reply.answer = True
+        db.session.commit()
+        return 'Done'
+    else:
+        abort(403)
+
+
+@bp.route('/post_reply/<int:post_reply_id>/unchoose_answer', methods=['POST'])
+def post_reply_unchoose_answer(post_reply_id):
+    post_reply = PostReply.query.get(post_reply_id)
+    if current_user.is_authenticated and (current_user.is_admin_or_staff() or post_reply.user_id == current_user.id or post_reply.community.is_moderator()):
+        post_reply.answer = False
+        db.session.commit()
+        return 'Done'
+    else:
+        abort(403)

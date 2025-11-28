@@ -452,6 +452,14 @@ h1 {
   content: "\e933";
 }
 
+.fe-answer::before {
+  content: "\e92b";
+  color: var(--bs-form-valid-border-color);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
 
 a.no-underline {
   text-decoration: none;
