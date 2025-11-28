@@ -1792,7 +1792,7 @@ function setupVotingLongPress() {
                         openVotingDialog(element);
                     }
                 }, 2000); // 2 seconds
-            });
+            }, {passive: true});
 
             element.addEventListener('touchmove', function(event) {
                 if (!hasMoved) {
@@ -1806,7 +1806,7 @@ function setupVotingLongPress() {
                         clearTimeout(longPressTimer);
                     }
                 }
-            });
+            }, {passive: true});
 
             element.addEventListener('touchend', function(event) {
                 clearTimeout(longPressTimer);
