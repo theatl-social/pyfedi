@@ -482,3 +482,50 @@ def lock_post_reply(post_reply_id, locked, src, auth=None):
 
     if src == SRC_API:
         return user.id, post_reply
+
+
+def choose_answer(post_reply_id, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post_reply = PostReply.query.get(post_reply_id)
+    post_reply.answer = True
+    with force_locale(get_recipient_language(post_reply.user_id)):
+        title = _('Your answer was chosen as an answer to %(post_title)s',
+                  post_title=shorten_string(post_reply.post.title, 100))
+    targets_data = {'gen': '0',
+                    'post_id': post_reply.post_id,
+                    'requestor_id': user.id,
+                    'author_user_name': post_reply.author.display_name(),
+                    'post_title': shorten_string(post_reply.post.title, 100)}
+    notify = Notification(title=title, url=post_reply.post.slug,
+                          user_id=post_reply.user_id,
+                          author_id=user.id, notif_type=NOTIF_ANSWER,
+                          subtype='answer_chosen',
+                          targets=targets_data)
+    post_reply.author.unread_notifications += 1
+    db.session.add(notify)
+    db.session.commit()
+
+    task_selector('choose_answer', user_id=user.id, post_reply_id=post_reply_id)
+
+    if src == SRC_API:
+        return user.id, post_reply
+
+
+def unchoose_answer(post_reply_id, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post_reply = PostReply.query.get(post_reply_id)
+    post_reply.answer = False
+    db.session.commit()
+
+    task_selector('unchoose_answer', user_id=user.id, post_reply_id=post_reply_id)
+
+    if src == SRC_API:
+        return user.id, post_reply

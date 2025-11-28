@@ -1197,6 +1197,11 @@ def process_inbox_request(request_json, store_ap_json):
 
                 if core_activity['type'] == 'PollVote': # Vote in a poll
                     process_poll_vote(user, store_ap_json, request_json, announced)
+                    return
+
+                if core_activity['type'] == 'ChooseAnswer': # Set the answer to a question
+                    process_question_answer(user, store_ap_json, request_json, announced)
+                    return
 
                 if core_activity['type'] == 'Flag':  # Reported content
                     reported = find_reported_object(core_activity['object'])
@@ -1684,6 +1689,15 @@ def process_inbox_request(request_json, store_ap_json):
 
                             unban_user(unblocker, unblocked, community, core_activity)
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                        return
+
+                    if core_activity['object']['type'] == 'ChooseAnswer':
+                        post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                        if post_reply:
+                            with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
+                                post_reply.answer = False
+                                session.commit()
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                         return
 
                     log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
@@ -2227,6 +2241,42 @@ def process_poll_vote(user, store_ap_json, request_json, announced):
             log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound poll choice ' + choice_text)
     else:
         log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
+
+
+def process_question_answer(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+
+    post_reply = PostReply.get_by_ap_id(ap_id)
+    if post_reply is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        from app import redis_client
+        with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
+            post_reply.answer = True
+            if post_reply.author.is_local():
+                targets_data = {'gen': '0',
+                                'post_id': post_reply.post_id,
+                                'requestor_id': user.id,
+                                'author_user_name': post_reply.author.display_name(),
+                                'post_title': shorten_string(post_reply.post.title, 100)}
+                notify = Notification(title='Answer was chosen', url=post_reply.post.slug,
+                                      user_id=post_reply.user_id,
+                                      author_id=user.id, notif_type=NOTIF_ANSWER,
+                                      subtype='answer_chosen',
+                                      targets=targets_data)
+                db.session.add(notify)
+                post_reply.author.unread_notifications += 1
+            db.session.commit()
+        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        if not announced:
+            announce_activity_to_followers(post_reply.community, user, request_json)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot set answer')
 
 
 

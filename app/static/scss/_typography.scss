@@ -460,6 +460,14 @@ h1 {
   top: 5px;
 }
 
+.fe-unanswer::before {
+  content: "\ea02";
+  color: var(--bs-danger);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
 
 a.no-underline {
   text-decoration: none;

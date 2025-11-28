@@ -23,7 +23,7 @@ from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVide
     CreateEventForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
 from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    POST_TYPE_EVENT
+    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -43,7 +43,7 @@ from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, re
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
     vote_for_poll
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
-    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply
+    delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply, choose_answer, unchoose_answer
 from app.shared.site import block_remote_instance
 from app.shared.community import get_comm_flair_list
 from app.shared.tasks import task_selector
@@ -2059,9 +2059,8 @@ def post_reply_check_ai(post_reply_id):
 def post_reply_choose_answer(post_reply_id):
     post_reply = PostReply.query.get(post_reply_id)
     if current_user.is_authenticated and (current_user.is_admin_or_staff() or post_reply.user_id == current_user.id or post_reply.community.is_moderator()):
-        post_reply.answer = True
-        db.session.commit()
-        return 'Done'
+        choose_answer(post_reply_id, src=SRC_WEB)
+        return _('Done')
     else:
         abort(403)
 
@@ -2070,8 +2069,7 @@ def post_reply_choose_answer(post_reply_id):
 def post_reply_unchoose_answer(post_reply_id):
     post_reply = PostReply.query.get(post_reply_id)
     if current_user.is_authenticated and (current_user.is_admin_or_staff() or post_reply.user_id == current_user.id or post_reply.community.is_moderator()):
-        post_reply.answer = False
-        db.session.commit()
-        return 'Done'
+        unchoose_answer(post_reply_id, src=SRC_WEB)
+        return _('Done')
     else:
         abort(403)
