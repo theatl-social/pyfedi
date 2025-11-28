@@ -78,3 +78,38 @@ finally:
     # Ensure the session is always properly closed
     session.close()
 ```
+
+## Changing the Database Schema
+
+Sometimes a feature needs new data to be stored in the database. To do so, we need to add a place to store it, whether that be a new table in the database, or a new column on an existing table. In the world of databases, this is often called a migration. To handle migrations, `sqlalchemy` uses a tool called [alembic](https://alembic.sqlalchemy.org/en/latest/).
+
+By using `alembic`, we can version the schema of the database in a similar manner to how the rest of the codebase is versioned with a tool like `git`. Much like `git` commits use hashes to uniquely identify them, each revision of the database schema and the code used to move between different versions is also assigned a unique has and a commit message.
+
+An important note for developers is that if you are working on a feature that requires a database migration, it is best practice to engage in conversation with the maintainers earlier rather than later. `alembic` mandates that migrations happen in a specific, sequential order. So, if two developers both create different migrations from the same starting point, then only one of them can be accepted and the other must be fixed. So, reach out to us to help you integrate your migration easier as it will prevent developers stepping on each other's toes.
+
+Now, let's walk through creating a database migration. Remember that our database schema is defined in the `models.py` file. So, let's add a boolean column to the `user` table. First, we need to add the attribute to the `User` class in the `models.py` file. In the file, we have already imported the `db` object from the flask app, so we just need to add a column to it that is part of the `User` class:
+
+```python
+class User(UserMixin, db.Model):
+    ...
+    is_cool = db.Column(db.Boolean, default=False)  # Mark whether the user is cool (or not)
+    ...
+```
+
+When we save this file and start back up our instance...nothing happens. The column doesn't automatically show up in the database just from defining it in `models.py`, we need to tell flask that we have changed the database schema and go through the migration process. The details of the process are going to vary between docker and baremetal installs, but the commands listed out in the following steps need to be run in a terminal belonging to the same machine/environment or container as is running flask. For docker, that can mean needing to exec into a running container (the `app` container, not the `db` container) to run the commands.
+
+Flask is smart enough to be able to analyze our new, updated `models.py` file and compare it against the current schema of the database. Then it can generate a script that will automatically apply the changes to the database needed to match the updated schema. So, the first step of this process is to tell flask that we changed the schema and want to create a migration to a new schema. Similar to a git commit, we also add a short message describing the change we are making. This can be done from the command line:
+
+```bash
+flask db migrate -m "Added a column to mark users as cool"
+```
+
+Running this command will generate our migration script and create a new python file in the `migrations/versions` folder. Importantly, creating the migration script like this does not actually execute the migration. This gives you a chance to inspect the generated script to make sure it is doing what you want. Also, you might need to add some additional code to the script to perform other actions such as calculating values to populate the column with at the time of creation.
+
+After inspecting/customizing your migration script, make sure that it is added to git so that it is tracked. Then, when you are ready to execute the migration, we can do so from the command line:
+
+```bash
+flask db upgrade
+```
+
+The `upgrade` command executes all the migrations to bring your database up to the most recent schema. Similarly, you can use the `downgrade` command to undo a migration one at a time. The `current` command will output the hash of the migration that your database is currently running.
