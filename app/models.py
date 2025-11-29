@@ -2499,6 +2499,7 @@ class PostReply(db.Model):
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
                           distinguished=distinguished,
+                          answer=request_json['object']['answer'] if request_json and 'answer' in request_json['object'] else None,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)

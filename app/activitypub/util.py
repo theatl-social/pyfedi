@@ -243,7 +243,8 @@ def comment_model_to_json(reply: PostReply) -> dict:
             'name': reply.language_name()
         },
         'flair': reply.author.community_flair(reply.community_id),
-        'repliesEnabled': reply.replies_enabled
+        'repliesEnabled': reply.replies_enabled,
+        'answer': reply.answer
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
