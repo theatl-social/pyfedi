@@ -37,7 +37,7 @@
         </div>
         {% if post.type == POST_TYPE_IMAGE -%}
             <p class="mt-2">
-                {% if post.url.startswith('https://pixelfed.social/') -%}
+                {% if post.url and post.url.startswith('https://pixelfed.social/') -%}
                     <a href="{{ post.url }}" rel="nofollow ugc" target="_blank" aria-label="Go to image">
                         {{ post.url|shorten_url }}
                         <span class="fe fe-external"></span>
