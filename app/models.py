@@ -2469,7 +2469,7 @@ class PostReply(db.Model):
     )
 
     @classmethod
-    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished,
+    def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, answer,
             request_json: dict = None, announce_id=None, session=None):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
             reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound
@@ -2499,7 +2499,7 @@ class PostReply(db.Model):
                           notify_author=notify_author, instance_id=user.instance_id,
                           language_id=language_id,
                           distinguished=distinguished,
-                          answer=request_json['object']['answer'] if request_json and 'answer' in request_json['object'] else None,
+                          answer=answer,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)

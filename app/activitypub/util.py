@@ -2205,6 +2205,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             language_id = site_language_id()
 
         distinguished = request_json['object']['distinguished'] if 'distinguished' in request_json['object'] else False
+        answer = request_json['object']['answer'] if 'answer' in request_json['object'] else False
 
         if 'attachment' in request_json['object']:
             attachment_list = []
@@ -2248,7 +2249,7 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
             db.session.commit()
         try:
             post_reply = PostReply.new(user, post, parent_comment, notify_author=False, body=body, body_html=body_html,
-                                       language_id=language_id, distinguished=distinguished, request_json=request_json,
+                                       language_id=language_id, distinguished=distinguished, answer=answer, request_json=request_json,
                                        announce_id=announce_id)
             for lutn in local_users_to_notify:
                 recipient = db.session.query(User).filter_by(ap_profile_id=lutn, ap_id=None).first()

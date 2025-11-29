@@ -143,12 +143,14 @@ def make_reply(input, post, parent_id, src, auth=None):
         notify_author = input['notify_author']
         language_id = input['language_id']
         distinguished = input['distinguished'] if 'distinguished' in input else False
+        answer = False
     else:
         user = current_user
         content = input.body.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         distinguished = input.distinguished.data
+        answer = False
 
     if parent_id:
         parent_reply = db.session.query(PostReply).filter_by(id=parent_id).one()
@@ -168,7 +170,7 @@ def make_reply(input, post, parent_id, src, auth=None):
     # WEBFORM would call 'make_reply' in a try block, so any exception from 'new' would bubble-up for it to handle
     reply = PostReply.new(user, post, in_reply_to=parent_reply, body=piefed_markdown_to_lemmy_markdown(content),
                           body_html=markdown_to_html(content), notify_author=notify_author,
-                          language_id=language_id, distinguished=distinguished)
+                          language_id=language_id, distinguished=distinguished, answer=answer)
 
     user.language_id = language_id
     user.post_reply_count += 1

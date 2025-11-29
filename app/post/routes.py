@@ -792,7 +792,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
             reply = PostReply.new(current_user, post, in_reply_to=in_reply_to,
                                   body=piefed_markdown_to_lemmy_markdown(content),
                                   body_html=markdown_to_html(content), notify_author=True,
-                                  language_id=language_id, distinguished=False)
+                                  language_id=language_id, distinguished=False, answer=False)
         except PostReplyValidationError as e:
             return '<div id="reply_to_{comment_id}" class="hidable"><span class="red">' + str(e) + '</span></div>'
 

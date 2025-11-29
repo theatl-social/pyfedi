@@ -254,12 +254,13 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                 
                                                 # Check if distinguished
                                                 distinguished = reply_data.get('distinguished', False)
-                                                
+                                                answer = reply_data.get('answer', False)
+
                                                 # Create the reply
                                                 try:
                                                     reply_data['object'] = {'id': reply_data['id']}
                                                     post_reply = PostReply.new(reply_author, post, in_reply_to, body, body_html,
-                                                                               False, language_id, distinguished, reply_data, session=session)
+                                                                               False, language_id, distinguished, answer, reply_data, session=session)
                                                     session.add(post_reply)
                                                     community.post_reply_count += 1
                                                     session.commit()
