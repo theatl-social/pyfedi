@@ -23,17 +23,18 @@
             </div>
             <br />
             <div>
-                <label for="posts_replies" class="form-label">Posts/Comments:</label>
+                <label for="posts_replies" class="form-label">{{ _('Posts/Comments:') }}</label>
                 <select name="posts_replies" class="form-select-sm submit_on_change">
                     <option value="">All</option>
-                    <option value="posts" {{ 'selected' if posts_replies == 'posts' }}>Posts</option>
-                    <option value="replies" {{ 'selected' if posts_replies == 'replies' }}>Comments</option>
+                    <option value="posts" {{ 'selected' if posts_replies == 'posts' }}>{{ _('Posts') }}</option>
+                    <option value="replies" {{ 'selected' if posts_replies == 'replies' }}>{{ _('Comments') }}</option>
                 </select>
                 <label for="days" class="form-label">Days:</label>
                 <select name="days" class="form-select-sm submit_on_change">
-                    <option value="3" {{ 'selected' if days == 3 }}>3 days</option>
-                    <option value="7" {{ 'selected' if days == 7 }}>7 days</option>
-                    <option value="14" {{ 'selected' if days == 14 }}>14 days</option>
+                    <option value="1" {{ 'selected' if days == 1 }}>{{ _('1 day') }}</option>
+                    <option value="3" {{ 'selected' if days == 3 }}>{{ _('3 days') }}</option>
+                    <option value="7" {{ 'selected' if days == 7 }}>{{ _('7 days') }}</option>
+                    <option value="14" {{ 'selected' if days == 14 }}>{{ _('14 days') }}</option>
                 </select>
             </div>
         </form>
