@@ -7,12 +7,17 @@
             {{ post.title }}
             {% if post.nsfw -%}
                 <span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">
-                    nsfw
+                    {{ _('nsfw') }}
                 </span>
             {% endif -%}
             {% if post.nsfl -%}
                 <span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">
-                    nsfl
+                    {{ _('nsfl') }}
+                </span>
+            {% endif -%}
+            {% if post.ai_generated -%}
+                <span class="warning_badge ai_generated" title="{{ _('This post contains AI generated content') }}">
+                    {{ _('AI') }}
                 </span>
             {% endif -%}
         </h1>
