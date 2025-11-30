@@ -102,7 +102,7 @@ def add_local():
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
                               ap_moderators_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/moderators',
                               ap_domain=current_app.config['SERVER_NAME'],
-                              subscriptions_count=1, instance_id=1,
+                              subscriptions_count=1, instance_id=1, ai_generated=form.ai_generated.data,
                               low_quality=('memes' in form.url.data or 'shitpost' in form.url.data) and
                                            get_setting('meme_comms_low_quality', False),
                               question_answer=form.question_answer.data)
@@ -981,6 +981,9 @@ def add_post(actor, type=None):
     if community.nsfl:
         form.nsfl.data = True
         form.nsfw.render_kw = {'disabled': True}
+    if community.ai_generated:
+        form.ai_generated.data = True
+        form.ai_generated.render_kw = {'disabled': True}
     if not (community.is_moderator() or community.is_owner() or current_user.is_admin()):
         form.sticky.render_kw = {'disabled': True}
 
@@ -1050,6 +1053,7 @@ def add_post(actor, type=None):
             form.body.data = source_post.body
             form.nsfw.data = source_post.nsfw
             form.nsfl.data = source_post.nsfl
+            form.ai_generated.data = source_post.ai_generated
             form.language_id.data = source_post.language_id
             if post_type == POST_TYPE_LINK:
                 form.link_url.data = source_post.url
@@ -1132,6 +1136,7 @@ def community_edit(community_id: int):
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
             community.posting_warning = form.posting_warning.data
             community.nsfw = form.nsfw.data
+            community.ai_generated = form.ai_generated.data
             community.local_only = form.local_only.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
@@ -1189,6 +1194,7 @@ def community_edit(community_id: int):
             form.description.data = community.description
             form.posting_warning.data = community.posting_warning
             form.nsfw.data = community.nsfw
+            form.ai_generated.data = community.ai_generated
             form.local_only.data = community.local_only
             form.new_mods_wanted.data = community.new_mods_wanted
             form.restricted_to_mods.data = community.restricted_to_mods

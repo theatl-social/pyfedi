@@ -145,6 +145,7 @@ def post_to_page(post: Post):
         "attachment": [],
         "commentsEnabled": post.comments_enabled,
         "sensitive": post.nsfw or post.nsfl,
+        "genAI": post.ai_generated,
         "published": ap_datetime(post.created_at),
         "stickied": post.sticky,
         "audience": post.community.public_url(),
@@ -804,6 +805,8 @@ def refresh_community_profile_task(community_id, activity_json):
                             new_language = find_language_or_create(ap_language['identifier'], ap_language['name'], session)
                             if new_language not in community.languages:
                                 community.languages.append(new_language)
+                    if 'genAI' in activity_json and not community.ignore_remote_gen_ai:
+                        community.ai_generated = activity_json['genAI']
                     instance = session.query(Instance).get(community.instance_id)
                     if instance and instance.software == 'peertube':
                         community.restricted_to_mods = True
@@ -1160,6 +1163,7 @@ def actor_json_to_model(activity_json, address, server):
         community = Community(name=activity_json['preferredUsername'].strip(),
                               title=activity_json['name'].strip(),
                               nsfw=activity_json['sensitive'] if 'sensitive' in activity_json else False,
+                              ai_generated=activity_json['genAI'] if 'genAI' in activity_json else False,
                               restricted_to_mods=activity_json['postingRestrictedToMods'] if 'postingRestrictedToMods' in activity_json else False,
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,

@@ -39,7 +39,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                    'language_id': post.language_id if post.language_id else 0,
                    'removed': False,
                    'locked': not post.comments_enabled,
-                   'nsfw': post.nsfw if post.nsfw is not None else False})
+                   'nsfw': post.nsfw if post.nsfw is not None else False,
+                   'ai_generated': post.ai_generated if post.ai_generated is not None else False})
         if post.body:
             v1['body'] = post.body
         if post.edited_at:
@@ -483,7 +484,7 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
     # Variant 1 - models/community/community.dart
     if variant == 1:
-        include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods', 'question_answer']
+        include = ['id', 'name', 'title', 'banned', 'nsfw', 'restricted_to_mods', 'question_answer', 'ai_generated']
         v1 = {column.name: getattr(community, column.name) for column in community.__table__.columns if
               column.name in include}
         v1.update({'published': community.created_at.isoformat(timespec="microseconds") + 'Z',

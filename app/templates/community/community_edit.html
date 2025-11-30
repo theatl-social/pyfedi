@@ -58,6 +58,7 @@
                 <div id="image_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ community.header_image() }});"></div>
             {% endif %}
             {{ render_field(form.nsfw) }}
+            {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
             {{ render_field(form.local_only) }}
             {{ render_field(form.question_answer) }}

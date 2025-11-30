@@ -876,6 +876,7 @@ def post_post(auth, data):
     body = data['body'] if 'body' in data else ''
     url = data['url'] if 'url' in data else None
     nsfw = data['nsfw'] if 'nsfw' in data else False
+    ai_generated = data['ai_generated'] if 'ai_generated' in data else False
     language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
         language_id = site_language_id()
@@ -894,7 +895,8 @@ def post_post(auth, data):
     else:
         type = POST_TYPE_ARTICLE
 
-    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True}
+    input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True,
+             'ai_generated': ai_generated}
 
     # Add event data if present
     if 'event' in data and data['event']:
@@ -919,6 +921,7 @@ def put_post(auth, data):
     body = data['body'] if 'body' in data else post.body
     url = data['url'] if 'url' in data else post.url
     nsfw = data['nsfw'] if 'nsfw' in data else post.nsfw
+    ai_generated = data['ai_generated'] if 'ai_generated' in data else post.ai_generated
     language_id = data['language_id'] if 'language_id' in data else post.language_id
     tags = data['tags'] if 'tags' in data else tags_to_string(post) or ''
     flair = data['flair'] if 'flair' in data else flair_to_string(post) or ''
@@ -935,7 +938,7 @@ def put_post(auth, data):
             type = POST_TYPE_ARTICLE
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True,
-             'tags': tags, 'flair': flair}
+             'tags': tags, 'flair': flair, 'ai_generated': ai_generated}
 
     # Add event data if present
     if 'event' in data and data['event']:

@@ -1205,6 +1205,7 @@ def admin_community_edit(community_id):
         community.description_html = markdown_to_html(form.description.data)
         community.rules = form.rules.data
         community.nsfw = form.nsfw.data
+        community.ai_generated = form.ai_generated.data
         community.banned = form.banned.data
         community.local_only = form.local_only.data
         community.restricted_to_mods = form.restricted_to_mods.data
@@ -1217,6 +1218,7 @@ def admin_community_edit(community_id):
         community.default_layout = form.default_layout.data
         community.posting_warning = form.posting_warning.data
         community.ignore_remote_language = form.ignore_remote_language.data
+        community.ignore_remote_gen_ai = form.ignore_remote_gen_ai.data
         community.always_translate = form.always_translate.data
         community.can_be_archived = form.can_be_archived.data
 
@@ -1263,6 +1265,7 @@ def admin_community_edit(community_id):
         form.description.data = community.description
         form.rules.data = community.rules
         form.nsfw.data = community.nsfw
+        form.ai_generated.data = community.ai_generated
         form.banned.data = community.banned
         form.local_only.data = community.local_only
         form.new_mods_wanted.data = community.new_mods_wanted
@@ -1276,6 +1279,7 @@ def admin_community_edit(community_id):
         form.posting_warning.data = community.posting_warning
         form.languages.data = community.language_ids()
         form.ignore_remote_language.data = community.ignore_remote_language
+        form.ignore_remote_gen_ai.data = community.ignore_remote_gen_ai
         form.always_translate.data = community.always_translate
         form.can_be_archived.data = community.can_be_archived
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)

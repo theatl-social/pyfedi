@@ -476,6 +476,7 @@ def community_profile(actor):
                           "defaultPostType": community.default_post_type,
                           "newModsWanted": community.new_mods_wanted,
                           "privateMods": community.private_mods,
+                          "genAI": community.ai_generated,
                           "url": f"https://{server}/c/{actor}",
                           "publicKey": {
                               "id": f"https://{server}/c/{actor}#main-key",

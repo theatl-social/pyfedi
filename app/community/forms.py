@@ -29,6 +29,7 @@ class AddCommunityForm(FlaskForm):
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
+    ai_generated = BooleanField('Only AI-generated content')
     local_only = BooleanField('Local only')
     publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
     question_answer = BooleanField('Question & answer community')
@@ -79,6 +80,7 @@ class EditCommunityForm(FlaskForm):
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField(_l('NSFW community'))
+    ai_generated = BooleanField('Only AI-generated content')
     local_only = BooleanField(_l('Only accept posts from current instance'))
     question_answer = BooleanField('Question & answer community')
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
@@ -179,6 +181,7 @@ class CreatePostForm(FlaskForm):
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
+    ai_generated = BooleanField(_l('AI generated'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int,
                               render_kw={'class': 'form-select'})

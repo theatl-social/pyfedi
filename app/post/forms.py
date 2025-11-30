@@ -81,6 +81,7 @@ class FlairPostForm(FlaskForm):
     flair = MultiCheckboxField(_l('Flair'), coerce=int, render_kw={'class': 'form-multicheck-columns'})
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
+    ai_generated = BooleanField(_l('AI generated'))
     submit = SubmitField(_l('Save'))
 
 

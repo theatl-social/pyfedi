@@ -246,6 +246,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         body = input['body']
         url = input['url']
         nsfw = input['nsfw']
+        ai_generated = input['ai_generated']
         notify_author = input['notify_author']
         language_id = input['language_id']
         timezone = input['timezone'] if 'timezone' in input else user.timezone
@@ -306,6 +307,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         else:
             url = None
         nsfw = input.nsfw.data
+        ai_generated = input.ai_generated.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         tags = tags_from_string_old(input.tags.data)
@@ -366,6 +368,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
+    post.ai_generated = ai_generated
     post.notify_author = notify_author
     post.language_id = language_id
     user.language_id = language_id

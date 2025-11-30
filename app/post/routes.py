@@ -928,6 +928,7 @@ def post_edit(post_id: int):
             form.notify_author.data = post.notify_author
             form.nsfw.data = post.nsfw
             form.nsfl.data = post.nsfl
+            form.ai_generated.data = post.ai_generated
             form.sticky.data = post.sticky
             form.language_id.data = post.language_id
             form.tags.data = tags_to_string(post)
@@ -1392,6 +1393,7 @@ def post_set_flair(post_id):
 
             post.nsfw = request.form.get('nsfw') == '1'
             post.nsfl = request.form.get('nsfl') == '1'
+            post.ai_generated = request.form.get('ai_generated') == '1'
 
             # Reset flair for the post
             post.flair = []
@@ -1430,6 +1432,7 @@ def post_set_flair(post_id):
             post.flair = flair_from_form(form.flair.data)
             post.nsfw = form.nsfw.data
             post.nsfl = form.nsfl.data
+            post.ai_generated = form.ai_generated.data
             db.session.commit()
             if post.status == POST_STATUS_PUBLISHED:
                 task_selector('edit_post', post_id=post.id)
@@ -1438,6 +1441,7 @@ def post_set_flair(post_id):
         form.flair.data = [flair.id for flair in post.flair]
         form.nsfw.data = post.nsfw
         form.nsfl.data = post.nsfl
+        form.ai_generated.data = post.ai_generated
         return render_template('generic_form.html', form=form,
                                title=_('Set flair for %(post_title)s', post_title=post.title))
     else:
