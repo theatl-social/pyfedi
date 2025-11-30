@@ -742,6 +742,7 @@ def refresh_community_profile_task(community_id, activity_json):
                     community.new_mods_wanted = activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False
                     community.private_mods = activity_json['privateMods'] if 'privateMods' in activity_json else False
                     community.question_answer = activity_json['questionAnswer'] if 'questionAnswer' in activity_json else False
+                    community.default_post_type = activity_json['defaultPostType'] if 'default_post_type' in activity_json else 'link'
                     community.ap_moderators_url = mods_url
                     if 'followers' in activity_json:
                         community.ap_followers_url = activity_json['followers']
@@ -1163,6 +1164,7 @@ def actor_json_to_model(activity_json, address, server):
                               new_mods_wanted=activity_json['newModsWanted'] if 'newModsWanted' in activity_json else False,
                               private_mods=activity_json['privateMods'] if 'privateMods' in activity_json else False,
                               question_answer=activity_json['questionAnswer'] if 'questionAnswer' in activity_json else False,
+                              default_post_type=activity_json['defaultPostType'] if 'defaultPostType' in activity_json else 'link',
                               created_at=activity_json['published'] if 'published' in activity_json else utcnow(),
                               last_active=activity_json['updated'] if 'updated' in activity_json else utcnow(),
                               posting_warning=activity_json['postingWarning'] if 'postingWarning' in activity_json else None,
