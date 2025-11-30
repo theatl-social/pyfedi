@@ -2292,6 +2292,10 @@ a.unread:before, div.unread:before {
   border: 1px solid black;
   color: black;
 }
+.warning_badge.ai_generated {
+  border: 1px solid #FF585B;
+  color: #FF585B;
+}
 
 h1 .warning_badge {
   position: relative;

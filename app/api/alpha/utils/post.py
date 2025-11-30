@@ -223,6 +223,14 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         else:
             u_rp_ids = tuple(db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
                                           {"user_id": user_id}).scalars())
+            if user.ignore_bots == 1:
+                posts = posts.filter(Post.from_bot == False)
+            if user.hide_nsfl == 1:
+                posts = posts.filter(Post.nsfl == False)
+            if user.hide_nsfw == 1:
+                posts = posts.filter(Post.nsfw == False)
+            if user.hide_gen_ai == 1:
+                posts = posts.filter(Post.ai_generated == False)
             if user.hide_read_posts and not query:
                 # Alias the read_posts table
                 rp = read_posts.alias()

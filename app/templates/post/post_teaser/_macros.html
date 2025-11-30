@@ -38,8 +38,9 @@
     {% for flair in post.flair -%}
         <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="/c/{{ post.community.link() }}?flair={{ flair.flair }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
     {% endfor -%}
-    {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
-    {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
+    {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">{{ _('nsfw') }}</span>{% endif -%}
+    {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">{{ _('nsfl') }}</span>{% endif -%}
+    {% if post.ai_generated and ((current_user.is_authenticated and current_user.hide_gen_ai == 2) or current_user.is_anonymous) -%}<span class="warning_badge ai_generated" title="{{ _('This post contains AI generated content') }}">{{ _('AI') }}</span>{% endif -%}
     {% if post.id in reported_posts -%}
     <a href="{{ url_for('community.community_moderate', actor=post.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span></a>
     {% endif -%}

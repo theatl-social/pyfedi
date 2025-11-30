@@ -2,7 +2,8 @@
 {% set content_blocked = post.blocked_by_content_filter(content_filters, current_user.get_id())
                          or (current_user.hide_nsfw == 3 and post.nsfw)
                          or (current_user.hide_nsfl == 3 and post.nsfl)
-                         or (current_user.ignore_bots == 3 and post.from_bot) -%}
+                         or (current_user.ignore_bots == 3 and post.from_bot)
+                         or (current_user.hide_gen_ai == 3 and post.ai_generated) -%}
 {% set blur_content = (current_user.hide_nsfw == 2 and post.nsfw)
                    or (current_user.hide_nsfl == 2 and post.nsfl)
                    or (current_user.ignore_bots == 2 and post.from_bot)

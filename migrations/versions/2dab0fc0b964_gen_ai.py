@@ -24,11 +24,11 @@ def upgrade():
         batch_op.create_index(batch_op.f('ix_community_ai_generated'), ['ai_generated'], unique=False)
 
     with op.batch_alter_table('post', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('ai_generated', sa.Boolean(), nullable=True))
+        batch_op.add_column(sa.Column('ai_generated', sa.Boolean(), server_default=sa.text('false'), nullable=True))
         batch_op.create_index(batch_op.f('ix_post_ai_generated'), ['ai_generated'], unique=False)
 
     with op.batch_alter_table('user', schema=None) as batch_op:
-        batch_op.add_column(sa.Column('hide_gen_ai', sa.Integer(), nullable=True))
+        batch_op.add_column(sa.Column('hide_gen_ai', sa.Integer(), server_default=sa.text('2'), nullable=True))
 
     # ### end Alembic commands ###
 

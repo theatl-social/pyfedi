@@ -357,6 +357,8 @@ def show_community(community: Community):
                 posts = posts.outerjoin(read_posts, (Post.id == read_posts.c.read_post_id) & (
                         read_posts.c.user_id == current_user.id))
                 posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
+            if current_user.hide_gen_ai == 1:
+                posts = posts.filter(Post.ai_generated == False)
             content_filters = user_filters_posts(current_user.id)
             posts = posts.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 

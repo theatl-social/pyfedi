@@ -27,6 +27,7 @@ def get_community_list(auth, data):
     limit = int(data['limit']) if 'limit' in data else 10
     show_nsfw = data['show_nsfw'] if 'show_nsfw' in data else False
     show_nsfl = show_nsfw
+    show_genai = data['show_genai'] if 'show_genai' in data else True
 
     user = authorise_api_user(auth, return_type='model') if auth else None
     user_id = user.id if user else None
@@ -60,6 +61,8 @@ def get_community_list(auth, data):
             communities = communities.filter(Community.nsfw == False)
         if user.hide_nsfl and not show_nsfl:
             communities = communities.filter(Community.nsfl == False)
+        if user.hide_gen_ai and not show_genai:
+            communities = communities.filter(Community.ai_generated == False)
     else:
         if not show_nsfw:
             communities = communities.filter_by(nsfw=False)

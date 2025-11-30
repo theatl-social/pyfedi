@@ -955,7 +955,7 @@ class User(UserMixin, db.Model):
     matrix_user_id = db.Column(db.String(256))
     hide_nsfw = db.Column(db.Integer, default=1)
     hide_nsfl = db.Column(db.Integer, default=1)
-    hide_gen_ai = db.Column(db.Integer, default=0)
+    hide_gen_ai = db.Column(db.Integer, default=2)      # 0 = show, 1 = hide, 2 = label, 3 = semi-transparent
     created = db.Column(db.DateTime, default=utcnow)
     last_seen = db.Column(db.DateTime, default=utcnow, index=True)
     avatar_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)

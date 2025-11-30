@@ -1880,6 +1880,11 @@ a.unread, div.unread {
     border:1px solid black;
     color:black;
   }
+
+  &.ai_generated {
+    border:1px solid #FF585B;
+    color:#FF585B;
+  }
 }
 
 h1 .warning_badge {

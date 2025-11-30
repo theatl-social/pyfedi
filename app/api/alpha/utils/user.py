@@ -310,6 +310,8 @@ def put_user_save_user_settings(auth, data):
     nsfw_visibility = data['nsfw_visibility'] if 'nsfw_visibility' in data else None
     show_nsfl = data['show_nsfl'] if 'show_nsfl' in data else None
     nsfl_visibility = data['nsfl_visibility'] if 'nsfl_visibility' in data else None
+    show_genai = data['show_genai'] if 'show_genai' in data else None
+    genai_visibility = data['genai_visibility'] if 'genai_visibility' in data else None
     show_read_posts = data['show_read_posts'] if 'show_read_posts' in data else None
     about = data['bio'] if 'bio' in data else None
     default_sort = data['default_sort_type'] if 'default_sort' in data else None
@@ -385,6 +387,21 @@ def put_user_save_user_settings(auth, data):
             user.hide_nsfl = 0
         elif show_nsfl == False:
             user.hide_nsfl = 1
+
+    if genai_visibility:
+        if genai_visibility == "Show":
+            user.hide_gen_ai = 0
+        elif genai_visibility == "Hide":
+            user.hide_gen_ai = 1
+        elif genai_visibility == "Label":
+            user.hide_gen_ai = 2
+        elif genai_visibility == "Transparent":
+            user.hide_gen_ai = 3
+    else:
+        if show_genai == True:
+            user.hide_gen_ai = 0
+        elif show_genai == False:
+            user.hide_gen_ai = 1
 
     if user_in_restricted_country(user):
         user.hide_nsfw = 1  # Hide nsfw

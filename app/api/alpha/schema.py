@@ -22,6 +22,7 @@ notification_status_list = ["All", "Unread", "Read", "New"]
 feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
+ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
 
 
@@ -163,6 +164,7 @@ class LocalUser(DefaultSchema):
     accept_private_messages = fields.String(required=True, validate=validate.OneOf(private_message_list),
                                             metadata={"description": 'Accept private messages from nobody, local users only, "trusted" instances, or any instance'})
     bot_visibility = fields.String(required=True, validate=validate.OneOf(nsfw_visibility_list))
+    ai_visibility = fields.String(required=True, validate=validate.OneOf(ai_visibility_list))
     community_keyword_filter = fields.List(fields.String(),
                                            metadata={"description": "Filter out communities with these words in their name"})
     default_comment_sort_type = fields.String(required=True, validate=validate.OneOf(comment_sort_list))
@@ -1001,6 +1003,8 @@ class UserSaveSettingsRequest(DefaultSchema):
                                     metadata={"description": "Overrides the show_nsfl field if provided"})
     nsfw_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list),
                                     metadata={"description": "Overrides the show_nsfw field if provided"})
+    genai_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list),
+                                    metadata={"description": "Overrides the show_genai field if provided"})
     reply_collapse_threshold = fields.Integer(metadata={"description": "Collapse replies with a score at or below this level"})
     reply_hide_threshold = fields.Integer(metadata={"description": "Hide replies with a score at or below this level"})
     show_nsfw = fields.Boolean()
