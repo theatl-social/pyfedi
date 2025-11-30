@@ -526,6 +526,7 @@ class Community(db.Model):
     post_reply_count = db.Column(db.Integer, default=0)
     nsfw = db.Column(db.Boolean, default=False)
     nsfl = db.Column(db.Boolean, default=False)
+    ai_generated = db.Column(db.Boolean, default=False, index=True)
     instance_id = db.Column(db.Integer, db.ForeignKey('instance.id'), index=True)
     low_quality = db.Column(db.Boolean, default=False)  # upvotes earned in low quality communities don't improve reputation
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -578,6 +579,7 @@ class Community(db.Model):
     show_all = db.Column(db.Boolean, default=True)
 
     ignore_remote_language = db.Column(db.Boolean, default=False)
+    ignore_remote_gen_ai = db.Column(db.Boolean, default=False)
 
     search_vector = db.Column(TSVectorType('name', 'title', 'description', 'rules', auto_index=False))
 
@@ -953,6 +955,7 @@ class User(UserMixin, db.Model):
     matrix_user_id = db.Column(db.String(256))
     hide_nsfw = db.Column(db.Integer, default=1)
     hide_nsfl = db.Column(db.Integer, default=1)
+    hide_gen_ai = db.Column(db.Integer, default=0)
     created = db.Column(db.DateTime, default=utcnow)
     last_seen = db.Column(db.DateTime, default=utcnow, index=True)
     avatar_id = db.Column(db.Integer, db.ForeignKey('file.id'), index=True)
@@ -1529,6 +1532,7 @@ class Post(db.Model):
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
     sticky = db.Column(db.Boolean, default=False, index=True)
+    ai_generated = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)

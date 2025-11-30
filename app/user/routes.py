@@ -1435,6 +1435,7 @@ def user_settings_filters():
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
+        current_user.hide_gen_ai = form.hide_gen_ai.data
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
@@ -1454,6 +1455,7 @@ def user_settings_filters():
         form.ignore_bots.data = current_user.ignore_bots
         form.hide_nsfw.data = current_user.hide_nsfw
         form.hide_nsfl.data = current_user.hide_nsfl
+        form.hide_gen_ai.data = current_user.hide_gen_ai
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
         form.hide_low_quality.data = current_user.hide_low_quality
