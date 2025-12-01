@@ -14,6 +14,7 @@ User-Agent: *
   Disallow: /post/*/options
   Disallow: /honey
   Disallow: /honey/
+  Content-Signal: ai-train=no, search=yes, ai-input=no
 
 User-agent: Applebot
 Disallow: /
