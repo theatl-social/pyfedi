@@ -59,11 +59,12 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    instance_gone_forever, site_language_code
+    site_language_code, block_honey_pot
 
 
 @login_required_if_private_instance
 def show_post(post_id: int):
+    block_honey_pot()
     with limiter.limit('30/minute'):
         post = Post.query.get_or_404(post_id)
         community: Community = post.community
@@ -553,6 +554,8 @@ def poll_vote(post_id):
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>')
 @login_required_if_private_instance
 def continue_discussion(post_id, comment_id):
+    block_honey_pot()
+
     post = Post.query.get_or_404(post_id)
     comment = PostReply.query.get_or_404(comment_id)
 

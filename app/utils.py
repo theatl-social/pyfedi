@@ -1002,6 +1002,14 @@ def blocked_referrers() -> List[str]:
         return []
 
 
+def block_honey_pot():
+    # Return 403 for any IP address that has visited /honey/* too many times. See honey_pot()
+    if current_user.is_anonymous:
+        from app import redis_client
+        if redis_client.exists(f"ban:{ip_address()}"):
+            abort(403)
+
+
 def retrieve_block_list():
     try:
         response = httpx_client.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)

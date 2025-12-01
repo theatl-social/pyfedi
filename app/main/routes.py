@@ -37,7 +37,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post, \
-    num_topics, referrer
+    num_topics, referrer, block_honey_pot
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -58,6 +58,7 @@ def index(sort=None, view_filter=None):
 
 def home_page(sort, view_filter):
     verification_warning()
+    block_honey_pot()
 
     if sort is None:
         sort = current_user.default_sort if current_user.is_authenticated else 'hot'
@@ -558,6 +559,34 @@ def replay_inbox():
     replay_inbox_request(request_json)
 
     return 'ok'
+
+
+@bp.route('/honey')
+@bp.route('/honey/<whatever>')
+def honey_pot(whatever=None):
+    from app import redis_client
+    from time import time
+    ip = ip_address()
+    key = f"honeypot:{ip}"
+
+    now = time()
+    score = now
+    member = str(now)  # unique enough for repeated entries
+
+    added = redis_client.zadd(key, {member: score})
+
+    if added == 1 and redis_client.ttl(key) == -1:
+        redis_client.expire(key, 86400)  # auto-expire key after 24h of inactivity
+
+    # Remove entries older than 24 hours
+    redis_client.zremrangebyscore(key, 0, now - 86400)
+
+    # Count recent events
+    count = redis_client.zcount(key, now - 86400, now)
+
+    if count >= 3:
+        redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
+    return ''
 
 
 @bp.route('/test')

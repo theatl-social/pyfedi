@@ -195,6 +195,7 @@
     {% with community = post.community -%}
         {% include "_side_pane.html" %}
     {% endwith -%}
+    <a href="/honey/{{ post.id }}" class="visually-hidden" tabindex="-1" aria-hidden="true">Do not click this</a>
 </div>
 <dialog id="communitySidebar"></dialog>
 <script nonce="{{ nonce }}">
