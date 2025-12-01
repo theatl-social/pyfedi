@@ -426,8 +426,7 @@ class CreatePollForm(CreatePostForm):
     finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices,
                             render_kw={'class': 'form-select'})
     local_only = BooleanField(_l('Accept votes from this instance only'))
-    choice_1 = StringField(
-        'Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
+    choice_1 = StringField('Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
     choice_2 = StringField('Choice')
     choice_3 = StringField('Choice')
     choice_4 = StringField('Choice')
@@ -437,6 +436,11 @@ class CreatePollForm(CreatePostForm):
     choice_8 = StringField('Choice')
     choice_9 = StringField('Choice')
     choice_10 = StringField('Choice')
+    choice_11 = StringField('Choice')
+    choice_12 = StringField('Choice')
+    choice_13 = StringField('Choice')
+    choice_14 = StringField('Choice')
+    choice_15 = StringField('Choice')
 
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
@@ -457,6 +461,8 @@ class CreatePollForm(CreatePostForm):
         elif choices_made <= 1:
             self.choice_2.errors.append(_l('Provide at least two choices'))
             return False
+        elif choices_made > 15:
+            self.choice_1.errors.append(_l('Maximum 15 choices'))
         return True
 
 

@@ -323,10 +323,10 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         # Extract poll data from form
         if type == POST_TYPE_POLL:
             poll_choices = []
-            for i in range(1, 10):
-                choice_text = getattr(input, f"choice_{i}").data.strip()
+            for i in range(1, 16):
+                choice_text = getattr(input, f"choice_{i}").data
                 if choice_text:
-                    poll_choices.append({'choice_text': choice_text, 'sort_order': i})
+                    poll_choices.append({'choice_text': choice_text.strip(), 'sort_order': i})
             poll_data = {
                 'mode': input.mode.data,
                 'local_only': input.local_only.data,

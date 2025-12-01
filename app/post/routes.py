@@ -918,6 +918,8 @@ def post_edit(post_id: int):
                 flash(_('Your changes have been saved.'), 'success')
             except Exception as ex:
                 flash(_('Your edit was not accepted because %(reason)s', reason=str(ex)), 'error')
+                if current_app.debug:
+                    raise ex
                 abort(401)
 
             return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
