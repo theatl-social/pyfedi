@@ -34,7 +34,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session, to_srgb, communities_banned_from_all_users
+    patch_db_session, to_srgb, communities_banned_from_all_users, blocked_communities, blocked_instances
 
 
 def public_key():
@@ -2356,7 +2356,11 @@ def notify_about_post_task(post_id):
             # NOTIF_USER 
             user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
             for notify_id in user_send_notifs_to:
-                if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                blocked_comms = blocked_communities(notify_id)
+                blocked_ints = blocked_instances(notify_id)
+                if notify_id != post.user_id and notify_id not in notifications_sent_to and \
+                        post.community_id not in blocked_comms and \
+                        post.instance_id not in blocked_ints:
                     targets_data = {'gen': '0',
                                     'post_id': post.id,
                                     'post_title': post.title,
@@ -2377,7 +2381,10 @@ def notify_about_post_task(post_id):
             # NOTIF_COMMUNITY
             community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
             for notify_id in community_send_notifs_to:
-                if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                blocked_senders = blocked_users(notify_id)
+                blocked_ints = blocked_instances(notify_id)
+                if notify_id != post.user_id and notify_id not in notifications_sent_to and \
+                        post.user_id not in blocked_senders and post.instance_id not in blocked_ints:
                     targets_data = {'gen': '0',
                                     'post_id': post.id,
                                     'post_title': post.title,
@@ -2399,7 +2406,14 @@ def notify_about_post_task(post_id):
             if post.community.topic_id:
                 topic = session.query(Topic).get(post.community.topic_id)
             for notify_id in topic_send_notifs_to:
-                if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                blocked_senders = blocked_users(notify_id)
+                blocked_comms = blocked_communities(notify_id)
+                blocked_ints = blocked_instances(notify_id)
+                if notify_id != post.user_id and \
+                        notify_id not in notifications_sent_to and \
+                        post.user_id not in blocked_senders and \
+                        post.community_id not in blocked_comms and \
+                        post.instance_id not in blocked_ints:
                     targets_data = {'gen': '0',
                                     'post_id': post.id,
                                     'post_title': post.title,
@@ -2426,7 +2440,14 @@ def notify_about_post_task(post_id):
             for feed in community_feeds:
                 feed_send_notifs_to = notification_subscribers(feed.id, NOTIF_FEED)
                 for notify_id in feed_send_notifs_to:
-                    if notify_id != post.user_id and notify_id not in notifications_sent_to:
+                    blocked_senders = blocked_users(notify_id)
+                    blocked_comms = blocked_communities(notify_id)
+                    blocked_ints = blocked_instances(notify_id)
+                    if notify_id != post.user_id and \
+                            notify_id not in notifications_sent_to and \
+                            post.user_id not in blocked_senders and \
+                            post.community_id not in blocked_comms and \
+                            post.instance_id not in blocked_ints:
                         targets_data = {'gen': '0',
                                         'post_id': post.id,
                                         'post_title': post.title,
