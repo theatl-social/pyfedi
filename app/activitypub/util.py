@@ -1672,22 +1672,27 @@ def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
     return post_id, parent_comment_id, root_id
 
 
-@cache.memoize(timeout=300)  # 5 minutes
+@cache.memoize(timeout=1200)  # 20 minutes
 def _find_liked_object_id(ap_id: str) -> Union[Tuple[int, str], None]:
     """Cache only the object ID and type, not the full SQLAlchemy model.
 
     Returns a tuple of (id, class_name) or None if not found.
     This avoids Redis serialization issues with SQLAlchemy models.
     """
-    post = Post.get_by_ap_id(ap_id)
-    if post:
-        if post.archived:
-            return None
-        return (post.id, 'Post')
+    if '/comment/' in ap_id:
+        post_reply = db.session.query(PostReply.id).filter(PostReply.ap_id == ap_id).first()
+        if post_reply and post_reply[0]:
+            return (post_reply[0], 'PostReply')
     else:
-        post_reply = PostReply.get_by_ap_id(ap_id)
-        if post_reply:
-            return (post_reply.id, 'PostReply')
+        post = db.session.query(Post.id, Post.archived).filter(Post.ap_id == ap_id).first()
+        if post and post[0]:
+            if post[1]:
+                return None
+            return (post[0], 'Post')
+        else:
+            post_reply = db.session.query(PostReply.id).filter(PostReply.ap_id == ap_id).first()
+            if post_reply and post_reply[0]:
+                return (post_reply[0], 'PostReply')
     return None
 
 
