@@ -397,6 +397,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
         
         visibility_options = ["Show", "Hide", "Blur", "Transparent"]
         private_message_options = ["None", "Local", "Trusted", "All"]
+        ai_visibility_options = ["Show", "Hide", "Label", "Transparent"]
 
         v6 = {
             "local_user_view": {
@@ -424,6 +425,7 @@ def user_view(user: User | int, variant, stub=False, user_id=None, flair_communi
                     "federate_votes": not user.vote_privately == True,
                     "feed_auto_follow": user.feed_auto_follow,
                     "feed_auto_leave": user.feed_auto_leave,
+                    "ai_visibility": ai_visibility_options[user.hide_gen_ai]
                 },
                 "person": {
                     "id": user.id,
@@ -495,7 +497,8 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
                    'local': community.is_local(),
                    'hidden': not community.show_all,
                    'instance_id': community.instance_id if community.instance_id else 1,
-                   'ap_domain': community.ap_domain})
+                   'ap_domain': community.ap_domain,
+                   'ai_generated': bool(v1['ai_generated'])})
         if community.description and not stub:
             v1['description'] = community.description
         if not stub:
