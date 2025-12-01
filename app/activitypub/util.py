@@ -295,7 +295,7 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         return None
 
 
-@cache.memoize(timeout=300)  # 5 minutes
+@cache.memoize(timeout=600)  # 10 minutes
 def _find_actor_id_cached(actor_url: str, community_only: bool, feed_only: bool) -> Union[Tuple[int, str], None]:
     """Cache only the actor ID and type, not the full SQLAlchemy model (cache.memoize cannot do DB models).
     Returns a tuple of (id, class_name) or None if not found, to avoid Redis serialization issues with SQLAlchemy models.
@@ -350,15 +350,12 @@ def find_actor_or_create_cached(actor: str, create_if_not_found=True, community_
             return actor_obj
 
     # Not in cache - fall back to the original function
-    if create_if_not_found:
-        actor_obj = find_actor_or_create(actor_url, create_if_not_found=True, community_only=community_only, feed_only=feed_only)
-        # Cache the newly created actor for next time
-        if actor_obj:
-            cache.set(f"_find_actor_id_cached({actor_url},{community_only},{feed_only})",
-                     (actor_obj.id, actor_obj.__class__.__name__), timeout=300)
-        return actor_obj
-
-    return None
+    actor_obj = find_actor_or_create(actor_url, create_if_not_found=create_if_not_found, community_only=community_only, feed_only=feed_only)
+    # Cache the actor for next time
+    if actor_obj:
+        cache.set(f"_find_actor_id_cached({actor_url},{community_only},{feed_only})",
+                 (actor_obj.id, actor_obj.__class__.__name__), timeout=600)
+    return actor_obj
 
 
 def find_language(code: str) -> Language | None:
@@ -1688,22 +1685,28 @@ def find_reply_parent(in_reply_to: str) -> Tuple[int, int, int]:
     return post_id, parent_comment_id, root_id
 
 
-@cache.memoize(timeout=300)  # 5 minutes
+@cache.memoize(timeout=1200)  # 20 minutes
 def _find_liked_object_id(ap_id: str) -> Union[Tuple[int, str], None]:
     """Cache only the object ID and type, not the full SQLAlchemy model.
 
     Returns a tuple of (id, class_name) or None if not found.
     This avoids Redis serialization issues with SQLAlchemy models.
     """
-    post = Post.get_by_ap_id(ap_id)
-    if post:
-        if post.archived:
-            return None
-        return (post.id, 'Post')
+
+    if '/comment/' in ap_id:
+        post_reply = db.session.query(PostReply.id).filter(PostReply.ap_id == ap_id).first()
+        if post_reply and post_reply[0]:
+            return (post_reply[0], 'PostReply')
     else:
-        post_reply = PostReply.get_by_ap_id(ap_id)
-        if post_reply:
-            return (post_reply.id, 'PostReply')
+        post = db.session.query(Post.id, Post.archived).filter(Post.ap_id == ap_id).first()
+        if post and post[0]:
+            if post[1]:
+                return None
+            return (post[0], 'Post')
+        else:
+            post_reply = db.session.query(PostReply.id).filter(PostReply.ap_id == ap_id).first()
+            if post_reply and post_reply[0]:
+                return (post_reply[0], 'PostReply')
     return None
 
 

@@ -1572,11 +1572,11 @@ class Post(db.Model):
     language = db.relationship('Language', foreign_keys=[language_id], lazy='joined')
     licence = db.relationship('Licence', foreign_keys=[licence_id])
     modlog = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.post_id", back_populates='post')
-    event = db.relationship('Event', uselist=False, backref='post', cascade='all, delete-orphan')
+    event = db.relationship('Event', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
     gallery = db.relationship('File', secondary=post_file, lazy='dynamic')
     votes = db.relationship('PostVote', lazy='dynamic', backref='post', cascade='all, delete-orphan', passive_deletes=True)
-    bookmarks = db.relationship('PostBookmark', backref='post', cascade='all, delete-orphan')
-    poll = db.relationship('Poll', uselist=False, backref='post', cascade='all, delete-orphan')
+    bookmarks = db.relationship('PostBookmark', backref='post', lazy='dynamic', cascade='all, delete-orphan')
+    poll = db.relationship('Poll', uselist=False, backref='post', lazy='select', cascade='all, delete-orphan')
 
     # db relationship tracked by the "read_posts" table
     # this is the Post side, so its referencing the User side
