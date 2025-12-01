@@ -12,6 +12,8 @@ User-Agent: *
   Disallow: /d/
   Disallow: /static/media/users/
   Disallow: /post/*/options
+  Disallow: /honey
+  Disallow: /honey/
 
 User-agent: Applebot
 Disallow: /
