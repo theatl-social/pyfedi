@@ -957,6 +957,13 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
         if v1["public"]:
             v1["actor_id"] = feed.public_url()
         else:
+            if not user_id:
+                raise Exception("insufficient permissions")
+            if not user_id == feed.user_id:
+                user = User.query.get(user_id)
+                if not user.is_admin():
+                    raise Exception("insufficient permissions")
+            
             v1["actor_id"] = feed.public_url() + "/" + feed.name.rsplit("/", 1)[1]
 
         if feed.icon_id:
