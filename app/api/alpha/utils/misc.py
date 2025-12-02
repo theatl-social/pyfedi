@@ -321,14 +321,25 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         object = search_for_user(query.lower())
         if object:
             return user_view(user=object, variant=7, user_id=user_id)
+    # assume that queries starting with ~ are for a feed
+    if not recursive and query.startswith('~'):
+        object = search_for_feed(query.lower())
+        if object and feed_dict:
+            return feed_view(feed=object, **feed_dict)
     # if the instance is following the lemmy convention, a '/u/' means user and '/c/' means community
-    if '/u/' in query or '/c/' in query:
+    if '/u/' in query or (
+        (query.startswith('!')) or
+        (('/c/' in query) and ('/p/' not in query)) or
+        (('/m/' in query) and ('/t/' not in query)) and
+        ('/comment/' not in query)):
         object = find_actor_or_create(query.lower())
         if object:
             if isinstance(object, User):
                 return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
             elif isinstance(object, Community):
                 return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
+            elif isinstance(object, Feed):
+                return feed_view(feed=object, **feed_dict)
 
     # no more hints from query
     ap_json = remote_object_to_json(query)
@@ -345,8 +356,8 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     if not 'type' in ap_json:
         raise Exception('No object found.')
 
-    if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' and
-            'preferredUsername' in ap_json):
+    if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' 
+        or ap_json['type'] == 'Feed' and 'preferredUsername' in ap_json):
         name = ap_json['preferredUsername'].lower()
         object = actor_json_to_model(ap_json, name, server)
         if object:
@@ -354,6 +365,8 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                 return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
             elif isinstance(object, Community):
                 return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
+            elif isinstance(object, Feed):
+                return feed_view(feed=object, **feed_dict)
 
     # a post or a reply
     community = find_community(ap_json)
