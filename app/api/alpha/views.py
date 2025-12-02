@@ -957,6 +957,13 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
         if v1["public"]:
             v1["actor_id"] = feed.public_url()
         else:
+            if not user_id:
+                raise Exception("insufficient permissions")
+            if not user_id == feed.user_id:
+                user = User.query.get(user_id)
+                if not user.is_admin():
+                    raise Exception("insufficient permissions")
+            
             v1["actor_id"] = feed.public_url() + "/" + feed.name.rsplit("/", 1)[1]
 
         if feed.icon_id:
@@ -986,6 +993,16 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
              'updated': feed.last_edit.isoformat(timespec="microseconds") + 'Z'})
 
         return v1
+
+    # This variant is from the resolve_object endpoint    
+    elif variant == 2:
+        v2 = {"feed": feed_view(feed=feed, variant=1, user_id=user_id, subscribed=subscribed,
+                                include_communities=include_communities, communities_moderating=communities_moderating,
+                                banned_from=banned_from, communities_joined=communities_joined,
+                                blocked_community_ids=blocked_community_ids, blocked_instance_ids=blocked_instance_ids)}
+        
+        v2["feed"]["children"] = []
+        return v2
 
 
 def private_message_view(cm: ChatMessage, variant, report=None) -> dict:

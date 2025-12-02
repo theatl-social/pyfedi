@@ -68,7 +68,8 @@ def find_remote_actor(actor_url):
         actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
         if actor:
             return actor
-    elif '/c/' in actor_url:
+    elif (('/c/' in actor_url and '/p/' not in actor_url) or
+          ('/m/' in actor_url and '/t/' not in actor_url)):
         # URL contains /c/ - likely a community
         actor = db.session.query(Community).filter(Community.ap_profile_id == actor_url).first()
         if actor and actor.banned:
@@ -257,7 +258,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
     server_name = current_app.config['SERVER_NAME']
 
     # Check for local actors first
-    if f"{server_name}/c/" in actor_url:
+    if f"{server_name}/c/" in actor_url and "/p/" not in actor_url:
         actor = find_local_community(actor_url)
         if actor and community_only:
             return actor

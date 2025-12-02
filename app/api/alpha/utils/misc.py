@@ -2,7 +2,7 @@ import re
 
 from urllib.parse import urlparse
 
-from flask import current_app
+from flask import current_app, g
 from sqlalchemy import desc
 
 from app.activitypub.util import find_actor_or_create, remote_object_to_json, actor_json_to_model, \
@@ -11,11 +11,13 @@ from app.api.alpha.utils.community import get_community_list
 from app.api.alpha.utils.post import get_post_list
 from app.api.alpha.utils.user import get_user_list
 from app.api.alpha.utils.reply import get_reply_list
-from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view
+from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view, feed_view
 from app.community.util import search_for_community
-from app.models import Post, PostReply, User, Community, BannedInstances
+from app.models import Post, PostReply, User, Community, BannedInstances, Feed
 from app.user.utils import search_for_user
-from app.utils import authorise_api_user, gibberish
+from app.feed.util import search_for_feed
+from app.utils import authorise_api_user, gibberish, subscribed_feeds, communities_banned_from, \
+    moderating_communities_ids, joined_or_modding_communities, blocked_communities, blocked_instances
 from app import db
 
 
@@ -50,6 +52,32 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
 
     query = data['q']
 
+    # Check if this is a request for a feed, then define some boilerplate for all subsequent feed_view calls
+    if "/f/" in query or query.startswith("~"):
+        feed_dict = {}
+        feed_dict["variant"] = 2
+        feed_dict["user_id"] = user_id
+        feed_dict["include_communities"] = False
+        if user_id:
+            user = User.query.get(user_id)
+            g.user = user
+
+            feed_dict["blocked_community_ids"] = blocked_communities(user_id)
+            feed_dict["blocked_instance_ids"] = blocked_instances(user_id)
+            feed_dict["subscribed"] = subscribed_feeds(user_id)
+            feed_dict["banned_from"] = communities_banned_from(user_id)
+            feed_dict["communities_moderating"] = moderating_communities_ids(user_id)
+            feed_dict["communities_joined"] = joined_or_modding_communities(user_id)
+        else:
+            feed_dict["subscribed"] = []
+            feed_dict["banned_from"] = []
+            feed_dict["communities_moderating"] = []
+            feed_dict["communities_joined"] = []
+            feed_dict["blocked_community_ids"] = []
+            feed_dict["blocked_instance_ids"] = []
+    else:
+        feed_dict = None
+
     # Check to see if the query parameter is already federated and is the canonical ap url
     object = db.session.query(PostReply).filter_by(ap_id=query).first()
     if object:
@@ -71,15 +99,20 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         if object.deleted or object.banned:
             raise Exception('No object found.')
         return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
+    object = db.session.query(Feed).filter_by(ap_profile_id=query.lower()).first()
+    if object and feed_dict:
+        if object.banned:
+            raise Exception('No object found.')
+        return feed_view(feed=object, **feed_dict) if not recursive else object
 
     # if not found and user is logged in, fetch the object if it's not hosted on a banned instance
-    # note: accommodating ! and @ queries for communities and people is different from lemmy's v3 api
+    # note: accommodating !, @, and ~ queries for communities, people, and feeds is different from lemmy's v3 api
 
     server = None
     if query.startswith('https://'):
         parsed_url = urlparse(query)
         server = parsed_url.netloc.lower()
-    elif query.startswith('!') or query.startswith('@'):
+    elif query.startswith('!') or query.startswith('@') or query.startswith('~'):
         address = query[1:]
         if '@' in address:
             name, server = address.lower().split('@')
@@ -99,6 +132,9 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                 user_name = query[1:]
                 user_name = user_name.split('@')[0]
             local_request = bool(search_for_user(user_name.lower(), allow_fetch=False))
+        elif query.startswith('~'):
+            # Check if this feed is already federated
+            local_request = bool(search_for_feed(query.lower(), allow_fetch=False))
         else:
             local_request = False
     
@@ -240,6 +276,39 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                 raise Exception('No object found.')
             else:
                 return reply_view(reply=object, variant=5, user_id=user_id)
+        
+        # Feeds
+        if "/f/" in query or query.startswith("~"):
+            if query.startswith("~"):
+                # This feed is specified using ~ notation
+                object = search_for_feed(query.lower(), allow_fetch=False)
+                
+                if object and feed_dict:
+                    return feed_view(feed=object, **feed_dict)
+                else:
+                    raise Exception('No object found.')
+            
+            # This is a feed specified by url
+            feed_pattern = re.compile(r"/[f]/(.*?)($)")
+            matches = re.search(feed_pattern, query)
+
+            try:
+                feed_name = "~" + matches.group(1)
+            except:
+                feed_name = None
+            
+            if not feed_name:
+                raise Exception('No object found.')
+            
+            if "@" not in feed_name:
+                feed_name = feed_name + "@" + current_app.config['SERVER_NAME']
+            
+            object = search_for_feed(feed_name, allow_fetch=bool(user_id))
+
+            if object and feed_dict:
+                return feed_view(feed=object, **feed_dict)
+            else:
+                raise Exception('No object found.')
 
     # use hints first in query first
     # assume that queries starting with ! are for a community
@@ -252,14 +321,25 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
         object = search_for_user(query.lower())
         if object:
             return user_view(user=object, variant=7, user_id=user_id)
+    # assume that queries starting with ~ are for a feed
+    if not recursive and query.startswith('~'):
+        object = search_for_feed(query.lower())
+        if object and feed_dict:
+            return feed_view(feed=object, **feed_dict)
     # if the instance is following the lemmy convention, a '/u/' means user and '/c/' means community
-    if '/u/' in query or '/c/' in query:
+    if '/u/' in query or (
+        (query.startswith('!')) or
+        (('/c/' in query) and ('/p/' not in query)) or
+        (('/m/' in query) and ('/t/' not in query)) and
+        ('/comment/' not in query)):
         object = find_actor_or_create(query.lower())
         if object:
             if isinstance(object, User):
                 return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
             elif isinstance(object, Community):
                 return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
+            elif isinstance(object, Feed):
+                return feed_view(feed=object, **feed_dict)
 
     # no more hints from query
     ap_json = remote_object_to_json(query)
@@ -276,8 +356,8 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     if not 'type' in ap_json:
         raise Exception('No object found.')
 
-    if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' and
-            'preferredUsername' in ap_json):
+    if (ap_json['type'] == 'Person' or ap_json['type'] == 'Service' or ap_json['type'] == 'Group' 
+        or ap_json['type'] == 'Feed' and 'preferredUsername' in ap_json):
         name = ap_json['preferredUsername'].lower()
         object = actor_json_to_model(ap_json, name, server)
         if object:
@@ -285,6 +365,8 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                 return user_view(user=object, variant=7, user_id=user_id) if not recursive else object
             elif isinstance(object, Community):
                 return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
+            elif isinstance(object, Feed):
+                return feed_view(feed=object, **feed_dict)  
 
     # a post or a reply
     community = find_community(ap_json)
