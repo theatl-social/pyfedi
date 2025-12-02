@@ -552,8 +552,10 @@ class CommentView(DefaultSchema):
 class FeedView(DefaultSchema):
     actor_id = fields.Url(required=True)
     ap_domain = fields.String(required=True)
-    children = fields.List(fields.Nested(lambda: FeedView()), required=True)
-    communities = fields.List(fields.Nested(Community), required=True)
+    children = fields.List(fields.Nested(lambda: FeedView()), required=True,
+                           metadata={"description": "Always empty list for resolve_object endpoint"})
+    communities = fields.List(fields.Nested(Community), required=True,
+                              metadata={"description": "Always empty list for resolve_object endpoint"})
     communities_count = fields.Integer(required=True)
     id = fields.Integer(required=True)
     is_instance_feed = fields.Boolean(required=True)

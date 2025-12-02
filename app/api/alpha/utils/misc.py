@@ -55,7 +55,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     # Check if this is a request for a feed, then define some boilerplate for all subsequent feed_view calls
     if "/f/" in query or query.startswith("~"):
         feed_dict = {}
-        feed_dict["variant"] = 1
+        feed_dict["variant"] = 2
         feed_dict["user_id"] = user_id
         feed_dict["include_communities"] = False
         if user_id:
@@ -103,7 +103,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
     if object and feed_dict:
         if object.banned:
             raise Exception('No object found.')
-        return feed_view(feed=object, **feed_dict)
+        return feed_view(feed=object, **feed_dict) if not recursive else object
 
     # if not found and user is logged in, fetch the object if it's not hosted on a banned instance
     # note: accommodating !, @, and ~ queries for communities, people, and feeds is different from lemmy's v3 api

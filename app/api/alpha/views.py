@@ -987,6 +987,16 @@ def feed_view(feed: Feed | int, variant: int, user_id, subscribed, include_commu
 
         return v1
 
+    # This variant is from the resolve_object endpoint    
+    elif variant == 2:
+        v2 = {"feed": feed_view(feed=feed, variant=1, user_id=user_id, subscribed=subscribed,
+                                include_communities=include_communities, communities_moderating=communities_moderating,
+                                banned_from=banned_from, communities_joined=communities_joined,
+                                blocked_community_ids=blocked_community_ids, blocked_instance_ids=blocked_instance_ids)}
+        
+        v2["feed"]["children"] = []
+        return v2
+
 
 def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
     creator = user_view(cm.sender_id, variant=1)
