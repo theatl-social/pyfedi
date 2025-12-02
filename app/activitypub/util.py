@@ -1388,11 +1388,14 @@ def actor_json_to_model(activity_json, address, server):
             db.session.commit()
 
         # add the communities from the remote /following list as feeditems
-        for c in feed_following:
-            fi = FeedItem(feed_id=feed.id, community_id=c.id)
-            feed.num_communities += 1
-            db.session.add(fi)
-            db.session.commit()
+        feed = db.session.query(Feed).filter_by(ap_profile_id=activity_json['id'].lower()).first()
+        if feed:
+            for c in feed_following:
+                fi = FeedItem(feed_id=feed.id,
+                            community_id=c.id)
+                feed.num_communities += 1
+                db.session.add(fi)
+                db.session.commit()
 
         if feed.icon_id:
             make_image_sizes(feed.icon_id, 60, 250, 'feeds')
