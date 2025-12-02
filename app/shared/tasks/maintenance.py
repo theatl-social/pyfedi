@@ -7,7 +7,7 @@ import time
 import httpx
 import boto3
 from flask import current_app
-from sqlalchemy import text
+from sqlalchemy import text, select, func
 
 from app import celery, cache, httpx_client
 from app.activitypub.util import find_actor_or_create, find_language_or_create
@@ -261,9 +261,17 @@ def update_community_stats():
         ).all()
 
         for community in communities:
-            community.subscriptions_count = session.execute(text(
-                'SELECT COUNT(user_id) as c FROM community_member WHERE community_id = :community_id AND is_banned = false'
-            ), {'community_id': community.id}).scalar()
+            stmt = (
+                select(func.count())
+                .select_from(CommunityMember)
+                .join(User, User.id == CommunityMember.user_id)
+                .where(
+                    CommunityMember.community_id == community.id,
+                    CommunityMember.is_banned == False,
+                    User.bot == False
+                )
+            )
+            community.subscriptions_count = session.execute(stmt).scalar()
             # ensure local communities have something their total_subscriptions_count, for use in topic and feed sidebar
             if community.is_local() and \
                     (community.total_subscriptions_count is None or community.total_subscriptions_count < community.subscriptions_count):

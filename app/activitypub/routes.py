@@ -990,7 +990,8 @@ def process_inbox_request(request_json, store_ap_json):
                                                              community_id=join_request.community_id,
                                                              joined_via_feed=joined_via_feed)
                                     session.add(member)
-                                    community.subscriptions_count += 1
+                                    if not member.user.bot:
+                                        community.subscriptions_count += 1
                                     community.last_active = utcnow()
                                     session.commit()
                                     cache.delete_memoized(community_membership, user, community)

@@ -2890,6 +2890,8 @@ class CommunityMember(db.Model):
     joined_via_feed = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=utcnow)
 
+    user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
+
     __table_args__ = (
         db.Index('ix_community_member_community_banned', 'community_id', 'is_banned'),
     )
