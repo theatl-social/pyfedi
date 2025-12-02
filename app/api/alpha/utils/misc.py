@@ -366,7 +366,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
             elif isinstance(object, Community):
                 return community_view(community=object, variant=6, user_id=user_id) if not recursive else object
             elif isinstance(object, Feed):
-                return feed_view(feed=object, **feed_dict)
+                return feed_view(feed=object, **feed_dict)  
 
     # a post or a reply
     community = find_community(ap_json)
