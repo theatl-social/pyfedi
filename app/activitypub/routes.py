@@ -83,6 +83,7 @@ def webfinger():
             }
             resp = jsonify(webfinger_data)
             resp.content_type = 'application/jrd+json'
+            resp.headers.set('Cache-Control', 'public, max-age=15')
             resp.headers.add_header('Access-Control-Allow-Origin', '*')
             return resp
 
@@ -134,6 +135,7 @@ def webfinger():
             })
         resp = jsonify(webfinger_data)
         resp.headers.add_header('Access-Control-Allow-Origin', '*')
+        resp.headers.set('Cache-Control', 'public, max-age=15')
         resp.content_type = 'application/jrd+json'
         return resp
     else:
@@ -143,9 +145,7 @@ def webfinger():
 @bp.route('/.well-known/nodeinfo')
 @cache.cached(timeout=600)
 def nodeinfo():
-    nodeinfo_data = {"links": [{"rel": "https://www.w3.org/ns/activitystreams#Application",
-                                "href": f"https://{current_app.config['SERVER_NAME']}"},
-                               {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
+    nodeinfo_data = {"links": [{"rel": "http://nodeinfo.diaspora.software/ns/schema/2.0",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.0"},
                                {"rel": "http://nodeinfo.diaspora.software/ns/schema/2.1",
                                 "href": f"https://{current_app.config['SERVER_NAME']}/nodeinfo/2.1"},
@@ -415,6 +415,8 @@ def user_profile(actor):
                                                      'value': field.text})
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Cache-Control', 'public, max-age=15')
+            resp.headers.set('Vary', 'Accept')
             resp.headers.set('Link',
                              f'<https://{current_app.config["SERVER_NAME"]}/u/{actor}>; rel="alternate"; type="text/html"')
             return resp
@@ -435,6 +437,8 @@ def user_outbox(actor):
     }
     resp = jsonify(outbox)
     resp.content_type = 'application/activity+json'
+    resp.headers.set('Cache-Control', 'public, max-age=1500')
+    resp.headers.set('Vary', 'Accept')
     return resp
 
 
@@ -513,6 +517,8 @@ def community_profile(actor):
                     }
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Cache-Control', 'public, max-age=30')
+            resp.headers.set('Vary', 'Accept')
             resp.headers.set('Link',
                              f'<https://{current_app.config["SERVER_NAME"]}/c/{actor}>; rel="alternate"; type="text/html"')
             return resp
@@ -1847,6 +1853,7 @@ def community_moderators_route(actor):
 
         resp = jsonify(community_data)
         resp.content_type = 'application/activity+json'
+        resp.headers.set('Cache-Control', 'public, max-age=120')
         return resp
     else:
         abort(404)
@@ -1866,6 +1873,7 @@ def community_followers(actor):
         }
         resp = jsonify(result)
         resp.content_type = 'application/activity+json'
+        resp.headers.set('Cache-Control', 'public, max-age=120')
         return resp
     else:
         abort(404)
@@ -1895,6 +1903,8 @@ def user_followers(actor):
         }
         resp = jsonify(result)
         resp.content_type = 'application/activity+json'
+        resp.headers.set('Cache-Control', 'public, max-age=15')
+        resp.headers.set('Vary', 'Accept')
         return resp
     else:
         abort(404)
@@ -1908,6 +1918,7 @@ def comment_ap(comment_id):
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Cache-Control', 'public, max-age=120')
         resp.headers.set('Link',
                          f'<https://{current_app.config["SERVER_NAME"]}/comment/{reply.id}>; rel="alternate"; type="text/html"')
         return resp
@@ -1932,6 +1943,7 @@ def post_ap(post_id):
                 post_data = []
             resp = jsonify(post_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Cache-Control', 'public, max-age=120')
             resp.headers.set('Vary', 'Accept')
             if post.slug:
                 resp.headers.set('Link',
@@ -1965,6 +1977,7 @@ def post_replies_ap(post_id):
         resp = jsonify(replies_collection)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Cache-Control', 'public, max-age=15')
         return resp
 
 
@@ -1990,6 +2003,7 @@ def post_ap_context(post_id):
         resp = jsonify(replies_collection)
         resp.content_type = 'application/activity+json'
         resp.headers.set('Vary', 'Accept')
+        resp.headers.set('Cache-Control', 'public, max-age=15')
         return resp
     else:
         abort(400)
@@ -2007,6 +2021,7 @@ def activities_json(type, id):
             activity_json = {}
         resp = jsonify(activity_json)
         resp.content_type = 'application/activity+json'
+        resp.headers['Cache-Control'] = 'public, max-age=1200'
         return resp
     else:
         abort(404)
@@ -2331,6 +2346,7 @@ def feed_profile(actor, feed_owner=None):
                 actor_data['childFeeds'].append(child_feed.ap_profile_id)
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Cache-Control', 'public, max-age=5')
             resp.headers.set('Link',
                              f'<https://{current_app.config["SERVER_NAME"]}/f/{actor}>; rel="alternate"; type="text/html"')
             return resp
@@ -2378,6 +2394,7 @@ def feed_outbox(actor):
     }
     resp = jsonify(result)
     resp.content_type = 'application/activity+json'
+    resp.headers.set('Cache-Control', 'public, max-age=5')
     return resp
 
 
@@ -2411,6 +2428,7 @@ def feed_following(actor):
     }
     resp = jsonify(result)
     resp.content_type = 'application/activity+json'
+    resp.headers.set('Cache-Control', 'public, max-age=10')
     return resp
 
 
@@ -2458,6 +2476,7 @@ def feed_followers(actor):
             }
             resp = jsonify(result)
             resp.content_type = 'application/activity+json'
+            resp.headers.set('Cache-Control', 'public, max-age=15')
             return resp
         else:
             abort(404)

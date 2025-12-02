@@ -176,6 +176,25 @@
     font-size: 12px;
 }
 
+@media (max-width: 440px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="sl-code"],
+    .downarea-toolbar .downarea-toolbar-tool[data-action="code-block"] {
+        display: none;
+    }
+}
+
+@media (max-width: 375px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="italic"] {
+        display: none;
+    }
+}
+
+@media (max-width: 355px) {
+    .downarea-toolbar .downarea-toolbar-tool[data-action="spoiler"] {
+        display: none;
+    }
+}
+
 .downarea .downarea-textarea {
     width: 100%;
     height: max-content;
