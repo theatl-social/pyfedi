@@ -2194,6 +2194,7 @@ a.unread:before, div.unread:before {
 
 .post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col {
   word-wrap: break-word;
+  line-height: 1.6;
 }
 .post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img {
   max-width: 100%;
