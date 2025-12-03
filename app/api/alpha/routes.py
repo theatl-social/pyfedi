@@ -23,7 +23,7 @@ from app.api.alpha.utils.reply import get_reply_list, post_reply_like, put_reply
     post_reply_lock, \
     get_reply_like_list, post_reply_mark_as_answer
 from app.api.alpha.utils.site import get_site, post_site_block, get_federated_instances, get_site_instance_chooser, \
-    get_site_instance_chooser_search, get_site_version
+    get_site_instance_chooser_search, get_site_version, get_site_metadata
 from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import post_upload_image, post_upload_community_image, post_upload_user_image, \
     post_image_delete
@@ -463,6 +463,19 @@ def get_alpha_post_replies(data):
     resp = get_post_replies(auth, data)
     validated = GetPostRepliesResponse().load(resp)
     return orjson_response(validated)
+
+
+@post_bp.route('/post/site_metadata', methods=['GET'])  #
+@post_bp.doc(summary="Get metadata about a url.")
+@post_bp.arguments(GetSiteMetadataRequest, location="query")
+@post_bp.response(200, GetSiteMetadataResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_metadata(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    with limiter.limit('20/minute'):
+        return GetSiteMetadataResponse().load(get_site_metadata(auth, data))
 
 
 @post_bp.route('/post/like', methods=['POST'])
@@ -1297,7 +1310,6 @@ def alpha_community():
 # Post - not yet implemented
 @bp.route('/api/alpha/post/report/resolve', methods=['PUT'])  # Stage 2
 @bp.route('/api/alpha/post/report/list', methods=['GET'])  # Stage 2
-@bp.route('/api/alpha/post/site_metadata', methods=['GET'])  # Not available in app
 def alpha_post():
     return jsonify({"error": "not_yet_implemented"}), 400
 

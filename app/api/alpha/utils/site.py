@@ -2,7 +2,7 @@ from app.api.alpha.views import site_view, federated_instances_view, site_instan
 from app.constants import SRC_API, VERSION
 from app.models import InstanceBlock, InstanceChooser, Language
 from app.shared.site import block_remote_instance, unblock_remote_instance
-from app.utils import authorise_api_user, instance_banned
+from app.utils import authorise_api_user, instance_banned, opengraph_parse
 
 
 def get_site(auth):
@@ -60,6 +60,24 @@ def get_site_instance_chooser_search(query_params):
 
 def get_federated_instances(data):
     return federated_instances_view()
+
+
+def get_site_metadata(auth, data):
+    if auth:
+        user = authorise_api_user(auth)
+    else:
+        user = None
+
+    metadata = opengraph_parse(data['url'])
+    if metadata:
+        return {'metadata': {
+            'title': metadata['og:title'] if 'og:title' in metadata else '',
+            'description': metadata['description'] if 'description' in metadata else '',
+            'image': metadata['og:image'] if 'og:image' in metadata else '',
+            'embed_video_url': ''
+        }}
+    else:
+        raise Exception('fetch_failed')
 
 
 def post_site_block(auth, data):

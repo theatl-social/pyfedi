@@ -1213,6 +1213,20 @@ class GetPostResponse(DefaultSchema):
     cross_posts = fields.List(fields.Nested(PostView))
 
 
+class GetSiteMetadataRequest(DefaultSchema):
+    url = fields.String()
+
+class SiteMetadataView(DefaultSchema):
+    title = fields.String()
+    description = fields.String()
+    image = fields.String()
+    embed_video_url = fields.String()
+
+
+class GetSiteMetadataResponse(DefaultSchema):
+    metadata = fields.Nested(SiteMetadataView, required=True)
+
+
 class LikePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)

@@ -1813,6 +1813,7 @@ def feed_tree_public(search_param=None) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
+@cache.memoize(timeout=600)
 def opengraph_parse(url):
     if '?' in url:
         url = url.split('?')
@@ -1948,23 +1949,10 @@ def url_to_thumbnail_file(filename) -> File:
 
 
 # By no means is this a complete list, but it is very easy to search for the ones you need later.
-KNOWN_OPENGRAPH_TAGS = [
-    "og:site_name",
-    "og:title",
-    "og:locale",
-    "og:type",
-    "og:image",
-    "og:url",
-    "og:image:url",
-    "og:image:secure_url",
-    "og:image:type",
-    "og:image:width",
-    "og:image:height",
-    "og:image:alt",
-]
 
 
-def parse_page(page_url, tags_to_search=KNOWN_OPENGRAPH_TAGS, fallback_tags=None):
+
+def parse_page(page_url):
     '''
     Parses a page, returns a JSON style dictionary of all OG tags found on that page.
 
@@ -1972,6 +1960,23 @@ def parse_page(page_url, tags_to_search=KNOWN_OPENGRAPH_TAGS, fallback_tags=None
 
     Returns False if page is unreadable
     '''
+
+    tags_to_search = [
+        "og:site_name",
+        "og:title",
+        "og:locale",
+        "og:type",
+        "og:image",
+        "og:url",
+        "og:image:url",
+        "og:image:secure_url",
+        "og:image:type",
+        "og:image:width",
+        "og:image:height",
+        "og:image:alt",
+        "og:description"
+    ]
+
     # read the html from the page
     response = get_request(page_url)
 
@@ -1988,9 +1993,15 @@ def parse_page(page_url, tags_to_search=KNOWN_OPENGRAPH_TAGS, fallback_tags=None
         new_found_tag = soup.find("meta", property=og_tag)
         if new_found_tag is not None:
             found_tags[new_found_tag["property"]] = new_found_tag["content"]
-        elif fallback_tags is not None and og_tag in fallback_tags:
-            found_tags[og_tag] = soup.find(fallback_tags[og_tag]).text
 
+    desc = soup.find("meta", attrs={"name": "description"})
+    if desc and desc.get("content"):
+        found_tags["description"] = desc["content"]
+        if "og:description" not in found_tags:
+            found_tags["og_description"] = desc["content"]
+
+    if "og:description" in found_tags and "description" not in found_tags:
+        found_tags["description"] = found_tags["og_description"]
     return found_tags
 
 
