@@ -405,6 +405,12 @@ def modlog():
     can_see_names = False
     is_admin = False
 
+    arg_dict = {"low_bandwidth": low_bandwidth,
+                "mod_action": mod_action,
+                "suspect_user_name": suspect_user_name,
+                "communities": community_id,
+                "user_name": user_name}
+
     # Admins can see all of the modlog, everyone else can only see public entries
     modlog_entries = ModLog.query
     if mod_action:
@@ -440,8 +446,8 @@ def modlog():
 
     # Pagination
     modlog_entries = modlog_entries.paginate(page=page, per_page=100 if not low_bandwidth else 50, error_out=False)
-    next_url = url_for('main.modlog', page=modlog_entries.next_num) if modlog_entries.has_next else None
-    prev_url = url_for('main.modlog', page=modlog_entries.prev_num) if modlog_entries.has_prev and page != 1 else None
+    next_url = url_for('main.modlog', page=modlog_entries.next_num, **arg_dict) if modlog_entries.has_next else None
+    prev_url = url_for('main.modlog', page=modlog_entries.prev_num, **arg_dict) if modlog_entries.has_prev and page != 1 else None
 
     instances = {instance.id: instance.domain for instance in Instance.query.all()}
     communities = {community.id: community.display_name() for community in Community.query.filter(Community.banned == False).all()}
