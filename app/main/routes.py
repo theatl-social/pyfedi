@@ -315,11 +315,9 @@ def list_communities():
     if instance:
         communities = communities.filter(Community.ap_domain == instance)
     
-    # hide nsfw communities if anonymous
-    hide_nsfw = True
+    hide_nsfw = False
 
     if current_user.is_authenticated:
-        hide_nsfw = False
         if current_user.hide_low_quality:
             communities = communities.filter(Community.low_quality == False)
         banned_from = communities_banned_from(current_user.id)
@@ -331,10 +329,8 @@ def list_communities():
             communities = communities.filter(Community.nsfw == False)
         else:
             if nsfw == 'no':
-                hide_nsfw = True
                 communities = communities.filter(Community.nsfw == False)
             elif nsfw == 'yes':
-                hide_nsfw = False
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
