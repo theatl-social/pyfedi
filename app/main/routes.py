@@ -314,8 +314,12 @@ def list_communities():
     # if filtering by home instance
     if instance:
         communities = communities.filter(Community.ap_domain == instance)
+    
+    # hide nsfw communities if anonymous
+    hide_nsfw = True
 
     if current_user.is_authenticated:
+        hide_nsfw = False
         if current_user.hide_low_quality:
             communities = communities.filter(Community.low_quality == False)
         banned_from = communities_banned_from(current_user.id)
@@ -327,8 +331,10 @@ def list_communities():
             communities = communities.filter(Community.nsfw == False)
         else:
             if nsfw == 'no':
+                hide_nsfw = True
                 communities = communities.filter(Community.nsfw == False)
             elif nsfw == 'yes':
+                hide_nsfw = False
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
@@ -387,7 +393,10 @@ def list_communities():
         "low_bandwidth": low_bandwidth,
         "feed_id": feed_id,
         "server_has_feeds": server_has_feeds,
-        "public_feeds": public_feeds
+        "public_feeds": public_feeds,
+        "hide_nsfw": hide_nsfw,
+        "create_admin_only": create_admin_only,
+        "is_admin": is_admin,
     })
 
     return render_template('list_communities.html', **context)
