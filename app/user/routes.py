@@ -816,6 +816,9 @@ def unban_profile(actor):
             user.deleted = False
             db.session.commit()
 
+            task_selector('unban_from_site', user_id=user.id, mod_id=current_user.id, expiry=None,
+                          reason='')
+
             add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
             flash(_('%(actor)s has been unbanned.', actor=actor))
