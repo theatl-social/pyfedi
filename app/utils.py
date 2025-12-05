@@ -1832,7 +1832,7 @@ def feed_tree_public(search_param=None) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-#@cache.memoize(timeout=600)
+@cache.memoize(timeout=600)
 def opengraph_parse(url):
     if '?' in url:
         url = url.split('?')
