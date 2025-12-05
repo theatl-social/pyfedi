@@ -160,7 +160,7 @@ def leave_feed(send_async, user_id, feed_id):
     session = get_task_session()
     try:
         user = session.query(User).get(user_id)
-        feed = session.query(Feed).filter_by(id=feed_id.one())
+        feed = session.query(Feed).filter_by(id=feed_id).one()
 
         cache.delete_memoized(feed_membership, user, feed)
         cache.delete_memoized(menu_subscribed_feeds, user_id)
@@ -170,7 +170,9 @@ def leave_feed(send_async, user_id, feed_id):
             return
         
         join_request = session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).first()
-        session.delete(join_request)
+        if join_request:
+            uuid = join_request.uuid
+        session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).delete()
         session.commit()
 
         if (not feed.instance.online()
@@ -180,7 +182,7 @@ def leave_feed(send_async, user_id, feed_id):
         
         # This code is based on feed.feed_unsubscribe and leave_community above
         if not feed.instance.gone_forever:
-            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{uuid}"
             undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
             follow = {
                 "actor": user.public_url(),
