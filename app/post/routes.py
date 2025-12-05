@@ -51,7 +51,7 @@ from app.shared.tasks import task_selector
 from app.utils import render_template, markdown_to_html, validation_required, \
     shorten_string, markdown_to_text, gibberish, ap_datetime, return_304, \
     request_etag_matches, ip_address, instance_banned, \
-    blocked_instances, blocked_domains, community_moderators, show_ban_message, recently_upvoted_posts, \
+    blocked_or_banned_instances, blocked_domains, community_moderators, show_ban_message, recently_upvoted_posts, \
     recently_downvoted_posts, recently_upvoted_post_replies, recently_downvoted_post_replies, \
     languages_for_form, add_to_modlog, blocked_communities, piefed_markdown_to_lemmy_markdown, \
     permission_required, blocked_users, get_request, is_local_image_url, is_video_url, can_upvote, can_downvote, \
@@ -154,7 +154,7 @@ def show_post(post_id: int):
                 if post.cross_posts:
                     cbf = communities_banned_from(current_user.get_id())
                     bc = blocked_communities(current_user.get_id())
-                    bi = blocked_instances(current_user.get_id())
+                    bi = blocked_or_banned_instances(current_user.get_id())
                     for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
                         if cross_posted_post.community_id not in cbf \
                                 and cross_posted_post.community_id not in bc \
@@ -370,7 +370,7 @@ def post_lazy_replies(post_id, nonce):
     if post.cross_posts:
         cbf = communities_banned_from_list
         bc = blocked_communities(current_user.get_id())
-        bi = blocked_instances(current_user.get_id())
+        bi = blocked_or_banned_instances(current_user.get_id())
         for cross_posted_post in Post.query.filter(Post.id.in_(post.cross_posts)):
             if cross_posted_post.community_id not in cbf \
                     and cross_posted_post.community_id not in bc \

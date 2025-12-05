@@ -17,7 +17,7 @@ from app.models import Post, PostReply, User, Community, BannedInstances, Feed
 from app.user.utils import search_for_user
 from app.feed.util import search_for_feed
 from app.utils import authorise_api_user, gibberish, subscribed_feeds, communities_banned_from, \
-    moderating_communities_ids, joined_or_modding_communities, blocked_communities, blocked_instances
+    moderating_communities_ids, joined_or_modding_communities, blocked_communities, blocked_or_banned_instances
 from app import db
 
 
@@ -63,7 +63,7 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
             g.user = user
 
             feed_dict["blocked_community_ids"] = blocked_communities(user_id)
-            feed_dict["blocked_instance_ids"] = blocked_instances(user_id)
+            feed_dict["blocked_instance_ids"] = blocked_or_banned_instances(user_id)
             feed_dict["subscribed"] = subscribed_feeds(user_id)
             feed_dict["banned_from"] = communities_banned_from(user_id)
             feed_dict["communities_moderating"] = moderating_communities_ids(user_id)

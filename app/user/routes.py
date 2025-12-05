@@ -41,7 +41,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
-    moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
+    moderating_communities_ids, is_valid_xml_utf8, blocked_or_banned_instances, blocked_domains, get_task_session, \
     patch_db_session, user_in_restricted_country, referrer
 
 
@@ -1371,7 +1371,7 @@ def import_settings_task(user_id, filename):
 
                 session.commit()
                 cache.delete_memoized(blocked_communities, user.id)
-                cache.delete_memoized(blocked_instances, user.id)
+                cache.delete_memoized(blocked_or_banned_instances, user.id)
                 cache.delete_memoized(blocked_users, user.id)
                 cache.delete_memoized(blocked_domains, user.id)
 

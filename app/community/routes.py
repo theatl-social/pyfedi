@@ -48,7 +48,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
     joined_communities, moderating_communities, moderating_communities_ids, blocked_domains, mimetype_from_url, \
-    blocked_instances, \
+    blocked_or_banned_instances, \
     community_moderators, communities_banned_from, show_ban_message, recently_upvoted_posts, recently_downvoted_posts, \
     blocked_users, languages_for_form, add_to_modlog, \
     blocked_communities, remove_tracking_from_link, piefed_markdown_to_lemmy_markdown, \
@@ -368,7 +368,7 @@ def show_community(community: Community):
             domains_ids = blocked_domains(current_user.id)
             if domains_ids:
                 posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-            instance_ids = blocked_instances(current_user.id)
+            instance_ids = blocked_or_banned_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
             community_ids = blocked_communities(current_user.id)
@@ -456,7 +456,7 @@ def show_community(community: Community):
             comments = comments.filter(PostReply.deleted == False)
 
             # filter instances
-            instance_ids = blocked_instances(current_user.id)
+            instance_ids = blocked_or_banned_instances(current_user.id)
             if instance_ids:
                 comments = comments.filter(or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))
 

@@ -14,7 +14,7 @@ from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.shared.domain import block_domain, unblock_domain
-from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_instances, \
+from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_or_banned_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
     return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
     moderating_communities_ids, block_honey_pot
@@ -55,7 +55,7 @@ def show_domain(domain_id):
                     desc(Post.posted_at))
 
             if current_user.is_authenticated:
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
                 content_filters = user_filters_posts(current_user.id)

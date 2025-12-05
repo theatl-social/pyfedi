@@ -16,7 +16,7 @@ from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, 
     vote_for_poll
 from app.post.util import post_replies, get_comment_branch, tags_to_string, flair_to_string
 from app.topic.routes import get_all_child_topic_ids
-from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_instances, recently_upvoted_posts, \
+from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_or_banned_instances, recently_upvoted_posts, \
     site_language_id, filtered_out_communities, joined_or_modding_communities, \
     user_filters_home, user_filters_posts, in_sorted_list, \
     communities_banned_from_all_users, moderating_communities_ids_all_users, blocked_domains, SqlKeysetPagination
@@ -64,7 +64,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
         blocked_community_ids = blocked_communities(user_id)
-        blocked_instance_ids = blocked_instances(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
         blocked_domain_ids = blocked_domains(user_id)
     else:
         blocked_person_ids = []
@@ -380,7 +380,7 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
         blocked_community_ids = blocked_communities(user_id)
-        blocked_instance_ids = blocked_instances(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
         blocked_domain_ids = blocked_domains(user_id)
     else:
         blocked_person_ids = []

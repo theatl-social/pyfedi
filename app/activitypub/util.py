@@ -35,7 +35,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     notification_subscribers, communities_banned_from, html_to_text, add_to_modlog, joined_communities, \
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
-    patch_db_session, to_srgb, communities_banned_from_all_users, blocked_communities, blocked_instances, \
+    patch_db_session, to_srgb, communities_banned_from_all_users, blocked_communities, blocked_or_banned_instances, \
     instance_community_ids, banned_instances
 
 
@@ -2105,6 +2105,7 @@ def ban_user(blocker, blocked, community, core_activity):
             cache.delete_memoized(joined_communities, blocked.id)
             cache.delete_memoized(moderating_communities, blocked.id)
             cache.delete_memoized(banned_instances, blocked.id)
+            cache.delete_memoized(blocked_or_banned_instances, blocked.id)
 
         add_to_modlog('ban_user', actor=blocker, target_user=blocked, reason=reason,
                       link_text=blocked.display_name(), link=f'u/{blocked.link()}')
@@ -2203,6 +2204,7 @@ def unban_user(blocker, blocked, community, core_activity):
             cache.delete_memoized(joined_communities, blocked.id)
             cache.delete_memoized(moderating_communities, blocked.id)
             cache.delete_memoized(banned_instances, blocked.id)
+            cache.delete_memoized(blocked_or_banned_instances, blocked.id)
     else:
         db.session.query(CommunityBan).filter(CommunityBan.community_id == community.id,
                                               CommunityBan.user_id == blocked.id).delete()
@@ -2452,7 +2454,7 @@ def notify_about_post_task(post_id):
             user_send_notifs_to = notification_subscribers(post.user_id, NOTIF_USER)
             for notify_id in user_send_notifs_to:
                 blocked_comms = blocked_communities(notify_id)
-                blocked_ints = blocked_instances(notify_id)
+                blocked_ints = blocked_or_banned_instances(notify_id)
                 if notify_id != post.user_id and notify_id not in notifications_sent_to and \
                         post.community_id not in blocked_comms and \
                         post.instance_id not in blocked_ints:
@@ -2477,7 +2479,7 @@ def notify_about_post_task(post_id):
             community_send_notifs_to = notification_subscribers(post.community_id, NOTIF_COMMUNITY)
             for notify_id in community_send_notifs_to:
                 blocked_senders = blocked_users(notify_id)
-                blocked_ints = blocked_instances(notify_id)
+                blocked_ints = blocked_or_banned_instances(notify_id)
                 if notify_id != post.user_id and notify_id not in notifications_sent_to and \
                         post.user_id not in blocked_senders and post.instance_id not in blocked_ints:
                     targets_data = {'gen': '0',
@@ -2503,7 +2505,7 @@ def notify_about_post_task(post_id):
             for notify_id in topic_send_notifs_to:
                 blocked_senders = blocked_users(notify_id)
                 blocked_comms = blocked_communities(notify_id)
-                blocked_ints = blocked_instances(notify_id)
+                blocked_ints = blocked_or_banned_instances(notify_id)
                 if notify_id != post.user_id and \
                         notify_id not in notifications_sent_to and \
                         post.user_id not in blocked_senders and \
@@ -2537,7 +2539,7 @@ def notify_about_post_task(post_id):
                 for notify_id in feed_send_notifs_to:
                     blocked_senders = blocked_users(notify_id)
                     blocked_comms = blocked_communities(notify_id)
-                    blocked_ints = blocked_instances(notify_id)
+                    blocked_ints = blocked_or_banned_instances(notify_id)
                     if notify_id != post.user_id and \
                             notify_id not in notifications_sent_to and \
                             post.user_id not in blocked_senders and \

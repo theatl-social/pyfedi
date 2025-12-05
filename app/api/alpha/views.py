@@ -11,7 +11,7 @@ from app.models import ChatMessage, Community, Language, Instance, Post, PostRep
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
     UserNote, Poll, Event, PollChoice, Rating
 from app.post.util import tags_to_string, flair_to_string
-from app.utils import blocked_communities, blocked_instances, blocked_users, communities_banned_from, get_setting, \
+from app.utils import blocked_communities, blocked_or_banned_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
     moderating_communities_ids_all_users
 from app.shared.community import get_comm_flair_list
@@ -1305,7 +1305,7 @@ def blocked_communities_view(user) -> list[dict]:
 
 
 def blocked_instances_view(user) -> list[dict]:
-    blocked_ids = blocked_instances(user.id)
+    blocked_ids = blocked_or_banned_instances(user.id)
     blocked = []
     for blocked_instance in Instance.query.filter(Instance.id.in_(blocked_ids)).all():
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_instance, variant=1)})

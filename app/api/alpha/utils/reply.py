@@ -11,7 +11,7 @@ from app.shared.reply import vote_for_reply, bookmark_reply, remove_bookmark_rep
     edit_reply, \
     delete_reply, restore_reply, report_reply, mod_remove_reply, mod_restore_reply, lock_post_reply, choose_answer, \
     unchoose_answer
-from app.utils import authorise_api_user, blocked_users, blocked_instances, site_language_id, \
+from app.utils import authorise_api_user, blocked_users, blocked_or_banned_instances, site_language_id, \
     communities_banned_from, in_sorted_list
 
 
@@ -118,7 +118,7 @@ def get_reply_list(auth, data, user_details=None):
             blocked_person_ids = blocked_users(user_id)
             if blocked_person_ids:
                 replies = replies.filter(PostReply.user_id.not_in(blocked_person_ids))
-            blocked_instance_ids = blocked_instances(user_id)
+            blocked_instance_ids = blocked_or_banned_instances(user_id)
             if blocked_instance_ids:
                 replies = replies.filter(PostReply.instance_id.not_in(blocked_instance_ids))
 

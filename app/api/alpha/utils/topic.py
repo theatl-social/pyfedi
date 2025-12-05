@@ -7,7 +7,7 @@ from app import db
 from app.api.alpha.views import feed_view, topic_view
 from app.constants import *
 from app.models import User
-from app.utils import authorise_api_user, blocked_communities, blocked_instances, filtered_out_communities, \
+from app.utils import authorise_api_user, blocked_communities, blocked_or_banned_instances, filtered_out_communities, \
     communities_banned_from, moderating_communities_ids, joined_or_modding_communities, feed_tree_public, feed_tree, \
     subscribed_feeds, topic_tree
 
@@ -25,7 +25,7 @@ def get_topic_list(auth, data, user_id=None) -> dict:
         g.user = user
 
         blocked_community_ids = blocked_communities(user_id)
-        blocked_instance_ids = blocked_instances(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
     else:
         blocked_community_ids = []
         blocked_instance_ids = []

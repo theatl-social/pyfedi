@@ -962,6 +962,14 @@ def blocked_communities(user_id) -> List[int]:
 
 
 @cache.memoize(timeout=86400)
+def blocked_or_banned_instances(user_id) -> List[int]:
+    if user_id == 0:
+        return []
+    blocks = db.session.query(InstanceBlock).filter_by(user_id=user_id)
+    return [block.instance_id for block in blocks] + banned_instances(user_id)
+
+
+@cache.memoize(timeout=86400)
 def blocked_instances(user_id) -> List[int]:
     if user_id == 0:
         return []
@@ -2737,7 +2745,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
             post_id_where.append('c.id NOT IN :filtered_out_community_ids ')
             params['filtered_out_community_ids'] = tuple(filtered_out_community_ids)
 
-        if bi := blocked_instances(current_user.id):
+        if bi := blocked_or_banned_instances(current_user.id):
             post_id_where.append('c.instance_id NOT IN :filtered_out_instance_ids ')
             params['filtered_out_instance_ids'] = tuple(bi)
             post_id_where.append('p.instance_id NOT IN :filtered_out_instance_ids2 ')
@@ -2774,7 +2782,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         if domains_ids:
             post_id_where.append('(p.domain_id NOT IN :domain_ids OR p.domain_id is null) ')
             params['domain_ids'] = tuple(domains_ids)
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             post_id_where.append('(p.instance_id NOT IN :instance_ids OR p.instance_id is null) ')
             params['instance_ids'] = tuple(instance_ids)

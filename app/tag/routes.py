@@ -15,7 +15,7 @@ from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag, Topic, FeedItem, Feed
 from app.tag import bp
 from app.topic.routes import get_all_child_topic_ids
-from app.utils import render_template, permission_required, user_filters_posts, blocked_instances, blocked_users, \
+from app.utils import render_template, permission_required, user_filters_posts, blocked_or_banned_instances, blocked_users, \
     blocked_domains, mimetype_from_url, \
     blocked_communities, login_required, moderating_communities_ids
 
@@ -38,7 +38,7 @@ def show_tag(tag):
             domains_ids = blocked_domains(current_user.id)
             if domains_ids:
                 posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-            instance_ids = blocked_instances(current_user.id)
+            instance_ids = blocked_or_banned_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
             community_ids = blocked_communities(current_user.id)
@@ -298,7 +298,7 @@ def tag_posts(tag_id):
         domains_ids = blocked_domains(current_user.id)
         if domains_ids:
             posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
         community_ids = blocked_communities(current_user.id)

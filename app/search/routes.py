@@ -9,7 +9,7 @@ from app.community.forms import RetrieveRemotePost
 from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
-from app.utils import render_template, blocked_domains, blocked_instances, \
+from app.utils import render_template, blocked_domains, blocked_or_banned_instances, \
     communities_banned_from, recently_upvoted_posts, recently_downvoted_posts, blocked_users, blocked_communities, \
     show_ban_message, login_required, login_required_if_private_instance, moderating_communities_ids, get_setting
 
@@ -50,7 +50,7 @@ def run_search():
                 domains_ids = blocked_domains(current_user.id)
                 if domains_ids:
                     posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
                 community_ids = blocked_communities(current_user.id)
@@ -98,7 +98,7 @@ def run_search():
                     replies = replies.filter(PostReply.from_bot == False)
                 if current_user.hide_nsfw == 1:
                     replies = replies.filter(PostReply.nsfw == False)
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     replies = replies.filter(
                         or_(PostReply.instance_id.not_in(instance_ids), PostReply.instance_id == None))

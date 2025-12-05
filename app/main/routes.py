@@ -30,14 +30,14 @@ from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
     ap_datetime, shorten_string, user_filters_home, \
     joined_communities, moderating_communities, markdown_to_html, allowlist_html, \
-    blocked_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
+    blocked_or_banned_instances, communities_banned_from, topic_tree, recently_upvoted_posts, recently_downvoted_posts, \
     menu_topics, blocked_communities, \
     permission_required, debug_mode_only, ip_address, menu_instance_feeds, menu_my_feeds, menu_subscribed_feeds, \
     feed_tree_public, gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, html_to_text, \
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, archive_post, \
-    num_topics, referrer, block_honey_pot
+    num_topics, referrer, block_honey_pot, banned_instances
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -133,7 +133,7 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             active_communities = active_communities.filter(Community.id.not_in(community_ids))
-        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
+        active_communities = active_communities.filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.id)))
 
     active_communities = active_communities.order_by(desc(Community.last_active)).limit(5).all()
 
@@ -147,7 +147,7 @@ def home_page(sort, view_filter):
         community_ids = blocked_communities(current_user.id)
         if community_ids:
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
-        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_instances(current_user.id)))
+        new_communities = new_communities.filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.id)))
     new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
 
     # Upcoming events
@@ -334,7 +334,7 @@ def list_communities():
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             communities = communities.filter(or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
         filtered_out_community_ids = filtered_out_communities(current_user)
@@ -1194,7 +1194,7 @@ def health2():
                 communities = communities.filter(Community.nsfw == True)
         if current_user.hide_nsfl == 1:
             communities = communities.filter(Community.nsfl == False)
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             communities = communities.filter(
                 or_(Community.instance_id.not_in(instance_ids), Community.instance_id == None))
