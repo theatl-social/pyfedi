@@ -107,13 +107,7 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
         target = community.public_url()
     else:               # instance ban
         community = None
-        if user.is_local():
-            communities = []
-        else:
-            communities = session.query(Community).filter_by(ap_id=None).\
-              join(CommunityMember, Community.id == CommunityMember.community_id).\
-              filter_by(banned=False).\
-              filter_by(user_id=user.id)
+        communities = []
         cc = []
         target = f"https://{current_app.config['SERVER_NAME']}/"
 
