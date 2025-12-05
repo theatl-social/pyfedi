@@ -30,7 +30,7 @@ from app.shared.user import subscribe_user
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm, DeleteFileForm, \
-    UploadFileForm, BlockUserForm, BlockCommunityForm, BlockDomainForm, BlockInstanceForm
+    UploadFileForm, BlockUserForm, BlockCommunityForm, BlockDomainForm, BlockInstanceForm, UnsubAllForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -253,6 +253,7 @@ def edit_profile(actor):
     if current_user.id != user.id:
         abort(401)
     delete_form = DeleteAccountForm()
+    unsub_form = UnsubAllForm()
     form = ProfileForm()
     old_email = user.email
     if form.validate_on_submit() and not current_user.banned:
@@ -349,8 +350,7 @@ def edit_profile(actor):
         form.password.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
-                           markdown_editor=current_user.markdown_editor, delete_form=delete_form,
-                           )
+                           markdown_editor=current_user.markdown_editor, delete_form=delete_form, unsub_form=unsub_form)
 
 
 @bp.route('/user/remove_avatar', methods=['GET', 'POST'])

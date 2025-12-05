@@ -134,6 +134,10 @@ class DeleteAccountForm(FlaskForm):
     submit = SubmitField(_l('Yes, delete my account'))
 
 
+class UnsubAllForm(FlaskForm):
+    submit = SubmitField(_l('Yes, unsubscribe from all communities I am not moderating'))
+
+
 class BanUserForm(FlaskForm):
     reason = StringField(_l('Reason'), render_kw={'list': 'reasons'})
     ip_address = BooleanField(_l('Ban IP address'))

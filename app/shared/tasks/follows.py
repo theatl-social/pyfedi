@@ -1,8 +1,9 @@
 from app import cache, celery, db
 from app.constants import *
 from app.activitypub.signature import default_context, post_request, send_post_request
-from app.models import Community, CommunityBan, CommunityJoinRequest, User
-from app.utils import community_membership, gibberish, joined_communities, instance_banned, get_task_session
+from app.models import Community, CommunityBan, CommunityJoinRequest, User, Feed, FeedJoinRequest
+from app.utils import community_membership, gibberish, joined_communities, instance_banned, get_task_session, \
+    feed_membership, menu_subscribed_feeds
 
 from flask import current_app, flash
 from markupsafe import Markup
@@ -154,3 +155,51 @@ def leave_community(send_async, user_id, community_id):
         session.close()
 
 
+@celery.task
+def leave_feed(send_async, user_id, feed_id):
+    session = get_task_session()
+    try:
+        user = session.query(User).get(user_id)
+        feed = session.query(Feed).filter_by(id=feed_id.one())
+
+        cache.delete_memoized(feed_membership, user, feed)
+        cache.delete_memoized(menu_subscribed_feeds, user_id)
+        cache.delete_memoized(joined_communities, user_id)
+
+        if feed.is_local():
+            return
+        
+        join_request = session.query(FeedJoinRequest).filter_by(user_id=user_id, feed_id=feed_id).first()
+        session.delete(join_request)
+        session.commit()
+
+        if (not feed.instance.online()
+            or user.has_blocked_instance(feed.instance.id)
+            or instance_banned(feed.instance.domain)):
+            return
+        
+        # This code is based on feed.feed_unsubscribe and leave_community above
+        if not feed.instance.gone_forever:
+            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+            undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+            follow = {
+                "actor": user.public_url(),
+                "to": [feed.public_url()],
+                "object": feed.public_url(),
+                "type": "Follow",
+                "id": follow_id
+            }
+            undo = {
+                'actor': user.public_url(),
+                'to': [feed.public_url()],
+                'type': 'Undo',
+                'id': undo_id,
+                'object': follow
+            }
+            send_post_request(feed.ap_inbox_url, undo, user.private_key,
+                                user.public_url() + '#main-key', timeout=10)
+
+    except Exception:
+        session.rollback()
+    finally:
+        session.close()

@@ -58,7 +58,9 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     moderating_communities_ids_all_users, block_honey_pot
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
-from app.utils import get_recipient_language
+from app.shared.community import leave_community
+from app.shared.feed import leave_feed
+from app.utils import get_recipient_language, subscribed_feeds, feed_membership
 from feedgen.feed import FeedGenerator
 from datetime import timezone, timedelta
 
@@ -2317,59 +2319,38 @@ def community_flair_delete(community_id, flair_id):
         abort(401)
 
 
-@bp.route('/community/leave_all')
+@bp.route('/leave_all', methods=['POST'])
 @login_required
 def community_leave_all():
     all_communities = Community.query.filter_by(banned=False)
     user_joined_communities = joined_communities(current_user.id)
-    user_moderating_communities = moderating_communities(current_user.id)
     # get the joined community ids list
     joined_ids = []
     for jc in user_joined_communities:
         joined_ids.append(jc.id)
-    for mc in user_moderating_communities:
-        joined_ids.append(mc.id)
     # filter down to just the joined communities
     communities = all_communities.filter(Community.id.in_(joined_ids))
 
     for community in communities.all():
         subscription = community_membership(current_user, community)
-        if subscription:
+        if subscription is not False and subscription < SUBSCRIPTION_MODERATOR:
+            # send leave requests to celery - also handles db commits and cache busting
+            leave_community(community_id=community.id, src=SRC_WEB, bulk_leave=True)
+    
+    joined_feed_ids = subscribed_feeds(current_user.id)
+
+    if joined_feed_ids:
+        for feed_id in joined_feed_ids:
+            feed = Feed.query.get(feed_id)
+            subscription = feed_membership(current_user, feed)
             if subscription != SUBSCRIPTION_OWNER:
-                # Undo the Follow
-                if not community.is_local():
-                    if not community.instance.gone_forever:
-                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
-                        if community.instance.domain == 'ovo.st':
-                            join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id,
-                                                                                community_id=community.id).first()
-                            if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
-                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
-                        follow = {
-                            "actor": current_user.public_url(),
-                            "to": [community.public_url()],
-                            "object": community.public_url(),
-                            "type": "Follow",
-                            "id": follow_id
-                        }
-                        undo = {
-                            'actor': current_user.public_url(),
-                            'to': [community.public_url()],
-                            'type': 'Undo',
-                            'id': undo_id,
-                            'object': follow
-                        }
-                        send_post_request(community.ap_inbox_url, undo, current_user.private_key,
-                                          current_user.public_url() + '#main-key', timeout=10)
+                # send leave requests to celery - also handles db commits and cache busting
+                leave_feed(feed=feed, src=SRC_WEB, bulk_leave=True)
+    
+    flash(_('You are being unsubscribed from all communities and feeds. '
+            'Please allow a couple minutes for the process to complete.'))
 
-                db.session.query(CommunityMember).filter_by(user_id=current_user.id, community_id=community.id).delete()
-                db.session.query(CommunityJoinRequest).filter_by(user_id=current_user.id,
-                                                                 community_id=community.id).delete()
-                cache.delete_memoized(community_membership, current_user, community)
-                db.session.commit()
-
-    return redirect(url_for('main.list_communities'))
+    return redirect(url_for('user.edit_profile', actor=current_user.user_name))
 
 
 @bp.route('/<actor>/invite', methods=['GET', 'POST'])

@@ -53,23 +53,23 @@ def join_community(community_id: int, src, auth=None, user_id=None):
 
 
 # function can be shared between WEB and API (only API calls it for now)
-def leave_community(community_id: int, src, auth=None):
+def leave_community(community_id: int, src, auth=None, bulk_leave=False):
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
     cm = db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community_id).one()
-    if not cm.is_owner:
+    if not cm.is_owner or not cm.is_moderator:
         task_selector('leave_community', user_id=user_id, community_id=community_id)
 
         db.session.query(CommunityMember).filter_by(user_id=user_id, community_id=community_id).delete()
         db.session.commit()
 
-        if src == SRC_WEB:
+        if src == SRC_WEB and not bulk_leave:
             flash(_('You have left the community'))
     else:
         # todo: community deletion
         if src == SRC_API:
-            raise Exception('need_to_make_someone_else_owner')
+            raise Exception('Step down as a moderator before leaving the community')
         else:
-            flash(_('You need to make someone else the owner before unsubscribing.'), 'warning')
+            flash(_('You need to step down as moderator before unsubscribing.'), 'warning')
             return
 
     if src == SRC_API:
