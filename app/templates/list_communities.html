@@ -382,6 +382,14 @@
                             </div>
                         </div>
                     </div>
+                {% else -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <!--this is here to occupy space so that things line up consistently-->
+                            </div>
+                        </div>
+                    </div>
                 {% endif -%}
                 {% if next_url -%}
                     <div class="col-6">
@@ -390,6 +398,14 @@
                                 <a href="{{ next_url }}" class="btn btn-primary me-auto" rel='nofollow'>
                                     {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
                                 </a>
+                            </div>
+                        </div>
+                    </div>
+                {% else -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <!--this is here to occupy space so that things line up consistently-->
                             </div>
                         </div>
                     </div>
