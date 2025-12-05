@@ -1832,7 +1832,7 @@ def feed_tree_public(search_param=None) -> List[dict]:
     return [feed for feed in feeds_dict.values() if feed['feed'].parent_feed_id is None]
 
 
-@cache.memoize(timeout=600)
+#@cache.memoize(timeout=600)
 def opengraph_parse(url):
     if '?' in url:
         url = url.split('?')
@@ -2021,6 +2021,11 @@ def parse_page(page_url):
 
     if "og:description" in found_tags and "description" not in found_tags:
         found_tags["description"] = found_tags["og_description"]
+
+    if len(found_tags) == 0 or 'og:title' not in found_tags:
+        title = soup.find("title")
+        if title:
+            found_tags['og:title'] = title.get_text()
     return found_tags
 
 
