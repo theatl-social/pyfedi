@@ -239,9 +239,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
 # 'from_scratch == True' means that it's not really a user edit, we're just re-using code for make_post()
 def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=None, from_scratch=False, hash=None):
     if src == SRC_API:
-        #if not user:
-        #    user = authorise_api_user(auth, return_type='model')
-        user = User.query.get(1)
+        if not user:
+           user = authorise_api_user(auth, return_type='model')
         title = input['title'].strip()
         body = input['body']
         url = input['url']
