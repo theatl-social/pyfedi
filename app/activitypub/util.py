@@ -2068,13 +2068,16 @@ def ban_user(blocker, blocked, community, core_activity):
         reason = shorten_string(reason, 255)
 
         instance_id = find_instance_id(furl(target).host)
-        instance_ban = InstanceBan(user_id=blocked.id, instance_id=instance_id)
-        if 'expires' in core_activity:
-            instance_ban.ban_until = core_activity['expires']
-        elif 'endTime' in core_activity:
-            instance_ban.ban_until = core_activity['endTime']
-        db.session.add(instance_ban)
-        db.session.commit()
+        existing_ban = db.session.query(InstanceBan).filter(InstanceBan.user_id == blocked.id,
+                                                            InstanceBan.instance_id == instance_id).first()
+        if not existing_ban:
+            instance_ban = InstanceBan(user_id=blocked.id, instance_id=instance_id)
+            if 'expires' in core_activity:
+                instance_ban.ban_until = core_activity['expires']
+            elif 'endTime' in core_activity:
+                instance_ban.ban_until = core_activity['endTime']
+            db.session.add(instance_ban)
+            db.session.commit()
 
         if blocked.is_local():
             communities = instance_community_ids(instance_id)
