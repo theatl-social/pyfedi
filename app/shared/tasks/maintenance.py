@@ -17,7 +17,8 @@ from app.models import Notification, SendQueue, CommunityBan, CommunityMember, U
     InstanceBan
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
-    shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users
+    shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users, \
+    banned_instances
 
 
 @celery.task
@@ -109,10 +110,11 @@ def process_expired_bans():
             session.delete(expired_ban)
             session.commit()
 
-        expired_instance_bans = session.query(InstanceBan).filter(InstanceBan.banned_until < utcnow()).all()
+        expired_instance_bans = session.query(InstanceBan).filter(InstanceBan.banned_until != None, InstanceBan.banned_until < utcnow()).all()
         for expired_ban in expired_instance_bans:
+            cache.delete_memoized(banned_instances, expired_ban.user_id)
             session.delete(expired_ban)
-            session.commit()
+        session.commit()
 
     except Exception:
         session.rollback()

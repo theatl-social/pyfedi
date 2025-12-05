@@ -2,6 +2,7 @@ import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
 from flask_login import current_user
+from furl import furl
 from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 
@@ -17,7 +18,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap, is_vote
+    post_replies_for_ap, is_vote, find_instance_id
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -25,7 +26,7 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan, ActivityBatch
+    IpBan, ActivityBatch, InstanceBan
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
@@ -1468,6 +1469,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
                                 return
                             if blocked.is_local():
+                                ban_user(blocker, blocked, None, core_activity)
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin in banning one of our users from their site')
                                 current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
@@ -1660,6 +1662,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
                                 return
                             if unblocked.is_local():
+                                unban_user(user, unblocked, None, core_activity)
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin in unbanning one of our users from their site')
                                 current_app.logger.error(

@@ -38,7 +38,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event
+from sqlalchemy import text, or_, desc, asc, event, select
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -1010,6 +1010,19 @@ def block_honey_pot():
             abort(403)
 
 
+def instance_community_ids(instance_id) -> List[int]:
+    rows = db.session.execute(select(Community.id).where(Community.instance_id == instance_id)).scalars()
+    return list(rows)
+
+
+@cache.memoize(timeout=86400)
+def banned_instances(user_id) -> List[int]:
+    if user_id == 0:
+        return []
+    blocks = db.session.query(InstanceBan).filter_by(user_id=user_id)
+    return [block.instance_id for block in blocks]
+
+
 def retrieve_block_list():
     try:
         response = httpx_client.get('https://raw.githubusercontent.com/rimu/no-qanon/master/domains.txt', timeout=1)
@@ -1644,11 +1657,17 @@ def moderating_communities_ids_all_users() -> dict[int, List[int]]:
 def joined_communities(user_id) -> List[Community]:
     if user_id is None or user_id == 0:
         return []
+    banned_instance_ids = banned_instances(user_id)
     communities = Community.query.join(CommunityMember, Community.id == CommunityMember.community_id). \
         filter(Community.banned == False). \
         filter(CommunityMember.is_moderator == False, CommunityMember.is_owner == False). \
         filter(CommunityMember.is_banned == False). \
-        filter(CommunityMember.user_id == user_id).order_by(Community.title).all()
+        filter(CommunityMember.user_id == user_id)
+
+    if banned_instance_ids:
+        communities = communities.filter(Community.instance_id.notin_(banned_instances(user_id)))
+
+    communities = communities.order_by(Community.title).all()
 
     # track display names to identify duplicates
     display_name_counts = {}
