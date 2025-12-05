@@ -2073,9 +2073,9 @@ def ban_user(blocker, blocked, community, core_activity):
         if not existing_ban:
             instance_ban = InstanceBan(user_id=blocked.id, instance_id=instance_id)
             if 'expires' in core_activity:
-                instance_ban.ban_until = core_activity['expires']
+                instance_ban.banned_until = datetime.fromisoformat(core_activity['expires'])
             elif 'endTime' in core_activity:
-                instance_ban.ban_until = core_activity['endTime']
+                instance_ban.banned_until = datetime.fromisoformat(core_activity['endTime'])
             db.session.add(instance_ban)
             db.session.commit()
 
@@ -2180,7 +2180,7 @@ def unban_user(blocker, blocked, community, core_activity):
     else:
         reason = ''
     if community is None:   # instance unban
-        target = core_activity['target']
+        target = core_activity['object']['target']
         instance_id = find_instance_id(furl(target).host)
         db.session.query(InstanceBan).filter(InstanceBan.instance_id == instance_id, InstanceBan.user_id == blocked.id).delete()
         db.session.commit()
@@ -2188,7 +2188,7 @@ def unban_user(blocker, blocked, community, core_activity):
             # Notify unbanned person
             targets_data = {'gen': '0', 'instance_id': instance_id}
             notify = Notification(title=shorten_string('You have been unbanned from ' + target),
-                                  url=f'/chat/ban_from_mod/{blocked.id}/{instance_id}', user_id=blocked.id,
+                                  url=f'/chat/unban_from_mod/{blocked.id}/{instance_id}', user_id=blocked.id,
                                   author_id=blocker.id, notif_type=NOTIF_UNBAN,
                                   subtype='user_unbanned_from_instance',
                                   targets=targets_data)

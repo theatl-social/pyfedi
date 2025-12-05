@@ -154,7 +154,7 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
 
     # site ban
     if not community:
-        instances = session.query(Instance).filter(Instance.domain == 'piefed.ngrok.app').all()
+        instances = session.query(Instance).filter(Instance.software != 'mastodon').all()
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1:
                 send_post_request(instance.inbox, object, mod.private_key, mod.public_url() + '#main-key')
