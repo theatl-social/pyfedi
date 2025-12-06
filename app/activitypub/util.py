@@ -3701,7 +3701,7 @@ def log_incoming_ap(id, aplog_type, aplog_result, saved_json, message=None, sess
 def find_community(request_json):
     # Create/Update from platform that included Community in 'audience', 'cc', or 'to' in outer or inner object
     # Also works for manually retrieved posts
-    locations = ['audience', 'cc', 'to']
+    locations = ['audience', 'cc', 'to', 'target']
     if 'object' in request_json and isinstance(request_json['object'], dict):
         rjs = [request_json, request_json['object']]
     else:
