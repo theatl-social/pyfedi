@@ -8,7 +8,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
     post_community_moderate_post_nsfw, post_community_mod, post_community_flair_create, put_community_flair_edit, \
-    post_community_flair_delete, post_community_rate
+    post_community_flair_delete, post_community_rate, post_community_leave_all
 from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
@@ -208,6 +208,18 @@ def post_alpha_community_follow(data):
     auth = request.headers.get('Authorization')
     resp = post_community_follow(auth, data)
     return CommunityResponse().load(resp)
+
+
+@comm_bp.route("/community/leave_all", methods=["POST"])
+@comm_bp.doc(summary="Leave all communities and feeds for which the user is not a moderator or owner.")
+@comm_bp.response(200, UserMeResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_leave_all():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_community_leave_all(auth)
+    return UserMeResponse().load(resp)
 
 
 @comm_bp.route("/community/rate", methods=["POST"])

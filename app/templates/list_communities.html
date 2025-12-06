@@ -371,16 +371,46 @@
             </table>
         </div>
         <nav aria-label="Pagination" class="mt-4" role="navigation">
-            {% if prev_url -%}
-                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
-                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                </a>
-            {% endif -%}
-            {% if next_url -%}
-                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
-                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                </a>
-            {% endif -%}
+            <div class="row justify-content-center">
+                {% if prev_url -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <a href="{{ prev_url }}" class="btn btn-primary ms-auto" rel='nofollow'>
+                                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% else -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <!--this is here to occupy space so that things line up consistently-->
+                            </div>
+                        </div>
+                    </div>
+                {% endif -%}
+                {% if next_url -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <a href="{{ next_url }}" class="btn btn-primary me-auto" rel='nofollow'>
+                                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% else -%}
+                    <div class="col-6">
+                        <div class="row">
+                            <div class="d-flex flex-row">
+                                <!--this is here to occupy space so that things line up consistently-->
+                            </div>
+                        </div>
+                    </div>
+                {% endif -%}
+            </div>
         </nav>
     {% else -%}
         {% if request.args.get('search', '') == '' -%}
@@ -393,14 +423,4 @@
             </p>
         {% endif -%}
     {% endif -%}
-    <p class="mt-4">
-        <a href="/topics" class="btn btn-primary">
-            {{ _('Browse topics') }}
-        </a>
-        {% if current_user.is_authenticated -%}
-            <a class="btn btn-primary confirm_first" href="{{ url_for('community.community_leave_all') }}" style="float: right;">
-                {{ _('Leave all communities') }}
-            </a>
-        {% endif %}
-    </p>
 {% endblock -%}

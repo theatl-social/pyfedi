@@ -10,14 +10,16 @@ from app.api.alpha.views import community_view, user_view, post_view, cached_mod
 from app.community.util import search_for_community
 from app.constants import *
 from app.models import Community, CommunityMember, User, CommunityBan, Notification, CommunityJoinRequest, \
-    NotificationSubscription, Post, CommunityFlair, utcnow
+    NotificationSubscription, Post, CommunityFlair, Feed, utcnow
 from app.shared.community import join_community, leave_community, block_community, unblock_community, make_community, \
     edit_community, subscribe_community, delete_community, restore_community, add_mod_to_community, \
     remove_mod_from_community, rate_community
+from app.shared.feed import leave_feed
 from app.shared.tasks import task_selector
 from app.utils import authorise_api_user, communities_banned_from_all_users, moderating_communities_ids
-from app.utils import communities_banned_from, blocked_or_banned_instances, blocked_communities, shorten_string, \
-    joined_communities, moderating_communities, expand_hex_color
+from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
+    joined_communities, moderating_communities, expand_hex_color, community_membership, subscribed_feeds, \
+    feed_membership
 
 
 def get_community_list(auth, data):
@@ -124,6 +126,40 @@ def post_community_follow(auth, data):
     user_id = join_community(community_id, SRC_API, auth) if follow else leave_community(community_id, SRC_API, auth)
     community_json = community_view(community=community_id, variant=4, stub=False, user_id=user_id)
     return community_json
+
+def post_community_leave_all(auth):
+    user = authorise_api_user(auth, return_type='model') if auth else None
+
+    if not user:
+        raise Exception('incorrect login')
+
+    all_communities = Community.query.filter_by(banned=False)
+    user_joined_communities = joined_communities(user_id=user.id)
+
+    joined_ids = []
+    for jc in user_joined_communities:
+        joined_ids.append(jc.id)
+
+    # filter down to just the joined communities
+    communities = all_communities.filter(Community.id.in_(joined_ids))
+
+    for community in communities.all():
+        subscription = community_membership(user, community)
+        if subscription is not False and subscription < SUBSCRIPTION_MODERATOR:
+            # send leave requests to celery - also handles db commits and cache busting, ignore returned value
+            user_id = leave_community(community_id=community.id, src=SRC_API, auth=auth, bulk_leave=True)
+
+    joined_feed_ids = subscribed_feeds(user.id)
+
+    if joined_feed_ids:
+        for feed_id in joined_feed_ids:
+            feed = Feed.query.get(feed_id)
+            subscription = feed_membership(user, feed)
+            if subscription != SUBSCRIPTION_OWNER:
+                # send leave requests to celery - also handles db commits and cache busting, ignore returned value
+                user_id = leave_feed(feed=feed, src=SRC_API, auth=auth, bulk_leave=True)
+
+    return user_view(user=user, variant=6, user_id=user_id)
 
 
 def post_community_rate(auth, data):
