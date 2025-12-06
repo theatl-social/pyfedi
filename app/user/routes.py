@@ -16,7 +16,7 @@ from app import db, cache, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
-from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
+from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill, search_for_community
 from app.constants import *
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap
@@ -1564,11 +1564,14 @@ def user_settings_block_community():
 
         # Check if it's an ActivityPub ID (contains ! or @ or is a URL)
         if '!' in community_name or '@' in community_name or community_name.startswith('http'):
-            # Remove leading ! if present
-            if community_name.startswith('!'):
-                community_name = community_name[1:]
-            # Try to find or create the remote community
-            community_to_block = find_actor_or_create(community_name, create_if_not_found=False, community_only=True)
+            if community_name.startswith('!') or ('@' in community_name and not community_name.startswith('http')):
+                if not community_name.startswith('!'):
+                    community_name = '!' + community_name
+                # Will work for !comm@instance.tld as well as comm@instance.tld
+                community_to_block = search_for_community(community_name, allow_fetch=False)
+            else:
+                # Try to find or create the remote community
+                community_to_block = find_actor_or_create(community_name, create_if_not_found=False, community_only=True)
             if community_to_block and not isinstance(community_to_block, Community):
                 community_to_block = None
         else:
