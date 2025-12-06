@@ -1054,7 +1054,7 @@ def post_restore(post_id: int):
         if post.deleted_by == post.user_id:
             restore_post(post.id, SRC_WEB, None)
         else:
-            mod_restore_post(post.id, SRC_WEB, None)
+            mod_restore_post(post.id, '', SRC_WEB, None)
 
         flash(_('Post has been restored.'))
     return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
