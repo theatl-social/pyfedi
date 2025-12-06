@@ -958,7 +958,7 @@ def post_edit(post_id: int):
                     try:
                         with open(path, "rb") as file:
                             form.image_file.data = file.read()
-                    except FileNotFoundError as e:
+                    except FileNotFoundError:
                         pass
 
             elif post_type == POST_TYPE_VIDEO:

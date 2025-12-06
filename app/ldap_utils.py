@@ -187,10 +187,10 @@ def login_with_ldap(user_name: str, password: str) -> str | bool:
         return False
 
     except LDAPException as e:
-        logger.error(f"LDAP error logging user {username} in: {e}")
+        logger.error(f"LDAP error logging user {user_name} in: {e}")
         return False
     except Exception as e:
-        logger.error(f"Unexpected error logging user {username} in with LDAP: {e}")
+        logger.error(f"Unexpected error logging user {user_name} in with LDAP: {e}")
         return False
     finally:
         if conn:

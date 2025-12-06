@@ -1055,7 +1055,7 @@ def add_remote_community_from_post(post_data):
             if f"@{current_app.config['SERVER_NAME']}" not in cl:
                 try:
                     search_for_community(cl)
-                except Exception as e:
+                except Exception:
                     pass
 
 
