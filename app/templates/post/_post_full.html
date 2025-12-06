@@ -270,7 +270,7 @@
                         </ul>
                     {% else -%}
                         <div id="pollResults" class="d-none mb-4">
-                            {% if poll_total_votes > 0 %}
+                            {% if poll_total_votes and poll_total_votes > 0 %}
                             <ul>
                                 {% for choice in poll_choices -%}
                                     <li>
