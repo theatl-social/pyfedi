@@ -90,6 +90,9 @@
                                     {% if post.community.posting_warning -%}
                                         <p align="center">{{ post.community.posting_warning|safe }}</p>
                                     {% endif -%}
+                                    {% if post.community.instance.posting_warning -%}
+                                        <p align="center">{{ post.community.instance.posting_warning|safe }}</p>
+                                    {% endif -%}
                                     {% if recipient_language_name -%}
                                         <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
                                             <i class="fas fa-language"></i>

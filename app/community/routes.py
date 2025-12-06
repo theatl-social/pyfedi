@@ -1055,6 +1055,8 @@ def add_post(actor, type=None):
             form.event_timezone.data = current_user.timezone
         if community.posting_warning:
             flash(community.posting_warning)
+        if community.instance.posting_warning:
+            flash(community.instance.posting_warning)
 
         form.timezone.data = current_user.timezone
         form.language_id.data = current_user.language_id or g.site.language_id
