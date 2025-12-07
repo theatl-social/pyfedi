@@ -56,7 +56,7 @@ id_list = db.session.execute(text(query_string), {"post_id": 95, "deleted": Fals
 
 ## DB Interactions from Celery Tasks
 
-When a database session is running inside Flask's web UI or from the API sections of the codebase, Flask will handle opening and closing the db session so that the number of connections to the database is pretty consistent over time. However, that is not the case when interacting with the database from celery tasks, outside of the Flask context. So, a special workflow needs to happen so that connections are reliably closed once the celery task completes execution and exits.
+When a database session is running inside Flask's web UI or from the API sections of the codebase, Flask will handle opening and closing the db session so that the number of connections to the database is pretty consistent over time. However, that is not the case when interacting with the database from celery tasks (more on celery in a later guide), outside of the Flask context. So, a special workflow needs to happen so that connections are reliably closed once the celery task completes execution and exits.
 
 To properly manage database connections, a helper function exists to initially connect the celery task to a database session. Inside a celery task, a database session is opened using the `get_task_session()` function:
 
