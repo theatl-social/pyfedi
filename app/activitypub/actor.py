@@ -294,4 +294,14 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
 
             return actor
 
+    if '@' in actor_url:
+        user: User = User.query.filter_by(ap_id=actor_url.lower()).first()
+        return user
+    else:
+        user: User = User.query.filter(or_(User.user_name == actor_url)).filter_by(ap_id=None).first()
+        if user is None:
+            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor_url.lower()}',
+                                        ap_id=None).first()
+        return user
+
     return None
