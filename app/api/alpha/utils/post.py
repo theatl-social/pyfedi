@@ -885,6 +885,7 @@ def post_post(auth, data):
     url = data['url'] if 'url' in data else None
     nsfw = data['nsfw'] if 'nsfw' in data else False
     ai_generated = data['ai_generated'] if 'ai_generated' in data else False
+    alt_text = data['alt_text'] if 'alt_text' in data else title
     language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
         language_id = site_language_id()
@@ -904,7 +905,7 @@ def post_post(auth, data):
         type = POST_TYPE_ARTICLE
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True,
-             'ai_generated': ai_generated}
+             'ai_generated': ai_generated, 'image_alt_text': alt_text}
 
     # Add event data if present
     if 'event' in data and data['event']:
@@ -935,6 +936,12 @@ def put_post(auth, data):
     flair = data['flair'] if 'flair' in data else flair_to_string(post) or ''
     if language_id < 2:
         language_id = site_language_id()
+    if 'alt_text' in data:
+        alt_text = data['alt_text']
+    elif post.image.alt_text:
+        alt_text = post.image.alt_text
+    else:
+        alt_text = ''
 
     # Determine post type - keep existing type unless explicitly changed
     type = post.type
@@ -946,7 +953,7 @@ def put_post(auth, data):
             type = POST_TYPE_ARTICLE
 
     input = {'title': title, 'body': body, 'url': url, 'nsfw': nsfw, 'language_id': language_id, 'notify_author': True,
-             'tags': tags, 'flair': flair, 'ai_generated': ai_generated}
+             'tags': tags, 'flair': flair, 'ai_generated': ai_generated, 'image_alt_text': alt_text}
 
     # Add event data if present
     if 'event' in data and data['event']:
