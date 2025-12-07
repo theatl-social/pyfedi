@@ -367,6 +367,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
+    instance_domains = fediverse_domains()
+
     # Filter tags, leaving only safe ones
     for tag in soup.find_all():
         # If the tag is not in the allowed_tags list, remove it and its contents
@@ -389,6 +391,8 @@ def allowlist_html(html: str, a_target='_blank') -> str:
             if tag.name == 'a':
                 tag.attrs['rel'] = 'nofollow ugc'
                 tag.attrs['target'] = a_target
+                if furl(tag['href']).host in instance_domains:
+                    tag['href'] = rewrite_href(tag['href'])
             # Add loading=lazy to images
             if tag.name == 'img':
                 tag.attrs['loading'] = 'lazy'
@@ -3641,6 +3645,37 @@ def to_srgb(im: Image.Image, assume="sRGB"):
 @cache.memoize(timeout=30)
 def show_explore():
     return num_topics() > 0 or num_feeds() > 0
+
+
+@cache.memoize(timeout=30)
+def fediverse_domains():
+    return [instance.domain for instance in db.session.query(Instance).filter(Instance.id != 1).all() if instance.online()]
+
+
+def rewrite_href(url: str) -> str:
+    if '/post/' in url or ('/c/' in url and '/p/' in url):
+        post = Post.get_by_ap_id(url)
+        if post:
+            if post.slug:
+                return post.slug
+            else:
+                return f'/post/{post.id}'
+    elif '/comment/' in url:
+        post_reply = PostReply.get_by_ap_id(url)
+        if post_reply:
+            return f'/comment/{post_reply.id}'
+    elif '/c/' in url and '/p/' not in url:
+        community = db.session.query(Community).filter(Community.ap_profile_id, Community.banned == False).first()
+        if community and not community.is_local():
+            url = f'/c/{community.link()}'
+    else:
+        post = Post.get_by_ap_id(url)
+        if post is None:
+            post_reply = PostReply.get_by_ap_id(url)
+            if post_reply:
+                return f'/comment/{post_reply.id}'
+
+    return url
 
 
 def expand_hex_color(text: str) -> str:
