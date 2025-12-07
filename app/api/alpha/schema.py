@@ -414,6 +414,7 @@ class PostView(DefaultSchema):
     subscribed = fields.String(required=True, validate=validate.OneOf(subscribed_type_list))
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
+    alt_text = fields.String()
     my_vote = fields.Integer()
     flair_list = fields.List(fields.Nested(CommunityFlair), metadata={"description": "See also the simpler 'flair' on post which can be used when editing"})
     can_auth_user_moderate = fields.Boolean()
@@ -1246,6 +1247,7 @@ class SubscribePostRequest(DefaultSchema):
 class CreatePostRequest(DefaultSchema):
     title = fields.String(required=True)
     community_id = fields.Integer(required=True)
+    alt_text = fields.String(metadata={"description": "Will be used for image posts or link posts that point to images"})
     body = fields.String()
     url = fields.String(metadata={"format": "url"})
     nsfw = fields.Boolean()
@@ -1257,6 +1259,7 @@ class CreatePostRequest(DefaultSchema):
 
 class EditPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
+    alt_text = fields.String(allow_none=True, metadata={"description": "Pass null to remove the existing alt text"})
     title = fields.String()
     body = fields.String()
     url = fields.String(allow_none=True, metadata={"description": "Pass value of null to remove the post url", "format": "url"})
