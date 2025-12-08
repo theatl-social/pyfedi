@@ -722,11 +722,12 @@ def ban_profile(actor):
     form = BanUserForm()
     if user_access('ban users', current_user.id) or user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, deleted=False).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False)
+        else:
+            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
-            if user is None:
-                abort(404)
+            abort(404)
 
         if user.id == current_user.id:
             flash(_('You cannot ban yourself.'), 'error')
@@ -803,11 +804,13 @@ def ban_profile(actor):
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False)
+        else:
+            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                                        create_if_not_found=False)
         if user is None:
-            user = User.query.filter_by(ap_id=actor).first()
-            if user is None:
-                abort(404)
+            abort(404)
 
         if user.id == current_user.id:
             flash(_('You cannot unban yourself.'), 'error')
@@ -833,15 +836,12 @@ def unban_profile(actor):
 @login_required
 def block_profile(actor):
     actor = actor.strip()
-    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
-        # Local user
-        user = User.query.filter_by(user_name=actor, deleted=False).filter(
-            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        # Remote user
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
 
     if user.id == current_user.id:
         flash(_('You cannot block yourself.'), 'error')
@@ -881,7 +881,10 @@ def block_profile(actor):
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
-    user = User.query.filter_by(ap_id=actor, deleted=False).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
     block_remote_instance(user.instance_id, SRC_WEB)
@@ -908,15 +911,12 @@ def user_block_instance(actor):
 @login_required
 def unblock_profile(actor):
     actor = actor.strip()
-    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
-        # Local user
-        user = User.query.filter_by(user_name=actor, deleted=False).filter(
-            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        # Remote user
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
 
     if user.id == current_user.id:
         flash(_('You cannot unblock yourself.'), 'error')
@@ -948,9 +948,11 @@ def unblock_profile(actor):
 @login_required
 def report_profile(actor):
     if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
     form = ReportUserForm()
 
     if user and user.reports == -1:  # When a mod decides to ignore future reports, user.reports is set to -1
@@ -1010,11 +1012,13 @@ def report_profile(actor):
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user: User = User.query.filter_by(user_name=actor, deleted=False).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False)
+        else:
+            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                                        create_if_not_found=False)
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
-            if user is None:
-                abort(404)
+            abort(404)
         if user.id == current_user.id:
             flash(_('You cannot delete yourself.'), 'error')
         else:
@@ -1527,7 +1531,7 @@ def user_settings_block_user():
                 user_to_block = None
         else:
             # Local username lookup
-            user_to_block = User.query.filter_by(user_name=username, deleted=False).first()
+            user_to_block = User.query.filter_by(user_name=username, deleted=False, ap_id=None).first()
 
         if not user_to_block:
             flash(_('User not found: %(username)s', username=username), 'error')
@@ -2036,13 +2040,14 @@ def user_feeds(actor):
     # this will show a specific user's public feeds
     user_has_public_feeds = False
 
-    # find the actor, local or remote
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+
     if user is None:
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        abort(404)
 
     # find all user feeds marked as public
     user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
@@ -2061,12 +2066,9 @@ def user_feeds(actor):
 def show_profile_rss(actor):
     actor = actor.strip()
     if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor.lower()).first()
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user: User = User.query.filter(User.user_name == actor).filter_by(ap_id=None).first()
-        if user is None:
-            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}',
-                                        ap_id=None).first()
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
 
     if user is not None:
         # If nothing has changed since their last visit, return HTTP 304

@@ -16,7 +16,8 @@ from app.shared.community import join_community, leave_community, block_communit
     remove_mod_from_community, rate_community
 from app.shared.feed import leave_feed
 from app.shared.tasks import task_selector
-from app.utils import authorise_api_user, communities_banned_from_all_users, moderating_communities_ids
+from app.utils import authorise_api_user, communities_banned_from_all_users, moderating_communities_ids, \
+    blocked_or_banned_instances
 from app.utils import communities_banned_from, blocked_instances, blocked_communities, shorten_string, \
     joined_communities, moderating_communities, expand_hex_color, community_membership, subscribed_feeds, \
     feed_membership
