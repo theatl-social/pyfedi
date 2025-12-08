@@ -636,6 +636,8 @@ def show_community(community: Community):
                            current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
     if current_user.is_anonymous:
         resp.headers.set('Cache-Control', 'public, max-age=30')
+    else:
+        resp.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
     return resp
 

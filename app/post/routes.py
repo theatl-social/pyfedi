@@ -334,6 +334,8 @@ def show_post(post_id: int):
         response.headers.set('Link', f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"')
         if current_user.is_anonymous:
             response.headers.set('Cache-Control', 'public, max-age=30')
+        else:
+            response.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
         return response
 
@@ -625,6 +627,8 @@ def continue_discussion(post_id, comment_id):
 
     if current_user.is_anonymous:
         response.headers.set('Cache-Control', 'public, max-age=30')
+    else:
+        response.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
     return response
 

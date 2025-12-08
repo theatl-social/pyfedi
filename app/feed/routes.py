@@ -758,6 +758,8 @@ def show_feed(feed):
                                ))
         if current_user.is_anonymous:
             resp.headers.set('Cache-Control', 'public, max-age=30')
+        else:
+            resp.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
         return resp
     else:
