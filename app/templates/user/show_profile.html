@@ -165,7 +165,7 @@
                     <li class="list-group-item">
                         <p class="mb-0"><strong>{{ field.label }}</strong><br>
                            {% if field.text.startswith('http') -%}
-                                <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                                <a href="{{ field.text }}" rel="nofollow noindex ugc{{ ' me' if field.label.lower() == 'mastodon' }}">{{ field.text }}</a>
                            {% else -%}
                                 {{ field.text }}
                            {% endif -%}
