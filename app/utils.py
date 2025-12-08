@@ -3665,7 +3665,7 @@ def rewrite_href(url: str) -> str:
         if post_reply:
             return f'/comment/{post_reply.id}'
     elif '/c/' in url and '/p/' not in url:
-        community = db.session.query(Community).filter(Community.ap_profile_id, Community.banned == False).first()
+        community = db.session.query(Community).filter(Community.ap_profile_id == url, Community.banned == False).first()
         if community and not community.is_local():
             url = f'/c/{community.link()}'
     else:
