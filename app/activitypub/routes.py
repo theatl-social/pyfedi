@@ -816,11 +816,10 @@ def process_inbox_request(request_json, store_ap_json):
                         return
 
                     if not feed:
-                        user_ap_id = request_json['object']['actor']
-                        user = find_actor_or_create_cached(user_ap_id)
+                        user = find_actor_or_create_cached(request_json['object']['actor'])
                         if user and isinstance(user, User):
                             if user.banned:
-                                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                                log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, f'{user.ap_id} is banned')
                                 return
 
                             with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
@@ -831,7 +830,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 user.instance.failures = 0
                                 session.commit()
                         else:
-                            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + user_ap_id)
+                            log_incoming_ap(id, APLOG_ANNOUNCE, APLOG_FAILURE, saved_json, 'Blocked or unfound user for Announce object actor ' + str(request_json['object']['actor']))
                             return
                     else:
                         user = None
@@ -968,10 +967,9 @@ def process_inbox_request(request_json, store_ap_json):
                         if join_request:
                             user = session.query(User).get(join_request.user_id)
                     elif core_activity['object']['type'] == 'Follow':
-                        user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create_cached(user_ap_id)
+                        user = find_actor_or_create_cached(core_activity['object']['actor'])
                         if user and user.banned:
-                            log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user_ap_id} is banned')
+                            log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, f'{user.ap_id} is banned')
                             return
                     if not user:
                         log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Accept')
@@ -1016,8 +1014,7 @@ def process_inbox_request(request_json, store_ap_json):
                 # Reject: remote server is rejecting our previous follow request
                 if core_activity['type'] == 'Reject':
                     if core_activity['object']['type'] == 'Follow':
-                        user_ap_id = core_activity['object']['actor']
-                        user = find_actor_or_create_cached(user_ap_id)
+                        user = find_actor_or_create_cached(core_activity['object']['actor'])
                         if not user:
                             log_incoming_ap(id, APLOG_ACCEPT, APLOG_FAILURE, saved_json, 'Could not find recipient of Reject')
                             return

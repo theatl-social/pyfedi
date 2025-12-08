@@ -52,3 +52,4 @@ asgiref==3.9.1  # WSGI to ASGI adapter
 pygments~=2.19.0
 fastapi~=0.118.0
 sqlakeyset~=2.0.0
+rich
