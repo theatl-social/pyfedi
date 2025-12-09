@@ -552,6 +552,7 @@ def user_settings():
         ('hi', _l('Hindi')),
         ('ja', _l('Japanese')),
         ('es', _l('Spanish')),
+        ('pl', _l('Polish')),
     ]
     form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
