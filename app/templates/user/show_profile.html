@@ -31,7 +31,7 @@
                   </ol>
                 </nav>
             </div>
-            <img class="community_icon_big bump_up rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+            <a href="{{ user.avatar_image() }}"><img class="community_icon_big bump_up rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
             <h1 class="mt-2">{{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}
                 {% if current_user.is_authenticated %}
                     {% include 'user/_notification_toggle.html' %}
@@ -48,14 +48,14 @@
                 </nav>
                 <div class="col-3 col-md-2">
                     {% if low_bandwidth %}
-                        <img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+                        <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
                     {% else %}
                         {% if user.avatar.source_url and user.avatar.source_url.endswith('.mp4') %}
                             <video autoplay disablepictureinpicture loop muted class="community_icon_big rounded-circle">
                                 <source src="{{ user.avatar.source_url }}" type="video/mp4">
                             </video>
                         {% else %}
-                            <img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+                            <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
                         {% endif %}
                     {% endif %}
                 </div>
