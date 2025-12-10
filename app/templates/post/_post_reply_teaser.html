@@ -39,11 +39,11 @@
             {% endif -%}
             <span class="comment_time">{% if has_continued %}<a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id) }}">{% else %}<a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">{% endif %}
                 {% if post_reply.edited_at -%}
-                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
+                    {{ _('edited') }} <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
                 {% else -%}
                     <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
                 {% endif -%}
-            </a></span>
+            </a></span><span class="visually-hidden"> {{ _('depth: %(comment_depth)d', comment_depth=post_reply.depth + 1) }}</span>
             {% if post_reply.has_been_reported() -%}
                     <a href="{{ url_for('community.community_moderate', actor=post_reply.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span></a>
             {% endif -%}
@@ -177,3 +177,4 @@
         </script>
     {% endif -%}
 </div>
+<hr class="visually-hidden">
