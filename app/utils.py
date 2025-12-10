@@ -3653,7 +3653,7 @@ def fediverse_domains():
 
 
 def rewrite_href(url: str) -> str:
-    if '/post/' in url or ('/c/' in url and '/p/' in url):
+    if '/post/' in url or ('/c/' in url and '/p/' in url) or ('/m/' in url and '/t/' in url and '/comment/' not in url):
         post = Post.get_by_ap_id(url)
         if post:
             if post.slug:
@@ -3664,7 +3664,7 @@ def rewrite_href(url: str) -> str:
         post_reply = PostReply.get_by_ap_id(url)
         if post_reply:
             return f'/comment/{post_reply.id}'
-    elif '/c/' in url and '/p/' not in url:
+    elif ('/c/' in url and '/p/' not in url) or ('/m/' in url and '/t/' not in url):
         community = db.session.query(Community).filter(Community.ap_profile_id == url, Community.banned == False).first()
         if community and not community.is_local():
             url = f'/c/{community.link()}'
