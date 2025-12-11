@@ -324,10 +324,16 @@ FEED_PATTERN = re.compile(r"(?<![\/])~([a-zA-Z0-9_.-]*)@([a-zA-Z0-9_.-]*)\b")
 
 
 # sanitise HTML using an allow list
-def allowlist_html(html: str, a_target='_blank') -> str:
+def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     # RUN THE TESTS in tests/test_allowlist_html.py whenever you alter this function, it's fragile and bugs are hard to spot.
     if html is None or html == '':
         return ''
+
+    # Produce a short, random string that is used for footnotes
+    if test_env:
+        fn_string = test_env.get('fn_string', 'fn-test')
+    else:
+        fn_string = gibberish(6)
 
     # Pre-escape angle brackets that aren't valid HTML tags before BeautifulSoup parsing
     # We need to distinguish between:
@@ -367,7 +373,10 @@ def allowlist_html(html: str, a_target='_blank') -> str:
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
 
-    instance_domains = fediverse_domains()
+    if not test_env:
+        instance_domains = fediverse_domains()
+    else:
+        instance_domains = []
 
     # Filter tags, leaving only safe ones
     for tag in soup.find_all():
@@ -376,7 +385,7 @@ def allowlist_html(html: str, a_target='_blank') -> str:
             tag.extract()
         else:
             # Filter and sanitize attributes
-            allowed_attrs = ['href', 'src', 'alt', 'class']
+            allowed_attrs = ['href', 'src', 'alt', 'class', 'id']
             # Add image-specific attributes for enhanced-images markdown extra
             if tag.name == 'img':
                 allowed_attrs.extend(['width', 'height', 'align', 'title', 'data-enhanced-img'])
@@ -389,10 +398,19 @@ def allowlist_html(html: str, a_target='_blank') -> str:
                 tag.extract()
             # Add nofollow and target=_blank to anchors
             if tag.name == 'a':
-                tag.attrs['rel'] = 'nofollow ugc'
-                tag.attrs['target'] = a_target
-                if furl(tag['href']).host in instance_domains:
-                    tag['href'] = rewrite_href(tag['href'])
+                if not tag.attrs.get('href', "").startswith("#"):
+                    tag.attrs['rel'] = 'nofollow ugc'
+                    tag.attrs['target'] = a_target
+                    if furl(tag['href']).host in instance_domains:
+                        tag['href'] = rewrite_href(tag['href'])
+                else:
+                    # This is a same-page anchor - a footnote, give unique suffix for href
+                    tag.attrs['href'] = tag.attrs.get('href', '') + '-' + fn_string
+            # Add unique suffix for footnote id's
+            if 'class' in tag.attrs and 'footnote-ref' in tag.attrs.get('class'):
+                tag.attrs['id'] = tag.attrs.get('id', '') + '-' + fn_string
+            if tag.name == 'li' and tag.attrs.get('id', '').startswith('fn-'):
+                tag.attrs['id'] = tag.attrs.get('id', '') + '-' + fn_string
             # Add loading=lazy to images
             if tag.name == 'img':
                 tag.attrs['loading'] = 'lazy'
@@ -554,7 +572,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
 
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
-def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank") -> str:
+def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
     if markdown_text:
 
         # Escape <...> if it’s not a real HTML tag
@@ -567,11 +585,17 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = markdown_text.replace('þ', 'th')
 
         try:
-            md = markdown2.Markdown(extras={'middle-word-em': False, 'tables': True, 'fenced-code-blocks': None, 'strike': True,
-                                            'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
+            md = markdown2.Markdown(extras={'middle-word-em': False,
+                                            'tables': True,
+                                            'fenced-code-blocks': None,
+                                            'strike': True,
+                                            'tg-spoiler': True,
+                                            'link-patterns': [(LINK_PATTERN, r'\1')],
                                             'breaks': {'on_newline': True, 'on_backslash': True},
-                                            'tag-friendly': True, 'smarty-pants': True,
-                                            'enhanced-images': True})
+                                            'tag-friendly': True,
+                                            'smarty-pants': True,
+                                            'enhanced-images': True,
+                                            'footnotes': True})
             raw_html = md.convert(markdown_text)
             # Apply enhanced image attributes after markdown processing
             raw_html = apply_enhanced_image_attributes(raw_html, md)
@@ -579,11 +603,16 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
             # weird markdown, like https://mander.xyz/u/tty1 and https://feddit.uk/comment/16076443,
             # causes "markdown2.Markdown._color_with_pygments() argument after ** must be a mapping, not bool" error, so try again without fenced-code-blocks extra
             try:
-                md = markdown2.Markdown(extras={'middle-word-em': False, 'tables': True, 'strike': True,
-                                                'tg-spoiler': True, 'link-patterns': [(LINK_PATTERN, r'\1')],
+                md = markdown2.Markdown(extras={'middle-word-em': False,
+                                                'tables': True,
+                                                'strike': True,
+                                                'tg-spoiler': True,
+                                                'link-patterns': [(LINK_PATTERN, r'\1')],
                                                 'breaks': {'on_newline': True, 'on_backslash': True},
-                                                'tag-friendly': True, 'smarty-pants': True,
-                                                'enhanced-images': True})
+                                                'tag-friendly': True,
+                                                'smarty-pants': True,
+                                                'enhanced-images': True,
+                                                'footnotes': True})
                 raw_html = md.convert(markdown_text)
                 # Apply enhanced image attributes after markdown processing
                 raw_html = apply_enhanced_image_attributes(raw_html, md)
@@ -593,7 +622,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         if not allow_img:
             raw_html = escape_img(raw_html)
 
-        return allowlist_html(raw_html, a_target=a_target if anchors_new_tab else '')
+        return allowlist_html(raw_html, a_target=a_target if anchors_new_tab else '', test_env=test_env)
     else:
         return ''
 
