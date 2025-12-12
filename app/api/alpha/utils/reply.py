@@ -1,7 +1,7 @@
 from datetime import timedelta
 
 from flask import g, current_app
-from sqlalchemy import desc, or_, text, func
+from sqlalchemy import desc, or_, text, func, cast, Float
 from sqlalchemy import select
 from sqlalchemy_searchable import search
 
@@ -247,7 +247,7 @@ def get_reply_list(auth, data, user_details=None):
 
     if replies:
         # sort == 'Relevance' handled above when query.search was executed
-        if sort == 'Hot' or sort == 'Controversial' or sort == 'Scaled':
+        if sort == 'Hot' or sort == 'Scaled':
             replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
         elif sort == 'Active':
             replies = replies.order_by(func.greatest(PostReply.posted_at, func.coalesce(PostReply.edited_at, 0)))
@@ -287,6 +287,13 @@ def get_reply_list(auth, data, user_details=None):
             replies = replies.order_by(PostReply.posted_at)
         elif sort == 'Relevance':
             pass  # already done as part of the search query
+        elif sort == 'Controversial':
+            # Pulled from the reddit algorithm: https://github.com/reddit-archive/reddit/blob/753b17407e9a9dca09558526805922de24133d53/r2/r2/lib/db/_sorts.pyx#L60
+            replies = replies.order_by(desc(
+                func.coalesce(func.pow(
+                    func.coalesce(PostReply.up_votes, 0) * func.coalesce(PostReply.down_votes, 0),
+                    cast(func.least(func.coalesce(PostReply.up_votes, 0), func.coalesce(PostReply.down_votes, 0)), Float) /
+                    cast(func.coalesce(func.greatest(PostReply.up_votes, PostReply.down_votes), 1), Float)), 0)))
         else:
             replies = replies.order_by(desc(PostReply.posted_at))
 

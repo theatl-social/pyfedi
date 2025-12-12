@@ -295,7 +295,7 @@ class SearchRequest(DefaultSchema):
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list), metadata={
         "description": "Only some sorting options supported for each `type_`.\n\n"
-        "For `Comments`, `Scaled` and `Controversial` are not supported and `Hot` will be returned instead.\n\n"
+        "For `Comments`, `Scaled` is not supported and `Hot` will be returned instead.\n\n"
         "For `Communities`, all `Top` sorts are equivalent. The `New` and `Old` sorts are supported. And all others are "
         "equivalent to `Active`.\n\n"
         "For `Users`, only `New` and `Top` (by number of posts) are supported. Otherwise will be sorted by user id.\n\n"
