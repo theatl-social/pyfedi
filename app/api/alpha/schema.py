@@ -286,7 +286,12 @@ class SearchRequest(DefaultSchema):
     q = fields.String(required=True)
     type_ = fields.String(required=True, validate=validate.OneOf(content_type_list))
     limit = fields.Integer()
-    listing_type = fields.String(validate=validate.OneOf(listing_type_list))
+    listing_type = fields.String(validate=validate.OneOf(listing_type_list), metadata={
+        "description": "Only some types are supported for each `type_`.\n\n"
+        "For `Comments` and `Communities`, `Popular` will return the same results as `All`.\n\n"
+        "For `Users`, only `Local` will differ from `All`.\n\n"
+        "All listing types supported for `Posts` and `Url` (simply an alias for `Posts`)."
+    })
     page = fields.Integer()
     sort = fields.String(validate=validate.OneOf(sort_list), metadata={
         "description": "Only some sorting options supported for each `type_`.\n\n"
