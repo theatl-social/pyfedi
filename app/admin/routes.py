@@ -1121,7 +1121,7 @@ def activity_json(activity_id):
         is_valid_json = False
 
     # Highlight JSON or fallback to plain text highlighting
-    formatter = HtmlFormatter(style="monokai")
+    formatter = HtmlFormatter(style=current_user.code_style or 'monokai')
     if is_valid_json:
         highlighted = highlight(pretty_json, JsonLexer(), formatter)
     else:
