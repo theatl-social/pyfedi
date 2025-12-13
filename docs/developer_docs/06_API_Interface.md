@@ -26,7 +26,7 @@ The first thing that is obviously different about this view function is all the 
 
 Moving down the list of decorators, the next one, `@comm_bp.doc`, is how we can provide a concise summary of the purpose of that API endpoint that is displayed on the swagger page before the details of the endpoint are expanded.
 
-The next two decorators, `arguments` and `response`, are closely related to schema, so look for more details on those in the schema section of this guide. Basically, the `arguments` decorator points to a structure that specifies what data is needed for that endpoint, how that data should be structured, and how that data is passed to th view function. The `response` decorator similarly points to a structure that specifies what data the endpoint will respond with and how it is structured.
+The next two decorators, `arguments` and `response`, are closely related to schema, so look for more details on those in the schema section of this guide. Basically, the `arguments` decorator points to a structure that specifies what data is needed for that endpoint, how that data should be structured, and how that data is passed to the view function. The `response` decorator similarly points to a structure that specifies what data the endpoint will respond with and how it is structured.
 
 To wrap up the decorators, the `alt_response` decorator is how we can signal what other types of responses the API can return. Typically, this is the response that is returned if there is an exception during execution or a problem with the request (thus the 400 response code).
 
