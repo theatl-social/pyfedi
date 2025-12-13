@@ -14,6 +14,9 @@ from sqlalchemy import text, desc, or_
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
+from pygments import highlight
+from pygments.lexers import JsonLexer, TextLexer
+from pygments.formatters import HtmlFormatter
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -1104,9 +1107,39 @@ def admin_activities():
 @login_required
 def activity_json(activity_id):
     activity = ActivityPubLog.query.get_or_404(activity_id)
-    return render_template('admin/activity_json.html', title=_('Activity JSON'),
-                           activity_json_data=activity.activity_json, activity=activity,
-                           current_app=current_app)
+
+    raw_json = activity.activity_json
+
+    # Try pretty printing
+    try:
+        parsed = json.loads(raw_json)
+        pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)
+        is_valid_json = True
+    except Exception as e:
+        pretty_json = raw_json       # keep raw data
+        json_error = str(e)
+        is_valid_json = False
+
+    # Highlight JSON or fallback to plain text highlighting
+    formatter = HtmlFormatter(style=current_user.code_style or 'monokai')
+    if is_valid_json:
+        highlighted = highlight(pretty_json, JsonLexer(), formatter)
+    else:
+        highlighted = highlight(pretty_json, TextLexer(), formatter)
+
+    highlight_css = formatter.get_style_defs('.highlight')
+
+    return render_template(
+        'admin/activity_json.html',
+        title=_('Activity JSON'),
+        highlighted_json=highlighted,
+        highlight_css=highlight_css,
+        activity=activity,
+        current_app=current_app,
+        is_valid_json=is_valid_json,
+        json_error=json_error if not is_valid_json else None,
+    )
+
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')

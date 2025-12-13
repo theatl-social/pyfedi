@@ -8,10 +8,14 @@
 
 {% block app_content %}
 
+<style>{{ highlight_css|safe }}</style>
+
 <div class="row">
     <div class="col">
         <h1>{{ _('Activity JSON') }}</h1>
-        <code><p>{{ activity_json_data }}</p></code>
+        <div class="highlight">
+            {{ highlighted_json|safe }}
+        </div>
         {% if current_app.debug %}
         <p><a class="btn btn-warning" href="{{ url_for('admin.activity_replay', activity_id=activity.id) }}">Re-submit this activity</a></p>
         {% endif %}
