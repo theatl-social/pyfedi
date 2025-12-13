@@ -3105,7 +3105,7 @@ class PostReplyVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # the author of the reply voted on - who's reputation is affected
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
-    emoji = db.Column(db.String(20), index=True)
+    emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
