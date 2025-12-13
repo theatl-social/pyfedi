@@ -13,7 +13,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, \
     can_upvote, can_downvote, get_recipient_language
 
 
-def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None):
+def vote_for_reply(reply_id: int, vote_direction, federate: bool, emoji: str | None, src, auth=None):
     if src == SRC_API:
         reply = db.session.query(PostReply).filter_by(id=reply_id).one()
         user = authorise_api_user(auth, return_type='model')
@@ -25,10 +25,10 @@ def vote_for_reply(reply_id: int, vote_direction, federate: bool, src, auth=None
         reply = db.session.query(PostReply).get_or_404(reply_id)
         user = current_user
 
-    undo = reply.vote(user, vote_direction)
+    undo = reply.vote(user, vote_direction, emoji)
 
     task_selector('vote_for_reply', user_id=user.id, reply_id=reply_id, vote_to_undo=undo,
-                  vote_direction=vote_direction, federate=federate)
+                  vote_direction=vote_direction, federate=federate, emoji=emoji)
 
     if src == SRC_API:
         return user.id

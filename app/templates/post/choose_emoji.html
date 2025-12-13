@@ -1,0 +1,38 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <h1>{{ title }}</h1>
+        <form method="post" id="basicEmojiPicker">
+          {{ form.csrf_token() }}
+          <ul class="list-group emoji-picker">
+            {% for emoji in emojis -%}
+              <li class="list-group-item">
+                  <input class="form-check-input" type="radio" name="emoji" value="{{ emoji.token }}" id="emoji-{{ emoji.id }}">
+                  <label class="form-check-label" for="emoji-{{ emoji.id }}">
+                    <span class="emoji" title="{{ emoji.token if emoji.url.startswith('https://') else emoji.aliases }}">{% if emoji.url.startswith('https://') %}
+                                            <img src="{{ emoji.url }}" width="30" alt="{{ emoji.token }}">
+                                        {% else %}
+                                            {{ emoji.token }}
+                                        {% endif %}</span>
+                  </label>
+              </li>
+            {% endfor -%}
+          </ul>
+          <noscript>
+              {{ render_field(form.submit) }}
+          </noscript>
+        </form>
+    </main>
+
+    {% with community = post.community -%}
+        {% include "_side_pane.html" %}
+    {% endwith -%}
+</div>
+{% endblock %}

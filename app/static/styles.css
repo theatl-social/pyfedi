@@ -2981,6 +2981,163 @@ form h5 {
   margin-right: 0.5rem;
 }
 
+.message_reactions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--bs-spacer-1);
+  max-width: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+.message_reactions:has(.message_reaction) {
+  margin-bottom: var(--bs-spacer-2);
+}
+.message_reactions .message_reaction_container {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+}
+.message_reactions .message_reaction_container.disabled {
+  cursor: not-allowed;
+}
+.message_reactions .message_reaction {
+  display: flex;
+  padding: 1.5px 4px 1.5px 3px;
+  box-sizing: border-box;
+  min-width: 44px;
+  cursor: pointer;
+  line-height: 1;
+  color: var(--bs-body-color);
+  background-color: var(--bs-secondary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 21px;
+  align-items: center;
+  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  transition: transform 100ms linear, font-weight 100ms linear;
+}
+.message_reactions .message_reaction.reacted {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-primary-bg-subtle);
+  border-color: var(--bs-primary-border-subtle);
+  border-width: 1.5px;
+  padding: 1px 4px 1px 3px;
+  font-weight: var(--bs-font-weight-semibold);
+  box-shadow: none;
+}
+.message_reactions .message_reaction.disabled {
+  pointer-events: none;
+}
+.message_reactions .message_reaction:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+.message_reactions .message_reaction:active {
+  transform: scale(0.95);
+}
+.message_reactions .message_reaction .emoji {
+  margin: 1px 3px;
+  height: 1.2143em;
+  width: 1.2143em;
+  flex-shrink: 0;
+  position: static;
+}
+.message_reactions .message_reaction .emoji_alt_code {
+  margin: 1px 3px;
+  font-size: 0.8em;
+}
+.message_reactions .message_reaction_count {
+  font-size: 90%;
+  margin: 0 3px;
+  line-height: 1.0317em;
+}
+.message_reactions .message_reaction:hover .message_reaction_count {
+  color: var(--bs-primary-text-emphasis);
+}
+.message_reactions:hover .reaction_button {
+  visibility: visible;
+  pointer-events: all;
+}
+.message_reactions .emoji-message-control-button-container {
+  display: flex;
+  align-items: center;
+}
+.message_reactions .reaction_button {
+  visibility: hidden;
+  pointer-events: none;
+  padding: 4px 6px;
+  border-radius: 21px;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+}
+.message_reactions .reaction_button i {
+  font-size: 1em;
+  color: var(--bs-secondary-color);
+}
+.message_reactions .reaction_button:hover i {
+  color: var(--bs-primary-text-emphasis);
+}
+.message_reactions .reaction_button:hover {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-secondary-bg);
+  border-color: var(--bs-primary-border-subtle);
+  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  opacity: 1;
+}
+.message_reactions .reaction_button .message_reaction_count {
+  font-weight: 700;
+  color: var(--bs-secondary-color);
+  margin-right: 0;
+  line-height: 14px;
+}
+.message_reactions .reaction_button:hover .message_reaction_count {
+  color: var(--bs-primary-text-emphasis);
+}
+
+.emoji_button {
+  font-weight: bold;
+  color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+}
+
+/* Visually hide radios but keep them accessible */
+.emoji-picker input[type=radio] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Make label the click target */
+.emoji-picker label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Emoji styling */
+.emoji-picker .emoji {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+/* Highlight selected item */
+.emoji-picker input[type=radio]:checked + label {
+  background-color: var(--bs-primary-bg-subtle);
+  border-radius: 0.375rem;
+}
+
+/* Optional hover */
+.emoji-picker label:hover {
+  background-color: var(--bs-secondary-bg);
+}
+
+/* Optional: hide text labels on capable UAs */
+@media (hover: hover) {
+  .emoji-picker .emoji-text {
+    display: none;
+  }
+}
 #topic_communities .list-group-item, #feed_communities .list-group-item {
   padding-left: 0;
   padding-right: 0;

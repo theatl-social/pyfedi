@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField
+from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField, RadioField
 from wtforms.fields.choices import SelectField
 from wtforms.validators import DataRequired, Length, ValidationError
 from flask_babel import _, lazy_gettext as _l
@@ -108,3 +108,7 @@ class NewReminderForm(FlaskForm):
 class ShareMastodonForm(FlaskForm):
     domain = StringField(_l('Mastodon instance domain name'), validators=[Length(max=512)])
     submit = SubmitField(_l('Share'))
+
+
+class ChooseEmojiForm(FlaskForm):
+    submit = SubmitField(_l('Choose'))

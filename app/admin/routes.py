@@ -23,7 +23,7 @@ from app.admin.constants import ReportTypes
 from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditCommunityForm, EditUserForm, \
     EditTopicForm, SendNewsletterForm, AddUserForm, PreLoadCommunitiesForm, ImportExportBannedListsForm, \
     EditInstanceForm, RemoteInstanceScanForm, MoveCommunityForm, EditBlockedImageForm, AddBlockedImageForm, \
-    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm
+    CmsPageForm, CreateOfflineInstanceForm, InstanceChooserForm, CloseInstanceForm, EmojiForm
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
@@ -33,7 +33,7 @@ from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_
 from app.email import send_registration_approved_email
 from app.models import AllowedInstances, BannedInstances, ActivityPubLog, utcnow, Site, Community, CommunityMember, \
     User, Instance, File, Report, Topic, UserRegistration, Role, Post, PostReply, Language, RolePermission, Domain, \
-    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification
+    Tag, DefederationSubscription, BlockedImage, CmsPage, Notification, Emoji
 from app.shared.tasks import task_selector
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, permission_required, set_setting, get_setting, gibberish, markdown_to_html, \
@@ -2136,3 +2136,58 @@ def admin_cms_page_delete(page_id):
     db.session.commit()
     flash(_('Page deleted.'))
     return redirect(url_for('admin.admin_cms_pages'))
+
+
+# Emoji
+@bp.route('/emoji', methods=['GET'])
+@permission_required('change instance settings')
+@login_required
+def admin_emoji():
+    emojis = Emoji.query.order_by(Emoji.token).all()
+    return render_template('admin/emoji.html', emojis=emojis, title=_('Emoji'))
+
+
+@bp.route('/emoji/add', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_emoji_add():
+    form = EmojiForm()
+    if form.validate_on_submit():
+        e = Emoji(token=form.token.data, url=form.url.data, category=form.category.data, aliases=form.aliases.data,
+                  instance_id=1)
+        db.session.add(e)
+        db.session.commit()
+        flash(_('Emoji saved.'))
+        return redirect(url_for('admin.admin_emoji'))
+
+    return render_template('admin/emoji_edit.html', form=form, title=_('Add Emoji'))
+
+
+@bp.route('/emoji/<int:emoji_id>/edit', methods=['GET', 'POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_emoji_edit(emoji_id):
+    emoji = Emoji.query.get_or_404(emoji_id)
+    form = EmojiForm(original_page=emoji, obj=emoji)
+
+    if form.validate_on_submit():
+        emoji.token = form.token.data
+        emoji.url = form.url.data
+        emoji.aliases = form.aliases.data
+        emoji.category = form.category.data
+        db.session.commit()
+        flash(_('Emoji saved.'))
+        return redirect(url_for('admin.admin_emoji'))
+
+    return render_template('admin/emoji_edit.html', form=form, page=emoji, title=_('Edit Emoji'))
+
+
+@bp.route('/emoji/<int:emoji_id>/delete', methods=['POST'])
+@permission_required('change instance settings')
+@login_required
+def admin_emoji_delete(emoji_id):
+    emoji = Emoji.query.get_or_404(emoji_id)
+    db.session.delete(emoji)
+    db.session.commit()
+    flash(_('Emoji deleted.'))
+    return redirect(url_for('admin.admin_emoji'))

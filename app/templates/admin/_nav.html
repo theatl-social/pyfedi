@@ -22,6 +22,7 @@
         <a href="{{ url_for('admin.admin_reports') }}">{{ _('Moderation') }}</a> |
     {% endif %}
     {% if user_access('change instance settings', current_user.id) %}
+        <a href="{{ url_for('admin.admin_emoji') }}">{{ _('Emoji') }}</a> |
         <a href="{{ url_for('admin.admin_federation') }}">{{ _('Federation') }}</a> |
         <a href="{{ url_for('admin.admin_instances') }}">{{ _('Instances') }}</a> |
         <a href="{{ url_for('admin.newsletter') }}">{{ _('Newsletter') }}</a> |

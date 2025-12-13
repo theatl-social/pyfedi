@@ -32,11 +32,11 @@ from app.models import Post, PostReply, PostReplyValidationError, \
     PostReplyVote, PostVote, Notification, utcnow, UserBlock, DomainBlock, Report, Site, Community, \
     Topic, User, Instance, UserFollower, Poll, PollChoice, PollChoiceVote, PostBookmark, \
     PostReplyBookmark, CommunityBlock, File, CommunityFlair, UserFlair, BlockedImage, CommunityBan, Language, Event, \
-    Reminder
+    Reminder, Emoji
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm, \
-    ShareMastodonForm
+    ShareMastodonForm, ChooseEmojiForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
@@ -516,15 +516,16 @@ def post_oembed(post_id):
 
 
 @bp.route('/post/<int:post_id>/<vote_direction>/<federate>', methods=['GET', 'POST'])
+@bp.route('/post/<int:post_id>/<vote_direction>/<federate>/<emoji>', methods=['GET', 'POST'])
 @login_required
 @validation_required
 @approval_required
-def post_vote(post_id: int, vote_direction, federate):
+def post_vote(post_id: int, vote_direction, federate, emoji=None):
     if federate == 'default':
         federate = not current_user.vote_privately
     else:
         federate = federate == 'public'
-    return vote_for_post(post_id, vote_direction, federate, SRC_WEB)
+    return vote_for_post(post_id, vote_direction, federate, emoji, SRC_WEB)
 
 
 @bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>', methods=['POST'])
@@ -536,7 +537,30 @@ def comment_vote(comment_id, vote_direction, federate):
         federate = not current_user.vote_privately
     else:
         federate = federate == 'public'
-    return vote_for_reply(comment_id, vote_direction, federate, SRC_WEB)
+    return vote_for_reply(comment_id, vote_direction, federate, None, SRC_WEB)
+
+
+@bp.route('/comment/<int:comment_id>/<vote_direction>/<federate>/emoji', methods=['GET', 'POST'])
+@login_required
+@validation_required
+@approval_required
+def comment_emoji_reaction(comment_id, vote_direction, federate):
+    form = ChooseEmojiForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        if federate == 'default':
+            federate = not current_user.vote_privately
+        else:
+            federate = federate == 'public'
+        retval = vote_for_reply(comment_id, vote_direction, federate, request.form.get('emoji'), SRC_WEB)
+        if request.headers.get('HX-Request'):
+            return retval
+        else:
+            comment = PostReply.query.get(comment_id)
+            return redirect(f'{comment.post.slug}#comment_{comment.id}')
+    else:
+        comment = PostReply.query.get(comment_id)
+        return render_template('post/choose_emoji.html', post=comment.post, title=_('Choose an emoji'), form=form,
+                               emojis=Emoji.query.order_by(Emoji.token).all())
 
 
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])

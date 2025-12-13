@@ -70,6 +70,22 @@
             {% else -%}
                 {{ post_reply.body_html | community_links | feed_links | person_links | safe }}
             {% endif -%}
+            {% if post_reply.emoji_reactions -%}
+            <div class="message_reactions">
+                {% for reaction in post_reply.emoji_reactions -%}
+                    <div class="message_reaction_container">
+                        <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}">
+                            <div class="emoji">{% if reaction['url'].startswith('https://') -%}
+                                                    <img src="{{ reaction['url'] }}" width="30" alt="{{ reaction['token'] }}">
+                                                {% else -%}
+                                                    {{ reaction['token'] }}
+                                                {%- endif %}</div>
+                            <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif -%}
         </div>
     </div>
     <div id="post_reply_ai_check_{{ post_reply.id }}"></div>
@@ -96,6 +112,9 @@
         </div>
         <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
             {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
+        </div>
+        <div class="emoji_button">
+            {{ render_emoji_button(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
         </div>
         <div class="hide_button">
             {% if collapsed -%}

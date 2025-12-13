@@ -24,6 +24,7 @@
                 <a class="nav-link{% if active_child == 'admin_cms_pages' %} active{% endif %}" id="cms-pages-tab" type="button" role="tab" href="/admin/pages" style="view-transition-name: cms-pages">{{ _('Pages') }}</a>
             {% endif %}
             {% if user_access('change instance settings', current_user.id) %}
+                <a class="nav-link{% if active_child == 'admin_emoji' %} active{% endif %}" id="emoji-tab" type="button" role="tab" href="/admin/emoji" style="view-transition-name: federation">{{ _('Emoji') }}</a>
                 <a class="nav-link{% if active_child == 'admin_federation' %} active{% endif %}" id="federation-tab" type="button" role="tab" href="/admin/federation" style="view-transition-name: federation">{{ _('Federation') }}</a>
                 <a class="nav-link{% if active_child == 'admin_instances' %} active{% endif %}" id="instances-tab" type="button" role="tab" href="/admin/instances" style="view-transition-name: instances">{{ _('Instances') }}</a>
                 <a class="nav-link{% if active_child == 'admin_newsletter' %} active{% endif %}" id="newsletter-tab" type="button" role="tab" href="/admin/newsletter" style="view-transition-name: newsletter">{{ _('Newsletter') }}</a>

@@ -28,7 +28,7 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb
 
 
-def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
+def vote_for_post(post_id: int, vote_direction, federate: bool, emoji: str, src, auth=None):
     if src == SRC_API:
         post = db.session.query(Post).get(post_id)
         user = authorise_api_user(auth, return_type='model')
@@ -47,9 +47,9 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
             return render_template(template, post=post, community=post.community, recently_upvoted=[],
                                    recently_downvoted=[])
 
-    undo = post.vote(user, vote_direction)
+    undo = post.vote(user, vote_direction, emoji)
 
-    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate)
+    task_selector('vote_for_post', user_id=user.id, post_id=post_id, vote_to_undo=undo, vote_direction=vote_direction, federate=federate, emoji=emoji)
 
     mark_post_read([post.id], True, user.id)
 

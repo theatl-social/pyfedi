@@ -2161,6 +2161,11 @@ def process_upvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if not announced:
+        emoji = request_json['content'] if 'content' in request_json else None
+    else:
+        emoji = request_json['object']['content'] if 'content' in request_json['object'] else None
+
     if isinstance(ap_id, dict) and 'id' in ap_id:
         ap_id = ap_id['id']
     liked = find_liked_object(ap_id)
@@ -2169,7 +2174,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         return
     if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
-            liked.vote(user, 'upvote')
+            liked.vote(user, 'upvote', emoji)
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
@@ -2189,7 +2194,7 @@ def process_downvote(user, store_ap_json, request_json, announced):
         return
     if can_downvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
-            liked.vote(user, 'downvote')
+            liked.vote(user, 'downvote', None)
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)

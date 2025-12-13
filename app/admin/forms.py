@@ -349,3 +349,13 @@ class CmsPageForm(FlaskForm):
         existing_page = CmsPage.query.filter_by(url=url.data).first()
         if existing_page and (not self.original_page or existing_page.id != self.original_page.id):
             raise ValidationError(_l('A page with this URL already exists.'))
+
+
+class EmojiForm(FlaskForm):
+    token = StringField(_l('Token or character'), validators=[DataRequired(), Length(max=20)],
+                        render_kw={'placeholder': _l('e.g., :happy: or a single character like 👍')})
+    url = StringField(_l('URL'), validators=[Optional(), Length(max=1024)],
+                      render_kw={'placeholder': _l('e.g. https://...')})
+    aliases = StringField(_l('Keywords'), validators=[Optional(), Length(max=100)])
+    category = StringField(_l('Category'), validators=[DataRequired(), Length(max=20)])
+    submit = SubmitField(_l('Save'))

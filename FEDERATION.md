@@ -16,11 +16,10 @@
 - [FEP-2677: Identifying the Application Actor](https://codeberg.org/fediverse/fep/src/branch/main/fep/2677/fep-2677.md)
 - [FEP-3b86: Activity Intents](https://codeberg.org/fediverse/fep/src/branch/main/fep/3b86/fep-3b86.md)
 - [FEP-7888: Context Property](https://codeberg.org/fediverse/fep/src/branch/main/fep/7888/fep-7888.md)
+- [FEP-c0e0: Emoji reactions](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md)
 
 ## Partially Supported FEPS
 
-- [FEP-c0e0: Emoji reactions](https://codeberg.org/fediverse/fep/src/branch/main/fep/c0e0/fep-c0e0.md)
-  - Treated as a `like` or `upvote`
 - [FEP-268d: Search consent signals for objects](https://codeberg.org/fediverse/fep/src/branch/main/fep/268d/fep-268d.md)
   - `"searchableBy": "https://www.w3.org/ns/activitystreams#Public"` == `"indexable": true`, any other content sets `"indexable": false`
   - `"searchableBy": ["https://alice.example/actor", "https://example.com/users/1/followers"]` is not currently supported.

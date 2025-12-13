@@ -847,6 +847,7 @@ def post_post_like(auth, data):
     post_id = data['post_id']
     score = data['score']
     private = data['private'] if 'private' in data else False
+    emoji = data['emoji'] if 'emoji' in data else None
     if score == 1:
         direction = 'upvote'
     elif score == -1:
@@ -855,7 +856,7 @@ def post_post_like(auth, data):
         score = 0
         direction = 'reversal'
 
-    user_id = vote_for_post(post_id, direction, not private, SRC_API, auth)
+    user_id = vote_for_post(post_id, direction, not private, emoji, SRC_API, auth)
     post_json = post_view(post=post_id, variant=4, user_id=user_id, my_vote=score)
     return post_json
 

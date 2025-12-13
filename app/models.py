@@ -3,6 +3,7 @@ import math
 import os
 import uuid
 import re
+from collections import defaultdict
 from datetime import datetime, timedelta
 from time import time
 from typing import List, Union
@@ -1551,6 +1552,7 @@ class Post(db.Model):
     scheduled_for = db.Column(db.DateTime, index=True)  # The first (or only) occurrence of this post
     repeat = db.Column(db.String(20), default='')  # 'daily', 'weekly', 'monthly'. Empty string = no repeat, just post once.
     stop_repeating = db.Column(db.DateTime, index=True)  # No more repeats after this datetime
+    emoji_reactions = db.Column(db.JSON)            # a cache of the emoji reactions a post has received, to avoid joins
     tags = db.relationship('Tag', lazy='joined', secondary=post_tag, backref=db.backref('posts', lazy='dynamic'))
     timezone = db.Column(db.String(30))
     archived = db.Column(db.String(100))
@@ -1666,6 +1668,8 @@ class Post(db.Model):
             post.nsfw = True  # old Lemmy instances ( < 0.19.8 ) allow nsfw content in nsfw communities to be flagged as sfw which makes no sense
         if community.nsfl:
             post.nsfl = True
+        if community.ai_generated:
+            post.ai_generated = True
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             # prefer Markdown in 'source' in provided
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
@@ -2299,7 +2303,7 @@ class Post(db.Model):
         seconds = self.epoch_seconds(post_date) - 1685766018
         return round(sign * order + seconds / 45000, 7)
 
-    def vote(self, user: User, vote_direction: str):
+    def vote(self, user: User, vote_direction: str, emoji: str | None):
         from app import redis_client
         if vote_direction == 'downvote':
             if self.author.has_blocked_user(user.id) or self.author.has_blocked_instance(user.instance_id):
@@ -2330,6 +2334,7 @@ class Post(db.Model):
                             undo = 'Like'
                         else:  # new vote is down while previous vote was up, so reverse their previous vote
                             existing_vote.effect = -1
+                            existing_vote.emoji = emoji
                             db.session.commit()
                             self.up_votes -= 1
                             self.down_votes += 1
@@ -2343,6 +2348,7 @@ class Post(db.Model):
                             undo = 'Dislike'
                         else:  # new vote is up while previous vote was down, so reverse their previous vote
                             existing_vote.effect = 1
+                            existing_vote.emoji = emoji
                             db.session.commit()
                             self.up_votes += 1
                             self.down_votes -= 1
@@ -2376,7 +2382,7 @@ class Post(db.Model):
                         effect = spicy_effect = 0
                     self.score += spicy_effect  # score + (-1) = score-1
                 vote = PostVote(user_id=user.id, post_id=self.id, author_id=self.author.id,
-                                effect=effect)
+                                effect=effect, emoji=emoji)
                 # upvotes do not increase reputation in low quality communities
                 if self.community.low_quality and effect > 0:
                     effect = 0
@@ -2434,6 +2440,7 @@ class PostReply(db.Model):
     edited_at = db.Column(db.DateTime)
     reports = db.Column(db.Integer, default=0)  # how many times this post has been reported. Set to -1 to ignore reports
     answer = db.Column(db.Boolean, default=False)   # this comment was designated as the best answer to a question
+    emoji_reactions = db.Column(db.JSON)            # a cache of the emoji reactions a post has received, to avoid joins
 
     ap_id = db.Column(db.String(255), index=True, unique=True)
     ap_create_id = db.Column(db.String(100))
@@ -2745,7 +2752,7 @@ class PostReply(db.Model):
                                                                       NotificationSubscription.type == NOTIF_REPLY).first()
         return existing_notification is not None
 
-    def vote(self, user: User, vote_direction: str):
+    def vote(self, user: User, vote_direction: str, emoji: str):
         from app import redis_client
         from app.utils import wilson_confidence_lower_bound
         with redis_client.lock(f"lock:post_reply:{self.id}", timeout=10, blocking_timeout=6):
@@ -2771,6 +2778,7 @@ class PostReply(db.Model):
                         undo = 'Like'
                     else:  # new vote is down while previous vote was up, so reverse their previous vote
                         existing_vote.effect = -1
+                        existing_vote.emoji = emoji
                         db.session.commit()
                         self.up_votes -= 1
                         self.down_votes += 1
@@ -2784,6 +2792,7 @@ class PostReply(db.Model):
                         undo = 'Dislike'
                     else:  # new vote is up while previous vote was down, so reverse their previous vote
                         existing_vote.effect = 1
+                        existing_vote.emoji = emoji
                         db.session.commit()
                         self.up_votes += 1
                         self.down_votes -= 1
@@ -2800,12 +2809,15 @@ class PostReply(db.Model):
                     self.down_votes += 1
                 self.score += effect
                 vote = PostReplyVote(user_id=user.id, post_reply_id=self.id, author_id=self.author.id,
-                                     effect=effect)
+                                     effect=effect, emoji=emoji)
                 with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation + :effect WHERE id = :user_id'),
                                        {'effect': effect, 'user_id': self.user_id})
                     db.session.commit()
                 db.session.add(vote)
+            if emoji or emoji == '-1':
+                db.session.commit()
+                self.update_reaction_cache()
 
             # Calculate the new ranking value
             self.ranking = wilson_confidence_lower_bound(self.up_votes, self.down_votes)
@@ -2815,6 +2827,26 @@ class PostReply(db.Model):
                 cache.delete_memoized(recently_upvoted_post_replies, user.id)
                 cache.delete_memoized(recently_downvoted_post_replies, user.id)
         return undo
+
+    def update_reaction_cache(self):
+        reactions = db.session.execute(text('SELECT user_id, emoji FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id AND emoji is not null'),
+                                       {'post_reply_id': self.id}).fetchall()
+
+        # count how many reactions there are of each type and their authors
+        reaction_counts = defaultdict(int)
+        reaction_authors = defaultdict(list)
+        for reaction in reactions:
+            reaction_counts[reaction[1]] += 1
+            user = User.query.get(reaction[0])
+            reaction_authors[reaction[1]].append(user.lemmy_link())
+
+        # Merge reaction counts and authors into the final result
+        result = []
+        for r, c in reaction_counts.items():
+            emoji = Emoji.query.filter(Emoji.token == r).order_by(Emoji.instance_id).first()
+            if emoji:
+                result.append({'url': emoji.url, 'token': emoji.token, 'authors': reaction_authors[r], 'count': c})
+        self.emoji_reactions = result
 
 
 class ScheduledPost(db.Model):
@@ -3028,6 +3060,7 @@ class PostVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
     effect = db.Column(db.Float, index=True)
+    emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
@@ -3046,6 +3079,7 @@ class PostReplyVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # the author of the reply voted on - who's reputation is affected
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
+    emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (
@@ -3712,6 +3746,15 @@ class Rating(db.Model):
     rating = db.Column(db.Float)
 
     author = db.relationship('User', lazy='joined', back_populates='ratings')
+
+
+class Emoji(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    url = db.Column(db.String(1024))
+    token = db.Column(db.String(20), index=True)
+    category = db.Column(db.String(20))
+    aliases = db.Column(db.String(100), index=True)
+    instance_id = db.Column(db.Integer, index=True)
 
 
 def _large_community_subscribers() -> float:

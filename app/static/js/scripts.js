@@ -60,7 +60,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupEventTimes,
         setupUserMentionSuggestions,
         setupScrollToComment,
-        setupTranslateAll
+        setupTranslateAll,
+        setupEmojiAutoSubmit
     ];
     
     // Run critical setups immediately
@@ -2186,5 +2187,16 @@ function setupTranslateAll() {
               }
         });
         triggerElement.dataset.listenerAdded = 'true'; // mark as initialized
+    }
+}
+
+function setupEmojiAutoSubmit() {
+    var triggerElement = document.getElementById('basicEmojiPicker');
+    if(triggerElement) {
+        triggerElement.addEventListener("change", function (e) {
+            if (e.target.matches('input[type="radio"]')) {
+              triggerElement.submit();
+            }
+        });
     }
 }
