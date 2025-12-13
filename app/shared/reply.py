@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from flask import current_app, flash
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user

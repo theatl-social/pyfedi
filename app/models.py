@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import html
 import math
 import os
@@ -19,7 +21,7 @@ from flask_login import UserMixin, current_user
 from flask_sqlalchemy.query import Query
 from furl import furl
 from slugify import slugify
-from sqlalchemy import or_, text, desc, Index
+from sqlalchemy import or_, text, desc, Index, func
 from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.dialects.postgresql import BIT
 from sqlalchemy.exc import IntegrityError
@@ -2392,6 +2394,10 @@ class Post(db.Model):
                     db.session.commit()
                 db.session.add(vote)
 
+            if emoji or emoji == '-1':
+                db.session.commit()
+                self.update_reaction_cache()
+
             # Calculate new ranking values
             self.ranking = self.post_ranking(self.score, self.created_at)
             self.ranking_scaled = int(self.ranking + self.community.scale_by())
@@ -2402,6 +2408,26 @@ class Post(db.Model):
                 cache.delete_memoized(recently_upvoted_posts, user.id)
                 cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
+
+    def update_reaction_cache(self):
+        count = func.count(PostVote.id).label("count")
+        rows = db.session.query(Emoji.url, Emoji.token, count,
+                                func.array_agg(User.user_name).label("authors")).\
+            join(PostVote, PostVote.emoji == Emoji.token).\
+            join(User, User.id == PostVote.user_id).\
+            filter(PostVote.post_id == self.id, PostVote.emoji.isnot(None)).\
+            group_by(Emoji.url, Emoji.token).\
+            order_by(count.desc()).all()
+
+        self.emoji_reactions = [
+            {
+                "url": url,
+                "token": token,
+                "authors": authors,
+                "count": count,
+            }
+            for url, token, count, authors in rows
+        ]
 
 
 class PostReply(db.Model):
@@ -2829,24 +2855,24 @@ class PostReply(db.Model):
         return undo
 
     def update_reaction_cache(self):
-        reactions = db.session.execute(text('SELECT user_id, emoji FROM "post_reply_vote" WHERE post_reply_id = :post_reply_id AND emoji is not null'),
-                                       {'post_reply_id': self.id}).fetchall()
+        count = func.count(PostReplyVote.id).label("count")
+        rows = db.session.query(Emoji.url, Emoji.token, count,
+                                func.array_agg(User.user_name).label("authors")).\
+            join(PostReplyVote, PostReplyVote.emoji == Emoji.token).\
+            join(User, User.id == PostReplyVote.user_id).\
+            filter(PostReplyVote.post_reply_id == self.id, PostReplyVote.emoji.isnot(None)).\
+            group_by(Emoji.url, Emoji.token).\
+            order_by(count.desc()).all()
 
-        # count how many reactions there are of each type and their authors
-        reaction_counts = defaultdict(int)
-        reaction_authors = defaultdict(list)
-        for reaction in reactions:
-            reaction_counts[reaction[1]] += 1
-            user = User.query.get(reaction[0])
-            reaction_authors[reaction[1]].append(user.lemmy_link())
-
-        # Merge reaction counts and authors into the final result
-        result = []
-        for r, c in reaction_counts.items():
-            emoji = Emoji.query.filter(Emoji.token == r).order_by(Emoji.instance_id).first()
-            if emoji:
-                result.append({'url': emoji.url, 'token': emoji.token, 'authors': reaction_authors[r], 'count': c})
-        self.emoji_reactions = result
+        self.emoji_reactions = [
+            {
+                "url": url,
+                "token": token,
+                "authors": authors,
+                "count": count,
+            }
+            for url, token, count, authors in rows
+        ]
 
 
 class ScheduledPost(db.Model):
@@ -3079,7 +3105,7 @@ class PostReplyVote(db.Model):
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # the author of the reply voted on - who's reputation is affected
     post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
     effect = db.Column(db.Float)
-    emoji = db.Column(db.String(20))
+    emoji = db.Column(db.String(20), index=True)
     created_at = db.Column(db.DateTime, default=utcnow)
 
     __table_args__ = (

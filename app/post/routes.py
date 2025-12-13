@@ -556,7 +556,8 @@ def comment_emoji_reaction(comment_id, vote_direction, federate):
             return retval
         else:
             comment = PostReply.query.get(comment_id)
-            return redirect(f'{comment.post.slug}#comment_{comment.id}')
+            fallback = f'/post/{comment.post.id}'
+            return redirect(f'{comment.post.slug if comment.post.slug else fallback}#comment_{comment.id}')
     else:
         comment = PostReply.query.get(comment_id)
         return render_template('post/choose_emoji.html', post=comment.post, title=_('Choose an emoji'), form=form,
