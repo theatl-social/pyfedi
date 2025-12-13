@@ -27,7 +27,7 @@ The final piece of the required theme puzzle is the `styles.css` file. This file
 
 ## The styles.css File
 
-This file lets you overwrite the default css of PieFed. There are some things within Bootstrap that are `!important`, but with the load order mentioned above, you can overwrite them by specifying `!important` in your theme's css. Trying to include an entire crash course on css and the possibilities it unlocks is beyond the scope of this guide (and beyond the scope of your humbe author's abilities). So, to keep this manageable, here are some basics and examples of how it has been done for existing themes in the codebase.
+This file lets you overwrite the default css of PieFed. There are some things within Bootstrap that are `!important`, but with the load order mentioned above, you can overwrite them by specifying `!important` in your theme's css. Trying to include an entire crash course on css and the possibilities it unlocks is beyond the scope of this guide (and beyond the scope of your humble author's abilities). So, to keep this manageable, here are some basics and examples of how it has been done for existing themes in the codebase.
 
 Once again, let's look at the css file for the `Amethyst` theme as an example. Looking at the beginning of the file, we start with the `:root` pseudo-class:
 
