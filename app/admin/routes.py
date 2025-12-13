@@ -1115,29 +1115,24 @@ def activity_json(activity_id):
         parsed = json.loads(raw_json)
         pretty_json = json.dumps(parsed, indent=2, ensure_ascii=False)
         is_valid_json = True
-    except Exception as e:
-        pretty_json = raw_json       # keep raw data
-        json_error = str(e)
+    except Exception:
+        # Fall back to just keeping raw json
+        pretty_json = raw_json
         is_valid_json = False
 
-    # Highlight JSON or fallback to plain text highlighting
-    formatter = HtmlFormatter(style=current_user.code_style or 'monokai')
     if is_valid_json:
-        highlighted = highlight(pretty_json, JsonLexer(), formatter)
+        json_md = "```json\n" + pretty_json + "\n```"
+        json_html = markdown_to_html(json_md)
     else:
-        highlighted = highlight(pretty_json, TextLexer(), formatter)
-
-    highlight_css = formatter.get_style_defs('.highlight')
+        json_md = "`" + pretty_json + "`"
+        json_html = markdown_to_html(json_md)
 
     return render_template(
         'admin/activity_json.html',
         title=_('Activity JSON'),
-        highlighted_json=highlighted,
-        highlight_css=highlight_css,
+        json_html=json_html,
         activity=activity,
         current_app=current_app,
-        is_valid_json=is_valid_json,
-        json_error=json_error if not is_valid_json else None,
     )
 
 
