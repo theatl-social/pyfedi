@@ -1199,7 +1199,7 @@ function setupAddPassKey() {
             console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
 
             if (authenticationOptionsJSON.error) {
-                $.prompt(authenticationOptionsJSON.error);
+                alert(authenticationOptionsJSON.error);
                 return;
             }
 
