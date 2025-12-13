@@ -2,7 +2,7 @@ from datetime import datetime
 
 from dateutil.relativedelta import relativedelta
 from flask import current_app
-from sqlalchemy import desc, or_, text
+from sqlalchemy import desc, or_, text, asc
 from sqlalchemy.orm.exc import NoResultFound
 
 from app import db, cache
@@ -45,7 +45,7 @@ def get_community_list(auth, data):
             CommunityMember.user_id == user_id)
     elif type_ == 'Local':
         communities = Community.query.filter_by(ap_id=None, banned=False)
-    elif type_ == 'ModeratorView':
+    elif type_ == 'ModeratorView' or type_ == 'Moderating':
         communities = Community.query.filter(Community.id.in_(moderating_communities_ids(user_id)))
     else:
         communities = Community.query.filter_by(banned=False)
@@ -79,6 +79,8 @@ def get_community_list(auth, data):
         communities = communities.order_by(desc(Community.created_at))
     elif sort.startswith('Top'):
         communities = communities.order_by(desc(Community.post_count))
+    elif sort == 'Old':
+        communities = communities.order_by(asc(Community.created_at))
     else:
         communities = communities.order_by(desc(Community.last_active))
 
