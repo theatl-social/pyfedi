@@ -1993,7 +1993,7 @@ def lookup(person, domain):
                 if 'is blocked.' in str(e):
                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
             if not new_person or new_person.banned:
-                flash(_('That person could not be retreived or is banned from %(site)s.', site=g.site.name), 'warning')
+                flash(_('That person could not be retrieved or is banned from %(site)s.', site=g.site.name), 'warning')
                 referrer = request.headers.get('Referer', None)
                 if referrer is not None:
                     return redirect(referrer)
