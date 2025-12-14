@@ -36,7 +36,7 @@ def passkey_options():
         response.content_type = 'application/json'
         return response
     else:
-        abort(404)
+        return jsonify({"error": f"Could not find user {request_json['username']}"})
 
 
 # ----------------------------------------------------------------------
