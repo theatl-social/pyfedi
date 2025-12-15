@@ -100,7 +100,7 @@ def show_tag(tag):
                                POST_TYPE_IMAGE=constants.POST_TYPE_IMAGE, POST_TYPE_LINK=constants.POST_TYPE_LINK,
                                POST_TYPE_VIDEO=constants.POST_TYPE_VIDEO,
                                next_url=next_url, prev_url=prev_url,
-                               content_filters=content_filters,
+                               content_filters=content_filters, category=category, category_id=category_id,
                                moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
                                rss_feed_name=f"#{tag.display_as} on {g.site.name}",
