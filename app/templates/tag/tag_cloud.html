@@ -20,15 +20,115 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col d-flex justify-content-center">   
-                <div id="tagCloud"></div>
-            </div>
+        <div class="nav nav-tabs nav-justified" role="tablist">
+            <button class="nav-link {{ 'active' if view == 'cloud' else '' }}" id="tag-cloud-tab" data-bs-toggle="tab"
+                    data-bs-target="#tag-cloud-content" type="button" role="tab" aria-controls="tag-cloud-content"
+                    aria-selected="{{ 'true' if view == 'cloud' else 'false' }}">
+                {{ _('Tag Cloud') }}
+            </button>
+            <button class="nav-link {{ 'active' if view == 'list' else '' }}" id="tag-list-tab" data-bs-toggle="tab"
+                    data-bs-target="#tag-list-content" type="button" role="tab" aria-controls="tag-list-content"
+                    aria-selected="{{ 'true' if view == 'list' else 'false' }}">
+                {{ _('Tag List') }}
+            </button>
         </div>
 
-        <div class="row">
-            <div class="col">
-                <div id="tagPosts"></div>
+        <div class="tab-content">
+            <div class="tab-pane {{ 'show active' if view == 'cloud' else '' }}" id="tag-cloud-content" role="tabpanel"
+                    aria-labelledby="tag-cloud-tab" tabindex="0">
+                <div class="row">
+                    <div class="col d-flex justify-content-center">   
+                        <div id="tagCloud"></div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col">
+                        <div id="tagPosts"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane {{ 'show active' if view == 'list' else '' }}" id="tag-list-content" role="tabpanel"
+                    aria-labelledby="tag-list-tab" tabindex="0">
+                {% if tag_list and tag_list.items -%}
+                    <div class="table-responsive-md">
+                        <table class="tags_table table table-striped table-hover text-center">
+                            <caption class="visually-hidden">
+                                {{ _('Tags') }}
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th>
+                                        {{ _('Tag') }}
+                                    </th>
+                                    <th>
+                                        {{ _('Number of Posts') }}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for tag in tag_list.items -%}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('tag.show_tag', tag=tag[0].name, category=category, category_id=category_id)}}">
+                                                {{ tag[0].display_as }}
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {{ tag[1] }}
+                                        </td>
+                                    </tr>
+                                {% endfor -%}
+                            </tbody>
+                        </table>
+                        <nav aria-label="Pagination" class="mt-4 mb-2" role="navigation">
+                            <div class="row justify-content-center">
+                                {% if prev_url -%}
+                                    <div class="col-6">
+                                        <div class="row">
+                                            <div class="d-flex flex-row">
+                                                <a href="{{ prev_url }}" class="btn btn-primary ms-auto" rel='nofollow'>
+                                                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else -%}
+                                    <div class="col-6">
+                                        <div class="row">
+                                            <div class="d-flex flex-row">
+                                                <!--this is here to occupy space so that things line up consistently-->
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif -%}
+                                {% if next_url -%}
+                                    <div class="col-6">
+                                        <div class="row">
+                                            <div class="d-flex flex-row">
+                                                <a href="{{ next_url }}" class="btn btn-primary me-auto" rel='nofollow'>
+                                                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% else -%}
+                                    <div class="col-6">
+                                        <div class="row">
+                                            <div class="d-flex flex-row">
+                                                <!--this is here to occupy space so that things line up consistently-->
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif -%}
+                            </div>
+                        </nav>
+                    </div>
+                {% else -%}
+                    <p>
+                        {{ _('There are no tags to display') }}
+                    </p>
+                {% endif -%}
             </div>
         </div>
 
