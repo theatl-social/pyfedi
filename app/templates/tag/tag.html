@@ -63,7 +63,7 @@
                     {% if category and category_id -%}
                         <div class="row">
                             <div class="col-8 mt-2">
-                                <a class="w-100 btn btn-warning" href="{{ url_for('tag.show_tag', tag=tag) }}">
+                                <a class="w-100 btn btn-warning" href="{{ url_for('tag.show_tag', tag=tag.name) }}">
                                     {{ _('Clear Filters') }}
                                 </a>
                             </div>
