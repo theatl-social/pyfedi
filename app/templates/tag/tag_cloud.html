@@ -33,7 +33,7 @@
             </button>
         </div>
 
-        <div class="tab-content">
+        <div class="tab-content tag_cloud_page">
             <div class="tab-pane {{ 'show active' if view == 'cloud' else '' }}" id="tag-cloud-content" role="tabpanel"
                     aria-labelledby="tag-cloud-tab" tabindex="0">
                 <div class="row">
@@ -51,7 +51,7 @@
             <div class="tab-pane {{ 'show active' if view == 'list' else '' }}" id="tag-list-content" role="tabpanel"
                     aria-labelledby="tag-list-tab" tabindex="0">
                 {% if tag_list and tag_list.items -%}
-                    <div class="table-responsive-md">
+                    <div class="table-responsive-md mt-4">
                         <table class="tags_table table table-striped table-hover text-center">
                             <caption class="visually-hidden">
                                 {{ _('Tags') }}

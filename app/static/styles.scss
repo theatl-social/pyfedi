@@ -228,6 +228,10 @@ div.navbar {
   padding: 10px 15px 0 15px;
 }
 
+.tag_cloud_page > .tab-pane {
+  border: none;
+}
+
 .dropdown-menu {
   .dropdown-item.active {
     background-color: $primary-colour;
