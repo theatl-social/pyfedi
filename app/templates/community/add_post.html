@@ -17,12 +17,12 @@
             {% if community.instance.can_poll() -%}
                 <a href="{{ url_for('community.add_post', actor=actor, type='poll') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_POLL else 'btn-outline-secondary' }}" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>
             {% else -%}
-                <a href="#" class="btn {{ 'btn-primary' if post_type == POST_TYPE_POLL else 'btn-outline-secondary' }} disabled" aria-disabled="true" tabindex="-1" aria-label="{{ _('Create a poll') }}">{{ _('Poll') }}</a>
+                <a href="#" class="btn {{ 'btn-primary' if post_type == POST_TYPE_POLL else 'btn-outline-secondary' }} disabled" aria-disabled="true" tabindex="-1" aria-label="{{ _('Create a poll') }}" title="{{ _('Lemmy does not support polls, try a PieFed community instead.') }}">{{ _('Poll') }}</a>
             {% endif -%}
             {% if community.instance.can_event() -%}
                 <a href="{{ url_for('community.add_post', actor=actor, type='event') }}" class="btn {{ 'btn-primary' if post_type == POST_TYPE_EVENT else 'btn-outline-secondary' }}" aria-label="{{ _('Create an event') }}">{{ _('Event') }}</a>
             {% else -%}
-                <a href="#" class="btn {{ 'btn-primary' if post_type == POST_TYPE_EVENT else 'btn-outline-secondary' }} disabled" aria-disabled="true" tabindex="-1" aria-label="{{ _('Create an event') }}">{{ _('Event') }}</a>
+                <a href="#" class="btn {{ 'btn-primary' if post_type == POST_TYPE_EVENT else 'btn-outline-secondary' }} disabled" aria-disabled="true" tabindex="-1" aria-label="{{ _('Create an event') }}" title="{{ _('Lemmy does not support events, try a PieFed community instead.') }}">{{ _('Event') }}</a>
             {% endif -%}
         </div>
 
