@@ -134,6 +134,12 @@ class Instance(db.Model):
         elif self.failures > 2 and self.dormant == False:
             self.dormant = True
 
+    def can_poll(self):
+        return self.software != 'lemmy'
+
+    def can_event(self):
+        return self.software != 'lemmy'
+
     @classmethod
     def weight(cls, domain: str):
         if domain:
