@@ -5,7 +5,7 @@ from sqlalchemy import desc, text, and_, exists, asc
 from sqlakeyset import get_page
 from sqlalchemy.exc import IntegrityError
 
-from app import db
+from app import db, plugins
 from app.api.alpha.views import post_view, post_report_view, reply_view, community_view, user_view, flair_view
 from app.constants import *
 from app.feed.routes import get_all_child_feed_ids
@@ -890,6 +890,8 @@ def post_post(auth, data):
     language_id = data['language_id'] if 'language_id' in data else site_language_id()
     if language_id < 2:
         language_id = site_language_id()
+    
+    user_id = authorise_api_user(auth)
 
     # Determine post type based on data provided
     if 'event' in data and data['event']:
@@ -917,6 +919,18 @@ def post_post(auth, data):
         input['poll'] = data['poll']
 
     community = Community.query.filter_by(id=community_id).one()
+
+    # Fire hook for plugins
+    post_data = {
+        "title": title,
+        "content": body,
+        "community": community.name,
+        "community_id": community.id,
+        "post_type": type,
+        "user_id": user_id,
+    }
+    plugins.fire_hook('before_post_create', post_data)
+
     user_id, post = make_post(input, community, type, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)

@@ -1017,6 +1017,7 @@ def add_post(actor, type=None):
                 'title': form.title.data,
                 'content': form.body.data if hasattr(form, 'body') else '',
                 'community': community.name,
+                'community_id': community.id,
                 'post_type': post_type,
                 'user_id': current_user.id
             }
