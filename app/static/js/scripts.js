@@ -2272,7 +2272,6 @@ function setupReactionDialog() {
                 e.stopPropagation();
 
                 var emoji = emojiBtn.textContent || emojiBtn.querySelector('img')?.getAttribute('alt');
-
                 var formData = new FormData();
                 formData.append('emoji', emoji);
 

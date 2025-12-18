@@ -89,7 +89,11 @@
 <div class="emoji-grid" data-category="custom" style="display: none; grid-template-columns: repeat(8, 1fr); gap: 4px; padding: 8px; max-height: 300px; overflow-y: auto;">
     {% for emoji in emojis %}
         <button type="button" class="emoji-item">
-            <img src="{{ emoji.url }}" alt=":{{ emoji.token }}:" title=":{{ emoji.token }}:" style="width: 20px; height: 20px;">
+            {%- if emoji.url -%}
+                <img src="{{ emoji.url }}" alt="{{ emoji.token }}" title="{{ emoji.token }}" style="width: 20px; height: 20px;">
+            {%- else -%}
+                {{ emoji.token }}
+            {%- endif -%}
         </button>
     {% endfor %}
 </div>

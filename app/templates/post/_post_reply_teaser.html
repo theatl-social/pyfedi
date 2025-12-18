@@ -79,7 +79,7 @@
                 <div class="message_reaction_container">
                     <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}">
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                <img src="{{ reaction['url'] }}" width="30" alt="{{ reaction['token'] }}">
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
                                             {% else -%}
                                                 {{ reaction['token'] }}
                                             {%- endif %}</div>
