@@ -27,7 +27,7 @@ from app.constants import *
 from app.models import User, Post, Community, File, PostReply, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
     Language, Tag, Poll, PollChoice, CommunityBan, CommunityJoinRequest, NotificationSubscription, \
-    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic, Event, InstanceBan
+    Licence, UserExtraField, Feed, FeedMember, FeedItem, CommunityFlair, UserFlair, Topic, Event, InstanceBan, Emoji
 from app.utils import get_request, allowlist_html, get_setting, ap_datetime, markdown_to_html, \
     is_image_url, domain_from_url, gibberish, ensure_directory_exists, head_request, \
     shorten_string, fixup_url, \
@@ -3373,6 +3373,28 @@ def lemmy_site_data():
             'name': language.name
         })
     data['discussion_languages'] = discussion_languages
+
+    # Custom emojis (only local instance emojis)
+    local_emojis = Emoji.query.filter_by(instance_id=1).all()
+    for emoji in local_emojis:
+        # Extract shortcode from token (remove colons if present)
+        shortcode = emoji.token.strip(':') if emoji.token else ''
+
+        # Parse aliases (space-separated string) into keyword objects
+        keywords = []
+        if emoji.aliases:
+            for alias in emoji.aliases.split():
+                keywords.append({"keyword": alias})
+
+        emoji_data = {
+            "custom_emoji": {
+                "shortcode": shortcode,
+                "image_url": emoji.url,
+                "category": emoji.category if emoji.category else ""
+            },
+            "keywords": keywords
+        }
+        data['custom_emojis'].append(emoji_data)
 
     # Admins (plus staff)
     for admin in Site.admins() + Site.staff():
