@@ -6,7 +6,7 @@
 {% from 'bootstrap5/form.html' import render_field -%}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
-{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button -%}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button, render_post_emoji_button -%}
 
 {% block schema_org %}
     {% if post.indexable and post.instance_id == 1 -%}

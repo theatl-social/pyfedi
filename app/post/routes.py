@@ -564,6 +564,7 @@ def comment_emoji_reaction(comment_id, vote_direction, federate):
                                emojis=Emoji.query.order_by(Emoji.token).all())
 
 
+@bp.route('/post/<int:comment_id>/emoji_list', methods=['GET'])
 @bp.route('/comment/<int:comment_id>/emoji_list', methods=['GET'])
 @login_required
 @validation_required
@@ -572,6 +573,20 @@ def comment_emoji_list(comment_id):
     emojis = Emoji.query.order_by(Emoji.token).all()
     emoji_list = [{'id': e.id, 'url': e.url, 'token': e.token, 'category': e.category, 'aliases': e.aliases} for e in emojis]
     return render_template('post/emoji_list.html', comment_id=comment_id, emojis=emoji_list, nonce=g.get('nonce', ''))
+
+
+@bp.route('/post/<int:post_id>/emoji_set', methods=['POST'])
+def post_emoji_set(post_id):
+    if current_user.is_authenticated:
+        federate = not current_user.vote_privately
+
+        vote_for_post(post_id, 'upvote', federate, request.form.get('emoji'), SRC_WEB)
+
+        post = Post.query.get(post_id)
+
+        return render_template('post/_post_reply_teaser_reactions.html', post_reply=post)
+    else:
+        abort(403)
 
 
 @bp.route('/comment/<int:comment_id>/emoji_set', methods=['POST'])

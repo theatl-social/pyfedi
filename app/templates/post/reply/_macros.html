@@ -35,12 +35,23 @@ hx-post="{{ url_for('post.post_reply_notification', post_reply_id=comment['comme
 title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies') }}"></a>
 {%- endmacro %}
 
+{% macro render_post_emoji_button(post, community, current_user=None, can_upvote_here=None, communities_banned_from_list=None, disable_voting=False, recently_upvoted_replies=None) -%}
+        {% if current_user and current_user.is_authenticated and current_user.verified -%}
+                {% if (can_upvote_here or can_upvote(current_user, community, communities_banned_from_list)) and not disable_voting -%}
+                        <a href="/post/{{ post.id }}/upvote/default/emoji" role="button"
+                           aria-label="{{ _('Emoji reaction button.') }}" aria-live="assertive"
+                           data-id="{{ post.id }}" class="reaction_button" data-target="post"
+                        ><span>☺</span></a>
+                {% endif -%}
+        {% endif -%}
+{%- endmacro %}
+
 {% macro render_emoji_button(comment, community, current_user=None, can_upvote_here=None, communities_banned_from_list=None, disable_voting=False, recently_upvoted_replies=None) -%}
         {% if current_user and current_user.is_authenticated and current_user.verified -%}
                 {% if (can_upvote_here or can_upvote(current_user, community, communities_banned_from_list)) and not disable_voting -%}
                         <a href="/comment/{{ comment.id }}/upvote/default/emoji" role="button"
                            aria-label="{{ _('Emoji reaction button.') }}" aria-live="assertive"
-                           data-id="{{ comment.id }}" class="post_reply_reaction_button"
+                           data-id="{{ comment.id }}" class="reaction_button" data-target="comment"
                         ><span>☺</span></a>
                 {% endif -%}
         {% endif -%}

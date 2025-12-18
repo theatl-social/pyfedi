@@ -417,6 +417,24 @@
             {% endfor -%}
         </nav>
     {% endif -%}
+    <div id="post_reactions_{{ post.id }}" class="outermost_reaction_container">
+        {%- if post.emoji_reactions -%}
+        <div class="message_reactions">
+            {% for reaction in post.emoji_reactions -%}
+                <div class="message_reaction_container me-1">
+                    <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}">
+                        <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                            {% else -%}
+                                                {{ reaction['token'] }}
+                                            {%- endif %}</div>
+                        <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {%- endif -%}
+    </div>
     <div id="ai_check_result"></div>
     <div class="post_utilities_bar">
         <div class="post_reply_count">
@@ -426,6 +444,9 @@
         </div>
         <div class="voting_buttons_new" aria-live="assertive" data-base-url="/post/{{ post.id}}">
             {% include "post/_post_voting_buttons.html" -%}
+        </div>
+        <div class="emoji_button">
+            {{ render_post_emoji_button(post, post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
         </div>
         {% if post.cross_posts -%}
             <div class="cross_post_button">

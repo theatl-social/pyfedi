@@ -2203,7 +2203,7 @@ function setupEmojiAutoSubmit() {
 }
 
 function setupReactionDialog() {
-    var triggerElements = document.querySelectorAll('.post_reply_reaction_button');
+    var triggerElements = document.querySelectorAll('.reaction_button');
     var dialog = document.getElementById('reaction_dialog');
     var dialogContents = document.getElementById('reaction_dialog_contents');
     var closeButton = document.getElementById('reaction_dialog_close');
@@ -2229,13 +2229,14 @@ function setupReactionDialog() {
         trigger.addEventListener('click', function(e) {
             e.preventDefault();
             var commentId = trigger.getAttribute('data-id');
+            var targetType = trigger.getAttribute('data-target');   // whether we're reacting to a post or comment
 
             // show the <dialog>
             dialog.showModal();
             dialogContents.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
             // fill the <div id="reaction_dialog_contents"> inside the dialog by making a fetch() to def comment_emoji_list()
-            fetch('/comment/' + commentId + '/emoji_list')
+            fetch('/' + targetType + '/' + commentId + '/emoji_list')
                 .then(function(response) {
                     if (!response.ok) throw new Error('Network response was not ok');
                     return response.text();
@@ -2250,12 +2251,12 @@ function setupReactionDialog() {
                             e.stopPropagation();
                             categoryButtons.forEach(function(b) { b.classList.remove('active'); });
                             btn.classList.add('active');
-                            renderEmojis(btn.dataset.category, commentId);
+                            renderEmojis(btn.dataset.category, targetType, commentId);
                         });
                     });
 
                     // addEventListener onto each of the emoji icons to do a POST to def comment_emoji_set()
-                    setupEmojiClickHandlers(commentId, dialog);
+                    setupEmojiClickHandlers(targetType, commentId, dialog);
                 })
                 .catch(function(error) {
                     console.error('Error loading emoji picker:', error);
@@ -2264,7 +2265,7 @@ function setupReactionDialog() {
         });
     });
 
-    function setupEmojiClickHandlers(commentId, dialog) {
+    function setupEmojiClickHandlers(targetType, commentId, dialog) {
         var emojiButtons = dialogContents.querySelectorAll('.emoji-item');
         emojiButtons.forEach(function(emojiBtn) {
             emojiBtn.addEventListener('click', function(e) {
@@ -2275,7 +2276,7 @@ function setupReactionDialog() {
                 var formData = new FormData();
                 formData.append('emoji', emoji);
 
-                fetch('/comment/' + commentId + '/emoji_set', {
+                fetch('/' + targetType + '/' + commentId + '/emoji_set', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -2288,7 +2289,7 @@ function setupReactionDialog() {
                 })
                 .then(function(html) {
                     // when the POST succeeds, replace the contents of <div id="comment_123">
-                    var commentDiv = document.getElementById('reactions_' + commentId);
+                    var commentDiv = document.getElementById(targetType + '_reactions_' + commentId);
                     if (commentDiv) {
                         commentDiv.innerHTML = html;
                     }
@@ -2301,7 +2302,7 @@ function setupReactionDialog() {
         });
     }
 
-    function renderEmojis(category, commentId) {
+    function renderEmojis(category, targetType, commentId) {
         // Show/hide pre-rendered emoji grids based on selected category
         var emojiGrids = dialogContents.querySelectorAll('.emoji-grid');
         emojiGrids.forEach(function(grid) {
@@ -2313,10 +2314,5 @@ function setupReactionDialog() {
                 grid.classList.remove('active');
             }
         });
-
-        // Re-setup click handlers for the newly visible emojis
-        setTimeout(function() {
-            setupEmojiClickHandlers(commentId, dialog);
-        }, 0);
     }
 }

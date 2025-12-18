@@ -72,7 +72,7 @@
             {% endif -%}
         </div>
     </div>
-    <div id="reactions_{{ post_reply.id }}" class="outermost_reaction_container">
+    <div id="comment_reactions_{{ post_reply.id }}" class="outermost_reaction_container">
         {%- if post_reply.emoji_reactions -%}
         <div class="message_reactions">
             {% for reaction in post_reply.emoji_reactions -%}
