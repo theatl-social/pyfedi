@@ -3014,14 +3014,18 @@ form h5 {
   box-sizing: border-box;
   min-width: 44px;
   cursor: pointer;
+  align-items: baseline;
   line-height: 1;
   color: var(--bs-body-color);
   background-color: var(--bs-secondary-bg);
   border: 1px solid var(--bs-border-color);
   border-radius: 21px;
-  align-items: center;
   box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
   transition: transform 100ms linear, font-weight 100ms linear;
+}
+.message_reactions .message_reaction div {
+  position: relative;
+  top: 1px;
 }
 .message_reactions .message_reaction.reacted {
   color: var(--bs-primary-text-emphasis);
@@ -3046,7 +3050,9 @@ form h5 {
   height: 1.2143em;
   width: 1.2143em;
   flex-shrink: 0;
-  position: static;
+}
+.message_reactions .message_reaction .emoji img {
+  margin-top: -2px;
 }
 .message_reactions .message_reaction .emoji_alt_code {
   margin: 1px 3px;
