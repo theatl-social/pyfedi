@@ -8,7 +8,7 @@ For support or questions about the project, some code, or contributions, feel fr
 - Join the [matrix chat for PieFed development](https://matrix.to/#/#piefed-developers:matrix.org).
 - Create an issue in the [PieFed Codeberg repository](https://codeberg.org/rimu/pyfedi/issues).
 
-## Main Components of the PieFed Codebase
+## PieFed Development Guides
 
 - The Database
 - The Web UI - Working with Flask
