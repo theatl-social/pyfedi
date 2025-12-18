@@ -606,22 +606,23 @@ def monitor_healthy_instances():
                                 ).delete()
 
                         # refresh custom emoji
-                        for emoji in instance_data['custom_emojis']:
-                            token = emoji['custom_emoji']['shortcode']
-                            aliases = [keyword['keyword'] for keyword in emoji['keywords']]
-                            existing_emoji = session.query(Emoji).filter(Emoji.instance_id == instance.id,
-                                                                         Emoji.token == f":{token}:").first()
-                            if existing_emoji:
-                                existing_emoji.url = emoji['custom_emoji']['image_url']
-                                existing_emoji.category = emoji['custom_emoji']['category']
-                                existing_emoji.aliases = ' '.join(aliases)
-                            else:
-                                new_emoji = Emoji(instance_id=instance.id, token=f':{token}:',
-                                                  url=emoji['custom_emoji']['image_url'],
-                                                  category=emoji['custom_emoji']['category'],
-                                                  aliases=' '.join(aliases))
-                                session.add(new_emoji)
-                            session.commit()
+                        if instance.trusted:
+                            for emoji in instance_data['custom_emojis']:
+                                token = emoji['custom_emoji']['shortcode']
+                                aliases = [keyword['keyword'] for keyword in emoji['keywords']]
+                                existing_emoji = session.query(Emoji).filter(Emoji.instance_id == instance.id,
+                                                                             Emoji.token == f":{token}:").first()
+                                if existing_emoji:
+                                    existing_emoji.url = emoji['custom_emoji']['image_url']
+                                    existing_emoji.category = emoji['custom_emoji']['category']
+                                    existing_emoji.aliases = ' '.join(aliases)
+                                else:
+                                    new_emoji = Emoji(instance_id=instance.id, token=f':{token}:',
+                                                      url=emoji['custom_emoji']['image_url'],
+                                                      category=emoji['custom_emoji']['category'],
+                                                      aliases=' '.join(aliases))
+                                    session.add(new_emoji)
+                                session.commit()
                 except Exception:
                     session.rollback()
                     instance.failures += 1
