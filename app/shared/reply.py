@@ -49,8 +49,6 @@ def vote_for_reply(reply_id: int, vote_direction, federate: bool, emoji: str | N
 
 
 def bookmark_reply(reply_id: int, src, auth=None):
-    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(
-        deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
@@ -69,7 +67,6 @@ def bookmark_reply(reply_id: int, src, auth=None):
 
 
 def remove_bookmark_reply(reply_id: int, src, auth=None):
-    PostReply.query.filter_by(id=reply_id, deleted=False).join(Post, Post.id == PostReply.post_id).filter_by(deleted=False).one()
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     existing_bookmark = PostReplyBookmark.query.filter_by(post_reply_id=reply_id, user_id=user_id).first()
