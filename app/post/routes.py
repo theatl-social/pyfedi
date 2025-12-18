@@ -581,7 +581,9 @@ def comment_emoji_set(comment_id):
 
         vote_for_reply(comment_id, 'upvote', federate, request.form.get('emoji'), SRC_WEB)
 
-        return render_template('post/_post_reply_teaser_reactions.html', post_reply=PostReply.query.get(comment_id))
+        post_reply = PostReply.query.get(comment_id)
+
+        return render_template('post/_post_reply_teaser_reactions.html', post_reply=post_reply)
     else:
         abort(403)
 

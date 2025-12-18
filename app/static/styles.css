@@ -2998,7 +2998,7 @@ form h5 {
   user-select: none;
 }
 .message_reactions:has(.message_reaction) {
-  margin-bottom: var(--bs-spacer-2);
+  margin-top: 4px;
 }
 .message_reactions .message_reaction_container {
   display: inline-flex;

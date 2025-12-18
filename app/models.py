@@ -2326,6 +2326,13 @@ class Post(db.Model):
             assert vote_direction == 'upvote' or vote_direction == 'downvote'
             undo = None
             if existing_vote:
+                # If emoji is provided and vote direction matches existing vote, just update the emoji
+                if emoji and ((existing_vote.effect > 0 and vote_direction == 'upvote') or
+                             (existing_vote.effect < 0 and vote_direction == 'downvote')):
+                    existing_vote.emoji = emoji
+                    db.session.commit()
+                    return None  # No undo, vote stays as-is with new emoji
+
                 with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):
                     if not self.community.low_quality:
                         with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
@@ -2798,6 +2805,15 @@ class PostReply(db.Model):
             assert vote_direction == 'upvote' or vote_direction == 'downvote'
             undo = None
             if existing_vote:
+                # If emoji is provided and vote direction matches existing vote, just update the emoji
+                if emoji and ((existing_vote.effect > 0 and vote_direction == 'upvote') or
+                             (existing_vote.effect < 0 and vote_direction == 'downvote')):
+                    existing_vote.emoji = emoji
+                    db.session.commit()
+                    self.update_reaction_cache()
+                    db.session.commit()
+                    return None  # No undo, vote stays as-is with new emoji
+
                 with redis_client.lock(f"lock:user:{self.user_id}", timeout=10, blocking_timeout=6):
                     db.session.execute(text('UPDATE "user" SET reputation = reputation - :effect WHERE id = :user_id'),
                                        {'effect': existing_vote.effect, 'user_id': self.user_id})

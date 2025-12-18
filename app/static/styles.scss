@@ -2656,7 +2656,7 @@ form {
     user-select: none;
 
     &:has(.message_reaction) {
-        margin-bottom: var(--bs-spacer-2);
+        margin-top: 4px;
     }
 
     .message_reaction_container {

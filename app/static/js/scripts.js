@@ -2291,7 +2291,7 @@ function setupReactionDialog() {
                     // when the POST succeeds, replace the contents of <div id="comment_123">
                     var commentDiv = document.getElementById('reactions_' + commentId);
                     if (commentDiv) {
-                        commentDiv.outerHTML = html;
+                        commentDiv.innerHTML = html;
                     }
                     dialog.close();
                 })
