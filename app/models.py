@@ -2417,22 +2417,23 @@ class Post(db.Model):
 
     def update_reaction_cache(self):
         count = func.count(PostVote.id).label("count")
-        rows = db.session.query(Emoji.url, Emoji.token, count,
+        # Use LEFT JOIN so unicode emojis (not in Emoji table) are included
+        rows = db.session.query(PostVote.emoji, Emoji.url, count,
                                 func.array_agg(User.user_name).label("authors")).\
-            join(PostVote, PostVote.emoji == Emoji.token).\
+            outerjoin(Emoji, PostVote.emoji == Emoji.token).\
             join(User, User.id == PostVote.user_id).\
             filter(PostVote.post_id == self.id, PostVote.emoji.isnot(None)).\
-            group_by(Emoji.url, Emoji.token).\
+            group_by(PostVote.emoji, Emoji.url).\
             order_by(count.desc()).all()
 
         self.emoji_reactions = [
             {
-                "url": url,
-                "token": token,
+                "url": url if url else '',  # None for unicode emoji, URL for custom emoji
+                "token": emoji,  # The actual emoji value (unicode or :token:)
                 "authors": authors,
                 "count": count,
             }
-            for url, token, count, authors in rows
+            for emoji, url, count, authors in rows
         ]
 
 
@@ -2862,22 +2863,23 @@ class PostReply(db.Model):
 
     def update_reaction_cache(self):
         count = func.count(PostReplyVote.id).label("count")
-        rows = db.session.query(Emoji.url, Emoji.token, count,
+        # Use LEFT JOIN so unicode emojis (not in Emoji table) are included
+        rows = db.session.query(PostReplyVote.emoji, Emoji.url, count,
                                 func.array_agg(User.user_name).label("authors")).\
-            join(PostReplyVote, PostReplyVote.emoji == Emoji.token).\
+            outerjoin(Emoji, PostReplyVote.emoji == Emoji.token).\
             join(User, User.id == PostReplyVote.user_id).\
             filter(PostReplyVote.post_reply_id == self.id, PostReplyVote.emoji.isnot(None)).\
-            group_by(Emoji.url, Emoji.token).\
+            group_by(PostReplyVote.emoji, Emoji.url).\
             order_by(count.desc()).all()
 
         self.emoji_reactions = [
             {
-                "url": url,
-                "token": token,
+                "url": url if url else '',  # None for unicode emoji, URL for custom emoji
+                "token": emoji,  # The actual emoji value (unicode or :token:)
                 "authors": authors,
                 "count": count,
             }
-            for url, token, count, authors in rows
+            for emoji, url, count, authors in rows
         ]
 
 

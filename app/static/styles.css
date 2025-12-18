@@ -2985,6 +2985,10 @@ form h5 {
   margin-right: 0.5rem;
 }
 
+#reaction_dialog {
+  padding: 10px;
+}
+
 .message_reactions {
   display: inline-flex;
   flex-wrap: wrap;

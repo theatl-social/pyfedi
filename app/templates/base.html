@@ -314,6 +314,10 @@
                 <p align="center" class="mt-3 mb-0 small">{% if current_user.vote_privately %}{{ _('Default mode: private.') }}{% else %}{{ _('Default mode: public.') }}{% endif %}</p>
             </div>
         </dialog>
+        <dialog id="reaction_dialog">
+            <div class="d-flex justify-content-end align-items-center mb-3"><button type="button" class="btn-close" aria-label="{{ _('Close') }}" id="reaction_dialog_close"></button></div>
+            <div id="reaction_dialog_contents"></div>
+        </dialog>
     {% endblock -%}
 
     {% block scripts -%}

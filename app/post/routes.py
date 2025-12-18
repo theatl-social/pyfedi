@@ -23,7 +23,7 @@ from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVide
     CreateEventForm
 from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
 from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER
+    POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
     POST_TYPE_IMAGE, \
     POST_TYPE_ARTICLE, POST_TYPE_VIDEO, POST_TYPE_POLL, SRC_WEB
@@ -562,6 +562,28 @@ def comment_emoji_reaction(comment_id, vote_direction, federate):
         comment = PostReply.query.get(comment_id)
         return render_template('post/choose_emoji.html', post=comment.post, title=_('Choose an emoji'), form=form,
                                emojis=Emoji.query.order_by(Emoji.token).all())
+
+
+@bp.route('/comment/<int:comment_id>/emoji_list', methods=['GET'])
+@login_required
+@validation_required
+@approval_required
+def comment_emoji_list(comment_id):
+    emojis = Emoji.query.order_by(Emoji.token).all()
+    emoji_list = [{'id': e.id, 'url': e.url, 'token': e.token, 'category': e.category, 'aliases': e.aliases} for e in emojis]
+    return render_template('post/emoji_list.html', comment_id=comment_id, emojis=emoji_list, nonce=g.get('nonce', ''))
+
+
+@bp.route('/comment/<int:comment_id>/emoji_set', methods=['POST'])
+def comment_emoji_set(comment_id):
+    if current_user.is_authenticated:
+        federate = not current_user.vote_privately
+
+        vote_for_reply(comment_id, 'upvote', federate, request.form.get('emoji'), SRC_WEB)
+
+        return render_template('post/_post_reply_teaser_reactions.html', post_reply=PostReply.query.get(comment_id))
+    else:
+        abort(403)
 
 
 @bp.route('/poll/<int:post_id>/vote', methods=['POST'])

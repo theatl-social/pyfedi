@@ -61,7 +61,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupUserMentionSuggestions,
         setupScrollToComment,
         setupTranslateAll,
-        setupEmojiAutoSubmit
+        setupEmojiAutoSubmit,
+        setupReactionDialog
     ];
     
     // Run critical setups immediately
@@ -2198,5 +2199,125 @@ function setupEmojiAutoSubmit() {
               triggerElement.submit();
             }
         });
+    }
+}
+
+function setupReactionDialog() {
+    var triggerElements = document.querySelectorAll('.post_reply_reaction_button');
+    var dialog = document.getElementById('reaction_dialog');
+    var dialogContents = document.getElementById('reaction_dialog_contents');
+    var closeButton = document.getElementById('reaction_dialog_close');
+
+    if (!dialog || !dialogContents) return;
+
+    // Close button handler
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            dialog.close();
+        });
+    }
+
+    // Click outside dialog to close
+    dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+            dialog.close();
+        }
+    });
+
+    // on each of the triggerElements: when clicked:
+    triggerElements.forEach(function(trigger) {
+        trigger.addEventListener('click', function(e) {
+            e.preventDefault();
+            var commentId = trigger.getAttribute('data-id');
+
+            // show the <dialog>
+            dialog.showModal();
+            dialogContents.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+            // fill the <div id="reaction_dialog_contents"> inside the dialog by making a fetch() to def comment_emoji_list()
+            fetch('/comment/' + commentId + '/emoji_list')
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(function(html) {
+                    dialogContents.innerHTML = html;
+                    // addEventListener onto each of the category buttons so users can switch between categories
+                    var categoryButtons = dialogContents.querySelectorAll('.emoji-category');
+                    categoryButtons.forEach(function(btn) {
+                        btn.addEventListener('click', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            categoryButtons.forEach(function(b) { b.classList.remove('active'); });
+                            btn.classList.add('active');
+                            renderEmojis(btn.dataset.category, commentId);
+                        });
+                    });
+
+                    // addEventListener onto each of the emoji icons to do a POST to def comment_emoji_set()
+                    setupEmojiClickHandlers(commentId, dialog);
+                })
+                .catch(function(error) {
+                    console.error('Error loading emoji picker:', error);
+                    dialogContents.innerHTML = '<div class="alert alert-danger">Error loading emoji picker</div>';
+                });
+        });
+    });
+
+    function setupEmojiClickHandlers(commentId, dialog) {
+        var emojiButtons = dialogContents.querySelectorAll('.emoji-item');
+        emojiButtons.forEach(function(emojiBtn) {
+            emojiBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var emoji = emojiBtn.textContent || emojiBtn.querySelector('img')?.getAttribute('alt');
+
+                var formData = new FormData();
+                formData.append('emoji', emoji);
+
+                fetch('/comment/' + commentId + '/emoji_set', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(function(html) {
+                    // when the POST succeeds, replace the contents of <div id="comment_123">
+                    var commentDiv = document.getElementById('reactions_' + commentId);
+                    if (commentDiv) {
+                        commentDiv.outerHTML = html;
+                    }
+                    dialog.close();
+                })
+                .catch(function(error) {
+                    console.error('Error setting emoji reaction:', error);
+                });
+            });
+        });
+    }
+
+    function renderEmojis(category, commentId) {
+        // Show/hide pre-rendered emoji grids based on selected category
+        var emojiGrids = dialogContents.querySelectorAll('.emoji-grid');
+        emojiGrids.forEach(function(grid) {
+            if (grid.getAttribute('data-category') === category) {
+                grid.style.display = 'grid';
+                grid.classList.add('active');
+            } else {
+                grid.style.display = 'none';
+                grid.classList.remove('active');
+            }
+        });
+
+        // Re-setup click handlers for the newly visible emojis
+        setTimeout(function() {
+            setupEmojiClickHandlers(commentId, dialog);
+        }, 0);
     }
 }
