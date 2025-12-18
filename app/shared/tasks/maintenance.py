@@ -10,11 +10,11 @@ from flask import current_app
 from sqlalchemy import text, select, func
 
 from app import celery, cache, httpx_client
-from app.activitypub.util import find_actor_or_create, find_language_or_create
+from app.activitypub.util import find_actor_or_create, find_language_or_create, find_instance_id
 from app.constants import NOTIF_UNBAN
 from app.models import Notification, SendQueue, CommunityBan, CommunityMember, User, Community, Post, PostReply, \
     DefederationSubscription, Instance, ActivityPubLog, InstanceRole, utcnow, InstanceChooser, \
-    InstanceBan
+    InstanceBan, Emoji
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users, \
@@ -604,6 +604,24 @@ def monitor_healthy_instances():
                                     InstanceRole.instance_id == instance.id,
                                     InstanceRole.role == 'admin'
                                 ).delete()
+
+                        # refresh custom emoji
+                        for emoji in instance_data['custom_emojis']:
+                            token = emoji['custom_emoji']['shortcode']
+                            aliases = [keyword['keyword'] for keyword in emoji['keywords']]
+                            existing_emoji = session.query(Emoji).filter(Emoji.instance_id == instance.id,
+                                                                         Emoji.token == f":{token}:").first()
+                            if existing_emoji:
+                                existing_emoji.url = emoji['custom_emoji']['image_url']
+                                existing_emoji.category = emoji['custom_emoji']['category']
+                                existing_emoji.aliases = ' '.join(aliases)
+                            else:
+                                new_emoji = Emoji(instance_id=instance.id, token=f':{token}:',
+                                                  url=emoji['custom_emoji']['image_url'],
+                                                  category=emoji['custom_emoji']['category'],
+                                                  aliases=' '.join(aliases))
+                                session.add(new_emoji)
+                            session.commit()
                 except Exception:
                     session.rollback()
                     instance.failures += 1
