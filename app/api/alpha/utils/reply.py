@@ -391,6 +391,7 @@ def get_reply(auth, data):
 def post_reply_like(auth, data):
     score = data['score']
     reply_id = data['comment_id']
+    emoji = data['emoji'] if 'emoji' in data else None
     if score == 1:
         direction = 'upvote'
     elif score == -1:
@@ -400,7 +401,7 @@ def post_reply_like(auth, data):
         direction = 'reversal'
     private = data['private'] if 'private' in data else False
 
-    user_id = vote_for_reply(reply_id, direction, not private, SRC_API, auth)
+    user_id = vote_for_reply(reply_id, direction, not private, emoji, SRC_API, auth)
     reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
     return reply_json
 
