@@ -10,14 +10,13 @@ For support or questions about the project, some code, or contributions, feel fr
 
 ## Main Components of the PieFed Codebase
 
-These guides are WIP...
-
-- Database
-- Flask
-- Jinja
-- Javascript and CSS
-- API Interface
-- Celery Tasks
+- The Database
+- The Web UI - Working with Flask
+- Making html Using Jinja Templates
+- JavaScript and CSS
+- API Codebase
+- Background Celery Tasks
 - ActivityPub and Federation
 - Theming Guide
 - Plugins
+- Local Development Guide
