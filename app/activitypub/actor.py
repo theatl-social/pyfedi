@@ -26,14 +26,17 @@ def find_local_feed(actor_url: str) -> Feed:
     return db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
 
 
-def find_local_user(actor_url: str) -> User:
+def find_local_user(actor_url: str, allow_banned: bool = False) -> User:
     """Find a local user by URL or alt name."""
     alt_user_name = actor_url.rsplit('/', 1)[-1]
-    return db.session.query(User).filter(or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)).filter_by(
-        ap_id=None, banned=False).first()
+    user = db.session.query(User).filter(or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name),
+                                         User.ap_id == None)
+    if not allow_banned:
+        user = user.filter_by(banned=False)
+    return user.first()
 
 
-def validate_remote_actor(actor_url, actor=None):
+def validate_remote_actor(actor_url, actor=None, allow_banned=False):
     """Validate if a remote actor is allowed."""
     server, _ = extract_domain_and_actor(actor_url)
 
@@ -51,7 +54,7 @@ def validate_remote_actor(actor_url, actor=None):
 
     # If we have the actor object, check more conditions
     if actor:
-        if actor.banned:
+        if actor.banned and not allow_banned:
             return False
         if isinstance(actor, User):
             if actor.deleted or actor_profile_contains_blocked_words(actor):
@@ -251,7 +254,7 @@ def create_actor_from_remote(actor_address: str, community_only=False,
     return None
 
 
-def find_actor_by_url(actor_url, community_only=False, feed_only=False):
+def find_actor_by_url(actor_url, community_only=False, feed_only=False, allow_banned=False):
     """Find an actor by URL without creating it."""
     """Warning: this function returns None if not found, False if found and banned/deleted"""
     actor_url = actor_url.strip().lower()
@@ -275,7 +278,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
         return None
 
     if f"{server_name}/u/" in actor_url:
-        actor = find_local_user(actor_url)
+        actor = find_local_user(actor_url, allow_banned=allow_banned)
         if actor and not community_only and not feed_only:
             return actor
         return None
