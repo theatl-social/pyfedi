@@ -265,7 +265,8 @@ def banned_user_agents():
     return []  # todo: finish this function
 
 
-def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False) -> Union[User, Community, Feed, None]:
+def find_actor_or_create(actor: str, create_if_not_found=True, community_only=False, feed_only=False,
+                         allow_banned=False) -> Union[User, Community, Feed, None]:
     """Find an actor by URL or webfinger, optionally creating it if not found.
 
     Consider using find_actor_or_create_cached() for better performance
@@ -275,11 +276,11 @@ def find_actor_or_create(actor: str, create_if_not_found=True, community_only=Fa
         actor = actor['id']
 
     actor_url = actor.strip()
-    if not validate_remote_actor(actor_url):
+    if not validate_remote_actor(actor_url, allow_banned=allow_banned):
         return None
 
     # Find the actor
-    actor_obj = find_actor_by_url(actor_url, community_only, feed_only)
+    actor_obj = find_actor_by_url(actor_url, community_only, feed_only, allow_banned=allow_banned)
 
     if actor_obj is False:  # banned or deleted actor was found
         return None

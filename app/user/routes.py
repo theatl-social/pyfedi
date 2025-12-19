@@ -806,10 +806,11 @@ def unban_profile(actor):
     if user_access('ban users', current_user.id):
         actor = actor.strip()
         if '@' in actor:
-            user = find_actor_or_create(actor, create_if_not_found=False)
+            user = find_actor_or_create(actor, create_if_not_found=False, allow_banned=True)
         else:
-            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-                                        create_if_not_found=False)
+            user = find_actor_or_create(
+                f'{current_app.config['HTTP_PROTOCOL']}://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                create_if_not_found=False, allow_banned=True)
         if user is None:
             abort(404)
 
