@@ -5,7 +5,7 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname %}
-{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button %}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button, render_post_emoji_button %}
 
 {% block end_scripts -%}
     <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}"></script>
