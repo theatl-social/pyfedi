@@ -3109,8 +3109,11 @@ form h5 {
 }
 
 .emoji_button {
-  font-weight: bold;
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+}
+.emoji_button a svg {
+  width: 15px;
+  height: 15px;
 }
 
 /* Visually hide radios but keep them accessible */

@@ -41,7 +41,7 @@ title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies')
                         <a href="/post/{{ post.id }}/upvote/default/emoji" role="button"
                            aria-label="{{ _('Emoji reaction button.') }}" aria-live="assertive"
                            data-id="{{ post.id }}" class="reaction_button" data-target="post"
-                        ><span>☺</span></a>
+                        ><svg class="icon"><use xlink:href="#smiley"></use></svg></a>
                 {% endif -%}
         {% endif -%}
 {%- endmacro %}
@@ -52,7 +52,7 @@ title="{{ _('Notify about replies') }}" aria-label="{{ _('Notify about replies')
                         <a href="/comment/{{ comment.id }}/upvote/default/emoji" role="button"
                            aria-label="{{ _('Emoji reaction button.') }}" aria-live="assertive"
                            data-id="{{ comment.id }}" class="reaction_button" data-target="comment"
-                        ><span>☺</span></a>
+                        ><svg class="icon"><use xlink:href="#smiley"></use></svg></a>
                 {% endif -%}
         {% endif -%}
 {%- endmacro %}
