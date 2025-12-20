@@ -1593,6 +1593,7 @@ function setupDynamicContent() {
     setupBasicAutoResize();
     setupUserMentionSuggestions();
     setupTranslateAll();
+    setupReactionDialog();
     
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -2226,43 +2227,47 @@ function setupReactionDialog() {
 
     // on each of the triggerElements: when clicked:
     triggerElements.forEach(function(trigger) {
-        trigger.addEventListener('click', function(e) {
-            e.preventDefault();
-            var commentId = trigger.getAttribute('data-id');
-            var targetType = trigger.getAttribute('data-target');   // whether we're reacting to a post or comment
+        if(trigger.dataset.listenerAdded) {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                var commentId = trigger.getAttribute('data-id');
+                var targetType = trigger.getAttribute('data-target');   // whether we're reacting to a post or comment
 
-            // show the <dialog>
-            dialog.showModal();
-            dialogContents.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                // show the <dialog>
+                dialog.showModal();
+                dialogContents.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
 
-            // fill the <div id="reaction_dialog_contents"> inside the dialog by making a fetch() to def comment_emoji_list()
-            fetch('/' + targetType + '/' + commentId + '/emoji_list')
-                .then(function(response) {
-                    if (!response.ok) throw new Error('Network response was not ok');
-                    return response.text();
-                })
-                .then(function(html) {
-                    dialogContents.innerHTML = html;
-                    // addEventListener onto each of the category buttons so users can switch between categories
-                    var categoryButtons = dialogContents.querySelectorAll('.emoji-category');
-                    categoryButtons.forEach(function(btn) {
-                        btn.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            categoryButtons.forEach(function(b) { b.classList.remove('active'); });
-                            btn.classList.add('active');
-                            renderEmojis(btn.dataset.category, targetType, commentId);
+                // fill the <div id="reaction_dialog_contents"> inside the dialog by making a fetch() to def comment_emoji_list()
+                fetch('/' + targetType + '/' + commentId + '/emoji_list')
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        dialogContents.innerHTML = html;
+                        // addEventListener onto each of the category buttons so users can switch between categories
+                        var categoryButtons = dialogContents.querySelectorAll('.emoji-category');
+                        categoryButtons.forEach(function(btn) {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                categoryButtons.forEach(function(b) { b.classList.remove('active'); });
+                                btn.classList.add('active');
+                                renderEmojis(btn.dataset.category, targetType, commentId);
+                            });
                         });
-                    });
 
-                    // addEventListener onto each of the emoji icons to do a POST to def comment_emoji_set()
-                    setupEmojiClickHandlers(targetType, commentId, dialog);
-                })
-                .catch(function(error) {
-                    console.error('Error loading emoji picker:', error);
-                    dialogContents.innerHTML = '<div class="alert alert-danger">Error loading emoji picker</div>';
-                });
-        });
+                        // addEventListener onto each of the emoji icons to do a POST to def comment_emoji_set()
+                        setupEmojiClickHandlers(targetType, commentId, dialog);
+                    })
+                    .catch(function(error) {
+                        console.error('Error loading emoji picker:', error);
+                        dialogContents.innerHTML = '<div class="alert alert-danger">Error loading emoji picker</div>';
+                    });
+            });
+            trigger.dataset.listenerAdded = 'true'; // mark as initialized
+        }
+
     });
 
     function setupEmojiClickHandlers(targetType, commentId, dialog) {

@@ -2340,6 +2340,8 @@ class Post(db.Model):
                              (existing_vote.effect < 0 and vote_direction == 'downvote')):
                     existing_vote.emoji = emoji
                     db.session.commit()
+                    self.update_reaction_cache()
+                    db.session.commit()
                     return None  # No undo, vote stays as-is with new emoji
 
                 with redis_client.lock(f"lock:vote:{existing_vote.id}", timeout=10, blocking_timeout=6):

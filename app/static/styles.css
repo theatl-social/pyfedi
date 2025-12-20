@@ -675,6 +675,7 @@ fieldset legend {
 
 body {
   font-size: 0.95rem;
+  --bs-body-font-family: system-ui,-apple-system,"Inter",Roboto,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,sans-serif,"Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
 }
 body.embed .post_teaser_body h3 {
   font-size: 1.2rem !important;
