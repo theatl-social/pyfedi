@@ -2227,7 +2227,7 @@ function setupReactionDialog() {
 
     // on each of the triggerElements: when clicked:
     triggerElements.forEach(function(trigger) {
-        if(trigger.dataset.listenerAdded) {
+        if(!trigger.dataset.listenerAdded) {
             trigger.addEventListener('click', function(e) {
                 e.preventDefault();
                 var commentId = trigger.getAttribute('data-id');
