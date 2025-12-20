@@ -2209,7 +2209,7 @@ def in_sorted_list(arr, target):
 @cache.memoize(timeout=600)
 def recently_upvoted_posts(user_id) -> List[int]:
     post_ids = db.session.execute(
-        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 300'),
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 3000'),
         {'user_id': user_id}).scalars()
     return sorted(post_ids)  # sorted so that in_sorted_list can be used
 
@@ -2217,7 +2217,7 @@ def recently_upvoted_posts(user_id) -> List[int]:
 @cache.memoize(timeout=600)
 def recently_downvoted_posts(user_id) -> List[int]:
     post_ids = db.session.execute(
-        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 300'),
+        text('SELECT post_id FROM "post_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 3000'),
         {'user_id': user_id}).scalars()
     return sorted(post_ids)
 
@@ -2225,7 +2225,7 @@ def recently_downvoted_posts(user_id) -> List[int]:
 @cache.memoize(timeout=600)
 def recently_upvoted_post_replies(user_id) -> List[int]:
     reply_ids = db.session.execute(text(
-        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 300'),
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect > 0 ORDER BY id DESC LIMIT 3000'),
                                    {'user_id': user_id}).scalars()
     return sorted(reply_ids)  # sorted so that in_sorted_list can be used
 
@@ -2233,7 +2233,7 @@ def recently_upvoted_post_replies(user_id) -> List[int]:
 @cache.memoize(timeout=600)
 def recently_downvoted_post_replies(user_id) -> List[int]:
     reply_ids = db.session.execute(text(
-        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 300'),
+        'SELECT post_reply_id FROM "post_reply_vote" WHERE user_id = :user_id AND effect < 0 ORDER BY id DESC LIMIT 3000'),
                                    {'user_id': user_id}).scalars()
     return sorted(reply_ids)
 
