@@ -97,7 +97,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
     # Variant 2 - views/post_view.dart - /post/list api endpoint
     if variant == 2:
         # counts - models/post/post_aggregates.dart
-        counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.score, 'upvotes': post.up_votes,
+        counts = {'post_id': post.id, 'comments': post.reply_count, 'score': post.up_votes - post.down_votes, 'upvotes': post.up_votes,
                   'downvotes': post.down_votes,
                   'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
                   'newest_comment_time': post.last_active.isoformat(timespec="microseconds") + 'Z',
@@ -700,7 +700,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
 
     # Variant 2 - CommentAggregatesModel
     if variant == 2:
-        v2 = {'comment_id': reply.id, 'score': reply.score, 'upvotes': reply.up_votes,
+        v2 = {'comment_id': reply.id, 'score': reply.up_votes - reply.down_votes, 'upvotes': reply.up_votes,
               'downvotes': reply.down_votes,
               'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
               'child_count': reply.child_count if reply.child_count is not None else 0}
