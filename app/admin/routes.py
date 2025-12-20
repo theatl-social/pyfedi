@@ -7,7 +7,7 @@ import json as python_json
 import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
-from flask_login import current_user
+from flask_login import current_user, login_user
 from flask_babel import _
 from slugify import slugify
 from sqlalchemy import text, desc, or_
@@ -2219,3 +2219,14 @@ def admin_emoji_delete(emoji_id):
     db.session.commit()
     flash(_('Emoji deleted.'))
     return redirect(url_for('admin.admin_emoji'))
+
+
+@bp.route('/masquerade/<int:user_id>')
+@login_required
+@permission_required('change instance settings')
+def masquerade(user_id):
+    user = User.query.get(user_id)
+    if user is not None and user.is_local():
+        login_user(user, False)
+        return redirect('/')
+    return ''
