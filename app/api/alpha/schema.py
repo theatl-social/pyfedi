@@ -357,6 +357,13 @@ class PostPoll(DefaultSchema):
     my_votes = fields.List(fields.Integer())
 
 
+class Reactions(DefaultSchema):
+    url = fields.String(allow_none=True)
+    token = fields.String()
+    authors = fields.List(fields.String())
+    count = fields.Integer()
+
+
 class Post(DefaultSchema):
     ap_id = fields.String(required=True)
     community_id = fields.Integer(required=True)
@@ -383,6 +390,7 @@ class Post(DefaultSchema):
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
     tags = fields.String(allow_none=True)
     flair = fields.String(allow_none=True)
+    emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
     event = fields.Nested(PostEvent)
     poll = fields.Nested(PostPoll)
 
@@ -514,6 +522,7 @@ class Comment(Schema):
     updated = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     locked = fields.Boolean()
     answer = fields.Boolean()
+    emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
 
     class Meta:
         unknown = INCLUDE # let the not-consistent-with-anything 'repliesEnabled' through for Boost
@@ -1244,6 +1253,7 @@ class LikePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)
     private = fields.Boolean()
+    emoji = fields.String()
 
 
 class SavePostRequest(DefaultSchema):

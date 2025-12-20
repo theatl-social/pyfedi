@@ -30,7 +30,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
-        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky']
+        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky', 'emoji_reactions']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
 
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
@@ -673,7 +673,7 @@ def reply_view(reply: PostReply | int, variant: int, user_id=None,
 
     # Variant 1 - Comment model
     if variant == 1:
-        include = ['id', 'user_id', 'post_id', 'body', 'deleted', 'answer']
+        include = ['id', 'user_id', 'post_id', 'body', 'deleted', 'answer', 'emoji_reactions']
         v1 = {column.name: getattr(reply, column.name) for column in reply.__table__.columns if column.name in include}
 
         v1.update({'published': reply.posted_at.isoformat(timespec="microseconds") + 'Z',
