@@ -3009,22 +3009,29 @@ def update_post_from_activity(post: Post, request_json: dict):
             len(request_json['object']['attachment']) > 0 and
             'type' in request_json['object']['attachment'][0]):
 
-        if request_json['object']['attachment'][0]['type'] == 'Link':
-            if 'href' in request_json['object']['attachment'][0]:
-                new_url = request_json['object']['attachment'][0]['href']  # Lemmy < 0.19.4
-            elif 'url' in request_json['object']['attachment'][0]:
-                new_url = request_json['object']['attachment'][0]['url']  # NodeBB
-
-        if request_json['object']['attachment'][0]['type'] == 'Document':
-            new_url = request_json['object']['attachment'][0]['url']  # Mastodon
-
-        if request_json['object']['attachment'][0]['type'] == 'Image':
-            new_url = request_json['object']['attachment'][0]['url']  # PixelFed / PieFed / Lemmy >= 0.19.4
-
-        if request_json['object']['attachment'][0]['type'] == 'Audio':  # WordPress podcast
-            new_url = request_json['object']['attachment'][0]['url']
-            if 'name' in request_json['object']['attachment'][0]:
-                post.title = request_json['object']['attachment'][0]['name']
+        for attachment in request_json['object']['attachment']:
+            if attachment['type'] == 'Link':
+                if 'href' in attachment:
+                    new_url = attachment['href']  # Lemmy < 0.19.4
+                elif 'url' in attachment:
+                    new_url = attachment['url']  # NodeBB
+                if new_url:
+                    break
+            elif attachment['type'] == 'Document':
+                new_url = attachment['url']  # Mastodon
+                if new_url:
+                    break
+            elif attachment['type'] == 'Audio':  # WordPress podcast
+                new_url = attachment['url']
+                if 'name' in attachment:
+                    post.title = attachment['name']
+                if new_url:
+                    break
+        # Lastly, check for image posts. Mbin sends link posts with both image and link and we want to ignore the image in that case.
+        if not new_url:
+            for attachment in request_json['object']['attachment']:
+                if attachment['type'] == 'Image':
+                    new_url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
 
     if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'],
                                                              dict):  # Mastodon / a.gup.pe
