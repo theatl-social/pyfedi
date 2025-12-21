@@ -139,7 +139,8 @@ def home_page(sort, view_filter):
 
     # New Communities
     cutoff = utcnow() - timedelta(days=30)
-    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False).filter(Community.created_at > cutoff)
+    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False). \
+        filter(Community.created_at > cutoff)
     if current_user.is_authenticated:  # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -148,7 +149,8 @@ def home_page(sort, view_filter):
         if community_ids:
             new_communities = new_communities.filter(Community.id.not_in(community_ids))
         new_communities = new_communities.filter(Community.instance_id.not_in(blocked_or_banned_instances(current_user.id)))
-    new_communities = new_communities.order_by(desc(Community.created_at)).limit(5).all()
+    new_communities = new_communities.order_by(desc(Community.first_federated_at)). \
+        order_by(desc(Community.created_at)).limit(5).all()
 
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
