@@ -107,7 +107,7 @@ def add_local():
                               subscriptions_count=1, instance_id=1, ai_generated=form.ai_generated.data,
                               low_quality=('memes' in form.url.data or 'shitpost' in form.url.data) and
                                            get_setting('meme_comms_low_quality', False),
-                              question_answer=form.question_answer.data)
+                              question_answer=form.question_answer.data, first_federated_at=utcnow())
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
             file = save_icon_file(icon_file)
