@@ -511,6 +511,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e933";
 }
 
+.fe-hide::before {
+  content: "\e9d0";
+}
+
 .fe-answer::before {
   content: "\e92b";
   color: var(--bs-form-valid-border-color);

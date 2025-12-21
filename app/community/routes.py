@@ -39,7 +39,7 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     File, utcnow, Report, Notification, Topic, PostReply, \
     NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
-    post_tag, Tag, Rating
+    post_tag, Tag, Rating, hidden_posts
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
@@ -363,6 +363,9 @@ def show_community(community: Community):
                 posts = posts.filter(read_posts.c.read_post_id.is_(None))  # Filter where there is no corresponding read post for the current user
             if current_user.hide_gen_ai == 1:
                 posts = posts.filter(Post.ai_generated == False)
+            posts = posts.outerjoin(hidden_posts, (Post.id == hidden_posts.c.hidden_post_id) & (
+                    hidden_posts.c.user_id == current_user.id))
+            posts = posts.filter(hidden_posts.c.hidden_post_id.is_(None))  # Filter where there is no corresponding hidden post for the current user
             content_filters = user_filters_posts(current_user.id)
             posts = posts.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING)
 

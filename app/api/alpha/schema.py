@@ -1340,6 +1340,11 @@ class LockPostRequest(DefaultSchema):
     locked = fields.Boolean(required=True)
 
 
+class HidePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    hidden = fields.Boolean(required=True)
+
+
 class FeaturePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     featured = fields.Boolean(required=True)

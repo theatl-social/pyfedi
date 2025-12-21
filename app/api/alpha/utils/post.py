@@ -13,7 +13,7 @@ from app.models import Post, Community, CommunityMember, utcnow, User, Feed, Fee
     CommunityFlair, read_posts, Poll
 from app.shared.post import vote_for_post, bookmark_post, remove_bookmark_post, subscribe_post, make_post, edit_post, \
     delete_post, restore_post, report_post, lock_post, sticky_post, mod_remove_post, mod_restore_post, mark_post_read, \
-    vote_for_poll
+    vote_for_poll, hide_post
 from app.post.util import post_replies, get_comment_branch, tags_to_string, flair_to_string
 from app.topic.routes import get_all_child_topic_ids
 from app.utils import authorise_api_user, blocked_users, blocked_communities, blocked_or_banned_instances, recently_upvoted_posts, \
@@ -1019,6 +1019,16 @@ def post_post_lock(auth, data):
     locked = data['locked']
 
     user_id, post = lock_post(post_id, locked, SRC_API, auth)
+
+    post_json = post_view(post=post, variant=4, user_id=user_id)
+    return post_json
+
+
+def post_post_hide(auth, data):
+    post_id = data['post_id']
+    hidden = data['hidden']
+
+    user_id, post = hide_post(post_id, hidden, SRC_API, auth)
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json

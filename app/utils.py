@@ -2799,9 +2799,10 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
             post_id_where.append('p.nsfw is false ')
         if current_user.hide_read_posts:
             post_id_where.append('p.id NOT IN (SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id) ')
-            params['user_id'] = current_user.id
         if current_user.hide_gen_ai == 1:
             post_id_where.append('p.ai_generated is false ')
+        post_id_where.append('p.id NOT IN (SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id) ')
+        params['user_id'] = current_user.id
 
         # Language filter
         if current_user.read_language_ids and len(current_user.read_language_ids) > 0:

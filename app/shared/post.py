@@ -925,6 +925,24 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     return user.id, post
 
 
+def hide_post(post_id: int, hidden: bool, src: int, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = db.session.query(Post).get(post_id)
+
+    if hidden:
+        user.mark_post_as_hidden(post)
+    else:
+        db.session.execute(text('DELETE FROM "hidden_posts" WHERE user_id = :user_id AND hidden_post_id = :post_id'),
+                           {'user_id': user.id, 'post_id': post.id})
+    db.session.commit()
+
+    return user.id, post
+
+
 # mod deletes
 def mod_remove_post(post_id: int, reason, src, auth):
     if src == SRC_API:

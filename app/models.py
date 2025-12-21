@@ -922,12 +922,21 @@ user_file = db.Table('user_file',
                      db.PrimaryKeyConstraint('user_id', 'file_id')
                      )
 
-# table to hold users' 'read' post ids
+# table to hold users' read post ids
 read_posts = db.Table('read_posts',
                       db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True, nullable=False),
                       db.Column('read_post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True, nullable=False),
                       db.Column('interacted_at', db.DateTime, index=True, default=utcnow),
                       db.Index('ix_read_posts_user_post', 'user_id', 'read_post_id')
+                      )
+
+
+# table to hold users' hidden post ids
+hidden_posts = db.Table('hidden_posts',
+                      db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True, nullable=False),
+                      db.Column('hidden_post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True, nullable=False),
+                      db.Column('interacted_at', db.DateTime, index=True, default=utcnow),
+                      db.Index('ix_hidden_posts_user_post', 'user_id', 'hidden_post_id')
                       )
 
 
@@ -1057,6 +1066,7 @@ class User(UserMixin, db.Model):
     # this is the User side, so its referencing the Post side
     # read_by is the corresponding Post object variable
     read_post = db.relationship('Post', secondary=read_posts, back_populates='read_by', lazy='dynamic')
+    hidden_post = db.relationship('Post', secondary=hidden_posts, back_populates='hidden_by', lazy='dynamic')
 
     def __repr__(self):
         return '<User {}_{}>'.format(self.user_name, self.id)
@@ -1414,6 +1424,8 @@ class User(UserMixin, db.Model):
         if self.waiting_for_approval():
             db.session.query(UserRegistration).filter(UserRegistration.user_id == self.id).delete()
         db.session.execute(text('DELETE FROM "user_role" WHERE user_id = :user_id'), {'user_id': self.id})
+        db.session.execute(text('DELETE FROM "hidden_posts" WHERE user_id = :user_id'), {'user_id': self.id})
+        db.session.execute(text('DELETE FROM "read_posts" WHERE user_id = :user_id'), {'user_id': self.id})
         db.session.query(NotificationSubscription).filter(NotificationSubscription.user_id == self.id).delete()
         db.session.query(Filter).filter(Filter.user_id == self.id).delete()
         db.session.query(UserFlair).filter(UserFlair.user_id == self.id).delete()
@@ -1500,6 +1512,18 @@ class User(UserMixin, db.Model):
     # returns true if the post has been read, false if not
     def has_read_post(self, post):
         return self.read_post.filter(read_posts.c.read_post_id == post.id).count() > 0
+
+
+    # mark a post as 'hidden' for this user
+    def mark_post_as_hidden(self, post):
+        # check if its already marked as hidden, if not, mark it as hidden
+        if not self.has_hidden_post(post):
+            self.hidden_post.append(post)
+
+    # check if post has been hidden by this user
+    # returns true if the post has been hidden, false if not
+    def has_hidden_post(self, post):
+        return self.hidden_post.filter(hidden_posts.c.hidden_post_id == post.id).count() > 0
 
     def get_note(self, by_user):
         user_note = self.user_notes.filter(UserNote.target_id == self.id, UserNote.user_id == by_user.id).first()
@@ -1595,6 +1619,7 @@ class Post(db.Model):
     # this is the Post side, so its referencing the User side
     # read_post is the corresponding User object variable
     read_by = db.relationship('User', secondary=read_posts, back_populates='read_post', lazy='dynamic')
+    hidden_by = db.relationship('User', secondary=hidden_posts, back_populates='hidden_post', lazy='dynamic')
 
     __table_args__ = (
         db.Index(
@@ -2112,6 +2137,9 @@ class Post(db.Model):
 
         # Delete event_user entries (association table, no cascade relationship)
         db.session.execute(text('DELETE FROM "event_user" WHERE post_id = :post_id'), {'post_id': self.id})
+
+        db.session.execute(text('DELETE FROM "hidden_posts" WHERE hidden_post_id = :post_id'), {'post_id': self.id})
+        db.session.execute(text('DELETE FROM "read_posts" WHERE read_post_id = :post_id'), {'post_id': self.id})
 
         # Handle file deletions from disk before cascade deletes the File records
         if self.image_id and self.image:

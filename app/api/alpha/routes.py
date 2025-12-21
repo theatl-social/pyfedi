@@ -14,7 +14,8 @@ from app.api.alpha.utils.feed import get_feed_list
 from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
-    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2, post_poll_vote
+    post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2, post_poll_vote, \
+    post_post_hide
 from app.api.alpha.utils.private_message import get_private_message_list, post_private_message, \
     post_private_message_mark_as_read, get_private_message_conversation, put_private_message, post_private_message_delete, \
     post_private_message_report, post_leave_conversation
@@ -592,6 +593,19 @@ def post_alpha_post_lock(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')
     resp = post_post_lock(auth, data)
+    return GetPostResponse().load(resp)
+
+
+@post_bp.route('/post/hide', methods=['POST'])
+@post_bp.doc(summary="Hide or unhide a post.")
+@post_bp.arguments(HidePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_lock(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = post_post_hide(auth, data)
     return GetPostResponse().load(resp)
 
 

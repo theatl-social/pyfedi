@@ -42,7 +42,7 @@ from app.post.util import post_replies, get_comment_branch, tags_to_string, url_
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
-    vote_for_poll
+    vote_for_poll, hide_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply, choose_answer, unchoose_answer
 from app.shared.site import block_remote_instance
@@ -1443,6 +1443,18 @@ def post_sticky(post_id: int, mode):
     else:
         flash(_('%(name)s has been un-stickied.', name=post.title))
     return redirect(referrer(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)))
+
+
+@bp.route('/post/<int:post_id>/hide/<mode>', methods=['POST'])
+@login_required
+def post_hide(post_id: int, mode):
+    post = Post.query.get_or_404(post_id)
+    hide_post(post.id, mode == 'yes', SRC_WEB)
+    if mode == 'yes':
+        flash(_('%(name)s has been hidden.', name=post.title))
+    else:
+        flash(_('%(name)s has been un-hidden.', name=post.title))
+    return redirect(referrer())
 
 
 @bp.route('/post/<int:post_id>/set_flair', methods=['GET', 'POST'])
