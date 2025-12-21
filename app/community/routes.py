@@ -1092,6 +1092,9 @@ def add_post(actor, type=None):
     # and that one checks for a post.image_id for editing image posts
     post = None
 
+    if form.language_id.data not in community.language_ids() and len(community.language_ids()) > 0:
+        flash(_('This community prefers posts in %(language_names)s', language_names=', '.join(community.language_names())), 'warning')
+
     return render_template('community/add_post.html', title=_('Add post to community'), form=form,
                            post_type=post_type, community=community, post=post, hide_community_actions=True,
                            markdown_editor=current_user.markdown_editor, low_bandwidth=False, actor=actor, event_online=True,

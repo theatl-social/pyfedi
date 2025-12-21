@@ -614,6 +614,9 @@ class Community(db.Model):
     def language_ids(self):
         return [language.id for language in self.languages.all()]
 
+    def language_names(self):
+        return [language.name for language in self.languages.filter(Language.code != 'und').all()]
+
     def icon_image(self, size='default') -> str:
         if self.icon_id is not None:
             if size == 'default':
