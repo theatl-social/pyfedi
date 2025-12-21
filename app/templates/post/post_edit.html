@@ -268,8 +268,12 @@
                 </div>
             {% endif %}
 
+            <div id="communityFlair">
+                {% if form.flair %}{{ render_field(form.flair) }}{% endif %}
+            </div>
             {{ render_field(form.tags) }}
             <small class="field_hint">{{ _('Separate each tag with a comma.') }}</small>
+            {{ render_field(form.language_id) }}
 
             <fieldset id="post_more_options" class="mt-4 mb-4 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_more_options_state', 'collapsed') == 'collapsed' }}">
                 <legend class="w-auto">{{ _('More options') }}</legend>
@@ -278,10 +282,6 @@
                 {{ render_field(form.nsfw) }}
                 {{ render_field(form.nsfl) }}
                 {{ render_field(form.ai_generated) }}
-                {{ render_field(form.language_id) }}
-                <div id="communityFlair">
-                    {% if form.flair %}{{ render_field(form.flair) }}{% endif %}
-                </div>
                 {{ render_field(form.scheduled_for) }}
                 {{ render_field(form.timezone) }}
                 {{ render_field(form.repeat) }}
