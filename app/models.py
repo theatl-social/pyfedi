@@ -555,6 +555,7 @@ class Community(db.Model):
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
     question_answer = db.Column(db.Boolean, default=False)     # if this is a stackoverflow-style question and answer community
+    first_federated_at = db.Column(db.DateTime, index=True, default=utcnow)
 
     ap_id = db.Column(db.String(255), index=True)
     ap_profile_id = db.Column(db.String(255), index=True, unique=True)

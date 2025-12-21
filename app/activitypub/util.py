@@ -1185,7 +1185,8 @@ def actor_json_to_model(activity_json, address, server):
                               public_key=activity_json['publicKey']['publicKeyPem'],
                               # language=community_json['language'][0]['identifier'] # todo: language
                               instance_id=find_instance_id(server),
-                              content_retention=current_app.config['DEFAULT_CONTENT_RETENTION']
+                              content_retention=current_app.config['DEFAULT_CONTENT_RETENTION'],
+                              first_federated_at=utcnow(),
                               )
         if get_setting('meme_comms_low_quality', False):
             community.low_quality = 'memes' in activity_json['preferredUsername'] or 'shitpost' in activity_json['preferredUsername']
