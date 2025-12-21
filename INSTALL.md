@@ -586,7 +586,7 @@ Some Cloudflare tips:
 - Ensure you exclude the URL "/inbox" from the Cloudflare WAF [as shown here](https://join.piefed.social/wp-content/uploads/2024/10/disable-waf-on-inbox.png). If you don't do this there will be federation issues.
 - Under Speed -> Optimization -> Content Optimization, turn everything off especially "Rocket Loader" to avoid JavaScript problems.
 - Under Speed -> Optimization -> Protocol Optimization, turn off HTTP/3 to avoid problems with Firefox.
-- Cloudflare's bot protection / AI scraper blocker tends to play havoc with the API, you'll have a much better time if you turn this off entirely.
+- Cloudflare's bot protection / AI scraper blocker tends to play havoc with the API, you'll have a much better time if you turn this off entirely, in Security -> Settings.
 
 PieFed has the capability to automatically remove file copies from the Cloudflare cache whenever
  those files are deleted from the server. To enable this, set these variables in your `.env` file:
