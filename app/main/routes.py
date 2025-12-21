@@ -1126,6 +1126,12 @@ def content_warning():
     return render_template('generic_form.html', title=_('Content warning'), message=message, form=form)
 
 
+@bp.route('/my-year-in-review/<year>')
+@login_required
+def my_year_in_review(year):
+    return render_template('generic_message.html', title=_('This page is intentionally left blank.'), message=_("We don't track you, so there's not much data to make graphs of."))
+
+
 @bp.route('/health', methods=['HEAD', 'GET'])
 def health():
     return 'Ok'
