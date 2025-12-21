@@ -2590,3 +2590,12 @@ def feed_followers(actor):
             return resp
         else:
             abort(404)
+
+
+@bp.route('/activitypub/externalInteraction', methods=['GET'])
+def activitypub_external_interaction():
+    uri = request.args.get('uri')
+    if uri:
+        community = find_actor_or_create_cached(uri, community_only=True)
+        if community:
+            return redirect(f'/community/{community.link()}/subscribe')

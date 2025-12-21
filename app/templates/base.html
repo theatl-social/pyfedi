@@ -103,9 +103,9 @@
     {% endif -%}
     {% block schema_org %}
     {% endblock %}
-    {%- include "svg_sprites.html" -%}
   </head>
   <body class="d-flex flex-column{{ ' low_bandwidth' if low_bandwidth }} {{ request.cookies.get('compact_level', '') }}" hx-headers='{"x-csrftoken": "{{ cs }}"}'>
+    {%- include "svg_sprites.html" -%}
     {% if 'fontSize' in request.cookies -%}
         <style>
             body, .form-control, .btn, .dropdown-item {
