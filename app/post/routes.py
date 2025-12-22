@@ -1675,6 +1675,42 @@ def post_reply_distinguish(post_id: int, comment_id: int):
         abort(401)
 
 
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/source/<state>', methods=['GET'])
+def post_reply_source(post_id: int, comment_id: int, state: str):
+    # This should just be accessed by htmx
+    if not request.headers.get('HX-Request'):
+            abort(400)
+    
+    post_reply = PostReply.query.get(comment_id)
+
+    if post_reply.deleted and not current_user.is_admin():
+        reply_hidden = True
+    else:
+        reply_hidden = False
+
+    if not post_reply or state not in ['show', 'hide'] or reply_hidden:
+        reply_body = markdown_to_html(_("Something went wrong and a comment could not be found."))
+        
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
+                               comment_id=comment_id, post_id=post_id)
+    
+    if state == "show":
+        if '```' in post_reply.body:
+            reply_body = markdown_to_html("````md\n" + post_reply.body + "\n````")
+        else:
+            reply_body = markdown_to_html("```md\n" + post_reply.body + "\n```")
+        
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="show",
+                               comment_id=comment_id, post_id=post_id)
+    
+    elif state == "hide":
+        reply_body = post_reply.body_html
+
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
+                               comment_id=comment_id, post_id=post_id)
+
+
+
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])
 @login_required
 def post_reply_edit(post_id: int, comment_id: int):
