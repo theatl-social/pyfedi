@@ -219,6 +219,11 @@ class CreatePostForm(FlaskForm):
                 return False
         return True
 
+    def filter_title(self, title):
+        if isinstance(title, str):
+            title = title.strip()
+
+        return title
 
 class CreateDiscussionForm(CreatePostForm):
     pass
