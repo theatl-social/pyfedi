@@ -922,6 +922,35 @@ def post_reply_options(post_id: int, comment_id: int):
                            existing_bookmark=existing_bookmark)
 
 
+@bp.route('/post/<int:post_id>/source/<state>', methods=['GET'])
+def post_source(post_id: int, state: str):
+    # This should just be accessed by htmx
+    if not request.headers.get('HX-Request'):
+        abort(400)
+    
+    post = Post.query.get(post_id)
+
+    if not post or state not in ['show', 'hide'] or (post.deleted and not current_user.is_admin()):
+        post_body = markdown_to_html(_("Something went wrong and a post could not be found."))
+        
+        return render_template("post/_post_source_swap.html", post_body=post_body, state="hide", post_id=post_id)
+    
+    if state == "show":
+        if '````' in post.body:
+            post_body = '<pre><code>' + post.body + '</code></pre>'
+        elif '```' in post.body:
+            post_body = markdown_to_html("````md\n" + post.body + "\n````")
+        else:
+            post_body = markdown_to_html("```md\n" + post.body + "\n```")
+        
+        return render_template("post/_post_source_swap.html", post_body=post_body, state="show", post_id=post_id)
+    
+    elif state == "hide":
+        post_body = post.body_html
+
+        return render_template("post/_post_source_swap.html", post_body=post_body, state="hide", post_id=post_id)
+
+
 @bp.route('/post/<int:post_id>/edit', methods=['GET', 'POST'])
 @login_required
 def post_edit(post_id: int):
@@ -1673,6 +1702,39 @@ def post_reply_distinguish(post_id: int, comment_id: int):
         return redirect(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id))
     else:
         abort(401)
+
+
+@bp.route('/post/<int:post_id>/comment/<int:comment_id>/source/<state>', methods=['GET'])
+def post_reply_source(post_id: int, comment_id: int, state: str):
+    # This should just be accessed by htmx
+    if not request.headers.get('HX-Request'):
+        abort(400)
+    
+    post_reply = PostReply.query.get(comment_id)
+
+    if not post_reply or state not in ['show', 'hide'] or (post_reply.deleted and not current_user.is_admin()):
+        reply_body = markdown_to_html(_("Something went wrong and a comment could not be found."))
+        
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
+                               comment_id=comment_id, post_id=post_id)
+    
+    if state == "show":
+        if '````' in post_reply.body:
+            reply_body = '<pre><code>' + post_reply.body + '</code></pre>'
+        elif '```' in post_reply.body:
+            reply_body = markdown_to_html("````md\n" + post_reply.body + "\n````")
+        else:
+            reply_body = markdown_to_html("```md\n" + post_reply.body + "\n```")
+        
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="show",
+                               comment_id=comment_id, post_id=post_id)
+    
+    elif state == "hide":
+        reply_body = post_reply.body_html
+
+        return render_template("post/_post_reply_source_swap.html", reply_body=reply_body, state="hide",
+                               comment_id=comment_id, post_id=post_id)
+
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/edit', methods=['GET', 'POST'])

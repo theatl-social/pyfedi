@@ -1,0 +1,25 @@
+<div class="col-12 pr-0">
+    {% if state == "show" -%}
+        {{ reply_body | safe }}
+    {% elif state == "hide" -%}
+        {{ reply_body | community_links | feed_links | person_links | safe }}
+    {% else -%}
+        <p>{{ _("Something went wrong and a comment could not be found.") }}</p>
+    {% endif -%}
+</div>
+<ul>
+    <li id="comment_source_swap_{{ comment_id }}" hx-swap-oob="true">
+        <a href="#" class="dropdown-item no-underline"
+                hx-get="{{ url_for('post.post_reply_source', post_id=post_id, comment_id=comment_id, state="show" if state == "hide" else "hide") }}" 
+                hx-trigger="click throttle:1s" 
+                hx-target="previous .comment_body" 
+                hx-swap="innerHTML">
+            <span class="fe fe-source"></span>
+            {% if state == "show" -%}
+                {{ _('Hide markdown source') }}
+            {% else -%}
+                {{ _('View markdown source') }}
+            {% endif -%}
+        </a>
+    </li>
+<ul>

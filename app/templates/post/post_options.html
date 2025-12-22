@@ -1,97 +1,222 @@
 {% if current_user.is_authenticated -%}
     {% if post.user_id == current_user.id -%}
-        <li><a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-edit"></span>
-            {{ _('Edit') }}</a></li>
+        <li>
+            <a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-edit"></span>
+                {{ _('Edit') }}
+            </a>
+        </li>
     {% endif -%}
     {% if post.user_id == current_user.id or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
         {% if post.deleted -%}
-            <li><a href="#" data-url="{{ url_for('post.post_restore', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first send_post" rel="nofollow noindex"><span class="fe fe-arrow-up"></span>
-                {{ _('Restore') }}</a></li>
-            <li><a href="#" data-url="{{ url_for('post.post_purge', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first send_post" rel="nofollow noindex"><span class="fe fe-delete red"></span>
-                {{ _('Purge') }}</a></li>
+            <li>
+                <a href="#" data-url="{{ url_for('post.post_restore', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first send_post" rel="nofollow noindex">
+                    <span class="fe fe-arrow-up"></span>
+                    {{ _('Restore') }}
+                </a>
+            </li>
+            <li>
+                <a href="#" data-url="{{ url_for('post.post_purge', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline confirm_first send_post" rel="nofollow noindex">
+                    <span class="fe fe-delete red"></span>
+                    {{ _('Purge') }}
+                </a>
+            </li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_delete', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-delete"></span>
-                {{ _('Delete') }}</a></li>
+            <li>
+                <a href="{{ url_for('post.post_delete', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-delete"></span>
+                    {{ _('Delete') }}
+                </a>
+            </li>
         {% endif -%}
     {% endif -%}
     {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
-        <li><a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-label"></span>
-                {{ _('Set flair') }}</a></li>
+        <li>
+            <a href="{{ url_for('post.post_set_flair', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-label"></span>
+                {{ _('Set flair') }}
+            </a>
+        </li>
         {% if post.sticky -%}
-            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unsticky"></span>
-                {{ _('Un-sticky') }}</a></li>
+            <li>
+                <a href="{{ url_for('post.post_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-unsticky"></span>
+                    {{ _('Un-sticky') }}
+                </a>
+            </li>
         {% else -%}
             <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky"></span>
                 {{ _('Sticky') }}</a></li>
         {% endif -%}
         {% if post.comments_enabled -%}
-            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-lock"></span>
-                {{ _('Lock') }}</a></li>
+            <li>
+                <a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-lock"></span>
+                    {{ _('Lock') }}
+                </a>
+            </li>
         {% else -%}
-            <li><a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-unlock"></span>
-                {{ _('Unlock') }}</a></li>
+            <li>
+                <a href="#" data-url="{{ url_for('post.post_lock', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-unlock"></span>
+                    {{ _('Unlock') }}
+                </a>
+            </li>
         {% endif -%}
             {% if post.body and len(post.body) >= 100 %}
-            <li><a href="#" hx-post="{{ url_for('post.post_check_ai', post_id=post.id) }}"
-                   hx-trigger="click throttle:1s" hx-target="#ai_check_result"
-                   style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-bot-account"></span>
-                {{ _('Written by AI?') }}</a></li>
+                <li>
+                    <a href="#" hx-post="{{ url_for('post.post_check_ai', post_id=post.id) }}"
+                            hx-trigger="click throttle:1s" hx-target="#ai_check_result"
+                            style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                        <span class="fe fe-bot-account"></span>
+                        {{ _('Written by AI?') }}
+                    </a>
+                </li>
             {% endif -%}
     {% endif -%}
     {% if existing_bookmark -%}
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Remove bookmark') }}"
-          hx-post="/post/{{ post.id }}/remove_bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0"><span class="fe fe-bookmark"></span> {{ _('Remove bookmark') }}</a></li>
+        <li>
+            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Remove bookmark') }}"
+                    hx-post="/post/{{ post.id }}/remove_bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0">
+                <span class="fe fe-bookmark"></span>
+                {{ _('Remove bookmark') }}
+            </a>
+        </li>
     {% else -%}
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Bookmark') }}"
-          hx-post="/post/{{ post.id }}/bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0"><span class="fe fe-bookmark"></span> {{ _('Bookmark') }}</a></li>
+        <li>
+            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Bookmark') }}"
+                    hx-post="/post/{{ post.id }}/bookmark" hx-trigger="click throttle:1s" hx-target="this" hx-swap="outerHTML" tabindex="0">
+                <span class="fe fe-bookmark"></span>
+                {{ _('Bookmark') }}
+            </a>
+        </li>
     {% endif -%}
-    <li><a href="#" data-url="{{ url_for('post.post_hide', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-hide"></span>
-                {{ _('Hide this post from me') }}</a></li>
+    <li>
+        <a href="#" data-url="{{ url_for('post.post_hide', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
+            <span class="fe fe-hide"></span>
+            {{ _('Hide this post from me') }}
+        </a>
+    </li>
     {% if post.user_id == current_user.id and not post.mea_culpa -%}
-        <li><a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-mea-culpa"></span>
-            {{ _("I made a mistake with this post and have changed my mind about the topic") }}</a></li>
+        <li>
+            <a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline">
+                <span class="fe fe-mea-culpa"></span>
+                {{ _("I made a mistake with this post and have changed my mind about the topic") }}
+            </a>
+        </li>
     {% endif -%}
-    <li><a href="{{ url_for('post.post_reminder', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-reminder"></span>{{ _('Remind me about this') }}</a></li>
+    <li>
+        <a href="{{ url_for('post.post_reminder', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline">
+            <span class="fe fe-reminder"></span>
+            {{ _('Remind me about this') }}
+        </a>
+    </li>
     {% if post.user_id != current_user.id -%}
         {% if post.type == POST_TYPE_LINK and post.author.bot and (post.cross_posts is none or len(post.cross_posts) == 0) -%}
-            <li><a class="dropdown-item no-underline" style="white-space: normal" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span>
-            {{ _('Cross-post to another community') }}</a></li>
+            <li>
+                <a class="dropdown-item no-underline" style="white-space: normal" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}">
+                    <span class="fe fe-cross-post"></span>
+                    {{ _('Cross-post to another community') }}
+                </a>
+            </li>
         {% endif -%}
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}"
-          hx-post="/post/{{ post.id }}/block_user" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}</a></li>
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}"
-          hx-post="/post/{{ post.id }}/block_community" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}</a></li>
+        <li>
+            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}"
+                    hx-post="/post/{{ post.id }}/block_user" hx-trigger="click throttle:1s"tabindex="0">
+                <span class="fe fe-block"></span>
+                {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}"
+                    hx-post="/post/{{ post.id }}/block_community" hx-trigger="click throttle:1s"tabindex="0">
+                <span class="fe fe-block"></span>
+                {{ _('Block community %(community_name)s', community_name=post.community.display_name()) }}
+            </a>
+        </li>
         {% if post.community.is_moderator() or current_user.get_id() in admin_ids -%}
-            <li><a href='#' data-url="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post.author.id) }}" style="white-space: normal" class="send_post confirm_first dropdown-item no-underline"><span class="fe fe-block red"></span>
-                {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}</a></li>
+            <li>
+                <a href='#' data-url="{{ url_for('community.community_ban_user', community_id=post.community.id, user_id=post.author.id) }}" style="white-space: normal" class="send_post confirm_first dropdown-item no-underline">
+                    <span class="fe fe-block red"></span>
+                    {{ _('Ban post author @%(author_name)s from %(community_name)s', author_name=post.author.user_name, community_name=post.community.title) }}
+                </a>
+            </li>
         {% endif -%}
         {% if post.domain_id -%}
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block domain %(domain)s', domain=post.domain.name) }}"
-          hx-post="/post/{{ post.id }}/block_domain" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _('Block domain %(domain)s', domain=post.domain.name) }}</a></li>
+            <li>
+                <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block domain %(domain)s', domain=post.domain.name) }}"
+                        hx-post="/post/{{ post.id }}/block_domain" hx-trigger="click throttle:1s"tabindex="0">
+                    <span class="fe fe-block"></span>
+                    {{ _('Block domain %(domain)s', domain=post.domain.name) }}
+                </a>
+            </li>
         {% endif -%}
         {% if post.instance_id and post.instance_id != 1 -%}
-        <li><a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}"
-          hx-post="/post/{{ post.id }}/block_instance" hx-trigger="click throttle:1s"tabindex="0"><span class="fe fe-block"></span> {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}</a></li>
+            <li>
+                <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}"
+                        hx-post="/post/{{ post.id }}/block_instance" hx-trigger="click throttle:1s"tabindex="0">
+                    <span class="fe fe-block"></span>
+                    {{ _("Hide every post from author's instance: %(name)s", name=post.instance.domain) }}
+                </a>
+            </li>
         {% endif -%}
     {% endif -%}
     {% if post.type == POST_TYPE_IMAGE and post.image.hash and (current_user.get_id() in admin_ids or current_user.is_staff()) -%}
-        <li><a href="{{ url_for('post.post_block_image', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline"><span class="fe fe-block red"></span>
-            {{ _('Ban image everywhere forever') }}</a></li>
+        <li>
+            <a href="{{ url_for('post.post_block_image', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline">
+                <span class="fe fe-block red"></span>
+                {{ _('Ban image everywhere forever') }}
+            </a>
+        </li>
     {% endif -%}
 {% endif -%}
 {% if post.ap_id -%}
-    <li><a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline"><img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
-        {{ _('View original on %(domain)s', domain=post.instance.domain) }}</a></li>
+    <li>
+        <a href="{{ post.ap_id }}" style="white-space: normal" rel="nofollow noindex" class="dropdown-item no-underline">
+            <img src="/static/images/fediverse_logo.svg" class="options_fediverse_logo">
+            {{ _('View original on %(domain)s', domain=post.instance.domain) }}
+        </a>
+    </li>
 {% endif -%}
-<li><a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-share"></span>
-        {{ _('Share on Mastodon') }}</a></li>
-<li><a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-report"></span>
-        {{ _('Report to moderators') }}</a></li>
-<li><a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-embed"></span>
-        {{ _('Get embed code') }}</a></li>
+<li id="post_source_swap_{{ post.id }}">
+    <a href="#" class="dropdown-item no-underline"
+            hx-get="{{ url_for('post.post_source', post_id=post.id, state="show") }}" 
+            hx-trigger="click throttle:1s" 
+            hx-target="previous .post_body" 
+            hx-swap="innerHTML">
+        <span class="fe fe-source"></span>
+        {{ _('View markdown source') }}
+    </a>
+</li>
+<li>
+    <a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+        <span class="fe fe-share"></span>
+        {{ _('Share on Mastodon') }}
+    </a>
+</li>
+<li>
+    <a href="{{ url_for('post.post_report', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+        <span class="fe fe-report"></span>
+        {{ _('Report to moderators') }}
+    </a>
+</li>
+<li>
+    <a href="{{ url_for('post.post_embed_code', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+        <span class="fe fe-embed"></span>
+        {{ _('Get embed code') }}
+    </a>
+</li>
 {% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post.community.is_moderator()) -%}
-    <li><a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky-left"></span>
-                {{ _('View Voting Activity') }}</a></li>
-    <li><a href="#" data-url="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post" rel="nofollow noindex"><span class="fe fe-sticky-right"></span>
-                {{ _('Fixup from remote') }}</a></li>
+    <li>
+        <a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+            <span class="fe fe-sticky-left"></span>
+            {{ _('View Voting Activity') }}
+        </a>
+    </li>
+    <li>
+        <a href="#" data-url="{{ url_for('post.post_fixup_from_remote', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline send_post" rel="nofollow noindex">
+            <span class="fe fe-sticky-right"></span>
+            {{ _('Fixup from remote') }}
+        </a>
+    </li>
 {% endif -%}
