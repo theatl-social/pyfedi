@@ -25,7 +25,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
               bookmarked_posts=None, post_subscriptions=None, communities_joined=None, read_posts=None, content_filters=None) -> dict:
     if isinstance(post, int):
         post = Post.query.get(post)
-        if post.deleted:
+        if post is None or post.deleted:
             raise NoResultFound
 
     # Variant 1 - models/post/post.dart
