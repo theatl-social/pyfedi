@@ -131,7 +131,9 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
             if query.endswith(current_app.config['SERVER_NAME']):
                 user_name = query[1:]
                 user_name = user_name.split('@')[0]
-            local_request = bool(search_for_user(user_name.lower(), allow_fetch=False))
+                local_request = bool(search_for_user(user_name.lower(), allow_fetch=False))
+            else:
+                local_request = bool(search_for_user(query.lower(), allow_fetch=False))
         elif query.startswith('~'):
             # Check if this feed is already federated
             local_request = bool(search_for_feed(query.lower(), allow_fetch=False))
