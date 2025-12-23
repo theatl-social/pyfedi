@@ -1469,12 +1469,10 @@ def process_inbox_request(request_json, store_ap_json):
                                 ban_user(blocker, blocked, None, core_activity)
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin in banning one of our users from their site')
-                                current_app.logger.info('Remote Admin in banning one of our users from their site: ' + str(request_json))
                                 return
                             if blocked.instance_id != blocker.instance_id:
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin is banning a user of a different instance from their site')
-                                current_app.logger.info('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
                                 return
 
                             if not already_banned:
