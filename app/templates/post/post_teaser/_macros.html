@@ -1,5 +1,6 @@
 {# Macros for post teaser components. We used to use include for this but import is much faster when deeply nested, as these are. #}
 {% from "_macros.html" import render_username, render_communityname %}
+{% from "post/reply/_macros.html" import render_post_emoji_button %}
 
 {% macro render_title(post, sort=None, embed=False, show_post_community=True, low_bandwidth=False, current_user=None, request=None, locale=None, reported_posts=None, user_flair=None, admin_ids=None, user_notes=None) -%}
 {% set POST_TYPE_LINK = 1 -%}
@@ -126,6 +127,11 @@
         <div class="post_cross_post_link">
             <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
         </div>
+    {% endif -%}
+    {% if current_user.is_authenticated and (post.type == POST_TYPE_IMAGE or post.type == POST_TYPE_VIDEO) -%}
+    <div class="emoji_button">
+        {{ render_post_emoji_button(post, post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
+    </div>
     {% endif -%}
     {% if not embed -%}
         <div class="post_options_link pull-right">
@@ -293,6 +299,28 @@
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
+    <div id="post_reactions_{{ post.id }}" class="outermost_reaction_container">
+        {%- if post.emoji_reactions -%}
+        <div class="message_reactions" id="p_reactions_{{ post.id }}">
+            {% for reaction in post.emoji_reactions -%}
+                <div class="message_reaction_container me-1">
+                    <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
+                         hx-post="/post/{{ post.id }}/emoji_set"
+                         hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                         hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
+                    >
+                        <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                            {% else -%}
+                                                {{ reaction['token'] }}
+                                            {%- endif %}</div>
+                        <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {%- endif -%}
+    </div>
     {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
 </div>
 {%- endmacro %}
@@ -338,6 +366,28 @@
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
             </div>
+        </div>
+        <div id="post_reactions_{{ post.id }}" class="outermost_reaction_container">
+            {%- if post.emoji_reactions -%}
+            <div class="message_reactions" id="p_reactions_{{ post.id }}">
+                {% for reaction in post.emoji_reactions -%}
+                    <div class="message_reaction_container me-1">
+                        <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
+                             hx-post="/post/{{ post.id }}/emoji_set"
+                             hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                             hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
+                        >
+                            <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                {% else -%}
+                                                    {{ reaction['token'] }}
+                                                {%- endif %}</div>
+                            <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {%- endif -%}
         </div>
     {% endif -%}
     {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}

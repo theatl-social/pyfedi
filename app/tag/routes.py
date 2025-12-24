@@ -53,7 +53,8 @@ def show_tag(tag):
             content_filters = user_filters_posts(current_user.id)
         else:
             content_filters = {}
-        
+
+        community_ids = []
         if category and category == 'community' and category_id:
             posts = posts.filter(Post.community_id == category_id)
         elif category and category == 'topic' and category_id:

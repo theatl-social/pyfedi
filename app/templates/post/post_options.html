@@ -63,7 +63,7 @@
                 </a>
             </li>
         {% endif -%}
-            {% if post.body and len(post.body) >= 100 %}
+            {% if post.body and len(post.body) >= 100 and can_detect_ai %}
                 <li>
                     <a href="#" hx-post="{{ url_for('post.post_check_ai', post_id=post.id) }}"
                             hx-trigger="click throttle:1s" hx-target="#ai_check_result"
