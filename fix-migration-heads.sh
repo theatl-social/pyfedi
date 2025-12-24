@@ -4,13 +4,11 @@
 
 set -e  # Exit on error
 
-source .venv/bin/activate
-
 echo "🔍 Checking migration heads..."
 echo ""
 
 # Get heads and count them
-heads_output=$(SERVER_NAME=localhost CACHE_TYPE=NullCache flask db heads 2>/dev/null | grep "(head)")
+heads_output=$(SERVER_NAME=localhost CACHE_TYPE=NullCache uv run flask db heads 2>/dev/null | grep "(head)")
 head_count=$(echo "$heads_output" | grep -c "(head)" || true)
 
 if [ "$head_count" -eq 1 ]; then
@@ -57,11 +55,11 @@ else
 
         # Create merge migration (supports 2-4 heads)
         if [ ${#heads_array[@]} -eq 2 ]; then
-            SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge ${heads_array[0]} ${heads_array[1]} -m "$merge_msg"
+            SERVER_NAME=localhost CACHE_TYPE=NullCache uv run flask db merge ${heads_array[0]} ${heads_array[1]} -m "$merge_msg"
         elif [ ${#heads_array[@]} -eq 3 ]; then
-            SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge ${heads_array[0]} ${heads_array[1]} ${heads_array[2]} -m "$merge_msg"
+            SERVER_NAME=localhost CACHE_TYPE=NullCache uv run flask db merge ${heads_array[0]} ${heads_array[1]} ${heads_array[2]} -m "$merge_msg"
         elif [ ${#heads_array[@]} -eq 4 ]; then
-            SERVER_NAME=localhost CACHE_TYPE=NullCache flask db merge ${heads_array[0]} ${heads_array[1]} ${heads_array[2]} ${heads_array[3]} -m "$merge_msg"
+            SERVER_NAME=localhost CACHE_TYPE=NullCache uv run flask db merge ${heads_array[0]} ${heads_array[1]} ${heads_array[2]} ${heads_array[3]} -m "$merge_msg"
         else
             echo "❌ Unsupported number of heads: ${#heads_array[@]}"
             echo "Manual intervention required"
@@ -73,7 +71,7 @@ else
         echo ""
         echo "Next steps:"
         echo "1. Review the generated migration file in migrations/versions/"
-        echo "2. Test the migration: SERVER_NAME=localhost CACHE_TYPE=NullCache flask db upgrade"
+        echo "2. Test the migration: SERVER_NAME=localhost CACHE_TYPE=NullCache uv run flask db upgrade"
         echo "3. Commit the migration:"
         echo "   git add migrations/"
         echo "   git commit -m 'Merge migration heads after upstream sync'"

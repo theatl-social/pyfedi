@@ -352,6 +352,18 @@ jobs:
           echo "Building Docker image for validation"
           docker build --target builder -t pyfedi:test .
 
+      - name: Validate entrypoint scripts use uv
+        run: |
+          echo "Validating entrypoint scripts use uv run instead of python3 -m"
+          # Check that entrypoint scripts don't use python3 -m for flask/celery/gunicorn
+          # Exclude commented lines (lines starting with optional whitespace then #)
+          if grep -E "^[^#]*python3 -m (flask|celery|gunicorn)" entrypoint.sh entrypoint_celery.sh entrypoint.test.sh 2>/dev/null; then
+            echo "ERROR: Entrypoint scripts still use 'python3 -m' instead of 'uv run'"
+            echo "This will cause Docker startup failures!"
+            exit 1
+          fi
+          echo "Entrypoint scripts correctly use uv run"
+
       - name: Test Docker image startup
         run: |
           echo "Testing Docker image startup"
@@ -367,6 +379,19 @@ jobs:
             -e TESTING=true \
             pyfedi:test \
             run python tests/test_startup_validation.py
+
+      - name: Validate uv run works in container
+        run: |
+          echo "Testing that uv run flask works inside container"
+          docker run --rm \
+            --entrypoint sh \
+            -e SERVER_NAME=test.localhost \
+            -e SECRET_KEY=test-secret-key \
+            -e DATABASE_URL=sqlite:///memory:test.db \
+            -e CACHE_TYPE=NullCache \
+            -e TESTING=true \
+            pyfedi:test \
+            -c "uv run flask --help > /dev/null && echo 'uv run flask works'"
 
   # Full production mirror tests (optional/conditional)
   production-mirror-tests:

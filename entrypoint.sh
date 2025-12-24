@@ -19,7 +19,7 @@ if echo "$DATABASE_URL" | grep -q "^sqlite"; then
   echo "Skipping database migrations (SQLite testing mode)"
 else
   echo "Running database migrations..."
-  python3 -m flask db upgrade
+  uv run flask db upgrade
 fi
 
 # echo "Populating community search..."
@@ -31,10 +31,10 @@ if [ "${FLASK_DEBUG:-}" = "1" ] && [ "${FLASK_ENV:-}" = "development" ]; then
   echo "Starting flask development server as user 'python'..."
   # Use 'exec' to replace the shell process with the Flask process
   # Use 'gosu' to switch from root to the 'python' user
-  exec gosu python python3 -m flask run -h 0.0.0.0 -p 5000
+  exec gosu python uv run flask run -h 0.0.0.0 -p 5000
 else
   echo "Starting Gunicorn as user 'python'..."
   # Use 'exec' to replace the shell process with the Gunicorn process
   # Use 'gosu' to switch from root to the 'python' user
-  exec gosu python python3 -m gunicorn --config gunicorn.conf.py pyfedi:app
+  exec gosu python uv run gunicorn --config gunicorn.conf.py pyfedi:app
 fi
