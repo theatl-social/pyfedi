@@ -2257,7 +2257,7 @@ def process_question_answer(user, store_ap_json, request_json, announced):
     if post_reply is None:
         log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
-    if not instance_banned(user.instance.domain):
+    if (not instance_banned(user.instance.domain)) and (post_reply.user_id == post_reply.post.user_id or post_reply.community.is_moderator(user) or post_reply.author.is_instance_admin()):
         from app import redis_client
         with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
             post_reply.answer = True

@@ -1479,6 +1479,9 @@ def post_sticky(post_id: int, mode):
 def post_hide(post_id: int, mode):
     post = Post.query.get_or_404(post_id)
     hide_post(post.id, mode == 'yes', SRC_WEB)
+
+    # todo: remove post.id from redis cache used by get_deduped_post_ids() if "result_id" is in referrer()
+    
     if mode == 'yes':
         flash(_('%(name)s has been hidden.', name=post.title))
     else:
