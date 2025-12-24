@@ -132,6 +132,8 @@ def post_leave_conversation(auth, data):
         )
         db.session.commit()
 
+        conversation.delete_if_abandoned()
+
     return
 
 

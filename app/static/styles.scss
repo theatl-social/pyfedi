@@ -18,6 +18,7 @@ html {
 
 body {
   font-size: 0.95rem;
+  --bs-body-font-family: system-ui,-apple-system,"Inter",Roboto,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,sans-serif,"Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
 
   &.embed {
     .post_teaser_body h3 {
@@ -226,6 +227,10 @@ div.navbar {
   border-left: solid 1px #dee2e6;
   border-radius: 0 0 5px 5px;
   padding: 10px 15px 0 15px;
+}
+
+.tag_cloud_page > .tab-pane {
+  border: none;
 }
 
 .dropdown-menu {
@@ -456,7 +461,7 @@ form {
     font-size: 150%;
   }
 
-  @media (max-width: 340px) {
+  @media (max-width: 350px) {
     a {
       font-size: 80%;
       padding-left: 0;
@@ -664,6 +669,7 @@ ul.form-multicheck-columns {
       font-size: 110%;
       margin-top: 4px;
       margin-bottom: 0;
+      overflow: hidden;
     }
 
     .meta_row, .main_row, .utilities_row {
@@ -710,6 +716,10 @@ ul.form-multicheck-columns {
         display: block;
         width: 100%;
         position: relative;
+      }
+
+      .fe {
+        z-index: 2;
       }
 
       .fe-external, .fe-video, .fe-image, .fe-audio, .fe-magnify {
@@ -1760,6 +1770,7 @@ a.unread, div.unread {
 
 .post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col {
   word-wrap: break-word;
+  line-height: 1.6;
 
   img {
     max-width: 100%;
@@ -1874,6 +1885,11 @@ a.unread, div.unread {
   &.nsfl {
     border:1px solid black;
     color:black;
+  }
+
+  &.ai_generated {
+    border:1px solid #FF585B;
+    color:#FF585B;
   }
 }
 
@@ -2398,6 +2414,13 @@ form {
   }
 }
 
+.comment.answer {
+    border-style: solid !important;
+  border-color: var(--bs-form-valid-border-color) !important;
+  border-width: 2px !important;
+  background-color: var(--bs-info-bg-subtle);
+}
+
 .blocked_image {
   img {
     filter: grayscale(100%) blur(3px)!important;
@@ -2618,6 +2641,208 @@ form {
     }
   }
 
+}
+
+#reaction_dialog {
+  padding: 10px;
+}
+
+.message_reactions {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: var(--bs-spacer-1);
+    max-width: 100%;
+
+    overflow: hidden;
+    user-select: none;
+
+    &:has(.message_reaction) {
+        margin-top: 4px;
+    }
+
+    .message_reaction_container {
+      display: inline-flex;
+      width: auto;
+      max-width: 100%;
+      &.disabled {
+        cursor: not-allowed;
+      }
+    }
+
+    .message_reaction {
+        display: flex;
+        padding: 1.5px 4px 1.5px 3px;
+        box-sizing: border-box;
+        min-width: 44px;
+        cursor: pointer;
+        align-items: baseline;
+        line-height: 1;
+        color: var(--bs-body-color);
+        background-color: var(--bs-secondary-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 21px;
+        box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+
+        transition:
+            transform 100ms linear,
+            font-weight 100ms linear;
+
+        div {
+          position: relative;
+          top: 1px;
+        }
+
+        &.reacted {
+            color: var(--bs-primary-text-emphasis);
+            background-color: var(--bs-primary-bg-subtle);
+            border-color: var(--bs-primary-border-subtle);
+
+            border-width: 1.5px;
+            padding: 1px 4px 1px 3px;
+
+            font-weight: var(--bs-font-weight-semibold);
+            box-shadow: none;
+        }
+
+        &.disabled {
+            pointer-events: none;
+        }
+
+        &:hover {
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        &:active {
+          transform: scale(0.95);
+        }
+
+        .emoji {
+          margin: 1px 3px;
+          height: 1.2143em;
+          width: 1.2143em;
+          flex-shrink: 0;
+
+          img {
+            margin-top: -2px;
+          }
+        }
+
+        .emoji_alt_code {
+            margin: 1px 3px;
+            font-size: 0.8em;
+        }
+    }
+
+    .message_reaction_count {
+        font-size: 90%;
+        margin: 0 3px;
+        line-height: 1.0317em;
+    }
+
+    .message_reaction:hover .message_reaction_count {
+        color: var(--bs-primary-text-emphasis);
+    }
+
+    &:hover .reaction_button {
+        visibility: visible;
+        pointer-events: all;
+    }
+
+    .emoji-message-control-button-container {
+        display: flex;
+        align-items: center;
+    }
+
+    .reaction_button {
+        visibility: hidden;
+        pointer-events: none;
+
+        padding: 4px 6px;
+        border-radius: 21px;
+
+        color: var(--bs-secondary-color);
+        background-color: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+
+        & i {
+            font-size: 1em;
+            color: var(--bs-secondary-color);
+        }
+
+        &:hover i {
+            color: var(--bs-primary-text-emphasis);
+        }
+
+        &:hover {
+            color: var(--bs-primary-text-emphasis);
+            background-color: var(--bs-secondary-bg);
+            border-color: var(--bs-primary-border-subtle);
+
+            box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+            opacity: 1;
+        }
+
+        .message_reaction_count {
+            font-weight: 700;
+            color: var(--bs-secondary-color);
+            margin-right: 0;
+            line-height: 14px;
+        }
+
+        &:hover .message_reaction_count {
+            color: var(--bs-primary-text-emphasis);
+        }
+    }
+}
+
+
+.emoji_button {
+  color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+  a svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+/* Visually hide radios but keep them accessible */
+.emoji-picker input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Make label the click target */
+.emoji-picker label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Emoji styling */
+.emoji-picker .emoji {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+/* Highlight selected item */
+.emoji-picker input[type="radio"]:checked + label {
+  background-color: var(--bs-primary-bg-subtle);
+  border-radius: 0.375rem;
+}
+
+/* Optional hover */
+.emoji-picker label:hover {
+  background-color: var(--bs-secondary-bg);
+}
+
+/* Optional: hide text labels on capable UAs */
+@media (hover: hover) {
+  .emoji-picker .emoji-text {
+    display: none;
+  }
 }
 
 #topic_communities, #feed_communities {

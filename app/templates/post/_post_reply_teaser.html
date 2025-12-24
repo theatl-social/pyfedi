@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) %} reported{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.has_been_reported() %} reported{% endif %}{% if post_reply.answer %} answer{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -39,13 +39,16 @@
             {% endif -%}
             <span class="comment_time">{% if has_continued %}<a href="{{ url_for('post.continue_discussion', post_id=post_reply.post.id, comment_id=post_reply.id) }}">{% else %}<a href="/post/{{ post_reply.post_id }}#comment_{{ post_reply.id }}">{% endif %}
                 {% if post_reply.edited_at -%}
-                    edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
+                    {{ _('edited') }} <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>
                 {% else -%}
                     <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>
                 {% endif -%}
-            </a></span>
-            {% if post_reply.reports and current_user.is_authenticated and post_reply.post.community.is_moderator(current_user) -%}
-                    <span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span>
+            </a></span><span class="visually-hidden"> {{ _('depth: %(comment_depth)d', comment_depth=post_reply.depth + 1) }}</span>
+            {% if post_reply.has_been_reported() -%}
+                    <a href="{{ url_for('community.community_moderate', actor=post_reply.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check comment for issues.') }}"></span></a>
+            {% endif -%}
+            {% if post_reply.answer -%}
+                <span class="green fe fe-answer" title="{{ _('OP prefers this answer') }}"></span>
             {% endif -%}
             {% if post_reply.deleted -%}
                     <span class="red fe fe-delete" title="{{ _('Comment deleted') }}"></span>
@@ -69,6 +72,28 @@
             {% endif -%}
         </div>
     </div>
+    <div id="comment_reactions_{{ post_reply.id }}" class="outermost_reaction_container">
+        {%- if post_reply.emoji_reactions -%}
+        <div class="message_reactions" id="reactions_{{ post_reply.id }}">
+            {% for reaction in post_reply.emoji_reactions -%}
+                <div class="message_reaction_container me-1">
+                    <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
+                         hx-post="/comment/{{ post_reply.id }}/emoji_set"
+                         hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                         hx-target="#reactions_{{ post_reply.id }}" hx-swap="outerHTML">
+                        <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                            {%- else -%}
+                                                {{ reaction['token'] }}
+                                            {%- endif %}</div>
+                        <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {%- endif -%}
+    </div>
+    <div id="post_reply_ai_check_{{ post_reply.id }}"></div>
     {% if not banned_from_community %}
     <div class="comment_actions hidable">
         <div class="post_replies_link">
@@ -93,6 +118,9 @@
         <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
             {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
         </div>
+        <div class="emoji_button">
+            {{ render_emoji_button(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
+        </div>
         <div class="hide_button">
             {% if collapsed -%}
                 <a href='#' class="" title="{{ _('Un-collapse') }}"><span class="fe fe-expand"></span></a>
@@ -105,6 +133,19 @@
                 {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
+        {% if post_reply.community.question_answer -%}
+            <div class="choose_answer_icon">
+                {% if post_reply.answer -%}
+                <a rel="nofollow noindex" title="{{ _('Un-choose answer') }}" href="#"
+                   hx-post="{{ url_for('post.post_reply_unchoose_answer', post_reply_id=post_reply.id) }}"
+                   hx-trigger="click throttle:1s" hx-target="closest .choose_answer_icon" hx-swap="innerHTML"><span class="fe fe-unanswer"></span></a>
+                {% else -%}
+                <a rel="nofollow noindex" title="{{ _('Choose answer') }}" href="#"
+                   hx-post="{{ url_for('post.post_reply_choose_answer', post_reply_id=post_reply.id) }}"
+                   hx-trigger="click throttle:1s" hx-target="closest .choose_answer_icon" hx-swap="innerHTML"><span class="fe fe-answer"></span></a>
+                {% endif -%}
+            </div>
+        {% endif -%}
         {% if can_translate and current_user.is_authenticated and current_user.language_id and post_reply.language_id and (current_user.language_id != post_reply.language_id or post_reply.community.always_translate) -%}
             <div class="post_translate_icon">
                 <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
@@ -160,3 +201,4 @@
         </script>
     {% endif -%}
 </div>
+<hr class="visually-hidden">

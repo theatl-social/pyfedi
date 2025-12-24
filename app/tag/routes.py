@@ -28,7 +28,7 @@ from app.utils import (
     render_template,
     permission_required,
     user_filters_posts,
-    blocked_instances,
+    blocked_or_banned_instances,
     blocked_users,
     blocked_domains,
     mimetype_from_url,
@@ -41,6 +41,8 @@ from app.utils import (
 @bp.route("/tag/<tag>", methods=["GET"])
 def show_tag(tag):
     page = request.args.get("page", 1, type=int)
+    category = request.args.get("category", "")
+    category_id = request.args.get("category_id", "")
 
     tag = Tag.query.filter(Tag.name == tag.lower()).first()
     if tag:
@@ -64,7 +66,7 @@ def show_tag(tag):
                 posts = posts.filter(
                     or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None)
                 )
-            instance_ids = blocked_instances(current_user.id)
+            instance_ids = blocked_or_banned_instances(current_user.id)
             if instance_ids:
                 posts = posts.filter(
                     or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None)
@@ -80,17 +82,66 @@ def show_tag(tag):
         else:
             content_filters = {}
 
+        community_ids = []
+        if category and category == "community" and category_id:
+            posts = posts.filter(Post.community_id == category_id)
+        elif category and category == "topic" and category_id:
+            topic = Topic.query.get_or_404(category_id)
+            # get posts from communities in that topic
+            if topic.show_posts_in_children:  # include posts from child topics
+                topic_ids = get_all_child_topic_ids(topic)
+            else:
+                topic_ids = [topic.id]
+
+            community_ids = db.session.execute(
+                text(
+                    "SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids"
+                ),
+                {"topic_ids": tuple(topic_ids)},
+            ).scalars()
+
+            posts = posts.filter(Post.community_id.in_(community_ids))
+
+        elif category and category == "feed" and category_id:
+            feed = Feed.query.get_or_404(category_id)
+            # get the feed_ids
+            if feed.show_posts_in_children:  # include posts from child feeds
+                feed_ids = get_all_child_feed_ids(feed)
+            else:
+                feed_ids = [feed.id]
+
+            # for each feed get the community ids (FeedItem) in the feed
+            # used for the posts searching
+            for fid in feed_ids:
+                feed_items = FeedItem.query.join(Feed, FeedItem.feed_id == fid).all()
+                for item in feed_items:
+                    community_ids.append(item.community_id)
+
+            posts = posts.filter(Post.community_id.in_(community_ids))
+
         posts = posts.order_by(desc(Post.posted_at))
 
         # pagination
         posts = posts.paginate(page=page, per_page=100, error_out=False)
         next_url = (
-            url_for("tag.show_tag", tag=tag, page=posts.next_num)
+            url_for(
+                "tag.show_tag",
+                tag=tag,
+                page=posts.next_num,
+                category=category,
+                category_id=category_id,
+            )
             if posts.has_next
             else None
         )
         prev_url = (
-            url_for("tag.show_tag", tag=tag, page=posts.prev_num)
+            url_for(
+                "tag.show_tag",
+                tag=tag,
+                page=posts.prev_num,
+                category=category,
+                category_id=category_id,
+            )
             if posts.has_prev and page != 1
             else None
         )
@@ -106,6 +157,8 @@ def show_tag(tag):
             next_url=next_url,
             prev_url=prev_url,
             content_filters=content_filters,
+            category=category,
+            category_id=category_id,
             moderated_community_ids=moderating_communities_ids(current_user.get_id()),
             rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
             rss_feed_name=f"#{tag.display_as} on {g.site.name}",
@@ -281,6 +334,8 @@ def tag_cloud(type, category_id: int):
     topic = None
     feed = None
     community_ids = []
+    view = request.args.get("view", "cloud")
+    page = int(request.args.get("page", 1))
 
     if type == "community":
         community = Community.query.get_or_404(category_id)
@@ -321,6 +376,30 @@ def tag_cloud(type, category_id: int):
         .join(Post, Post.id == post_tag.c.post_id)
         .filter(Post.community_id.in_(community_ids), Post.deleted == False)
         .group_by(Tag.id)
+    )
+
+    tag_list_results = tags_query.paginate(page=page, per_page=50, error_out=False)
+    next_url = (
+        url_for(
+            "tag.tag_cloud",
+            type=type,
+            category_id=category_id,
+            view="list",
+            page=tag_list_results.next_num,
+        )
+        if tag_list_results.has_next
+        else None
+    )
+    prev_url = (
+        url_for(
+            "tag.tag_cloud",
+            type=type,
+            category_id=category_id,
+            view="list",
+            page=tag_list_results.prev_num,
+        )
+        if tag_list_results.has_prev and page != 1
+        else None
     )
 
     # Limit to top 50 tags by usage for performance
@@ -368,12 +447,18 @@ def tag_cloud(type, category_id: int):
 
     return render_template(
         "tag/tag_cloud.html",
-        title="Community tags",
+        title=f"{type.capitalize()} tags",
         community=community,
         topic=topic,
         feed=feed,
+        tag_list=tag_list_results,
+        next_url=next_url,
+        prev_url=prev_url,
         tags_data=tags_data,
+        view=view,
         tag_relationships=relationships,
+        category=type,
+        category_id=category_id,
     )
 
 
@@ -397,7 +482,7 @@ def tag_posts(tag_id):
             posts = posts.filter(
                 or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None)
             )
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(
                 or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None)

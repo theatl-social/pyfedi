@@ -46,7 +46,7 @@ from app.utils import (
     blocked_communities,
     recently_upvoted_posts,
     recently_downvoted_posts,
-    blocked_instances,
+    blocked_or_banned_instances,
     blocked_users,
     joined_or_modding_communities,
     login_required_if_private_instance,
@@ -55,12 +55,14 @@ from app.utils import (
     user_notes,
     moderating_communities_ids,
     approval_required,
+    block_honey_pot,
 )
 
 
 @bp.route("/topic/<path:topic_path>", methods=["GET"])
 @login_required_if_private_instance
 def show_topic(topic_path):
+    block_honey_pot()
     page = request.args.get("page", 0, type=int)
     sort = request.args.get(
         "sort", "" if current_user.is_anonymous else current_user.default_sort
@@ -128,7 +130,9 @@ def show_topic(topic_path):
                 Community.total_subscriptions_count > 0,
             )
             .filter(
-                Community.instance_id.not_in(blocked_instances(current_user.get_id()))
+                Community.instance_id.not_in(
+                    blocked_or_banned_instances(current_user.get_id())
+                )
             )
             .filter(Community.id.not_in(blocked_communities(current_user.get_id())))
             .order_by(desc(Community.total_subscriptions_count))
@@ -190,7 +194,7 @@ def show_topic(topic_path):
                 comments = comments.filter(PostReply.deleted == False)
 
                 # filter instances
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     comments = comments.filter(
                         or_(

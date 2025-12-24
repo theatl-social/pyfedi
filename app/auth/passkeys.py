@@ -25,7 +25,8 @@ from app.models import User, utcnow
 def passkey_options():
     request_json = request.get_json(force=True)
     user = User.query.filter(
-        User.user_name == request_json["username"],
+        (User.user_name == request_json["username"])
+        | (User.email == request_json["username"]),
         User.ap_id == None,
         User.banned == False,
     ).first()
@@ -42,7 +43,7 @@ def passkey_options():
         response.content_type = "application/json"
         return response
     else:
-        abort(404)
+        return jsonify({"error": f"Could not find user {request_json['username']}"})
 
 
 # ----------------------------------------------------------------------
@@ -67,7 +68,8 @@ def passkey_verification():
 
     auth_credential = parse_authentication_credential_json(request_json["response"])
     user = User.query.filter(
-        User.user_name == request_json["username"],
+        (User.user_name == request_json["username"])
+        | (User.email == request_json["username"]),
         User.ap_id == None,
         User.banned == False,
     ).first()

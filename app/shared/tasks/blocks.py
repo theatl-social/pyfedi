@@ -99,27 +99,18 @@ def unban_from_community(send_async, user_id, mod_id, community_id, expiry, reas
 def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=False):
     if expiry is None:
         expiry = datetime.datetime(year=2100, month=1, day=1)
-    user = session.query(User).filter_by(id=user_id).one()
-    mod = session.query(User).filter_by(id=mod_id).one()
-    if community_id:
-        community = session.query(Community).filter_by(id=community_id).one()
+    user = session.query(User).get(user_id)
+    mod = session.query(User).get(mod_id)
+    if community_id:  # community ban
+        community = session.query(Community).get(community_id)
         communities = [community] if community.is_local() else []
         if community.local_only:
             return
         cc = [community.public_url()]
         target = community.public_url()
-    else:
+    else:  # instance ban
         community = None
-        if user.is_local():
-            communities = []
-        else:
-            communities = (
-                session.query(Community)
-                .filter_by(ap_id=None)
-                .join(CommunityMember, Community.id == CommunityMember.community_id)
-                .filter_by(banned=False)
-                .filter_by(user_id=user.id)
-            )
+        communities = []
         cc = []
         target = f"https://{current_app.config['SERVER_NAME']}/"
 
@@ -166,9 +157,11 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
         del block["@context"]
         object = block
 
-    # site ban - local user
-    if not community and user.is_local():
-        instances = session.query(Instance).all()
+    # site ban
+    if not community:
+        instances = (
+            session.query(Instance).filter(Instance.software != "mastodon").all()
+        )
         for instance in instances:
             if instance.inbox and instance.online() and instance.id != 1:
                 send_post_request(

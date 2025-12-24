@@ -1,5 +1,6 @@
 {# Macros for post teaser components. We used to use include for this but import is much faster when deeply nested, as these are. #}
 {% from "_macros.html" import render_username, render_communityname %}
+{% from "post/reply/_macros.html" import render_post_emoji_button %}
 
 {% macro render_title(post, sort=None, embed=False, show_post_community=True, low_bandwidth=False, current_user=None, request=None, locale=None, reported_posts=None, user_flair=None, admin_ids=None, user_notes=None) -%}
 {% set POST_TYPE_LINK = 1 -%}
@@ -38,16 +39,17 @@
     {% for flair in post.flair -%}
         <span class="post_flair" style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}" title="{{ _('Show only %(flair_name)s', flair_name=flair.flair) }}"><a href="/c/{{ post.community.link() }}?flair={{ flair.flair }}" style="color: {{ flair.text_color}}">{{ flair.flair }}</a></span>
     {% endfor -%}
-    {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">nsfw</span>{% endif -%}
-    {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">nsfl</span>{% endif -%}
+    {% if post.nsfw -%}<span class="warning_badge nsfw" title="{{ _('Not safe for work') }}">{{ _('nsfw') }}</span>{% endif -%}
+    {% if post.nsfl -%}<span class="warning_badge nsfl" title="{{ _('Potentially emotionally scarring content') }}">{{ _('nsfl') }}</span>{% endif -%}
+    {% if post.ai_generated and ((current_user.is_authenticated and current_user.hide_gen_ai == 2) or current_user.is_anonymous) -%}<span class="warning_badge ai_generated" title="{{ _('This post contains AI generated content') }}">{{ _('AI') }}</span>{% endif -%}
     {% if post.id in reported_posts -%}
-        <span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span>
+    <a href="{{ url_for('community.community_moderate', actor=post.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span></a>
     {% endif -%}
     {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
     {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
 </h3>
 <div class="author small">{% if show_post_community -%}<a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), _external=embed) }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
-    {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" />{% endif -%}
+    {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" loading="lazy" />{% endif -%}
     c/{{ post.community.name }}</a><span class="community_instance text-muted {{ 'local' if post.community.is_local() }}">@{{ post.community.ap_domain }}</span> {% endif -%}
     by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
@@ -62,7 +64,7 @@
 {% set POST_TYPE_POLL = 5 -%}
 <div class="post_utilities_bar">
     <div class="post_replies_link">
-        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span></a>
+        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span><span class="visually-hidden"> comments</span></a>
     </div>
     <div class="voting_buttons_new" data-base-url="/post/{{ post.id }}" aria-live="assertive">
         {% if current_user.is_authenticated and current_user.verified -%}
@@ -126,6 +128,11 @@
             <a rel="nofollow" aria-label="{{ _('Cross-post') }}" href="{{ url_for('post.post_cross_post', post_id=post.id) }}"><span class="fe fe-cross-post"></span></a>
         </div>
     {% endif -%}
+    {% if current_user.is_authenticated and (post.type == POST_TYPE_IMAGE or post.type == POST_TYPE_VIDEO) -%}
+    <div class="emoji_button">
+        {{ render_post_emoji_button(post, post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
+    </div>
+    {% endif -%}
     {% if not embed -%}
         <div class="post_options_link pull-right">
             {% if current_user.is_authenticated and joined_communities and post.community_id not in joined_communities %}
@@ -170,7 +177,7 @@
             </div>
         </div>
     {% endif -%}
-</div>
+</div><hr class="visually-hidden">
 {%- endmacro %}
 
 {% macro render_article(post, low_bandwidth=False, blur_content=False, sort=None, current_user=None, request=None, locale=None, show_post_community=show_post_community, joined_communities=None, can_upvote_here=None, can_downvote_here=None, disable_voting=False, recently_upvoted=None, recently_downvoted=None, communities_banned_from_list=None, upvoted_class='', downvoted_class='', reported_posts=None, user_flair=None, admin_ids=None, user_notes=None, moderated_community_ids=None) -%}
@@ -292,6 +299,28 @@
             {{ first_paragraph(post.body_html) | safe }}
         </div>
     {% endif -%}
+    <div id="post_reactions_{{ post.id }}" class="outermost_reaction_container">
+        {%- if post.emoji_reactions -%}
+        <div class="message_reactions" id="p_reactions_{{ post.id }}">
+            {% for reaction in post.emoji_reactions -%}
+                <div class="message_reaction_container me-1">
+                    <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
+                         hx-post="/post/{{ post.id }}/emoji_set"
+                         hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                         hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
+                    >
+                        <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                            {% else -%}
+                                                {{ reaction['token'] }}
+                                            {%- endif %}</div>
+                        <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        {%- endif -%}
+    </div>
     {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}
 </div>
 {%- endmacro %}
@@ -317,6 +346,15 @@
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                {% elif post.url.startswith('https://loops.video/') -%}
+                    <p>
+                        <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
+                        {% if post.image.source_url.endswith('.mp4') -%}
+                            <source src="{{ post.image.source_url }}" type="video/mp4" />
+                        {% elif post.image.source_url.endswith('.webm') -%}
+                            <source src="{{ post.image.source_url }}" type="video/webm" />
+                        {% endif -%}
+                        </video></p>
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
                     <div class="video-wrapper" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
@@ -328,6 +366,28 @@
                     <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.peertube_embed() }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% endif -%}
             </div>
+        </div>
+        <div id="post_reactions_{{ post.id }}" class="outermost_reaction_container">
+            {%- if post.emoji_reactions -%}
+            <div class="message_reactions" id="p_reactions_{{ post.id }}">
+                {% for reaction in post.emoji_reactions -%}
+                    <div class="message_reaction_container me-1">
+                        <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
+                             hx-post="/post/{{ post.id }}/emoji_set"
+                             hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                             hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
+                        >
+                            <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
+                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                {% else -%}
+                                                    {{ reaction['token'] }}
+                                                {%- endif %}</div>
+                            <div class="message_reaction_count">{{ reaction['count'] }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {%- endif -%}
         </div>
     {% endif -%}
     {{ render_utilities_bar(post, sort=sort, current_user=current_user, joined_communities=joined_communities, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, disable_voting=disable_voting, recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted, communities_banned_from_list=communities_banned_from_list, upvoted_class=upvoted_class, downvoted_class=downvoted_class, reported_posts=reported_posts, moderated_community_ids=moderated_community_ids) }}

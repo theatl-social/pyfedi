@@ -16,7 +16,7 @@ from app import db, cache, celery
 from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import find_actor_or_create, extract_domain_and_actor
 from app.auth.util import random_token
-from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill
+from app.community.util import save_icon_file, save_banner_file, retrieve_mods_and_backfill, search_for_community
 from app.constants import *
 from app.email import send_verification_email
 from app.ldap_utils import sync_user_to_ldap
@@ -25,12 +25,13 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
     InstanceBlock, NotificationSubscription, PostBookmark, PostReplyBookmark, read_posts, Topic, UserNote, \
     UserExtraField, Feed, FeedMember, IpBan, user_file
 from app.shared.site import block_remote_instance
+from app.shared.tasks import task_selector
 from app.shared.upload import process_file_delete, process_upload
 from app.shared.user import subscribe_user
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm, DeleteFileForm, \
-    UploadFileForm, BlockUserForm, BlockCommunityForm, BlockDomainForm, BlockInstanceForm
+    UploadFileForm, BlockUserForm, BlockCommunityForm, BlockDomainForm, BlockInstanceForm, UnsubAllForm
 from app.user.utils import purge_user_then_delete, unsubscribe_from_community, search_for_user
 from app.utils import render_template, markdown_to_html, user_access, markdown_to_text, shorten_string, \
     gibberish, file_get_contents, community_membership, user_filters_home, \
@@ -40,7 +41,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     read_language_choices, request_etag_matches, return_304, mimetype_from_url, notif_id_to_string, \
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
-    moderating_communities_ids, is_valid_xml_utf8, blocked_instances, blocked_domains, get_task_session, \
+    moderating_communities_ids, is_valid_xml_utf8, blocked_or_banned_instances, blocked_domains, get_task_session, \
     patch_db_session, user_in_restricted_country, referrer
 
 
@@ -253,6 +254,7 @@ def edit_profile(actor):
     if current_user.id != user.id:
         abort(401)
     delete_form = DeleteAccountForm()
+    unsub_form = UnsubAllForm()
     form = ProfileForm()
     old_email = user.email
     if form.validate_on_submit() and not current_user.banned:
@@ -349,8 +351,7 @@ def edit_profile(actor):
         form.password.data = ''
 
     return render_template('user/edit_profile.html', title=_('Edit profile'), form=form, user=current_user,
-                           markdown_editor=current_user.markdown_editor, delete_form=delete_form,
-                           )
+                           markdown_editor=current_user.markdown_editor, delete_form=delete_form, unsub_form=unsub_form)
 
 
 @bp.route('/user/remove_avatar', methods=['GET', 'POST'])
@@ -551,6 +552,7 @@ def user_settings():
         ('hi', _l('Hindi')),
         ('ja', _l('Japanese')),
         ('es', _l('Spanish')),
+        ('pl', _l('Polish')),
     ]
     form.read_languages.choices = read_language_choices()
     if form.validate_on_submit():
@@ -721,11 +723,12 @@ def ban_profile(actor):
     form = BanUserForm()
     if user_access('ban users', current_user.id) or user_access('manage users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, deleted=False).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False)
+        else:
+            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
-            if user is None:
-                abort(404)
+            abort(404)
 
         if user.id == current_user.id:
             flash(_('You cannot ban yourself.'), 'error')
@@ -778,6 +781,8 @@ def ban_profile(actor):
                         db.session.add(IpBan(ip_address=user.ip_address, notes=form.reason.data))
                         db.session.commit()
 
+                task_selector('ban_from_site', user_id=user.id, mod_id=current_user.id, expiry=None, reason=form.reason.data)
+
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
@@ -800,11 +805,13 @@ def ban_profile(actor):
 def unban_profile(actor):
     if user_access('ban users', current_user.id):
         actor = actor.strip()
-        user = User.query.filter_by(user_name=actor).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False, allow_banned=True)
+        else:
+            user = find_actor_or_create(f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/u/{actor}",
+                                        create_if_not_found=False, allow_banned=True)
         if user is None:
-            user = User.query.filter_by(ap_id=actor).first()
-            if user is None:
-                abort(404)
+            abort(404)
 
         if user.id == current_user.id:
             flash(_('You cannot unban yourself.'), 'error')
@@ -812,6 +819,9 @@ def unban_profile(actor):
             user.banned = False
             user.deleted = False
             db.session.commit()
+
+            task_selector('unban_from_site', user_id=user.id, mod_id=current_user.id, expiry=None,
+                          reason='')
 
             add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
 
@@ -827,15 +837,12 @@ def unban_profile(actor):
 @login_required
 def block_profile(actor):
     actor = actor.strip()
-    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
-        # Local user
-        user = User.query.filter_by(user_name=actor, deleted=False).filter(
-            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        # Remote user
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
 
     if user.id == current_user.id:
         flash(_('You cannot block yourself.'), 'error')
@@ -875,7 +882,10 @@ def block_profile(actor):
 @login_required
 def user_block_instance(actor):
     actor = actor.strip()
-    user = User.query.filter_by(ap_id=actor, deleted=False).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
     block_remote_instance(user.instance_id, SRC_WEB)
@@ -902,15 +912,12 @@ def user_block_instance(actor):
 @login_required
 def unblock_profile(actor):
     actor = actor.strip()
-    if "@" not in actor or actor.endswith("@" + current_app.config['SERVER_NAME']):
-        # Local user
-        user = User.query.filter_by(user_name=actor, deleted=False).filter(
-            or_(User.ap_id == None, User.ap_domain == current_app.config['SERVER_NAME'])).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        # Remote user
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
 
     if user.id == current_user.id:
         flash(_('You cannot unblock yourself.'), 'error')
@@ -942,9 +949,11 @@ def unblock_profile(actor):
 @login_required
 def report_profile(actor):
     if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor, deleted=False, banned=False).first()
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user: User = User.query.filter_by(user_name=actor, deleted=False, ap_id=None).first()
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+    if user is None:
+        abort(404)
     form = ReportUserForm()
 
     if user and user.reports == -1:  # When a mod decides to ignore future reports, user.reports is set to -1
@@ -1004,11 +1013,13 @@ def report_profile(actor):
 def delete_profile(actor):
     if user_access('manage users', current_user.id):
         actor = actor.strip()
-        user: User = User.query.filter_by(user_name=actor, deleted=False).first()
+        if '@' in actor:
+            user = find_actor_or_create(actor, create_if_not_found=False)
+        else:
+            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                                        create_if_not_found=False)
         if user is None:
-            user = User.query.filter_by(ap_id=actor, deleted=False).first()
-            if user is None:
-                abort(404)
+            abort(404)
         if user.id == current_user.id:
             flash(_('You cannot delete yourself.'), 'error')
         else:
@@ -1128,53 +1139,6 @@ def send_deletion_requests(user_id):
         user.deleted = True
 
         db.session.commit()
-
-
-@bp.route('/u/<actor>/ban_purge', methods=['GET'])
-@login_required
-def ban_purge_profile(actor):
-    if user_access('manage users', current_user.id):
-        actor = actor.strip()
-        user = User.query.filter_by(user_name=actor, ap_id=None).first()
-        if user is None:
-            user = User.query.filter_by(ap_id=actor).first()
-            if user is None:
-                abort(404)
-
-        if user.id == current_user.id:
-            flash(_('You cannot purge yourself.'), 'error')
-        else:
-            user.banned = True
-            db.session.commit()
-
-            # todo: empty relevant caches
-
-            if user.is_instance_admin():
-                flash(_('Purged user was a remote instance admin.'), 'warning')
-            if user.is_admin() or user.is_staff():
-                flash(_('Purged user with role permissions.'), 'warning')
-
-            # federate deletion
-            if user.is_local():
-                user.deleted_by = current_user.id
-                purge_user_then_delete(user.id)
-                flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
-                      actor=actor))
-            else:
-                user.deleted = True
-                user.deleted_by = current_user.id
-                user.delete_dependencies()
-                user.purge_content()
-                db.session.commit()
-                flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
-
-            add_to_modlog('delete_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
-
-    else:
-        abort(401)
-
-    goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
-    return redirect(goto)
 
 
 @bp.route('/notifications', methods=['GET', 'POST'])
@@ -1412,7 +1376,7 @@ def import_settings_task(user_id, filename):
 
                 session.commit()
                 cache.delete_memoized(blocked_communities, user.id)
-                cache.delete_memoized(blocked_instances, user.id)
+                cache.delete_memoized(blocked_or_banned_instances, user.id)
                 cache.delete_memoized(blocked_users, user.id)
                 cache.delete_memoized(blocked_domains, user.id)
 
@@ -1435,6 +1399,7 @@ def user_settings_filters():
         current_user.ignore_bots = form.ignore_bots.data
         current_user.hide_nsfw = form.hide_nsfw.data
         current_user.hide_nsfl = form.hide_nsfl.data
+        current_user.hide_gen_ai = form.hide_gen_ai.data
         current_user.reply_collapse_threshold = form.reply_collapse_threshold.data
         current_user.reply_hide_threshold = form.reply_hide_threshold.data
         current_user.hide_low_quality = form.hide_low_quality.data
@@ -1454,6 +1419,7 @@ def user_settings_filters():
         form.ignore_bots.data = current_user.ignore_bots
         form.hide_nsfw.data = current_user.hide_nsfw
         form.hide_nsfl.data = current_user.hide_nsfl
+        form.hide_gen_ai.data = current_user.hide_gen_ai
         form.reply_collapse_threshold.data = current_user.reply_collapse_threshold
         form.reply_hide_threshold.data = current_user.reply_hide_threshold
         form.hide_low_quality.data = current_user.hide_low_quality
@@ -1566,7 +1532,7 @@ def user_settings_block_user():
                 user_to_block = None
         else:
             # Local username lookup
-            user_to_block = User.query.filter_by(user_name=username, deleted=False).first()
+            user_to_block = User.query.filter_by(user_name=username, deleted=False, ap_id=None).first()
 
         if not user_to_block:
             flash(_('User not found: %(username)s', username=username), 'error')
@@ -1603,11 +1569,14 @@ def user_settings_block_community():
 
         # Check if it's an ActivityPub ID (contains ! or @ or is a URL)
         if '!' in community_name or '@' in community_name or community_name.startswith('http'):
-            # Remove leading ! if present
-            if community_name.startswith('!'):
-                community_name = community_name[1:]
-            # Try to find or create the remote community
-            community_to_block = find_actor_or_create(community_name, create_if_not_found=False, community_only=True)
+            if community_name.startswith('!') or ('@' in community_name and not community_name.startswith('http')):
+                if not community_name.startswith('!'):
+                    community_name = '!' + community_name
+                # Will work for !comm@instance.tld as well as comm@instance.tld
+                community_to_block = search_for_community(community_name, allow_fetch=False)
+            else:
+                # Try to find or create the remote community
+                community_to_block = find_actor_or_create(community_name, create_if_not_found=False, community_only=True)
             if community_to_block and not isinstance(community_to_block, Community):
                 community_to_block = None
         else:
@@ -1827,8 +1796,10 @@ def user_alerts(type='posts', filter='all'):
 
     elif type == 'users':
         # ignore filter
-        entities = User.query.join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
-            filter_by(type=NOTIF_USER, user_id=current_user.id).order_by(desc(NotificationSubscription.created_at))
+        entities = User.query.filter_by(deleted=False). \
+            join(NotificationSubscription, NotificationSubscription.entity_id == User.id). \
+            filter_by(type=NOTIF_USER, user_id=current_user.id). \
+            order_by(desc(NotificationSubscription.created_at))
         title = _('User Alerts')
 
     else:  # default to 'posts' type
@@ -2022,7 +1993,7 @@ def lookup(person, domain):
                 if 'is blocked.' in str(e):
                     flash(_('Sorry, that instance is blocked, check https://gui.fediseer.com/ for reasons.'), 'warning')
             if not new_person or new_person.banned:
-                flash(_('That person could not be retreived or is banned from %(site)s.', site=g.site.name), 'warning')
+                flash(_('That person could not be retrieved or is banned from %(site)s.', site=g.site.name), 'warning')
                 referrer = request.headers.get('Referer', None)
                 if referrer is not None:
                     return redirect(referrer)
@@ -2070,13 +2041,14 @@ def user_feeds(actor):
     # this will show a specific user's public feeds
     user_has_public_feeds = False
 
-    # find the actor, local or remote
     actor = actor.strip()
-    user = User.query.filter_by(user_name=actor, deleted=False).first()
+    if '@' in actor:
+        user = find_actor_or_create(actor, create_if_not_found=False)
+    else:
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+
     if user is None:
-        user = User.query.filter_by(ap_id=actor, deleted=False).first()
-        if user is None:
-            abort(404)
+        abort(404)
 
     # find all user feeds marked as public
     user_public_feeds = Feed.query.filter_by(public=True).filter_by(user_id=user.id).all()
@@ -2095,12 +2067,9 @@ def user_feeds(actor):
 def show_profile_rss(actor):
     actor = actor.strip()
     if '@' in actor:
-        user: User = User.query.filter_by(ap_id=actor.lower()).first()
+        user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user: User = User.query.filter(User.user_name == actor).filter_by(ap_id=None).first()
-        if user is None:
-            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}',
-                                        ap_id=None).first()
+        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
 
     if user is not None:
         # If nothing has changed since their last visit, return HTTP 304

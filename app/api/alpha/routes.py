@@ -32,6 +32,8 @@ from app.api.alpha.utils.community import (
     post_community_flair_create,
     put_community_flair_edit,
     post_community_flair_delete,
+    post_community_rate,
+    post_community_leave_all,
 )
 from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list
@@ -54,6 +56,8 @@ from app.api.alpha.utils.post import (
     get_post_like_list,
     put_post_set_flair,
     get_post_list2,
+    post_poll_vote,
+    post_post_hide,
 )
 from app.api.alpha.utils.private_message import (
     get_private_message_list,
@@ -79,6 +83,7 @@ from app.api.alpha.utils.reply import (
     get_reply,
     post_reply_lock,
     get_reply_like_list,
+    post_reply_mark_as_answer,
 )
 from app.api.alpha.utils.site import (
     get_site,
@@ -87,6 +92,7 @@ from app.api.alpha.utils.site import (
     get_site_instance_chooser,
     get_site_instance_chooser_search,
     get_site_version,
+    get_site_metadata,
 )
 from app.api.alpha.utils.topic import get_topic_list
 from app.api.alpha.utils.upload import (
@@ -111,6 +117,7 @@ from app.api.alpha.utils.user import (
     post_user_set_flair,
     get_user_details,
     get_user_media,
+    post_user_set_note,
 )
 from app.constants import *
 from app.utils import orjson_response, get_setting
@@ -293,6 +300,33 @@ def post_alpha_community_follow(data):
     auth = request.headers.get("Authorization")
     resp = post_community_follow(auth, data)
     return CommunityResponse().load(resp)
+
+
+@comm_bp.route("/community/leave_all", methods=["POST"])
+@comm_bp.doc(
+    summary="Leave all communities and feeds for which the user is not a moderator or owner."
+)
+@comm_bp.response(200, UserMeResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_leave_all():
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_community_leave_all(auth)
+    return UserMeResponse().load(resp)
+
+
+@comm_bp.route("/community/rate", methods=["POST"])
+@comm_bp.doc(summary="Rate a community.")
+@comm_bp.arguments(RateCommunityRequest)
+@comm_bp.response(200, GetCommunityResponse)
+@comm_bp.alt_response(400, schema=DefaultError)
+def post_alpha_community_rate(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_community_rate(auth, data)
+    return GetCommunityResponse().load(resp)
 
 
 @comm_bp.route("/community/block", methods=["POST"])
@@ -537,6 +571,19 @@ def get_alpha_post_replies(data):
     return orjson_response(validated)
 
 
+@post_bp.route("/post/site_metadata", methods=["GET"])  #
+@post_bp.doc(summary="Get metadata about a url.")
+@post_bp.arguments(GetSiteMetadataRequest, location="query")
+@post_bp.response(200, GetSiteMetadataResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_metadata(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    with limiter.limit("20/minute"):
+        return GetSiteMetadataResponse().load(get_site_metadata(auth, data))
+
+
 @post_bp.route("/post/like", methods=["POST"])
 @post_bp.doc(summary="Like or unlike a post.")
 @post_bp.arguments(LikePostRequest)
@@ -642,6 +689,19 @@ def post_alpha_post_lock(data):
     return GetPostResponse().load(resp)
 
 
+@post_bp.route("/post/hide", methods=["POST"])
+@post_bp.doc(summary="Hide or unhide a post.")
+@post_bp.arguments(HidePostRequest)
+@post_bp.response(200, GetPostResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_hide(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_post_hide(auth, data)
+    return GetPostResponse().load(resp)
+
+
 @post_bp.route("/post/feature", methods=["POST"])
 @post_bp.doc(summary="Feature or unfeature a post.")
 @post_bp.arguments(FeaturePostRequest)
@@ -706,6 +766,19 @@ def post_alpha_post_set_flair(data):
     auth = request.headers.get("Authorization")
     resp = put_post_set_flair(auth, data)
     return PostSetFlairResponse().load(resp)
+
+
+@post_bp.route("/post/poll_vote", methods=["POST"])
+@post_bp.doc(summary="Vote in a poll")
+@post_bp.arguments(PollVoteRequest)
+@post_bp.response(200, PollVoteResponse)
+@post_bp.alt_response(400, schema=DefaultError)
+def post_alpha_post_poll_vote(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_poll_vote(auth, data)
+    return PollVoteResponse().load(resp)
 
 
 # Reply
@@ -839,6 +912,19 @@ def post_alpha_comment_mark_as_read(data):
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get("Authorization")
     resp = post_reply_mark_as_read(auth, data)
+    return GetCommentReplyResponse().load(resp)
+
+
+@reply_bp.route("/comment/mark_as_answer", methods=["POST"])
+@reply_bp.doc(summary="Mark a comment as the preferred answer to a question.")
+@reply_bp.arguments(MarkCommentAsAnswerRequest)
+@reply_bp.response(200, GetCommentReplyResponse)
+@reply_bp.alt_response(400, schema=DefaultError)
+def post_alpha_comment_mark_as_answer(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_reply_mark_as_answer(auth, data)
     return GetCommentReplyResponse().load(resp)
 
 
@@ -1150,7 +1236,7 @@ def put_alpha_user_subscribe(data):
     return UserSubscribeResponse().load(resp)
 
 
-# not all settings implemented yet, nor all choices for settings (eg. blur nsfw)
+# not all settings implemented yet, nor all choices for settings
 @user_bp.route("/user/save_user_settings", methods=["PUT"])
 @user_bp.doc(summary="Save your user settings")
 @user_bp.arguments(UserSaveSettingsRequest)
@@ -1241,6 +1327,19 @@ def post_alpha_user_set_flair(data):
     auth = request.headers.get("Authorization")
     resp = post_user_set_flair(auth, data)
     return UserSetFlairResponse().load(resp)
+
+
+@user_bp.route("/user/note", methods=["POST"])
+@user_bp.doc(summary="Set a note for a user")
+@user_bp.arguments(UserSetNoteRequest)
+@user_bp.response(200, UserSetNoteResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_note(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_user_set_note(auth, data)
+    return UserSetNoteResponse().load(resp)
 
 
 # Upload
@@ -1337,7 +1436,6 @@ def alpha_community():
 # Post - not yet implemented
 @bp.route("/api/alpha/post/report/resolve", methods=["PUT"])  # Stage 2
 @bp.route("/api/alpha/post/report/list", methods=["GET"])  # Stage 2
-@bp.route("/api/alpha/post/site_metadata", methods=["GET"])  # Not available in app
 def alpha_post():
     return jsonify({"error": "not_yet_implemented"}), 400
 

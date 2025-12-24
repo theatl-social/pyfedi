@@ -40,7 +40,7 @@
                     data-recipient-language="{{ recipient_language_id }}"
                     data-warning-div-id="comment_language_warning_{{ comment_id }}">
                 {% for language in languages %}
-                    <option value="{{ language[0] }}" {{ 'selected' if language[0] == current_user.language_id }}>{{ language[1] }}</option>
+                    <option value="{{ language[0] }}" {{ 'selected' if language[0] == recipient_language_id or language[0] == current_user.language_id }}>{{ language[1] }}</option>
                 {% endfor %}
             </select>
         </div>

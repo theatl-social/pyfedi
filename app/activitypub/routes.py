@@ -2,6 +2,7 @@ import werkzeug.exceptions
 from flask import request, current_app, abort, jsonify, json, g, url_for, redirect, make_response, flash
 from flask_babel import _
 from flask_login import current_user
+from furl import furl
 from psycopg2 import IntegrityError
 from sqlalchemy import desc, or_, text
 
@@ -17,7 +18,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap, is_vote
+    post_replies_for_ap, is_vote, find_instance_id
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -25,7 +26,7 @@ from app.feed.routes import show_feed
 from app.models import User, Community, CommunityJoinRequest, CommunityMember, CommunityBan, ActivityPubLog, Post, \
     PostReply, Instance, AllowedInstances, BannedInstances, utcnow, Site, Notification, \
     ChatMessage, Conversation, UserFollower, UserBlock, Poll, PollChoice, Feed, FeedItem, FeedMember, FeedJoinRequest, \
-    IpBan, ActivityBatch
+    IpBan, ActivityBatch, InstanceBan
 from app.post.routes import continue_discussion, show_post
 from app.shared.tasks import task_selector
 from app.user.routes import show_profile
@@ -472,8 +473,11 @@ def community_profile(actor):
                           "featured": f"https://{server}/c/{actor}/featured",
                           "attributedTo": f"https://{server}/c/{actor}/moderators",
                           "postingRestrictedToMods": community.restricted_to_mods or community.local_only,
+                          "questionAnswer": community.question_answer,
+                          "defaultPostType": community.default_post_type,
                           "newModsWanted": community.new_mods_wanted,
                           "privateMods": community.private_mods,
+                          "genAI": community.ai_generated,
                           "url": f"https://{server}/c/{actor}",
                           "publicKey": {
                               "id": f"https://{server}/c/{actor}#main-key",
@@ -580,9 +584,6 @@ def shared_inbox():
 
         id = object['id']
 
-
-    if id.startswith('xyz'):
-        eee = 1
 
     if redis_client.exists(id):  # Something is sending same activity multiple times
         log_incoming_ap(id, APLOG_DUPLICATE, APLOG_IGNORED, saved_json, 'Already aware of this activity')
@@ -988,7 +989,8 @@ def process_inbox_request(request_json, store_ap_json):
                                                              community_id=join_request.community_id,
                                                              joined_via_feed=joined_via_feed)
                                     session.add(member)
-                                    community.subscriptions_count += 1
+                                    if not member.user.bot:
+                                        community.subscriptions_count += 1
                                     community.last_active = utcnow()
                                     session.commit()
                                     cache.delete_memoized(community_membership, user, community)
@@ -1185,6 +1187,18 @@ def process_inbox_request(request_json, store_ap_json):
 
                 if core_activity['type'] == 'Dislike':  # Downvote
                     process_downvote(user, store_ap_json, request_json, announced)
+                    return
+
+                if core_activity['type'] == 'Rate':     # Rate community
+                    process_rate(user, store_ap_json, request_json, announced)
+                    return
+
+                if core_activity['type'] == 'PollVote': # Vote in a poll
+                    process_poll_vote(user, store_ap_json, request_json, announced)
+                    return
+
+                if core_activity['type'] == 'ChooseAnswer': # Set the answer to a question
+                    process_question_answer(user, store_ap_json, request_json, announced)
                     return
 
                 if core_activity['type'] == 'Flag':  # Reported content
@@ -1452,14 +1466,13 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
                                 return
                             if blocked.is_local():
+                                ban_user(blocker, blocked, None, core_activity)
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin in banning one of our users from their site')
-                                current_app.logger.error('Remote Admin in banning one of our users from their site: ' + str(request_json))
                                 return
                             if blocked.instance_id != blocker.instance_id:
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin is banning a user of a different instance from their site')
-                                current_app.logger.error('Remote Admin is banning a user of a different instance from their site: ' + str(request_json))
                                 return
 
                             if not already_banned:
@@ -1644,6 +1657,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_FAILURE, saved_json, 'Does not have permission')
                                 return
                             if unblocked.is_local():
+                                unban_user(user, unblocked, None, core_activity)
                                 log_incoming_ap(id, APLOG_USERBAN, APLOG_MONITOR, request_json,
                                                 'Remote Admin in unbanning one of our users from their site')
                                 current_app.logger.error(
@@ -1673,6 +1687,15 @@ def process_inbox_request(request_json, store_ap_json):
 
                             unban_user(unblocker, unblocked, community, core_activity)
                             log_incoming_ap(id, APLOG_USERBAN, APLOG_SUCCESS, saved_json)
+                        return
+
+                    if core_activity['object']['type'] == 'ChooseAnswer':
+                        post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                        if post_reply:
+                            with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
+                                post_reply.answer = False
+                                session.commit()
+                            log_incoming_ap(id, APLOG_LOCK, APLOG_SUCCESS, saved_json)
                         return
 
                     log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
@@ -2136,6 +2159,11 @@ def process_upvote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
     ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if not announced:
+        emoji = request_json['content'] if 'content' in request_json else None
+    else:
+        emoji = request_json['object']['content'] if 'content' in request_json['object'] else None
+
     if isinstance(ap_id, dict) and 'id' in ap_id:
         ap_id = ap_id['id']
     liked = find_liked_object(ap_id)
@@ -2144,7 +2172,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         return
     if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
-            liked.vote(user, 'upvote')
+            liked.vote(user, 'upvote', emoji)
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
@@ -2164,12 +2192,95 @@ def process_downvote(user, store_ap_json, request_json, announced):
         return
     if can_downvote(user, liked.community) and not instance_banned(user.instance.domain):
         if isinstance(liked, (Post, PostReply)):
-            liked.vote(user, 'downvote')
+            liked.vote(user, 'downvote', None)
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
+
+
+def process_rate(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+    community = find_actor_or_create_cached(ap_id, create_if_not_found=False, community_only=True)
+    if community is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        community.rate(user, request_json['rating'])
+        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        if not announced:
+            announce_activity_to_followers(community, user, request_json)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
+
+
+def process_poll_vote(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    choice_text = request_json['choice_text'] if not announced else request_json['object']['choice_text']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+
+    post = Post.get_by_ap_id(ap_id)
+    if post is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        poll = db.session.query(Poll).get(post.id)
+        choice = db.session.query(PollChoice).filter(PollChoice.choice_text == choice_text,
+                                                     PollChoice.post_id == post.id).first()
+        if choice:
+            poll.vote_for_choice(choice.id, user.id)
+            log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+            if not announced:
+                announce_activity_to_followers(post.community, user, request_json)
+        else:
+            log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound poll choice ' + choice_text)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
+
+
+def process_question_answer(user, store_ap_json, request_json, announced):
+    saved_json = request_json if store_ap_json else None
+    id = request_json['id']
+    ap_id = request_json['object'] if not announced else request_json['object']['object']
+    if isinstance(ap_id, dict) and 'id' in ap_id:
+        ap_id = ap_id['id']
+
+    post_reply = PostReply.get_by_ap_id(ap_id)
+    if post_reply is None:
+        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        return
+    if not instance_banned(user.instance.domain):
+        from app import redis_client
+        with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
+            post_reply.answer = True
+            if post_reply.author.is_local():
+                targets_data = {'gen': '0',
+                                'post_id': post_reply.post_id,
+                                'requestor_id': user.id,
+                                'author_user_name': post_reply.author.display_name(),
+                                'post_title': shorten_string(post_reply.post.title, 100)}
+                notify = Notification(title='Answer was chosen', url=post_reply.post.slug,
+                                      user_id=post_reply.user_id,
+                                      author_id=user.id, notif_type=NOTIF_ANSWER,
+                                      subtype='answer_chosen',
+                                      targets=targets_data)
+                db.session.add(notify)
+                post_reply.author.unread_notifications += 1
+            db.session.commit()
+        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        if not announced:
+            announce_activity_to_followers(post_reply.community, user, request_json)
+    else:
+        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot set answer')
+
 
 
 # Private Messages, for both Create / ChatMessage (PieFed / Lemmy), and Create / Note (Mastodon, NodeBB)
@@ -2477,3 +2588,12 @@ def feed_followers(actor):
             return resp
         else:
             abort(404)
+
+
+@bp.route('/activitypub/externalInteraction', methods=['GET'])
+def activitypub_external_interaction():
+    uri = request.args.get('uri')
+    if uri:
+        community = find_actor_or_create_cached(uri, community_only=True)
+        if community:
+            return redirect(f'/community/{community.link()}/subscribe')

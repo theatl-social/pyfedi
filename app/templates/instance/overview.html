@@ -4,58 +4,54 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 aria-label="{{ _('Navigation') }}">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/instances">{{ _("Instances") }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ instance.domain }}</li>
-                </ol>
-            </nav>
-            <h1 class="mt-2">{{ _('%(instance)s overview', instance=instance.domain) }}</h1>
-            <p>{{ _('This is a %(software)s instance.', software=instance.software) }}</p>
-            <p>
-                <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">{{ _("People") }}</a>
-                <br />
-                <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">{{ _("Posts") }}</a>
-                <br />
-                <a href="{{ url_for('main.list_communities', instance=instance.domain) }}">{{ _("Communities") }}</a>
-            </p>
-            <p>
-                <a href="https://{{ instance.domain }}"
-                   rel="noopener nofollow noindex noreferrer">{{ _("Go to instance") }} <span class="fe fe-external"></span></a>
-            </p>
-        </main>
-        <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
-            <div class="card">
-                <div class="card-body">
-                    {% if current_user.is_authenticated -%}
-                        {% if current_user.has_blocked_instance(instance.id) -%}
-                            <a class="btn btn-primary"
-                               role="button"
-                               aria-label="{{ _('Unblock %(instance_name)s', instance_name=instance.domain) }}"
-                               hx-post="/instance/{{ instance.id }}/unblock"
-                               hx-trigger="click throttle:1s"
-                               tabindex="0">{{ _("Unblock") }}</a>
-                        {% else %}
-                            <a class="btn btn-primary confirm_first"
-                               role="button"
-                               aria-label="{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}"
-                               hx-post="/instance/{{ instance.id }}/block"
-                               hx-trigger="click throttle:1s"
-                               tabindex="0">{{ _("Block") }}</a>
-                        {% endif -%}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/instances">{{ _('Instances') }}</a></li>
+            <li class="breadcrumb-item active">{{ instance.domain }}</li>
+          </ol>
+        </nav>
+        <h1 class="mt-2">{{ _('%(instance)s overview', instance=instance.domain) }}</h1>
+        <p>{{ _('This is a %(software)s instance.', software=instance.software) }}
+            {% if instance.vote_weight == 1 -%}
+                {{ _('Votes are weighted at the normal level.') }}
+            {% else -%}
+                {{ _('Votes are weighted at %(weight)dx.', weight=instance.vote_weight) }}
+            {% endif -%}
+        </p>
+        <p>
+            <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">
+                {{ _('People') }}
+            </a>
+            <br />
+            <a href="{{ url_for('instance.instance_posts', instance_domain=instance.domain) }}">
+                {{ _('Posts') }}
+            </a>
+            <br />
+            <a href="{{ url_for('main.list_communities', instance=instance.domain) }}">
+                {{ _('Communities') }}
+            </a>
+        </p>
+        <p><a href="https://{{ instance.domain }}" rel="noopener nofollow noindex noreferrer">{{ _('Go to instance') }} <span class="fe fe-external"></span></a></p>
+    </main>
+
+    <aside id="side_pane" class="col-12 col-lg-4 side_pane" role="complementary">
+
+        <div class="card">
+            <div class="card-body">
+                {% if current_user.is_authenticated -%}
+                    {% if current_user.has_blocked_instance(instance.id) -%}
+                      <a class="btn btn-primary" role="button" aria-label="{{ _('Unblock %(instance_name)s', instance_name=instance.domain) }}" hx-post="/instance/{{ instance.id }}/unblock" hx-trigger="click throttle:1s"tabindex="0">{{ _('Unblock') }}</a>
+                    {% else %}
+                      <a class="btn btn-primary confirm_first" role="button" aria-label="{{ _('Block everyone from %(instance_name)s', instance_name=instance.domain) }}" hx-post="/instance/{{ instance.id }}/block" hx-trigger="click throttle:1s"tabindex="0">{{ _('Block') }}</a>
                     {% endif -%}
-                </div>
+                {% endif -%}
             </div>
-        </aside>
-    </div>
+        </div>
+    </aside>
+</div>
 {% endblock %}

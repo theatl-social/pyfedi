@@ -38,6 +38,7 @@
             <small class="field_hint">Provide a wide image - letterbox orientation.</small>
             {{ render_field(form.rules) }}
             {{ render_field(form.nsfw) }}
+            {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
             <div id="tom_select">
                 {{ render_field(form.languages) }}
@@ -57,6 +58,7 @@
                 {{ render_field(form.topic) }}
                 {{ render_field(form.default_layout) }}
                 {{ render_field(form.ignore_remote_language) }}
+                {{ render_field(form.ignore_remote_gen_ai) }}
                 {{ render_field(form.can_be_archived) }}
             {% if not community.is_local() %}
             </fieldset>

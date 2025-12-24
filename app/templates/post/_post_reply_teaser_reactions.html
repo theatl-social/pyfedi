@@ -1,0 +1,14 @@
+<div class="message_reactions" id="reactions_{{ post_reply.id }}">
+    {% for reaction in post_reply.emoji_reactions -%}
+        <div class="message_reaction_container me-1">
+            <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}">
+                <div class="emoji">{% if reaction['url'].startswith('https://') -%}
+                                        <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                    {% else -%}
+                                        {{ reaction['token'] }}
+                                    {%- endif %}</div>
+                <div class="message_reaction_count">{{ reaction['count'] }}</div>
+            </div>
+        </div>
+    {% endfor %}
+</div>

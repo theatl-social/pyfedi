@@ -93,6 +93,33 @@
                 {% endif -%}
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
 
+                <div class="community_rating">
+                    {% if community.average_rating -%}
+                        <a href="{{ url_for('community.community_ratings', actor=community.link()) }}">
+                            <span class="stars">
+                              {% set rating = community.average_rating %}
+                              {% for i in range(1, 6) %}
+                                <span class="star">
+                                  {% if rating >= i %}
+                                    <span class="full">★</span>
+                                  {% elif rating >= i - 0.5 %}
+                                    <span class="half">
+                                      <span class="filled">★</span>
+                                      <span class="empty">★</span>
+                                    </span>
+                                  {% else %}
+                                    <span class="empty">★</span>
+                                  {% endif %}
+                                </span>
+                              {% endfor %}
+                            </span>
+                        </a>
+                    {% endif -%}
+                    {% if current_user.is_authenticated -%}
+                        <a href="{{ url_for('community.rate', actor=community.link()) }}">{{ _('Rate community') }}</a>
+                    {% endif -%}
+                </div>
+
                 {% if current_user.is_authenticated or (community_flair and community_flair|length > 0) -%}
                     <hr>
                     <h3>{{ _('Flair') }}</h3>
@@ -110,7 +137,7 @@
                         {% endfor -%}
                     </ul>
                     {% if un_moderated -%}
-                    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
+                        <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                     {% endif -%}
                 {% endif -%}
                 {% if community.content_retention != -1 -%}

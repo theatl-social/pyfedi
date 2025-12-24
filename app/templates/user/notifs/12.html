@@ -1,0 +1,16 @@
+<tr class="align-middle">
+    <td width="*">
+        <div class="overflow-ellipses-parent text-truncate">
+            <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+                <a class="border border-0" href="/u/{{ notification.targets.author_user_name }}">
+                    {{ notification.targets.author_user_name }}
+                </a>
+                {{ _('chose your answer to this question: ') }}
+                <a href="/post/{{ notification.targets.post_id }}">
+                    {{ notification.targets.post_title }}
+                </a>
+            </div>
+        </div>
+    </td>
+    {% include "user/notifs/_time_and_buttons.html" %}
+</tr>

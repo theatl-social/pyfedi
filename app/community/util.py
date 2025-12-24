@@ -20,6 +20,7 @@ from app.activitypub.util import (
     find_hashtag_or_create,
     create_post,
     remote_object_to_json,
+    find_flair,
 )
 from app.community.forms import CreateLinkForm
 from app.constants import SRC_WEB, POST_TYPE_LINK
@@ -429,6 +430,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                 distinguished = reply_data.get(
                                                     "distinguished", False
                                                 )
+                                                answer = reply_data.get("answer", False)
 
                                                 # Create the reply
                                                 try:
@@ -444,6 +446,7 @@ def retrieve_mods_and_backfill(community_id: int, server, name, community_json=N
                                                         False,
                                                         language_id,
                                                         distinguished,
+                                                        answer,
                                                         reply_data,
                                                         session=session,
                                                     )
@@ -574,6 +577,24 @@ def flair_from_form(tag_ids) -> List[CommunityFlair]:
     if tag_ids is None:
         return []
     return CommunityFlair.query.filter(CommunityFlair.id.in_(tag_ids)).all()
+
+
+def flairs_from_string(flairs: str, community_id: int) -> List[Tag]:
+    return_value = []
+    if flairs is None:
+        return []
+    flairs = flairs.strip()
+    if flairs == "":
+        return []
+    if flairs[-1:] == ",":
+        flairs = flairs[:-1]
+    flair_list = flairs.split(",")
+    flair_list = [tag.strip() for tag in flair_list]
+    for f in flair_list:
+        flair_to_append = find_flair(f, community_id)
+        if flair_to_append and flair_to_append not in return_value:
+            return_value.append(flair_to_append)
+    return return_value
 
 
 def delete_post_from_community(post_id):

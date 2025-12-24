@@ -1,0 +1,31 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block app_content %}
+    <div class="row">
+        <div class="col col-login mx-auto">
+            <div class="card mt-5">
+                <div class="card-body p-6 rating_form">
+                    <div class="card-title">{{ _('Rate community') }}</div>
+                    <form method="post" enctype="multipart/form-data" role="form">
+                        {{ form.csrf_token() }}
+                        <div class="rating">
+                            {% for value, label in form.rating.choices %}
+                              <input type="radio" id="star{{ value }}" name="{{ form.rating.name }}"
+                                     value="{{ value }}"
+                                     {% if form.rating.data == value %}checked{% endif %}>
+                              <label for="star{{ value }}" title="{{ value }} stars">★</label>
+                            {% endfor %}
+                        </div>
+                        <p>{{ _('1 = terrible, 3 = ok, 5 = best ever') }}</p>
+                        <p>{{ render_field(form.submit) }}</p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

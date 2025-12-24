@@ -155,6 +155,7 @@ def register(app):
             db.session.add(Language(code='hi', name='हिन्दी'))
             db.session.add(Language(code='ja', name='日本語'))
             db.session.add(Language(code='zh', name='中文'))
+            db.session.add(Language(code='pl', name='Polski'))
 
             # Initial roles
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in

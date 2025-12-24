@@ -114,6 +114,10 @@
   content: "\e940";
 }
 
+.fe-source::before {
+  content: "\e964";
+}
+
 .fe-external::before {
   content: "\e95b";
 }
@@ -511,6 +515,26 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e933";
 }
 
+.fe-hide::before {
+  content: "\e9d0";
+}
+
+.fe-answer::before {
+  content: "\e92b";
+  color: var(--bs-form-valid-border-color);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
+.fe-unanswer::before {
+  content: "\ea02";
+  color: var(--bs-danger);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
 a.no-underline {
   text-decoration: none;
 }
@@ -585,6 +609,69 @@ fieldset legend {
   background-color: #d8e5ee;
 }
 
+.community_rating {
+  margin-bottom: 12px;
+}
+.community_rating .stars {
+  display: inline-flex;
+  gap: 0;
+  font-size: 1.4em;
+  line-height: 1;
+}
+.community_rating .star {
+  position: relative;
+  display: inline-block;
+}
+.community_rating .full {
+  color: gold;
+}
+.community_rating .empty {
+  color: lightgray;
+}
+.community_rating .half {
+  position: relative;
+  display: inline-block;
+}
+.community_rating .half .filled {
+  color: gold;
+  position: absolute;
+  overflow: hidden;
+  width: 50%;
+}
+.community_rating .half .empty {
+  color: lightgray;
+}
+
+.communities_table .community_rating .stars {
+  font-size: 1em;
+}
+
+.rating_form {
+  /* highlight selected stars */
+  /* highlight on hover */
+}
+.rating_form .rating {
+  direction: rtl; /* Highest value on the left */
+  unicode-bidi: bidi-override;
+  display: inline-flex;
+}
+.rating_form .rating > input[type=radio] {
+  display: none; /* hide radio buttons */
+}
+.rating_form .rating > label {
+  font-size: 2em;
+  color: lightgray;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.rating_form .rating > input:checked ~ label {
+  color: gold;
+}
+.rating_form .rating > label:hover,
+.rating_form .rating > label:hover ~ label {
+  color: gold;
+}
+
 @view-transition {
   navigation: auto;
 }
@@ -596,6 +683,7 @@ fieldset legend {
 
 body {
   font-size: 0.95rem;
+  --bs-body-font-family: system-ui,-apple-system,"Inter",Roboto,"Helvetica Neue","Noto Sans","Liberation Sans",Arial,sans-serif,"Twemoji Mozilla", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji", "EmojiOne Color", "Android Emoji";
 }
 body.embed .post_teaser_body h3 {
   font-size: 1.2rem !important;
@@ -783,6 +871,10 @@ div.navbar {
   border-left: solid 1px #dee2e6;
   border-radius: 0 0 5px 5px;
   padding: 10px 15px 0 15px;
+}
+
+.tag_cloud_page > .tab-pane {
+  border: none;
 }
 
 .dropdown-menu .dropdown-item.active {
@@ -980,7 +1072,7 @@ form > .mb-3.required > label:after {
 .mobilenav .fe {
   font-size: 150%;
 }
-@media (max-width: 340px) {
+@media (max-width: 350px) {
   .mobilenav a {
     font-size: 80%;
     padding-left: 0;
@@ -1164,6 +1256,7 @@ ul.form-multicheck-columns li {
   font-size: 110%;
   margin-top: 4px;
   margin-bottom: 0;
+  overflow: hidden;
 }
 .post_list .post_teaser .meta_row a, .post_list .post_teaser .main_row a, .post_list .post_teaser .utilities_row a {
   text-decoration: none;
@@ -1206,6 +1299,9 @@ ul.form-multicheck-columns li {
   display: block;
   width: 100%;
   position: relative;
+}
+.post_list .post_teaser .thumbnail .fe {
+  z-index: 2;
 }
 .post_list .post_teaser .thumbnail .fe-external, .post_list .post_teaser .thumbnail .fe-video, .post_list .post_teaser .thumbnail .fe-image, .post_list .post_teaser .thumbnail .fe-audio, .post_list .post_teaser .thumbnail .fe-magnify {
   display: block;
@@ -2111,6 +2207,7 @@ a.unread:before, div.unread:before {
 
 .post_body, .comment_body, #preview, .reply_preview, .accordion-body, .post_col {
   word-wrap: break-word;
+  line-height: 1.6;
 }
 .post_body img, .comment_body img, #preview img, .reply_preview img, .accordion-body img, .post_col img {
   max-width: 100%;
@@ -2208,6 +2305,10 @@ a.unread:before, div.unread:before {
 .warning_badge.nsfl {
   border: 1px solid black;
   color: black;
+}
+.warning_badge.ai_generated {
+  border: 1px solid #FF585B;
+  color: #FF585B;
 }
 
 h1 .warning_badge {
@@ -2687,6 +2788,13 @@ form h5 {
   filter: grayscale(100%) blur(6px) !important;
 }
 
+.comment.answer {
+  border-style: solid !important;
+  border-color: var(--bs-form-valid-border-color) !important;
+  border-width: 2px !important;
+  background-color: var(--bs-info-bg-subtle);
+}
+
 .blocked_image img {
   filter: grayscale(100%) blur(3px) !important;
 }
@@ -2886,6 +2994,176 @@ form h5 {
   margin-right: 0.5rem;
 }
 
+#reaction_dialog {
+  padding: 10px;
+}
+
+.message_reactions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--bs-spacer-1);
+  max-width: 100%;
+  overflow: hidden;
+  user-select: none;
+}
+.message_reactions:has(.message_reaction) {
+  margin-top: 4px;
+}
+.message_reactions .message_reaction_container {
+  display: inline-flex;
+  width: auto;
+  max-width: 100%;
+}
+.message_reactions .message_reaction_container.disabled {
+  cursor: not-allowed;
+}
+.message_reactions .message_reaction {
+  display: flex;
+  padding: 1.5px 4px 1.5px 3px;
+  box-sizing: border-box;
+  min-width: 44px;
+  cursor: pointer;
+  align-items: baseline;
+  line-height: 1;
+  color: var(--bs-body-color);
+  background-color: var(--bs-secondary-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: 21px;
+  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  transition: transform 100ms linear, font-weight 100ms linear;
+}
+.message_reactions .message_reaction div {
+  position: relative;
+  top: 1px;
+}
+.message_reactions .message_reaction.reacted {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-primary-bg-subtle);
+  border-color: var(--bs-primary-border-subtle);
+  border-width: 1.5px;
+  padding: 1px 4px 1px 3px;
+  font-weight: var(--bs-font-weight-semibold);
+  box-shadow: none;
+}
+.message_reactions .message_reaction.disabled {
+  pointer-events: none;
+}
+.message_reactions .message_reaction:hover {
+  background-color: var(--bs-tertiary-bg);
+}
+.message_reactions .message_reaction:active {
+  transform: scale(0.95);
+}
+.message_reactions .message_reaction .emoji {
+  margin: 1px 3px;
+  height: 1.2143em;
+  width: 1.2143em;
+  flex-shrink: 0;
+}
+.message_reactions .message_reaction .emoji img {
+  margin-top: -2px;
+}
+.message_reactions .message_reaction .emoji_alt_code {
+  margin: 1px 3px;
+  font-size: 0.8em;
+}
+.message_reactions .message_reaction_count {
+  font-size: 90%;
+  margin: 0 3px;
+  line-height: 1.0317em;
+}
+.message_reactions .message_reaction:hover .message_reaction_count {
+  color: var(--bs-primary-text-emphasis);
+}
+.message_reactions:hover .reaction_button {
+  visibility: visible;
+  pointer-events: all;
+}
+.message_reactions .emoji-message-control-button-container {
+  display: flex;
+  align-items: center;
+}
+.message_reactions .reaction_button {
+  visibility: hidden;
+  pointer-events: none;
+  padding: 4px 6px;
+  border-radius: 21px;
+  color: var(--bs-secondary-color);
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+}
+.message_reactions .reaction_button i {
+  font-size: 1em;
+  color: var(--bs-secondary-color);
+}
+.message_reactions .reaction_button:hover i {
+  color: var(--bs-primary-text-emphasis);
+}
+.message_reactions .reaction_button:hover {
+  color: var(--bs-primary-text-emphasis);
+  background-color: var(--bs-secondary-bg);
+  border-color: var(--bs-primary-border-subtle);
+  box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  opacity: 1;
+}
+.message_reactions .reaction_button .message_reaction_count {
+  font-weight: 700;
+  color: var(--bs-secondary-color);
+  margin-right: 0;
+  line-height: 14px;
+}
+.message_reactions .reaction_button:hover .message_reaction_count {
+  color: var(--bs-primary-text-emphasis);
+}
+
+.emoji_button {
+  color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
+}
+.emoji_button a svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Visually hide radios but keep them accessible */
+.emoji-picker input[type=radio] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Make label the click target */
+.emoji-picker label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  width: 100%;
+}
+
+/* Emoji styling */
+.emoji-picker .emoji {
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+/* Highlight selected item */
+.emoji-picker input[type=radio]:checked + label {
+  background-color: var(--bs-primary-bg-subtle);
+  border-radius: 0.375rem;
+}
+
+/* Optional hover */
+.emoji-picker label:hover {
+  background-color: var(--bs-secondary-bg);
+}
+
+/* Optional: hide text labels on capable UAs */
+@media (hover: hover) {
+  .emoji-picker .emoji-text {
+    display: none;
+  }
+}
 #topic_communities .list-group-item, #feed_communities .list-group-item {
   padding-left: 0;
   padding-right: 0;

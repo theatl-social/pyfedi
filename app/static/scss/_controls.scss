@@ -62,3 +62,77 @@
   background-color: #d8e5ee;
 
 }
+
+.community_rating {
+  margin-bottom: 12px;
+
+  .stars {
+    display: inline-flex;
+    gap: 0;
+    font-size: 1.4em;
+    line-height: 1;
+  }
+
+  .star {
+    position: relative;
+    display: inline-block;
+  }
+
+  .full {
+    color: gold;
+  }
+
+  .empty {
+    color: lightgray;
+  }
+
+  .half {
+    position: relative;
+    display: inline-block;
+  }
+
+  .half .filled {
+    color: gold;
+    position: absolute;
+    overflow: hidden;
+    width: 50%;
+  }
+
+  .half .empty {
+    color: lightgray;
+  }
+}
+
+.communities_table .community_rating .stars {
+  font-size: 1em;
+}
+
+.rating_form {
+  .rating {
+    direction: rtl; /* Highest value on the left */
+    unicode-bidi: bidi-override;
+    display: inline-flex;
+  }
+
+  .rating > input[type="radio"] {
+    display: none; /* hide radio buttons */
+  }
+
+  .rating > label {
+    font-size: 2em;
+    color: lightgray;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  /* highlight selected stars */
+  .rating > input:checked ~ label {
+    color: gold;
+  }
+
+  /* highlight on hover */
+  .rating > label:hover,
+  .rating > label:hover ~ label {
+    color: gold;
+  }
+}

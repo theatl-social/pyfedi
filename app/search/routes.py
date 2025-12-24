@@ -12,7 +12,7 @@ from app.search import bp
 from app.utils import (
     render_template,
     blocked_domains,
-    blocked_instances,
+    blocked_or_banned_instances,
     communities_banned_from,
     recently_upvoted_posts,
     recently_downvoted_posts,
@@ -70,7 +70,7 @@ def run_search():
                     posts = posts.filter(
                         or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None)
                     )
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     posts = posts.filter(
                         or_(
@@ -137,7 +137,7 @@ def run_search():
                     replies = replies.filter(PostReply.from_bot == False)
                 if current_user.hide_nsfw == 1:
                     replies = replies.filter(PostReply.nsfw == False)
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     replies = replies.filter(
                         or_(

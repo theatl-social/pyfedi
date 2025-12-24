@@ -10,7 +10,7 @@ from app.models import User
 from app.utils import (
     authorise_api_user,
     blocked_communities,
-    blocked_instances,
+    blocked_or_banned_instances,
     filtered_out_communities,
     communities_banned_from,
     moderating_communities_ids,
@@ -36,7 +36,7 @@ def get_feed_list(auth, data, user_id=None) -> dict:
         g.user = user
 
         blocked_community_ids = blocked_communities(user_id)
-        blocked_instance_ids = blocked_instances(user_id)
+        blocked_instance_ids = blocked_or_banned_instances(user_id)
     else:
         blocked_community_ids = []
         blocked_instance_ids = []

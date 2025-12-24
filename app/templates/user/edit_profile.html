@@ -3,56 +3,41 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% set active_child = "edit_profile" %}
+{% set active_child = 'edit_profile' %}
 {% from 'bootstrap5/form.html' import render_field, render_form %}
+
 {% block extra_css %}
-    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}"
-          type="text/css"
-          rel="stylesheet" />
+    <link href="{{ url_for('static', filename='js/tomselect/tom-select.css') }}" type="text/css" rel="stylesheet" />
 {% endblock %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav class="mb-2"
-                 aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 title="Navigation">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Edit profile") }}</li>
-                </ol>
-            </nav>
-            <h1>{{ _('Edit profile of %(name)s', name=user.user_name) }}</h1>
-            {% include "user/_user_nav.html" %}
-            <form method='post'
-                  enctype="multipart/form-data"
-                  role="form"
-                  autocomplete="off">
-                {{ form.csrf_token() }}
-                <h5>{{ _("Login") }}</h5>
-                {{ render_field(form.email) }}
-                <div class="password-container">
-                    {{ render_field(form.password) }}
-                    <a href="#" class="hidePassword" title="{{ _('Show password') }}">
-                        <img src="/static/images/eye-password-show.svg"
-                             alt="{{ _('Show password') }}">
-                    </a>
-                    <a href="#" class="showPassword" title="{{ _('Hide password') }}">
-                        <img src="/static/images/eye-password-hide.svg"
-                             alt="{{ _('Hide password') }}">
-                    </a>
-                </div>
-                <h5>{{ _("Profile") }}</h5>
-                {{ render_field(form.title) }}
-                {{ render_field(form.about) }}
-                {% if not low_bandwidth %}
-                    {% if markdown_editor %}
-                        <script nonce="{{ nonce }}">
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active">{{ _('Edit profile') }}</li>
+          </ol>
+        </nav>
+        <h1>{{ _('Edit profile of %(name)s', name=user.user_name) }}</h1>
+        {% include "user/_user_nav.html" %}
+
+        <form method='post' enctype="multipart/form-data" role="form" autocomplete="off">
+            {{ form.csrf_token() }}
+            <h5>{{ _('Login') }}</h5>
+            {{ render_field(form.email) }}
+            <div class="password-container">
+                {{ render_field(form.password) }}
+                <a href="#" class="hidePassword" title="{{ _('Show password') }}"><img src="/static/images/eye-password-show.svg" alt="{{ _('Show password') }}"></a>
+                <a href="#" class="showPassword" title="{{ _('Hide password') }}"><img src="/static/images/eye-password-hide.svg" alt="{{ _('Hide password') }}"></a>
+            </div>
+            <h5>{{ _('Profile') }}</h5>
+            {{ render_field(form.title) }}
+            {{ render_field(form.about) }}
+            {% if not low_bandwidth %}
+                {% if markdown_editor %}
+                    <script nonce="{{ nonce }}">
                         window.addEventListener("load", function () {
                             var downarea = new DownArea({
                                 elem: document.querySelector('#about'),
@@ -62,120 +47,116 @@
                             });
                             setupAutoResize('about');
                         });
-                        </script>
-                    {% else %}
-                        <a href="#"
-                           aria-hidden="true"
-                           class="markdown_editor_enabler create_post_markdown_editor_enabler"
-                           data-id="about">{{ _("Enable markdown editor") }}</a>
-                    {% endif %}
+                    </script>
+                {% else %}
+                    <a href="#" aria-hidden="true" class="markdown_editor_enabler create_post_markdown_editor_enabler" data-id="about">{{ _('Enable markdown editor') }}</a>
                 {% endif %}
-                <fieldset class="coolfieldset mt-2 mb-3">
-                    <legend>{{ _("Extra fields") }}</legend>
-                    <p>{{ _("Your homepage, pronouns, age, etc.") }}</p>
-                    <table class="hide-labels w-100">
-                        <tr>
-                            <td>{{ render_field(form.extra_label_1) }}</td>
-                            <td>{{ render_field(form.extra_text_1) }}</td>
-                        </tr>
-                        <tr>
-                            <td>{{ render_field(form.extra_label_2) }}</td>
-                            <td>{{ render_field(form.extra_text_2) }}</td>
-                        </tr>
-                        <tr>
-                            <td>{{ render_field(form.extra_label_3) }}</td>
-                            <td>{{ render_field(form.extra_text_3) }}</td>
-                        </tr>
-                        <tr>
-                            <td>{{ render_field(form.extra_label_4) }}</td>
-                            <td>{{ render_field(form.extra_text_4) }}</td>
-                        </tr>
-                    </table>
-                </fieldset>
-                {{ render_field(form.timezone) }}
-                {{ render_field(form.bot) }}
-                {{ render_field(form.matrixuserid) }}
-                <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
-                <h5>{{ ('Profile Images') }}</h5>
-                {{ render_field(form.profile_file) }}
-                <small class="field_hint">{{ _("Provide a square image that looks good when small.") }}</small>
-                {% if user.avatar_id %}
-                    <p>
-                        <a href="{{ user.avatar_image() }}"
-                           class="btn btn-sm btn-primary showElement"
-                           data-id="avatar_image">{{ _("View image") }}</a>
-                        <a href="{{ url_for('user.remove_avatar') }}"
-                           class="btn btn-sm btn-primary"
-                           hx-post="{{ url_for('user.remove_avatar') }}"
-                           hx-target="#avatar_image"
-                           hx-swap="outerHTML">{{ _("Remove image") }}</a>
-                    </p>
-                    <p>
-                        <img id="avatar_image"
-                             class="community_icon_big rounded-circle"
-                             loading="lazy"
-                             style="display: none"
-                             src="{{ user.avatar_image() }}"
-                             alt="{{ _('Profile pic') }}" />
-                    </p>
-                {% endif %}
-                {{ render_field(form.banner_file) }}
-                <small class="field_hint">{{ _("Provide a wide image - letterbox orientation.") }}</small>
-                {% if user.cover_id %}
-                    <p>
-                        <a href="{{ user.cover_image() }}"
-                           class="btn btn-sm btn-primary showElement"
-                           data-id="cover_div">{{ _("View image") }}</a> |
-                        <a href="{{ url_for('user.remove_cover') }}"
-                           class="btn btn-sm btn-primary"
-                           hx-post="{{ url_for('user.remove_cover') }}"
-                           hx-target="#cover_div"
-                           hx-swap="outerHTML">{{ _("Remove image") }}</a>
-                    </p>
-                    <div id="cover_div"
-                         class="community_header mb-4"
-                         style="display: none;
-                                height: 240px;
-                                background-image: url({{ user.cover_image() }})"></div>
-                {% endif %}
-                <p>&nbsp;</p>
-                <p class="mt-4">{{ render_field(form.submit) }}</p>
-            </form>
-            <hr class="bg-danger border-4 border-top border-danger" />
-            <div class="accordion" id="deleteAccordion">
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button bg-danger text-light collapsed"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#collapseDelete"
-                                aria-expanded="false"
-                                aria-controls="collapseDelete">{{ _("Danger Zone! - Account Deletion") }}</button>
-                    </h2>
-                    <div id="collapseDelete"
-                         class="accordion-collapse collapse bg-danger text-light"
-                         data-bs-parent="#deleteAccordion">
-                        <div class="accordion-body">
-                            <form action="/delete_account" method="post" role="form">
-                                <p>
-                                    {{ _('You are about to permanently delete the account with the username "<strong>%(username)s</strong>." This means your profile will disappear, pictures will be deleted. Text-based posts will stay but look like they are from someone named "deleted."', username=user.user_name) }}
-                                </p>
-                                <p>
-                                    {{ _('Once you hit delete, nobody can use "%(username)s" as a username again. We are doing this so nobody pretends to be you.', username=user.user_name) }}
-                                </p>
-                                <p>
-                                    {{ _("We will tell other websites (fediverse instances) that your account is gone. But it's up to them to decide what to do with any copies they have of your stuff. Some websites work differently than ours.") }}
-                                </p>
-                                <p>{{ _("Remember, once you do this, there's no going back. Are you sure you want to continue?") }}</p>
-                                {{ render_form(delete_form) }}
-                            </form>
-                        </div>
+            {% endif %}
+            <fieldset class="coolfieldset mt-2 mb-3">
+                <legend>{{ _('Extra fields') }}</legend>
+                <p>{{ _('Your homepage, pronouns, age, etc.') }}</p>
+                <table class="hide-labels w-100">
+                    <tr>
+                        <td>{{ render_field(form.extra_label_1) }}</td>
+                        <td>{{ render_field(form.extra_text_1) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_2) }}</td>
+                        <td>{{ render_field(form.extra_text_2) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_3) }}</td>
+                        <td>{{ render_field(form.extra_text_3) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ render_field(form.extra_label_4) }}</td>
+                        <td>{{ render_field(form.extra_text_4) }}</td>
+                    </tr>
+                </table>
+            </fieldset>
+            {{ render_field(form.timezone) }}
+            {{ render_field(form.bot) }}
+            {{ render_field(form.matrixuserid) }}
+            <small class="field_hint">e.g. @something:matrix.org. Include leading @ and use : before server</small>
+            <h5>{{ ('Profile Images') }}</h5>
+            {{ render_field(form.profile_file) }}
+            <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
+            {% if user.avatar_id %}
+                <p><a href="{{ user.avatar_image() }}" class="btn btn-sm btn-primary showElement" data-id="avatar_image">{{ _('View image') }}</a>
+                   <a href="{{ url_for('user.remove_avatar') }}" class="btn btn-sm btn-primary"
+                      hx-post="{{ url_for('user.remove_avatar') }}"
+                      hx-target="#avatar_image"
+                      hx-swap="outerHTML">{{ _('Remove image') }}</a>
+                </p>
+                <p><img id="avatar_image" class="community_icon_big rounded-circle" loading="lazy" style="display: none;" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></p>
+            {% endif %}
+            {{ render_field(form.banner_file) }}
+            <small class="field_hint">{{ _('Provide a wide image - letterbox orientation.') }}</small>
+            {% if user.cover_id %}
+                <p><a href="{{ user.cover_image() }}" class="btn btn-sm btn-primary showElement" data-id="cover_div">{{ _('View image') }}</a> |
+                   <a href="{{ url_for('user.remove_cover') }}" class="btn btn-sm btn-primary"
+                      hx-post="{{ url_for('user.remove_cover') }}"
+                      hx-target="#cover_div"
+                      hx-swap="outerHTML">{{ _('Remove image') }}</a></p>
+                <div id="cover_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ user.cover_image() }});"></div>
+            {% endif %}
+            <p>&nbsp;</p>
+            <p class="mt-4">{{ render_field(form.submit) }}</p>
+        </form>
+        <hr class="bg-danger border-4 border-top border-danger" />
+        <div class="accordion mb-2 text-dark" id="unsubAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button text-bg-warning collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUnsub" aria-expanded="false" aria-controls="collapseUnsub">
+                        {{ _('Warning! - Unsubscribe from Everything') }}
+                    </button>
+                </h2>
+                <div id="collapseUnsub" class="accordion-collapse collapse text-bg-warning" data-bs-parent="#unsubAccordion">
+                    <div class="accordion-body">
+                        <form action="{{ url_for('community.community_leave_all') }}" method="post" role="form">
+                            <p>
+                                {{ _('You are about to unsubscribe from every community and feed for which you are not an owner or moderator.') }}
+                            </p>
+                            <p>
+                                {{ _("You are able to resubscribe like normal after this action, but this bulk action cannot be undone. Are you sure you want to continue?") }}
+                            </p>
+                            {{ render_form(unsub_form) }}
+                        </form>
                     </div>
                 </div>
             </div>
-        </main>
-        <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
-        <script nonce="{{ nonce }}">
+        </div>
+        <div class="accordion" id="deleteAccordion">
+            <div class="accordion-item">
+                <h2 class="accordion-header">
+                    <button class="accordion-button text-bg-danger collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDelete" aria-expanded="false" aria-controls="collapseDelete">
+                        {{ _('Danger Zone! - Account Deletion') }}
+                    </button>
+                </h2>
+                <div id="collapseDelete" class="accordion-collapse collapse text-bg-danger" data-bs-parent="#deleteAccordion">
+                    <div class="accordion-body">
+                        <form action="/delete_account" method="post" role="form">
+                            <p>
+                                {{ _('You are about to permanently delete the account with the username "<strong>%(username)s</strong>." This means your profile will disappear, pictures will be deleted. Text-based posts will stay but look like they are from someone named "deleted".', username=user.user_name) }}
+                            </p>
+                            <p>
+                                {{ _('Once you hit delete, nobody can use "%(username)s" as a username again. We are doing this so nobody pretends to be you.', username=user.user_name) }}
+                            </p>
+                            <p>
+                                {{ _("We will tell other websites (fediverse instances) that your account is gone. But it's up to them to decide what to do with any copies they have of your stuff. Some websites work differently than ours.") }}
+                            </p>
+                            <p>
+                                {{ _("Remember, once you do this, there's no going back. Are you sure you want to continue?") }}
+                            </p>
+                            {{ render_form(delete_form) }}
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <script nonce="{{ nonce }}">
       document.addEventListener("DOMContentLoaded", () => {
         new TomSelect(".tom-select", {
           plugins: ['dropdown_input'],
@@ -183,6 +164,6 @@
           maxOptions: 2000,
        })
     });
-        </script>
-    </div>
+    </script>
+</div>
 {% endblock %}
