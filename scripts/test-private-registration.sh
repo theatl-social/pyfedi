@@ -168,20 +168,9 @@ check_prerequisites() {
         error "Not in PieFed project root. Please run from project directory."
     fi
 
-    # Check if virtual environment is activated
-    if [ "$MODE" = "local" ] && [ -z "$VIRTUAL_ENV" ]; then
-        warning "Virtual environment not detected. Attempting to activate..."
-        if [ -f "$PROJECT_ROOT/.venv/bin/activate" ]; then
-            source "$PROJECT_ROOT/.venv/bin/activate"
-            success "Activated virtual environment"
-        else
-            error "No virtual environment found. Please run 'uv venv && source .venv/bin/activate'"
-        fi
-    fi
-
     # Check required dependencies
-    if ! python -c "import pytest" 2>/dev/null; then
-        error "pytest not installed. Please install test dependencies."
+    if ! uv run python -c "import pytest" 2>/dev/null; then
+        error "pytest not installed. Please run 'uv sync' to install dependencies."
     fi
 
     success "Prerequisites check passed"
@@ -221,7 +210,7 @@ run_test_configuration() {
     fi
 
     # Run the tests
-    if pytest "${pytest_args[@]}"; then
+    if uv run pytest "${pytest_args[@]}"; then
         success "$test_name passed"
         return 0
     else
@@ -242,7 +231,7 @@ test_endpoints_with_curl() {
     if ! curl -s "$base_url/health" >/dev/null 2>&1; then
         log "Starting test server..."
         cd "$PROJECT_ROOT"
-        flask run --port=5000 --debug &
+        uv run flask run --port=5000 --debug &
         server_pid=$!
         sleep 5  # Wait for server to start
     fi

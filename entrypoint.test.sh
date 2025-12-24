@@ -17,11 +17,11 @@ cron
 # 2. Database setup and migrations
 echo "🗄️  Setting up test database..."
 echo "Running database migrations..."
-python3 -m flask db upgrade
+uv run flask db upgrade
 
 # 3. Test-specific database initialization
 echo "🔧 Initializing test database with baseline data..."
-python3 -c "
+uv run python -c "
 from app import create_app, db
 from app.models import Site, Instance, Settings, User, Role, RolePermission
 from app.keys import RsaKeys
@@ -87,13 +87,13 @@ with app.app_context():
 
 # 4. Load test fixtures if available
 echo "📊 Loading test fixtures..."
-python3 -m flask load-test-fixtures 2>/dev/null || {
+uv run flask load-test-fixtures 2>/dev/null || {
     echo "ℹ️  No test fixtures to load, continuing with basic setup"
 }
 
 # 5. Verify test environment is ready
 echo "🔍 Verifying test environment..."
-python3 -c "
+uv run python -c "
 import os
 from app import create_app, db
 from app.models import Site, User, Community
@@ -122,9 +122,9 @@ else
     if [ "${FLASK_DEBUG:-}" = "1" ] && [ "${FLASK_ENV:-}" = "development" ]; then
         export FLASK_RUN_EXTRA_FILES=$(find app/templates app/static -type f | tr '\n' ':')
         echo "Starting flask development server as user 'python'..."
-        exec gosu python python3 -m flask run -h 0.0.0.0 -p 5000
+        exec gosu python uv run flask run -h 0.0.0.0 -p 5000
     else
         echo "Starting Gunicorn as user 'python'..."
-        exec gosu python python3 -m gunicorn --config gunicorn.conf.py --preload pyfedi:app
+        exec gosu python uv run gunicorn --config gunicorn.conf.py --preload pyfedi:app
     fi
 fi
