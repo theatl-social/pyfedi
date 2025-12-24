@@ -356,7 +356,8 @@ jobs:
         run: |
           echo "Validating entrypoint scripts use uv run instead of python3 -m"
           # Check that entrypoint scripts don't use python3 -m for flask/celery/gunicorn
-          if grep -E "python3 -m (flask|celery|gunicorn)" entrypoint.sh entrypoint_celery.sh entrypoint.test.sh 2>/dev/null; then
+          # Exclude commented lines (lines starting with optional whitespace then #)
+          if grep -E "^[^#]*python3 -m (flask|celery|gunicorn)" entrypoint.sh entrypoint_celery.sh entrypoint.test.sh 2>/dev/null; then
             echo "ERROR: Entrypoint scripts still use 'python3 -m' instead of 'uv run'"
             echo "This will cause Docker startup failures!"
             exit 1
