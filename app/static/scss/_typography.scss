@@ -49,6 +49,10 @@
   content: "\e940";
 }
 
+.fe-source::before {
+  content: "\e964";
+}
+
 .fe-external::before {
   content: "\e95b";
 }
@@ -450,6 +454,26 @@ h1 {
   position: relative;
   top: 2px;
   content: "\e933";
+}
+
+.fe-hide::before {
+  content: "\e9d0";
+}
+
+.fe-answer::before {
+  content: "\e92b";
+  color: var(--bs-form-valid-border-color);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
+}
+
+.fe-unanswer::before {
+  content: "\ea02";
+  color: var(--bs-danger);
+  font-size: 150%;
+  position: relative;
+  top: 5px;
 }
 
 

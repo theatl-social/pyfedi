@@ -10,7 +10,7 @@ from flask_login import current_user
 from flask_wtf import FlaskForm
 from sqlalchemy import func
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, HiddenField, SelectField, FileField, \
-    DateField, IntegerField, DateTimeLocalField
+    DateField, IntegerField, DateTimeLocalField, RadioField
 
 from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Optional
 
@@ -29,8 +29,10 @@ class AddCommunityForm(FlaskForm):
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField('NSFW')
+    ai_generated = BooleanField('Only AI-generated content')
     local_only = BooleanField('Local only')
     publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
+    question_answer = BooleanField('Question & answer community')
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
                                    render_kw={'class': 'form-multicheck-columns'})
     submit = SubmitField(_l('Create'))
@@ -78,7 +80,9 @@ class EditCommunityForm(FlaskForm):
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
     nsfw = BooleanField(_l('NSFW community'))
+    ai_generated = BooleanField('Only AI-generated content')
     local_only = BooleanField(_l('Only accept posts from current instance'))
+    question_answer = BooleanField('Question & answer community')
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
     downvote_accept_modes = [(DOWNVOTE_ACCEPT_ALL, _l('Everyone')),
@@ -106,6 +110,10 @@ class EditCommunityForm(FlaskForm):
                  ]
     default_post_type = SelectField(_l('Default post type'), coerce=str, choices=post_types, validators=[Optional()],
                                  render_kw={'class': 'form-select'})
+    url_types = [('friendly', _l('Friendly urls')),
+                 ('post_id', _l('Post ids only'))]
+    post_url_type = SelectField(_l('Post url structure to use in this community'), choices=url_types, coerce=str,
+                                validators=[Optional()], render_kw={'class': 'form-select'})
     submit = SubmitField(_l('Save'))
 
 
@@ -173,6 +181,7 @@ class CreatePostForm(FlaskForm):
     sticky = BooleanField(_l('Sticky'))
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
+    ai_generated = BooleanField(_l('AI generated'))
     notify_author = BooleanField(_l('Notify about replies'))
     language_id = SelectField(_l('Language'), validators=[DataRequired()], coerce=int,
                               render_kw={'class': 'form-select'})
@@ -210,6 +219,11 @@ class CreatePostForm(FlaskForm):
                 return False
         return True
 
+    def filter_title(self, title):
+        if isinstance(title, str):
+            title = title.strip()
+
+        return title
 
 class CreateDiscussionForm(CreatePostForm):
     pass
@@ -417,8 +431,7 @@ class CreatePollForm(CreatePostForm):
     finish_in = SelectField(_('End voting in'), validators=[DataRequired()], choices=finish_choices,
                             render_kw={'class': 'form-select'})
     local_only = BooleanField(_l('Accept votes from this instance only'))
-    choice_1 = StringField(
-        'Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
+    choice_1 = StringField('Choice')  # intentionally left out of internationalization (no _l()) as this label is not used
     choice_2 = StringField('Choice')
     choice_3 = StringField('Choice')
     choice_4 = StringField('Choice')
@@ -428,6 +441,11 @@ class CreatePollForm(CreatePostForm):
     choice_8 = StringField('Choice')
     choice_9 = StringField('Choice')
     choice_10 = StringField('Choice')
+    choice_11 = StringField('Choice')
+    choice_12 = StringField('Choice')
+    choice_13 = StringField('Choice')
+    choice_14 = StringField('Choice')
+    choice_15 = StringField('Choice')
 
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
@@ -448,6 +466,8 @@ class CreatePollForm(CreatePostForm):
         elif choices_made <= 1:
             self.choice_2.errors.append(_l('Provide at least two choices'))
             return False
+        elif choices_made > 15:
+            self.choice_1.errors.append(_l('Maximum 15 choices'))
         return True
 
 
@@ -516,3 +536,19 @@ class EditCommunityFlairForm(FlaskForm):
     background_color = StringField(_l('Background color'), render_kw={"type": "color"})
     blur_images = BooleanField(_l('Blur images and thumbnails for posts with this flair'))
     submit = SubmitField(_l('Save'))
+
+
+class RateCommunityForm(FlaskForm):
+    rating = RadioField(
+        'Rate this community:',
+        choices=[
+            ('5', '★'),
+            ('4', '★'),
+            ('3', '★'),
+            ('2', '★'),
+            ('1', '★')
+        ],
+        validators=[DataRequired()],
+        coerce=int  # ensures it becomes an int (optional)
+    )
+    submit = SubmitField(_l('Rate'))

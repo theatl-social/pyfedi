@@ -253,6 +253,7 @@ def send_post(post_id, edit=False, session=None):
         "commentsEnabled": post.comments_enabled,
         "sensitive": post.nsfw or post.nsfl,
         "nsfl": post.nsfl,
+        "genAI": post.ai_generated,
         "stickied": post.sticky,
     }
     if post.type != POST_TYPE_POLL:

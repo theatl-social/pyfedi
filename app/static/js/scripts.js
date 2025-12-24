@@ -11,57 +11,101 @@ if(!setTheme) {
 // fires after DOM is ready for manipulation
 document.addEventListener("DOMContentLoaded", function () {
     let low_bandwidth = document.body.classList.contains('low_bandwidth');
+
+    // Critical setup functions that must run immediately
+    const criticalSetups = [
+        setupMobileNav,
+        setupLightDark,
+        setupConfirmFirst,
+        setupSendPost,
+        setupDynamicContentObserver
+    ];
+
+    // High priority setup functions
+    const highPrioritySetups = [
+        setupVotingLongPress,
+        setupVotingDialogHandlers,
+        setupKeyboardShortcuts,
+        setupCommunityNameInput,
+        setupShowMoreLinks,
+        setupSubmitOnInputChange
+    ];
+
+    // Lower priority setup functions that can be deferred
+    const deferredSetups = [
+        setupTopicChooser,
+        setupTimeTracking,
+        setupConversationChooser,
+        setupMarkdownEditorEnabler,
+        setupPolls,
+        setupShowElementLinks,
+        setupPostTeaserHandler,
+        setupPostTypeSwitcher,
+        setupSelectNavigation,
+        setupUserPopup,
+        preventDoubleFormSubmissions,
+        setupSelectAllCheckbox,
+        setupFontSizeChangers,
+        setupAddPassKey,
+        setupFancySelects,
+        setupImagePreview,
+        setupNotificationPermission,
+        setupFederationModeToggle,
+        setupPopupCommunitySidebar,
+        setupVideoSpoilers,
+        setupCommunityFilter,
+        setupPopupTooltips,
+        setupPasswordEye,
+        setupBasicAutoResize,
+        setupEventTimes,
+        setupUserMentionSuggestions,
+        setupScrollToComment,
+        setupTranslateAll,
+        setupEmojiAutoSubmit,
+        setupReactionDialog
+    ];
+
+    // Run critical setups immediately
+    criticalSetups.forEach(setup => setup());
+
+    // Run high priority setups in next frame
+    requestAnimationFrame(() => {
+        highPrioritySetups.forEach(setup => setup());
+
+        // Setup lightbox if not low bandwidth
+        if (!low_bandwidth) {
+            requestAnimationFrame(() => {
+                setupLightboxTeaser();
+                setupLightboxPostBody();
+            });
+        }
+    });
+
+    // Defer remaining setups to avoid blocking
+    let setupIndex = 0;
+    function runDeferredSetups() {
+        const batchSize = 3; // Process 3 setups per frame
+        const endIndex = Math.min(setupIndex + batchSize, deferredSetups.length);
+
+        for (let i = setupIndex; i < endIndex; i++) {
+            deferredSetups[i]();
+        }
+
+        setupIndex = endIndex;
+        if (setupIndex < deferredSetups.length) {
+            requestAnimationFrame(runDeferredSetups);
+        }
+    }
+    requestAnimationFrame(runDeferredSetups);
+
     if(navigator.getBattery) {
         navigator.getBattery().then(function(battery) {
             // Only load youtube videos in teasers if there is plenty of power available
             if (battery.charging) {
-                setupYouTubeLazyLoad();
+                requestAnimationFrame(setupYouTubeLazyLoad);
             }
         });
     }
-    setupVotingLongPress();
-    setupVotingDialogHandlers();
-    setupCommunityNameInput();
-    setupShowMoreLinks();
-    setupConfirmFirst();
-    setupSendPost();
-    setupSubmitOnInputChange();
-    setupTimeTracking();
-    setupMobileNav();
-    setupLightDark();
-    setupKeyboardShortcuts();
-    setupTopicChooser();
-    setupConversationChooser();
-    setupMarkdownEditorEnabler();
-    setupPolls();
-    setupShowElementLinks();
-    if (!low_bandwidth) {
-      setupLightboxTeaser();
-      setupLightboxPostBody();
-    }
-    setupPostTeaserHandler();
-    setupPostTypeSwitcher();
-    setupSelectNavigation();
-    setupUserPopup();
-    preventDoubleFormSubmissions();
-    setupSelectAllCheckbox();
-    setupFontSizeChangers();
-    setupAddPassKey();
-    setupFancySelects();
-    setupImagePreview();
-    setupNotificationPermission();
-    setupFederationModeToggle();
-    setupPopupCommunitySidebar();
-    setupVideoSpoilers();
-    setupDynamicContentObserver();
-    setupCommunityFilter();
-    setupPopupTooltips();
-    setupPasswordEye();
-    setupBasicAutoResize();
-    setupEventTimes();
-    setupUserMentionSuggestions();
-    setupScrollToComment();
-    setupTranslateAll();
 
     // save user timezone into a timezone field, if it exists
     const timezoneField = document.getElementById('timezone');
@@ -71,7 +115,10 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // iOS doesn't support beforeinstallprompt, so detect iOS and show PWA button manually
     if(/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-        document.getElementById('btn_add_home_screen').style.display = 'inline-block';
+        const btnAddHomeScreen = document.getElementById('btn_add_home_screen');
+        if (btnAddHomeScreen) {
+            btnAddHomeScreen.style.display = 'inline-block';
+        }
         document.body.classList.add('ios');
     }
 
@@ -350,12 +397,14 @@ function setupLightDark() {
         if (theme === 'dark') {
             elem.setAttribute('aria-label', 'Light mode');
             elem.setAttribute('title', 'Light mode');
+            elem.setAttribute('data-bs-original-title', 'Light mode');
             elem.setAttribute('data-bs-theme-value', 'light');
             icon.classList.remove('fe-moon');
             icon.classList.add('fe-sun');
         } else {
             elem.setAttribute('aria-label', 'Dark mode');
             elem.setAttribute('title', 'Dark mode');
+            elem.setAttribute('data-bs-original-title', 'Dark mode');
             elem.setAttribute('data-bs-theme-value', 'dark');
             icon.classList.remove('fe-sun');
             icon.classList.add('fe-moon');
@@ -1151,7 +1200,7 @@ function setupAddPassKey() {
             console.log(JSON.stringify(authenticationOptionsJSON, null, 2));
 
             if (authenticationOptionsJSON.error) {
-                $.prompt(authenticationOptionsJSON.error);
+                alert(authenticationOptionsJSON.error);
                 return;
             }
 
@@ -1446,44 +1495,55 @@ function setupVideoSpoilers() {
 
 // Setup MutationObserver to detect dynamically loaded content (e.g., from htmx)
 function setupDynamicContentObserver() {
+    let setupTimeout = null;
+    const SETUP_DELAY = 100; // Debounce delay in ms
+
     const observer = new MutationObserver(function(mutations) {
         let shouldResetup = false;
 
-        mutations.forEach(function(mutation) {
-            // Check if new nodes were added
+        // Use a more efficient check - only look for specific class patterns
+        const targetClasses = [
+            'send_post', 'confirm_first', 'showElement', 'show-more',
+            'user_preview', 'hide_button', 'unhide', 'comment', 'autoresize'
+        ];
+
+        for (const mutation of mutations) {
             if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(function(node) {
-                    // Only process element nodes (not text nodes)
+                for (const node of mutation.addedNodes) {
                     if (node.nodeType === Node.ELEMENT_NODE) {
-                        // Check if the added content contains elements that need event handlers
-                        if (node.querySelector && (
-                            node.querySelector('.send_post') ||
-                            node.querySelector('.confirm_first') ||
-                            node.querySelector('.showElement') ||
-                            node.querySelector('.show-more') ||
-                            node.querySelector('.user_preview') ||
-                            node.querySelector('.hide_button') ||
-                            node.querySelector('.unhide') ||
-                            node.querySelector('.comment') ||
-                            node.querySelector('.autoresize') ||
-                            node.classList.contains('send_post') ||
-                            node.classList.contains('confirm_first') ||
-                            node.classList.contains('showElement') ||
-                            node.classList.contains('hide_button') ||
-                            node.classList.contains('unhide') ||
-                            node.classList.contains('comment') ||
-                            node.classList.contains('autoresize')
-                        )) {
-                            shouldResetup = true;
+                        // Quick check - does the node or any descendant have target classes?
+                        if (node.className && typeof node.className === 'string') {
+                            if (targetClasses.some(cls => node.className.includes(cls))) {
+                                shouldResetup = true;
+                                break;
+                            }
+                        }
+
+                        // Only do expensive querySelector if basic check didn't match
+                        if (!shouldResetup && node.querySelector) {
+                            const hasTargetElements = targetClasses.some(cls =>
+                                node.querySelector('.' + cls) !== null
+                            );
+                            if (hasTargetElements) {
+                                shouldResetup = true;
+                                break;
+                            }
                         }
                     }
-                });
+                }
+                if (shouldResetup) break;
             }
-        });
+        }
 
-        // Re-run setup functions for the new content
+        // Debounce the setup to avoid excessive calls
         if (shouldResetup) {
-            setupDynamicContent();
+            if (setupTimeout) {
+                clearTimeout(setupTimeout);
+            }
+            setupTimeout = setTimeout(() => {
+                setupDynamicContent();
+                setupTimeout = null;
+            }, SETUP_DELAY);
         }
     });
 
@@ -1533,6 +1593,7 @@ function setupDynamicContent() {
     setupBasicAutoResize();
     setupUserMentionSuggestions();
     setupTranslateAll();
+    setupReactionDialog();
 
     // Process toBeHidden array after a short delay to allow inline scripts to run
     setTimeout(() => {
@@ -1790,7 +1851,7 @@ function setupVotingLongPress() {
                         openVotingDialog(element);
                     }
                 }, 2000); // 2 seconds
-            });
+            }, {passive: true});
 
             element.addEventListener('touchmove', function(event) {
                 if (!hasMoved) {
@@ -1804,7 +1865,7 @@ function setupVotingLongPress() {
                         clearTimeout(longPressTimer);
                     }
                 }
-            });
+            }, {passive: true});
 
             element.addEventListener('touchend', function(event) {
                 clearTimeout(longPressTimer);
@@ -2128,5 +2189,135 @@ function setupTranslateAll() {
               }
         });
         triggerElement.dataset.listenerAdded = 'true'; // mark as initialized
+    }
+}
+
+function setupEmojiAutoSubmit() {
+    var triggerElement = document.getElementById('basicEmojiPicker');
+    if(triggerElement) {
+        triggerElement.addEventListener("change", function (e) {
+            if (e.target.matches('input[type="radio"]')) {
+              triggerElement.submit();
+            }
+        });
+    }
+}
+
+function setupReactionDialog() {
+    var triggerElements = document.querySelectorAll('.reaction_button');
+    var dialog = document.getElementById('reaction_dialog');
+    var dialogContents = document.getElementById('reaction_dialog_contents');
+    var closeButton = document.getElementById('reaction_dialog_close');
+
+    if (!dialog || !dialogContents) return;
+
+    // Close button handler
+    if (closeButton) {
+        closeButton.addEventListener('click', function() {
+            dialog.close();
+        });
+    }
+
+    // Click outside dialog to close
+    dialog.addEventListener('click', function(e) {
+        if (e.target === dialog) {
+            dialog.close();
+        }
+    });
+
+    // on each of the triggerElements: when clicked:
+    triggerElements.forEach(function(trigger) {
+        if(!trigger.dataset.listenerAdded) {
+            trigger.addEventListener('click', function(e) {
+                e.preventDefault();
+                var commentId = trigger.getAttribute('data-id');
+                var targetType = trigger.getAttribute('data-target');   // whether we're reacting to a post or comment
+
+                // show the <dialog>
+                dialog.showModal();
+                dialogContents.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+                // fill the <div id="reaction_dialog_contents"> inside the dialog by making a fetch() to def comment_emoji_list()
+                fetch('/' + targetType + '/' + commentId + '/emoji_list')
+                    .then(function(response) {
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        return response.text();
+                    })
+                    .then(function(html) {
+                        dialogContents.innerHTML = html;
+                        // addEventListener onto each of the category buttons so users can switch between categories
+                        var categoryButtons = dialogContents.querySelectorAll('.emoji-category');
+                        categoryButtons.forEach(function(btn) {
+                            btn.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                categoryButtons.forEach(function(b) { b.classList.remove('active'); });
+                                btn.classList.add('active');
+                                renderEmojis(btn.dataset.category, targetType, commentId);
+                            });
+                        });
+
+                        // addEventListener onto each of the emoji icons to do a POST to def comment_emoji_set()
+                        setupEmojiClickHandlers(targetType, commentId, dialog);
+                    })
+                    .catch(function(error) {
+                        console.error('Error loading emoji picker:', error);
+                        dialogContents.innerHTML = '<div class="alert alert-danger">Error loading emoji picker</div>';
+                    });
+            });
+            trigger.dataset.listenerAdded = 'true'; // mark as initialized
+        }
+
+    });
+
+    function setupEmojiClickHandlers(targetType, commentId, dialog) {
+        var emojiButtons = dialogContents.querySelectorAll('.emoji-item');
+        emojiButtons.forEach(function(emojiBtn) {
+            emojiBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var emoji = emojiBtn.textContent || emojiBtn.querySelector('img')?.getAttribute('alt');
+                var formData = new FormData();
+                formData.append('emoji', emoji);
+
+                fetch('/' + targetType + '/' + commentId + '/emoji_set', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(function(html) {
+                    // when the POST succeeds, replace the contents of <div id="comment_123">
+                    var commentDiv = document.getElementById(targetType + '_reactions_' + commentId);
+                    if (commentDiv) {
+                        commentDiv.innerHTML = html;
+                    }
+                    dialog.close();
+                })
+                .catch(function(error) {
+                    console.error('Error setting emoji reaction:', error);
+                });
+            });
+        });
+    }
+
+    function renderEmojis(category, targetType, commentId) {
+        // Show/hide pre-rendered emoji grids based on selected category
+        var emojiGrids = dialogContents.querySelectorAll('.emoji-grid');
+        emojiGrids.forEach(function(grid) {
+            if (grid.getAttribute('data-category') === category) {
+                grid.style.display = 'grid';
+                grid.classList.add('active');
+            } else {
+                grid.style.display = 'none';
+                grid.classList.remove('active');
+            }
+        });
     }
 }

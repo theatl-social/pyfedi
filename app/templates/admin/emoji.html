@@ -1,0 +1,54 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% set active_child = 'admin_emoji' %}
+
+{% block app_content %}
+{% include 'admin/_tabbed_nav.html' %}
+<br>
+
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>{{ _('Emoji') }}</h2>
+            <a href="{{ url_for('admin.admin_emoji_add') }}" class="btn btn-primary">{{ _('Add new emoji') }}</a>
+        </div>
+
+        {% if emojis %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>{{ _('Token') }}</th>
+                        <th>{{ _('URL') }}</th>
+                        <th>{{ _('Category') }}</th>
+                        <th>{{ _('Keywords') }}</th>
+                        <th>{{ _('Instance') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for emoji in emojis %}
+                    <tr>
+                        <td><strong>{{ emoji.token }}</strong></td>
+                        <td>{% if emoji.url.startswith('https://') %}<img src="{{ emoji.url }}" width="30" > {% endif %}{{ emoji.url }}</td>
+                        <td>{{ emoji.category }}</td>
+                        <td>{{ emoji.aliases }}</td>
+                        <td>{{ emoji.instance_id }}</td>
+                        <td>
+                            <a href="{{ url_for('admin.admin_emoji_edit', emoji_id=emoji.id) }}">{{ _('Edit') }}</a>
+                            <a href='#' data-url="{{ url_for('admin.admin_emoji_delete', emoji_id=emoji.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+            <p>{{ _('No emoji have been created yet.') }}</p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}

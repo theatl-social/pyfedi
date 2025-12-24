@@ -22,7 +22,7 @@ The following are our goals for 2025. We brainstormed ideas then [ranked them by
 
 ✅ [Default sort for comments](https://piefed.social/post/411572)
 
-[Loops integration](https://piefed.social/post/411561)
+✅ [Loops integration](https://piefed.social/post/411561)
 
 [Follow mastodon accounts](https://piefed.social/post/411559)
  - [Content warnings](https://piefed.social/post/411566)

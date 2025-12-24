@@ -43,20 +43,19 @@ def find_local_feed(actor_url: str) -> Feed:
     return db.session.query(Feed).filter(Feed.ap_profile_id == actor_url).first()
 
 
-def find_local_user(actor_url: str) -> User:
+def find_local_user(actor_url: str, allow_banned: bool = False) -> User:
     """Find a local user by URL or alt name."""
     alt_user_name = actor_url.rsplit("/", 1)[-1]
-    return (
-        db.session.query(User)
-        .filter(
-            or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name)
-        )
-        .filter_by(ap_id=None, banned=False)
-        .first()
+    user = db.session.query(User).filter(
+        or_(User.ap_profile_id == actor_url, User.alt_user_name == alt_user_name),
+        User.ap_id == None,
     )
+    if not allow_banned:
+        user = user.filter_by(banned=False)
+    return user.first()
 
 
-def validate_remote_actor(actor_url, actor=None):
+def validate_remote_actor(actor_url, actor=None, allow_banned=False):
     """Validate if a remote actor is allowed."""
     server, _ = extract_domain_and_actor(actor_url)
 
@@ -74,7 +73,7 @@ def validate_remote_actor(actor_url, actor=None):
 
     # If we have the actor object, check more conditions
     if actor:
-        if actor.banned:
+        if actor.banned and not allow_banned:
             return False
         if isinstance(actor, User):
             if actor.deleted or actor_profile_contains_blocked_words(actor):
@@ -91,7 +90,9 @@ def find_remote_actor(actor_url):
         actor = db.session.query(User).filter(User.ap_profile_id == actor_url).first()
         if actor:
             return actor
-    elif "/c/" in actor_url:
+    elif ("/c/" in actor_url and "/p/" not in actor_url) or (
+        "/m/" in actor_url and "/t/" not in actor_url
+    ):
         # URL contains /c/ - likely a community
         actor = (
             db.session.query(Community)
@@ -308,14 +309,16 @@ def create_actor_from_remote(
     return None
 
 
-def find_actor_by_url(actor_url, community_only=False, feed_only=False):
+def find_actor_by_url(
+    actor_url, community_only=False, feed_only=False, allow_banned=False
+):
     """Find an actor by URL without creating it."""
     """Warning: this function returns None if not found, False if found and banned/deleted"""
     actor_url = actor_url.strip().lower()
     server_name = current_app.config["SERVER_NAME"]
 
     # Check for local actors first
-    if f"{server_name}/c/" in actor_url:
+    if f"{server_name}/c/" in actor_url and "/p/" not in actor_url:
         actor = find_local_community(actor_url)
         if actor and community_only:
             return actor
@@ -332,7 +335,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
         return None
 
     if f"{server_name}/u/" in actor_url:
-        actor = find_local_user(actor_url)
+        actor = find_local_user(actor_url, allow_banned=allow_banned)
         if actor and not community_only and not feed_only:
             return actor
         return None
@@ -350,5 +353,21 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False):
                 return None
 
             return actor
+
+    if "@" in actor_url:
+        user: User = User.query.filter_by(ap_id=actor_url.lower()).first()
+        return user
+    else:
+        user: User = (
+            User.query.filter(or_(User.user_name == actor_url))
+            .filter_by(ap_id=None)
+            .first()
+        )
+        if user is None:
+            user = User.query.filter_by(
+                ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor_url.lower()}',
+                ap_id=None,
+            ).first()
+        return user
 
     return None

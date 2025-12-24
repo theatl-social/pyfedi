@@ -169,6 +169,12 @@ class RegistrationForm(FlaskForm):
         ):
             raise ValidationError(_l("This password is too common."))
 
+    def filter_user_name(self, user_name):
+        if isinstance(user_name, str):
+            user_name = user_name.strip()
+
+        return user_name
+
 
 class ResetPasswordRequestForm(FlaskForm):
     email = EmailField(

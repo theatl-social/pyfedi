@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask_wtf import FlaskForm
-from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField
+from wtforms import TextAreaField, SubmitField, BooleanField, StringField, HiddenField, RadioField
 from wtforms.fields.choices import SelectField
 from wtforms.validators import DataRequired, Length, ValidationError
 from flask_babel import _, lazy_gettext as _l
@@ -81,6 +81,7 @@ class FlairPostForm(FlaskForm):
     flair = MultiCheckboxField(_l('Flair'), coerce=int, render_kw={'class': 'form-multicheck-columns'})
     nsfw = BooleanField(_l('NSFW'))
     nsfl = BooleanField(_l('Gore/gross'))
+    ai_generated = BooleanField(_l('AI generated'))
     submit = SubmitField(_l('Save'))
 
 
@@ -102,3 +103,12 @@ class NewReminderForm(FlaskForm):
                 raise ValidationError(_l('Invalid.'))
         except Exception:
             raise ValidationError(_l('Invalid.'))
+
+
+class ShareMastodonForm(FlaskForm):
+    domain = StringField(_l('Mastodon instance domain name'), validators=[Length(max=512)])
+    submit = SubmitField(_l('Share'))
+
+
+class ChooseEmojiForm(FlaskForm):
+    submit = SubmitField(_l('Choose'))

@@ -37,7 +37,7 @@
                 <!-- <img class="community_icon_big rounded-circle" src="{{ community.icon_image() }}" /> -->
             {% endif %}
             {{ render_field(form.icon_file) }}
-            <small class="field_hint">Provide a square image that looks good when small.</small>
+            <small class="field_hint">{{ _('Provide a square image that looks good when small.') }}</small>
             {% if community.image_id %}
                 <!-- <a href="{{ community.header_image() }}"><img class="community_icon_big" src="{{ community.header_image() }}" /></a> -->
             {% endif %}
@@ -58,15 +58,20 @@
                 <div id="image_div" class="community_header mb-4" style="display: none; height: 240px; background-image: url({{ community.header_image() }});"></div>
             {% endif %}
             {{ render_field(form.nsfw) }}
+            {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
             {{ render_field(form.local_only) }}
+            {{ render_field(form.question_answer) }}
             {{ render_field(form.new_mods_wanted) }}
             {{ render_field(form.downvote_accept_mode) }}
             {{ render_field(form.topic) }}
             {{ render_field(form.languages) }}
             {{ render_field(form.default_layout) }}
             {{ render_field(form.default_post_type) }}
-            <div class="row mb-4">
+            {{ render_field(form.post_url_type) }}
+            <small class="field_hint">{{ _('Some languages, e.g. Japanese, do not work well with friendly urls.') }}</small>
+
+            <div class="row mb-4 mt-4">
                 <div class="col-auto">
                     {{ render_field(form.submit) }}
                 </div>

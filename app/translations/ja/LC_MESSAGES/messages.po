@@ -3,7 +3,7 @@ msgstr ""
 "Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-11-05 15:45+1300\n"
-"PO-Revision-Date: 2025-11-11 16:59+0000\n"
+"PO-Revision-Date: 2025-12-23 21:49+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
 "Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
 "main-web-app/ja/>\n"
@@ -20,14 +20,14 @@ msgid "Please log in to access this page."
 msgstr "このページにアクセスするにはログインが必要です。"
 
 #: app/cli.py:623
-#, fuzzy, python-format
+#, python-format
 msgid "Reminder: %(title)s"
-msgstr "%(title)s を共有"
+msgstr "リマインダー：%(title)s"
 
 #: app/cli.py:628
-#, fuzzy, python-format
+#, python-format
 msgid "Reminder: comment on %(title)s"
-msgstr "%(post_title)sに対する私のコメントへの返信"
+msgstr "リマインダー：%(title)sのコメント"
 
 #: app/cli.py:826 app/main/routes.py:673
 msgid "[PieFed] You have unread notifications"
@@ -453,9 +453,8 @@ msgid "Show Rational Discourse Toolkit in sidebar"
 msgstr "サイドバーに Rational Discourse Toolkit（理性的な議論ツール）を表示"
 
 #: app/admin/forms.py:66
-#, fuzzy
 msgid "Allow non-admins to add remote communities"
-msgstr "新しいリモートコミュニティを自動で追加する"
+msgstr "管理者以外がリモートコミュニティを追加することを許可する"
 
 #: app/admin/forms.py:72
 msgid "Enable instance chooser"
@@ -522,14 +521,12 @@ msgid "Automatically add new remote communities"
 msgstr "新しいリモートコミュニティを自動で追加する"
 
 #: app/admin/forms.py:96
-#, fuzzy
 msgid "Closing down announcement for home page"
-msgstr "トップページへ表示するお知らせ"
+msgstr "インスタンス閉鎖のアナウンス"
 
 #: app/admin/forms.py:97
-#, fuzzy
 msgid "Yes, close my instance"
-msgstr "ブロックしたインスタンスはありません"
+msgstr "はい、インスタンスを閉鎖します"
 
 #: app/admin/forms.py:101 app/admin/forms.py:107
 msgid "Number of Communities to add"
@@ -668,7 +665,7 @@ msgstr "6か月"
 
 #: app/admin/forms.py:142
 msgid "1 year"
-msgstr "1 年"
+msgstr "1年"
 
 #: app/admin/forms.py:143
 msgid "2 years"
@@ -801,9 +798,8 @@ msgid "Trusted"
 msgstr "信用済み"
 
 #: app/admin/forms.py:186
-#, fuzzy
 msgid "Hide from instance chooser"
-msgstr "インスタンス選択機能を有効にする"
+msgstr "インスタンス選択機能から隠す"
 
 #: app/admin/forms.py:188
 msgid "Inbox"
@@ -1057,7 +1053,7 @@ msgstr "その他の設定"
 msgid ""
 "Settings saved. It might take up to 24 hours before other instances show "
 "your changes."
-msgstr ""
+msgstr "保存しました。24時間程度で他のインスタンスへも反映されます。"
 
 #: app/admin/routes.py:418
 #, python-format
@@ -1852,9 +1848,8 @@ msgid "Event"
 msgstr "イベント"
 
 #: app/community/forms.py:107
-#, fuzzy
 msgid "Default post type"
-msgstr "投稿のデフォルトフィルター"
+msgstr "既定の投稿タイプ"
 
 #: app/community/forms.py:115 app/community/forms.py:169 app/post/forms.py:15
 msgid "Body"
@@ -2079,9 +2074,8 @@ msgid "More information link"
 msgstr "追加の情報へのリンク"
 
 #: app/community/forms.py:324
-#, fuzzy
 msgid "Cost"
-msgstr "投稿"
+msgstr "コスト"
 
 #: app/community/forms.py:325
 msgid "Maximum number of attendees"
@@ -2096,24 +2090,20 @@ msgid "Online"
 msgstr "オンライン"
 
 #: app/community/forms.py:327
-#, fuzzy
 msgid "Online link"
-msgstr "オンライン"
+msgstr "オンライン参加へのリンク"
 
 #: app/community/forms.py:328
-#, fuzzy
 msgid "Address"
-msgstr "フィードURL"
+msgstr "住所"
 
 #: app/community/forms.py:329
-#, fuzzy
 msgid "City"
-msgstr "コミュニティ"
+msgstr "市"
 
 #: app/community/forms.py:330
-#, fuzzy
 msgid "Country"
-msgstr "コミュニティ"
+msgstr "国"
 
 #: app/community/forms.py:336
 msgid "Free"
@@ -2128,29 +2118,28 @@ msgid "Paid"
 msgstr "有料"
 
 #: app/community/forms.py:360 app/community/forms.py:362
-#, fuzzy
 msgid "This time is in the past."
-msgstr "この名前は既に使われています。"
+msgstr "過去の日時は指定できません。"
 
 #: app/community/forms.py:365
 msgid "Start must be less than end."
-msgstr ""
+msgstr "開始日時は終了日時より前である必要があります。"
 
 #: app/community/forms.py:371
 msgid "Online link is required for online events."
-msgstr ""
+msgstr "オンラインイベントにはリンクが必要です。"
 
 #: app/community/forms.py:376
 msgid "Address is required for physical events."
-msgstr ""
+msgstr "現地イベントには住所が必要です。"
 
 #: app/community/forms.py:379
 msgid "City is required for physical events."
-msgstr ""
+msgstr "現地イベントには市や県の入力が必要です。"
 
 #: app/community/forms.py:382
 msgid "Country is required for physical events."
-msgstr ""
+msgstr "現地イベントには国が必要です。"
 
 #: app/community/forms.py:405
 msgid "Mode"
@@ -2314,7 +2303,7 @@ msgstr "コミュニティを作成"
 
 #: app/community/routes.py:156
 msgid "Adding remote communities is restricted to admin and staff users only."
-msgstr ""
+msgstr "リモートコミュニティの追加は管理者もしくはスタッフに限定されています。"
 
 #: app/community/routes.py:166 app/community/routes.py:2419
 #: app/feed/routes.py:130 app/feed/routes.py:1150 app/user/routes.py:1873
@@ -2413,7 +2402,8 @@ msgstr "フィード"
 msgid ""
 "This instance no longer online, so posts and comments will only be "
 "visible locally"
-msgstr ""
+msgstr "このインスタンスは長い間オフラインとなっているため、投稿やコメントはローカル"
+"でのみ表示されます"
 
 #: app/community/routes.py:776 app/shared/tasks/follows.py:49
 msgid "You cannot join this community"
@@ -2622,7 +2612,7 @@ msgstr "リモートコミュニティの検索をするにはログインする
 
 #: app/community/routes.py:2509
 msgid "This function is only for admins"
-msgstr ""
+msgstr "この機能は管理者のみが利用できます"
 
 #: app/community/routes.py:2515
 msgid "This is a local community"
@@ -2750,11 +2740,13 @@ msgstr "リモートフィードの検索にはログインが必要です"
 
 #: app/instance/routes.py:54
 msgid "Limiting results to blocked instances disables filters other than search"
-msgstr ""
+msgstr "ブロックされたインスタンスに結果を制限すると、検索以外のフィルターが無効化さ"
+"れます"
 
 #: app/instance/routes.py:56
 msgid "Limiting results to allowed instances disables filters other than search"
-msgstr ""
+msgstr "許可されたインスタンスに結果を制限すると、検索以外のフィルターが無効化されま"
+"す"
 
 #: app/instance/routes.py:78 app/instance/routes.py:214
 #: app/templates/admin/_nav.html:26 app/templates/admin/_tabbed_nav.html:28
@@ -2817,11 +2809,11 @@ msgstr "モデレーションログ"
 #: app/main/routes.py:758
 #, python-format
 msgid "Failed to look up %(url)s"
-msgstr ""
+msgstr "%(url)s を参照できませんでした"
 
 #: app/main/routes.py:772
 msgid "Protocol handler"
-msgstr ""
+msgstr "プロトコル ハンドラー"
 
 #: app/main/routes.py:904
 msgid "Please click the link in your email inbox to verify your account."
@@ -2859,17 +2851,16 @@ msgid "Also delete replies to this comment"
 msgstr "このコメントの返信も削除する"
 
 #: app/post/forms.py:88
-#, fuzzy
 msgid "When would you like to be reminded?"
-msgstr "このサイトに登録したいと思った理由を教えて下さい。"
+msgstr "リマインドする時間を指定してください"
 
 #: app/post/forms.py:89
 msgid "e.g. 'in 2 weeks'"
-msgstr ""
+msgstr "例： 'in 2 weeks'"
 
 #: app/post/forms.py:102 app/post/forms.py:104
 msgid "Invalid."
-msgstr ""
+msgstr "無効。"
 
 #: app/post/routes.py:74 app/post/routes.py:411 app/post/routes.py:590
 msgid ""
@@ -2966,17 +2957,17 @@ msgstr "投稿を完全に削除しました。"
 #: app/post/routes.py:1120 app/post/routes.py:1145
 #, python-format
 msgid "Reminder added for %(when)s"
-msgstr ""
+msgstr "%(when)s にリマインドする"
 
 #: app/post/routes.py:1125
-#, fuzzy, python-format
+#, python-format
 msgid "Creating a reminder about \"%(post_title)s\""
-msgstr "\"%(post_title)s\" を通報"
+msgstr "\"%(post_title)s\"のリマインドを作成"
 
 #: app/post/routes.py:1150
-#, fuzzy, python-format
+#, python-format
 msgid "Creating a reminder about comment by %(author)s on \"%(post_title)s\""
-msgstr "%(post_title)sに対する私のコメントへの返信"
+msgstr "%(author)s のコメント \"%(post_title)s\" のリマインドを作成"
 
 #: app/post/routes.py:1208
 msgid ""
@@ -3049,9 +3040,8 @@ msgid "Edit comment"
 msgstr "コメントを編集"
 
 #: app/post/routes.py:1614
-#, fuzzy
 msgid "Delete all my comments in this chain"
-msgstr "このアカウントの全てのコンテンツを削除"
+msgstr "このスレッド内の自分のコメントをすべて削除する"
 
 #: app/post/routes.py:1654
 #, python-format
@@ -3319,7 +3309,7 @@ msgstr "1週間で最も賛成された投票"
 #: app/templates/community/_community_nav.html:441
 #: app/templates/feed/_feed_nav.html:83
 msgid "Week"
-msgstr "週"
+msgstr "1週間"
 
 #: app/templates/_home_nav.html:34
 #: app/templates/community/_community_nav.html:47
@@ -3364,7 +3354,7 @@ msgstr "最も賛成された投票"
 #: app/templates/community/_community_nav.html:456
 #: app/templates/feed/_feed_nav.html:98
 msgid "All Time"
-msgstr "全時間"
+msgstr "すべての期間"
 
 #: app/templates/_home_nav.html:46 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -3524,14 +3514,12 @@ msgid "Explore Tag Cloud"
 msgstr "タグクラウドを見る"
 
 #: app/templates/_side_pane.html:66 app/templates/index.html:90
-#, fuzzy
 msgid "Upcoming events"
-msgstr "コメント"
+msgstr "直近のイベント"
 
 #: app/templates/_side_pane.html:79
-#, fuzzy
 msgid "iCal feed"
-msgstr "フィードの作成"
+msgstr "iCalフィード"
 
 #: app/templates/_side_pane.html:91
 msgid "This community does not federate with other instances."
@@ -3576,7 +3564,7 @@ msgstr "オリジナルサーバから投稿を取得"
 
 #: app/templates/_side_pane.html:130
 msgid "Refresh community information from remote"
-msgstr ""
+msgstr "リモートの情報でコミュニティを更新する"
 
 #: app/templates/_side_pane.html:135
 #: app/templates/community/_community_moderation_nav.html:14
@@ -3930,9 +3918,8 @@ msgid "Donate using Liberapay"
 msgstr "Liberapayで寄付する"
 
 #: app/templates/donate.html:21
-#, fuzzy
 msgid "Donate using Ko-fi"
-msgstr "Patreonで寄付する"
+msgstr "Ko-fiで寄付する"
 
 #: app/templates/explore.html:43 app/templates/list_communities.html:355
 #: app/templates/list_topics.html:34
@@ -4116,13 +4103,12 @@ msgid "Add community from another instance"
 msgstr "他のインスタンスからコミュニティを追加"
 
 #: app/templates/list_communities.html:44
-#, fuzzy
 msgid "Community Location"
-msgstr "コミュニティオプション"
+msgstr "コミュニティの場所"
 
 #: app/templates/list_communities.html:48
 msgid "Filter based on whether the community is local or remote"
-msgstr ""
+msgstr "コミュニティをローカル/リモートでフィルターします"
 
 #: app/templates/auth/instance_chooser.html:28
 #: app/templates/list_communities.html:50
@@ -4139,9 +4125,8 @@ msgid "Subscription Status"
 msgstr "参加状態"
 
 #: app/templates/list_communities.html:67
-#, fuzzy
 msgid "Filter based on community subscription status"
-msgstr "コミュニティ作成日でソート"
+msgstr "コミュニティの参加状態でフィルターします"
 
 #: app/templates/list_communities.html:75
 msgid "Not Subscribed"
@@ -4223,9 +4208,8 @@ msgid "Created"
 msgstr "作成日"
 
 #: app/templates/list_communities.html:276
-#, fuzzy
 msgid "Rank"
-msgstr "理由"
+msgstr "ランク"
 
 #: app/templates/list_communities.html:313
 #, python-format
@@ -4327,15 +4311,18 @@ msgid ""
 " open it in PieFed. This is possible by registering \"web+ap\" as a type "
 "of link that PieFed will open."
 msgstr ""
+"Lemmy のページを開いたときに、URL の https 部分を web+ap に変更すると PieFed "
+"で開くことができます。これは、\"web+ap\" を PieFed "
+"が開くリンクの種類として登録することで可能になります。"
 
 #: app/templates/protocol_handler.html:13
 #, python-format
 msgid "Open web+ap links using %(domain)s"
-msgstr ""
+msgstr "web+ap リンクで%(domain)sを開く"
 
 #: app/templates/protocol_handler.html:14
 msgid "Un-register protocol handler"
-msgstr ""
+msgstr "プロトコルハンドラーの登録を外す"
 
 #: app/templates/share.html:16
 #, python-format
@@ -4742,12 +4729,15 @@ msgid "Remote server scan"
 msgstr "リモートサーバーのスキャン"
 
 #: app/templates/admin/federation.html:47
-#, fuzzy
 msgid ""
 "Use this to scan a remote PieFed or Lemmy server and \"pre-load\" its "
 "communities, as ranked by posts and activity. NSFW communities and "
 "communities from banned instances are excluded."
-msgstr "リモートのLemmyインスタンスをスキャンし、投稿数やアクティブユーザーに基づいてランク付けされたコミュニティを「事前読み込み」します。NSFWのコミュニティや、BANされたインスタンスのコミュニティは除外されます。"
+msgstr ""
+"これを使ってリモートの PieFed / Lemmy "
+"インスタンスをスキャンし、投稿数や活動状況に基づいてコミュニティを事前に読み"
+"込むことができます。NSFW コミュニティや、BAN "
+"されたインスタンスのコミュニティは含まれません。"
 
 #: app/templates/admin/federation.html:48
 msgid "Input should be in the form of <strong>https://server-name.tld</strong>"
@@ -5306,9 +5296,8 @@ msgid "You have blocked this person or they have blocked you."
 msgstr "この人をブロックしているか、ブロックされています。"
 
 #: app/templates/chat/chat_options.html:2
-#, fuzzy
 msgid "Leave conversation"
-msgstr "会話を削除"
+msgstr "会話から抜ける"
 
 #: app/templates/chat/chat_options.html:4
 msgid "Delete conversation"
@@ -5517,7 +5506,6 @@ msgstr "投稿の種類"
 #: app/templates/community/_community_nav.html:155
 #: app/templates/community/_community_nav.html:386
 #: app/templates/community/_community_nav.html:486
-#, fuzzy
 msgid "Events"
 msgstr "イベント"
 
@@ -5549,9 +5537,8 @@ msgid "Show comments"
 msgstr "コメントを表示"
 
 #: app/templates/community/_community_nav.html:485
-#, fuzzy
 msgid "Show events"
-msgstr "コメントを表示"
+msgstr "イベントを表示"
 
 #: app/templates/community/_join_button.html:2
 #: app/templates/feed/_feed_table_row.html:7
@@ -5576,7 +5563,8 @@ msgstr "新着投稿のたびに通知されます。投稿の多いコミュニ
 msgid ""
 "This is shown above the field where people compose their content. Only "
 "use this if really necessary."
-msgstr ""
+msgstr "これは、投稿内容を入力するフィールドの上に表示されます。必要な場合のみ使用し"
+"てください。"
 
 #: app/templates/community/add_local.html:27
 #: app/templates/feed/feed_copy.html:29 app/templates/feed/feed_edit.html:34
@@ -6032,9 +6020,9 @@ msgid "How many times has something on this domain been posted"
 msgstr "このドメインからの投稿回数"
 
 #: app/templates/domain/domains_blocked.html:14
-#, fuzzy, python-format
+#, python-format
 msgid "Banned domains containing \"%(search)s\""
-msgstr "\"%(search)s\" を含むドメインはブロックしています"
+msgstr "\"%(search)s\" を含むドメインはBANされています"
 
 #: app/templates/domain/domains_blocked.html:46
 msgid "Unbanning this domain allows future posts linking to that domain."
@@ -6187,7 +6175,7 @@ msgstr "%(name)s を表示"
 
 #: app/templates/feed/feed_edit.html:20
 msgid "Feed has subscribers, cannot change Url."
-msgstr ""
+msgstr "このフィードには購読者がいるため、URL を変更できません。"
 
 #: app/templates/feed/feed_new.html:13
 msgid "Create Feed"
@@ -6223,15 +6211,13 @@ msgid "Feed communities"
 msgstr "フィード内のコミュニティ"
 
 #: app/templates/feed/show_feed.html:191
-#, fuzzy
 msgid "Curated by "
-msgstr "作成日"
+msgstr "編集者： "
 
 #: app/templates/feed/show_feed.html:199
 #: app/templates/topic/show_topic.html:127
-#, fuzzy
 msgid "Number of subscribers"
-msgstr "参加者数"
+msgstr "購読者数"
 
 #: app/templates/instance/list_instances.html:27
 #: app/templates/instance/list_instances.html:28
@@ -6380,9 +6366,8 @@ msgid "Score:"
 msgstr "スコア:"
 
 #: app/templates/post/_flair_choices.html:13
-#, fuzzy
 msgid "NSFL"
-msgstr "NSFW"
+msgstr "NSFL"
 
 #: app/templates/post/_post_full.html:14
 #: app/templates/post/post_teaser/_macros.html:42
@@ -6395,9 +6380,8 @@ msgid "Reported. Check post for issues."
 msgstr "通報されました。投稿に問題がないかご確認ください。"
 
 #: app/templates/post/_post_full.html:72
-#, fuzzy
 msgid "Go to image"
-msgstr "インスタンスへ移動"
+msgstr "画像を開く"
 
 #: app/templates/post/_post_full.html:113
 #: app/templates/post/_post_full.html:153
@@ -6405,22 +6389,18 @@ msgid "Watch on piped.video"
 msgstr "piped.videoで見る"
 
 #: app/templates/post/_post_full.html:182
-#, fuzzy
 msgid "Online Event"
-msgstr "オンライン"
+msgstr "オンラインイベント"
 
 #: app/templates/post/_post_full.html:190
-#, fuzzy
 msgid "Location"
-msgstr "寄付"
+msgstr "場所"
 
 #: app/templates/post/_post_full.html:198
-#, fuzzy
 msgid "Max Attendees"
 msgstr "最大参加可能人数"
 
 #: app/templates/post/_post_full.html:205
-#, fuzzy
 msgid "Join Mode"
 msgstr "参加モード"
 
@@ -6443,9 +6423,8 @@ msgid "No votes have been cast yet."
 msgstr "ページはまだ作成されていません。"
 
 #: app/templates/post/_post_full.html:276
-#, fuzzy
 msgid "Show voting form"
-msgstr "古い順に表示"
+msgstr "投票画面に戻る"
 
 #: app/templates/post/_post_full.html:303
 #: app/templates/post/_post_full.html:360
@@ -6453,9 +6432,8 @@ msgid "Vote"
 msgstr "投票"
 
 #: app/templates/post/_post_full.html:303
-#, fuzzy
 msgid "View results"
-msgstr "履歴を表示"
+msgstr "投票結果を表示"
 
 #: app/templates/post/_post_full.html:307
 #: app/templates/post/_post_full.html:330
@@ -6469,9 +6447,8 @@ msgid "Poll closes"
 msgstr "投票の終了"
 
 #: app/templates/post/_post_full.html:367
-#, fuzzy
 msgid "Add to calendar"
-msgstr "ローカルユーザーを追加"
+msgstr "カレンダーに追加"
 
 #: app/templates/post/_post_full.html:378
 msgid "Hashtags"
@@ -6574,9 +6551,8 @@ msgid "reply"
 msgstr "返信"
 
 #: app/templates/post/_post_reply_teaser.html:90
-#, fuzzy
 msgid "locked"
-msgstr "ブロック"
+msgstr "ロック済み"
 
 #: app/templates/post/_post_reply_teaser.html:98
 msgid "Un-collapse"
@@ -6667,69 +6643,63 @@ msgstr ""
 
 #: app/templates/post/add_reply_inline.html:82 app/templates/post/post.html:38
 #: app/templates/post/post_edit.html:100
-#, fuzzy
 msgid "Loading..."
-msgstr "コメントを読み込み中..."
+msgstr "読み込み中..."
 
 #: app/templates/post/add_reply_inline.html:83 app/templates/post/post.html:39
 #: app/templates/post/post_edit.html:101
-#, fuzzy
 msgid "No images found."
-msgstr "表示するユーザーがいません"
+msgstr "画像が見つかりませんでした。"
 
 #: app/templates/post/add_reply_inline.html:84 app/templates/post/post.html:40
 #: app/templates/post/post_edit.html:102
-#, fuzzy
 msgid "Error loading images."
-msgstr "コメントを読み込み中..."
+msgstr "画像の読み込みに失敗しました。"
 
 #: app/templates/post/add_reply_inline.html:85 app/templates/post/post.html:41
 #: app/templates/post/post_edit.html:103
-#, fuzzy
 msgid "Insert"
-msgstr "回答"
+msgstr "挿入"
 
 #: app/templates/post/add_reply_inline.html:88 app/templates/post/post.html:44
 #: app/templates/post/post_edit.html:106
-#, fuzzy
 msgid "Are you sure you want to delete this image?"
-msgstr "このページを本当に削除してもよろしいでしょうか？"
+msgstr "この画像を削除してもよろしいでしょうか？"
 
 #: app/templates/post/add_reply_inline.html:89 app/templates/post/post.html:45
 #: app/templates/post/post_edit.html:107
 msgid "Failed to delete image. Please try again."
-msgstr ""
+msgstr "削除に失敗しました、改めて実行してください。"
 
 #: app/templates/post/add_reply_inline.html:90 app/templates/post/post.html:46
 #: app/templates/post/post_edit.html:108
 msgid "Please select a file."
-msgstr ""
+msgstr "ファイルを選択してください。"
 
 #: app/templates/post/add_reply_inline.html:91 app/templates/post/post.html:47
 #: app/templates/post/post_edit.html:109
 msgid "Please select an image file."
-msgstr ""
+msgstr "画像を選択してください。"
 
 #: app/templates/post/add_reply_inline.html:92 app/templates/post/post.html:48
 #: app/templates/post/post_edit.html:110
-#, fuzzy
 msgid "Uploading..."
-msgstr "コメントを読み込み中..."
+msgstr "アップロード中..."
 
 #: app/templates/post/add_reply_inline.html:93 app/templates/post/post.html:49
 #: app/templates/post/post_edit.html:111
 msgid "Upload successful!"
-msgstr ""
+msgstr "アップロード完了！"
 
 #: app/templates/post/add_reply_inline.html:94 app/templates/post/post.html:50
 #: app/templates/post/post_edit.html:112
 msgid "Upload failed. Please try again."
-msgstr ""
+msgstr "アップロードに失敗しました、改めて実行してください。"
 
 #: app/templates/post/add_reply_inline.html:95 app/templates/post/post.html:51
 #: app/templates/post/post_edit.html:113
 msgid "Failed to upload pasted image. Please try again."
-msgstr ""
+msgstr "アップロードに失敗しました、改めて実行してください。"
 
 #: app/templates/post/continue_discussion.html:21
 #, fuzzy
@@ -6737,13 +6707,12 @@ msgid "Back to main discussion"
 msgstr "文章を投稿する"
 
 #: app/templates/post/continue_discussion.html:27
-#, fuzzy
 msgid "Parent comment"
-msgstr "コメントを通報する"
+msgstr "親コメント"
 
 #: app/templates/post/post.html:79
 msgid "This post is old so votes and comments are disabled."
-msgstr ""
+msgstr "この投稿は古くなっているため投票とコメントは無効になっています。"
 
 #: app/templates/post/post.html:84
 msgid "The author of this post has been banned so they might not see your reply."
@@ -6816,9 +6785,8 @@ msgid "Tags available"
 msgstr ""
 
 #: app/templates/post/post_edit.html:283
-#, fuzzy
 msgid "Example"
-msgstr "ユーザー"
+msgstr "例"
 
 #: app/templates/post/post_edit.html:284
 msgid "...will generate"
@@ -6881,13 +6849,12 @@ msgstr "アンロック"
 
 #: app/templates/post/post_options.html:44
 msgid "I made a mistake with this post and have changed my mind about the topic"
-msgstr "投稿の内容に誤りがあり、このトピックについては考え直すことにしました"
+msgstr "投稿の内容について考え直す"
 
 #: app/templates/post/post_options.html:46
 #: app/templates/post/post_reply_options.html:59
-#, fuzzy
 msgid "Remind me about this"
-msgstr "詳細はこちら"
+msgstr "リマインドに追加"
 
 #: app/templates/post/post_options.html:50
 msgid "Cross-post to another community"
@@ -7138,9 +7105,9 @@ msgstr "RSS"
 
 #: app/templates/tag/tag_cloud.html:14 app/templates/tag/tag_cloud.html:16
 #: app/templates/tag/tag_cloud.html:18
-#, fuzzy, python-format
+#, python-format
 msgid "Tags in %(community)s"
-msgstr "%(community)s のフレア"
+msgstr "%(community)s のタグ"
 
 #: app/templates/tag/tags.html:14 app/templates/tag/tags_blocked.html:14
 #, python-format
@@ -7477,7 +7444,7 @@ msgstr "画像を削除"
 
 #: app/templates/user/edit_profile.html:111
 msgid "Danger Zone! - Account Deletion"
-msgstr ""
+msgstr "！危険です！ - アカウント削除設定"
 
 #: app/templates/user/edit_settings.html:24
 msgid "Mail Settings"
@@ -7505,7 +7472,7 @@ msgstr "フォントを小さくする"
 
 #: app/templates/user/edit_settings.html:54
 msgid "Go here to preview the different code styles"
-msgstr ""
+msgstr "こちらからプレビューを確認できます"
 
 #: app/templates/user/edit_settings.html:59
 msgid "Do not blindly copy and paste CSS from random strangers on the internet."
@@ -7523,11 +7490,11 @@ msgstr "設定した言語の投稿や返信のみ表示します、全て許可
 
 #: app/templates/user/edit_settings.html:69
 msgid "Long press to vote differently."
-msgstr ""
+msgstr "投票を長押しすることで種類を選択して投票できます。"
 
 #: app/templates/user/edit_settings.html:70
 msgid "Hold down the mouse button to vote differently."
-msgstr ""
+msgstr "投票を長押しすることで種類を選択して投票できます。"
 
 #: app/templates/user/edit_settings.html:75
 msgid "Communities joined outside of a feed will not be auto unsubscribed."
@@ -7535,7 +7502,7 @@ msgstr "自分で参加したコミュニティは、自動的に外れること
 
 #: app/templates/user/edit_settings.html:77
 msgid "Set up web+ap links"
-msgstr ""
+msgstr "web+ap リンクを設定する"
 
 #: app/templates/user/email_notifs_unsubscribed.html:13
 #: app/templates/user/newsletter_unsubscribed.html:13
@@ -7572,26 +7539,24 @@ msgid "Files"
 msgstr "ファイル"
 
 #: app/templates/user/file_delete.html:20
-#, fuzzy
 msgid "Are you sure you want to delete this file?"
-msgstr "このページを本当に削除してもよろしいでしょうか？"
+msgstr "このファイルを本当に削除してもよろしいでしょうか？"
 
 #: app/templates/user/file_upload.html:20
-#, fuzzy
 msgid "Upload files"
-msgstr "フィルター: "
+msgstr "ファイルアップロード"
 
 #: app/templates/user/file_upload.html:22
 msgid ""
 "You can add files to your library by providing a list of urls or "
 "uploading them from your device."
-msgstr ""
+msgstr "URLのリストを使用するか、デバイスからアップロードすることができます。"
 
 #: app/templates/user/file_upload.html:27
 msgid ""
 "Files added via url do not consume your quota as they are not copied into"
 " PieFed."
-msgstr ""
+msgstr "URLで追加した画像はPieFedの容量に影響しません。"
 
 #: app/templates/user/files.html:24
 #, python-format
@@ -7599,9 +7564,8 @@ msgid "You are using %(size)s out of a quota of %(max_size)s"
 msgstr "現在 %(size)s 使用しています、最大 %(max_size)s までアップロード可能です"
 
 #: app/templates/user/files.html:43
-#, fuzzy
 msgid "No media has been uploaded yet."
-msgstr "ページはまだ作成されていません。"
+msgstr "まだファイルがアップロードされていません。"
 
 #: app/templates/user/filters.html:28
 msgid "Collapse replies with a score at or below this level - click to view."
@@ -7796,9 +7760,9 @@ msgid "View original profile"
 msgstr "完全なプロフィールの表示"
 
 #: app/templates/user/show_profile.html:120
-#, fuzzy, python-format
+#, python-format
 msgid "Block @%(user_name)s"
-msgstr "%(user_name)s をブロック"
+msgstr "@%(user_name)s をブロック"
 
 #: app/templates/user/show_profile.html:121
 #, python-format
@@ -7860,18 +7824,16 @@ msgid "Overview pagination"
 msgstr "投稿のページ切り替え"
 
 #: app/templates/user/show_profile.html:225
-#, fuzzy
 msgid "No posts or comments yet."
-msgstr "コメントはありません。"
+msgstr "投稿またはコメントがまだありません。"
 
 #: app/templates/user/show_profile.html:241
 msgid "Post pagination"
 msgstr "投稿のページ切り替え"
 
 #: app/templates/user/show_profile.html:315
-#, fuzzy
 msgid "Same IP address"
-msgstr "BAN IPアドレス"
+msgstr "IPアドレス"
 
 #: app/templates/user/show_profile.html:331
 msgid "Moderate user"
@@ -8018,9 +7980,8 @@ msgid ""
 msgstr "ユーザーの新着通知を設定していません。通知を受け取るにはユーザーのベルアイコンをクリックしてください。"
 
 #: app/templates/user/notifs/0.html:11
-#, fuzzy
 msgid "New post by followed user "
-msgstr "NSFWな投稿は許可されていません。"
+msgstr "フォローしているユーザーからの新着投稿 "
 
 #: app/templates/user/notifs/0.html:15
 #, fuzzy
@@ -8028,14 +7989,12 @@ msgid "in"
 msgstr "自分に関係する投稿"
 
 #: app/templates/user/notifs/1.html:11
-#, fuzzy
 msgid "New Post in followed community "
-msgstr "%(community_name)sに新着投稿"
+msgstr "参加しているコミュニティからの新着投稿 "
 
 #: app/templates/user/notifs/2.html:11
-#, fuzzy
 msgid "New Post in followed topic "
-msgstr "子トピックの投稿を表示"
+msgstr "購読しているトピックからの新着投稿 "
 
 #: app/templates/user/notifs/20.html:4
 #, fuzzy
@@ -8043,9 +8002,8 @@ msgid "Post Reported"
 msgstr "投稿を戻しました。"
 
 #: app/templates/user/notifs/20.html:16 app/templates/user/notifs/20.html:43
-#, fuzzy
 msgid "Post details"
-msgstr "ページの詳細"
+msgstr "投稿の詳細"
 
 #: app/templates/user/notifs/20.html:32
 #, fuzzy
@@ -8053,9 +8011,8 @@ msgid "User Reported"
 msgstr "ユーザーメモ"
 
 #: app/templates/user/notifs/20.html:35
-#, fuzzy
 msgid "Username"
-msgstr "ユーザー名 (英数字（a～z、0～9 ) が使用できます)"
+msgstr "ユーザー名"
 
 #: app/templates/user/notifs/20.html:58
 #, fuzzy
@@ -8063,9 +8020,8 @@ msgid "Comment Reported"
 msgstr "コメントを戻しました。"
 
 #: app/templates/user/notifs/20.html:69
-#, fuzzy
 msgid "Comment details"
-msgstr "詳細"
+msgstr "コメントの詳細"
 
 #: app/templates/user/notifs/20.html:85
 msgid "Post From Suspicious Domain"
@@ -8117,9 +8073,8 @@ msgid "Post title: "
 msgstr "フィルター: "
 
 #: app/templates/user/notifs/6.html:38
-#, fuzzy
 msgid "Post Details"
-msgstr "ページの詳細"
+msgstr "投稿の詳細"
 
 #: app/templates/user/notifs/6.html:52
 #, fuzzy
@@ -8176,7 +8131,7 @@ msgstr "追加情報 1 - ラベル"
 
 #: app/user/forms.py:18
 msgid "e.g. Pronouns"
-msgstr ""
+msgstr "例：代名詞"
 
 #: app/user/forms.py:19
 msgid "Extra field 1 - text"
@@ -8184,7 +8139,7 @@ msgstr "追加情報 1 - テキスト"
 
 #: app/user/forms.py:20
 msgid "he/him, she/her, they/them, etc"
-msgstr ""
+msgstr "he/him, she/her, they/them など"
 
 #: app/user/forms.py:21
 msgid "Extra field 2 - label"
@@ -8192,7 +8147,7 @@ msgstr "追加情報 2 - ラベル"
 
 #: app/user/forms.py:22
 msgid "What I care about"
-msgstr ""
+msgstr "好きなこと"
 
 #: app/user/forms.py:23
 msgid "Extra field 2 - text"
@@ -8200,7 +8155,7 @@ msgstr "追加情報 2 - テキスト"
 
 #: app/user/forms.py:24
 msgid "Cats, Peace, Family"
-msgstr ""
+msgstr "ペット、家族、場所"
 
 #: app/user/forms.py:25
 msgid "Extra field 3 - label"
@@ -8208,7 +8163,7 @@ msgstr "追加情報 3 - ラベル"
 
 #: app/user/forms.py:26
 msgid "People who influence me"
-msgstr ""
+msgstr "尊敬する人"
 
 #: app/user/forms.py:27
 msgid "Extra field 3 - text"
@@ -8219,9 +8174,8 @@ msgid "Extra field 4 - label"
 msgstr "追加情報 4 - ラベル"
 
 #: app/user/forms.py:29
-#, fuzzy
 msgid "Things I've changed my mind about"
-msgstr "投稿についての考えが変わりました"
+msgstr "普段やっていること"
 
 #: app/user/forms.py:30
 msgid "Extra field 4 - text"
@@ -8279,16 +8233,15 @@ msgstr "既読投稿（投票含む）を表示しない"
 
 #: app/user/forms.py:69
 msgid "Show communities I've joined on my profile"
-msgstr ""
+msgstr "参加しているコミュニティをプロフィールに表示する"
 
 #: app/user/forms.py:70
 msgid "Manually approve followers"
 msgstr "フォロワーを手動で承認する"
 
 #: app/user/forms.py:71
-#, fuzzy
 msgid "Federate votes"
-msgstr "連合"
+msgstr "投票を連合する"
 
 #: app/user/forms.py:72
 msgid "Enable Automatic Follow of Feed Communities."
@@ -8303,27 +8256,24 @@ msgid "Default post sort"
 msgstr "投稿のデフォルトフィルター"
 
 #: app/user/forms.py:88
-#, fuzzy
 msgid "Default comment sort"
-msgstr "投稿のデフォルトフィルター"
+msgstr "コメントのデフォルトソート順"
 
 #: app/user/forms.py:98
 msgid "Theme"
 msgstr "テーマ"
 
 #: app/user/forms.py:100
-#, fuzzy
 msgid "Not compact - expand images"
 msgstr "適用しない：画像を大きく表示"
 
 #: app/user/forms.py:101
 msgid "More compact - only thumbnails for images"
-msgstr ""
+msgstr "少しコンパクト - 画像はサムネイルのみ"
 
 #: app/user/forms.py:102
-#, fuzzy
 msgid "Most compact - no images, only text"
-msgstr "適用：画像は表示しません"
+msgstr "コンパクト：画像は表示しません"
 
 #: app/user/forms.py:104
 msgid "Compact UI"
@@ -8351,7 +8301,7 @@ msgstr "フォント"
 
 #: app/user/forms.py:114
 msgid "Code syntax highlighting color scheme"
-msgstr ""
+msgstr "Codeブロックのシンタックスハイライトの選択"
 
 #: app/user/forms.py:120
 msgid "All instances"
@@ -8390,9 +8340,8 @@ msgid "Malicious reporting"
 msgstr "悪意のある通報"
 
 #: app/user/forms.py:176
-#, fuzzy
 msgid "Hide posts in communities with these words in their name"
-msgstr "名前に以下の単語を含むユーザーの投稿やコメントをすべて破棄する（1行に1つずつ）"
+msgstr "名前に以下の単語を含むコミュニティの投稿を非表示にする"
 
 #: app/user/forms.py:179
 msgid "Blur thumbnail"
@@ -8472,57 +8421,47 @@ msgstr "メモを保存"
 
 #: app/user/forms.py:234
 msgid "URLs to files (one per line)"
-msgstr ""
+msgstr "ファイルのURL(1行に1つ)"
 
 #: app/user/forms.py:235
-#, fuzzy
 msgid "File 1"
-msgstr "ファイル"
+msgstr "ファイル1"
 
 #: app/user/forms.py:236
-#, fuzzy
 msgid "File 2"
-msgstr "ファイル"
+msgstr "ファイル2"
 
 #: app/user/forms.py:237
-#, fuzzy
 msgid "File 3"
-msgstr "ファイル"
+msgstr "ファイル3"
 
 #: app/user/forms.py:238
-#, fuzzy
 msgid "File 4"
-msgstr "ファイル"
+msgstr "ファイル4"
 
 #: app/user/forms.py:239
-#, fuzzy
 msgid "File 5"
-msgstr "ファイル"
+msgstr "ファイル5"
 
 #: app/user/forms.py:240
-#, fuzzy
 msgid "File 6"
-msgstr "ファイル"
+msgstr "ファイル6"
 
 #: app/user/forms.py:241
-#, fuzzy
 msgid "File 7"
-msgstr "ファイル"
+msgstr "ファイル7"
 
 #: app/user/forms.py:242
-#, fuzzy
 msgid "File 8"
-msgstr "ファイル"
+msgstr "ファイル8"
 
 #: app/user/forms.py:243
-#, fuzzy
 msgid "File 9"
-msgstr "ファイル"
+msgstr "ファイル9"
 
 #: app/user/forms.py:244
-#, fuzzy
 msgid "File 10"
-msgstr "ファイル"
+msgstr "ファイル10"
 
 #: app/user/routes.py:180
 msgid "This user has been deleted."
@@ -8549,7 +8488,7 @@ msgstr "自動検出"
 
 #: app/user/routes.py:545
 msgid "Basque"
-msgstr ""
+msgstr "Basque"
 
 #: app/user/routes.py:546
 msgid "Catalan"
@@ -8572,9 +8511,8 @@ msgid "German"
 msgstr "German"
 
 #: app/user/routes.py:551
-#, fuzzy
 msgid "Hindi"
-msgstr "探す"
+msgstr "Hindi"
 
 #: app/user/routes.py:552
 msgid "Japanese"
@@ -8715,7 +8653,7 @@ msgstr "すべての通知を既読にしました。"
 
 #: app/user/routes.py:1433
 msgid "NSFW content will be hidden due to legal restrictions in your country."
-msgstr ""
+msgstr "お住まいの国の法的制限により、NSFW コンテンツは非表示になります。"
 
 #: app/user/routes.py:1546
 msgid "Filter deleted."
@@ -8768,7 +8706,7 @@ msgstr "リモートユーザーの検索にはログインが必要です"
 
 #: app/user/routes.py:2105
 msgid "You have exceeded your storage quota."
-msgstr ""
+msgstr "ストレージの使用量が上限を超えています。"
 
 #: app/user/subscription.py:18
 #, python-format

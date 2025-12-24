@@ -291,3 +291,102 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
                 user.private_key,
                 user.public_url() + "#main-key",
             )
+
+
+@celery.task
+def choose_answer(send_async, post_reply_id, user_id):
+    send_answer(post_reply_id, user_id, False)
+
+
+@celery.task
+def unchoose_answer(send_async, post_reply_id, user_id):
+    send_answer(post_reply_id, user_id, True)
+
+
+def send_answer(post_reply_id, user_id, is_undo):
+    session = get_task_session()
+    try:
+        user = session.query(User).get(user_id)
+        post_reply = session.query(PostReply).get(post_reply_id)
+
+        if (
+            post_reply.community.local_only
+            or not post_reply.community.instance.online()
+        ):
+            return
+
+        answer_ap_id = f"https://{current_app.config['SERVER_NAME']}/activities/answer/{gibberish(15)}"
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        cc = [post_reply.community.public_url()]
+        lock = {
+            "id": answer_ap_id,
+            "type": "ChooseAnswer",
+            "actor": user.public_url(),
+            "object": post_reply.public_url(),
+            "@context": default_context(),
+            "audience": post_reply.community.public_url(),
+            "to": to,
+            "cc": cc,
+        }
+
+        if is_undo:
+            del lock["@context"]
+            undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+            undo = {
+                "id": undo_id,
+                "type": "Undo",
+                "actor": user.public_url(),
+                "object": lock,
+                "@context": default_context(),
+                "audience": post_reply.community.public_url(),
+                "to": to,
+                "cc": cc,
+            }
+
+        if post_reply.community.is_local():
+            if is_undo:
+                del undo["@context"]
+                object = undo
+            else:
+                del lock["@context"]
+                object = lock
+
+            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            actor = post_reply.community.public_url()
+            cc = [post_reply.community.ap_followers_url]
+            announce = {
+                "id": announce_id,
+                "type": "Announce",
+                "actor": actor,
+                "object": object,
+                "@context": default_context(),
+                "to": to,
+                "cc": cc,
+            }
+            for instance in post_reply.community.following_instances():
+                if (
+                    instance.inbox
+                    and instance.online()
+                    and not user.has_blocked_instance(instance.id)
+                    and not instance_banned(instance.domain)
+                ):
+                    send_post_request(
+                        instance.inbox,
+                        announce,
+                        post_reply.community.private_key,
+                        post_reply.community.public_url() + "#main-key",
+                    )
+        else:
+            payload = undo if is_undo else lock
+            send_post_request(
+                post_reply.community.ap_inbox_url,
+                payload,
+                user.private_key,
+                user.public_url() + "#main-key",
+            )
+
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

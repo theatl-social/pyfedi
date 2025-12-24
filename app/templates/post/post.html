@@ -6,7 +6,7 @@
 {% from 'bootstrap5/form.html' import render_field -%}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video -%}
-{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle -%}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button, render_post_emoji_button -%}
 
 {% block schema_org %}
     {% if post.indexable and post.instance_id == 1 -%}
@@ -81,7 +81,7 @@
                                 {% else -%}
                                     {% if author_banned -%}
                                         <div id="author_banned_notice" class="alert alert-message mb-0">
-                                            {{ _('The author of this post has been banned so they might not see your reply.') }}
+                                            {{ _('The author of this post has been banned/deleted so they might not see your reply.') }}
                                         </div>
                                     {% endif -%}
                                     {% if post.community.ap_id and '@beehaw.org' in post.community.ap_id -%}
@@ -89,6 +89,9 @@
                                     {% endif -%}
                                     {% if post.community.posting_warning -%}
                                         <p align="center">{{ post.community.posting_warning|safe }}</p>
+                                    {% endif -%}
+                                    {% if post.community.instance.posting_warning -%}
+                                        <p align="center">{{ post.community.instance.posting_warning|safe }}</p>
                                     {% endif -%}
                                     {% if recipient_language_name -%}
                                         <div id="post_language_warning_{{ post.id }}" class="alert alert-warning d-none">
@@ -195,6 +198,7 @@
     {% with community = post.community -%}
         {% include "_side_pane.html" %}
     {% endwith -%}
+    <a href="/honey/{{ post.id }}" class="visually-hidden" tabindex="-1" aria-hidden="true">Do not click this</a>
 </div>
 <dialog id="communitySidebar"></dialog>
 <script nonce="{{ nonce }}">

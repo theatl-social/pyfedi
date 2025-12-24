@@ -8,29 +8,25 @@ PieFed is a federated discussion and link aggregation platform (Reddit/Lemmy/Mbi
 
 ## Critical Development Commands
 
-### Virtual Environment Setup
+### Virtual Environment Setup (using uv)
 ```bash
-# Create and activate virtual environment
-uv venv
-source .venv/bin/activate
+# Install all dependencies (creates .venv automatically)
+uv sync
 
-# Install dependencies
-uv pip install -r requirements.txt
+# Or with dev dependencies
+uv sync --dev
 ```
 
 ### Running Tests
 ```bash
-# ALWAYS activate virtual environment first
-source .venv/bin/activate
-
 # Run database schema immutability tests
-SERVER_NAME=localhost python -m pytest tests/test_field_consistency_simple.py -v
+SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py -v
 
 # Run specific test
-SERVER_NAME=localhost python -m pytest tests/test_field_consistency_simple.py::test_user_model_columns_exist -v
+SERVER_NAME=localhost uv run pytest tests/test_field_consistency_simple.py::test_user_model_columns_exist -v
 
 # Run all tests in a file
-SERVER_NAME=localhost python -m pytest tests/test_allowlist_html.py -v
+SERVER_NAME=localhost uv run pytest tests/test_allowlist_html.py -v
 
 # Run production mirror tests (Docker environment)
 ./scripts/run-production-mirror-tests.sh
@@ -43,25 +39,38 @@ export SERVER_NAME=localhost
 export DATABASE_URL=postgresql://pyfedi:pyfedi@localhost/pyfedi
 
 # Run Flask development server
-flask run
+uv run flask run
 
 # Run Celery worker (in separate terminal)
-celery -A celery_worker.celery worker --loglevel=info
+uv run celery -A celery_worker.celery worker --loglevel=info
 ```
 
 ### Database Management
 ```bash
 # Initialize database
-flask init-db
+uv run flask init-db
 
 # Create migration
-flask db migrate -m "description"
+uv run flask db migrate -m "description"
 
 # Apply migrations
-flask db upgrade
+uv run flask db upgrade
 
 # Downgrade migration
-flask db downgrade
+uv run flask db downgrade
+```
+
+### Adding Dependencies
+
+```bash
+# Add a new dependency
+uv add package-name
+
+# Add a dev dependency
+uv add --dev package-name
+
+# Update lockfile after manual pyproject.toml changes
+uv lock
 ```
 
 ## Architecture & Key Components

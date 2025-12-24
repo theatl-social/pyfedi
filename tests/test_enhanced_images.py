@@ -7,7 +7,7 @@ from app.markdown_extras import apply_enhanced_image_attributes
 def markdown_with_enhanced_images(text, extras_list=None):
     """Helper function to convert markdown with enhanced images support"""
     if extras_list is None:
-        extras_list = ['enhanced-images']
+        extras_list = ["enhanced-images"]
     extras_dict = {extra: True for extra in extras_list}
     md = markdown2.Markdown(extras=extras_dict)
     html = md.convert(text)
@@ -17,7 +17,6 @@ def markdown_with_enhanced_images(text, extras_list=None):
 
 
 class TestEnhancedImages(unittest.TestCase):
-
     def test_image_with_align_left_and_width(self):
         """Test image with align-left and width attribute"""
         markdown = "![A cute cat :: align-left width=200px](cat.jpg)"
@@ -53,9 +52,9 @@ class TestEnhancedImages(unittest.TestCase):
         self.assertIn('alt="Regular image"', result)
         self.assertIn('src="regular.jpg"', result)
         # Should not have any custom attributes
-        self.assertNotIn('align=', result)
-        self.assertNotIn('width=', result)
-        self.assertNotIn('height=', result)
+        self.assertNotIn("align=", result)
+        self.assertNotIn("width=", result)
+        self.assertNotIn("height=", result)
 
     def test_image_with_class_attribute(self):
         """Test image with CSS class attribute"""
@@ -83,7 +82,7 @@ class TestEnhancedImages(unittest.TestCase):
         result = markdown2.markdown(markdown)
         # Without the extras, the :: should be preserved in alt text
         self.assertIn('alt="Alt text :: some data"', result)
-        self.assertNotIn('align=', result)
+        self.assertNotIn("align=", result)
 
     def test_image_with_title(self):
         """Test enhanced image with title attribute"""
@@ -139,11 +138,13 @@ Some text here.
         self.assertIn('width="200px"', result)
         self.assertIn('alt="Cat"', result)
         # Img should be inside anchor tag
-        self.assertIn('</a>', result)
+        self.assertIn("</a>", result)
 
     def test_thumbnail_with_fullsize_and_attributes(self):
         """Test thumbnail with fullsize and multiple attributes"""
-        markdown = "![Cat :: align-left width=200px class=thumbnail](thumb.jpg, full.jpg)"
+        markdown = (
+            "![Cat :: align-left width=200px class=thumbnail](thumb.jpg, full.jpg)"
+        )
         result = markdown_with_enhanced_images(markdown)
         self.assertIn('<a href="full.jpg">', result)
         self.assertIn('src="thumb.jpg"', result)
@@ -166,31 +167,33 @@ Some text here.
         """Test that single images don't get wrapped in anchor tag"""
         markdown = "![Cat :: width=200px](cat.jpg)"
         result = markdown_with_enhanced_images(markdown)
-        self.assertIn('<img', result)
+        self.assertIn("<img", result)
         self.assertIn('src="cat.jpg"', result)
         # Should NOT have anchor tag
-        self.assertNotIn('<a href=', result)
+        self.assertNotIn("<a href=", result)
 
     def test_integration_with_markdown_to_html(self):
         """Test integration with markdown_to_html function (full extras suite)"""
         from app.utils import markdown_to_html
-        markdown = 'Testing!\n\n![an image :: width=50](https://piefed.social/static/media/logo_8p7en.svg)\n\nthere we go'
-        result = markdown_to_html(markdown)
+
+        markdown = "Testing!\n\n![an image :: width=50](https://piefed.social/static/media/logo_8p7en.svg)\n\nthere we go"
+        # Pass test_env to skip fediverse_domains() cache lookup which requires Flask app context
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         print(f"Result: {result}")
         # Should have proper width attribute
         self.assertIn('width="50"', result)
         # Should have proper src (without extra quotes)
-        self.assertIn('src=', result)
-        self.assertIn('https://piefed.social/static/media/logo_8p7en.svg', result)
+        self.assertIn("src=", result)
+        self.assertIn("https://piefed.social/static/media/logo_8p7en.svg", result)
         # Should have proper alt text
-        self.assertIn('alt=', result)
-        self.assertIn('an image', result)
+        self.assertIn("alt=", result)
+        self.assertIn("an image", result)
         # Should NOT have data-enhanced-img in final output
-        self.assertNotIn('data-enhanced-img', result)
+        self.assertNotIn("data-enhanced-img", result)
         # Should NOT have broken quotes like src="'url'"
         self.assertNotIn("src=\"'", result)
         self.assertNotIn("alt=\"'", result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

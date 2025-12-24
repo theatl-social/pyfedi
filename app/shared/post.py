@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from typing import List
 from zoneinfo import ZoneInfo
+from datetime import datetime
 
 import boto3
 import arrow
@@ -15,7 +16,12 @@ from sqlalchemy import text, Integer
 
 from app import db, cache, plugins
 from app.activitypub.util import make_image_sizes, notify_about_post
-from app.community.util import tags_from_string_old, end_poll_date, flair_from_form
+from app.community.util import (
+    tags_from_string_old,
+    end_poll_date,
+    flair_from_form,
+    flairs_from_string,
+)
 from app.constants import *
 from app.models import (
     File,
@@ -62,7 +68,9 @@ from app.utils import (
 )
 
 
-def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
+def vote_for_post(
+    post_id: int, vote_direction, federate: bool, emoji: str, src, auth=None
+):
     if src == SRC_API:
         post = db.session.query(Post).get(post_id)
         user = authorise_api_user(auth, return_type="model")
@@ -90,7 +98,7 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
                 recently_downvoted=[],
             )
 
-    undo = post.vote(user, vote_direction)
+    undo = post.vote(user, vote_direction, emoji)
 
     task_selector(
         "vote_for_post",
@@ -99,6 +107,7 @@ def vote_for_post(post_id: int, vote_direction, federate: bool, src, auth=None):
         vote_to_undo=undo,
         vote_direction=vote_direction,
         federate=federate,
+        emoji=emoji,
     )
 
     mark_post_read([post.id], True, user.id)
@@ -317,7 +326,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     if post.status == POST_STATUS_PUBLISHED:
         notify_about_post(post)
 
-    plugins.fire_hook("after_post_create")
+    plugins.fire_hook("after_post_create", post)
 
     if src == SRC_API:
         return user.id, post
@@ -340,18 +349,65 @@ def edit_post(
     if src == SRC_API:
         if not user:
             user = authorise_api_user(auth, return_type="model")
-        title = input["title"]
+        title = input["title"].strip()
         body = input["body"]
         url = input["url"]
         nsfw = input["nsfw"]
+        ai_generated = input["ai_generated"]
         notify_author = input["notify_author"]
         language_id = input["language_id"]
         timezone = input["timezone"] if "timezone" in input else user.timezone
         image_alt_text = input["image_alt_text"] if "image_alt_text" in input else ""
-        tags = []
-        flair = []
+        if image_alt_text is None:
+            image_alt_text = ""
+        if "tags" in input:
+            tags = tags_from_string_old(input["tags"])
+        else:
+            tags = []
+        if "flair" in input:
+            flair = flairs_from_string(input["flair"], post.community_id)
+        else:
+            flair = []
         scheduled_for = None
         repeat = None
+
+        # Parse event data from API
+        event_data = input.get("event", None)
+        if event_data:
+            # Parse datetime strings to datetime objects
+            if "start" in event_data:
+                if isinstance(event_data["start"], str):
+                    event_data["start"] = datetime.fromisoformat(
+                        event_data["start"].replace("Z", "+00:00")
+                    ).replace(tzinfo=None)
+                else:
+                    event_data["start"] = event_data["start"]
+            if "end" in event_data and event_data["end"]:
+                if isinstance(event_data["end"], str):
+                    event_data["end"] = datetime.fromisoformat(
+                        event_data["end"].replace("Z", "+00:00")
+                    ).replace(tzinfo=None)
+                else:
+                    event_data["end"] = event_data["end"]
+
+        # Parse poll data from API
+        poll_data = input.get("poll", None)
+        if poll_data:
+            # Extract all poll fields
+            parsed_poll = {
+                "mode": poll_data.get("mode", "single"),
+                "local_only": poll_data.get("local_only", False),
+                "choices": poll_data.get("choices", []),
+            }
+            if "end_poll" in poll_data and poll_data["end_poll"]:
+                if isinstance(poll_data["end_poll"], str):
+                    parsed_poll["end_poll"] = datetime.fromisoformat(
+                        poll_data["end_poll"].replace("Z", "+00:00")
+                    )
+                else:
+                    parsed_poll["end_poll"] = poll_data["end_poll"]
+
+            poll_data = parsed_poll
     else:
         if not user:
             user = current_user
@@ -366,6 +422,7 @@ def edit_post(
         else:
             url = None
         nsfw = input.nsfw.data
+        ai_generated = input.ai_generated.data
         notify_author = input.notify_author.data
         language_id = input.language_id.data
         tags = tags_from_string_old(input.tags.data)
@@ -382,12 +439,57 @@ def edit_post(
             else ""
         )
 
+        # Extract poll data from form
+        if type == POST_TYPE_POLL:
+            poll_choices = []
+            for i in range(1, 16):
+                choice_text = getattr(input, f"choice_{i}").data
+                if choice_text:
+                    poll_choices.append(
+                        {"choice_text": choice_text.strip(), "sort_order": i}
+                    )
+            poll_data = {
+                "mode": input.mode.data,
+                "local_only": input.local_only.data,
+                "choices": poll_choices,
+            }
+            if input.finish_in:
+                poll_data["end_poll"] = end_poll_date(input.finish_in.data)
+        else:
+            poll_data = None
+
+        # Extract event data from form
+        if type == POST_TYPE_EVENT:
+            local_tz = ZoneInfo(input.event_timezone.data)
+            local_start = input.start_datetime.data.replace(tzinfo=local_tz)
+            local_end = input.end_datetime.data.replace(tzinfo=local_tz)
+            utc_start = local_start.astimezone(ZoneInfo("UTC"))
+            utc_end = local_end.astimezone(ZoneInfo("UTC"))
+
+            event_data = {
+                "start": utc_start.replace(tzinfo=None),
+                "end": utc_end.replace(tzinfo=None),
+                "timezone": input.event_timezone.data,
+                "max_attendees": input.max_attendees.data,
+                "online": input.online.data,
+                "online_link": input.online_link.data,
+                "join_mode": input.join_mode.data,
+                "location": {
+                    "address": input.irl_address.data,
+                    "city": input.irl_city.data,
+                    "country": input.irl_country.data,
+                },
+            }
+        else:
+            event_data = None
+
     # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
 
     post.indexable = user.indexable
     post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
+    post.ai_generated = ai_generated
     post.notify_author = notify_author
     post.language_id = language_id
     user.language_id = language_id
@@ -398,6 +500,14 @@ def edit_post(
     post.scheduled_for = scheduled_for
     post.repeat = repeat
     post.timezone = timezone
+
+    if post.url:
+        if post.url.startswith("https://pixelfed.social/") or post.url.startswith(
+            "https://pixelfed.uno/"
+        ):
+            post.type = POST_TYPE_IMAGE
+        elif post.url.startswith("https://loops.video/"):
+            post.type = POST_TYPE_VIDEO
 
     if scheduled_for:
         date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
@@ -631,6 +741,42 @@ def edit_post(
                 )
                 post.type = POST_TYPE_IMAGE
                 post.url = url
+        elif url.startswith("https://pixelfed.social") or url.startswith(
+            "pixelfed.uno"
+        ):
+            post.type = POST_TYPE_IMAGE
+            opengraph = opengraph_parse(thumbnail_url)
+            if opengraph and (
+                opengraph.get("og:image", "") != ""
+                or opengraph.get("og:image:url", "") != ""
+            ):
+                filename = opengraph.get("og:image") or opengraph.get("og:image:url")
+                if not filename.startswith("/"):
+                    file = File(
+                        source_url=filename,
+                        alt_text=shorten_string(opengraph.get("og:title"), 295),
+                    )
+                    post.image = file
+                    db.session.add(file)
+            post.url = url
+            post.body += "\n\nSource: "
+        elif url.startswith("https://loops.video"):
+            post.type = POST_TYPE_VIDEO
+            opengraph = opengraph_parse(thumbnail_url)
+            if opengraph and (
+                opengraph.get("og:image", "") != ""
+                or opengraph.get("og:image:url", "") != ""
+            ):
+                filename = opengraph.get("og:image") or opengraph.get("og:image:url")
+                if not filename.startswith("/"):
+                    filename = filename.replace(".jpg", ".720p.mp4")
+                    file = File(
+                        source_url=filename,
+                        alt_text=shorten_string(opengraph.get("og:title"), 295),
+                    )
+                    post.image = file
+                    db.session.add(file)
+            post.url = url
         else:
             opengraph = opengraph_parse(thumbnail_url)
             if opengraph and (
@@ -666,60 +812,61 @@ def edit_post(
             file.alt_text = image_alt_text
 
     federate = True
-    if type == POST_TYPE_POLL:
-        # When the API supports polls and events we will no longer be able to use the input object as it could be a dict or a form object.
+    if type == POST_TYPE_POLL and poll_data:
         post.type = POST_TYPE_POLL
-        for i in range(1, 10):
-            # change this line when polls are supported in API
-            choice_data = getattr(input, f"choice_{i}").data.strip()
-            if choice_data != "":
-                db.session.add(
-                    PollChoice(post_id=post.id, choice_text=choice_data, sort_order=i)
-                )
+
+        # Add poll choices
+        if "choices" in poll_data:
+            for choice in poll_data["choices"]:
+                if "choice_text" in choice and choice["choice_text"].strip():
+                    db.session.add(
+                        PollChoice(
+                            post_id=post.id,
+                            choice_text=choice["choice_text"].strip(),
+                            sort_order=choice.get("sort_order", 1),
+                        )
+                    )
 
         poll = Poll.query.filter_by(post_id=post.id).first()
         if poll is None:
             poll = Poll(post_id=post.id)
             db.session.add(poll)
-        poll.mode = input.mode.data
-        if input.finish_in:
-            poll.end_poll = end_poll_date(input.finish_in.data)
-        poll.local_only = input.local_only.data
+        poll.mode = poll_data.get("mode", "single")
+        if "end_poll" in poll_data and poll_data["end_poll"]:
+            poll.end_poll = poll_data["end_poll"]
+        poll.local_only = poll_data.get("local_only", False)
         poll.latest_vote = None
         db.session.commit()
 
         if poll.local_only:
             federate = False
 
-    if type == POST_TYPE_EVENT:
+    if type == POST_TYPE_EVENT and event_data:
         post.type = POST_TYPE_EVENT
         event = Event.query.filter_by(post_id=post.id).first()
         if event is None:
             event = Event(post_id=post.id)
             db.session.add(event)
-        # populate event model
-        # Treat datetime-local input as naive datetime in the specified timezone
-        local_tz = ZoneInfo(input.event_timezone.data)
-        local_start = input.start_datetime.data.replace(tzinfo=local_tz)
-        local_end = input.end_datetime.data.replace(tzinfo=local_tz)
 
-        # Convert to UTC for storage
-        utc_start = local_start.astimezone(ZoneInfo("UTC"))
-        utc_end = local_end.astimezone(ZoneInfo("UTC"))
+        if "start" in event_data:
+            event.start = event_data["start"]
+        if "end" in event_data and event_data["end"]:
+            event.end = event_data["end"]
 
-        # Store as naive UTC
-        event.start = utc_start.replace(tzinfo=None)
-        event.end = utc_end.replace(tzinfo=None)
-        event.timezone = input.event_timezone.data
-        event.max_attendees = input.max_attendees.data
-        event.online = input.online.data
-        event.online_link = input.online_link.data
-        event.join_mode = input.join_mode.data
-        event.location = {
-            "address": input.irl_address.data,
-            "city": input.irl_city.data,
-            "country": input.irl_country.data,
-        }
+        event.timezone = event_data.get("timezone", "UTC")
+        event.max_attendees = event_data.get("max_attendees", 0)
+        event.participant_count = event_data.get("participant_count", 0)
+        event.full = event_data.get("full", False)
+        event.online = event_data.get("online", False)
+        event.online_link = event_data.get("online_link")
+        event.join_mode = event_data.get("join_mode", "free")
+        event.external_participation_url = event_data.get("external_participation_url")
+        event.anonymous_participation = event_data.get("anonymous_participation", False)
+        event.buy_tickets_link = event_data.get("buy_tickets_link")
+        event.event_fee_currency = event_data.get("event_fee_currency")
+        event.event_fee_amount = event_data.get("event_fee_amount", 0)
+        if "location" in event_data:
+            event.location = event_data["location"]
         db.session.commit()
 
     # add tags & flair
@@ -1030,6 +1177,28 @@ def sticky_post(post_id: int, featured: bool, src: int, auth=None):
     return user.id, post
 
 
+def hide_post(post_id: int, hidden: bool, src: int, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type="model")
+    else:
+        user = current_user
+
+    post = db.session.query(Post).get(post_id)
+
+    if hidden:
+        user.mark_post_as_hidden(post)
+    else:
+        db.session.execute(
+            text(
+                'DELETE FROM "hidden_posts" WHERE user_id = :user_id AND hidden_post_id = :post_id'
+            ),
+            {"user_id": user.id, "post_id": post.id},
+        )
+    db.session.commit()
+
+    return user.id, post
+
+
 # mod deletes
 def mod_remove_post(post_id: int, reason, src, auth):
     if src == SRC_API:
@@ -1154,3 +1323,41 @@ def get_post_flair_list(post: Post | int) -> list:
         flair_list = post.flair
 
     return flair_list
+
+
+def vote_for_poll(post_id, votes, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type="model")
+    else:
+        user = current_user
+
+    if isinstance(votes, int):
+        votes = [votes]
+
+    poll = Poll.query.get_or_404(post_id)
+    if poll.mode == "single":
+        if len(votes) != 1:
+            if src == SRC_API:
+                raise Exception(
+                    "Poll is in single vote mode, only a single choice is allowed."
+                )
+        if not poll.has_voted(user.id):
+            poll.vote_for_choice(votes[0], user.id)
+            task_selector(
+                "vote_for_poll",
+                post_id=post_id,
+                user_id=user.id,
+                choice_text=PollChoice.query.get(votes[0]).choice_text,
+            )
+        else:
+            if src == SRC_API:
+                raise Exception("User has already voted.")
+    else:
+        for choice_id in votes:
+            poll.vote_for_choice(int(choice_id), user.id)
+            task_selector(
+                "vote_for_poll",
+                post_id=post_id,
+                user_id=user.id,
+                choice_text=PollChoice.query.get(int(choice_id)).choice_text,
+            )

@@ -1,5 +1,7 @@
-from flask import g
-from sqlalchemy import desc, or_, text
+from datetime import timedelta
+
+from flask import g, current_app
+from sqlalchemy import desc, or_, text, func, cast, Float
 from sqlalchemy import select
 from sqlalchemy_searchable import search
 
@@ -12,7 +14,7 @@ from app.api.alpha.views import (
     user_view,
 )
 from app.constants import *
-from app.models import Notification, PostReply, Post, User, PostReplyVote
+from app.models import Notification, PostReply, Post, User, PostReplyVote, utcnow
 from app.shared.reply import (
     vote_for_reply,
     bookmark_reply,
@@ -26,14 +28,18 @@ from app.shared.reply import (
     mod_remove_reply,
     mod_restore_reply,
     lock_post_reply,
+    choose_answer,
+    unchoose_answer,
 )
 from app.utils import (
     authorise_api_user,
     blocked_users,
-    blocked_instances,
+    blocked_or_banned_instances,
     site_language_id,
     communities_banned_from,
     in_sorted_list,
+    moderating_communities_ids,
+    joined_communities,
 )
 
 
@@ -55,6 +61,7 @@ def get_reply_list(auth, data, user_details=None):
     page = int(data["page"]) if "page" in data else 1
     limit = int(data["limit"]) if "limit" in data else 10
     sort = data["sort"] if "sort" in data else "New"
+    type = data["type_"] if "type_" in data else "All"
 
     # LIKED_ONLY
     vote_effect = None
@@ -86,11 +93,40 @@ def get_reply_list(auth, data, user_details=None):
         is_reply_bookmarked = True
         by_saved_only = True
 
+    # SEARCH
     if query:
         if not replies:
-            replies = PostReply.query.search(query)
+            replies = PostReply.query.search(query, sort=sort == "Relevance")
         else:
-            replies = replies.search(query)
+            replies = replies.search(query, sort=sort == "Relevance")
+
+    if replies:
+        if type == "Local":
+            replies = replies.filter(
+                or_(
+                    PostReply.ap_id == None,
+                    PostReply.ap_id.startswith(
+                        "https://" + current_app.config["SERVER_NAME"]
+                    ),
+                )
+            )
+        elif type == "Moderating" or type == "ModeratorView":
+            if user_id:
+                replies = replies.filter(
+                    PostReply.community_id.in_(
+                        moderating_communities_ids(user_id=user_id)
+                    )
+                )
+            else:
+                raise Exception("incorrect login")
+        elif type == "Subscribed":
+            if user_id:
+                comms = joined_communities(user_id=user_id)
+                comm_ids = [comm.id for comm in comms]
+                comm_ids.extend(moderating_communities_ids(user_id=user_id))
+                replies = replies.filter(PostReply.community_id.in_(comm_ids))
+            else:
+                raise Exception("incorrect login")
 
     # PERSON_ID
     add_creator_in_view = True
@@ -161,7 +197,7 @@ def get_reply_list(auth, data, user_details=None):
             blocked_person_ids = blocked_users(user_id)
             if blocked_person_ids:
                 replies = replies.filter(PostReply.user_id.not_in(blocked_person_ids))
-            blocked_instance_ids = blocked_instances(user_id)
+            blocked_instance_ids = blocked_or_banned_instances(user_id)
             if blocked_instance_ids:
                 replies = replies.filter(
                     PostReply.instance_id.not_in(blocked_instance_ids)
@@ -280,14 +316,92 @@ def get_reply_list(auth, data, user_details=None):
             add_post_in_view = False
 
     if replies:
-        if sort == "Hot" or sort == "Controversial":
+        # sort == 'Relevance' handled above when query.search was executed
+        if sort == "Hot" or sort == "Scaled":
             replies = replies.order_by(desc(PostReply.ranking)).order_by(
                 desc(PostReply.posted_at)
             )
-        elif sort.startswith("Top"):
+        elif sort == "Active":
+            replies = replies.order_by(
+                func.greatest(
+                    PostReply.posted_at, func.coalesce(PostReply.edited_at, 0)
+                )
+            )
+        elif sort == "Top" or sort == "TopAll":
             replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopHour":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(hours=1)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopSixHour":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(hours=6)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopTwelveHour":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(hours=12)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopDay":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=1)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopWeek":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=7)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopMonth":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=28)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopThreeMonths":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=90)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopSixMonths":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=180)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopNineMonths":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=270)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
+        elif sort == "TopYear":
+            replies = replies.filter(
+                PostReply.posted_at > utcnow() - timedelta(days=365)
+            ).order_by(desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == "Old":
             replies = replies.order_by(PostReply.posted_at)
+        elif sort == "Relevance":
+            pass  # already done as part of the search query
+        elif sort == "Controversial":
+            # Pulled from the reddit algorithm: https://github.com/reddit-archive/reddit/blob/753b17407e9a9dca09558526805922de24133d53/r2/r2/lib/db/_sorts.pyx#L60
+            replies = replies.order_by(
+                desc(
+                    func.coalesce(
+                        func.pow(
+                            func.coalesce(PostReply.up_votes, 0)
+                            * func.coalesce(PostReply.down_votes, 0),
+                            cast(
+                                func.least(
+                                    func.coalesce(PostReply.up_votes, 0),
+                                    func.coalesce(PostReply.down_votes, 0),
+                                ),
+                                Float,
+                            )
+                            / cast(
+                                func.coalesce(
+                                    func.greatest(
+                                        PostReply.up_votes, PostReply.down_votes
+                                    ),
+                                    1,
+                                ),
+                                Float,
+                            ),
+                        ),
+                        0,
+                    )
+                )
+            )
         else:
             replies = replies.order_by(desc(PostReply.posted_at))
 
@@ -400,6 +514,7 @@ def get_reply_list(auth, data, user_details=None):
                     variant=1,
                     stub=True,
                     flair_community_id=reply.community_id,
+                    user_id=user_id,
                 )
             reply_json["creator"] = inner_creator_view
         if add_community_in_view == False:
@@ -432,6 +547,7 @@ def get_reply(auth, data):
 def post_reply_like(auth, data):
     score = data["score"]
     reply_id = data["comment_id"]
+    emoji = data["emoji"] if "emoji" in data else None
     if score == 1:
         direction = "upvote"
     elif score == -1:
@@ -441,7 +557,7 @@ def post_reply_like(auth, data):
         direction = "reversal"
     private = data["private"] if "private" in data else False
 
-    user_id = vote_for_reply(reply_id, direction, not private, SRC_API, auth)
+    user_id = vote_for_reply(reply_id, direction, not private, emoji, SRC_API, auth)
     reply_json = reply_view(reply=reply_id, variant=4, user_id=user_id)
     return reply_json
 
@@ -632,6 +748,46 @@ def post_reply_mark_as_read(auth, data):
     return {"comment_reply_view": reply_json}
 
 
+def post_reply_mark_as_answer(auth, data):
+    reply_id = data["comment_reply_id"]
+    answer = data["answer"]
+
+    user_details = authorise_api_user(auth, return_type="dict")
+    user_id = user_details["id"]
+
+    if answer:
+        choose_answer(reply_id, SRC_API, auth)
+    else:
+        unchoose_answer(reply_id, SRC_API, auth)
+
+    reply = PostReply.query.get(reply_id)
+    recipient = user_view(user=user_id, variant=1)
+    vote_effect = 0
+    if in_sorted_list(user_details["upvoted_reply_ids"], reply_id):
+        vote_effect = 1
+    elif in_sorted_list(user_details["downvoted_reply_ids"], reply_id):
+        vote_effect = -1
+    reply_json = reply_view(
+        reply=reply,
+        variant=3,
+        user_id=user_id,
+        is_user_banned_from_community=reply.community_id
+        in user_details["user_ban_community_ids"],
+        is_user_following_community=reply.community_id
+        in user_details["followed_community_ids"],
+        is_reply_bookmarked=reply.id in user_details["bookmarked_reply_ids"],
+        is_creator_blocked=reply.user_id in user_details["blocked_creator_ids"],
+        vote_effect=vote_effect,
+        is_reply_subscribed=reply.id in user_details["subscribed_reply_ids"],
+        is_user_moderator=reply.community_id in user_details["moderated_community_ids"],
+    )
+    reply_json["comment_reply"] = reply_view(
+        reply=reply, variant=6, user_id=user_id, read_comment_ids=[reply_id]
+    )
+    reply_json["recipient"] = recipient
+    return {"comment_reply_view": reply_json}
+
+
 def post_reply_lock(auth, data):
     comment_id = data["comment_id"]
     locked = data["locked"]
@@ -680,7 +836,9 @@ def get_reply_like_list(auth, data):
                     "creator_banned_from_community": like.user_id
                     in banned_from_community_user_ids,
                     "creator_banned": like.user_id in banned_from_site_user_ids,
-                    "creator": user_view(user=like.user_id, variant=1, stub=True),
+                    "creator": user_view(
+                        user=like.user_id, variant=1, stub=True, user_id=user.id
+                    ),
                 }
             )
         response_json = {

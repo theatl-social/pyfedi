@@ -67,7 +67,6 @@ def chat_home(conversation_id=None):
             else:
                 messages = []
 
-            # Check if user is alone in conversation (other member left)
             members = db.session.execute(
                 text(
                     "SELECT user_id FROM conversation_member WHERE joined = :state AND conversation_id = :conversation_id"
@@ -80,15 +79,8 @@ def chat_home(conversation_id=None):
             else:
                 alone = False
 
-            # Mark notifications as read (using parameterized query for security)
-            sql = "UPDATE notification SET read = true WHERE url LIKE :url_pattern AND user_id = :user_id"
-            db.session.execute(
-                text(sql),
-                {
-                    "url_pattern": f"/chat/{conversation_id}%",
-                    "user_id": current_user.id,
-                },
-            )
+            sql = f"UPDATE notification SET read = true WHERE url LIKE '/chat/{conversation_id}%' AND user_id = {current_user.id}"
+            db.session.execute(text(sql))
             db.session.commit()
             current_user.unread_notifications = Notification.query.filter_by(
                 user_id=current_user.id, read=False
@@ -247,6 +239,9 @@ def chat_leave(conversation_id):
             },
         )
         db.session.commit()
+
+        conversation.delete_if_abandoned()
+
     return redirect(url_for("chat.chat_home"))
 
 

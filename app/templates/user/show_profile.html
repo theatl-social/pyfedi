@@ -6,7 +6,7 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username, render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
-{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle %}
+{% from "post/reply/_macros.html" import render_comment_voting_buttons, render_reply_notification_toggle, render_emoji_button %}
 
 {% if current_user.is_authenticated and user.id == current_user.id %}
     {% set active_child = 'view_profile' %}
@@ -31,7 +31,7 @@
                   </ol>
                 </nav>
             </div>
-            <img class="community_icon_big bump_up rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+            <a href="{{ user.avatar_image() }}"><img class="community_icon_big bump_up rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
             <h1 class="mt-2">{{ user.display_name() if user.is_local()  else user.display_name() + ', ' + user.ap_id }}
                 {% if current_user.is_authenticated %}
                     {% include 'user/_notification_toggle.html' %}
@@ -48,14 +48,14 @@
                 </nav>
                 <div class="col-3 col-md-2">
                     {% if low_bandwidth %}
-                        <img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+                        <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
                     {% else %}
                         {% if user.avatar.source_url and user.avatar.source_url.endswith('.mp4') %}
                             <video autoplay disablepictureinpicture loop muted class="community_icon_big rounded-circle">
                                 <source src="{{ user.avatar.source_url }}" type="video/mp4">
                             </video>
                         {% else %}
-                            <img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" />
+                            <a href="{{ user.avatar_image() }}"><img class="community_icon_big rounded-circle" src="{{ user.avatar_image() }}" alt="{{ _('Profile pic') }}" /></a>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -165,7 +165,7 @@
                     <li class="list-group-item">
                         <p class="mb-0"><strong>{{ field.label }}</strong><br>
                            {% if field.text.startswith('http') -%}
-                                <a href="{{ field.text }}" rel="nofollow noindex ugc">{{ field.text }}</a>
+                                <a href="{{ field.text }}" rel="nofollow noindex ugc{{ ' me' if field.label.lower() == 'mastodon' }}">{{ field.text }}</a>
                            {% else -%}
                                 {{ field.text }}
                            {% endif -%}

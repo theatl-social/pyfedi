@@ -83,7 +83,7 @@ def unlock_post_reply(send_async, user_id, post_reply_id):
 
 
 def lock_object(session, user_id, object, is_undo=False):
-    user = session.query(User).filter_by(id=user_id).one()
+    user = session.query(User).get(user_id)
     community = object.community
 
     if community.local_only or not community.instance.online():

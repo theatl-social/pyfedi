@@ -20,7 +20,7 @@ from app.shared.site import block_remote_instance, unblock_remote_instance
 from app.utils import (
     render_template,
     blocked_domains,
-    blocked_instances,
+    blocked_or_banned_instances,
     blocked_communities,
     blocked_users,
     user_filters_home,
@@ -293,7 +293,7 @@ def instance_posts(instance_domain):
             posts = posts.filter(
                 or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None)
             )
-        instance_ids = blocked_instances(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
         if instance_ids:
             posts = posts.filter(
                 or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None)

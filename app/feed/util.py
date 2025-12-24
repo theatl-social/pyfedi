@@ -39,7 +39,7 @@ def feeds_for_form_children(
     return result
 
 
-def search_for_feed(address: str):
+def search_for_feed(address: str, allow_fetch: bool = True):
     if address.startswith("~"):
         name, server = address[1:].split("@")
 
@@ -57,6 +57,8 @@ def search_for_feed(address: str):
         already_exists = Feed.query.filter_by(ap_id=address[1:]).first()
         if already_exists:
             return already_exists
+        elif not allow_fetch:
+            return None
 
         # Look up the profile address of the Feed using WebFinger
         try:

@@ -32,6 +32,7 @@ sort_list = [
     "TopAll",
     "Scaled",
     "Old",
+    "Relevance",
 ]
 default_sorts_list = ["Hot", "Top", "New", "Active", "Old", "Scaled"]
 default_comment_sorts_list = ["Hot", "Top", "New", "Old"]
@@ -55,8 +56,15 @@ post_sort_list = [
     "Active",
 ]
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
-community_sort_list = ["Hot", "Top", "TopAll", "New", "Active"]
-listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
+community_sort_list = ["Hot", "Top", "New", "Active", "TopAll"]
+listing_type_list = [
+    "All",
+    "Local",
+    "Subscribed",
+    "Popular",
+    "Moderating",
+    "ModeratorView",
+]
 community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
@@ -65,6 +73,9 @@ feature_type_list = [
     "Community"
 ]  # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
+nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
+ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
+private_message_list = ["None", "Local", "Trusted", "All"]
 
 
 def validate_datetime_string(text):
@@ -121,6 +132,7 @@ class Person(DefaultSchema):
     extra_fields = fields.List(
         fields.Nested(UserExtraField), validate=validate.Length(max=4)
     )
+    note = fields.String(validate=validate.Length(max=50))
     flair = fields.String()
     published = fields.String(
         validate=validate_datetime_string,
@@ -154,7 +166,7 @@ class Site(DefaultSchema):
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
     enable_downvotes = fields.Boolean()
-    icon = fields.String(allow_none=True)
+    icon = fields.String(allow_none=True, metadata={"format": "url"})
     registration_mode = fields.String(validate=validate.OneOf(reg_mode_list))
     sidebar = fields.String(metadata={"format": "html"})
     sidebar_md = fields.String(metadata={"format": "markdown"})
@@ -173,6 +185,7 @@ class Community(DefaultSchema):
     local = fields.Boolean(required=True)
     name = fields.String(required=True)
     nsfw = fields.Boolean(required=True)
+    ai_generated = fields.Boolean(required=True)
     published = fields.String(
         required=True,
         validate=validate_datetime_string,
@@ -182,9 +195,10 @@ class Community(DefaultSchema):
     restricted_to_mods = fields.Boolean(required=True)
     title = fields.String(required=True)
     banned = fields.Boolean()
-    banner = fields.String(allow_none=True)
+    question_answer = fields.Boolean()
+    banner = fields.String(allow_none=True, metadata={"format": "url"})
     description = fields.String(metadata={"format": "markdown"})
-    icon = fields.String(allow_none=True)
+    icon = fields.String(allow_none=True, metadata={"format": "url"})
     posting_warning = fields.String(allow_none=True)
     updated = fields.String(
         validate=validate_datetime_string,
@@ -224,6 +238,25 @@ class InstanceBlockView(DefaultSchema):
 
 
 class LocalUser(DefaultSchema):
+    accept_private_messages = fields.String(
+        required=True,
+        validate=validate.OneOf(private_message_list),
+        metadata={
+            "description": 'Accept private messages from nobody, local users only, "trusted" instances, or any instance'
+        },
+    )
+    bot_visibility = fields.String(
+        required=True, validate=validate.OneOf(nsfw_visibility_list)
+    )
+    ai_visibility = fields.String(
+        required=True, validate=validate.OneOf(ai_visibility_list)
+    )
+    community_keyword_filter = fields.List(
+        fields.String(),
+        metadata={
+            "description": "Filter out communities with these words in their name"
+        },
+    )
     default_comment_sort_type = fields.String(
         required=True, validate=validate.OneOf(comment_sort_list)
     )
@@ -231,9 +264,80 @@ class LocalUser(DefaultSchema):
         required=True, validate=validate.OneOf(listing_type_list)
     )
     default_sort_type = fields.String(validate=validate.OneOf(sort_list))
-    show_bot_accounts = fields.Boolean(required=True)
-    show_nsfl = fields.Boolean(required=True)
-    show_nsfw = fields.Boolean(required=True)
+    email_unread = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Receive email about missed notifications (if set up by local admin)"
+        },
+    )
+    federate_votes = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "If false, votes are only counted on local instance instead of federated remotely"
+        },
+    )
+    feed_auto_follow = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Automatically follow communities in a subscribed feed"
+        },
+    )
+    feed_auto_leave = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Automatically leave communities when unsubscribing from a feed. Does not impact communities joined outside of a feed auto-follow."
+        },
+    )
+    hide_low_quality = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Hide posts from communities marked as low-quality by the local instance admin"
+        },
+    )
+    indexable = fields.Boolean(
+        required=True,
+        metadata={"description": "If posts can show up in search results"},
+    )
+    newsletter = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "Subscribe to the email newsletter that the local instance admin can send"
+        },
+    )
+    nsfl_visibility = fields.String(
+        required=True, validate=validate.OneOf(nsfw_visibility_list)
+    )
+    nsfw_visibility = fields.String(
+        required=True, validate=validate.OneOf(nsfw_visibility_list)
+    )
+    reply_collapse_threshold = fields.Integer(
+        required=True,
+        metadata={
+            "description": "Collapse replies with a score at or below this level"
+        },
+    )
+    reply_hide_threshold = fields.Integer(
+        required=True,
+        metadata={"description": "Hide replies with a score at or below this level"},
+    )
+    searchable = fields.Boolean(
+        required=True,
+        metadata={
+            "description": "If profile shows up in the user list on the instance"
+        },
+    )
+    show_bot_accounts = fields.Boolean(
+        required=True,
+        metadata={"description": "True for any visibility option other than Hide"},
+    )
+    show_nsfl = fields.Boolean(
+        required=True,
+        metadata={"description": "True for any visibility option other than Hide"},
+    )
+    show_nsfw = fields.Boolean(
+        required=True,
+        metadata={"description": "True for any visibility option other than Hide"},
+    )
     show_read_posts = fields.Boolean(required=True)
     show_scores = fields.Boolean(required=True)
 
@@ -284,9 +388,9 @@ class GetSiteInstanceChooserResponse(DefaultSchema):
     description = fields.String(required=True)
     about = fields.String(required=True)
     sidebar = fields.String(required=True)
-    logo_url = fields.String(required=True)
+    logo_url = fields.String(required=True, metadata={"format": "url"})
     maturity = fields.String(required=True)
-    tos_url = fields.String(required=True)
+    tos_url = fields.String(required=True, metadata={"format": "url"})
     mau = fields.Integer(required=True)
     can_make_communities = fields.Boolean(required=True)
     defederation = fields.List(fields.String(), required=True)
@@ -302,9 +406,9 @@ class GetSiteInstanceChooserSearchResponseItem(DefaultSchema):
     description = fields.String(required=True)
     about = fields.String(required=True)
     sidebar = fields.String(required=True)
-    logo_url = fields.String(required=True)
+    logo_url = fields.String(required=True, metadata={"format": "url"})
     maturity = fields.String(required=True)
-    tos_url = fields.String(required=True)
+    tos_url = fields.String(required=True, metadata={"format": "url"})
     uptime = fields.String(required=True)
     mau = fields.Integer(required=True)
     can_make_communities = fields.Boolean(required=True)
@@ -335,9 +439,27 @@ class SearchRequest(DefaultSchema):
     q = fields.String(required=True)
     type_ = fields.String(required=True, validate=validate.OneOf(content_type_list))
     limit = fields.Integer()
-    listing_type = fields.String(validate=validate.OneOf(listing_type_list))
+    listing_type = fields.String(
+        validate=validate.OneOf(listing_type_list),
+        metadata={
+            "description": "Only some types are supported for each `type_`.\n\n"
+            "For `Comments` and `Communities`, `Popular` will return the same results as `All`.\n\n"
+            "For `Users`, only `Local` will differ from `All`.\n\n"
+            "All listing types supported for `Posts` and `Url` (simply an alias for `Posts`)."
+        },
+    )
     page = fields.Integer()
-    sort = fields.String(validate=validate.OneOf(sort_list))
+    sort = fields.String(
+        validate=validate.OneOf(sort_list),
+        metadata={
+            "description": "Only some sorting options supported for each `type_`.\n\n"
+            "For `Comments`, `Scaled` is not supported and `Hot` will be returned instead.\n\n"
+            "For `Communities`, all `Top` sorts are equivalent. The `New` and `Old` sorts are supported. And all others are "
+            "equivalent to `Active`.\n\n"
+            "For `Users`, only `New` and `Top` (by number of posts) are supported. Otherwise will be sorted by user id.\n\n"
+            "All sorting methods supported for `Posts`. `Url` is simply an alias for `Posts`."
+        },
+    )
     community_name = fields.String()
     community_id = fields.Integer()
 
@@ -360,6 +482,83 @@ class MiniCrossPosts(DefaultSchema):
     community_name = fields.String()
 
 
+class PostEvent(DefaultSchema):
+    start = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    end = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    timezone = fields.String(metadata={"example": "America/New_York"})
+    max_attendees = fields.Integer(metadata={"default": 0})
+    participant_count = fields.Integer(metadata={"default": 0})
+    full = fields.Boolean(metadata={"default": False})
+    online_link = fields.String(allow_none=True, metadata={"format": "url"})
+    join_mode = fields.String(
+        metadata={
+            "example": "free",
+            "description": "free, restricted, external, invite",
+        }
+    )
+    external_participation_url = fields.String(
+        allow_none=True, metadata={"format": "url"}
+    )
+    anonymous_participation = fields.Boolean(metadata={"default": False})
+    online = fields.Boolean(metadata={"default": False})
+    buy_tickets_link = fields.String(allow_none=True, metadata={"format": "url"})
+    event_fee_currency = fields.String(metadata={"example": "USD"})
+    event_fee_amount = fields.Float(metadata={"default": 0})
+    location = fields.Dict(
+        allow_none=True,
+        metadata={"description": "JSON object containing location details"},
+    )
+
+
+class PollChoice(DefaultSchema):
+    id = fields.Integer(required=True)
+    choice_text = fields.String(required=True)
+    sort_order = fields.Integer(required=True)
+    num_votes = fields.Integer(
+        metadata={
+            "default": 0,
+            "description": "Value is ignored when creating/editing a poll",
+        }
+    )
+
+
+class PostPoll(DefaultSchema):
+    end_poll = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    mode = fields.String(
+        required=True,
+        metadata={
+            "example": "single",
+            "description": "single or multiple - determines whether people can vote for one or multiple options",
+        },
+    )
+    local_only = fields.Boolean(metadata={"default": False})
+    latest_vote = fields.String(
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    choices = fields.List(
+        fields.Nested(PollChoice), required=True, validate=validate.Length(max=10)
+    )
+    my_votes = fields.List(fields.Integer())
+
+
+class Reactions(DefaultSchema):
+    url = fields.String(allow_none=True)
+    token = fields.String()
+    authors = fields.List(fields.String())
+    count = fields.Integer()
+
+
 class Post(DefaultSchema):
     ap_id = fields.String(required=True)
     community_id = fields.Integer(required=True)
@@ -369,6 +568,7 @@ class Post(DefaultSchema):
     local = fields.Boolean(required=True)
     locked = fields.Boolean(required=True)
     nsfw = fields.Boolean(required=True)
+    ai_generated = fields.Boolean(required=True)
     published = fields.String(
         required=True,
         validate=validate_datetime_string,
@@ -380,16 +580,21 @@ class Post(DefaultSchema):
     user_id = fields.Integer(required=True)
     alt_text = fields.String()
     body = fields.String(metadata={"format": "markdown"})
-    small_thumbnail_url = fields.String()
-    thumbnail_url = fields.String()
+    small_thumbnail_url = fields.String(metadata={"format": "url"})
+    thumbnail_url = fields.String(metadata={"format": "url"})
     updated = fields.String(
         validate=validate_datetime_string,
         metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
     )
-    url = fields.String()
+    url = fields.String(metadata={"format": "url"})
     image_details = fields.Nested(WidthHeight)
     cross_posts = fields.List(fields.Nested(MiniCrossPosts))
     post_type = fields.String(required=True, validate=validate.OneOf(post_type_list))
+    tags = fields.String(allow_none=True)
+    flair = fields.String(allow_none=True)
+    emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
+    event = fields.Nested(PostEvent)
+    poll = fields.Nested(PostPoll)
 
 
 class PostAggregates(DefaultSchema):
@@ -458,8 +663,14 @@ class PostView(DefaultSchema):
     )
     unread_comments = fields.Integer(required=True)
     activity_alert = fields.Boolean()
+    alt_text = fields.String()
     my_vote = fields.Integer()
-    flair_list = fields.List(fields.Nested(CommunityFlair))
+    flair_list = fields.List(
+        fields.Nested(CommunityFlair),
+        metadata={
+            "description": "See also the simpler 'flair' on post which can be used when editing"
+        },
+    )
     can_auth_user_moderate = fields.Boolean()
 
 
@@ -474,6 +685,8 @@ class CommunityAggregates(DefaultSchema):
     active_weekly = fields.Integer()
     active_monthly = fields.Integer()
     active_6monthly = fields.Integer()
+    average_rating = fields.Float(allow_none=True)
+    total_ratings = fields.Integer(allow_none=True)
 
 
 class CommunityView(DefaultSchema):
@@ -559,6 +772,8 @@ class Comment(Schema):
         metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
     )
     locked = fields.Boolean()
+    answer = fields.Boolean()
+    emoji_reactions = fields.List(fields.Nested(Reactions), allow_none=True)
 
     class Meta:
         unknown = INCLUDE  # let the not-consistent-with-anything 'repliesEnabled' through for Boost
@@ -621,6 +836,55 @@ class CommentView(DefaultSchema):
     can_auth_user_moderate = fields.Boolean()
 
 
+class FeedView(DefaultSchema):
+    actor_id = fields.Url(required=True)
+    ap_domain = fields.String(required=True)
+    children = fields.List(
+        fields.Nested(lambda: FeedView()),
+        required=True,
+        metadata={"description": "Always empty list for resolve_object endpoint"},
+    )
+    communities = fields.List(
+        fields.Nested(Community),
+        required=True,
+        metadata={"description": "Always empty list for resolve_object endpoint"},
+    )
+    communities_count = fields.Integer(required=True)
+    id = fields.Integer(required=True)
+    is_instance_feed = fields.Boolean(required=True)
+    local = fields.Boolean(required=True)
+    name = fields.String(required=True)
+    nsfl = fields.Boolean(required=True)
+    nsfw = fields.Boolean(required=True)
+    owner = fields.Boolean(
+        required=True,
+        metadata={"description": "Is the authorized user the creator of the feed?"},
+    )
+    public = fields.Boolean(required=True)
+    published = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    show_posts_from_children = fields.Boolean(required=True)
+    subscribed = fields.Boolean(required=True)
+    subscriptions_count = fields.Integer(required=True)
+    title = fields.String(required=True)
+    updated = fields.String(
+        required=True,
+        validate=validate_datetime_string,
+        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
+    )
+    user_id = fields.Integer(
+        required=True, metadata={"description": "user_id of the feed creator/owner"}
+    )
+    banner = fields.String(allow_none=True, metadata={"format": "url"})
+    description = fields.String(allow_none=True, metadata={"format": "markdown"})
+    description_html = fields.String(allow_none=True, metadata={"format": "html"})
+    icon = fields.String(allow_none=True, metadata={"format": "url"})
+    parent_feed_id = fields.Integer(allow_none=True)
+
+
 class CommentReportView(CommentView):
     comment_report = fields.Nested(CommentReport, required=True)
     comment_creator = fields.Nested(Person, required=True)
@@ -644,6 +908,7 @@ class ResolveObjectResponse(DefaultSchema):
     post = fields.Nested(PostView)
     community = fields.Nested(CommunityView)
     person = fields.Nested(PersonView)
+    feed = fields.Nested(FeedView)
 
 
 class InstanceWithoutFederationState(DefaultSchema):
@@ -681,6 +946,8 @@ class GetCommunityResponse(DefaultSchema):
     community_view = fields.Nested(CommunityView, required=True)
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
+    can_rate = fields.Boolean()
+    my_rating = fields.Integer(allow_none=True)
     site = fields.Nested(Site)
 
 
@@ -703,12 +970,13 @@ class CommunityFlairDeleteResponse(GetCommunityResponse):
 class CreateCommunityRequest(DefaultSchema):
     name = fields.String(required=True)
     title = fields.String(required=True)
-    banner_url = fields.String(allow_none=True)
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.String(allow_none=True)
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
+    question_answer = fields.Boolean()
     restricted_to_mods = fields.Boolean()
     rules = fields.String()
 
@@ -721,13 +989,14 @@ class CommunityResponse(DefaultSchema):
 class EditCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     title = fields.String()
-    banner_url = fields.String(allow_none=True)
+    banner_url = fields.String(allow_none=True, metadata={"format": "url"})
     description = fields.String(metadata={"format": "markdown"})
     discussion_languages = fields.List(fields.Integer())
-    icon_url = fields.String(allow_none=True)
+    icon_url = fields.String(allow_none=True, metadata={"format": "url"})
     local_only = fields.Boolean()
     nsfw = fields.Boolean()
     restricted_to_mods = fields.Boolean()
+    question_answer = fields.Boolean()
     rules = fields.String()
 
 
@@ -752,6 +1021,15 @@ class ListCommunitiesResponse(DefaultSchema):
 class FollowCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     follow = fields.Boolean(required=True)
+
+
+class RateCommunityRequest(DefaultSchema):
+    community_id = fields.Integer(required=True)
+    rating = fields.Integer(
+        required=True,
+        allow_none=True,
+        metadata={"description": "Providing a null value removes your rating"},
+    )
 
 
 class BlockCommunityRequest(DefaultSchema):
@@ -833,47 +1111,6 @@ class CommunityModerationUnbanRequest(DefaultSchema):
 class CommunityModerationNsfwRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     nsfw_status = fields.Boolean(required=True)
-
-
-class FeedView(DefaultSchema):
-    actor_id = fields.Url(required=True)
-    ap_domain = fields.String(required=True)
-    children = fields.List(fields.Nested(lambda: FeedView()), required=True)
-    communities = fields.List(fields.Nested(Community), required=True)
-    communities_count = fields.Integer(required=True)
-    id = fields.Integer(required=True)
-    is_instance_feed = fields.Boolean(required=True)
-    local = fields.Boolean(required=True)
-    name = fields.String(required=True)
-    nsfl = fields.Boolean(required=True)
-    nsfw = fields.Boolean(required=True)
-    owner = fields.Boolean(
-        required=True,
-        metadata={"description": "Is the authorized user the creator of the feed?"},
-    )
-    public = fields.Boolean(required=True)
-    published = fields.String(
-        required=True,
-        validate=validate_datetime_string,
-        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
-    )
-    show_posts_from_children = fields.Boolean(required=True)
-    subscribed = fields.Boolean(required=True)
-    subscriptions_count = fields.Integer(required=True)
-    title = fields.String(required=True)
-    updated = fields.String(
-        required=True,
-        validate=validate_datetime_string,
-        metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"},
-    )
-    user_id = fields.Integer(
-        required=True, metadata={"description": "user_id of the feed creator/owner"}
-    )
-    banner = fields.String(allow_none=True)
-    description = fields.String(allow_none=True, metadata={"format": "markdown"})
-    description_html = fields.String(allow_none=True, metadata={"format": "html"})
-    icon = fields.String(allow_none=True)
-    parent_feed_id = fields.Integer(allow_none=True)
 
 
 class FeedListRequest(DefaultSchema):
@@ -1052,7 +1289,7 @@ class UserMentionsResponse(DefaultSchema):
 
 
 class MediaView(DefaultSchema):
-    url = fields.String()
+    url = fields.String(metadata={"format": "url"})
     name = fields.String()
 
 
@@ -1102,12 +1339,27 @@ class UserSetFlairRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     flair_text = fields.String(
         allow_none=True,
+        validate=validate.Length(max=50),
         metadata={"description": "Either omit or set to null to remove existing flair"},
     )
 
 
 class UserSetFlairResponse(DefaultSchema):
     person_view = fields.Nested(PersonView)
+
+
+class UserSetNoteRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    note = fields.String(
+        required=True,
+        allow_none=True,
+        validate=validate.Length(max=50),
+        metadata={"description": "Pass a value of null to remove existing note"},
+    )
+
+
+class UserSetNoteResponse(UserSetFlairResponse):
+    pass
 
 
 class NewUserExtraField(DefaultSchema):
@@ -1133,6 +1385,12 @@ class NewUserExtraField(DefaultSchema):
 
 
 class UserSaveSettingsRequest(DefaultSchema):
+    accept_private_messages = fields.String(
+        validate=validate.OneOf(private_message_list),
+        metadata={
+            "description": 'Accept private messages from nobody, local users only, "trusted" instances, or any instance'
+        },
+    )
     avatar = fields.String(
         allow_none=True,
         metadata={
@@ -1141,6 +1399,15 @@ class UserSaveSettingsRequest(DefaultSchema):
         },
     )
     bio = fields.String(metadata={"format": "markdown"})
+    bot = fields.Boolean(metadata={"description": "This user is a bot"})
+    bot_visibility = fields.String(validate=validate.OneOf(nsfw_visibility_list))
+    community_keyword_filter = fields.List(
+        fields.String(),
+        allow_none=True,
+        metadata={
+            "description": "Filter out communities with these words in their name. Pass null to remove any filters."
+        },
+    )
     cover = fields.String(
         allow_none=True,
         metadata={
@@ -1152,15 +1419,69 @@ class UserSaveSettingsRequest(DefaultSchema):
         validate=validate.OneOf(default_comment_sorts_list)
     )
     default_sort_type = fields.String(validate=validate.OneOf(default_sorts_list))
+    email_unread = fields.Boolean(
+        metadata={
+            "description": "Receive email about missed notifications (if set up by local admin)"
+        }
+    )
     extra_fields = fields.List(
         fields.Nested(NewUserExtraField),
         metadata={
             "description": "A user can't have more than four total extra fields."
         },
     )
+    federate_votes = fields.Boolean(
+        metadata={
+            "description": "If false, votes are only counted on local instance instead of federated remotely"
+        }
+    )
+    feed_auto_follow = fields.Boolean(
+        metadata={
+            "description": "Automatically follow communities in a subscribed feed"
+        }
+    )
+    feed_auto_leave = fields.Boolean(
+        metadata={
+            "description": "Automatically leave communities when unsubscribing from a feed. Does not impact communities joined outside of a feed auto-follow."
+        }
+    )
+    hide_low_quality = fields.Boolean(
+        metadata={
+            "description": "Hide posts from communities marked as low-quality by the local instance admin"
+        }
+    )
+    indexable = fields.Boolean(
+        metadata={"description": "If posts can show up in search results"}
+    )
+    newsletter = fields.Boolean(
+        metadata={
+            "description": "Subscribe to the email newsletter that the local instance admin can send"
+        }
+    )
+    nsfl_visibility = fields.String(
+        validate=validate.OneOf(nsfw_visibility_list),
+        metadata={"description": "Overrides the show_nsfl field if provided"},
+    )
+    nsfw_visibility = fields.String(
+        validate=validate.OneOf(nsfw_visibility_list),
+        metadata={"description": "Overrides the show_nsfw field if provided"},
+    )
+    genai_visibility = fields.String(
+        validate=validate.OneOf(nsfw_visibility_list),
+        metadata={"description": "Overrides the show_genai field if provided"},
+    )
+    reply_collapse_threshold = fields.Integer(
+        metadata={"description": "Collapse replies with a score at or below this level"}
+    )
+    reply_hide_threshold = fields.Integer(
+        metadata={"description": "Hide replies with a score at or below this level"}
+    )
     show_nsfw = fields.Boolean()
     show_nsfl = fields.Boolean()
     show_read_posts = fields.Boolean()
+    searchable = fields.Boolean(
+        metadata={"description": "If profile shows up in the user list on the instance"}
+    )
 
 
 class UserSaveSettingsResponse(DefaultSchema):
@@ -1316,6 +1637,7 @@ class LikeCommentRequest(DefaultSchema):
             "default": False,
         }
     )
+    emoji = fields.String()
 
 
 class SaveCommentRequest(DefaultSchema):
@@ -1379,6 +1701,11 @@ class MarkCommentAsReadRequest(DefaultSchema):
     read = fields.Boolean(required=True)
 
 
+class MarkCommentAsAnswerRequest(DefaultSchema):
+    comment_reply_id = fields.Integer(required=True)
+    answer = fields.Boolean(required=True)
+
+
 class GetCommentReplyResponse(DefaultSchema):
     comment_reply_view = fields.Nested(CommentReplyView, required=True)
 
@@ -1432,10 +1759,26 @@ class GetPostResponse(DefaultSchema):
     cross_posts = fields.List(fields.Nested(PostView))
 
 
+class GetSiteMetadataRequest(DefaultSchema):
+    url = fields.String()
+
+
+class SiteMetadataView(DefaultSchema):
+    title = fields.String()
+    description = fields.String()
+    image = fields.String()
+    embed_video_url = fields.String()
+
+
+class GetSiteMetadataResponse(DefaultSchema):
+    metadata = fields.Nested(SiteMetadataView, required=True)
+
+
 class LikePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     score = fields.Integer(required=True)
     private = fields.Boolean()
+    emoji = fields.String()
 
 
 class SavePostRequest(DefaultSchema):
@@ -1451,22 +1794,49 @@ class SubscribePostRequest(DefaultSchema):
 class CreatePostRequest(DefaultSchema):
     title = fields.String(required=True)
     community_id = fields.Integer(required=True)
+    alt_text = fields.String(
+        metadata={
+            "description": "Will be used for image posts or link posts that point to images"
+        }
+    )
     body = fields.String()
-    url = fields.String()
+    url = fields.String(metadata={"format": "url"})
     nsfw = fields.Boolean()
+    ai_generated = fields.Boolean()
     language_id = fields.Integer()
+    event = fields.Nested(PostEvent, allow_none=True)
+    poll = fields.Nested(PostPoll, allow_none=True)
 
 
 class EditPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
+    alt_text = fields.String(
+        allow_none=True,
+        metadata={"description": "Pass null to remove the existing alt text"},
+    )
     title = fields.String()
     body = fields.String()
     url = fields.String(
         allow_none=True,
-        metadata={"description": "Pass value of null to remove the post url"},
+        metadata={
+            "description": "Pass value of null to remove the post url",
+            "format": "url",
+        },
     )
     nsfw = fields.Boolean()
     language_id = fields.Integer()
+    event = fields.Nested(PostEvent, allow_none=True)
+    poll = fields.Nested(PostPoll, allow_none=True)
+    tags = fields.String(
+        allow_none=True,
+        metadata={
+            "description": "Hashtags, separated by commas with no hash character"
+        },
+    )
+    flair = fields.String(
+        allow_none=True,
+        metadata={"description": "Flair, separated by commas with no hash character"},
+    )
 
 
 class DeletePostRequest(DefaultSchema):
@@ -1524,6 +1894,11 @@ class PostReportResponse(DefaultSchema):
 class LockPostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     locked = fields.Boolean(required=True)
+
+
+class HidePostRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    hidden = fields.Boolean(required=True)
 
 
 class FeaturePostRequest(DefaultSchema):
@@ -1697,7 +2072,7 @@ class ImageUploadRequest(DefaultSchema):
 
 
 class ImageUploadResponse(DefaultSchema):
-    url = fields.String(required=True)
+    url = fields.String(required=True, metadata={"format": "url"})
     liked_only = fields.Boolean()
     saved_only = fields.Boolean()
     q = fields.String()
@@ -1729,6 +2104,21 @@ class PostSetFlairRequest(DefaultSchema):
 
 class PostSetFlairResponse(PostView):
     pass
+
+
+class PollVoteRequest(DefaultSchema):
+    post_id = fields.Integer(required=True)
+    choice_id = fields.List(
+        fields.Integer(),
+        required=True,
+        metadata={
+            "description": "Must have a length of 1 for a poll in single vote mode."
+        },
+    )
+
+
+class PollVoteResponse(DefaultSchema):
+    post_view = fields.Nested(PostView, required=True)
 
 
 # Admin API Schemas

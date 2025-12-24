@@ -28,7 +28,7 @@ from app.utils import (
     permission_required,
     user_filters_posts,
     blocked_domains,
-    blocked_instances,
+    blocked_or_banned_instances,
     recently_upvoted_posts,
     recently_downvoted_posts,
     mimetype_from_url,
@@ -38,12 +38,14 @@ from app.utils import (
     login_required_if_private_instance,
     reported_posts,
     moderating_communities_ids,
+    block_honey_pot,
 )
 
 
 @bp.route("/d/<domain_id>", methods=["GET", "POST"])
 @login_required_if_private_instance
 def show_domain(domain_id):
+    block_honey_pot()
     with limiter.limit("60/minute"):
         page = request.args.get("page", 1, type=int)
 
@@ -90,7 +92,7 @@ def show_domain(domain_id):
                 )
 
             if current_user.is_authenticated:
-                instance_ids = blocked_instances(current_user.id)
+                instance_ids = blocked_or_banned_instances(current_user.id)
                 if instance_ids:
                     posts = posts.filter(
                         or_(

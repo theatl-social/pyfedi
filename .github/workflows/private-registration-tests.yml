@@ -54,25 +54,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.13"
+          version: "latest"
 
-      - name: Cache dependencies
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-private-reg-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-private-reg-
-            ${{ runner.os }}-pip-
+      - name: Set up Python 3.13
+        run: uv python install 3.13
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-cov pytest-html
+        run: uv sync --frozen
 
       - name: Set environment variables
         run: |
@@ -84,7 +75,7 @@ jobs:
       - name: Run Private Registration Tests - ${{ matrix.config }}
         run: |
           # Use the working test file directly with coverage
-          python -m pytest tests/test_private_registration_security_simple.py -v --tb=short --cov=app.api.admin --cov-report=xml:coverage-${{ matrix.config }}.xml
+          uv run pytest tests/test_private_registration_security_simple.py -v --tb=short --cov=app.api.admin --cov-report=xml:coverage-${{ matrix.config }}.xml
         env:
           # Test-specific secrets (safe for CI)
           PRIVATE_REGISTRATION_SECRET: test-secret-ci-${{ github.run_id }}
@@ -118,35 +109,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.13"
+          version: "latest"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-benchmark pytest-asyncio locust
+        run: uv sync --frozen
 
       - name: Run comprehensive security tests
         run: |
           # Run our working security test suite
-          export PYTHONPATH=${{ github.workspace }}
-          export SERVER_NAME=localhost
-          export PRIVATE_REGISTRATION_ENABLED=true
-          export PRIVATE_REGISTRATION_SECRET=test-secret-security-tests
-
-          python -m pytest tests/test_private_registration_security_simple.py -v
+          uv run pytest tests/test_private_registration_security_simple.py -v
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SERVER_NAME: localhost
+          PRIVATE_REGISTRATION_ENABLED: true
+          PRIVATE_REGISTRATION_SECRET: test-secret-security-tests
 
       - name: Run basic performance check
         run: |
-          export PYTHONPATH=${{ github.workspace }}
-          export SERVER_NAME=localhost
-
           # Simple performance validation - just ensure tests run quickly
           start_time=$(date +%s)
-          python -m pytest tests/test_private_registration_security_simple.py -v
+          uv run pytest tests/test_private_registration_security_simple.py -v
           end_time=$(date +%s)
 
           duration=$((end_time - start_time))
@@ -158,6 +146,9 @@ jobs:
           else
               echo "Performance check passed: ${duration}s < 30s"
           fi
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SERVER_NAME: localhost
 
   # Integration Tests
   integration-tests:
@@ -169,25 +160,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.13"
+          version: "latest"
+
+      - name: Set up Python 3.13
+        run: uv python install 3.13
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: uv sync --frozen
 
       - name: Run integration tests
         run: |
-          export PYTHONPATH=${{ github.workspace }}
-          export SERVER_NAME=localhost
-          export PRIVATE_REGISTRATION_ENABLED=true
-          export PRIVATE_REGISTRATION_SECRET=test-integration-${{ github.run_id }}
-
           # Run all our security tests as integration validation
-          python -m pytest tests/test_private_registration_security_simple.py -v --tb=short
+          uv run pytest tests/test_private_registration_security_simple.py -v --tb=short
+        env:
+          PYTHONPATH: ${{ github.workspace }}
+          SERVER_NAME: localhost
+          PRIVATE_REGISTRATION_ENABLED: true
+          PRIVATE_REGISTRATION_SECRET: test-integration-${{ github.run_id }}
 
   # Comprehensive test report
   test-summary:
@@ -213,15 +205,15 @@ jobs:
           if [ "${{ needs.private-registration-tests.result }}" = "success" ] && \
              [ "${{ needs.security-tests.result }}" = "success" ] && \
              [ "${{ needs.integration-tests.result }}" = "success" ]; then
-            echo "## ✅ All Tests Passed" >> test-summary.md
+            echo "## All Tests Passed" >> test-summary.md
             echo "" >> test-summary.md
             echo "Private Registration API is working correctly across all test scenarios:" >> test-summary.md
-            echo "- Environment variable configuration ✅" >> test-summary.md
-            echo "- Authentication and authorization ✅" >> test-summary.md
-            echo "- Rate limiting and IP restrictions ✅" >> test-summary.md
-            echo "- Integration testing ✅" >> test-summary.md
+            echo "- Environment variable configuration" >> test-summary.md
+            echo "- Authentication and authorization" >> test-summary.md
+            echo "- Rate limiting and IP restrictions" >> test-summary.md
+            echo "- Integration testing" >> test-summary.md
           else
-            echo "## ❌ Some Tests Failed" >> test-summary.md
+            echo "## Some Tests Failed" >> test-summary.md
             echo "" >> test-summary.md
             echo "Please check individual test results for details." >> test-summary.md
           fi

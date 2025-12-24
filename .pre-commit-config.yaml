@@ -1,5 +1,5 @@
 # Pre-commit hooks for PieFed
-# Install with: pip install pre-commit && pre-commit install
+# Install with: uv sync && uv run pre-commit install
 
 repos:
   # Python formatting and linting
@@ -10,12 +10,12 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  # Template linting - using local hook for better control
+  # Template linting - using local hook with uv
   - repo: local
     hooks:
       - id: djlint-templates
         name: djLint template linting
-        entry: djlint
+        entry: uv run djlint
         args: [--lint]
         language: system
         files: ^app/templates/.*\.html$

@@ -5,7 +5,7 @@ from flask_login import current_user
 from app import cache, db
 from app.constants import *
 from app.models import InstanceBlock
-from app.utils import authorise_api_user, blocked_instances
+from app.utils import authorise_api_user, blocked_or_banned_instances
 
 
 def block_remote_instance(instance_id, src, auth=None):
@@ -27,7 +27,7 @@ def block_remote_instance(instance_id, src, auth=None):
         db.session.add(InstanceBlock(user_id=user_id, instance_id=instance_id))
         db.session.commit()
 
-        cache.delete_memoized(blocked_instances, user_id)
+        cache.delete_memoized(blocked_or_banned_instances, user_id)
 
     if src == SRC_API:
         return user_id
@@ -47,7 +47,7 @@ def unblock_remote_instance(instance_id, src, auth=None):
         db.session.delete(existing)
         db.session.commit()
 
-        cache.delete_memoized(blocked_instances, user_id)
+        cache.delete_memoized(blocked_or_banned_instances, user_id)
 
     if src == SRC_API:
         return user_id
