@@ -443,7 +443,7 @@
     <div class="post_utilities_bar">
         <div class="post_reply_count">
             <a href="#post_replies">
-                <span class="fe fe-reply"></span> {{ post.reply_count }}
+                <span class="fe fe-reply"></span><span class="post_reply_count_text"> {{ post.reply_count }}</span>
             </a>
         </div>
         <div class="voting_buttons_new" aria-live="assertive" data-base-url="/post/{{ post.id}}">
@@ -493,7 +493,7 @@
             </div>
         {% endif -%}
         {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
-            <div class="dropdown" id="flair_dropdown_{{ post.id }}">
+            <div class="dropdown flair_dropdown" id="flair_dropdown_{{ post.id }}">
                 <a href="{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}"
                         data-bs-toggle="dropdown"
                         rel="nofollow noindex">

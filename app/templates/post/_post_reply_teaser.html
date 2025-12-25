@@ -118,7 +118,7 @@
         <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
             {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
         </div>
-        <div class="emoji_button">
+        <div class="emoji_button hide_skinny_mobile">
             {{ render_emoji_button(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
         </div>
         <div class="hide_button">
@@ -133,7 +133,7 @@
                 {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
-        {% if post_reply.community.question_answer -%}
+        {% if post_reply.community.question_answer and post_reply.depth < 3 -%}
             <div class="choose_answer_icon">
                 {% if post_reply.answer -%}
                 <a rel="nofollow noindex" title="{{ _('Un-choose answer') }}" href="#"

@@ -1500,12 +1500,29 @@ time {
   line-height: 26px;
 }
 
+.post_full .post_utilities_bar {
+  container-type: inline-size;
+}
 .post_full .post_utilities_bar .voting_buttons_new {
   margin-left: -15px;
 }
 .post_full .post_utilities_bar .post_reply_count {
   justify-content: left;
   margin-right: 8px;
+}
+@container (width < 400px) {
+  .post_full .post_utilities_bar .flair_dropdown {
+    display: none;
+  }
+}
+@container (width < 350px) {}
+@container (width < 300px) {
+  .post_full .post_utilities_bar .post_reply_count_text {
+    display: none;
+  }
+  .post_full .post_utilities_bar .voting_buttons_new .score {
+    display: none;
+  }
 }
 
 #masonry {
@@ -3003,6 +3020,7 @@ form h5 {
   flex-wrap: wrap;
   gap: var(--bs-spacer-1);
   max-width: 100%;
+  row-gap: 0.3rem;
   overflow: hidden;
   user-select: none;
 }
