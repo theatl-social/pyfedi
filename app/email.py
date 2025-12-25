@@ -220,7 +220,7 @@ class SMTPEmailService:
         self.msg.replace_header("From", in_from)
     
     def set_reply_to(self, reply_to):
-        self.msg.replace_header("Reply-To", reply_to)
+        self.msg.add_header("Reply-To", reply_to)
 
     def set_plaintext(self, in_body_text):
         """
