@@ -1515,12 +1515,16 @@ time {
     display: none;
   }
 }
-@container (width < 350px) {}
-@container (width < 300px) {
-  .post_full .post_utilities_bar .post_reply_count_text {
-    display: none;
+@container (width < 350px) {
+  .post_full .post_utilities_bar .voting_buttons_new .upvote_button, .post_full .post_utilities_bar .voting_buttons_new .downvote_button {
+    min-width: 34px;
   }
   .post_full .post_utilities_bar .voting_buttons_new .score {
+    display: none;
+  }
+}
+@container (width < 300px) {
+  .post_full .post_utilities_bar .post_reply_count_text {
     display: none;
   }
 }
@@ -3139,8 +3143,8 @@ form h5 {
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
 }
 .emoji_button a svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Visually hide radios but keep them accessible */
