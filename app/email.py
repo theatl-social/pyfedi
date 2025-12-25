@@ -84,6 +84,8 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
                                             (current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT']),
                                             use_tls=current_app.config['MAIL_USE_TLS'])
             email_sender.set_message(text_body, subject, sender, html_body)  # sender = 'John Doe <j.doe@server.com>'
+            if reply_to:
+                email_sender.set_reply_to(reply_to)
             email_sender.set_recipients(recipients)
             email_sender.connect()
             email_sender.send_all(close_connection=True)
@@ -216,6 +218,9 @@ class SMTPEmailService:
 
     def set_from(self, in_from):
         self.msg.replace_header("From", in_from)
+    
+    def set_reply_to(self, reply_to):
+        self.msg.replace_header("Reply-To", reply_to)
 
     def set_plaintext(self, in_body_text):
         """
