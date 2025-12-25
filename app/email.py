@@ -11,7 +11,7 @@ from flask import current_app, render_template, g, url_for, flash
 from flask_babel import _  # todo: set the locale based on account_id so that _() works
 
 from app import celery
-from app.utils import get_setting, markdown_to_html, markdown_to_text
+from app.utils import get_setting, markdown_to_html, html_to_text
 
 CHARSET = "UTF-8"
 
@@ -50,7 +50,7 @@ def send_registration_approved_email(user):
     send_email(subject,
                sender=f'{g.site.name} <{mail_from}>',
                recipients=[user.email],
-               text_body=markdown_to_text(body),
+               text_body=html_to_text(body),
                html_body=body, reply_to=g.site.contact_email)
 
 
