@@ -886,6 +886,10 @@ ul.form-multicheck-columns {
       height: 100%;
       border: 0;
   }
+
+  .blur {
+    filter: blur(24px);
+  }
 }
 
 time {

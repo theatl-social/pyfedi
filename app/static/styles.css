@@ -1447,6 +1447,9 @@ ul.form-multicheck-columns li {
   height: 100%;
   border: 0;
 }
+.post_teaser_video_preview .blur {
+  filter: blur(24px);
+}
 
 time {
   white-space: nowrap;
