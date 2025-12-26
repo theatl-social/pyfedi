@@ -426,7 +426,7 @@
                          hx-post="/post/{{ post.id }}/emoji_set"
                          hx-vals='{"emoji": "{{ reaction['token'] }}"}'
                          hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
-                    >
+                         title='{{ ", ".join(reaction["authors"]) }}'>
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
                                                 <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
                                             {% else -%}
