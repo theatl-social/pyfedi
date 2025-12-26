@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
+from urllib.parse import unquote
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
 from flask_babel import _, force_locale, gettext
@@ -2134,7 +2135,42 @@ def post_cross_post(post_id: int):
 @bp.route('/post_preview', methods=['POST'])
 @login_required
 def preview():
-    return markdown_to_html(request.form.get('body'))
+    # return markdown_to_html(request.form.get('body'))
+    preview_type = request.args.get('type', None)
+    preview_id = request.args.get('id', None)
+    preview_top = request.args.get('top', None)
+
+    oob_target = ""
+    target_id = ""
+    additional_classes = ""
+
+    if preview_top:
+        oob_target = oob_target + "top_"
+
+    if preview_type == "comment":
+        oob_target = oob_target + "comment_preview_"
+        if preview_top:
+            target_id = "#textarea_comment_to_preview"
+        else:
+            target_id = "#textarea_in_reply_to_preview_"
+            if preview_id:
+                target_id += preview_id
+    elif preview_type == "post":
+        oob_target = "post_preview_btn"
+        target_id = "#preview"
+    
+    if preview_id:
+        oob_target = oob_target + preview_id
+    
+    if preview_type == "comment" and not preview_top:
+        additional_classes = "mt-2"
+    
+    preview_url = url_for('post.preview', type=preview_type, id=preview_id, top=preview_top)
+
+    html_preview = markdown_to_html(request.form.get('body'))
+
+    return render_template('post/_post_preview.html', preview=html_preview, oob_target=oob_target,
+                           preview_url=preview_url, target_id=target_id, additional_classes=additional_classes)
 
 
 @bp.route('/post/<int:post_id>/ical', methods=['GET'])

@@ -171,7 +171,12 @@
             {% if not low_bandwidth -%}
                 <div class="row mb-3">
                     <div class="col-6">
-                        <a href="#" class="btn btn-outline-secondary" hx-post="{{ url_for('post.preview') }}" hx-target="#preview">{{ _('Preview') }}</a>
+                        <a href="#" 
+                                id="post_preview_btn" 
+                                class="btn btn-outline-secondary" 
+                                hx-post="{{ url_for('post.preview', type="post") }}" 
+                                hx-target="#preview">{{ _('Preview') }}
+                        </a>
                         <a href="#" class="btn btn-outline-secondary {{ 'd-none' if markdown_editor }}" id="insertImage">{{ _('Insert image') }}</a>
                     </div>
                     <div class="col-6 text-right">
