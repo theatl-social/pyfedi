@@ -2135,7 +2135,6 @@ def post_cross_post(post_id: int):
 @bp.route('/post_preview', methods=['POST'])
 @login_required
 def preview():
-    # return markdown_to_html(request.form.get('body'))
     preview_type = request.args.get('type', None)
     preview_id = request.args.get('id', None)
     preview_top = request.args.get('top', None)
