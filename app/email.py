@@ -11,7 +11,7 @@ from flask import current_app, render_template, g, url_for, flash
 from flask_babel import _  # todo: set the locale based on account_id so that _() works
 
 from app import celery
-from app.utils import get_setting, markdown_to_html, markdown_to_text
+from app.utils import get_setting, markdown_to_html, html_to_text
 
 CHARSET = "UTF-8"
 
@@ -50,7 +50,7 @@ def send_registration_approved_email(user):
     send_email(subject,
                sender=f'{g.site.name} <{mail_from}>',
                recipients=[user.email],
-               text_body=markdown_to_text(body),
+               text_body=html_to_text(body),
                html_body=body, reply_to=g.site.contact_email)
 
 
@@ -84,6 +84,8 @@ def send_async_email(subject, sender, recipients, text_body, html_body, reply_to
                                             (current_app.config['MAIL_SERVER'], current_app.config['MAIL_PORT']),
                                             use_tls=current_app.config['MAIL_USE_TLS'])
             email_sender.set_message(text_body, subject, sender, html_body)  # sender = 'John Doe <j.doe@server.com>'
+            if reply_to:
+                email_sender.set_reply_to(reply_to)
             email_sender.set_recipients(recipients)
             email_sender.connect()
             email_sender.send_all(close_connection=True)
@@ -216,6 +218,9 @@ class SMTPEmailService:
 
     def set_from(self, in_from):
         self.msg.replace_header("From", in_from)
+    
+    def set_reply_to(self, reply_to):
+        self.msg.add_header("Reply-To", reply_to)
 
     def set_plaintext(self, in_body_text):
         """

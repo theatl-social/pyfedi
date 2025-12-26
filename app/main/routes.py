@@ -830,9 +830,12 @@ def test_email():
         email = request.args.get('email')
     else:
         email = current_user.email
-    send_email('This is a test email', f'{g.site.name} <{current_app.config["MAIL_FROM"]}>', [email],
-               'This is a test email. If you received this, email sending is working!',
-               '<p>This is a test email. If you received this, email sending is working!</p>')
+    send_email(subject='This is a test email',
+               sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+               recipients=[email],
+               text_body='This is a test email. If you received this, email sending is working!',
+               html_body='<p>This is a test email. If you received this, email sending is working!</p>',
+               reply_to=g.site.contact_email)
     return f'Email sent to {email}.'
 
 
