@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import namedtuple, defaultdict
 from datetime import datetime, timedelta
 from random import randint
-from urllib.parse import unquote
 
 from flask import redirect, url_for, flash, current_app, abort, request, g, make_response, jsonify
 from flask_babel import _, force_locale, gettext
