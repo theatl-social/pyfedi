@@ -11,7 +11,7 @@
 {% endblock %}
 
 {% block app_content %}
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+<script src="/static/js/tomselect/tom-select.complete.min.js" nonce={{ nonce }}></script>
 <div class="row">
     <div class="col col-login mx-auto">
         <h1>{{ _('Edit %(community_name)s', community_name=community.display_name()) }}</h1>
