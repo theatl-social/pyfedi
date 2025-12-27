@@ -1920,7 +1920,7 @@ def url_to_thumbnail_file(filename) -> File:
                 medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
                 medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
 
-                final_ext = file_extension
+                final_ext = file_extension.lower()
 
                 if medium_image_format == 'AVIF':
                     import pillow_avif  # NOQA

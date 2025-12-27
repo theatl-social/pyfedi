@@ -35,7 +35,7 @@ def process_upload(image_file, destination='posts', user_id=None):
     image_file.save(final_place)
     file_size = os.path.getsize(final_place)
 
-    final_ext = file_ext  # track file extension for conversion
+    final_ext = file_ext.lower()  # track file extension for conversion
 
     if file_ext.lower() == '.heic':
         register_heif_opener()
