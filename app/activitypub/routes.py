@@ -2289,10 +2289,19 @@ def process_chat(user, store_ap_json, core_activity, session):
     saved_json = core_activity if store_ap_json else None
     id = core_activity['id']
     sender = user
-    if not ('to' in core_activity['object'] and
-            isinstance(core_activity['object']['to'], list) and
-            len(core_activity['object']['to']) > 0):
-        return False
+
+    # activity['object']['to'] must exist in the activity
+    if not ('to' in core_activity['object']):
+        if isinstance(core_activity['object']['to'], str):
+            # activity['object']['to'] is a sole string
+            # jsonld arrays can be represented by the value alone to indicate the only element
+            # we wrap this solo value in a list and continue processing
+            core_activity['object']['to'] = [core_activity['object']['to']]
+        if not (isinstance(core_activity['object']['to'], list) and len(core_activity['object']['to']) > 0):
+            # if activity['object']['to'] is not a list that has at least 1 target, discard the activity
+            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Chat recipient is invalid')
+            return False
+        
     recipient_ap_id = core_activity['object']['to'][0]
     recipient = find_actor_or_create_cached(recipient_ap_id)
     if recipient and recipient.is_local():
@@ -2368,6 +2377,7 @@ def process_chat(user, store_ap_json, core_activity, session):
 
         return True
 
+    log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'ChatMessage target is not local')
     return False
 
 
