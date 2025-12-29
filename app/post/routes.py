@@ -8,7 +8,7 @@ from flask import redirect, url_for, flash, current_app, abort, request, g, make
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc, Integer
+from sqlalchemy import text, desc, Integer, case
 from sqlalchemy.orm.exc import NoResultFound
 from ics import Calendar, DisplayAlarm
 import ics
@@ -570,7 +570,15 @@ def comment_emoji_reaction(comment_id, vote_direction, federate):
 @validation_required
 @approval_required
 def comment_emoji_list(comment_id):
-    emojis = Emoji.query.order_by(Emoji.token).all()
+    # order emoji by: instance_id=1 first, then trusted instances, then all others
+    emojis = Emoji.query.outerjoin(Instance, Emoji.instance_id == Instance.id).order_by(
+        case(
+            (Emoji.instance_id == 1, 0),
+            (Instance.trusted == True, 1),
+            else_=2
+        ),
+        Emoji.token
+    ).all()
     emoji_list = [{'id': e.id, 'url': e.url, 'token': e.token, 'category': e.category, 'aliases': e.aliases} for e in emojis]
     return render_template('post/emoji_list.html', comment_id=comment_id, emojis=emoji_list, nonce=g.get('nonce', ''))
 

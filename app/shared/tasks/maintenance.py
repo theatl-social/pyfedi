@@ -608,7 +608,7 @@ def monitor_healthy_instances():
                                 ).delete()
 
                         # refresh custom emoji
-                        if instance.trusted:
+                        if not instance_banned(instance.domain):
                             for emoji in instance_data['custom_emojis']:
                                 token = emoji['custom_emoji']['shortcode']
                                 aliases = [keyword['keyword'] for keyword in emoji['keywords']]
