@@ -83,7 +83,7 @@
                          hx-target="#reactions_{{ post_reply.id }}" hx-swap="outerHTML"
                          title='{{ ", ".join(reaction["authors"]) }}'>
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" referrerpolicy="no-referrer">
                                             {%- else -%}
                                                 {{ reaction['token'] }}
                                             {%- endif %}</div>
