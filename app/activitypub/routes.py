@@ -989,7 +989,7 @@ def process_inbox_request(request_json, store_ap_json):
                                                              community_id=join_request.community_id,
                                                              joined_via_feed=joined_via_feed)
                                     session.add(member)
-                                    if not member.user.bot:
+                                    if User.query.get(join_request.user_id).bot is False:
                                         community.subscriptions_count += 1
                                     community.last_active = utcnow()
                                     session.commit()
