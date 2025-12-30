@@ -953,7 +953,7 @@ def put_post(auth, data):
         language_id = site_language_id()
     if 'alt_text' in data:
         alt_text = data['alt_text']
-    elif post.image.alt_text:
+    elif post.image and post.image.alt_text:
         alt_text = post.image.alt_text
     else:
         alt_text = ''
