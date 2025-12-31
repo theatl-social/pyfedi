@@ -2288,7 +2288,7 @@ def process_question_answer(user, store_ap_json, request_json, announced):
 def process_chat(user, store_ap_json, core_activity, session):
     saved_json = core_activity if store_ap_json else None
     id = core_activity['id']
-    sender = user
+    sender = session.query(User).get(user.id)
 
     # activity['object']['to'] must exist in the activity
     if not ('to' in core_activity['object']):

@@ -262,7 +262,7 @@ class Conversation(db.Model):
                     cm2.user_id = :user_id_2 AND 
                     cm1.user_id <> cm2.user_id;"""
         ec = db.session.execute(text(sql), {'user_id_1': recipient.id, 'user_id_2': sender.id}).fetchone()
-        return Conversation.query.get(ec[0]) if ec else None
+        return db.session.query(Conversation).get(ec[0]) if ec else None
 
 
 conversation_member = db.Table('conversation_member',
