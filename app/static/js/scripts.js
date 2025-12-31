@@ -126,28 +126,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 function setupUserPopup() {
-    document.querySelectorAll('.render_username .author_link').forEach(anchor => {
-        if (!anchor.dataset.userPopupSetup) {
-            let timeoutId;
+    if(window.matchMedia("(pointer: fine)").matches) {
+        document.querySelectorAll('.render_username .author_link').forEach(anchor => {
+            if (!anchor.dataset.userPopupSetup) {
+                let timeoutId;
 
-            anchor.addEventListener('mouseover', function() {
-                timeoutId = setTimeout(function () {
-                    anchor.nextElementSibling.classList.remove('d-none');
-                }, 1000);
-            });
+                anchor.addEventListener('mouseover', function() {
+                    timeoutId = setTimeout(function () {
+                        anchor.nextElementSibling.classList.remove('d-none');
+                    }, 1000);
+                });
 
-            anchor.addEventListener('mouseout', function() {
-                clearTimeout(timeoutId);
+                anchor.addEventListener('mouseout', function() {
+                    clearTimeout(timeoutId);
 
-                let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
-                if (userPreview) {
-                    userPreview.classList.add('d-none');
-                }
-            });
-            
-            anchor.dataset.userPopupSetup = 'true';
-        }
-    });
+                    let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
+                    if (userPreview) {
+                        userPreview.classList.add('d-none');
+                    }
+                });
+
+                anchor.dataset.userPopupSetup = 'true';
+            }
+        });
+    }
 }
 function setupPostTeaserHandler() {
     document.querySelectorAll('.post_teaser_clickable').forEach(div => {
