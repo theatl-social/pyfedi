@@ -44,6 +44,25 @@ function connect() {
             }
         }
 
+        // SSE message telling the frontend that a new chat message has arrived
+        if(data['conversation'] && location.href.indexOf(`chat/${data['conversation']}`)) {
+            fetch(`/chat/refresh-conversation/${data['conversation']}`)
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.text();
+                })
+                .then(function(html) {
+                    const conversation = document.getElementById('conversation');
+                    if(conversation) {
+                        stick = stickToBottom(conversation);
+                        conversation.innerHTML = html;
+                        if(stick) {
+                            conversation.scrollTop = conversation.scrollHeight;
+                        }
+                    }
+                });
+        }
+
     };
 
     eventSource.onerror = (err) => {

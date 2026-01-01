@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupScrollToComment,
         setupTranslateAll,
         setupEmojiAutoSubmit,
-        setupReactionDialog
+        setupReactionDialog,
+        setupScrollChat,
     ];
     
     // Run critical setups immediately
@@ -2322,4 +2323,17 @@ function setupReactionDialog() {
             }
         });
     }
+}
+
+
+
+function setupScrollChat() {
+    var scrollThese = document.querySelectorAll('.scroll_down');
+    scrollThese.forEach(function(scroll) {
+        scroll.scrollTop = scroll.scrollHeight;
+    });
+}
+
+function stickToBottom(el) {
+    return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 1;
 }

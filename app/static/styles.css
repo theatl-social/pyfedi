@@ -2879,8 +2879,16 @@ form h5 {
   background-color: var(--bs-card-cap-bg);
 }
 
+.chat-input label {
+  display: none;
+}
+
 .alone_message {
   float: inline-start;
+}
+
+.vh-90 {
+  height: 90vh !important;
 }
 
 #subtopic_nav {

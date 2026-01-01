@@ -35,7 +35,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids, \
-    moderating_communities_ids_all_users
+    moderating_communities_ids_all_users, publish_sse_event
 
 
 @bp.route('/testredis')
@@ -2362,17 +2362,19 @@ def process_chat(user, store_ap_json, core_activity, session):
                 notification_text = 'Updated message from '
                 message_id = updated_message.id
 
-            # Notify recipient
-            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
-            notify = Notification(title=shorten_string(notification_text + sender.display_name()),
-                                  url=f'/chat/{existing_conversation.id}#message_{message_id}',
-                                  user_id=recipient.id,
-                                  author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
-                                  targets=targets_data)
-            session.add(notify)
-            recipient.unread_notifications += 1
-            existing_conversation.read = False
-            session.commit()
+            if recipient.is_local():
+                publish_sse_event(f"messages:{recipient.id}", json.dumps({'conversation': existing_conversation.id}))
+                # Notify recipient
+                targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
+                notify = Notification(title=shorten_string(notification_text + sender.display_name()),
+                                      url=f'/chat/{existing_conversation.id}#message_{message_id}',
+                                      user_id=recipient.id,
+                                      author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
+                                      targets=targets_data)
+                session.add(notify)
+                recipient.unread_notifications += 1
+                existing_conversation.read = False
+                session.commit()
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
 
         return True
