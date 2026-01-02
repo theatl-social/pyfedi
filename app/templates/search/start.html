@@ -73,6 +73,17 @@
                                     <option value="top">{{ _('Top') }}</option>
                                 </select>
                             </div>
+                            <div class="form-group"><label class="form-control-label" for="type" aria-label="Sort results">{{ _('NSFW') }}</label>
+                                <select class="form-control form-select" id="nsfw" name="nsfw">
+                                    <option value="">{{ _('Use my profile settings') }}</option>
+                                    <option value="only">{{ _('Only NSFW') }}</option>
+                                    <option value="include">{{ _('Include NSFW') }}</option>
+                                    <option value="exclude">{{ _('No NSFW') }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label class="form-control-label" for="minimum_upvote" aria-label="Minimum upvotes">{{ _('Minimum upvotes') }} ({{ _('optional') }})</label>
+                                <input class="form-control" id="minimum_upvote" name="minimum_upvote" type="text" inputmode="numeric" pattern="\d+">
+                            </div>
                             <input class="btn btn-primary btn-md" id="submit" name="submit" type="submit" value="Search">
                         </form>
                         <h6 class="mt-5">{{ _('Example searches:') }} </h6>
