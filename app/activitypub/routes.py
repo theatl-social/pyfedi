@@ -2211,7 +2211,7 @@ def process_rate(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
     if not instance_banned(user.instance.domain):
-        community.rate(user, request_json['rating'])
+        community.rate(user, request_json['rating'] if 'rating' in request_json else request_json['object']['rating'])
         log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
         if not announced:
             announce_activity_to_followers(community, user, request_json)
