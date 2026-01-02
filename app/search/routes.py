@@ -84,7 +84,7 @@ def run_search():
                 posts = posts.filter(Post.nsfw == False)
 
             if minimum_upvote:
-                posts = posts.filter(Post.up_votes >= int(minimum_upvote))
+                posts = posts.filter(Post.score >= int(minimum_upvote))
             posts = posts.filter(Post.indexable == True)
             if q is not None:
                 posts = posts.search(q, sort=True if sort_by == '' else False)

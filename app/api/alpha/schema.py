@@ -24,6 +24,7 @@ post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
+search_nsfw = ['Exclude', 'Include', 'Only']
 
 
 def validate_datetime_string(text):
@@ -303,6 +304,8 @@ class SearchRequest(DefaultSchema):
     })
     community_name = fields.String()
     community_id = fields.Integer()
+    minimun_upvotes = fields.Integer()
+    nsfw = fields.String(validate=validate.OneOf(search_nsfw))
 
 
 class SearchInstanceChooser(DefaultSchema):
