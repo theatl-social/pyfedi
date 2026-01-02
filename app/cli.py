@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from random import randint, uniform
 from time import sleep
 from zoneinfo import ZoneInfo
+from shared.community import is_bad_name
 
 import click
 import flask
@@ -1018,15 +1019,7 @@ def register(app):
                 elif c['counts']['users_active_week'] < 10:
                     continue
 
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                seven_things_plus = [
-                    'shit', 'piss', 'fuck',
-                    'cunt', 'cocksucker', 'motherfucker', 'tits',
-                    'piracy', '196', 'greentext', 'usauthoritarianism',
-                    'enoughmuskspam', 'political_weirdos', '4chan'
-                ]
-                if any(badword in c['name'].lower() for badword in seven_things_plus):
+                if is_bad_name(c['name']):
                     continue
 
                 # convert the url to server, community
