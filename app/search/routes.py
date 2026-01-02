@@ -35,7 +35,7 @@ def run_search():
     sort_by = request.args.get('sort_by', '')
     search_for = request.args.get('search_for', 'posts')
     nsfw = request.args.get('nsfw', '')
-    minimum_upvote = request.args.get('minimum_upvote')
+    minimum_upvote = request.args.get('minimum_upvote', '')
 
     if q != '' or type != 0 or language_id != 0 or community_id != 0 or nsfw != '' or minimum_upvote != '':
         posts = None
