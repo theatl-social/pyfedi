@@ -373,7 +373,7 @@ def admin_federation():
         seven_things_plus = [
             'shit', 'piss', 'fuck',
             'cunt', 'cocksucker', 'motherfucker', 'tits',
-            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'memes', 'piracy', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
         ]
 
@@ -484,7 +484,7 @@ def admin_federation():
         seven_things_plus = [
             'shit', 'piss', 'fuck',
             'cunt', 'cocksucker', 'motherfucker', 'tits',
-            'memes', 'piracy', '196', 'greentext', 'usauthoritarianism',
+            'memes', 'piracy', 'greentext', 'usauthoritarianism',
             'enoughmuskspam', 'political_weirdos', '4chan'
         ]
         is_lemmy = False
