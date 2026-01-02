@@ -266,7 +266,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             pass
 
     if minimum_upvotes:
-        posts = posts.filter(Post.score >= minimum_upvotes)
+        posts = posts.filter(Post.up_votes - Post.down_votes >= minimum_upvotes)
     
     if search_by_community and not ignore_sticky:
         posts = posts.order_by(desc(Post.sticky))
