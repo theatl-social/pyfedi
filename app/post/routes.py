@@ -73,7 +73,10 @@ def show_post(post_id: int):
             if post.deleted_by == post.user_id:
                 flash(_('This post has been deleted by the author.'), 'warning')
             else:
-                flash(_('This post has been deleted by a moderator.'), 'warning')
+                if current_user.is_authenticated and (community.is_moderator() or current_user.is_admin_or_staff()):
+                    flash(_('This post has been deleted and is only visible to staff and admins.'), 'warning')
+                else:
+                    abort(404)
         
         if current_user.is_anonymous:
             if current_app.config['CONTENT_WARNING']:
