@@ -1,5 +1,5 @@
 {% if current_user.is_authenticated -%}
-    {% if post.user_id == current_user.id -%}
+    {% if post.user_id == current_user.id and not post.deleted -%}
         <li>
             <a href="{{ url_for('post.post_edit', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
                 <span class="fe fe-edit"></span>
@@ -188,6 +188,7 @@
         {{ _('View markdown source') }}
     </a>
 </li>
+{% if not post.deleted -%}
 <li>
     <a href="{{ url_for('post.post_share_mastodon', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
         <span class="fe fe-share"></span>
@@ -206,6 +207,7 @@
         {{ _('Get embed code') }}
     </a>
 </li>
+{% endif -%}
 {% if current_user.is_authenticated and (current_user.get_id() in admin_ids or current_user.is_staff() or post.community.is_moderator()) -%}
     <li>
         <a href="{{ url_for('post.post_view_voting_activity', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">

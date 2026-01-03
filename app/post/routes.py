@@ -898,10 +898,6 @@ def post_options(post_id: int):
     if post.deleted:
         if current_user.is_anonymous:
             abort(404)
-        if (not post.community.is_moderator() and
-                not current_user.is_admin() and
-                (post.deleted_by is not None and post.deleted_by != current_user.id)):
-            abort(401)
 
     existing_bookmark = []
     if current_user.is_authenticated:
