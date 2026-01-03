@@ -366,7 +366,8 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
 
     post.indexable = user.indexable
-    post.sticky = False if src == SRC_API else input.sticky.data
+    if post.community.is_moderator(user) or post.community.is_owner(user) or user.is_admin():
+        post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
     post.ai_generated = ai_generated
