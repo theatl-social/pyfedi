@@ -218,7 +218,11 @@ def delete_old_soft_deleted_content():
                 # Delete old posts
                 post_ids = list(
                     session.execute(
-                        text('SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff'),
+                        text("""SELECT id FROM post p WHERE p.deleted = true AND p.posted_at < :cutoff AND NOT EXISTS (
+                                      SELECT 1
+                                      FROM post_bookmark pb
+                                      WHERE pb.post_id = p.id
+                                  )"""),
                         {'cutoff': cutoff}
                     ).scalars()
                 )
