@@ -1690,8 +1690,7 @@ def user_bookmarks():
     page = request.args.get('page', 1, type=int)
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
 
-    posts = Post.query.filter(Post.deleted == False, Post.status > POST_STATUS_REVIEWING).join(PostBookmark,
-                                                                                               PostBookmark.post_id == Post.id). \
+    posts = Post.query.filter(Post.status > POST_STATUS_REVIEWING).join(PostBookmark, PostBookmark.post_id == Post.id). \
         filter(PostBookmark.user_id == current_user.id).order_by(desc(PostBookmark.created_at))
 
     posts = posts.paginate(page=page, per_page=100 if current_user.is_authenticated and not low_bandwidth else 50,
