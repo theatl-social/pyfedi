@@ -49,12 +49,6 @@
                <th title="{{ _('Known Users') }}">{{ _('Users') }}</th>
                <th>{{ _('Posts') }}</th>
                <th>
-                   <button form="searchInstances" name="sort_by" value="vote_weight{{' ASC' if sort_by == 'vote_weight DESC' else ' DESC' }}" class="btn" title="{{ _('Vote Weight') }}">
-                       {{ _('Vote Weight') }}
-                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'vote_weight ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'vote_weight DESC' }}"></span>
-                   </button>
-               </th>
-               <th>
                    <button form="searchInstances" name="sort_by" value="trusted{{' ASC' if sort_by == 'trusted DESC' else ' DESC' }}" class="btn" title="{{ _('Trusted') }}">
                        {{ _('Trusted') }}
                        <span class="{{ 'fe fe-chevron-up' if sort_by == 'trusted ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'trusted DESC' }}"></span>
@@ -94,7 +88,6 @@
                     <td><span title="{{ _('Known Communities') }}">{{ instance.known_communities_count()  }}</span></td>
                     <td><span title="{{ _('Known Users') }}">{{ instance.known_users_count()  }}</span></td>
                     <td><span title="{{ _('Posts') }}">{{ instance.post_count()  }}</span></td>
-                    <td><span title="{{ _('Vote Weight') }}">{{ instance.vote_weight  }}</span></td>
                     <td><span title="{{ _('Trusted') }}">{{ _('Yes') if instance.trusted }}</span></td>
                     <td><span title="{{ _('Last Seen') }}: {{ instance.last_seen }}">{{ arrow.get(instance.last_seen).humanize(locale=locale) if instance.last_seen }}</span></td>
                     <td><span title="{{ _('Sent') }}">{{ arrow.get(instance.last_successful_send).humanize(locale=locale) if instance.last_successful_send }}</span></td>

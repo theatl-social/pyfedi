@@ -79,7 +79,6 @@ class Instance(db.Model):
     inbox = db.Column(db.String(256))
     shared_inbox = db.Column(db.String(256))
     outbox = db.Column(db.String(256))
-    vote_weight = db.Column(db.Float, default=1.0)
     software = db.Column(db.String(50))
     version = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -139,14 +138,6 @@ class Instance(db.Model):
 
     def can_event(self):
         return self.software != 'lemmy'
-
-    @classmethod
-    def weight(cls, domain: str):
-        if domain:
-            instance = db.session.query(cls).filter_by(domain=domain).first()
-            if instance:
-                return instance.vote_weight
-        return 1.0
 
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
@@ -1663,7 +1654,7 @@ class Post(db.Model):
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
-        from app.activitypub.util import instance_weight, find_language_or_create, find_language, \
+        from app.activitypub.util import find_language_or_create, find_language, \
             find_hashtag_or_create, \
             find_licence_or_create, make_image_sizes, notify_about_post, find_flair_or_create
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, \
@@ -1693,7 +1684,7 @@ class Post(db.Model):
                     ap_announce_id=announce_id,
                     up_votes=1,
                     from_bot=user.bot or user.bot_override,
-                    score=instance_weight(user.ap_domain),
+                    score=1.0,
                     instance_id=user.instance_id,
                     indexable=user.indexable,
                     microblog=microblog,
@@ -2414,7 +2405,7 @@ class Post(db.Model):
                     db.session.commit()
             else:
                 if vote_direction == 'upvote':
-                    effect = Instance.weight(user.ap_domain)
+                    effect = 1.0
                     spicy_effect = effect
                     # Make 'hot' sort more spicy by amplifying the effect of early upvotes
                     if self.up_votes + self.down_votes <= 10:

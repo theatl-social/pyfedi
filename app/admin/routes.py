@@ -1879,7 +1879,7 @@ def admin_instances():
         elif filter == 'blocked':
             instances = instances.join(BannedInstances, BannedInstances.domain == Instance.domain)
 
-    instances = instances.order_by(safe_order_by(sort_by, Instance, {'domain', 'software', 'version', 'vote_weight',
+    instances = instances.order_by(safe_order_by(sort_by, Instance, {'domain', 'software', 'version',
                                                                      'trusted', 'last_seen', 'last_successful_send',
                                                                      'failures', 'gone_forever', 'dormant'}))
     instances = instances.paginate(page=page, per_page=50, error_out=False)
@@ -1903,7 +1903,6 @@ def admin_instance_edit(instance_id):
     if instance.software != 'piefed':
         del form.hide
     if form.validate_on_submit():
-        instance.vote_weight = form.vote_weight.data
         instance.dormant = form.dormant.data
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
@@ -1921,7 +1920,6 @@ def admin_instance_edit(instance_id):
         flash(_('Saved'))
         return redirect(url_for('admin.admin_instances'))
     else:
-        form.vote_weight.data = instance.vote_weight
         form.dormant.data = instance.dormant
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
