@@ -55,7 +55,13 @@ class MeaCulpaForm(FlaskForm):
 
 
 class CrossPostForm(FlaskForm):
-    which_community = SelectField(_l('Community to post this link to'), validators=[DataRequired()], coerce=int, render_kw={'class': 'form-select'})
+    which_community = StringField(_l('Community to post to'), validators=[DataRequired()],
+                                  render_kw={'list': 'community_suggestions',
+                                             'hx-post': '/post/search_community_suggestions',
+                                             'hx-trigger': 'keyup changed delay: 500ms',
+                                             'hx-target': '#community_suggestions',
+                                             'hx-swap': 'innerHTML settle:0ms',
+                                             'autocomplete': 'off'})
     submit = SubmitField(_l('Next'))
 
 

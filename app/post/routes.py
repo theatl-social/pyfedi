@@ -1620,6 +1620,8 @@ def post_move(post_id: int):
             community = search_for_community(f'!{search}', allow_fetch=False)
             if community:
                 move_post(post_id, community.id, SRC_WEB)
+            else:
+                flash(_('Could not find that community.'), 'error')
             return redirect(url_for('activitypub.post_ap', post_id=post_id))
         else:
             return render_template('post/post_move.html', title=_('Move "%(post_title)s"', post_title=post.title), form=form, post=post)
@@ -1638,12 +1640,12 @@ def post_search_community_suggestions():
     for c in moderating:
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
-                comms.append(c.link())
+                comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
     for c in joined:
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
-                comms.append(c.link())
+                comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
     for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
             Community.banned == False).order_by(Community.title).all():
@@ -2154,18 +2156,20 @@ def post_cross_post(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CrossPostForm()
 
-    form.which_community.choices = possible_communities()
-
     if form.validate_on_submit():
-        community = Community.query.get_or_404(form.which_community.data)
-        post_type = post_type_to_form_url_type(post.type, post.url)
-        response = make_response(
-            redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
-        response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
-        response.delete_cookie('post_title')
-        response.delete_cookie('post_description')
-        response.delete_cookie('post_tags')
-        return response
+        community = search_for_community(f'!{form.which_community.data}', allow_fetch=False)
+        if community:
+            post_type = post_type_to_form_url_type(post.type, post.url)
+            response = make_response(
+                redirect(url_for('community.add_post', actor=community.link(), type=post_type, source=str(post.id))))
+            response.set_cookie('cross_post_community_id', str(community.id), max_age=timedelta(days=28))
+            response.delete_cookie('post_title')
+            response.delete_cookie('post_description')
+            response.delete_cookie('post_tags')
+            return response
+        else:
+            flash(_('Could not find that community.'), 'error')
+            return redirect(url_for('post.post_cross_post', post_id=post_id))
     else:
         breadcrumbs = []
         breadcrumb = namedtuple("Breadcrumb", ['text', 'url'])
@@ -2178,7 +2182,7 @@ def post_cross_post(post_id: int):
         breadcrumbs.append(breadcrumb)
 
         if request.cookies.get('cross_post_community_id'):
-            form.which_community.data = int(request.cookies.get('cross_post_community_id'))
+            form.which_community.data = Community.query.get(int(request.cookies.get('cross_post_community_id'))).lemmy_link().replace('!', '')
 
         return render_template('post/post_cross_post.html', title=_('Cross post'), form=form, post=post,
                                breadcrumbs=breadcrumbs)
