@@ -1090,6 +1090,12 @@ form > .mb-3.required > label:after {
   }
 }
 
+@media (max-width: 991.98px) {
+  .footer {
+    padding-bottom: 70px !important; 
+  }
+}
+
 .communities_table tbody tr th {
   padding: 0;
 }
