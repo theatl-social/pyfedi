@@ -16,6 +16,7 @@ def task_selector(task_key, send_async=True, **kwargs):
     from app.shared.tasks.groups import edit_community
     from app.shared.tasks.users import check_user_application
     from app.shared.tasks.blocks import ban_from_community, unban_from_community, ban_from_site, unban_from_site
+    from app.shared.tasks.moves import move_post
     tasks = {
         'join_community': join_community,
         'leave_community': leave_community,
@@ -54,7 +55,8 @@ def task_selector(task_key, send_async=True, **kwargs):
         'rate_community': rate_community,
         'vote_for_poll': vote_for_poll,
         'choose_answer': choose_answer,
-        'unchoose_answer': unchoose_answer
+        'unchoose_answer': unchoose_answer,
+        'move_post': move_post
     }
 
     if current_app.debug:

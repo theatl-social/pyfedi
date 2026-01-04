@@ -1881,16 +1881,6 @@ def new_instance_profile_task(instance_id: int):
         session.close()
 
 
-# alter the effect of upvotes based on their instance. Default to 1.0
-@cache.memoize(timeout=50)
-def instance_weight(domain):
-    if domain:
-        instance = db.session.query(Instance).filter_by(domain=domain).first()
-        if instance:
-            return instance.vote_weight
-    return 1.0
-
-
 def is_activitypub_request():
     return 'application/ld+json' in request.headers.get('Accept', '') or 'application/activity+json' in request.headers.get('Accept', '')
 
@@ -2917,10 +2907,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                         if endpoint == 'dislikes':
                             downvotes += object['totalItems']
 
-        # this uses the instance the post is from, rather the instances of individual votes. Useful for promoting PeerTube vids over Lemmy posts.
-        multiplier = post.instance.vote_weight
-        if not multiplier:
-            multiplier = 1.0
+        multiplier = 1.0
         post.up_votes = upvotes * multiplier
         post.down_votes = downvotes
         post.score = upvotes - downvotes

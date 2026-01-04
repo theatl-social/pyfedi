@@ -35,7 +35,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids, \
-    moderating_communities_ids_all_users
+    moderating_communities_ids_all_users, publish_sse_event
 
 
 @bp.route('/testredis')
@@ -989,7 +989,7 @@ def process_inbox_request(request_json, store_ap_json):
                                                              community_id=join_request.community_id,
                                                              joined_via_feed=joined_via_feed)
                                     session.add(member)
-                                    if not member.user.bot:
+                                    if User.query.get(join_request.user_id).bot is False:
                                         community.subscriptions_count += 1
                                     community.last_active = utcnow()
                                     session.commit()
@@ -1428,6 +1428,22 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Remove: cannot find community or feed')
                     return
 
+                if core_activity['type'] == 'Move':
+                    origin_community: Community = find_actor_or_create_cached(core_activity['origin'], community_only=True)
+                    target_community = find_actor_or_create_cached(core_activity['target'], community_only=True)
+                    post = Post.get_by_ap_id(core_activity['object'])
+                    if origin_community and target_community and post:
+                        if user.id == post.user_id or origin_community.is_moderator(user) or origin_community.is_instance_admin(user):
+                            post.move_to(target_community)
+                            session.commit()
+
+                            add_to_modlog('move_post', actor=user, target_user=post.author, reason='',
+                                          community=target_community, post=post,
+                                          link_text=shorten_string(post.title), link=f'post/{post.id}')
+                            if origin_community.is_local():
+                                announce_activity_to_followers(origin_community, user, request_json)
+                            log_incoming_ap(id, APLOG_MOVE, APLOG_SUCCESS, saved_json,
+                                            f'{user.user_name} moved post to {target_community.link()}')
                 if core_activity['type'] == 'Block':  # User Ban
                     """
                     Sent directly (not Announced) if a remote Admin is banning one of their own users from their site
@@ -2211,7 +2227,7 @@ def process_rate(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
     if not instance_banned(user.instance.domain):
-        community.rate(user, request_json['rating'])
+        community.rate(user, request_json['rating'] if 'rating' in request_json else request_json['object']['rating'])
         log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
         if not announced:
             announce_activity_to_followers(community, user, request_json)
@@ -2288,7 +2304,7 @@ def process_question_answer(user, store_ap_json, request_json, announced):
 def process_chat(user, store_ap_json, core_activity, session):
     saved_json = core_activity if store_ap_json else None
     id = core_activity['id']
-    sender = user
+    sender = session.query(User).get(user.id)
     recipient_ap_id = None
 
     # activity['object']['to'] must exist in the activity
@@ -2364,17 +2380,19 @@ def process_chat(user, store_ap_json, core_activity, session):
                 notification_text = 'Updated message from '
                 message_id = updated_message.id
 
-            # Notify recipient
-            targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
-            notify = Notification(title=shorten_string(notification_text + sender.display_name()),
-                                  url=f'/chat/{existing_conversation.id}#message_{message_id}',
-                                  user_id=recipient.id,
-                                  author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
-                                  targets=targets_data)
-            session.add(notify)
-            recipient.unread_notifications += 1
-            existing_conversation.read = False
-            session.commit()
+            if recipient.is_local():
+                publish_sse_event(f"messages:{recipient.id}", json.dumps({'conversation': existing_conversation.id}))
+                # Notify recipient
+                targets_data = {'gen': '0', 'conversation_id': existing_conversation.id, 'message_id': message_id}
+                notify = Notification(title=shorten_string(notification_text + sender.display_name()),
+                                      url=f'/chat/{existing_conversation.id}#message_{message_id}',
+                                      user_id=recipient.id,
+                                      author_id=sender.id, notif_type=NOTIF_MESSAGE, subtype='chat_message',
+                                      targets=targets_data)
+                session.add(notify)
+                recipient.unread_notifications += 1
+                existing_conversation.read = False
+                session.commit()
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
 
         return True

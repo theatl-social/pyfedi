@@ -4,7 +4,7 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% set active_child = 'chats' %}
-{% from 'bootstrap5/form.html' import render_form %}
+{% from 'bootstrap5/form.html' import render_field %}
 
 {% macro conversation_members(conversation) %}
     {% if len(conversation.members) == 2 %}
@@ -30,31 +30,33 @@
 {% block app_content %}
 <div class="row">
     <div class="row">
-        <main class="col main_pane">
+        <main class="col main_pane vh-90">
             <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
               <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                 <li class="breadcrumb-item active">{{ _('Chat') }}</li>
               </ol>
             </nav>
-            <div class="row mt-3">
-                <div class="col col-md-2 d-none d-md-block sender_list">
+            <div class="row mt-3 pb-4 h-100">
+                <div class="col col-md-2 sender_list h-100 d-none d-md-flex flex-column border-end min-h-0">
                     <h3>{{ _('People') }}</h3>
-                    <ul class="list-group list-group-flush">
-                    {% for conversation in conversations %}
-                        <li class="list-group-item">
-                            {% if conversation.id == current_conversation %}
-                                {{ conversation_members(conversation) }}
-                            {% else %}
-                                <a href="{{ url_for('chat.chat_home', conversation_id=conversation.id) }}">
+                    <div class="flex-grow-1 overflow-auto min-h-0">
+                        <ul class="list-group list-group-flush">
+                        {% for conversation in conversations %}
+                            <li class="list-group-item">
+                                {% if conversation.id == current_conversation %}
                                     {{ conversation_members(conversation) }}
-                                </a>
-                            {% endif %}
-                        </li>
-                    {% endfor %}
-                    </ul>
+                                {% else %}
+                                    <a href="{{ url_for('chat.chat_home', conversation_id=conversation.id) }}">
+                                        {{ conversation_members(conversation) }}
+                                    </a>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                        </ul>
+                    </div>
                 </div>
-                <div class="col col-md-10">
+                <div class="col col-md-10 h-100 d-flex flex-column min-h-0">
                     {% if messages %}
                         <h3 class="d-none d-md-inline">{{ _('Messages with %(name)s', name=conversation.member_names(current_user.id)) }}</h3>
                         <h3 class="d-md-none">{{ _('Messages with: ') }}
@@ -62,47 +64,36 @@
                                         <option value="{{ conversation.id }}" {{ 'selected' if conversation.id == current_conversation }}>{{ conversation.member_names(current_user.id) }}</option>
                                     {% endfor %}
                             </select></h3>
-                        <div class="conversation mt-3">
-                            {% for message in messages %}
-                                <div id="message_{{ message.id }}" class="card message {{ 'from_other_party' if message.sender_id != current_user.id else 'from_me' }}">
-                                    <div class="message_body">
-                                        <span class="message_created_at text-muted small">{{ arrow.get(message.created_at).humanize(locale=locale) }}</span>
-                                        <span class="message_sender">
-                                            <a href="/u/{{ message.sender.link() }}">{{ message.sender.display_name() }}</a>: 
-                                        </span>
-                                        {% if message.deleted %}
-                                            <p>{{ _('Deleted by author') }}</p>
-                                        {% else %}
-                                            {{ message.body_html|remove_images|person_links|community_links|feed_links|safe }}
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% if alone -%}
-                                    <div class="alert alert-warning alone_message" role="alert">
-                                        {{ _("The other participant has left the chat.") }}
-                                    </div>
-                                {% endif -%}
-                            {% endfor %}
-                            {{ render_form(form) }}
-                            <div class="dropdown">
-                                <a 
-                                    class="conversation_options btn btn-outline-secondary" 
-                                    data-bs-toggle="dropdown" rel="nofollow noindex" 
-                                    href="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}" 
-                                    class="btn btn-outline-secondary">
-                                    {{ _('Options') }}
-                                </a>
-                                <ul class="dropdown-menu" style="max-width: 240px">
-                                    <div 
-                                        hx-get="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}"
-                                        hx-trigger="intersect once"
-                                        hx-target="this"
-                                        hx-swap="outerHTML"
-                                    ></div>
-                                </ul>
-                            </div>
+                        <div id="conversation" class="conversation flex-grow-1 overflow-auto min-h-0 p-3 scroll_down">
+                            {% include "chat/_messages.html" -%}
                         </div>
                     {% endif %}
+                    <div class="border-top pt-2 pb-3 flex-shrink-0 chat-input">
+                        <form class="form" role="form" method="post">
+                            {{ form.csrf_token() }}
+                            {{ render_field(form.message) }}
+                            <div class="d-flex">
+                                {{ render_field(form.submit) }}
+                                <div class="dropdown ms-auto">
+                                    <a
+                                        class="conversation_options btn btn-outline-secondary"
+                                        data-bs-toggle="dropdown" rel="nofollow noindex"
+                                        href="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}"
+                                        class="btn btn-outline-secondary">
+                                        {{ _('Options') }}
+                                    </a>
+                                    <ul class="dropdown-menu" style="max-width: 240px">
+                                        <div
+                                            hx-get="{{ url_for('chat.chat_options', conversation_id=current_conversation) }}"
+                                            hx-trigger="intersect once"
+                                            hx-target="this"
+                                            hx-swap="outerHTML"
+                                        ></div>
+                                    </ul>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </main>

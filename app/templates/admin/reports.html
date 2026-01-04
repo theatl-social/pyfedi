@@ -7,7 +7,7 @@
 {% set active_child = 'admin_reports' %}
 
 {% block app_content %}
-    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <script src="/static/js/tomselect/tom-select.complete.min.js" nonce={{ nonce }}></script>
     {% include 'admin/_tabbed_nav.html' %}
     <br>
     <div class="row">

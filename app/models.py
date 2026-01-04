@@ -79,7 +79,6 @@ class Instance(db.Model):
     inbox = db.Column(db.String(256))
     shared_inbox = db.Column(db.String(256))
     outbox = db.Column(db.String(256))
-    vote_weight = db.Column(db.Float, default=1.0)
     software = db.Column(db.String(50))
     version = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -139,14 +138,6 @@ class Instance(db.Model):
 
     def can_event(self):
         return self.software != 'lemmy'
-
-    @classmethod
-    def weight(cls, domain: str):
-        if domain:
-            instance = db.session.query(cls).filter_by(domain=domain).first()
-            if instance:
-                return instance.vote_weight
-        return 1.0
 
     def __repr__(self):
         return '<Instance {}>'.format(self.domain)
@@ -262,7 +253,7 @@ class Conversation(db.Model):
                     cm2.user_id = :user_id_2 AND 
                     cm1.user_id <> cm2.user_id;"""
         ec = db.session.execute(text(sql), {'user_id_1': recipient.id, 'user_id_2': sender.id}).fetchone()
-        return Conversation.query.get(ec[0]) if ec else None
+        return db.session.query(Conversation).get(ec[0]) if ec else None
 
 
 conversation_member = db.Table('conversation_member',
@@ -1663,7 +1654,7 @@ class Post(db.Model):
 
     @classmethod
     def new(cls, user: User, community: Community, request_json: dict, announce_id=None):
-        from app.activitypub.util import instance_weight, find_language_or_create, find_language, \
+        from app.activitypub.util import find_language_or_create, find_language, \
             find_hashtag_or_create, \
             find_licence_or_create, make_image_sizes, notify_about_post, find_flair_or_create
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, \
@@ -1693,7 +1684,7 @@ class Post(db.Model):
                     ap_announce_id=announce_id,
                     up_votes=1,
                     from_bot=user.bot or user.bot_override,
-                    score=instance_weight(user.ap_domain),
+                    score=1.0,
                     instance_id=user.instance_id,
                     indexable=user.indexable,
                     microblog=microblog,
@@ -2414,7 +2405,7 @@ class Post(db.Model):
                     db.session.commit()
             else:
                 if vote_direction == 'upvote':
-                    effect = Instance.weight(user.ap_domain)
+                    effect = 1.0
                     spicy_effect = effect
                     # Make 'hot' sort more spicy by amplifying the effect of early upvotes
                     if self.up_votes + self.down_votes <= 10:
@@ -2464,6 +2455,12 @@ class Post(db.Model):
                 cache.delete_memoized(recently_upvoted_posts, user.id)
                 cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
+
+    def move_to(self, community: Community):
+        self.community_id = community.id
+        self.instance_id = community.instance_id
+        db.session.execute(text('UPDATE post_reply SET community_id = :community_id, instance_id = :instance_id WHERE post_id = :post_id'),
+                           {'community_id': community.id, 'instance_id': community.instance_id, 'post_id': self.id})
 
     def update_reaction_cache(self):
         count = func.count(PostVote.id).label("count")
@@ -3417,6 +3414,7 @@ class ModLog(db.Model):
         'unlock_post': _l('Un-lock post'),
         'lock_post_reply': _l('Lock comment'),
         'unlock_post_reply': _l('Un-lock comment'),
+        'move_post': _l('Move post')
     }
 
     def action_to_str(self):

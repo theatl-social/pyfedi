@@ -82,7 +82,7 @@ def edit_post(send_async, post_id):
 
 
 def send_post(post_id, edit=False, session=None):
-    post = session.query(Post).filter_by(id=post_id).one()
+    post = session.query(Post).get(post_id)
     user = post.author
     community = post.community
 

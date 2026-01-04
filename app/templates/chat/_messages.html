@@ -1,0 +1,20 @@
+{% for message in messages -%}
+    <div id="message_{{ message.id }}" class="card message {{ 'from_other_party' if message.sender_id != current_user.id else 'from_me' }}">
+        <div class="message_body">
+            <span class="message_created_at text-muted small">{{ arrow.get(message.created_at).humanize(locale=locale) }}</span>
+            <span class="message_sender">
+                <a href="/u/{{ message.sender.link() }}">{{ message.sender.display_name() }}</a>:
+            </span>
+            {% if message.deleted %}
+                <p>{{ _('Deleted by author') }}</p>
+            {% else %}
+                {{ message.body_html|remove_images|person_links|community_links|feed_links|safe }}
+            {% endif %}
+        </div>
+    </div>
+    {% if alone -%}
+        <div class="alert alert-warning alone_message" role="alert">
+            {{ _("The other participant has left the chat.") }}
+        </div>
+    {% endif -%}
+{% endfor -%}

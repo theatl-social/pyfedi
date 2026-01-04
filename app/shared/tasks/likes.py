@@ -25,7 +25,7 @@ def vote_for_post(send_async, user_id, post_id, vote_to_undo, vote_direction, fe
     with current_app.app_context():
         session = get_task_session()
         with patch_db_session(session):
-            post = session.query(Post).filter_by(id=post_id).one()
+            post = session.query(Post).get(post_id)
             if federate:
                 send_vote(user_id, post, vote_to_undo, vote_direction, emoji)
 

@@ -67,16 +67,6 @@ def render_template(template_name: str, **context) -> Response:
     else:
         content = flask.render_template(template_name, **context)
 
-    # Add nonces to all script tags that don't have them (for CSP with strict-dynamic)
-    if hasattr(g, 'nonce') and g.nonce:
-        import re
-        # Find all <script tags with src= that don't have nonce=
-        content = re.sub(
-            r'<script\s+([^>]*?)src=(["\'][^"\']*["\'])(?![^>]*nonce=)',
-            rf'<script \1src=\2 nonce="{g.nonce}"',
-            content
-        )
-
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
     if current_user.is_anonymous:
@@ -335,6 +325,59 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     else:
         fn_string = gibberish(6)
 
+    # substitute out the <code> snippets so that they don't inadvertently get formatted
+    code_snippets, clean_html = stash_code_html(html)
+
+    # avoid returning empty anchors
+    re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
+    clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
+
+    # replace lemmy's spoiler markdown left in HTML
+    clean_html = clean_html.replace('<h2>:::</h2>',
+                                    '<p>:::</p>')  # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
+    re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
+    clean_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', clean_html)
+
+    # replace strikethough markdown left in HTML
+    re_strikethough = re.compile(r'~~(.*)~~')
+    clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
+
+    # replace subscript markdown left in HTML
+    re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
+    clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
+
+    # replace superscript markdown left in HTML
+    re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
+    clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
+
+    # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
+    clean_html = re_embedded_mp4.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
+        clean_html)
+
+    # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
+    clean_html = re_embedded_webm.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
+        clean_html)
+
+    # replace <img src> for mp3 with <audio>
+    re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
+    clean_html = re_embedded_mp3.sub(r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html)
+
+    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
+    re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
+    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
+                                       clean_html)
+
+    # replace ruby markdown like {漢字|かんじ}
+    re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
+    clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
+
+    # bring back the <code> snippets
+    clean_html = pop_code(code_snippets, clean_html)
+
     # Pre-escape angle brackets that aren't valid HTML tags before BeautifulSoup parsing
     # We need to distinguish between:
     # 1. Valid HTML tags (allowed or disallowed) - let BeautifulSoup handle them
@@ -368,7 +411,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
             # This doesn't look like a valid HTML tag - escape it
             return f"&lt;{match.group(1)}&gt;"
     
-    html = re.sub(r'<([^<>]+?)>', escape_non_html_brackets, html)
+    html = re.sub(r'<([^<>]+?)>', escape_non_html_brackets, clean_html)
 
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, 'html.parser')
@@ -417,61 +460,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
             if tag.name == 'table':
                 tag.attrs['class'] = 'table'
 
-    clean_html = str(soup)
-
-    # substitute out the <code> snippets so that they don't inadvertently get formatted
-    code_snippets, clean_html = stash_code_html(clean_html)
-
-    # avoid returning empty anchors
-    re_empty_anchor = re.compile(r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>')
-    clean_html = re_empty_anchor.sub(r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html)
-
-    # replace lemmy's spoiler markdown left in HTML
-    clean_html = clean_html.replace('<h2>:::</h2>', '<p>:::</p>')   # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
-    re_spoiler = re.compile(r':{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}', re.S)
-    clean_html = re_spoiler.sub(r'<details><summary>\1</summary><p>\2</p></details>', clean_html)
-
-    # replace strikethough markdown left in HTML
-    re_strikethough = re.compile(r'~~(.*)~~')
-    clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
-
-    # replace subscript markdown left in HTML
-    re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
-    clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
-
-    # replace superscript markdown left in HTML
-    re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
-    clean_html = re_superscript.sub(r'<sup>\1</sup>', clean_html)
-
-    # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
-    re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
-    clean_html = re_embedded_mp4.sub(
-        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
-        clean_html)
-
-    # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
-    re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
-    clean_html = re_embedded_webm.sub(
-        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
-        clean_html)
-
-    # replace <img src> for mp3 with <audio>
-    re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
-    clean_html = re_embedded_mp3.sub(r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html)
-
-    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
-    re_fandom_hotlink = re.compile(r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net')
-    clean_html = re_fandom_hotlink.sub(r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
-                                       clean_html)
-
-    # replace ruby markdown like {漢字|かんじ}
-    re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
-    clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
-
-    # bring back the <code> snippets
-    clean_html = pop_code(code_snippets, clean_html)
-
-    return clean_html
+    return str(soup)
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
@@ -1931,7 +1920,7 @@ def url_to_thumbnail_file(filename) -> File:
                 medium_image_format = current_app.config['MEDIA_IMAGE_MEDIUM_FORMAT']
                 medium_image_quality = current_app.config['MEDIA_IMAGE_MEDIUM_QUALITY']
 
-                final_ext = file_extension
+                final_ext = file_extension.lower()
 
                 if medium_image_format == 'AVIF':
                     import pillow_avif  # NOQA

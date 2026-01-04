@@ -16,13 +16,7 @@
           </ol>
         </nav>
         <h1 class="mt-2">{{ _('%(instance)s overview', instance=instance.domain) }}</h1>
-        <p>{{ _('This is a %(software)s instance.', software=instance.software) }}
-            {% if instance.vote_weight == 1 -%}
-                {{ _('Votes are weighted at the normal level.') }}
-            {% else -%}
-                {{ _('Votes are weighted at %(weight)dx.', weight=instance.vote_weight) }}
-            {% endif -%}
-        </p>
+        <p>{{ _('This is a %(software)s instance.', software=instance.software) }}</p>
         <p>
             <a href="{{ url_for('instance.instance_people', instance_domain=instance.domain) }}">
                 {{ _('People') }}

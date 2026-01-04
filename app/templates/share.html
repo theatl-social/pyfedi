@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block app_content %}
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+<script src="/static/js/tomselect/tom-select.complete.min.js" nonce={{ nonce }}></script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         <h1 class="mt-2">{{ _('Share %(title)s', title=title) }}</h1>

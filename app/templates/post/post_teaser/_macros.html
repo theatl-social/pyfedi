@@ -310,7 +310,7 @@
                          hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
                          title='{{ ", ".join(reaction["authors"]) }}'>
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" referrerpolicy="no-referrer">
                                             {% else -%}
                                                 {{ reaction['token'] }}
                                             {%- endif %}</div>
@@ -341,11 +341,11 @@
                         {% endif -%}
                         </video></p>
                 {% elif post.url.startswith('https://vimeo.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://streamable.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://loops.video/') -%}
                     <p>
                         <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
@@ -357,7 +357,7 @@
                         </video></p>
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
-                    <div class="video-wrapper" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
+                    <div class="video-wrapper {{ 'blur' if blur_content }}" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
                         <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}" rel="nofollow ugc" aria-label="{{ _('Read article') }}">
                             <img src="https://img.youtube.com/vi/{{ post.youtube_video_id() }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288" loading="lazy">
                         </a>
@@ -378,7 +378,7 @@
                              hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
                              title='{{ ", ".join(reaction["authors"]) }}'>
                             <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" referrerpolicy="no-referrer">
                                                 {% else -%}
                                                     {{ reaction['token'] }}
                                                 {%- endif %}</div>

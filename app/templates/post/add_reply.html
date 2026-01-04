@@ -7,7 +7,7 @@
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
 
 {% block app_content %}
-<script src="/static/js/coolfieldset.js?v=3"></script>
+<script src="/static/js/coolfieldset.js?v=3" nonce={{ nonce }}></script>
 <div class="row">
     <main class="col-12 col-lg-8 position-relative add_reply main_pane">
         <fieldset id="post_reply_op" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3"><legend class="w-auto">Original post</legend>

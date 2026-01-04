@@ -182,7 +182,6 @@ class EditTopicForm(FlaskForm):
 
 
 class EditInstanceForm(FlaskForm):
-    vote_weight = FloatField(_l('Vote weight'))
     dormant = BooleanField(_l('Dormant'))
     gone_forever = BooleanField(_l('Gone forever'))
     trusted = BooleanField(_l('Trusted'))

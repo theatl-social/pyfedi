@@ -886,6 +886,10 @@ ul.form-multicheck-columns {
       height: 100%;
       border: 0;
   }
+
+  .blur {
+    filter: blur(24px);
+  }
 }
 
 time {
@@ -2507,8 +2511,18 @@ form {
   }
 }
 
+.chat-input {
+  label {
+    display: none;
+  }
+}
+
 .alone_message {
   float: inline-start;
+}
+
+.vh-90 {
+  height: 90vh !important;
 }
 
 #subtopic_nav {

@@ -19,7 +19,7 @@ from app.activitypub.util import make_image_sizes, notify_about_post
 from app.community.util import tags_from_string_old, end_poll_date, flair_from_form, flairs_from_string
 from app.constants import *
 from app.models import File, Notification, NotificationSubscription, Poll, PollChoice, Post, PostBookmark, PostVote, \
-    Report, Site, User, utcnow, Instance, Event
+    Report, Site, User, utcnow, Instance, Event, Community
 from app.shared.tasks import task_selector
 from app.utils import render_template, authorise_api_user, shorten_string, gibberish, ensure_directory_exists, \
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
@@ -201,7 +201,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     post.up_votes = 1
-    effect = user.instance.vote_weight
+    effect = 1.0
     post.score = post.up_votes * effect
     post.ranking = post.post_ranking(post.score, post.posted_at)
     post.ranking_scaled = int(post.ranking + community.scale_by())
@@ -890,6 +890,33 @@ def lock_post(post_id: int, locked, src, auth=None):
             if src == SRC_WEB:
                 flash(_('%(name)s has been unlocked.', name=post.title))
             task_selector('unlock_post', user_id=user.id, post_id=post_id)
+
+    if src == SRC_API:
+        return user.id, post
+
+
+def move_post(post_id: int, target_id: int, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type='model')
+    else:
+        user = current_user
+
+    post = db.session.query(Post).get(post_id)
+    old_community_id = post.community_id
+    target_community = db.session.query(Community).get(target_id)
+
+    post.move_to(target_community)
+    db.session.commit()
+
+    add_to_modlog('move_post', actor=user, target_user=post.author, reason='',
+                  community=target_community, post=post,
+                  link_text=shorten_string(post.title), link=f'post/{post.id}')
+
+    if src == SRC_WEB:
+        flash(_('%(name)s has been moved.', name=post.title))
+
+    task_selector('move_post', user_id=user.id, old_community_id=old_community_id,
+                  new_community_id=target_community.id, post_id=post_id)
 
     if src == SRC_API:
         return user.id, post

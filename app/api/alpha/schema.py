@@ -15,7 +15,7 @@ post_sort_list = ["Hot", "Top", "TopHour", "TopSixHour", "TopTwelveHour", "TopWe
 comment_sort_list = ["Hot", "Top", "TopAll", "New", "Old", "Controversial"]
 community_sort_list = ["Hot", "Top", "New", "Active", "TopAll"]
 listing_type_list = ["All", "Local", "Subscribed", "Popular", "Moderating", "ModeratorView"]
-community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
+community_listing_type_list = ["All", "Local", "Subscribed", "Moderating", "ModeratorView"]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
@@ -24,6 +24,7 @@ post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
+search_nsfw = ['Exclude', 'Include', 'Only']
 
 
 def validate_datetime_string(text):
@@ -303,6 +304,8 @@ class SearchRequest(DefaultSchema):
     })
     community_name = fields.String()
     community_id = fields.Integer()
+    minimun_upvotes = fields.Integer()
+    nsfw = fields.String(validate=validate.OneOf(search_nsfw))
 
 
 class SearchInstanceChooser(DefaultSchema):

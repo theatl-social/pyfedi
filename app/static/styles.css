@@ -471,6 +471,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e972";
 }
 
+.fe-move:before {
+  content: "\e95f";
+}
+
 .fe-video {
   position: relative;
   top: 2px;
@@ -1090,6 +1094,12 @@ form > .mb-3.required > label:after {
   }
 }
 
+@media (max-width: 991.98px) {
+  .footer {
+    padding-bottom: 70px !important; 
+  }
+}
+
 .communities_table tbody tr th {
   padding: 0;
 }
@@ -1446,6 +1456,9 @@ ul.form-multicheck-columns li {
   width: 100%;
   height: 100%;
   border: 0;
+}
+.post_teaser_video_preview .blur {
+  filter: blur(24px);
 }
 
 time {
@@ -2876,8 +2889,16 @@ form h5 {
   background-color: var(--bs-card-cap-bg);
 }
 
+.chat-input label {
+  display: none;
+}
+
 .alone_message {
   float: inline-start;
+}
+
+.vh-90 {
+  height: 90vh !important;
 }
 
 #subtopic_nav {
