@@ -1178,16 +1178,11 @@ function setupAddPassKey() {
     const logInWithPasskey = document.getElementById('log_in_with_passkey');
     if(logInWithPasskey) {
         document.getElementById('log_in_with_passkey').addEventListener('click', async () => {
-            const { browserSupportsWebAuthn } = SimpleWebAuthnBrowser;
-            let passkeyUsername = getCookie('passkey');
-            if(!passkeyUsername) {
-                passkeyUsername = document.getElementById('user_name').value;
-                if(!passkeyUsername) {
-                   passkeyUsername = prompt('What is your user name?');
-                }
-            }
+            const passkeyUsername = document.getElementById('user_name').value
+                || getCookie('passkey')
+                || prompt('What is your user name?');
 
-            const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
+            const { startAuthentication } = SimpleWebAuthnBrowser;
             let redirect = getValueFromQueryString('next');
             // Submit options
             const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
