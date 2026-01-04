@@ -1433,7 +1433,7 @@ def process_inbox_request(request_json, store_ap_json):
                     target_community = find_actor_or_create_cached(core_activity['target'], community_only=True)
                     post = Post.get_by_ap_id(core_activity['object'])
                     if origin_community and target_community and post:
-                        if user.id == post.user_id or origin_community.is_moderator(user) or origin_community.is_instance_admin(user):
+                        if user.id == post.user_id or origin_community.is_moderator(user) or (origin_community.instance_id == user.instance_id and origin_community.is_instance_admin(user)):
                             post.move_to(target_community)
                             session.commit()
 

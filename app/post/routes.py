@@ -1611,7 +1611,7 @@ def post_reply_lock(post_id: int, post_reply_id: int, mode):
 @login_required
 def post_move(post_id: int):
     post = Post.query.get_or_404(post_id)
-    if current_user.id == post.user_id or post.community.is_moderator(current_user) or post.community.is_admin_or_staff(current_user):
+    if current_user.id == post.user_id or post.community.is_moderator(current_user) or (post.community.is_local() and post.community.is_admin_or_staff(current_user)):
         form = MovePostForm()
         if form.validate_on_submit():
             search = form.which_community.data.lower().strip()
@@ -1639,12 +1639,12 @@ def post_search_community_suggestions():
     already_added = set()
     for c in moderating:
         if c.id not in already_added:
-            if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
+            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
                 comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
     for c in joined:
         if c.id not in already_added:
-            if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
+            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
                 comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
     for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
