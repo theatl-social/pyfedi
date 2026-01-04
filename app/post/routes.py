@@ -21,7 +21,8 @@ from app.activitypub.signature import default_context, send_post_request
 from app.activitypub.util import update_post_from_activity
 from app.community.forms import CreateLinkForm, CreateDiscussionForm, CreateVideoForm, CreatePollForm, EditImageForm, \
     CreateEventForm
-from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community
+from app.community.util import send_to_remote_instance, flair_from_form, hashtags_used_in_community, \
+    search_for_community
 from app.constants import NOTIF_REPORT, NOTIF_REPORT_ESCALATION, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
     POST_TYPE_EVENT, NOTIF_MENTION, NOTIF_ANSWER, SRC_API
 from app.constants import SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR, POST_TYPE_LINK, \
@@ -36,13 +37,13 @@ from app.models import Post, PostReply, PostReplyValidationError, \
 from app.post import bp
 from app.post.forms import NewReplyForm, ReportPostForm, MeaCulpaForm, CrossPostForm, ConfirmationForm, \
     ConfirmationMultiDeleteForm, EditReplyForm, FlairPostForm, DeleteConfirmationForm, NewReminderForm, \
-    ShareMastodonForm, ChooseEmojiForm
+    ShareMastodonForm, ChooseEmojiForm, MovePostForm
 from app.post.util import post_replies, get_comment_branch, tags_to_string, url_needs_archive, \
     generate_archive_link, body_has_no_archive_link, retrieve_archived_post
 from app.post.util import post_type_to_form_url_type
 from app.shared.post import edit_post, sticky_post, lock_post, bookmark_post, remove_bookmark_post, subscribe_post, \
     vote_for_post, mark_post_read, report_post, delete_post, mod_remove_post, restore_post, mod_restore_post, \
-    vote_for_poll, hide_post
+    vote_for_poll, hide_post, move_post
 from app.shared.reply import make_reply, edit_reply, bookmark_reply, remove_bookmark_reply, subscribe_reply, \
     delete_reply, mod_remove_reply, vote_for_reply, lock_post_reply, report_reply, choose_answer, unchoose_answer
 from app.shared.site import block_remote_instance
@@ -59,7 +60,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    site_language_code, block_honey_pot
+    site_language_code, block_honey_pot, joined_communities, moderating_communities
 
 
 @login_required_if_private_instance
@@ -1604,6 +1605,55 @@ def post_lock(post_id: int, mode):
 def post_reply_lock(post_id: int, post_reply_id: int, mode):
     lock_post_reply(post_reply_id, mode == 'yes', SRC_WEB)
     return redirect(referrer(url_for('activitypub.post_ap', post_id=post_id, _anchor=f'comment_{post_reply_id}')))
+
+
+@bp.route('/post/<int:post_id>/move', methods=['GET', 'POST'])
+@login_required
+def post_move(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if current_user.id == post.user_id or post.community.is_moderator(current_user) or post.community.is_admin_or_staff(current_user):
+        form = MovePostForm()
+        if form.validate_on_submit():
+            search = form.which_community.data.lower().strip()
+            if '@' not in search:
+                search += f'@{current_app.config["SERVER_NAME"]}'
+            community = search_for_community(f'!{search}', allow_fetch=False)
+            if community:
+                move_post(post_id, community.id, SRC_WEB)
+            return redirect(url_for('activitypub.post_ap', post_id=post_id))
+        else:
+            return render_template('post/post_move.html', title=_('Move "%(post_title)s"', post_title=post.title), form=form, post=post)
+    else:
+        abort(403)
+
+
+@bp.route("/post/search_community_suggestions", methods=['POST'])
+def post_search_community_suggestions():
+    q = request.form.get("which_community", "").lower()
+
+    joined = joined_communities(current_user.get_id())
+    moderating = moderating_communities(current_user.get_id())
+    comms = []
+    already_added = set()
+    for c in moderating:
+        if c.id not in already_added:
+            if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
+                comms.append(c.link())
+            already_added.add(c.id)
+    for c in joined:
+        if c.id not in already_added:
+            if (c.ap_id and q in c.ap_id) or q in c.display_name().lower():
+                comms.append(c.link())
+            already_added.add(c.id)
+    for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
+            Community.banned == False).order_by(Community.title).all():
+        if c.id not in already_added:
+            display_name = f"{c.title}@{c.ap_domain}"
+            if (c.ap_id and q in c.ap_id) or q in display_name.lower():
+                comms.append(display_name)
+            already_added.add(c.id)
+    html = "".join(f"<option value='{c}'>" for c in comms)
+    return html
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/report', methods=['GET', 'POST'])

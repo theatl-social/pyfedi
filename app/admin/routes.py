@@ -14,10 +14,6 @@ from sqlalchemy import text, desc, or_
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
-from pygments import highlight
-from pygments.lexers import JsonLexer, TextLexer
-from pygments.formatters import HtmlFormatter
-from app.shared.community import is_bad_name
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -31,7 +27,7 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
-from app.community.util import save_icon_file, save_banner_file, search_for_community
+from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
 from app.email import send_registration_approved_email

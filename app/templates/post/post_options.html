@@ -28,6 +28,12 @@
                     {{ _('Delete') }}
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('post.post_move', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-move"></span>
+                    {{ _('Move to another community') }}
+                </a>
+            </li>
         {% endif -%}
     {% endif -%}
     {% if post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}

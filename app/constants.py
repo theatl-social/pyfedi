@@ -116,6 +116,7 @@ APLOG_UNDO_USERBAN = (True, 'Undo User Ban')
 
 APLOG_ADD = (True, 'Add')
 APLOG_REMOVE = (True, 'Remove')
+APLOG_MOVE = (True, 'Move')
 
 APLOG_ANNOUNCE = (True, 'Announce')
 APLOG_PT_VIEW = (True, 'PeerTube View')

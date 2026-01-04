@@ -1428,6 +1428,22 @@ def process_inbox_request(request_json, store_ap_json):
                         log_incoming_ap(id, APLOG_ADD, APLOG_FAILURE, saved_json, 'Remove: cannot find community or feed')
                     return
 
+                if core_activity['type'] == 'Move':
+                    origin_community: Community = find_actor_or_create_cached(core_activity['origin'], community_only=True)
+                    target_community = find_actor_or_create_cached(core_activity['target'], community_only=True)
+                    post = Post.get_by_ap_id(core_activity['object'])
+                    if origin_community and target_community and post:
+                        if user.id == post.user_id or origin_community.is_moderator(user) or origin_community.is_instance_admin(user):
+                            post.move_to(target_community)
+                            session.commit()
+
+                            add_to_modlog('move_post', actor=user, target_user=post.author, reason='',
+                                          community=target_community, post=post,
+                                          link_text=shorten_string(post.title), link=f'post/{post.id}')
+                            if origin_community.is_local():
+                                announce_activity_to_followers(origin_community, user, request_json)
+                            log_incoming_ap(id, APLOG_MOVE, APLOG_SUCCESS, saved_json,
+                                            f'{user.user_name} moved post to {target_community.link()}')
                 if core_activity['type'] == 'Block':  # User Ban
                     """
                     Sent directly (not Announced) if a remote Admin is banning one of their own users from their site

@@ -943,3 +943,15 @@ def publicize_community_task(community_id: int):
     get_request(f'https://lemmy.blahaj.zone/api/v3/resolve_object?q={community.lemmy_link()}')
     get_request(f'https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}')
     session.close()
+
+
+def is_bad_name(community_name: str) -> bool:
+    name_lower = community_name.lower()
+    # sort out the 'seven things you can't say on tv' names (cursewords), plus some "low effort" communities
+    seven_things_plus = [
+        'shit', 'piss', 'fuck',
+        'cunt', 'cocksucker', 'motherfucker', 'tits',
+        'piracy', 'greentext', 'usauthoritarianism',
+        'enoughmuskspam', 'political_weirdos', '4chan'
+    ]
+    return any(badword in name_lower for badword in seven_things_plus)

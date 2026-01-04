@@ -28,7 +28,7 @@ def lock_post(send_async, user_id, post_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = session.query(Post).filter_by(id=post_id).one()
+                post = session.query(Post).get(post_id)
                 lock_object(session, user_id, post)
         except Exception:
             session.rollback()
@@ -43,7 +43,7 @@ def unlock_post(send_async, user_id, post_id):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = session.query(Post).filter_by(id=post_id).one()
+                post = session.query(Post).get(post_id)
                 lock_object(session, user_id, post, is_undo=True)
         except Exception:
             session.rollback()

@@ -12,7 +12,6 @@ from datetime import datetime, timedelta
 from random import randint, uniform
 from time import sleep
 from zoneinfo import ZoneInfo
-from shared.community import is_bad_name
 
 import click
 import flask
@@ -25,6 +24,7 @@ from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
 from app.activitypub.util import extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
+from app.community.util import is_bad_name
 from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
     POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
 from app.email import send_email

@@ -2456,6 +2456,12 @@ class Post(db.Model):
                 cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
 
+    def move_to(self, community: Community):
+        self.community_id = community.id
+        self.instance_id = community.instance_id
+        db.session.execute(text('UPDATE post_reply SET community_id = :community_id, instance_id = :instance_id WHERE post_id = :post_id'),
+                           {'community_id': community.id, 'instance_id': community.instance_id, 'post_id': self.id})
+
     def update_reaction_cache(self):
         count = func.count(PostVote.id).label("count")
         # Use LEFT JOIN so unicode emojis (not in Emoji table) are included
@@ -3408,6 +3414,7 @@ class ModLog(db.Model):
         'unlock_post': _l('Un-lock post'),
         'lock_post_reply': _l('Lock comment'),
         'unlock_post_reply': _l('Un-lock comment'),
+        'move_post': _l('Move post')
     }
 
     def action_to_str(self):

@@ -471,6 +471,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e972";
 }
 
+.fe-move:before {
+  content: "\e95f";
+}
+
 .fe-video {
   position: relative;
   top: 2px;
