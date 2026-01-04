@@ -2305,20 +2305,22 @@ def process_chat(user, store_ap_json, core_activity, session):
     saved_json = core_activity if store_ap_json else None
     id = core_activity['id']
     sender = session.query(User).get(user.id)
+    recipient_ap_id = None
 
     # activity['object']['to'] must exist in the activity
-    if not ('to' in core_activity['object']):
+    if 'to' in core_activity['object']:
         if isinstance(core_activity['object']['to'], str):
             # activity['object']['to'] is a sole string
             # jsonld arrays can be represented by the value alone to indicate the only element
-            # we wrap this solo value in a list and continue processing
-            core_activity['object']['to'] = [core_activity['object']['to']]
-        if not (isinstance(core_activity['object']['to'], list) and len(core_activity['object']['to']) > 0):
-            # if activity['object']['to'] is not a list that has at least 1 target, discard the activity
-            log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Chat recipient is invalid')
-            return False
+            recipient_ap_id = core_activity['object']['to']
+        elif isinstance(core_activity['object']['to'], list) and len(core_activity['object']['to']) > 0:
+            # activity['object']['to'] is an array with at least 1 element
+            recipient_ap_id = core_activity['object']['to'][0]
         
-    recipient_ap_id = core_activity['object']['to'][0]
+    if recipient_ap_id == None:
+        log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Chat recipient is invalid')
+        return False
+        
     recipient = find_actor_or_create_cached(recipient_ap_id)
     if recipient and recipient.is_local():
         if sender.created_very_recently():
