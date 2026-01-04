@@ -215,11 +215,11 @@ def delete_old_soft_deleted_content():
                 from app import redis_client
                 cutoff = utcnow() - timedelta(days=7)
 
-                # Delete old posts
+                # Delete old posts only when no replies, mod-deleted or forced by community retention policy (deleted_by = 1)
                 post_ids = list(
                     session.execute(
                         text("""SELECT id FROM post p 
-                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.reply_count = 0) 
+                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.deleted_by = 1 OR p.reply_count = 0) 
                                   AND NOT EXISTS (
                                       SELECT 1
                                       FROM post_bookmark pb
