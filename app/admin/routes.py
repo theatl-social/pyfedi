@@ -17,6 +17,7 @@ from furl import furl
 from pygments import highlight
 from pygments.lexers import JsonLexer, TextLexer
 from pygments.formatters import HtmlFormatter
+from app.shared.community import is_bad_name
 
 from app import db, celery, cache
 from app.activitypub.routes import process_inbox_request, process_delete_request, replay_inbox_request
@@ -370,12 +371,6 @@ def admin_federation():
 
         already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
         banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
-        seven_things_plus = [
-            'shit', 'piss', 'fuck',
-            'cunt', 'cocksucker', 'motherfucker', 'tits',
-            'memes', 'piracy', 'greentext', 'usauthoritarianism',
-            'enoughmuskspam', 'political_weirdos', '4chan'
-        ]
 
         total_count = already_known_count = nsfw_count = low_content_count = low_active_users_count = banned_count = bad_words_count = 0
         candidate_communities = []
@@ -408,9 +403,7 @@ def admin_federation():
                 banned_count += 1
                 continue
 
-            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-            # "low effort" communities
-            if any(badword in community['name'].lower() for badword in seven_things_plus):
+            if is_bad_name(community['name']):
                 bad_words_count += 1
                 continue
 
@@ -481,12 +474,6 @@ def admin_federation():
         # filters to be used later
         already_known = list(db.session.execute(text('SELECT ap_public_url FROM "community"')).scalars())
         banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
-        seven_things_plus = [
-            'shit', 'piss', 'fuck',
-            'cunt', 'cocksucker', 'motherfucker', 'tits',
-            'memes', 'piracy', 'greentext', 'usauthoritarianism',
-            'enoughmuskspam', 'political_weirdos', '4chan'
-        ]
         is_lemmy = False
         is_mbin = False
         is_piefed = False
@@ -590,9 +577,7 @@ def admin_federation():
                 elif community['counts']['users_active_week'] < min_users:
                     low_active_users_count += 1
                     continue
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                if is_bad_name(community['community']['name']):
                     bad_words_count += 1
                     continue
                 else:
@@ -663,9 +648,7 @@ def admin_federation():
                     low_active_users_count += 1
                     continue
 
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(badword in community['community']['name'].lower() for badword in seven_things_plus):
+                if is_bad_name(community['community']['name']):
                     bad_words_count += 1
                     continue
                 else:
@@ -737,9 +720,7 @@ def admin_federation():
                 elif magazine['subscriptionsCount'] < min_users:
                     low_subscribed_users_count += 1
                     continue
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(badword in magazine['name'].lower() for badword in seven_things_plus):
+                if is_bad_name(magazine['name']):
                     bad_words_count += 1
                     continue
                 else:
