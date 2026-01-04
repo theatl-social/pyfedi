@@ -141,7 +141,7 @@ def remove_old_community_content():
                 ).filter(Post.posted_at < cut_off).all()
 
                 for post in old_posts:
-                    post_delete_post(community, post, post.user_id, reason=None, federate_deletion=False)
+                    post_delete_post(community, post, 1, reason=None, federate_deletion=False)  # posts are deleted by user ID 1 (super admin) so that delete_old_soft_deleted_content() hard-deletes it.
 
         session.commit()
     except Exception:
@@ -218,7 +218,9 @@ def delete_old_soft_deleted_content():
                 # Delete old posts
                 post_ids = list(
                     session.execute(
-                        text("""SELECT id FROM post p WHERE p.deleted = true AND p.posted_at < :cutoff AND NOT EXISTS (
+                        text("""SELECT id FROM post p 
+                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.reply_count = 0) 
+                                  AND NOT EXISTS (
                                       SELECT 1
                                       FROM post_bookmark pb
                                       WHERE pb.post_id = p.id
