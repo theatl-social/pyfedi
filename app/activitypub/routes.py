@@ -18,7 +18,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap, is_vote, find_instance_id
+    post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -1432,6 +1432,9 @@ def process_inbox_request(request_json, store_ap_json):
                     origin_community: Community = find_actor_or_create_cached(core_activity['origin'], community_only=True)
                     target_community = find_actor_or_create_cached(core_activity['target'], community_only=True)
                     post = Post.get_by_ap_id(core_activity['object'])
+                    if post is None and origin_community and target_community:
+                        # retrieve post from remote instance
+                        post = resolve_remote_post_from_search(core_activity['object'])
                     if origin_community and target_community and post:
                         if user.id == post.user_id or origin_community.is_moderator(user) or (origin_community.instance_id == user.instance_id and origin_community.is_instance_admin(user)):
                             post.move_to(target_community)
