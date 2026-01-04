@@ -190,7 +190,7 @@ def home_page(sort, view_filter):
                            enable_mod_filter=enable_mod_filter,
                            has_topics=num_topics() > 0
                            ))
-
+    resp.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     if current_user.is_anonymous:
         resp.headers.set('Cache-Control', 'public, max-age=60')
     else:
