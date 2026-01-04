@@ -716,6 +716,7 @@ def recalculate_user_attitudes():
 
                 for user in users:
                     user.recalculate_attitude()
+                    user.recalculate_post_stats()
                     processed += 1
 
                 # Commit after each batch
