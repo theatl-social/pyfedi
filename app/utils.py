@@ -665,9 +665,20 @@ def mastodon_extra_field_link(extra_field: str) -> str:
         return tag['href']
 
 
-def microblog_content_to_title(html: str) -> str:
+def microblog_content_to_title(html: str) -> Tuple[str, str]:
     title = ''
-    if '<p>' in html:
+    link = ''
+    if '<h1>' in html.lower():
+        soup = BeautifulSoup(html, 'html.parser')
+        for tag in soup.find_all('h1'):
+            text = tag.get_text(separator=" ")
+            if len(text) >= 5:
+                title = text
+                a = tag.find('a', href=True)
+                if a:
+                    link = a['href']
+                break
+    elif '<p>' in html:
         soup = BeautifulSoup(html, 'html.parser')
         for tag in soup.find_all('p'):
             title = tag.get_text(separator=" ")
@@ -692,7 +703,7 @@ def microblog_content_to_title(html: str) -> str:
             title = shorten_string(title, 197)
         else:
             title = '(content in post body)'
-        return title.strip()
+        return title.strip(), link
 
     if end_index != -1:
         if question_index != -1 and question_index == end_index:
@@ -707,7 +718,7 @@ def microblog_content_to_title(html: str) -> str:
                 break
         title = title[:i] + ' ...' if i > 0 else ''
 
-    return title.strip()
+    return title.strip(), link
 
 
 def first_paragraph(html):
