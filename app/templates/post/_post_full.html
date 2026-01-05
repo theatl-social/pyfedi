@@ -35,8 +35,8 @@
             {% endif -%}
             {% if post.type != POST_TYPE_EVENT -%}
                 <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
-                    {% if not post.deleted -%}
-                        {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) if not post.deleted }}
+                    {% if not post.deleted or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+                        {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
                     {% else -%}
                         [{{ _('deleted') }}]
                     {% endif -%}
@@ -386,8 +386,8 @@
                 {{ _('Add to calendar') }}
             </a>
             <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
-            {% if not post.deleted -%}
-                {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) if not post.deleted }}
+            {% if not post.deleted or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
+                {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
             {% else -%}
                 [{{ _('deleted') }}]
             {% endif -%}
