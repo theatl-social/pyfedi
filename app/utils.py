@@ -56,7 +56,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji
 
 
 # Flask's render_template function, with support for themes added
@@ -375,6 +375,17 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
     clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
+    emoji_replacements = get_emoji_replacements()
+    pattern = re.compile(
+        "|".join(re.escape(k) for k in emoji_replacements),
+        re.IGNORECASE
+    )
+
+    clean_html = pattern.sub(
+        lambda m: "<img width=30 height=30 src='" + emoji_replacements[m.group(0).lower()] + "'>",
+        clean_html
+    )
+
     # bring back the <code> snippets
     clean_html = pop_code(code_snippets, clean_html)
 
@@ -641,6 +652,11 @@ def html_to_text(html) -> str:
         return ''
     soup = BeautifulSoup(html, 'html.parser')
     return soup.get_text()
+
+
+@cache.memoize(timeout=5000)
+def get_emoji_replacements():
+    return {e.token: e.url for e in db.session.query(Emoji)}
 
 
 def mastodon_extra_field_link(extra_field: str) -> str:

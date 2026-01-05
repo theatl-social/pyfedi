@@ -42,7 +42,7 @@ from app.utils import render_template, permission_required, set_setting, get_set
     download_defeds, instance_banned, login_required, referrer, \
     community_membership, retrieve_image_hash, posts_with_blocked_images, user_access, reported_posts, user_notes, \
     safe_order_by, get_task_session, patch_db_session, low_value_reposters, moderating_communities_ids, \
-    instance_allowed, trusted_instance_ids
+    instance_allowed, trusted_instance_ids, get_emoji_replacements
 from app.admin import bp
 
 
@@ -2160,6 +2160,7 @@ def admin_emoji_add():
                   instance_id=1)
         db.session.add(e)
         db.session.commit()
+        cache.delete_memoized(get_emoji_replacements)
         flash(_('Emoji saved.'))
         return redirect(url_for('admin.admin_emoji'))
 
@@ -2179,6 +2180,7 @@ def admin_emoji_edit(emoji_id):
         emoji.aliases = form.aliases.data
         emoji.category = form.category.data
         db.session.commit()
+        cache.delete_memoized(get_emoji_replacements)
         flash(_('Emoji saved.'))
         return redirect(url_for('admin.admin_emoji'))
 
@@ -2192,6 +2194,7 @@ def admin_emoji_delete(emoji_id):
     emoji = Emoji.query.get_or_404(emoji_id)
     db.session.delete(emoji)
     db.session.commit()
+    cache.delete_memoized(get_emoji_replacements)
     flash(_('Emoji deleted.'))
     return redirect(url_for('admin.admin_emoji'))
 

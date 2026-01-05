@@ -18,7 +18,7 @@ from app.models import Notification, SendQueue, CommunityBan, CommunityMember, U
 from app.post.routes import post_delete_post
 from app.utils import get_task_session, download_defeds, instance_banned, get_request_instance, get_request, \
     shorten_string, patch_db_session, archive_post, get_setting, set_setting, communities_banned_from_all_users, \
-    banned_instances, blocked_or_banned_instances
+    banned_instances, blocked_or_banned_instances, get_emoji_replacements
 
 
 @celery.task
@@ -631,6 +631,7 @@ def monitor_healthy_instances():
                                                       aliases=' '.join(aliases))
                                     session.add(new_emoji)
                                 session.commit()
+                    cache.delete_memoized(get_emoji_replacements)
                 except Exception:
                     session.rollback()
                     instance.failures += 1
