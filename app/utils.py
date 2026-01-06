@@ -325,7 +325,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     else:
         fn_string = gibberish(6)
 
-    code_placeholder = gibberish(6)
+    code_placeholder = gibberish(10)
 
     # substitute out the <code> snippets so that they don't inadvertently get formatted
     code_snippets, clean_html = stash_code_html(html, code_placeholder)
@@ -751,8 +751,8 @@ def community_link_to_href(link: str, server_name_override: str | None = None) -
     else:
         server_name = current_app.config['SERVER_NAME']
 
-    code_placeholder = gibberish(6)
-    link_placeholder = gibberish(6)
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
 
     # Stash the <code> portions so they are not formatted
     code_snippets, link = stash_code_html(link, code_placeholder)
@@ -779,8 +779,8 @@ def feed_link_to_href(link: str, server_name_override: str | None = None) -> str
     else:
         server_name = current_app.config['SERVER_NAME']
 
-    code_placeholder = gibberish(6)
-    link_placeholder = gibberish(6)
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
 
     # Stash the <code> portions so they are not formatted
     code_snippets, link = stash_code_html(link, code_placeholder)
@@ -807,8 +807,8 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     else:
         server_name = current_app.config['SERVER_NAME']
 
-    code_placeholder = gibberish(6)
-    link_placeholder = gibberish(6)
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
     
     # Stash the <code> portions so they are not formatted
     code_snippets, link = stash_code_html(link, code_placeholder)
