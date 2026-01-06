@@ -270,6 +270,7 @@ def admin_misc():
         site.default_filter = form.default_filter.data
         site.private_instance = form.private_instance.data
         site.language_id = form.language_id.data
+        site.honeypot = form.honeypot.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
@@ -318,6 +319,7 @@ def admin_misc():
         form.private_instance.data = site.private_instance
         form.registration_approved_email.data = get_setting('registration_approved_email', '')
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
+        form.honeypot.data = site.honeypot
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 

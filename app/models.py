@@ -3511,6 +3511,7 @@ class Site(db.Model):
     additional_js = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer)
+    honeypot = db.Column(db.Boolean, default=True)
      
 
     @staticmethod

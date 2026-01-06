@@ -1078,7 +1078,7 @@ def blocked_referrers() -> List[str]:
 
 def block_honey_pot():
     # Return 403 for any IP address that has visited /honey/* too many times. See honey_pot()
-    if current_user.is_anonymous:
+    if current_user.is_anonymous and g.site.honeypot:
         from app import redis_client
         if redis_client.exists(f"ban:{ip_address()}"):
             abort(403)
