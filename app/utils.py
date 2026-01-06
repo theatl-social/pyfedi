@@ -375,6 +375,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     re_ruby = re.compile(r'\{(.+?)\|(.+?)\}')
     clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
+    # replace :emoji: with images
     emoji_replacements = get_emoji_replacements()
     pattern = re.compile(
         "|".join(re.escape(k) for k in emoji_replacements),
