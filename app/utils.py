@@ -376,15 +376,16 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     clean_html = re_ruby.sub(r'<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>', clean_html)
 
     emoji_replacements = get_emoji_replacements()
-    pattern = re.compile(
-        "|".join(re.escape(k) for k in emoji_replacements),
-        re.IGNORECASE
-    )
+    if emoji_replacements:
+        pattern = re.compile(
+            "|".join(re.escape(k) for k in emoji_replacements),
+            re.IGNORECASE
+        )
 
-    clean_html = pattern.sub(
-        lambda m: "<img width=30 height=30 src='" + emoji_replacements[m.group(0).lower()] + "'>",
-        clean_html
-    )
+        clean_html = pattern.sub(
+            lambda m: "<img width=30 height=30 src='" + emoji_replacements[m.group(0).lower()] + "'>",
+            clean_html
+        )
 
     # bring back the <code> snippets
     clean_html = pop_code(code_snippets, clean_html)
