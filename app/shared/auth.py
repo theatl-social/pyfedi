@@ -20,12 +20,12 @@ def log_user_in(input, src):
     ip = ip_address()
     country = get_country(ip)
     if src == SRC_WEB:
-        username = input.user_name.data.lower()
-        password = input.password.data
+        username = input.user_name.data.lower().strip()
+        password = input.password.data.strip()
         user = db.session.query(User).filter_by(user_name=username, ap_id=None).first()
     elif src == SRC_API:
-        username = input['username'].lower()
-        password = input['password']
+        username = input['username'].lower().strip()
+        password = input['password'].strip()
         
         user = db.session.query(User).filter(func.lower(User.user_name) == func.lower(username)).filter_by(ap_id=None, deleted=False).first()
         
