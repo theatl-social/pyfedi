@@ -1823,6 +1823,14 @@ class Post(db.Model):
                         db.session.add(file)
             else:
                 post.type = constants.POST_TYPE_LINK
+                # remove unnecessary "cross-posted from..." message that Lemmy inserts (only on link posts where we have a UI showing cross-posts)
+                if post.body and 'cross-posted from: https://' in post.body:
+                    lines = []
+                    for line in post.body.split('\n'):
+                        if not line.strip().startswith('cross-posted from: https://'):
+                            lines.append(line)
+                    post.body = '\n'.join(lines)
+                    post.body_html = markdown_to_html(post.body)
             if 'blogspot.com' in post.url:
                 return None
             domain = domain_from_url(post.url)
