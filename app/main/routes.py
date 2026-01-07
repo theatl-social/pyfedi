@@ -25,6 +25,7 @@ from flask_babel import _
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.post.routes import show_post
 from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import render_template, get_setting, request_etag_matches, return_304, blocked_domains, \
@@ -607,6 +608,9 @@ def honey_pot(whatever=None):
 
     if count >= 3:
         redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
+
+    if whatever:
+        return show_post(int(whatever))
     return ''
 
 
