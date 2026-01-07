@@ -2560,7 +2560,7 @@ def rate(actor: str):
             try:
                 rate_community(community.id, form.rating.data, SRC_WEB)
             except Exception as e:
-                if str(e) == 'community_members_only' or str(e) == 'wait_one_day':
+                if str(e) == 'community members only' or str(e) == 'wait one day':
                     return redirect(url_for('community.rate_moderation_denied'))
                 else:
                     raise e
