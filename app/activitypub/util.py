@@ -687,9 +687,9 @@ def refresh_user_profile_task(user_id):
                             session.add(cover)
                             cover_changed = True
                     session.commit()
-                    if user.avatar_id and avatar_changed:
+                    if user.avatar_id and avatar_changed and get_setting('cache_remote_images_locally', True):
                         make_image_sizes(user.avatar_id, 40, 250, 'users')
-                    if user.cover_id and cover_changed:
+                    if user.cover_id and cover_changed and get_setting('cache_remote_images_locally', True):
                         make_image_sizes(user.cover_id, 700, 1600, 'users')
                         cache.delete_memoized(User.cover_image, user)
     except Exception:
@@ -1137,9 +1137,9 @@ def actor_json_to_model(activity_json, address, server):
         except IntegrityError:
             db.session.rollback()
             return db.session.query(User).filter_by(ap_profile_id=activity_json['id'].lower()).one()
-        if user.avatar_id:
+        if user.avatar_id and get_setting('cache_remote_images_locally', True):
             make_image_sizes(user.avatar_id, 40, 250, 'users')
-        if user.cover_id:
+        if user.cover_id and get_setting('cache_remote_images_locally', True):
             make_image_sizes(user.cover_id, 878, None, 'users')
         return user
     elif activity_json['type'] == 'Group':
@@ -2996,7 +2996,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                 db.session.add(image)
                 db.session.commit()
                 post.image = image
-                make_image_sizes(image.id, 170, 512, 'posts')
+                if get_setting('cache_remote_images_locally', True):
+                    make_image_sizes(image.id, 170, 512, 'posts')
             else:
                 post.image_id = None
             db.session.commit()

@@ -1658,7 +1658,7 @@ class Post(db.Model):
             find_hashtag_or_create, \
             find_licence_or_create, make_image_sizes, notify_about_post, find_flair_or_create
         from app.utils import allowlist_html, markdown_to_html, html_to_text, microblog_content_to_title, \
-            blocked_phrases, \
+            blocked_phrases, get_setting, \
             is_image_url, is_video_url, domain_from_url, opengraph_parse, shorten_string, fixup_url, \
             is_video_hosting_site, communities_banned_from, recently_upvoted_posts, blocked_users
 
@@ -2010,7 +2010,7 @@ class Post(db.Model):
 
                 db.session.commit()
 
-            if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
+            if post.image_id and not post.type == constants.POST_TYPE_VIDEO and get_setting('cache_remote_images_locally', True):
                 if post.type == constants.POST_TYPE_IMAGE:
                     make_image_sizes(post.image_id, 512, 1200, 'posts',
                                      community.low_quality)  # the 512 sized image is for masonry view
