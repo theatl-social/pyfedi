@@ -31,6 +31,13 @@ class SiteMiscForm(FlaskForm):
     enable_this_comment_filter = BooleanField(_l('Filter out comments that are simply a form of "this"'))
     meme_comms_low_quality = BooleanField(_l('Meme communities = low-quality'))
     allow_local_image_posts = BooleanField(_l('Allow local image posts'))
+    video_upload_options = [('no', _l('No')),
+               ('user 1', _l('User ID 1')),
+               ('admins', _l('Admins and staff')),
+               ('users', _l('Any user')),
+               ]
+    allow_video_file_uploads = SelectField(_l('Allow video file uploads'), choices=video_upload_options,
+                                           validators=[DataRequired()], render_kw={'class': 'form-select'})
     enable_nsfw = BooleanField(_l('Allow NSFW communities'))
     enable_nsfl = BooleanField(_l('Allow NSFL communities and posts'))
     nsfw_country_restriction = TextAreaField(_l('Bar people from these countries from accessing NSFW and NSFL content'))

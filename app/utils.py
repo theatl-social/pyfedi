@@ -244,7 +244,7 @@ def is_local_image_url(url):
 
 def is_video_url(url: str) -> bool:
     common_video_extensions = ['.mp4', '.webm']
-    mime_type = mime_type_using_head(url)
+    mime_type = mime_type_using_head(url) if url.startswith('http') else None
     if mime_type:
         mime_type_parts = mime_type.split('/')
         return f'.{mime_type_parts[1]}' in common_video_extensions
@@ -1547,6 +1547,19 @@ def can_create_post_reply(user, content: Community) -> bool:
     if content.id in communities_banned_from(user.id):
         return False
 
+    return True
+
+
+def can_upload_video():
+    upload_access = get_setting('allow_video_file_uploads', 'no')
+    if upload_access == 'no':
+        return False
+    elif upload_access == 'user 1' and current_user.get_id() != 1:
+        return False
+    elif upload_access == 'admins' and not current_user.is_admin_or_staff():
+        return False
+    elif upload_access == 'users' and not current_user.is_authenticated():
+        return False
     return True
 
 

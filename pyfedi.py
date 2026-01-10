@@ -19,7 +19,7 @@ from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize
+    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize, can_upload_video
 
 app = create_app()
 cli.register(app)
@@ -58,6 +58,7 @@ with app.app_context():
     app.jinja_env.globals['can_create'] = can_create_post
     app.jinja_env.globals['can_upvote'] = can_upvote
     app.jinja_env.globals['can_downvote'] = can_downvote
+    app.jinja_env.globals['can_upload_video'] = can_upload_video
     app.jinja_env.globals['show_explore'] = show_explore
     app.jinja_env.globals['in_sorted_list'] = in_sorted_list
     app.jinja_env.globals['theme'] = current_theme

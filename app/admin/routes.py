@@ -287,6 +287,7 @@ def admin_misc():
         set_setting('nsfw_country_restriction', form.nsfw_country_restriction.data.strip())
         set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         set_setting('cache_remote_images_locally', form.cache_remote_images_locally.data)
+        set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -322,6 +323,7 @@ def admin_misc():
         form.ban_check_servers.data = get_setting('ban_check_servers', '')
         form.honeypot.data = site.honeypot
         form.cache_remote_images_locally.data = get_setting('cache_remote_images_locally', True)
+        form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 

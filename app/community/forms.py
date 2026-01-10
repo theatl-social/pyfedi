@@ -249,8 +249,9 @@ class CreateLinkForm(CreatePostForm):
 
 
 class CreateVideoForm(CreatePostForm):
-    video_url = StringField(_l('URL'), validators=[DataRequired(), Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
+    video_url = StringField(_l('URL'), validators=[Regexp(r'^https?://', message='Submitted links need to start with "http://"" or "https://"')],
                             render_kw={'placeholder': 'https://...'})
+    image_file = FileField(_l('Video file (mp4 or webm)'), render_kw={'accept': 'video/mp4,video/webm'})    # do not change from image_file even though this is a video
 
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)

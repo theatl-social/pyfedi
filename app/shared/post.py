@@ -25,7 +25,8 @@ from app.utils import render_template, authorise_api_user, shorten_string, gibbe
     piefed_markdown_to_lemmy_markdown, markdown_to_html, fixup_url, domain_from_url, \
     opengraph_parse, url_to_thumbnail_file, can_create_post, is_video_hosting_site, recently_upvoted_posts, \
     is_image_url, add_to_modlog, store_files_in_s3, guess_mime_type, retrieve_image_hash, \
-    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb
+    hash_matches_blocked_image, can_upvote, can_downvote, get_recipient_language, to_srgb, can_upload_video, \
+    is_video_url
 
 
 def vote_for_post(post_id: int, vote_direction, federate: bool, emoji: str, src, auth=None):
@@ -191,6 +192,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     if uploaded_file and uploaded_file.filename != '':
         # check if this is an allowed type of file
         allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
+        if type == POST_TYPE_VIDEO and can_upload_video():
+            allowed_extensions.extend(['.mp4', '.webm', '.mov'])
         file_ext = os.path.splitext(uploaded_file.filename)[1]
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
@@ -421,6 +424,12 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
                 domain = domain_from_url(post.url)
                 if domain:
                     domain.post_count -= 1
+                if post.type == POST_TYPE_VIDEO and store_files_in_s3() and post.url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+                    from app.shared.tasks.maintenance import delete_from_s3
+                    if current_app.debug:
+                        delete_from_s3([post.url])
+                    else:
+                        delete_from_s3.delay([post.url])
 
         # remove any old tags
         post.tags.clear()
@@ -433,6 +442,8 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
     if uploaded_file and uploaded_file.filename != '':
         # check if this is an allowed type of file
         allowed_extensions = ['.gif', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.mpo', '.avif', '.svg']
+        if type == POST_TYPE_VIDEO and can_upload_video():
+            allowed_extensions.extend(['.mp4', '.webm', '.mov'])
         file_ext = os.path.splitext(uploaded_file.filename)[1]
         if file_ext.lower() not in allowed_extensions:
             raise Exception('filetype not allowed')
@@ -467,7 +478,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
         if image_format == 'AVIF':
             import pillow_avif  # NOQA  # do not remove
 
-        if not final_place.endswith('.svg') and not final_place.endswith('.gif'):
+        if not final_place.endswith('.svg') and not final_place.endswith('.gif') and not is_video_url(final_place):
             img = Image.open(final_place)
             if '.' + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
@@ -491,7 +502,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
-        if current_app.config['IMAGE_HASHING_ENDPOINT']:  # and not user.trustworthy():
+        if current_app.config['IMAGE_HASHING_ENDPOINT'] and not is_video_url(final_place):
             hash = retrieve_image_hash(url)
             if hash and hash_matches_blocked_image(hash):
                 raise Exception('This image is blocked')

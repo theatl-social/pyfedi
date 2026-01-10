@@ -1026,7 +1026,7 @@ def add_post(actor, type=None):
             }
             plugins.fire_hook('before_post_create', post_data)
 
-            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' else None
+            uploaded_file = request.files['image_file'] if type == 'image' or type == 'event' or type == 'video' else None
             post = make_post(form, community, post_type, SRC_WEB, uploaded_file=uploaded_file)
         except Exception as ex:
             flash(_('Your post was not accepted because %(reason)s', reason=str(ex)), 'error')
