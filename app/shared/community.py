@@ -16,7 +16,7 @@ from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
-    Community, Language, File, CommunityFlair, Rating, utcnow
+    Community, Language, File, CommunityFlair, utcnow
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
@@ -593,28 +593,3 @@ def comm_flair_ap_format(flair: CommunityFlair | int | str) -> dict:
     flair_dict["blurImages"] = flair.blur_images
 
     return flair_dict
-
-
-def rate_community(community_id: int, rating: int, src, auth=None):
-    if src == SRC_API:
-        user = authorise_api_user(auth, return_type='model')
-    else:
-        user = current_user
-
-    community = db.session.query(Community).filter_by(id=community_id).one()
-    can_rate = community.can_rate(user)
-
-    if can_rate[0]:
-        community.rate(user, rating)
-        task_selector('rate_community', user_id=user.id, community_id=community_id, rating=rating)
-        existing_rating = db.session.query(Rating).filter_by(community_id=community_id, user_id=user.id)
-
-        if not existing_rating:
-            if rating is not None:
-                community.total_ratings += 1
-            else:
-                community.total_ratings -= 1
-        
-            db.session.commit()
-    else:
-        raise Exception(can_rate[1])

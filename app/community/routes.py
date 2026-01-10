@@ -23,7 +23,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm, \
-    CreateEventForm, RateCommunityForm
+    CreateEventForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
@@ -39,11 +39,11 @@ from app.models import User, Community, CommunityMember, CommunityJoinRequest, C
     File, utcnow, Report, Notification, Topic, PostReply, \
     NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
-    post_tag, Tag, Rating, hidden_posts
+    post_tag, Tag, hidden_posts
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
-    remove_mod_from_community, get_comm_flair_list, rate_community
+    remove_mod_from_community, get_comm_flair_list
 from app.utils import get_setting, render_template, markdown_to_html, validation_required, \
     shorten_string, gibberish, community_membership, \
     request_etag_matches, return_304, can_upvote, can_downvote, user_filters_posts, \
@@ -2543,50 +2543,3 @@ def fixup_from_remote(actor: str):
         schedule_actor_refresh(community, override=True)
     
     return redirect(url_for('activitypub.community_profile', actor=actor))
-
-
-@bp.route('/c/<actor>/rate', methods=['GET', 'POST'])
-@login_required
-@validation_required
-@approval_required
-def rate(actor: str):
-
-    form = RateCommunityForm()
-
-    community = actor_to_community(actor)
-
-    if community is not None:
-        if form.validate_on_submit():
-            try:
-                rate_community(community.id, form.rating.data, SRC_WEB)
-            except Exception as e:
-                if str(e) == 'community members only' or str(e) == 'wait one day':
-                    return redirect(url_for('community.rate_moderation_denied'))
-                else:
-                    raise e
-            flash(_('Your rating has been submitted.'))
-            return redirect(f'/c/{community.link()}')
-        else:
-            return render_template('community/rate.html', form=form)
-    else:
-        abort(404)
-
-
-@bp.route('/c/<actor>/ratings', methods=['GET'])
-def community_ratings(actor: str):
-    community = actor_to_community(actor)
-    ratings = Rating.query.filter(Rating.community_id == community.id).order_by(desc(Rating.created_at))
-    if community is not None:
-        return render_template('community/ratings.html',
-                               ratings=ratings,
-                               community=community,
-                               title=_('%(community_name)s ratings', community_name=community.display_name()),
-                               is_admin_or_staff=current_user.is_authenticated and current_user.is_admin_or_staff())
-
-
-@bp.route('/community/rate_moderation_denied', methods=['GET'])
-@login_required
-@validation_required
-@approval_required
-def rate_moderation_denied():
-    return render_template('generic_message.html', title=_('Please try again tomorrow'), message=_('You can rate a community once you’ve been part of it for a while.'))

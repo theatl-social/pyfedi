@@ -537,19 +537,3 @@ class EditCommunityFlairForm(FlaskForm):
     background_color = StringField(_l('Background color'), render_kw={"type": "color"})
     blur_images = BooleanField(_l('Blur images and thumbnails for posts with this flair'))
     submit = SubmitField(_l('Save'))
-
-
-class RateCommunityForm(FlaskForm):
-    rating = RadioField(
-        'Rate this community:',
-        choices=[
-            ('5', '★'),
-            ('4', '★'),
-            ('3', '★'),
-            ('2', '★'),
-            ('1', '★')
-        ],
-        validators=[DataRequired()],
-        coerce=int  # ensures it becomes an int (optional)
-    )
-    submit = SubmitField(_l('Rate'))

@@ -9,7 +9,7 @@ from app.activitypub.util import active_month
 from app.constants import *
 from app.models import ChatMessage, Community, Language, Instance, Post, PostReply, User, \
     AllowedInstances, BannedInstances, utcnow, Site, Feed, FeedItem, Topic, CommunityFlair, \
-    UserNote, Poll, Event, PollChoice, Rating
+    UserNote, Poll, Event, PollChoice
 from app.post.util import tags_to_string, flair_to_string
 from app.utils import blocked_communities, blocked_or_banned_instances, blocked_users, communities_banned_from, get_setting, \
     num_topics, moderating_communities_ids, moderating_communities, joined_communities, \
@@ -563,15 +563,6 @@ def community_view(community: Community | int | str, variant, stub=False, user_i
 
         v3 = {'community_view': community_view(community=community, variant=2, stub=False, user_id=user_id),
               'moderators': modlist, 'discussion_languages': []}
-        
-        if user_id:
-            # Fetch user info for ratings
-            v3['can_rate'] = community.can_rate(user_id)[0]
-            my_rating = Rating.query.filter(Rating.user_id == user_id, Rating.community_id == community.id).first()
-            if my_rating:
-                v3['my_rating'] = my_rating.rating
-            else:
-                v3['my_rating'] = None
         
         return v3
 

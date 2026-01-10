@@ -541,8 +541,6 @@ class Community(db.Model):
     downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
-    average_rating = db.Column(db.Float)
-    total_ratings = db.Column(db.Integer)
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
     question_answer = db.Column(db.Boolean, default=False)     # if this is a stackoverflow-style question and answer community
@@ -842,44 +840,6 @@ class Community(db.Model):
                 })
         
         return result
-    
-    @cache.memoize(timeout=300)
-    def can_rate(self, user):
-        if isinstance(user, int):
-            user = User.query.get(user)
-        
-        if not user:
-            return [False, "no user provided"]
-
-        # Returns [boolean, message] if the provided user is able to rate the community
-        if user.is_admin_or_staff():
-            return [True, ""]
-        
-        if not user.subscribed(self.id):
-            return [False, "community members only"]
-        else:
-            cm = CommunityMember.query.filter(CommunityMember.user_id == user.id, CommunityMember.community_id == self.id).first()
-            if cm and cm.created_at + timedelta(days=1) > utcnow():
-                return [False, "not subscribed for long enough"]
-            
-        return [True, ""]
-
-    def rate(self, user, rating):
-        db.session.execute(text('DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'),
-                           {'user_id': user.id,
-                            'community_id': self.id})
-        db.session.add(Rating(user_id=user.id, community_id=self.id, rating=rating))
-        db.session.commit()
-        db.session.execute(text("""
-                            UPDATE "community"
-                            SET average_rating = (
-                                SELECT AVG(rating)
-                                FROM "rating"
-                                WHERE community_id = :community_id
-                            )
-                            WHERE id = :community_id
-                        """), {'community_id': self.id})
-        db.session.commit()
 
     def delete_dependencies(self):
         from app import redis_client
@@ -1051,7 +1011,6 @@ class User(UserMixin, db.Model):
     passkeys = db.relationship('Passkey', lazy='dynamic', cascade="all, delete-orphan")
     modlog_target = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.target_user_id", back_populates='target_user')
     modlog_actor = db.relationship('ModLog', lazy='dynamic', foreign_keys="ModLog.user_id", back_populates='author')
-    ratings = db.relationship('Rating', lazy='dynamic', foreign_keys="Rating.user_id", cascade="all, delete-orphan", back_populates='author')
 
     hide_read_posts = db.Column(db.Boolean, default=False)
     # db relationship tracked by the "read_posts" table
@@ -3861,16 +3820,6 @@ class Reminder(db.Model):
     remind_at = db.Column(db.DateTime)
     reminder_type = db.Column(db.Integer)
     reminder_destination = db.Column(db.Integer)
-
-
-class Rating(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    community_id = db.Column(db.Integer, db.ForeignKey('community.id'), index=True)
-    created_at = db.Column(db.DateTime, index=True, default=utcnow)
-    rating = db.Column(db.Float)
-
-    author = db.relationship('User', lazy='joined', back_populates='ratings')
 
 
 class Emoji(db.Model):

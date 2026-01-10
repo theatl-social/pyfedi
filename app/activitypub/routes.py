@@ -1189,10 +1189,6 @@ def process_inbox_request(request_json, store_ap_json):
                     process_downvote(user, store_ap_json, request_json, announced)
                     return
 
-                if core_activity['type'] == 'Rate':     # Rate community
-                    process_rate(user, store_ap_json, request_json, announced)
-                    return
-
                 if core_activity['type'] == 'PollVote': # Vote in a poll
                     process_poll_vote(user, store_ap_json, request_json, announced)
                     return
@@ -2219,25 +2215,6 @@ def process_downvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
 
 
-def process_rate(user, store_ap_json, request_json, announced):
-    saved_json = request_json if store_ap_json else None
-    id = request_json['id']
-    ap_id = request_json['object'] if not announced else request_json['object']['object']
-    if isinstance(ap_id, dict) and 'id' in ap_id:
-        ap_id = ap_id['id']
-    community = find_actor_or_create_cached(ap_id, create_if_not_found=False, community_only=True)
-    if community is None:
-        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
-        return
-    if not instance_banned(user.instance.domain):
-        community.rate(user, request_json['rating'] if 'rating' in request_json else request_json['object']['rating'])
-        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
-        if not announced:
-            announce_activity_to_followers(community, user, request_json)
-    else:
-        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot rate this')
-
-
 def process_poll_vote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json['id']
@@ -2274,7 +2251,7 @@ def process_question_answer(user, store_ap_json, request_json, announced):
 
     post_reply = PostReply.get_by_ap_id(ap_id)
     if post_reply is None:
-        log_incoming_ap(id, APLOG_RATE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
+        log_incoming_ap(id, APLOG_QA, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
     if (not instance_banned(user.instance.domain)) and (post_reply.user_id == post_reply.post.user_id or post_reply.community.is_moderator(user) or post_reply.author.is_instance_admin()):
         from app import redis_client
@@ -2294,11 +2271,11 @@ def process_question_answer(user, store_ap_json, request_json, announced):
                 db.session.add(notify)
                 post_reply.author.unread_notifications += 1
             db.session.commit()
-        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        log_incoming_ap(id, APLOG_QA, APLOG_SUCCESS, saved_json)
         if not announced:
             announce_activity_to_followers(post_reply.community, user, request_json)
     else:
-        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, 'Cannot set answer')
+        log_incoming_ap(id, APLOG_QA, APLOG_IGNORED, saved_json, 'Cannot set answer')
 
 
 

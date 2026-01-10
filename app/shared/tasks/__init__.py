@@ -4,7 +4,7 @@ from flask import current_app
 def task_selector(task_key, send_async=True, **kwargs):
     # Import tasks here to avoid circular imports
     from app.shared.tasks.follows import join_community, leave_community, leave_feed
-    from app.shared.tasks.likes import vote_for_post, vote_for_reply, rate_community, vote_for_poll
+    from app.shared.tasks.likes import vote_for_post, vote_for_reply, vote_for_poll
     from app.shared.tasks.notes import make_reply, edit_reply, choose_answer, unchoose_answer
     from app.shared.tasks.deletes import delete_reply, restore_reply, delete_post, restore_post, delete_community, \
         restore_community, delete_posts_with_blocked_images, delete_pm, restore_pm
@@ -51,7 +51,6 @@ def task_selector(task_key, send_async=True, **kwargs):
         'remove_mod': remove_mod,
         'delete_pm': delete_pm,
         'restore_pm': restore_pm,
-        'rate_community': rate_community,
         'vote_for_poll': vote_for_poll,
         'choose_answer': choose_answer,
         'unchoose_answer': unchoose_answer,
