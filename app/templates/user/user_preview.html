@@ -18,7 +18,7 @@
         </div>
         <div class="row">
             <div class="col-auto">
-                <p>{% if user.bot %}{{ _('Bot Account') }}<br />{% endif %}
+                <p>{% if user.bot or user.bot_override %}{{ _('Bot Account') }}<br />{% endif %}
                     {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
                     {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
                     {% if current_user.is_authenticated %}{{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />{% endif %}

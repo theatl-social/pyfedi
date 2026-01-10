@@ -21,7 +21,7 @@
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
         {% endif -%}
-        {% if user.bot -%}
+        {% if user.bot or user.bot_override -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
         {% if user_flair and user.id in user_flair %}
