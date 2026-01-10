@@ -50,11 +50,11 @@
                             <div class="dropdown">
                                 <a
                                     href="{{ url_for('post.post_reply_options', post_id=1, comment_id=1) if low_bandwidth else '#' }}"
-                                    data-bs-toggle="dropdown" rel="nofollow noindex"
+                                    data-bs-toggle="dropdown" rel="nofollow noindex" aria-expanded="false" id="comm_options_{{ community.id }}"
                                     aria-label="{{ _('Community options') }}">
                                     <span class="fe fe-options" title="Options"> </span>
                                 </a>
-                                <ul class="dropdown-menu" style="width: 320px">
+                                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="comm_options_{{ community.id }}">
                                     {% if community_membership(current_user, community) not in [SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
                                          <li><a href="{{ url_for('community.subscribe', actor=community.link()) }}" class="dropdown-item no-underline white-space-normal" rel="nofollow">
                                              <span class="fe fe-plus"></span> {{ _('Join') }}</a></li>

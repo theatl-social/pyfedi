@@ -520,11 +520,11 @@
         <div class="post_options_link">
             <div class="dropdown">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
-                        data-bs-toggle="dropdown"
+                        data-bs-toggle="dropdown" aria-expanded="false" id="post_options_link_{{ post.id }}"
                         rel="nofollow">
                     <span class="fe fe-options" title="Options"></span>
                 </a>
-                <ul class="dropdown-menu" style="width: 320px">
+                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="post_options_link_{{ post.id }}">
                     <div 
                             hx-get="{{ url_for('post.post_options', post_id=post.id) }}" 
                             hx-trigger="intersect once"
