@@ -4,15 +4,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-12-24 10:51+1300\n"
-"PO-Revision-Date: 2025-11-27 06:47+0000\n"
-"Last-Translator: 0x <1362432220@qq.com>\n"
+"PO-Revision-Date: 2025-12-28 20:53+0000\n"
+"Last-Translator: Poesty Li <poesty7450@gmail.com>\n"
+"Language-Team: Chinese (Simplified Han script) <http://"
+"translate.piefed.social/projects/piefed/main-web-app/zh_Hans/>\n"
 "Language: zh\n"
-"Language-Team: Chinese (Simplified Han script) "
-"<http://translate.piefed.social/projects/piefed/main-web-app/zh_Hans/>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -609,9 +610,8 @@ msgid "NSFW community"
 msgstr "NSFW 社区"
 
 #: app/admin/forms.py:128
-#, fuzzy
 msgid "Only AI-generated content"
-msgstr "已删除内容"
+msgstr "仅限 AI 生成内容"
 
 #: app/admin/forms.py:129
 msgid "Banned - no new posts accepted"
@@ -736,13 +736,12 @@ msgid "Override remote language setting"
 msgstr "覆盖远程语言设置"
 
 #: app/admin/forms.py:157
-#, fuzzy
 msgid "Override remote AI content setting"
-msgstr "覆盖远程语言设置"
+msgstr "覆盖远程 AI 内容设置"
 
 #: app/admin/forms.py:158
 msgid "Always show translation icon on posts"
-msgstr ""
+msgstr "始终在帖子上显示翻译图标"
 
 #: app/admin/forms.py:159
 msgid "Old posts can be archived"
@@ -970,9 +969,8 @@ msgid "Flag their posts as from a bot"
 msgstr "将其帖子标记为机器人发布"
 
 #: app/admin/forms.py:290
-#, fuzzy
 msgid "Suppress cross-posts"
-msgstr "显示转发帖子"
+msgstr "禁止转发帖子"
 
 #: app/admin/forms.py:293
 msgid "Ban posts"
@@ -1053,11 +1051,11 @@ msgstr "具有此 URL 的页面已存在。"
 
 #: app/admin/forms.py:355
 msgid "Token or character"
-msgstr ""
+msgstr "令牌或字符"
 
 #: app/admin/forms.py:356
 msgid "e.g., :happy: or a single character like 👍"
-msgstr ""
+msgstr "例如，:happy: 或单个字符如 👍"
 
 #: app/admin/forms.py:357 app/community/forms.py:233 app/community/forms.py:252
 #: app/templates/admin/cms_pages.html:25 app/templates/admin/emoji.html:25
@@ -1066,7 +1064,7 @@ msgstr "网址"
 
 #: app/admin/forms.py:358
 msgid "e.g. https://..."
-msgstr ""
+msgstr "例如 https://..."
 
 #: app/admin/forms.py:359 app/templates/admin/emoji.html:27
 #: app/templates/user/filters.html:48
@@ -1074,9 +1072,8 @@ msgid "Keywords"
 msgstr "关键词"
 
 #: app/admin/forms.py:360 app/templates/admin/emoji.html:26
-#, fuzzy
 msgid "Category"
-msgstr "创建者"
+msgstr "分类"
 
 #: app/admin/routes.py:221 app/admin/routes.py:253 app/admin/routes.py:291
 #: app/feed/routes.py:238
@@ -1410,29 +1407,24 @@ msgstr "页面已删除。"
 
 #: app/admin/routes.py:2175 app/templates/admin/_nav.html:25
 #: app/templates/admin/_tabbed_nav.html:27 app/templates/admin/emoji.html:15
-#, fuzzy
 msgid "Emoji"
-msgstr "电子邮件"
+msgstr "表情符号"
 
 #: app/admin/routes.py:2188 app/admin/routes.py:2207
-#, fuzzy
 msgid "Emoji saved."
-msgstr "页面已保存。"
+msgstr "表情符号已保存。"
 
 #: app/admin/routes.py:2191
-#, fuzzy
 msgid "Add Emoji"
-msgstr "添加主题"
+msgstr "添加表情符号"
 
 #: app/admin/routes.py:2210
-#, fuzzy
 msgid "Edit Emoji"
-msgstr "编辑主题"
+msgstr "编辑表情符号"
 
 #: app/admin/routes.py:2220
-#, fuzzy
 msgid "Emoji deleted."
-msgstr "主题已删除"
+msgstr "表情符号已删除。"
 
 #: app/admin/util.py:96
 msgid "No recipients"
@@ -1925,16 +1917,15 @@ msgstr "默认帖子类型"
 
 #: app/community/forms.py:113
 msgid "Friendly urls"
-msgstr ""
+msgstr "友好网址"
 
 #: app/community/forms.py:114
 msgid "Post ids only"
-msgstr ""
+msgstr "仅帖子 ID"
 
 #: app/community/forms.py:115
-#, fuzzy
 msgid "Post url structure to use in this community"
-msgstr "该社区尚无帖子。"
+msgstr "本社区使用的帖子 URL 结构"
 
 #: app/community/forms.py:123 app/community/forms.py:177 app/post/forms.py:15
 msgid "Body"
@@ -2056,9 +2047,8 @@ msgstr "血腥/恶心"
 
 #: app/community/forms.py:184 app/post/forms.py:84
 #: app/templates/post/_flair_choices.html:14
-#, fuzzy
 msgid "AI generated"
-msgstr "...将生成"
+msgstr "AI 生成"
 
 #: app/community/forms.py:185 app/post/forms.py:17
 #: app/templates/post/_post_notification_toggle.html:5
@@ -2296,7 +2286,7 @@ msgstr "提供至少两个选择"
 
 #: app/community/forms.py:470
 msgid "Maximum 15 choices"
-msgstr ""
+msgstr "最多 15 个选项"
 
 #: app/community/forms.py:475
 msgid "Breaks instance rules"
@@ -2379,9 +2369,8 @@ msgid "Blur images and thumbnails for posts with this flair"
 msgstr "模糊带有此标签帖子的图片和缩略图"
 
 #: app/community/forms.py:554
-#, fuzzy
 msgid "Rate"
-msgstr "创建"
+msgstr "评分"
 
 #: app/community/routes.py:83
 msgid "Community creation has been restricted to admins on this site"
@@ -2528,9 +2517,9 @@ msgid "Your post was not accepted because %(reason)s"
 msgstr "您的帖子未被接受，因为 %(reason)s"
 
 #: app/community/routes.py:1099
-#, fuzzy, python-format
+#, python-format
 msgid "This community prefers posts in %(language_names)s"
-msgstr "将社区所有者设置为 %(user_name)s"
+msgstr "本社区倾向于使用 %(language_names)s 语言的帖子"
 
 #: app/community/routes.py:1101
 msgid "Add post to community"
@@ -2691,7 +2680,7 @@ msgstr "标签已删除。"
 msgid ""
 "You are being unsubscribed from all communities and feeds. Please allow a"
 " couple minutes for the process to complete."
-msgstr ""
+msgstr "您正在从所有社区和订阅源中退订。请等待几分钟让此过程完成。"
 
 #: app/community/routes.py:2385
 msgid "Sorry your account is too new to do this."
@@ -2725,22 +2714,21 @@ msgid "This is a local community"
 msgstr "这是本地社区"
 
 #: app/community/routes.py:2565
-#, fuzzy
 msgid "Your rating has been submitted."
-msgstr "您的更改已保存。"
+msgstr "您的评分已提交。"
 
 #: app/community/routes.py:2581 app/templates/community/ratings.html:24
-#, fuzzy, python-format
+#, python-format
 msgid "%(community_name)s ratings"
-msgstr " 在 %(community_name)s"
+msgstr "%(community_name)s 评分"
 
 #: app/community/routes.py:2590
 msgid "Please try again tomorrow"
-msgstr ""
+msgstr "请明天再试"
 
 #: app/community/routes.py:2590
 msgid "You can rate a community once you’ve been part of it for a while."
-msgstr ""
+msgstr "您加入社区一段时间后，即可对其进行评分。"
 
 #: app/dev/forms.py:12
 msgid "Populate Communities"
@@ -2947,11 +2935,11 @@ msgstr "内容警告"
 
 #: app/main/routes.py:1134
 msgid "This page is intentionally left blank."
-msgstr ""
+msgstr "此页面特意留空。"
 
 #: app/main/routes.py:1134
 msgid "We don't track you, so there's not much data to make graphs of."
-msgstr ""
+msgstr "我们不追踪您，因此没有太多数据可用于制作图表。"
 
 #: app/post/forms.py:18
 msgid "Distinguish as moderator comment"
@@ -2994,12 +2982,11 @@ msgstr "无效。"
 
 #: app/post/forms.py:109
 msgid "Mastodon instance domain name"
-msgstr ""
+msgstr "Mastodon 实例域名"
 
 #: app/post/forms.py:110
-#, fuzzy
 msgid "Share"
-msgstr "保存"
+msgstr "分享"
 
 #: app/post/routes.py:77 app/post/routes.py:419 app/post/routes.py:633
 msgid ""
@@ -3036,9 +3023,8 @@ msgid "Embed code for %(post_title)s"
 msgstr "%(post_title)s 的嵌入代码"
 
 #: app/post/routes.py:563
-#, fuzzy
 msgid "Choose an emoji"
-msgstr "选择一个主题"
+msgstr "选择一个表情符号"
 
 #: app/post/routes.py:615
 msgid "Vote has been cast."
@@ -3068,7 +3054,7 @@ msgstr "此评论不可回复。"
 
 #: app/post/routes.py:934
 msgid "Something went wrong and a post could not be found."
-msgstr ""
+msgstr "出错了，未能找到帖子。"
 
 #: app/post/routes.py:1018 app/shared/reply.py:217 app/user/routes.py:336
 #: app/user/routes.py:588 app/user/routes.py:705 app/user/routes.py:1415
@@ -3162,14 +3148,14 @@ msgid "%(name)s has been un-stickied."
 msgstr "%(name)s 已被取消置顶。"
 
 #: app/post/routes.py:1483
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been hidden."
-msgstr "%(name)s 已被置顶。"
+msgstr "%(name)s 已被隐藏。"
 
 #: app/post/routes.py:1485
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been un-hidden."
-msgstr "%(name)s 已被取消置顶。"
+msgstr "%(name)s 已被取消隐藏。"
 
 #: app/post/routes.py:1560
 #, python-format
@@ -3197,7 +3183,7 @@ msgstr "举报评论"
 #: app/post/routes.py:1716 app/templates/post/_post_reply_source_swap.html:7
 #: app/templates/post/_post_source_swap.html:7
 msgid "Something went wrong and a comment could not be found."
-msgstr ""
+msgstr "出错了，未能找到评论。"
 
 #: app/post/routes.py:1762
 msgid "Edit comment"
@@ -3252,22 +3238,19 @@ msgstr "转发帖子"
 
 #: app/post/routes.py:2181 app/post/routes.py:2205
 msgid "Body text is too short to be sure."
-msgstr ""
+msgstr "正文文本太短，无法确定。"
 
 #: app/post/routes.py:2183 app/post/routes.py:2207
-#, fuzzy
 msgid "Not configured."
-msgstr "未连接"
+msgstr "未配置。"
 
 #: app/post/routes.py:2215 app/post/routes.py:2225
-#, fuzzy
 msgid "Done"
-msgstr "捐赠"
+msgstr "完成"
 
 #: app/post/routes.py:2240 app/templates/post/post_options.html:194
-#, fuzzy
 msgid "Share on Mastodon"
-msgstr "连接 Mastodon"
+msgstr "在 Mastodon 上分享"
 
 #: app/search/routes.py:158
 #, python-format
@@ -3288,9 +3271,8 @@ msgid "You have left the community"
 msgstr "您已离开该社区"
 
 #: app/shared/community.py:72
-#, fuzzy
 msgid "You need to step down as moderator before unsubscribing."
-msgstr "您需要先让其他人成为所有者才能退订。"
+msgstr "您需要先辞去版主职务才能取消订阅。"
 
 #: app/shared/community.py:389
 #, python-format
@@ -3315,12 +3297,11 @@ msgstr "版主已移除"
 msgid ""
 "You have unsubscribed from the %(feed_name)s feed, please allow a couple "
 "minutes for it to fully process"
-msgstr ""
+msgstr "您已从 %(feed_name)s 订阅源退订，请等待几分钟让其完全处理"
 
 #: app/shared/feed.py:51
-#, fuzzy
 msgid "You cannot leave your own feed"
-msgstr "您无法删除自己。"
+msgstr "您无法离开自己的动态"
 
 #: app/shared/post.py:887
 #, python-format
@@ -3351,7 +3332,7 @@ msgstr "评论已解锁。"
 #: app/shared/reply.py:497
 #, python-format
 msgid "Your answer was chosen as an answer to %(post_title)s"
-msgstr ""
+msgstr "您的回答被选为 %(post_title)s 的答案"
 
 #: app/shared/user.py:27 app/user/routes.py:848 app/user/routes.py:1542
 msgid "You cannot block yourself."
@@ -3733,9 +3714,8 @@ msgstr "此社区不与其它实例联合。"
 
 #: app/templates/_side_pane.html:119 app/templates/community/rate.html:13
 #: app/templates/community/ratings.html:21
-#, fuzzy
 msgid "Rate community"
-msgstr "创建社区"
+msgstr "社区评分"
 
 #: app/templates/_side_pane.html:129
 msgid "Set my flair"
@@ -4063,7 +4043,8 @@ msgstr "PieFed v%(version)s 是自由开源软件"
 msgid ""
 "This is how long you have spent using PieFed during this month. We hope "
 "this use of your time aligns with your priorities and values."
-msgstr ""
+msgstr "这是您本月使用 PieFed "
+"所花费的时间。我们希望您的时间使用与您的优先事项和价值观相符。"
 
 #: app/templates/base.html:297
 msgid "Voting Options"
@@ -4099,7 +4080,7 @@ msgstr "默认模式：公开。"
 
 #: app/templates/base.html:319
 msgid "React with an emoji"
-msgstr ""
+msgstr "用表情符号回应"
 
 #: app/templates/communities_menu.html:7
 msgid "Filter communities..."
@@ -4406,15 +4387,13 @@ msgid "Sort by name"
 msgstr "按名称排序"
 
 #: app/templates/list_communities.html:221
-#, fuzzy
 msgid "Sort by rating"
-msgstr "按活跃排序"
+msgstr "按评分排序"
 
 #: app/templates/community/ratings.html:29
 #: app/templates/list_communities.html:223
-#, fuzzy
 msgid "Rating"
-msgstr "管理中"
+msgstr "评分"
 
 #: app/templates/list_communities.html:233
 msgid "Sort by number of active users in the past week"
@@ -4634,9 +4613,8 @@ msgid "Pages"
 msgstr "页面"
 
 #: app/templates/admin/activity_json.html:20
-#, fuzzy
 msgid "Re-submit this activity"
-msgstr "最近活动"
+msgstr "重新提交此活动"
 
 #: app/templates/admin/add_user.html:12
 msgid "Add new user"
@@ -4915,14 +4893,12 @@ msgid "Move %(community)s to %(instance_domain)s"
 msgstr "将 %(community)s 移动到 %(instance_domain)s"
 
 #: app/templates/admin/content.html:26
-#, fuzzy
 msgid "Posts/Comments:"
-msgstr "评论"
+msgstr "帖子/评论："
 
 #: app/templates/admin/content.html:37
-#, fuzzy
 msgid "14 days"
-msgstr "1 天"
+msgstr "14 天"
 
 #: app/templates/admin/content.html:50
 msgid "No posts."
@@ -4970,14 +4946,12 @@ msgid "Edit %(user_name)s (%(display_name)s)"
 msgstr "编辑 %(user_name)s (%(display_name)s)"
 
 #: app/templates/admin/emoji.html:16
-#, fuzzy
 msgid "Add new emoji"
-msgstr "添加新用户"
+msgstr "添加新表情符号"
 
 #: app/templates/admin/emoji.html:24
-#, fuzzy
 msgid "Token"
-msgstr "打开"
+msgstr "令牌"
 
 #: app/templates/admin/emoji.html:28
 #: app/templates/instance/list_instances.html:126
@@ -4987,9 +4961,8 @@ msgid "Instance"
 msgstr "实例"
 
 #: app/templates/admin/emoji.html:49
-#, fuzzy
 msgid "No emoji have been created yet."
-msgstr "尚未创建任何页面。"
+msgstr "尚未创建任何表情符号。"
 
 #: app/templates/admin/federation.html:22
 msgid "Import / Export Bans"
@@ -5852,7 +5825,7 @@ msgstr "请勿公开测试社区。"
 
 #: app/templates/community/add_local.html:36
 msgid "Comments can be designated as the answer."
-msgstr ""
+msgstr "评论可被指定为答案。"
 
 #: app/templates/community/add_post.html:8
 msgid "Type of post"
@@ -5881,7 +5854,7 @@ msgstr "创建投票"
 
 #: app/templates/community/add_post.html:20
 msgid "Lemmy does not support polls, try a PieFed community instead."
-msgstr ""
+msgstr "Lemmy 不支持投票，请尝试使用 PieFed 社区。"
 
 #: app/templates/community/add_post.html:23
 #: app/templates/community/add_post.html:25
@@ -5890,7 +5863,7 @@ msgstr "创建事件"
 
 #: app/templates/community/add_post.html:25
 msgid "Lemmy does not support events, try a PieFed community instead."
-msgstr ""
+msgstr "Lemmy 不支持活动，请尝试使用 PieFed 社区。"
 
 #: app/templates/community/add_remote.html:41
 #: app/templates/community/lookup_remote.html:15
@@ -5977,7 +5950,7 @@ msgstr "头像"
 
 #: app/templates/community/community_edit.html:72
 msgid "Some languages, e.g. Japanese, do not work well with friendly urls."
-msgstr ""
+msgstr "某些语言（例如日语）与友好网址的兼容性不佳。"
 
 #: app/templates/community/community_find_moderator.html:26
 msgid "Found some people:"
@@ -6159,11 +6132,10 @@ msgstr ""
 "            因此在此实例上订阅该社区的账号一段时间是获取旧帖子的唯一途径。"
 
 #: app/templates/community/community_move.html:26
-#, fuzzy
 msgid ""
 "Lock the old community by setting it to 'moderators only' so no one else "
 "can post in it."
-msgstr "将旧社区锁定为“仅限管理员”，以便没有其他人可以发帖。"
+msgstr "将旧社区锁定为“仅限版主”，以便其他人无法在其中发帖。"
 
 #: app/templates/community/community_move.html:27
 #, python-format
@@ -6234,21 +6206,19 @@ msgstr "联邦宇宙账号以 '@' 开头，以区分电子邮件地址。"
 
 #: app/templates/community/rate.html:24
 msgid "1 = terrible, 3 = ok, 5 = best ever"
-msgstr ""
+msgstr "1 = 极差，3 = 一般，5 = 最佳"
 
 #: app/templates/community/ratings.html:16
-#, fuzzy
 msgid "Ratings"
-msgstr "操作"
+msgstr "评分"
 
 #: app/templates/community/ratings.html:31
-#, fuzzy
 msgid "Who"
-msgstr "热门"
+msgstr "谁"
 
 #: app/templates/community/ratings.html:47
 msgid "Only admins and staff can see who made each rating."
-msgstr ""
+msgstr "只有管理员和工作人员可以看到每条评分是谁给出的。"
 
 #: app/templates/community/retrieve_remote_post.html:30
 msgid "Found a post:"
@@ -6592,12 +6562,12 @@ msgstr "这是一个 %(software)s 实例。"
 
 #: app/templates/instance/overview.html:21
 msgid "Votes are weighted at the normal level."
-msgstr ""
+msgstr "投票按正常权重计算。"
 
 #: app/templates/instance/overview.html:23
 #, python-format
 msgid "Votes are weighted at %(weight)dx."
-msgstr ""
+msgstr "投票按 %(weight)dx 权重计算。"
 
 #: app/templates/instance/overview.html:39
 msgid "Go to instance"
@@ -6676,9 +6646,8 @@ msgstr "不适内容"
 
 #: app/templates/post/_post_full.html:10
 #: app/templates/post/post_teaser/_macros.html:42
-#, fuzzy
 msgid "nsfw"
-msgstr "NSFW"
+msgstr "nsfw"
 
 #: app/templates/post/_post_full.html:14
 #: app/templates/post/post_teaser/_macros.html:43
@@ -6687,20 +6656,18 @@ msgstr "可能造成情感创伤的内容"
 
 #: app/templates/post/_post_full.html:15
 #: app/templates/post/post_teaser/_macros.html:43
-#, fuzzy
 msgid "nsfl"
-msgstr "不适内容"
+msgstr "nsfl"
 
 #: app/templates/post/_post_full.html:19
 #: app/templates/post/post_teaser/_macros.html:44
 msgid "This post contains AI generated content"
-msgstr ""
+msgstr "此帖子包含 AI 生成内容"
 
 #: app/templates/post/_post_full.html:20
 #: app/templates/post/post_teaser/_macros.html:44
-#, fuzzy
 msgid "AI"
-msgstr "付费"
+msgstr "AI"
 
 #: app/templates/post/_post_full.html:34
 #: app/templates/post/post_teaser/_macros.html:46
@@ -6807,9 +6774,8 @@ msgid "Set flair"
 msgstr "设置标签"
 
 #: app/templates/post/_post_replies.html:7
-#, fuzzy
 msgid "Translate all comments"
-msgstr "离开所有社区"
+msgstr "翻译所有评论"
 
 #: app/templates/post/_post_replies.html:14
 msgid "Sort by magic"
@@ -6854,17 +6820,15 @@ msgstr "屏蔽社区 %(community_name)s"
 
 #: app/templates/post/_post_reply_source_swap.html:19
 #: app/templates/post/_post_source_swap.html:19
-#, fuzzy
 msgid "Hide markdown source"
-msgstr "Markdown 帮助"
+msgstr "隐藏 Markdown 源代码"
 
 #: app/templates/post/_post_reply_source_swap.html:21
 #: app/templates/post/_post_source_swap.html:21
 #: app/templates/post/post_options.html:188
 #: app/templates/post/post_reply_options.html:187
-#, fuzzy
 msgid "View markdown source"
-msgstr "Markdown 帮助"
+msgstr "查看 Markdown 源代码"
 
 #: app/templates/post/_post_reply_teaser.html:38
 #: app/templates/post/add_reply_inline_result.html:55
@@ -6872,14 +6836,13 @@ msgid "Post creator"
 msgstr "帖子创建者"
 
 #: app/templates/post/_post_reply_teaser.html:42
-#, fuzzy
 msgid "edited"
-msgstr "编辑订阅源"
+msgstr "已编辑"
 
 #: app/templates/post/_post_reply_teaser.html:46
 #, python-format
 msgid "depth: %(comment_depth)d"
-msgstr ""
+msgstr "深度：%(comment_depth)d"
 
 #: app/templates/post/_post_reply_teaser.html:48
 #: app/templates/post/add_reply_inline_result.html:63
@@ -6888,7 +6851,7 @@ msgstr "已举报。检查评论以获取问题。"
 
 #: app/templates/post/_post_reply_teaser.html:51
 msgid "OP prefers this answer"
-msgstr ""
+msgstr "发帖者倾向此答案"
 
 #: app/templates/post/_post_reply_teaser.html:54
 #: app/templates/post/add_reply_inline_result.html:68
@@ -6919,14 +6882,12 @@ msgid "Collapse"
 msgstr "折叠"
 
 #: app/templates/post/_post_reply_teaser.html:139
-#, fuzzy
 msgid "Un-choose answer"
-msgstr "选择器"
+msgstr "取消选择答案"
 
 #: app/templates/post/_post_reply_teaser.html:143
-#, fuzzy
 msgid "Choose answer"
-msgstr "选择器"
+msgstr "选择答案"
 
 #: app/templates/post/_post_reply_teaser.html:161
 #: app/templates/post/add_reply_inline_result.html:113
@@ -7075,20 +7036,18 @@ msgid "Parent comment"
 msgstr "父级评论"
 
 #: app/templates/post/emoji_list.html:13
-#, fuzzy
 msgid "custom"
-msgstr "邪教"
+msgstr "自定义"
 
 #: app/templates/post/post.html:79
 msgid "This post is old so votes and comments are disabled."
 msgstr "此帖已过时，投票和评论功能已禁用。"
 
 #: app/templates/post/post.html:84
-#, fuzzy
 msgid ""
 "The author of this post has been banned/deleted so they might not see "
 "your reply."
-msgstr "帖子作者已被封禁，可能无法看到您的回复。"
+msgstr "此帖子的作者已被封禁/删除，因此他们可能看不到您的回复。"
 
 #: app/templates/post/post.html:171
 msgid "Verify your email address to comment"
@@ -7222,11 +7181,11 @@ msgstr "解锁"
 #: app/templates/post/post_options.html:72
 #: app/templates/post/post_reply_options.html:163
 msgid "Written by AI?"
-msgstr ""
+msgstr "由 AI 撰写？"
 
 #: app/templates/post/post_options.html:97
 msgid "Hide this post from me"
-msgstr ""
+msgstr "对我隐藏此帖子"
 
 #: app/templates/post/post_options.html:104
 msgid "I made a mistake with this post and have changed my mind about the topic"
@@ -7378,7 +7337,7 @@ msgstr "阅读文章"
 #: app/templates/post/reply/_macros.html:42
 #: app/templates/post/reply/_macros.html:53
 msgid "Emoji reaction button."
-msgstr ""
+msgstr "表情符号反应按钮。"
 
 #: app/templates/search/results.html:14
 msgid "Search results for"
@@ -7463,9 +7422,8 @@ msgid "Results will have exactly that phrase in them."
 msgstr "结果将准确包含该短语。"
 
 #: app/templates/search/start.html:98
-#, fuzzy
 msgid "Trying to add a community or post from another instance?"
-msgstr "尝试从另一个实例添加社区或帖子？"
+msgstr "尝试添加来自其他实例的社区或帖子？"
 
 #: app/templates/search/start.html:99
 msgid ""
@@ -7497,29 +7455,24 @@ msgid "Tags in %(community)s"
 msgstr "%(community)s 内的标签"
 
 #: app/templates/tag/tag_cloud.html:27
-#, fuzzy
 msgid "Tag Cloud"
-msgstr "探索标签云"
+msgstr "标签云"
 
 #: app/templates/tag/tag_cloud.html:32
-#, fuzzy
 msgid "Tag List"
-msgstr "标签"
+msgstr "标签列表"
 
 #: app/templates/tag/tag_cloud.html:62
-#, fuzzy
 msgid "Tag"
 msgstr "标签"
 
 #: app/templates/tag/tag_cloud.html:65
-#, fuzzy
 msgid "Number of Posts"
 msgstr "帖子数量"
 
 #: app/templates/tag/tag_cloud.html:129
-#, fuzzy
 msgid "There are no tags to display"
-msgstr "此社区没有维基页面。"
+msgstr "没有可显示的标签"
 
 #: app/templates/tag/tags.html:14 app/templates/tag/tags_blocked.html:14
 #, python-format
@@ -7640,65 +7593,61 @@ msgstr "过滤器"
 
 #: app/templates/user/block_community.html:17
 #: app/templates/user/block_community.html:20 app/user/forms.py:268
-#, fuzzy
 msgid "Block community"
-msgstr "锁定评论"
+msgstr "屏蔽社区"
 
 #: app/templates/user/block_community.html:22
 msgid "Enter the name or ActivityPub ID of the community you want to block."
-msgstr ""
+msgstr "输入您想要屏蔽的社区名称或 ActivityPub ID。"
 
 #: app/templates/user/block_community.html:26
 msgid ""
 "Examples: community, !community@example.com, or "
 "https://example.com/c/community"
-msgstr ""
+msgstr "示例：community、!community@example.com 或 https://example.com/c/community"
 
 #: app/templates/user/block_domain.html:17
 #: app/templates/user/block_domain.html:20 app/user/forms.py:274
-#, fuzzy
 msgid "Block domain"
-msgstr "没有被屏蔽的域名"
+msgstr "屏蔽域名"
 
 #: app/templates/user/block_domain.html:22
 msgid ""
 "Enter the domain name you want to block. Posts linking to this domain "
 "will be hidden."
-msgstr ""
+msgstr "输入您想要屏蔽的域名。链接到此域的帖子将被隐藏。"
 
 #: app/templates/user/block_domain.html:26
 msgid "Example: example.com"
-msgstr ""
+msgstr "示例：example.com"
 
 #: app/templates/user/block_instance.html:17
 #: app/templates/user/block_instance.html:20 app/user/forms.py:280
-#, fuzzy
 msgid "Block instance"
-msgstr "已屏蔽实例"
+msgstr "屏蔽实例"
 
 #: app/templates/user/block_instance.html:22
 msgid ""
 "Enter the domain of the instance you want to block. All content from this"
 " instance will be hidden."
-msgstr ""
+msgstr "输入您想要屏蔽的实例域名。来自此实例的所有内容将被隐藏。"
 
 #: app/templates/user/block_instance.html:26
 msgid "Example: lemmy.example.com"
-msgstr ""
+msgstr "示例：lemmy.example.com"
 
 #: app/templates/user/block_user.html:17 app/templates/user/block_user.html:20
 #: app/user/forms.py:262
-#, fuzzy
 msgid "Block user"
-msgstr "已屏蔽服务器"
+msgstr "屏蔽用户"
 
 #: app/templates/user/block_user.html:22
 msgid "Enter the username or ActivityPub ID of the user you want to block."
-msgstr ""
+msgstr "输入您想要屏蔽的用户名或 ActivityPub ID。"
 
 #: app/templates/user/block_user.html:26
 msgid "Examples: username, @user@example.com, or https://example.com/u/username"
-msgstr ""
+msgstr "示例：username、@user@example.com 或 https://example.com/u/username"
 
 #: app/templates/user/bookmarks.html:26
 msgid ""
@@ -7824,15 +7773,16 @@ msgstr "删除 %(username)s"
 
 #: app/templates/user/delete_account.html:20
 #: app/templates/user/edit_profile.html:140
-#, fuzzy, python-format
+#, python-format
 msgid ""
 "You are about to permanently delete the account with the username "
 "\"<strong>%(username)s</strong>.\" This means your profile will "
 "disappear, pictures will be deleted. Text-based posts will stay but look "
 "like they are from someone named \"deleted\"."
 msgstr ""
-"您即将永久删除用户名为 \"<strong>%(username)s</strong>\" "
-"的账号。这意味着您的个人资料将消失，图片将被删除。基于文本的帖子将保留，但看起来是来自名为“已删除”的人。"
+"您即将永久删除用户名为“<strong>%(username)s</strong>”的账户。这意味着您的个人"
+"资料将消失，图片将被删除。基于文本的帖子将保留，但看起来像是来自名为“已删除”"
+"的用户。"
 
 #: app/templates/user/delete_account.html:21
 #: app/templates/user/edit_profile.html:143
@@ -7912,19 +7862,19 @@ msgstr "移除图片"
 
 #: app/templates/user/edit_profile.html:111
 msgid "Warning! - Unsubscribe from Everything"
-msgstr ""
+msgstr "警告！ - 退订所有内容"
 
 #: app/templates/user/edit_profile.html:118
 msgid ""
 "You are about to unsubscribe from every community and feed for which you "
 "are not an owner or moderator."
-msgstr ""
+msgstr "您即将从所有您不是所有者或版主的社区和订阅源中退订。"
 
 #: app/templates/user/edit_profile.html:121
 msgid ""
 "You are able to resubscribe like normal after this action, but this bulk "
 "action cannot be undone. Are you sure you want to continue?"
-msgstr ""
+msgstr "此操作后您仍可正常重新订阅，但此批量操作无法撤销。您确定要继续吗？"
 
 #: app/templates/user/edit_profile.html:133
 msgid "Danger Zone! - Account Deletion"
@@ -8100,9 +8050,8 @@ msgstr "当看到不喜内容时可添加新屏蔽 - 点击帖子或评论上的
 
 #: app/templates/user/filters.html:89 app/templates/user/filters.html:110
 #: app/templates/user/filters.html:131 app/templates/user/filters.html:152
-#, fuzzy
 msgid "Add block"
-msgstr "屏蔽"
+msgstr "添加屏蔽"
 
 #: app/templates/user/filters.html:100 app/templates/user/show_profile.html:117
 #, python-format
@@ -8478,7 +8427,7 @@ msgstr "关注社区的新帖子 "
 
 #: app/templates/user/notifs/12.html:8
 msgid "chose your answer to this question: "
-msgstr ""
+msgstr "请选择您对此问题的回答： "
 
 #: app/templates/user/notifs/2.html:11
 msgid "New Post in followed topic "
@@ -8799,9 +8748,8 @@ msgid "Yes, delete my account"
 msgstr "是的，删除我的账号"
 
 #: app/user/forms.py:138
-#, fuzzy
 msgid "Yes, unsubscribe from all communities I am not moderating"
-msgstr "您管理社区中的帖子"
+msgstr "是的，取消订阅所有我未担任版主的社区"
 
 #: app/user/forms.py:143
 msgid "Ban IP address"
@@ -8833,12 +8781,11 @@ msgstr "将帖子设为半透明"
 
 #: app/user/forms.py:187
 msgid "Label as AI"
-msgstr ""
+msgstr "标记为 AI"
 
 #: app/user/forms.py:195
-#, fuzzy
 msgid "Show AI-generated posts"
-msgstr "显示 NSFW 帖子"
+msgstr "显示 AI 生成的帖子"
 
 #: app/user/forms.py:199
 msgid "Hide posts in low quality communities"
@@ -8954,38 +8901,35 @@ msgstr "文件 10"
 
 #: app/user/forms.py:260
 msgid "Username or ActivityPub ID"
-msgstr ""
+msgstr "用户名或 ActivityPub ID"
 
 #: app/user/forms.py:261
 msgid "e.g. @user@example.com or user"
-msgstr ""
+msgstr "例如：@user@example.com 或 user"
 
 #: app/user/forms.py:266
 msgid "Community name or ActivityPub ID"
-msgstr ""
+msgstr "社区名称或 ActivityPub ID"
 
 #: app/user/forms.py:267
 msgid "e.g. !community@example.com or community"
-msgstr ""
+msgstr "例如：!community@example.com 或 community"
 
 #: app/user/forms.py:272
-#, fuzzy
 msgid "Domain name"
-msgstr "域名管理"
+msgstr "域名"
 
 #: app/user/forms.py:273
-#, fuzzy
 msgid "e.g. example.com"
-msgstr "示例"
+msgstr "例如：example.com"
 
 #: app/user/forms.py:278
-#, fuzzy
 msgid "Instance domain"
-msgstr "实例信息"
+msgstr "实例域名"
 
 #: app/user/forms.py:279
 msgid "e.g. lemmy.example.com"
-msgstr ""
+msgstr "例如：lemmy.example.com"
 
 #: app/user/routes.py:181
 msgid "This user has been deleted."
@@ -9047,9 +8991,8 @@ msgid "Spanish"
 msgstr "西班牙语"
 
 #: app/user/routes.py:555
-#, fuzzy
 msgid "Polish"
-msgstr "发布"
+msgstr "波兰语"
 
 #: app/user/routes.py:655
 #, python-format
@@ -9185,29 +9128,29 @@ msgid "Filter deleted."
 msgstr "过滤器已删除。"
 
 #: app/user/routes.py:1538
-#, fuzzy, python-format
+#, python-format
 msgid "User not found: %(username)s"
-msgstr "编辑 \"%(user_name)s\" 的备注"
+msgstr "未找到用户：%(username)s"
 
 #: app/user/routes.py:1548 app/user/routes.py:1593 app/user/routes.py:1627
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s is already blocked."
 msgstr "%(name)s 已被屏蔽。"
 
 #: app/user/routes.py:1587
-#, fuzzy, python-format
+#, python-format
 msgid "Community not found: %(name)s"
-msgstr "未找到社区。"
+msgstr "未找到社区：%(name)s"
 
 #: app/user/routes.py:1654
 #, python-format
 msgid "Instance not found: %(domain)s"
-msgstr ""
+msgstr "未找到实例：%(domain)s"
 
 #: app/user/routes.py:1662
-#, fuzzy, python-format
+#, python-format
 msgid "Error blocking instance: %(error)s"
-msgstr "没有被屏蔽的实例"
+msgstr "屏蔽实例时出错：%(error)s"
 
 #: app/user/routes.py:1733
 msgid "Comment bookmarks"
@@ -9246,9 +9189,9 @@ msgid "Reading history has been deleted"
 msgstr "阅读历史已被删除"
 
 #: app/user/routes.py:1996
-#, fuzzy, python-format
+#, python-format
 msgid "That person could not be retrieved or is banned from %(site)s."
-msgstr "无法检索该用户或该用户已被封禁自 %(site)s。"
+msgstr "无法检索该用户，或者该用户已被 %(site)s 封禁。"
 
 #: app/user/routes.py:2006
 msgid "Searching for remote people requires login"
@@ -9469,4 +9412,3 @@ msgstr "您的捐款已被取消。"
 
 #~ msgid "You cannot purge yourself."
 #~ msgstr "您无法清除自己。"
-

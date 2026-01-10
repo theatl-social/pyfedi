@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2025-12-24 10:51+1300\n"
-"PO-Revision-Date: 2025-12-23 21:49+0000\n"
+"PO-Revision-Date: 2025-12-26 03:47+0000\n"
 "Last-Translator: 鴉河雛 <takeuchinomori@gmail.com>\n"
+"Language-Team: Japanese <http://translate.piefed.social/projects/piefed/"
+"main-web-app/ja/>\n"
 "Language: ja\n"
-"Language-Team: Japanese <http://translate.piefed.social/projects/piefed"
-"/main-web-app/ja/>\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=1; plural=0;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -609,9 +609,8 @@ msgid "NSFW community"
 msgstr "NSFW コミュニティ"
 
 #: app/admin/forms.py:128
-#, fuzzy
 msgid "Only AI-generated content"
-msgstr "削除された投稿"
+msgstr "AI生成コンテンツのみ"
 
 #: app/admin/forms.py:129
 msgid "Banned - no new posts accepted"
@@ -970,9 +969,8 @@ msgid "Flag their posts as from a bot"
 msgstr "BOTからの投稿としてマーク"
 
 #: app/admin/forms.py:290
-#, fuzzy
 msgid "Suppress cross-posts"
-msgstr "クロスポストを表示"
+msgstr "おすすめのクロスポスト"
 
 #: app/admin/forms.py:293
 msgid "Ban posts"
@@ -1066,7 +1064,7 @@ msgstr "URL"
 
 #: app/admin/forms.py:358
 msgid "e.g. https://..."
-msgstr ""
+msgstr "例：https://..."
 
 #: app/admin/forms.py:359 app/templates/admin/emoji.html:27
 #: app/templates/user/filters.html:48
@@ -1074,9 +1072,8 @@ msgid "Keywords"
 msgstr "キーワード"
 
 #: app/admin/forms.py:360 app/templates/admin/emoji.html:26
-#, fuzzy
 msgid "Category"
-msgstr "作成者"
+msgstr "カテゴリー"
 
 #: app/admin/routes.py:221 app/admin/routes.py:253 app/admin/routes.py:291
 #: app/feed/routes.py:238
@@ -1410,29 +1407,24 @@ msgstr "ページを削除しました。"
 
 #: app/admin/routes.py:2175 app/templates/admin/_nav.html:25
 #: app/templates/admin/_tabbed_nav.html:27 app/templates/admin/emoji.html:15
-#, fuzzy
 msgid "Emoji"
-msgstr "メール"
+msgstr "絵文字"
 
 #: app/admin/routes.py:2188 app/admin/routes.py:2207
-#, fuzzy
 msgid "Emoji saved."
-msgstr "ページを保存しました。"
+msgstr "絵文字を保存しました。"
 
 #: app/admin/routes.py:2191
-#, fuzzy
 msgid "Add Emoji"
-msgstr "トピックを追加"
+msgstr "絵文字を追加"
 
 #: app/admin/routes.py:2210
-#, fuzzy
 msgid "Edit Emoji"
-msgstr "トピックを編集"
+msgstr "絵文字を編集"
 
 #: app/admin/routes.py:2220
-#, fuzzy
 msgid "Emoji deleted."
-msgstr "トピックを削除しました"
+msgstr "絵文字を削除しました。"
 
 #: app/admin/util.py:96
 msgid "No recipients"
@@ -1925,16 +1917,15 @@ msgstr "既定の投稿タイプ"
 
 #: app/community/forms.py:113
 msgid "Friendly urls"
-msgstr ""
+msgstr "フレンドリーURL"
 
 #: app/community/forms.py:114
 msgid "Post ids only"
-msgstr ""
+msgstr "ポストIDのみ"
 
 #: app/community/forms.py:115
-#, fuzzy
 msgid "Post url structure to use in this community"
-msgstr "まだこのコミュニティに投稿はありません。"
+msgstr "このコミュニティで使用するURLの形式"
 
 #: app/community/forms.py:123 app/community/forms.py:177 app/post/forms.py:15
 msgid "Body"
@@ -2056,9 +2047,8 @@ msgstr "グロ・ショッキング"
 
 #: app/community/forms.py:184 app/post/forms.py:84
 #: app/templates/post/_flair_choices.html:14
-#, fuzzy
 msgid "AI generated"
-msgstr "連合済み"
+msgstr "AI生成"
 
 #: app/community/forms.py:185 app/post/forms.py:17
 #: app/templates/post/_post_notification_toggle.html:5
@@ -2379,9 +2369,8 @@ msgid "Blur images and thumbnails for posts with this flair"
 msgstr "このフレアが付いた投稿の画像とサムネイルをぼかす"
 
 #: app/community/forms.py:554
-#, fuzzy
 msgid "Rate"
-msgstr "作成"
+msgstr "レート"
 
 #: app/community/routes.py:83
 msgid "Community creation has been restricted to admins on this site"
@@ -2732,13 +2721,13 @@ msgid "Your rating has been submitted."
 msgstr "変更が保存されました。"
 
 #: app/community/routes.py:2581 app/templates/community/ratings.html:24
-#, fuzzy, python-format
+#, python-format
 msgid "%(community_name)s ratings"
-msgstr " ：%(community_name)s"
+msgstr "%(community_name)s のレート"
 
 #: app/community/routes.py:2590
 msgid "Please try again tomorrow"
-msgstr ""
+msgstr "明日もう一度お試しください"
 
 #: app/community/routes.py:2590
 msgid "You can rate a community once you’ve been part of it for a while."
@@ -2996,12 +2985,11 @@ msgstr "無効。"
 
 #: app/post/forms.py:109
 msgid "Mastodon instance domain name"
-msgstr ""
+msgstr "Mastodonインスタンスドメイン名"
 
 #: app/post/forms.py:110
-#, fuzzy
 msgid "Share"
-msgstr "保存"
+msgstr "共有"
 
 #: app/post/routes.py:77 app/post/routes.py:419 app/post/routes.py:633
 msgid ""
@@ -3038,9 +3026,8 @@ msgid "Embed code for %(post_title)s"
 msgstr "%(post_title)sの埋め込みコード"
 
 #: app/post/routes.py:563
-#, fuzzy
 msgid "Choose an emoji"
-msgstr "トピックを選択"
+msgstr "絵文字を選択"
 
 #: app/post/routes.py:615
 msgid "Vote has been cast."
@@ -3070,7 +3057,7 @@ msgstr "このコメントには返信できません。"
 
 #: app/post/routes.py:934
 msgid "Something went wrong and a post could not be found."
-msgstr ""
+msgstr "問題が発生したため投稿が見つかりませんでした。"
 
 #: app/post/routes.py:1018 app/shared/reply.py:217 app/user/routes.py:336
 #: app/user/routes.py:588 app/user/routes.py:705 app/user/routes.py:1415
@@ -3164,14 +3151,14 @@ msgid "%(name)s has been un-stickied."
 msgstr "%(name)s のピン留めを解除しました。"
 
 #: app/post/routes.py:1483
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been hidden."
-msgstr "%(name)s をピン留めしました。"
+msgstr "%(name)s を非表示にしました。"
 
 #: app/post/routes.py:1485
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been un-hidden."
-msgstr "%(name)s のピン留めを解除しました。"
+msgstr "%(name)s の非表示を解除しました。"
 
 #: app/post/routes.py:1560
 #, python-format
@@ -3199,7 +3186,7 @@ msgstr "コメントを通報する"
 #: app/post/routes.py:1716 app/templates/post/_post_reply_source_swap.html:7
 #: app/templates/post/_post_source_swap.html:7
 msgid "Something went wrong and a comment could not be found."
-msgstr ""
+msgstr "問題が発生したためコメントが見つかりませんでした。"
 
 #: app/post/routes.py:1762
 msgid "Edit comment"
@@ -3267,9 +3254,8 @@ msgid "Done"
 msgstr "寄付"
 
 #: app/post/routes.py:2240 app/templates/post/post_options.html:194
-#, fuzzy
 msgid "Share on Mastodon"
-msgstr "内容(Markdown)"
+msgstr "Mastodonに共有"
 
 #: app/search/routes.py:158
 #, python-format
@@ -4101,7 +4087,7 @@ msgstr "デフォルト：公開"
 
 #: app/templates/base.html:319
 msgid "React with an emoji"
-msgstr ""
+msgstr "絵文字リアクション"
 
 #: app/templates/communities_menu.html:7
 msgid "Filter communities..."
@@ -4974,9 +4960,8 @@ msgid "Edit %(user_name)s (%(display_name)s)"
 msgstr "%(user_name)s を編集 (%(display_name)s)"
 
 #: app/templates/admin/emoji.html:16
-#, fuzzy
 msgid "Add new emoji"
-msgstr "新しいユーザーを追加する"
+msgstr "新しい絵文字を追加"
 
 #: app/templates/admin/emoji.html:24
 #, fuzzy
@@ -4991,9 +4976,8 @@ msgid "Instance"
 msgstr "インスタンス"
 
 #: app/templates/admin/emoji.html:49
-#, fuzzy
 msgid "No emoji have been created yet."
-msgstr "ページはまだ作成されていません。"
+msgstr "まだ絵文字が追加されていません。"
 
 #: app/templates/admin/federation.html:22
 msgid "Import / Export Bans"
@@ -6219,7 +6203,7 @@ msgstr "履歴を表示"
 
 #: app/templates/community/community_wiki_list.html:64
 msgid "Add a link to the wiki in the community description."
-msgstr "コミュニティの説明にWikiへのリンクを追加する。"
+msgstr "コミュニティの説明にWikiへのリンクを追加してください。"
 
 #: app/templates/community/community_wiki_list.html:66
 msgid "There are no wiki pages in this community."
@@ -7394,7 +7378,7 @@ msgstr "記事を読む"
 #: app/templates/post/reply/_macros.html:42
 #: app/templates/post/reply/_macros.html:53
 msgid "Emoji reaction button."
-msgstr ""
+msgstr "絵文字リアクションボタン。"
 
 #: app/templates/search/results.html:14
 msgid "Search results for"
@@ -9677,4 +9661,3 @@ msgstr "寄付がキャンセルされました。"
 
 #~ msgid "You cannot purge yourself."
 #~ msgstr "自分自身を削除することはできません。"
-
