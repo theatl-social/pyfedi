@@ -2999,5 +2999,13 @@ form {
     }
 }
 
+[data-bs-theme="dark"] .nav-link:focus-visible {
+  box-shadow: 0 0 0 .25rem rgba(253,253,253,.5);
+}
+
+[data-bs-theme="dark"] .skip-link {
+  color: black;
+}
+
 @import "scss/compact";
 @import "scss/print";
