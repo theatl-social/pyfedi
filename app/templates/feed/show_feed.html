@@ -12,7 +12,7 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
       {% if feed.header_image() != '' and not low_bandwidth -%}
         <div class="community_header" style="background-image: url({{ feed.header_image() }});">
-          <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+          <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
             <ol class="breadcrumb">
               <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
               <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
@@ -39,7 +39,7 @@
         {% endif %}
       {% elif feed.icon_id and not low_bandwidth -%}
         <div class="row mb-3">
-          <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+          <nav class="mb-3"  id="breadcrumb_nav" title="Navigation">
             <ol class="breadcrumb">
               <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
               <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
@@ -69,7 +69,7 @@
           </div>
         </div>
       {% else -%}
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+        <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/feeds">{{ _('Feeds') }}</a></li>
@@ -119,7 +119,7 @@
             </div>
         {% endif %}
 
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+        <nav aria-label="{{ _('Pagination') }} class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
                         <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}

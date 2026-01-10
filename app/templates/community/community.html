@@ -13,7 +13,7 @@
     <main class="col-12 {{ 'col-lg-10' if post_layout == 'masonry_wide' else 'col-lg-8' }} position-relative main_pane {{ 'border border-warning bg-body-secondary' if is_dead }}">
         {% if community.header_image() != '' and not low_bandwidth -%}
             <div class="community_header" style="background-image: url({{ community.header_image() }});">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+                <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
                     <ol class="breadcrumb">
                         {% for breadcrumb in breadcrumbs -%}
                             <li class="breadcrumb-item">
@@ -26,7 +26,7 @@
                                 {% endif -%}
                             </li>
                         {% endfor -%}
-                        <li class="breadcrumb-item active">
+                        <li class="breadcrumb-item active" aria-current="page">
                             {{ (community.title + '@' + community.ap_domain)|shorten }}
                         </li>
                     </ol>
@@ -48,7 +48,7 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% elif community.icon_id and not low_bandwidth -%}
             <div class="row mb-3">
-                <nav class="mb-3" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+                <nav class="mb-3"  id="breadcrumb_nav" title="Navigation">
                     <ol class="breadcrumb">
                         {% for breadcrumb in breadcrumbs -%}
                             <li class="breadcrumb-item">
@@ -61,7 +61,7 @@
                                 {% endif -%}
                             </li>
                         {% endfor -%}
-                        <li class="breadcrumb-item active">
+                        <li class="breadcrumb-item active" aria-current="page">
                             {{ (community.title + '@' + community.ap_domain)|shorten }}
                         </li>
                     </ol>
@@ -86,7 +86,7 @@
                 </div>
             </div>
         {% else -%}
-            <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+            <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
                 <ol class="breadcrumb">
                     {% for breadcrumb in breadcrumbs -%}
                         <li class="breadcrumb-item">
@@ -99,7 +99,7 @@
                             {% endif -%}
                         </li>
                     {% endfor -%}
-                    <li class="breadcrumb-item active">
+                    <li class="breadcrumb-item active" aria-current="page">
                         {{ (community.title + '@' + community.ap_domain)|shorten }}
                     </li>
                 </ol>
@@ -170,7 +170,7 @@
             {% endif -%}
         {% endif -%}
 
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+        <nav aria-label="{{ _('Pagination') }} class="mt-4" role="navigation">
             {% if prev_url -%}
                 <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
                     <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}

@@ -11,7 +11,7 @@
     <option value="/home/{{ sort }}/all" aria-label="{{ _('No filter') }}" {{ 'selected'  if view_filter == 'all' }}>{{ _('All') }}</option>
   </select>
 </div>
-<div class="d-none d-xl-block view_filter btn-group mt-1 mb-2" aria-label="{{ _('Post filters: ') }}">
+<div class="d-none d-xl-block view_filter btn-group mt-1 mb-2">
   {% if not current_user.is_anonymous -%}
     {% if enable_mod_filter -%}
       <a href="/home/{{ sort }}/moderating" class="btn {{ 'btn-primary' if view_filter == 'moderating' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from communities you moderate') }}">

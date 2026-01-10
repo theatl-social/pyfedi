@@ -10,11 +10,11 @@
 
     <div class="row">
         <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav class="mb-2" aria-label="breadcrumb" id="breadcrumb_nav" title="Navigation">
+            <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
-                    <li class="breadcrumb-item active">{{ _('Connect OAuth') }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Connect OAuth') }}</li>
                 </ol>
             </nav>
             <h1>{{ _('Connect OAuth') }}</h1>

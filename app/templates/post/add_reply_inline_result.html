@@ -12,7 +12,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+        <a href="/u/{{ user.link() }}" class="author_link" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" decoding="async" referrerpolicy="no-referrer" />
             {% endif -%}

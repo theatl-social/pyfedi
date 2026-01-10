@@ -1626,7 +1626,7 @@ def awaken_dormant_instance(instance):
             db.session.commit()
 
 
-def shorten_number(number):
+def shorten_number(number) -> str:
     if number < 1000:
         return str(number)
     elif number < 1000000:

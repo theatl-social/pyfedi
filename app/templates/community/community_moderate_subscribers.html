@@ -9,12 +9,12 @@
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
-        <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+        <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
           <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
             <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
             <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
-            <li class="breadcrumb-item active">{{ _('Moderation') }}</li>
+            <li class="breadcrumb-item active" aria-current="page">{{ _('Moderation') }}</li>
           </ol>
         </nav>
         {% include "community/_community_moderation_nav.html" %}
@@ -106,7 +106,7 @@
                 {% endfor %}
             </table>
         </div>
-        <nav aria-label="Pagination" class="mt-4" role="navigation">
+        <nav aria-label="{{ _('Pagination') }} class="mt-4" role="navigation">
             {% if prev_url %}
                 <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
                     <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}

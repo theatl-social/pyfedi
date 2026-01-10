@@ -9,7 +9,7 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
+        <a href="/u/{{ user.link() }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" />
             {% endif -%}
@@ -51,7 +51,7 @@
 
 {% macro render_communityname(community, add_domain=True, low_bandwidth=False, collapsed=False) -%}
     <span class="render_community">
-        <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
+        <a href="/c/{{ community.link() }}">
             {% if community.icon_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
             {% endif -%}
@@ -62,7 +62,7 @@
 
 {% macro render_feedname(feed, add_domain=True, low_bandwidth=False, collapsed=False) -%}
     <span class="render_feed">
-        <a href="/f/{{ feed.link() }}" aria-label="{{ _('Go to feed %(name)s', name=feed.title) }}">
+        <a href="/f/{{ feed.link() }}">
             {% if feed.icon_id and not low_bandwidth and not collapsed -%}
                 <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
             {% endif -%}
