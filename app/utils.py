@@ -590,8 +590,6 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
         markdown_text = handle_lemmy_autocomplete(markdown_text)
 
-        markdown_text = markdown_text.replace('þ', 'th')
-
         try:
             md = markdown2.Markdown(extras={'middle-word-em': False,
                                             'tables': True,
