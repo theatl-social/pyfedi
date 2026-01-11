@@ -35,7 +35,7 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_STATUS_PUBLISHED
+    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO
 
 
 def utcnow(naive=True):
@@ -2105,6 +2105,12 @@ class Post(db.Model):
         # Handle file deletions from disk before cascade deletes the File records
         if self.image_id and self.image:
             self.image.delete_from_disk(purge_cdn=False)
+        if self.type == POST_TYPE_VIDEO and _store_files_in_s3() and self.url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}'):
+            from app.shared.tasks.maintenance import delete_from_s3
+            if current_app.debug:
+                delete_from_s3([self.url])
+            else:
+                delete_from_s3.delay([self.url])
 
         for reply in self.replies:
             if reply.image_id and reply.image:
