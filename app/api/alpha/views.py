@@ -303,7 +303,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 # 'user' param can be anyone (including the logged in user), 'user_id' param belongs to the user making the request
 def user_view(user: User | int, variant, stub=False, user_id=None, flair_community_id=None) -> dict:
     if isinstance(user, int):
-        user = User.query.filter_by(id=user).one()
+        user = User.query.get(user)
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
