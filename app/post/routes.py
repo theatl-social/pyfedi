@@ -653,9 +653,13 @@ def continue_discussion(post_id, comment_id):
 
     # Voting history
     if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
         recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
         recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
     else:
+        recently_upvoted = []
+        recently_downvoted = []
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
@@ -691,6 +695,7 @@ def continue_discussion(post_id, comment_id):
                                event=event,
                                is_moderator=is_moderator, comment=comment, replies=replies,
                                markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+                               recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                recently_upvoted_replies=recently_upvoted_replies,
                                recently_downvoted_replies=recently_downvoted_replies,
                                community=post.community, parent_id=parent_id,
