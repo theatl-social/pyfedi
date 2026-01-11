@@ -199,7 +199,12 @@ def send_post(post_id, edit=False, session=None):
       'sensitive': post.nsfw or post.nsfl,
       'nsfl': post.nsfl,
       'genAI': post.ai_generated,
-      'stickied': post.sticky
+      'stickied': post.sticky,
+      'interactionPolicy': {
+        'canQuote': {
+          'automaticApproval': ['https://www.w3.org/ns/activitystreams#Public']
+        }
+      },
     }
     if post.type != POST_TYPE_POLL:
         page['name'] = post.title
