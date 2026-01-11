@@ -36,7 +36,7 @@
                     {% include "admin/reports/" + str(report.type_text()).lower() + "_report.html" %}
                 {% endfor %}
             </table>
-            <nav aria-label="{{ _('Pagination') }} class="mt-4" role="navigation">
+            <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary">
                         <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
