@@ -141,7 +141,6 @@ def post_to_page(post: Post):
         "name": post.title,
         "cc": [],
         "content": post.body_html if post.body_html else '',
-        "summary": post.body_html if post.body_html else '',
         "mediaType": "text/html",
         "source": {"content": post.body if post.body else '', "mediaType": "text/markdown"},
         "attachment": [],
