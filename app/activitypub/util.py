@@ -18,7 +18,7 @@ from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
 from furl import furl
-from sqlalchemy import text, Integer
+from sqlalchemy import text, Integer, update
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
@@ -2572,6 +2572,7 @@ def notify_about_post_task(post_id):
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
+    from app import redis_client
     if parent_reply is None:  # This happens when a new_reply is a top-level comment, not a comment on a comment
         send_notifs_to = notification_subscribers(new_reply.post.id, NOTIF_POST)
         post = Post.query.get(new_reply.post.id)
@@ -2593,11 +2594,26 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                                                 notif_type=NOTIF_POST,
                                                 subtype='top_level_comment_on_followed_post',
                                                 targets=targets_data)
-                db.session.add(new_notification)
-                user = User.query.get(notify_id)
-                user.unread_notifications += 1
-                db.session.commit()
+                with redis_client.lock(f"lock:user:{notify_id}", timeout=10, blocking_timeout=6):
+                    db.session.add(new_notification)
+                    user = db.session.query(User).get(notify_id)
+                    user.unread_notifications += 1
+                    db.session.commit()
     else:
+        # Set notifications about parent_reply to read
+        db.session.execute(
+            update(Notification)
+            .where(Notification.user_id == new_reply.user_id)
+            .where(Notification.targets['comment_id'].as_string() == str(parent_reply.id))
+            .values(read=True)
+        )
+        db.session.commit()
+
+        with redis_client.lock(f"lock:user:{new_reply.user_id}", timeout=10, blocking_timeout=6):
+            user = db.session.query(User).get(new_reply.user_id)
+            user.unread_notifications = Notification.query.filter_by(user_id=user.id, read=False).count()
+            db.session.commit()
+
         # Send notifications based on subscriptions
         send_notifs_to = set(notification_subscribers(parent_reply.id, NOTIF_REPLY))
         for notify_id in send_notifs_to:
@@ -2621,9 +2637,10 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                         subtype='new_reply_on_followed_comment',
                         targets=targets_data)
                 db.session.add(new_notification)
-                user = User.query.get(notify_id)
-                user.unread_notifications += 1
-                db.session.commit()
+                with redis_client.lock(f"lock:user:{notify_id}", timeout=10, blocking_timeout=6):
+                    user = User.query.get(notify_id)
+                    user.unread_notifications += 1
+                    db.session.commit()
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
