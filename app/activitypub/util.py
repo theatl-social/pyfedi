@@ -157,6 +157,11 @@ def post_to_page(post: Post):
             "identifier": post.language_code(),
             "name": post.language_name()
         },
+        'interactionPolicy': {
+            'canQuote': {
+                'automaticApproval': ['https://www.w3.org/ns/activitystreams#Public']
+            }
+        },
     }
     if post.language_id:
         activity_data['contentMap'] = {post.language_code(): activity_data['content']}
@@ -247,7 +252,12 @@ def comment_model_to_json(reply: PostReply) -> dict:
         },
         'flair': reply.author.community_flair(reply.community_id),
         'repliesEnabled': reply.replies_enabled,
-        'answer': reply.answer
+        'answer': reply.answer,
+        'interactionPolicy': {
+            'canQuote': {
+                'automaticApproval': ['https://www.w3.org/ns/activitystreams#Public']
+            }
+        },
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)
