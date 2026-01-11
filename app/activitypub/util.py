@@ -1128,8 +1128,14 @@ def actor_json_to_model(activity_json, address, server):
                 avatar = File(source_url=icon_entry)
                 user.avatar = avatar
                 db.session.add(avatar)
-        if 'image' in activity_json and activity_json['image'] is not None and 'url' in activity_json['image']:
+        if 'image' in activity_json and activity_json['image'] is not None and isinstance(dict, activity_json['image']) and 'url' in activity_json['image']:
             cover = File(source_url=activity_json['image']['url'])
+            user.cover = cover
+            db.session.add(cover)
+        elif 'image' in activity_json and activity_json['image'] is not None \
+                and isinstance(list, activity_json['image']) \
+                and len(activity_json['image']) > 0:                    # bridgy-fed
+            cover = File(source_url=activity_json['image'][0]['url'])
             user.cover = cover
             db.session.add(cover)
         if 'attachment' in activity_json and isinstance(activity_json['attachment'], list):
