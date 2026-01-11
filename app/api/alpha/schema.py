@@ -979,6 +979,22 @@ class UserSetNoteRequest(DefaultSchema):
                          metadata={"description": "Pass a value of null to remove existing note"})
 
 
+class UserBanRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    ban_ip_address = fields.Boolean(required=True, allow_none=True)
+    purge_content = fields.Boolean(required=True, allow_none=True)
+    reason = fields.String(required=True, allow_none=True, validate=validate.Length(max=50),
+                           metadata={"description": "Note to add to modlog"})
+
+
+class UserUnbanRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+
+
+class UserBanResponse(DefaultSchema):
+    person_view = fields.Nested(PersonView)
+
+
 class UserSetNoteResponse(UserSetFlairResponse):
     pass
 

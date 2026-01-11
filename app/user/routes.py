@@ -27,7 +27,7 @@ from app.models import Post, Community, CommunityMember, User, PostReply, PostVo
 from app.shared.site import block_remote_instance
 from app.shared.tasks import task_selector
 from app.shared.upload import process_file_delete, process_upload
-from app.shared.user import subscribe_user
+from app.shared.user import subscribe_user, ban_user, unban_user
 from app.user import bp
 from app.user.forms import ProfileForm, SettingsForm, DeleteAccountForm, ReportUserForm, \
     FilterForm, KeywordFilterEditForm, RemoteFollowForm, ImportExportForm, UserNoteForm, BanUserForm, DeleteFileForm, \
@@ -732,53 +732,8 @@ def ban_profile(actor):
             return redirect(goto)
         else:
             if form.validate_on_submit():
-                user.banned = True
-                db.session.commit()
-
-                # Purge content
-                if form.purge.data:
-                    if user.is_instance_admin():
-                        flash(_('Purged user was a remote instance admin.'), 'warning')
-                    if user.is_admin() or user.is_staff():
-                        flash(_('Purged user with role permissions.'), 'warning')
-
-                    # federate deletion
-                    if user.is_local():
-                        user.deleted_by = current_user.id
-                        purge_user_then_delete(user.id, flush=form.flush.data)
-                        flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
-                              actor=actor))
-                    else:
-                        user.delete_dependencies()
-                        user.purge_content(flush=form.flush.data)
-                        from app import redis_client
-                        with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
-                            user = User.query.get(user.id)
-                            user.deleted = True
-                            user.deleted_by = current_user.id
-                            db.session.commit()
-                        flash(_('%(actor)s has been banned, deleted and all their content deleted.', actor=actor))
-
-                    add_to_modlog('delete_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
-                else:
-                    add_to_modlog('ban_user', actor=current_user, target_user=user, reason=form.reason.data, link_text=user.display_name(), link=user.link())
-
-                    if user.is_instance_admin():
-                        flash(_('Banned user was a remote instance admin.'), 'warning')
-                    if user.is_admin() or user.is_staff():
-                        flash(_('Banned user with role permissions.'), 'warning')
-                    else:
-                        flash(_('%(actor)s has been banned.', actor=actor))
-
-                # IP address ban
-                if form.ip_address.data and user.ip_address:
-                    existing_ip_ban = IpBan.query.filter(IpBan.ip_address == user.ip_address).first()
-                    if not existing_ip_ban:
-                        db.session.add(IpBan(ip_address=user.ip_address, notes=form.reason.data))
-                        db.session.commit()
-
-                task_selector('ban_from_site', user_id=user.id, mod_id=current_user.id, expiry=None, reason=form.reason.data)
-
+                form.person_id = user.id
+                ban_user(form, SRC_WEB, None)
                 goto = request.args.get('redirect') if 'redirect' in request.args else f'/u/{actor}'
                 return redirect(goto)
 
@@ -812,15 +767,7 @@ def unban_profile(actor):
         if user.id == current_user.id:
             flash(_('You cannot unban yourself.'), 'error')
         else:
-            user.banned = False
-            user.deleted = False
-            db.session.commit()
-
-            task_selector('unban_from_site', user_id=user.id, mod_id=current_user.id, expiry=None,
-                          reason='')
-
-            add_to_modlog('unban_user', actor=current_user, target_user=user, link_text=user.display_name(), link=user.link())
-
+            unban_user({'person_id': user.id}, SRC_WEB, None)
             flash(_('%(actor)s has been unbanned.', actor=actor))
     else:
         abort(401)
