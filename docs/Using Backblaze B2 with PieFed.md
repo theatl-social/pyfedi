@@ -51,7 +51,11 @@
 
 ## Step 3: Add a CNAME record pointing to the friendly name for your bucket (CF Only)
 
-If you are using CloudFlare, add a new CNAME record with these details:
+With Cloudflare, we can use our custom domain.
+Backblaze doesn't natively support custom domains, so we work around by using Cloudflare settings:
+
+First, we need a new **CNAME** record with these details under DNS settings on Cloudflare:
+
 - **Name:** Whatever prefix you want to use for your media. We'll use `piefed-media`
 - **Target:** The part of the Friendly URL you copied. In this case, that's `f004.backblazeb2.com`
 - **Proxy status:** Enabled (orange)
@@ -62,7 +66,7 @@ If you are using CloudFlare, add a new CNAME record with these details:
 
 ## Step 4: Set rewrite rules in your Cloudflare Rules (CF Only)
 
-We're using Cloudflare in our example. If you are using a different DNS provider, check their documentation.
+Next, add a rewrite the URL passed to Backblaze:
 
 1. From the left-side menu, click on **Overview** under **Rules**
 
@@ -194,7 +198,10 @@ flask config_check
 
 2. Move files to S3
 
-You can kick off an immediate push of images to your S3 location. **This can take a long time**
+You can kick off an immediate push of images to your S3 location.
+
+**This can take a long time**
+
 Please use a disconnectable terminal such as tmux or screen for this.
 On Baremetal:
 
