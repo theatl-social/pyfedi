@@ -1,6 +1,6 @@
 # Overview
 - [Step 1: Create a new public Bucket in Backblaze](#step_1)
-- [Step 2: Get the Friendly Name for your Bucket](#step_2)
+- [Step 2: Get the Public Name for your Bucket](#step_2)
 - [Step 3: Add a CNAME record pointing to the friendly name for your bucket (Cloudflare Only)](#step_3)
 - [Step 4: Set rewrite rules in your Cloudflare Rules (Cloudflare Only)](#step_4)
 - [Step 5: Get your access credentials](#step_5)
@@ -45,7 +45,9 @@
 
 ![File overview](backblaze_b2_process_images/upload_overview.png)
 
-4. Copy the part of the Friendly URL between the `https://` and the next `/`. In this case, that's `f004.backblazeb2.com`
+4. If you are using Cloudflare, get the part of the Friendly URL between the `https://` and the next `/`. In this case, that's `f004.backblazeb2.com`
+
+5. If you are not using Cloudflare, get the S3 URL between the `https://` and leave off the trailing `/pifed.png`. For us, that's `your-super-unique-bucket-name.s3.us-west-004.backblazeb2.com`
 
 <a id="step_3"></a>
 
