@@ -399,6 +399,8 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     # 2. Invalid/non-HTML content in angle brackets - escape them
     def escape_non_html_brackets(match):
         tag_content = match.group(1).strip().lower()
+        if tag_content == '':
+            return f"&lt;{match.group(1)}&gt;"
         # Handle closing tags by removing the leading slash before extracting tag name
         if tag_content.startswith('/'):
             tag_name = tag_content[1:].split()[0]
