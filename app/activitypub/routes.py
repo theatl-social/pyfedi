@@ -1616,14 +1616,15 @@ def process_inbox_request(request_json, store_ap_json):
                         mod = user
                         post = None
                         post_reply = None
+                        target_ap_id = core_activity['object']['object']
                         if '/post/' in core_activity['object']:
-                            post = Post.get_by_ap_id(core_activity['object'])
+                            post = Post.get_by_ap_id(target_ap_id)
                         elif '/comment/' in core_activity['object']:
-                            post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                            post_reply = PostReply.get_by_ap_id(target_ap_id)
                         else:
-                            post = Post.get_by_ap_id(core_activity['object'])
+                            post = Post.get_by_ap_id(target_ap_id)
                             if post is None:
-                                post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                                post_reply = PostReply.get_by_ap_id(target_ap_id)
                         reason = core_activity['summary'] if 'summary' in core_activity else ''
                         if post:
                             if post.community.is_moderator(mod) or post.community.is_instance_admin(mod):
@@ -1705,7 +1706,11 @@ def process_inbox_request(request_json, store_ap_json):
                         return
 
                     if core_activity['object']['type'] == 'ChooseAnswer':
-                        post_reply = PostReply.get_by_ap_id(core_activity['object'])
+                        if isinstance(core_activity['object'], str):
+                            target_ap_id = core_activity['object']
+                        else:
+                            target_ap_id = core_activity['object']['object']
+                        post_reply = PostReply.get_by_ap_id(target_ap_id)
                         if post_reply:
                             with redis_client.lock(f"lock:post_reply:{post_reply.id}", timeout=10, blocking_timeout=6):
                                 post_reply.answer = False
