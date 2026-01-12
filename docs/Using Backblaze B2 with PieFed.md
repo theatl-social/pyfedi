@@ -152,7 +152,7 @@ Next, add a rewrite the URL passed to Backblaze:
 | **S3_REGION**        | The part of the **Endpoint** between `s3.` and `.backblazeb2`                           |
 | **S3_PUBLIC_URL**    | If CF, the CNAME you created above. Our's was `piefed-media.your.domain.here`           |
 | **-------------**    |                --------------------OR-----------------                                  |
-| **S3_PUBLIC_URL**    | No CF, **S3 URL** from above `your-super-unique-bucket-name.s3.us-west-004.backblazeb2.com` |
+| **S3_PUBLIC_URL**    | No CF, **S3 URL** from above `your-super-unique-bucket-name.s3.us-west-004.backblazeb2.com` , minus the piefed.png |
 | **S3_ACCESS_KEY**    | Your **keyID**                                                                          |
 | **S3_ACCESS_SECRET** | Your **applicationKey**                                                                 |
 
@@ -203,6 +203,7 @@ You can kick off an immediate push of images to your S3 location.
 **This can take a long time**
 
 Please use a disconnectable terminal such as tmux or screen for this.
+
 On Baremetal:
 
 ```
