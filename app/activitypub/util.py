@@ -688,13 +688,23 @@ def refresh_user_profile_task(user_id):
                                 session.add(avatar)
                                 avatar_changed = True
                     if 'image' in activity_json and activity_json['image'] is not None:
-                        if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
-                            user.cover.delete_from_disk()
-                        if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
-                            cover = File(source_url=activity_json['image']['url'])
-                            user.cover = cover
-                            session.add(cover)
-                            cover_changed = True
+                        if isinstance(activity_json['image'], dict):
+                            if user.cover_id and activity_json['image']['url'] != user.cover.source_url:
+                                user.cover.delete_from_disk()
+                            if not user.cover_id or (user.cover_id and activity_json['image']['url'] != user.cover.source_url):
+                                cover = File(source_url=activity_json['image']['url'])
+                                user.cover = cover
+                                session.add(cover)
+                                cover_changed = True
+                        elif isinstance(activity_json['image'], list):
+                            if user.cover_id and activity_json['image'][0]['url'] != user.cover.source_url:
+                                user.cover.delete_from_disk()
+                            if not user.cover_id or (user.cover_id and activity_json['image'][0]['url'] != user.cover.source_url):
+                                cover = File(source_url=activity_json['image'][0]['url'])
+                                user.cover = cover
+                                session.add(cover)
+                                cover_changed = True
+
                     session.commit()
                     if user.avatar_id and avatar_changed and get_setting('cache_remote_images_locally', True):
                         make_image_sizes(user.avatar_id, 40, 250, 'users')
@@ -1133,7 +1143,7 @@ def actor_json_to_model(activity_json, address, server):
             user.cover = cover
             db.session.add(cover)
         elif 'image' in activity_json and activity_json['image'] is not None \
-                and isinstance(list, activity_json['image']) \
+                and isinstance(activity_json['image'], list) \
                 and len(activity_json['image']) > 0:                    # bridgy-fed
             cover = File(source_url=activity_json['image'][0]['url'])
             user.cover = cover
