@@ -25,6 +25,9 @@
                             <div class="form-group required">
                                 <label class="form-control-label" for="address">Community address</label>
                                 {{ form.address(**{"list":"communitysearch","class":"form-control","hx-get":"/community/search-names","hx-trigger":"keyup changed","hx-target":"#communitysearch","hx-swap":"innerHTML"}) }}
+                                {% for error in form.address.errors %}
+                                    <br><span style="color: red;">[{{ error }}]</span>
+                                {% endfor %}
                             </div>
                             {{ render_field(form.submit) }}
                             <datalist id="communitysearch"></datalist>
