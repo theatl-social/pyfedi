@@ -2457,6 +2457,7 @@ class Post(db.Model):
     def move_to(self, community: Community):
         self.community_id = community.id
         self.instance_id = community.instance_id
+        self.flair.clear()
         db.session.execute(text('UPDATE post_reply SET community_id = :community_id, instance_id = :instance_id WHERE post_id = :post_id'),
                            {'community_id': community.id, 'instance_id': community.instance_id, 'post_id': self.id})
 
