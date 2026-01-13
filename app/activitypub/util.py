@@ -257,6 +257,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
                 'automaticApproval': ['https://www.w3.org/ns/activitystreams#Public']
             }
         },
+        'tag': reply.tags_for_activitypub()
     }
     if reply.edited_at:
         reply_data['updated'] = ap_datetime(reply.edited_at)

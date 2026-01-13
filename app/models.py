@@ -2785,6 +2785,32 @@ class PostReply(db.Model):
             parent = PostReply.query.get(self.parent_id)
             return parent.author.public_url()
 
+    def tags_for_activitypub(self):
+        return_value = []
+        # include emojis used in body text
+        if self.body and ':' in self.body:
+            from app.utils import guess_mime_type
+            EMOJI_RE = re.compile(r':([a-z0-9_+-]{1,20}):', re.IGNORECASE)
+            tokens = {
+                f':{m.group(1).lower()}:'
+                for m in EMOJI_RE.finditer(self.body)
+            }
+
+            if tokens:
+                emojis = db.session.query(Emoji).filter(Emoji.token.in_(tokens)).order_by(Emoji.instance_id).all()
+                for emoji in emojis:
+                    return_value.append({
+                        'type': 'Emoji',
+                        'name': emoji.token,
+                        'icon': {
+                            'type': 'Image',
+                            'mediaType': guess_mime_type(emoji.url),  # or store this in DB
+                            'url': emoji.url,
+                        },
+                    })
+
+        return return_value
+
     def delete_dependencies(self):
         """
         Handle non-cascading deletes and special cleanup.
