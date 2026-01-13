@@ -11,6 +11,11 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         self.assertEqual(result, "<p><strong>Bold</strong> and <em>italic</em> text</p>\n")
 
+        markdown = "**Bold**, *italics*, __underscore bold__, and _underscore italics_, each next to a punctuation mark."
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><strong>Bold</strong>, <em>italics</em>, <strong>underscore bold</strong>, and <em>underscore italics</em>, each next to a punctuation mark.</p>\n'
+        self.assertEqual(target_html, result)
+
     def test_paragraphs(self):
         """Test paragraph formatting"""
         markdown = "First paragraph\n\nSecond paragraph"
