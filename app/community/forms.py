@@ -16,7 +16,7 @@ from wtforms.validators import ValidationError, DataRequired, Length, Regexp, Op
 
 from app import db
 from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
-    DOWNVOTE_ACCEPT_TRUSTED
+    DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_NONE
 from app.models import Community, Site, utcnow, User, Feed
 from app.utils import domain_from_url, MultiCheckboxField, get_timezones
 
@@ -86,6 +86,7 @@ class EditCommunityForm(FlaskForm):
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
     downvote_accept_modes = [(DOWNVOTE_ACCEPT_ALL, _l('Everyone')),
+                             (DOWNVOTE_ACCEPT_NONE, _l('Nobody')),
                              (DOWNVOTE_ACCEPT_MEMBERS, _l('Community members')),
                              (DOWNVOTE_ACCEPT_INSTANCE, _l('This instance')),
                              (DOWNVOTE_ACCEPT_TRUSTED, _l('Trusted instances')),

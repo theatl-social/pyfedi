@@ -1455,7 +1455,9 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
         return False
 
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
-        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
+        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_NONE:
+            return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
             if not community.is_member(user):
                 return False
         elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_INSTANCE:

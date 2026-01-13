@@ -1232,6 +1232,7 @@ def admin_community_edit(community_id):
         community.ignore_remote_gen_ai = form.ignore_remote_gen_ai.data
         community.always_translate = form.always_translate.data
         community.can_be_archived = form.can_be_archived.data
+        community.downvote_accept_mode = form.downvote_accept_mode.data
 
         icon_file = request.files['icon_file']
         if icon_file and icon_file.filename != '':
@@ -1293,6 +1294,7 @@ def admin_community_edit(community_id):
         form.ignore_remote_gen_ai.data = community.ignore_remote_gen_ai
         form.always_translate.data = community.always_translate
         form.can_be_archived.data = community.can_be_archived
+        form.downvote_accept_mode.data = community.downvote_accept_mode
     return render_template('admin/edit_community.html', title=_('Edit community'), form=form, community=community)
 
 

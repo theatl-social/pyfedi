@@ -7,6 +7,8 @@ from wtforms.fields.choices import SelectMultipleField
 from wtforms.validators import ValidationError, DataRequired, Email, EqualTo, Length, Optional
 from flask_babel import _, lazy_gettext as _l
 
+from app.constants import DOWNVOTE_ACCEPT_ALL, DOWNVOTE_ACCEPT_MEMBERS, DOWNVOTE_ACCEPT_INSTANCE, \
+    DOWNVOTE_ACCEPT_TRUSTED, DOWNVOTE_ACCEPT_NONE
 from app.models import Community, User, CmsPage
 
 
@@ -139,6 +141,15 @@ class EditCommunityForm(FlaskForm):
     local_only = BooleanField(_l('Only accept posts from current instance'))
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
+    downvote_accept_modes = [(DOWNVOTE_ACCEPT_ALL, _l('Everyone')),
+                             (DOWNVOTE_ACCEPT_NONE, _l('Nobody')),
+                             (DOWNVOTE_ACCEPT_MEMBERS, _l('Community members')),
+                             (DOWNVOTE_ACCEPT_INSTANCE, _l('This instance')),
+                             (DOWNVOTE_ACCEPT_TRUSTED, _l('Trusted instances')),
+
+                             ]
+    downvote_accept_mode = SelectField(_l('Accept downvotes from'), coerce=int, choices=downvote_accept_modes,
+                                       validators=[Optional()], render_kw={'class': 'form-select'})
     show_popular = BooleanField(_l('Posts can be popular'))
     show_all = BooleanField(_l('Posts show in All list'))
     low_quality = BooleanField(_l("Low quality / toxic - upvotes in here don't add to reputation"))

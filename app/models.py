@@ -538,7 +538,7 @@ class Community(db.Model):
     default_layout = db.Column(db.String(15))
     default_post_type = db.Column(db.String(15))
     posting_warning = db.Column(db.String(512))
-    downvote_accept_mode = db.Column(db.Integer, default=0)  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
+    downvote_accept_mode = db.Column(db.Integer, default=0)  # -1 = None, 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     always_translate = db.Column(db.Boolean)
