@@ -159,6 +159,8 @@ class SearchRemoteCommunity(FlaskForm):
         if self.address.data.strip() == '':
             self.address.errors.append(_l('Address is required.'))
             return False
+        elif self.address.data.strip().startswith('https://'):
+            return True
         else:
             if not self.address.data.strip().startswith('!'):
                 self.address.errors.append(_l('Address must start with !'))
@@ -169,6 +171,8 @@ class SearchRemoteCommunity(FlaskForm):
             elif '/' in self.address.data.strip():
                 self.address.errors.append(_l('/ cannot be in address'))
                 return False
+        
+        return True
 
 
 class BanUserCommunityForm(FlaskForm):
