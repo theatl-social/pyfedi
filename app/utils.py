@@ -300,7 +300,7 @@ LINK_PATTERN = re.compile(
         (
             (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
             \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
-            [^<>\s"']*                    # rest of url
+            [^<>\s\"']*                   # rest of url
             (?<![?!.,:*_~);])             # exclude trailing punctuation
             (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
         )
@@ -481,7 +481,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
 
@@ -516,14 +516,18 @@ def handle_double_bolds(text: str) -> str:
     same sentence.
     """
 
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Wrap **bold** sections with <strong></strong>
-    # Regex is slightly modified from markdown2 source code
-    re_bold = re.compile(r"(\*\*)(?=\S)(.+?[*]?)(?<=\S)\1")
+    # First, sub any that are both italics and bold
+    re_em_bold = re.compile(r"(\*\*\*|___)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
+    text = re_em_bold.sub(r"<em><strong>\2</strong></em>", text)
+
+    # Second, sub any that are just bold
+    re_bold = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
     # Step 3: Restore code blocks
@@ -554,7 +558,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
     ...which will be later converted to an instance-local link
     """
 
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
@@ -836,7 +840,7 @@ def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}"
     
     text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
 
@@ -848,7 +852,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}"
     
     # Fenced code blocks (```...```)
     text = re.sub(r'```[\s\S]*?```', store_code, text)
@@ -860,7 +864,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
-        text = text.replace(f"{placeholder}{i}__", code)
+        text = text.replace(f"{placeholder}{i}", code)
     
     return text
 
@@ -870,7 +874,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_link(match):
         link_snippets.append(match.group(0))
-        return f"{placeholder}{len(link_snippets) - 1}__"
+        return f"{placeholder}{len(link_snippets) - 1}"
     
     text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
 
