@@ -3972,7 +3972,7 @@ def is_vote(activity: dict) -> bool:
     return False
 
 
-def proactively_delete_reply(community: Community, ap_id: str):
+def proactively_delete_content(community: Community, ap_id: str):
     deletor = None
     # Try to find a local moderator to send the Delete
     for moderator in community.moderators():
