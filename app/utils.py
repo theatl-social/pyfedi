@@ -510,7 +510,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
 
     return text
 
-def handle_double_bolds(text: str) -> str:
+def handle_bold_em(text: str) -> str:
     """
     Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
     same sentence.
@@ -529,6 +529,10 @@ def handle_double_bolds(text: str) -> str:
     # Second, sub any that are just bold
     re_bold = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
     text = re_bold.sub(r"<strong>\2</strong>", text)
+
+    # Third, sub any that are single for italics
+    re_em = re.compile(r"(\*|_)(?=\S)(.*?\S)\1", re.S)
+    text = re_em.sub(r"<em>\2</em>", text)
 
     # Step 3: Restore code blocks
     text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
@@ -593,7 +597,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = escape_non_html_angle_brackets(
             markdown_text)  # To handle situations like https://ani.social/comment/9666667
         
-        markdown_text = handle_double_bolds(markdown_text)  # To handle bold in two places in a sentence
+        markdown_text = handle_bold_em(markdown_text)  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
 
         try:
