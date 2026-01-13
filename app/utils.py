@@ -883,7 +883,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     for i, link in enumerate(link_snippets):
-        text = text.replace(f"{placeholder}{i}__", link)
+        text = text.replace(f"{placeholder}{i}", link)
     
     return text
 
