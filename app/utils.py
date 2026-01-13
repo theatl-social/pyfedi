@@ -840,7 +840,7 @@ def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}"
+        return f"{placeholder}{len(code_snippets) - 1}$"
     
     text = re.sub(r'<code>[\s\S]*?<\/code>', store_code, text)
 
@@ -852,7 +852,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}"
+        return f"{placeholder}{len(code_snippets) - 1}$"
     
     # Fenced code blocks (```...```)
     text = re.sub(r'```[\s\S]*?```', store_code, text)
@@ -864,7 +864,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
-        text = text.replace(f"{placeholder}{i}", code)
+        text = text.replace(f"{placeholder}{i}$", code)
     
     return text
 
@@ -874,7 +874,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_link(match):
         link_snippets.append(match.group(0))
-        return f"{placeholder}{len(link_snippets) - 1}"
+        return f"{placeholder}{len(link_snippets) - 1}$"
     
     text = re.sub(r'<a href=[\s\S]*?<\/a>', store_link, text)
 
@@ -883,7 +883,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     for i, link in enumerate(link_snippets):
-        text = text.replace(f"{placeholder}{i}", link)
+        text = text.replace(f"{placeholder}{i}$", link)
     
     return text
 
