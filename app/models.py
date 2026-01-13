@@ -1521,7 +1521,7 @@ class Post(db.Model):
     sticky = db.Column(db.Boolean, default=False, index=True)
     ai_generated = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
-    indexable = db.Column(db.Boolean, default=True)
+    indexable = db.Column(db.Boolean, default=True, index=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the content arrived here
     posted_at = db.Column(db.DateTime, index=True, default=utcnow)  # this is when the original server created it
@@ -2501,6 +2501,7 @@ class PostReply(db.Model):
     body_html = db.Column(db.Text)
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)  # used for 'top' sorting
+    indexable = db.Column(db.Boolean, default=True, index=True)
     nsfw = db.Column(db.Boolean, default=False, index=True)
     distinguished = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
@@ -2591,6 +2592,7 @@ class PostReply(db.Model):
                           language_id=language_id,
                           distinguished=distinguished,
                           answer=answer,
+                          indexable=user.indexable,
                           ap_id=request_json['object']['id'] if request_json else None,
                           ap_create_id=request_json['id'] if request_json else None,
                           ap_announce_id=announce_id)
@@ -2600,6 +2602,8 @@ class PostReply(db.Model):
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_('Blocked phrase in comment'))
+        if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
+            reply.indexable = False
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:

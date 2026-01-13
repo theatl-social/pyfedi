@@ -136,6 +136,7 @@ def run_search():
             replies = replies.join(Post, PostReply.post_id == Post.id).filter(Post.indexable == True,
                                                                               Post.deleted == False,
                                                                               Post.status > POST_STATUS_REVIEWING)
+            replies = replies.filter(PostReply.indexable == True)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == '' else False)
             if type != 0:
