@@ -154,6 +154,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
     for recipient in recipients:
         tag.append({'href': recipient.public_url(), 'name': recipient.mention_tag(), 'type': 'Mention'})
         cc.append(recipient.public_url())
+    tag.extend(reply.tags_for_activitypub())
     language = {'identifier': reply.language_code(), 'name': reply.language_name()}
     content_map = {reply.language_code(): reply.body_html}
     source = {'content': reply.body, 'mediaType': 'text/markdown'}
@@ -174,7 +175,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
       'language': language,
       'contentMap': content_map,
       'distinguished': reply.distinguished,
-      'flair': user.community_flair(reply.community_id)
+      'flair': user.community_flair(reply.community_id),
     }
     if edit:
         note['updated'] = ap_datetime(utcnow())
