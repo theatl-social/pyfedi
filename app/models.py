@@ -346,7 +346,7 @@ class File(db.Model):
             else:
                 return self.source_url
         elif self.file_path:
-            if self.file_path.startswith('https://'):
+            if self.file_path.startswith('http'):
                 return self.file_path
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
             scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
@@ -357,7 +357,7 @@ class File(db.Model):
     def medium_url(self):
         if self.file_path is None:
             return self.thumbnail_url()
-        if self.file_path.startswith('https://'):
+        if self.file_path.startswith('http'):
             return self.file_path
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
@@ -369,7 +369,7 @@ class File(db.Model):
                 return self.source_url
             else:
                 return ''
-        if self.thumbnail_path.startswith('https://'):
+        if self.thumbnail_path.startswith('http'):
             return self.thumbnail_path
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
         scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
@@ -724,21 +724,21 @@ class Community(db.Model):
         return self.id in [cb.community_id for cb in community_bans]
 
     def profile_id(self):
-        retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.name}"
         return retval.lower()
 
     def public_url(self):
-        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.name}"
         return result
 
     def is_local(self):
-        return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.profile_id().startswith(f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}")
 
     def local_url(self):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
+            return f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
 
     def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
@@ -822,7 +822,7 @@ class Community(db.Model):
         if version == 1:
             for flair in self.flair:
                 result.append({'type': 'lemmy:CommunityTag',
-                            'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                            'id': f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
                             'display_name': flair.flair,
                             'text_color': flair.text_color,
                             'background_color': flair.background_color,
@@ -1123,7 +1123,7 @@ class User(UserMixin, db.Model):
         return content
 
     def is_local(self):
-        return self.ap_id is None or self.ap_profile_id.startswith('https://' + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_profile_id.startswith(f"{current_app.config['SERVER_NAME']}://" + current_app.config['SERVER_NAME'])
 
     def waiting_for_approval(self):
         application = UserRegistration.query.filter_by(user_id=self.id, status=0).first()
@@ -1332,11 +1332,11 @@ class User(UserMixin, db.Model):
             join(CommunityMember).filter(CommunityMember.is_banned == False, CommunityMember.user_id == self.id).all()
 
     def profile_id(self):
-        result = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
+        result = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
         return result
 
     def public_url(self):
-        return self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        return self.ap_public_url if self.ap_public_url else f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
 
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
@@ -1601,7 +1601,7 @@ class Post(db.Model):
     )
 
     def is_local(self):
-        return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_id.startswith(f"{current_app.config['SERVER_NAME']}://" + current_app.config['SERVER_NAME'])
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
@@ -1896,7 +1896,7 @@ class Post(db.Model):
                 for json_tag in request_json['object']['tag']:
                     if 'type' in json_tag and json_tag['type'] == 'Mention':
                         profile_id = json_tag['href'] if 'href' in json_tag else None
-                        if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                        if profile_id and isinstance(profile_id, str) and profile_id.startswith(f"{current_app.config['SERVER_NAME']}://" + current_app.config['SERVER_NAME']):
                             profile_id = profile_id.lower()
                             recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                             if recipient:
@@ -1913,7 +1913,7 @@ class Post(db.Model):
                                     from app.utils import get_recipient_language
                                     with force_locale(get_recipient_language(recipient.id)):
                                         notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in post {post.id}"),
-                                                                    url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                    url=f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/post/{post.id}",
                                                                     author_id=post.user_id, notif_type=NOTIF_MENTION,
                                                                     subtype='post_mention',
                                                                     targets=targets_data)
@@ -2220,7 +2220,7 @@ class Post(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/post/{self.id}"
+            return f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/post/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -2277,14 +2277,14 @@ class Post(db.Model):
         return_value = []
         for flair in self.flair:
             return_value.append({'type': 'lemmy:CommunityTag',
-                                 'id': f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
+                                 'id': f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
                                  'display_name': flair.flair,
                                  'text_color': flair.text_color,
                                  'background_color': flair.background_color,
                                  'blur_images': flair.blur_images})
         for tag in self.tags:
             return_value.append({'type': 'Hashtag',
-                                 'href': f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
+                                 'href': f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
                                  'name': f'#{tag.name}'})
 
         # include emojis used in body text
@@ -2747,7 +2747,7 @@ class PostReply(db.Model):
             return 'English'
 
     def is_local(self):
-        return self.ap_id is None or self.ap_id.startswith('https://' + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_id.startswith(f"{current_app.config['SERVER_NAME']}://" + current_app.config['SERVER_NAME'])
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
@@ -2757,7 +2757,7 @@ class PostReply(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/comment/{self.id}"
+            return f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/comment/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -3687,21 +3687,21 @@ class Feed(db.Model):
                 return SUBSCRIPTION_NONMEMBER
 
     def profile_id(self):
-        retval = self.ap_profile_id if self.ap_profile_id else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return retval.lower()
 
     def public_url(self):
-        result = self.ap_public_url if self.ap_public_url else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/f/{self.name}"
         return result
 
     def is_local(self):
-        return self.ap_id is None or self.profile_id().startswith('https://' + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.profile_id().startswith(f"{current_app.config['SERVER_NAME']}://" + current_app.config['SERVER_NAME'])
 
     def local_url(self):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
+            return f"{current_app.config['SERVER_NAME']}://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
 
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,
