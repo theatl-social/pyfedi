@@ -1786,7 +1786,7 @@ class Post(db.Model):
                 if post.body and 'cross-posted from: https://' in post.body:
                     lines = []
                     for line in post.body.split('\n'):
-                        if not line.strip().startswith('cross-posted from: https://'):
+                        if not 'cross-posted from:  https://' in line.strip():
                             lines.append(line)
                     post.body = '\n'.join(lines)
                     post.body_html = markdown_to_html(post.body)
