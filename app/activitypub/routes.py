@@ -18,7 +18,7 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search
+    post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search, proactively_delete_reply
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -2165,12 +2165,19 @@ def process_new_content(user, community, store_ap_json, request_json, announced)
 
                         if not announced:
                             announce_activity_to_followers(community, user, request_json)
+                    else:  # The reply was not allowed - send a 'Delete' to remove it from the remote instance
+                        if community.is_local():
+                            proactively_delete_reply(community, ap_id)
                     return
                 except TypeError:
                     current_app.logger.error('TypeError: ' + str(request_json))
                     log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'TypeError. See log file.')
                     return
             else:
+                # The reply was not allowed - send a 'Delete' to remove it from the remote instance
+                if community.is_local():
+                    proactively_delete_reply(community, ap_id)
+
                 log_incoming_ap(id, APLOG_CREATE, APLOG_FAILURE, saved_json, 'User cannot create reply in Community')
                 return
 

@@ -22,7 +22,7 @@ from sqlalchemy import text, Integer, update
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
-from app.activitypub.signature import signed_get_request
+from app.activitypub.signature import signed_get_request, send_post_request, default_context
 from app.constants import *
 from app.models import User, Post, Community, File, PostReply, Instance, utcnow, \
     PostVote, PostReplyVote, ActivityPubLog, Notification, Site, CommunityMember, InstanceRole, Report, Conversation, \
@@ -36,7 +36,7 @@ from app.utils import get_request, allowlist_html, get_setting, ap_datetime, mar
     moderating_communities, get_task_session, is_video_hosting_site, opengraph_parse, mastodon_extra_field_link, \
     blocked_users, piefed_markdown_to_lemmy_markdown, store_files_in_s3, guess_mime_type, get_recipient_language, \
     patch_db_session, to_srgb, communities_banned_from_all_users, blocked_communities, blocked_or_banned_instances, \
-    instance_community_ids, banned_instances
+    instance_community_ids, banned_instances, instance_banned
 
 
 def public_key():
@@ -1804,6 +1804,11 @@ def find_instance_id(server):
         new_instance_profile(new_instance.id)
 
         return new_instance.id
+
+
+def find_instance_by_domain(server):
+    server = server.strip().lower()
+    return db.session.query(Instance).filter_by(domain=server).first()
 
 
 def new_instance_profile(instance_id: int):
@@ -3965,3 +3970,50 @@ def is_vote(activity: dict) -> bool:
         return False
 
     return False
+
+
+def proactively_delete_reply(community: Community, ap_id: str):
+    deletor = None
+    # Try to find a local moderator to send the Delete
+    for moderator in community.moderators():
+        moderator_account = db.session.query(User).get(moderator.user_id)
+        if moderator_account.is_local():
+            deletor = moderator_account
+            break
+    # Use admin account if there is not one.
+    if deletor is None:
+        deletor = db.session.query(User).get(1)
+    if deletor:
+
+        delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        cc = [community.public_url()]
+        delete = {
+          'id': delete_id,
+          'type': 'Delete',
+          'actor': deletor.public_url(),
+          'object': ap_id,
+          'audience': community.public_url(),
+          'to': to,
+          'cc': cc,
+          'summary': 'Automatic deletion due to block'
+        }
+
+        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        actor = community.public_url()
+        cc = [community.ap_followers_url]
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        announce = {
+            'id': announce_id,
+            'type': 'Announce',
+            'actor': actor,
+            'object': delete,
+            '@context': default_context(),
+            'to': to,
+            'cc': cc
+        }
+        domain = furl(ap_id).host
+        instance = find_instance_by_domain(domain)
+        if instance and instance.inbox:
+            send_post_request(instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+
