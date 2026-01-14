@@ -951,7 +951,6 @@ def is_bad_name(community_name: str) -> bool:
     seven_things_plus = [
         'shit', 'piss', 'fuck',
         'cunt', 'cocksucker', 'motherfucker', 'tits',
-        'piracy', 'greentext', 'usauthoritarianism',
-        'enoughmuskspam', 'political_weirdos', '4chan'
+        'greentext', '4chan'
     ]
     return any(badword in name_lower for badword in seven_things_plus)
