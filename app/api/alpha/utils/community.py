@@ -40,7 +40,6 @@ from app.shared.community import (
     restore_community,
     add_mod_to_community,
     remove_mod_from_community,
-    rate_community,
 )
 from app.shared.feed import leave_feed
 from app.shared.tasks import task_selector
@@ -228,19 +227,6 @@ def post_community_leave_all(auth):
                 user_id = leave_feed(feed=feed, src=SRC_API, auth=auth, bulk_leave=True)
 
     return user_view(user=user, variant=6, user_id=user_id)
-
-
-def post_community_rate(auth, data):
-    community_id = data["community_id"]
-    rating = data["rating"]
-
-    user_id = authorise_api_user(auth) if auth else None
-
-    rate_community(community_id, rating, SRC_API, auth)
-    community_json = community_view(
-        community=community_id, variant=3, stub=False, user_id=user_id
-    )
-    return community_json
 
 
 def post_community_block(auth, data):

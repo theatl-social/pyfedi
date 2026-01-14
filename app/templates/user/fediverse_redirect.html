@@ -4,30 +4,26 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = "settings" %}
+{% set active_child = 'settings' %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav class="mb-2"
-                 aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 title="Navigation">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Follow on remote instance") }}</li>
-                </ol>
-            </nav>
-            <h1>{{ _("Follow on remote instance") }}</h1>
-            <p>{{ _("We are about to send you to your instance where you will then need to click the \"Follow\" button.") }}</p>
-            {{ render_form(form) }}
-            {% if send_to %}
-                <div id="redirectMessage"></div>
-                <script defer nonce="{{ nonce }}">
+
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ _('Follow on remote instance') }}</li>
+          </ol>
+        </nav>
+        <h1>{{ _('Follow on remote instance') }}</h1>
+        <p>{{ _('We are about to send you to your instance where you will then need to click the "Follow" button.') }}</p>
+        {{ render_form(form) }}
+
+        {% if send_to %}
+        <div id="redirectMessage"></div>
+        <script defer nonce="{{ nonce }}">
             window.addEventListener("load", function () {
                 var redirectTimeout;
                 var cookieName = "remote_instance_url";
@@ -61,8 +57,8 @@
                 }
             });
 
-                </script>
-            {% endif %}
-        </main>
-    </div>
+        </script>
+        {% endif %}
+  </main>
+</div>
 {% endblock %}

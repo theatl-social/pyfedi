@@ -27,9 +27,10 @@
                 {{ _('Comment') }}
             </a>
             <a href="#"
-                class="btn btn-outline-secondary mt-2"
-                hx-post="{{ url_for('post.preview') }}"
-                hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
+                    id="comment_preview_{{ comment_id }}"
+                    class="btn btn-outline-secondary mt-2"
+                    hx-post="{{ url_for('post.preview', type="comment", id=comment_id) }}"
+                    hx-target="#textarea_in_reply_to_preview_{{ comment_id }}">
                 {{ _('Preview') }}
             </a> <a href="#" class="btn btn-outline-secondary mt-2 {{ 'd-none' if markdown_editor }}" id="insertImage_{{ comment_id }}">{{ _('Insert image') }}</a>
         </div>

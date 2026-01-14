@@ -43,10 +43,11 @@ from flask import (
     abort,
 )
 from flask_login import current_user
-from flask_babel import _, get_locale
+from flask_babel import _
 from sqlalchemy import desc, text
 
 from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.post.routes import show_post
 from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
 from app.utils import (
@@ -61,7 +62,6 @@ from app.utils import (
     joined_communities,
     moderating_communities,
     markdown_to_html,
-    allowlist_html,
     blocked_or_banned_instances,
     communities_banned_from,
     topic_tree,
@@ -95,11 +95,9 @@ from app.utils import (
     login_required,
     safe_order_by,
     filtered_out_communities,
-    archive_post,
     num_topics,
     referrer,
     block_honey_pot,
-    banned_instances,
 )
 from app.models import (
     Community,
@@ -353,7 +351,7 @@ def home_page(sort, view_filter):
             has_topics=num_topics() > 0,
         )
     )
-
+    resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
     if current_user.is_anonymous:
         resp.headers.set("Cache-Control", "public, max-age=60")
     else:
@@ -858,6 +856,14 @@ def replay_inbox():
 @bp.route("/honey")
 @bp.route("/honey/<whatever>")
 def honey_pot(whatever=None):
+    if current_user.is_authenticated:
+        return ""
+    else:
+        do_not_track = ["image", "audio", "video"]
+        if request.headers.get(
+            "Sec-Fetch-Dest", ""
+        ) in do_not_track or request.headers.get("Accept", "").startswith("image/"):
+            return ""
     from app import redis_client
     from time import time
 
@@ -881,6 +887,9 @@ def honey_pot(whatever=None):
 
     if count >= 3:
         redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
+
+    if whatever:
+        return show_post(int(whatever))
     return ""
 
 
@@ -1206,11 +1215,12 @@ def test_email():
     else:
         email = current_user.email
     send_email(
-        "This is a test email",
-        f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
-        [email],
-        "This is a test email. If you received this, email sending is working!",
-        "<p>This is a test email. If you received this, email sending is working!</p>",
+        subject="This is a test email",
+        sender=f'{g.site.name} <{current_app.config["MAIL_FROM"]}>',
+        recipients=[email],
+        text_body="This is a test email. If you received this, email sending is working!",
+        html_body="<p>This is a test email. If you received this, email sending is working!</p>",
+        reply_to=g.site.contact_email,
     )
     return f"Email sent to {email}."
 

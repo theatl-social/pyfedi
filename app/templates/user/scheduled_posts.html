@@ -3,74 +3,61 @@
 {% else %}
     {% extends "base.html" %}
 {% endif %}
-{% set active_child = "scheduled_posts" %}
+{% set active_child = 'scheduled_posts' %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-md-8 position-relative main_pane">
-            <nav class="mb-2"
-                 aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 title="Navigation">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Scheduled posts") }}</li>
-                </ol>
-            </nav>
-            <div class="col">
-                <h1>{{ title }}</h1>
-                <table class="table table-striped">
-                    {% if entities %}
+<div class="row">
+    <main class="col-12 col-md-8 position-relative main_pane">
+        <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ _('Scheduled posts') }}</li>
+          </ol>
+        </nav>
+
+        <div class="col">
+            <h1>{{ title }}</h1>
+            <table class="table table-striped">
+
+                {% if entities %}
+                    <tr>
+                       <th>{{ _('Title') }}</th>
+                       <th>{{ _('Scheduled for') }}</th>
+		       <th>{{ _('Timezone') }}</th>
+                       <th>{{ _('Frequency') }}</th>
+                       <th>{{ _('Actions') }}</th>
+                    </tr>
+                    {% for post in entities %}
                         <tr>
-                            <th>{{ _("Title") }}</th>
-                            <th>{{ _("Scheduled for") }}</th>
-                            <th>{{ _("Timezone") }}</th>
-                            <th>{{ _("Frequency") }}</th>
-                            <th>{{ _("Actions") }}</th>
+                            <td><span title="{{ post.title }}">{{ post.title }}</span></td>
+                            <td><span title="{{ _('Scheduled for') }}">{{ post.scheduled_for }}</span></td>
+			    <td><span title="{{ _('Timezone') }}">{{ post.timezone }}</span></td>
+                            <td><span title="{{ _('Frequency') }}">
+                            {% if post.repeat == 'daily' %}
+                                {{ _('Daily') }}
+                            {% elif post.repeat == 'weekly' %}
+                                {{ _('Weekly') }}
+                            {% elif post.repeat == 'monthly' %}
+                                {{ _('Monthly') }}
+                            {% else %}
+                                {{ _('Only once') }}
+                            {% endif %}
+                            </span></td>
+                            <td><span title="{{ _('Actions')}}">
+                                <a href="{{ url_for('post.post_edit', post_id=post.id)}}">{{ _('Edit') }}</a>
+                                <a href="{{ url_for('post.post_delete', post_id=post.id)}}">{{ _('Delete') }}</a>
+                            </td></span>
                         </tr>
-                        {% for post in entities %}
-                            <tr>
-                                <td>
-                                    <span title="{{ post.title }}">{{ post.title }}</span>
-                                </td>
-                                <td>
-                                    <span title="{{ _('Scheduled for') }}">{{ post.scheduled_for }}</span>
-                                </td>
-                                <td>
-                                    <span title="{{ _('Timezone') }}">{{ post.timezone }}</span>
-                                </td>
-                                <td>
-                                    <span title="{{ _('Frequency') }}">
-                                        {% if post.repeat == 'daily' %}
-                                            {{ _("Daily") }}
-                                        {% elif post.repeat == 'weekly' %}
-                                            {{ _("Weekly") }}
-                                        {% elif post.repeat == 'monthly' %}
-                                            {{ _("Monthly") }}
-                                        {% else %}
-                                            {{ _("Only once") }}
-                                        {% endif %}
-                                    </span>
-                                </td>
-                                <td>
-                                    <span title="{{ _('Actions') }}">
-                                        <a href="{{ url_for('post.post_edit', post_id=post.id) }}">{{ _("Edit") }}</a>
-                                        <a href="{{ url_for('post.post_delete', post_id=post.id) }}">{{ _("Delete") }}</a>
-                                    </td>
-                                </span>
-                            </tr>
-                        {% endfor %}
-                    {% else %}
-                        <tr>
-                            {{ _("No scheduled posts yet. To schedule a post, create one in your favorite community and set up a date and frequency.") }}
-                        </tr>
-                    {% endif %}
-                </table>
-            </div>
-        </main>
-    </div>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        {{ _('No scheduled posts yet. To schedule a post, create one in your favorite community and set up a date and frequency.') }}
+                    </tr>
+                {% endif %}
+            </table>
+        </div>
+    </main>
+</div>
+
 {% endblock %}

@@ -12,7 +12,7 @@ class AddReply(FlaskForm):
         validators=[DataRequired(), Length(min=1, max=5000)],
         render_kw={
             "placeholder": _l("Type a message here..."),
-            "rows": 6,
+            "rows": 3,
             "autofocus": "true",
         },
     )

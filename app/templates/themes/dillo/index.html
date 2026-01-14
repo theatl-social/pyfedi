@@ -4,42 +4,48 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% set active_child = "home" %}
+{% set active_child = 'home' %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            {% if announcement -%}
-                <div id="home_announcement">{{ announcement|safe }}</div>
-            {% endif -%}
-            <table width="100%">
-                <tr>
-                    <td width="50%">{% include "themes/dillo/_home_nav.html" %}</td>
-                    <td width="50%" align="right">{% include "themes/dillo/_view_filter_nav.html" %}</td>
-                </tr>
-            </table>
-            <div class="post_list h-feed">
-                {% for post in posts %}
-                    {% include 'post/_post_teaser.html' %}
-                {% else %}
-                    <p>{{ _("No posts yet. Join some communities to see more.") }}</p>
-                    <p>
-                        <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a>
-                    </p>
-                {% endfor %}
-            </div>
-            <nav aria-label="Pagination" class="mt-4" role="navigation">
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        {% if announcement -%}
+            <div id="home_announcement">{{ announcement|safe }}</div>
+        {% endif -%}
+        <table width="100%">
+            <tr>
+                <td width="50%">
+                    {% include "themes/dillo/_home_nav.html" %}
+                </td>
+                <td width="50%" align="right">
+                    {% include "themes/dillo/_view_filter_nav.html" %}
+                </td>
+            </tr>
+        </table>
+
+
+        <div class="post_list h-feed">
+            {% for post in posts %}
+                {% include 'post/_post_teaser.html' %}
+            {% else %}
+                <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
+                <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
+            {% endfor %}
+        </div>
+
+        <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary" rel="nofollow">
-                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary" rel="nofollow">
-                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-            </nav>
-        </main>
-    </div>
+        </nav>
+    </main>
+</div>
 {% endblock %}

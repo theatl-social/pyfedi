@@ -62,6 +62,18 @@ class SiteMiscForm(FlaskForm):
     )
     meme_comms_low_quality = BooleanField(_l("Meme communities = low-quality"))
     allow_local_image_posts = BooleanField(_l("Allow local image posts"))
+    video_upload_options = [
+        ("no", _l("No")),
+        ("user 1", _l("User ID 1")),
+        ("admins", _l("Admins and staff")),
+        ("users", _l("Any user")),
+    ]
+    allow_video_file_uploads = SelectField(
+        _l("Allow video file uploads"),
+        choices=video_upload_options,
+        validators=[DataRequired()],
+        render_kw={"class": "form-select"},
+    )
     enable_nsfw = BooleanField(_l("Allow NSFW communities"))
     enable_nsfl = BooleanField(_l("Allow NSFL communities and posts"))
     nsfw_country_restriction = TextAreaField(
@@ -131,6 +143,7 @@ class SiteMiscForm(FlaskForm):
         coerce=str,
         render_kw={"class": "form-select"},
     )
+    cache_remote_images_locally = BooleanField(_l("Cache remote images locally"))
     log_activitypub_json = BooleanField(_l("Log ActivityPub JSON for debugging"))
     public_modlog = BooleanField(_l("Show moderation actions publicly"))
     private_instance = BooleanField(_l("Private instance - require login to browse"))
@@ -140,6 +153,7 @@ class SiteMiscForm(FlaskForm):
     allow_default_user_add_remote_community = BooleanField(
         _l("Allow non-admins to add remote communities")
     )
+    honeypot = BooleanField(_l("Honeypot to block bad crawlers"))
 
     submit = SubmitField(_l("Save"))
 
@@ -336,7 +350,6 @@ class EditTopicForm(FlaskForm):
 
 
 class EditInstanceForm(FlaskForm):
-    vote_weight = FloatField(_l("Vote weight"))
     dormant = BooleanField(_l("Dormant"))
     gone_forever = BooleanField(_l("Gone forever"))
     trusted = BooleanField(_l("Trusted"))

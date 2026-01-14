@@ -1,4 +1,4 @@
-from flask import current_app
+from flask import current_app, abort
 from flask_login import current_user
 from furl import furl
 from sqlalchemy import text, desc, func
@@ -24,8 +24,19 @@ from app.models import (
     UserExtraField,
     UserNote,
 )
-from app.shared.user import block_another_user, unblock_another_user, subscribe_user
-from app.utils import authorise_api_user, in_sorted_list, user_in_restricted_country
+from app.shared.user import (
+    block_another_user,
+    unblock_another_user,
+    subscribe_user,
+    ban_user,
+    unban_user,
+)
+from app.utils import (
+    authorise_api_user,
+    in_sorted_list,
+    user_in_restricted_country,
+    user_access,
+)
 
 
 def get_user(auth, data):
@@ -1046,5 +1057,47 @@ def post_user_set_note(auth, data):
             db.session.delete(existing_note)
 
     db.session.commit()
+
+    return user_view(user=target_user_id, variant=5, user_id=user.id)
+
+
+def post_user_ban(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+    target_user_id = data["person_id"]
+    ban_ip_address = data["ban_ip_address"] if "ban_ip_address" in data else False
+    purge_content = data["purge_content"] if "purge_content" in data else False
+    reason = data["reason"] if "reason" in data else ""
+
+    if user_access("ban users", user.id) or user_access("manage users", user.id):
+        if user.id == target_user_id:
+            raise Exception("cannot_ban_self")
+
+        ban_user(
+            {
+                "person_id": target_user_id,
+                "ban_ip_address": ban_ip_address,
+                "purge_content": purge_content,
+                "reason": reason,
+            },
+            SRC_API,
+            auth,
+        )
+    else:
+        abort(403)
+
+    return user_view(user=target_user_id, variant=5, user_id=user.id)
+
+
+def post_user_unban(auth, data):
+    user = authorise_api_user(auth, return_type="model")
+    target_user_id = data["person_id"]
+
+    if user_access("ban users", user.id) or user_access("manage users", user.id):
+        if user.id == target_user_id:
+            raise Exception("cannot_unban_self")
+
+        unban_user({"person_id": target_user_id}, SRC_API, auth)
+    else:
+        abort(403)
 
     return user_view(user=target_user_id, variant=5, user_id=user.id)

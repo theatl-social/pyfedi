@@ -386,14 +386,16 @@ class CreateVideoForm(CreatePostForm):
     video_url = StringField(
         _l("URL"),
         validators=[
-            DataRequired(),
             Regexp(
                 r"^https?://",
                 message='Submitted links need to start with "http://"" or "https://"',
-            ),
+            )
         ],
         render_kw={"placeholder": "https://..."},
     )
+    image_file = FileField(
+        _l("Video file (mp4 or webm)"), render_kw={"accept": "video/mp4,video/webm"}
+    )  # do not change from image_file even though this is a video
 
     def validate(self, extra_validators=None) -> bool:
         super().validate(extra_validators)
@@ -777,13 +779,3 @@ class EditCommunityFlairForm(FlaskForm):
         _l("Blur images and thumbnails for posts with this flair")
     )
     submit = SubmitField(_l("Save"))
-
-
-class RateCommunityForm(FlaskForm):
-    rating = RadioField(
-        "Rate this community:",
-        choices=[("5", "★"), ("4", "★"), ("3", "★"), ("2", "★"), ("1", "★")],
-        validators=[DataRequired()],
-        coerce=int,  # ensures it becomes an int (optional)
-    )
-    submit = SubmitField(_l("Rate"))

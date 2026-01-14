@@ -49,6 +49,7 @@ from app.utils import (
     communities_banned_from_all_users,
     banned_instances,
     blocked_or_banned_instances,
+    get_emoji_replacements,
 )
 
 
@@ -197,12 +198,8 @@ def remove_old_community_content():
 
                 for post in old_posts:
                     post_delete_post(
-                        community,
-                        post,
-                        post.user_id,
-                        reason=None,
-                        federate_deletion=False,
-                    )
+                        community, post, 1, reason=None, federate_deletion=False
+                    )  # posts are deleted by user ID 1 (super admin) so that delete_old_soft_deleted_content() hard-deletes it.
 
         session.commit()
     except Exception:
@@ -217,30 +214,34 @@ def remove_old_bot_content():
     session = get_task_session()
     try:
         with patch_db_session(session):
-            cut_off = utcnow() - timedelta(days=28 * 6)
-            # First, fetch just the post IDs (lightweight query)
-            post_ids = [
-                p[0]
-                for p in session.query(Post.id)
-                .filter_by(deleted=False, sticky=False, from_bot=True, reply_count=0)
-                .filter(Post.posted_at < cut_off)
-                .all()
-            ]
-
-            # Process posts in batches of 100
-            batch_size = 100
-            for i in range(0, len(post_ids), batch_size):
-                batch_ids = post_ids[i : i + batch_size]
-                posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
-
-                for post in posts:
-                    post_delete_post(
-                        post.community,
-                        post,
-                        post.user_id,
-                        reason=None,
-                        federate_deletion=post.author.is_local(),
+            bot_retention = current_app.config["BOT_CONTENT_RETENTION"]
+            if bot_retention > 0:
+                cut_off = utcnow() - timedelta(days=28 * bot_retention)
+                # First, fetch just the post IDs (lightweight query)
+                post_ids = [
+                    p[0]
+                    for p in session.query(Post.id)
+                    .filter_by(
+                        deleted=False, sticky=False, from_bot=True, reply_count=0
                     )
+                    .filter(Post.posted_at < cut_off)
+                    .all()
+                ]
+
+                # Process posts in batches of 100
+                batch_size = 100
+                for i in range(0, len(post_ids), batch_size):
+                    batch_ids = post_ids[i : i + batch_size]
+                    posts = session.query(Post).filter(Post.id.in_(batch_ids)).all()
+
+                    for post in posts:
+                        post_delete_post(
+                            post.community,
+                            post,
+                            post.user_id,
+                            reason=None,
+                            federate_deletion=post.author.is_local(),
+                        )
 
     except Exception:
         session.rollback()
@@ -283,12 +284,16 @@ def delete_old_soft_deleted_content():
 
                 cutoff = utcnow() - timedelta(days=7)
 
-                # Delete old posts
+                # Delete old posts only when no replies, mod-deleted or forced by community retention policy (deleted_by = 1)
                 post_ids = list(
                     session.execute(
-                        text(
-                            "SELECT id FROM post WHERE deleted = true AND posted_at < :cutoff"
-                        ),
+                        text("""SELECT id FROM post p
+                                WHERE p.deleted = true AND p.posted_at < :cutoff AND (p.deleted_by <> p.user_id OR p.deleted_by = 1 OR p.reply_count = 0)
+                                  AND NOT EXISTS (
+                                      SELECT 1
+                                      FROM post_bookmark pb
+                                      WHERE pb.post_id = p.id
+                                  )"""),
                         {"cutoff": cutoff},
                     ).scalars()
                 )
@@ -769,7 +774,7 @@ def monitor_healthy_instances():
                                 ).delete()
 
                         # refresh custom emoji
-                        if instance.trusted:
+                        if not instance_banned(instance.domain):
                             for emoji in instance_data["custom_emojis"]:
                                 token = emoji["custom_emoji"]["shortcode"]
                                 aliases = [
@@ -801,6 +806,7 @@ def monitor_healthy_instances():
                                     )
                                     session.add(new_emoji)
                                 session.commit()
+                    cache.delete_memoized(get_emoji_replacements)
                 except Exception:
                     session.rollback()
                     instance.failures += 1
@@ -898,6 +904,7 @@ def recalculate_user_attitudes():
 
                 for user in users:
                     user.recalculate_attitude()
+                    user.recalculate_post_stats()
                     processed += 1
 
                 # Commit after each batch

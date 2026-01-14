@@ -216,9 +216,25 @@ The repository includes comprehensive test infrastructure:
 ## Recent Updates & Notes
 
 ### Merge History
-- Successfully merged with upstream/main (commit aa2e9e85) on 2025-08-25
+
+- Successfully merged with upstream v1.5.0 on 2026-01-14
+- Branch: `20250723/theatl-fork-pyfed-nightly-2`
+- Key additions from upstream v1.5.0:
+  - Move activity type for moving posts between communities
+  - Server-Sent Events (SSE) for real-time chat notifications
+  - `interactionPolicy` field for quoting support
+  - `cache_remote_images_locally` setting control
+  - `is_bad_name()` helper for community filtering
+  - `get_emoji_replacements` cache invalidation
+  - Redis locking for notification handling
+  - Dynamic placeholders for code stashing (`gibberish()`)
+  - Bridgy-fed image handling (dict/list support)
+  - Video file upload settings
+  - New migration: `merge_heads_20260114.py`
+
+- Previously merged with upstream/main (commit aa2e9e85) on 2025-08-25
 - Branch: `feature/merge-upstream-20250825`
-- Key additions from upstream:
+- Key additions from that merge:
   - Instance chooser functionality
   - LDAP authentication improvements
   - API enhancements (image dimensions, cross-post data)

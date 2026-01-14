@@ -62,7 +62,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupScrollToComment,
         setupTranslateAll,
         setupEmojiAutoSubmit,
-        setupReactionDialog
+        setupReactionDialog,
+        setupScrollChat,
     ];
 
     // Run critical setups immediately
@@ -126,28 +127,30 @@ document.addEventListener("DOMContentLoaded", function () {
 
 
 function setupUserPopup() {
-    document.querySelectorAll('.render_username .author_link').forEach(anchor => {
-        if (!anchor.dataset.userPopupSetup) {
-            let timeoutId;
+    if(window.matchMedia("(pointer: fine)").matches) {
+        document.querySelectorAll('.render_username .author_link').forEach(anchor => {
+            if (!anchor.dataset.userPopupSetup) {
+                let timeoutId;
 
-            anchor.addEventListener('mouseover', function() {
-                timeoutId = setTimeout(function () {
-                    anchor.nextElementSibling.classList.remove('d-none');
-                }, 1000);
-            });
+                anchor.addEventListener('mouseover', function() {
+                    timeoutId = setTimeout(function () {
+                        anchor.nextElementSibling.classList.remove('d-none');
+                    }, 1000);
+                });
 
-            anchor.addEventListener('mouseout', function() {
-                clearTimeout(timeoutId);
+                anchor.addEventListener('mouseout', function() {
+                    clearTimeout(timeoutId);
 
-                let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
-                if (userPreview) {
-                    userPreview.classList.add('d-none');
-                }
-            });
+                    let userPreview = anchor.closest('.render_username').querySelector('.user_preview');
+                    if (userPreview) {
+                        userPreview.classList.add('d-none');
+                    }
+                });
 
-            anchor.dataset.userPopupSetup = 'true';
-        }
-    });
+                anchor.dataset.userPopupSetup = 'true';
+            }
+        });
+    }
 }
 function setupPostTeaserHandler() {
     document.querySelectorAll('.post_teaser_clickable').forEach(div => {
@@ -1175,16 +1178,11 @@ function setupAddPassKey() {
     const logInWithPasskey = document.getElementById('log_in_with_passkey');
     if(logInWithPasskey) {
         document.getElementById('log_in_with_passkey').addEventListener('click', async () => {
-            const { browserSupportsWebAuthn } = SimpleWebAuthnBrowser;
-            let passkeyUsername = getCookie('passkey');
-            if(!passkeyUsername) {
-                passkeyUsername = document.getElementById('user_name').value;
-                if(!passkeyUsername) {
-                   passkeyUsername = prompt('What is your user name?');
-                }
-            }
+            const passkeyUsername = document.getElementById('user_name').value
+                || getCookie('passkey')
+                || prompt('What is your user name?');
 
-            const { startAuthentication, browserSupportsWebAuthnAutofill } = SimpleWebAuthnBrowser;
+            const { startAuthentication } = SimpleWebAuthnBrowser;
             let redirect = getValueFromQueryString('next');
             // Submit options
             const apiAuthOptsResp = await fetch('/auth/passkeys/login_options', {
@@ -2320,4 +2318,17 @@ function setupReactionDialog() {
             }
         });
     }
+}
+
+
+
+function setupScrollChat() {
+    var scrollThese = document.querySelectorAll('.scroll_down');
+    scrollThese.forEach(function(scroll) {
+        scroll.scrollTop = scroll.scrollHeight;
+    });
+}
+
+function stickToBottom(el) {
+    return Math.abs(el.scrollHeight - el.scrollTop - el.clientHeight) < 1;
 }

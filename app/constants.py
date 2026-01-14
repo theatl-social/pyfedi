@@ -1,4 +1,4 @@
-VERSION = "1.4.0"
+VERSION = "1.5.0"
 
 POST_TYPE_LINK = 1
 POST_TYPE_ARTICLE = 2
@@ -107,6 +107,7 @@ APLOG_UPDATE = (True, "Update")
 APLOG_LIKE = (True, "Like")
 APLOG_DISLIKE = (True, "Dislike")
 APLOG_RATE = (True, "Rate")
+APLOG_QA = (True, "QA")
 APLOG_REPORT = (True, "Report")
 APLOG_USERBAN = (True, "User Ban")
 APLOG_LOCK = (True, "Post Lock")
@@ -118,6 +119,7 @@ APLOG_UNDO_USERBAN = (True, "Undo User Ban")
 
 APLOG_ADD = (True, "Add")
 APLOG_REMOVE = (True, "Remove")
+APLOG_MOVE = (True, "Move")
 
 APLOG_ANNOUNCE = (True, "Announce")
 APLOG_PT_VIEW = (True, "PeerTube View")

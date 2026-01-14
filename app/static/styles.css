@@ -471,6 +471,10 @@ h1 .fe-bell, h1 .fe-no-bell {
   content: "\e972";
 }
 
+.fe-move:before {
+  content: "\e95f";
+}
+
 .fe-video {
   position: relative;
   top: 2px;
@@ -1090,6 +1094,11 @@ form > .mb-3.required > label:after {
   }
 }
 
+@media (max-width: 991.98px) {
+  .footer {
+    padding-bottom: 70px !important;
+  }
+}
 .communities_table tbody tr th {
   padding: 0;
 }
@@ -1447,6 +1456,9 @@ ul.form-multicheck-columns li {
   height: 100%;
   border: 0;
 }
+.post_teaser_video_preview .blur {
+  filter: blur(24px);
+}
 
 time {
   white-space: nowrap;
@@ -1500,12 +1512,33 @@ time {
   line-height: 26px;
 }
 
+.post_full .post_utilities_bar {
+  container-type: inline-size;
+}
 .post_full .post_utilities_bar .voting_buttons_new {
   margin-left: -15px;
 }
 .post_full .post_utilities_bar .post_reply_count {
   justify-content: left;
   margin-right: 8px;
+}
+@container (width < 400px) {
+  .post_full .post_utilities_bar .flair_dropdown {
+    display: none;
+  }
+}
+@container (width < 350px) {
+  .post_full .post_utilities_bar .voting_buttons_new .upvote_button, .post_full .post_utilities_bar .voting_buttons_new .downvote_button {
+    min-width: 34px;
+  }
+  .post_full .post_utilities_bar .voting_buttons_new .score {
+    display: none;
+  }
+}
+@container (width < 300px) {
+  .post_full .post_utilities_bar .post_reply_count_text {
+    display: none;
+  }
 }
 
 #masonry {
@@ -2855,8 +2888,16 @@ form h5 {
   background-color: var(--bs-card-cap-bg);
 }
 
+.chat-input label {
+  display: none;
+}
+
 .alone_message {
   float: inline-start;
+}
+
+.vh-90 {
+  height: 90vh !important;
 }
 
 #subtopic_nav {
@@ -3003,6 +3044,7 @@ form h5 {
   flex-wrap: wrap;
   gap: var(--bs-spacer-1);
   max-width: 100%;
+  row-gap: 0.3rem;
   overflow: hidden;
   user-select: none;
 }
@@ -3121,8 +3163,8 @@ form h5 {
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
 }
 .emoji_button a svg {
-  width: 15px;
-  height: 15px;
+  width: 16px;
+  height: 16px;
 }
 
 /* Visually hide radios but keep them accessible */
@@ -3334,6 +3376,14 @@ form h5 {
 
 [data-bs-theme=dark] .post_teaser_title_a:visited {
   color: color-mix(in srgb, var(--bs-link-color) 65%, black);
+}
+
+[data-bs-theme=dark] .nav-link:focus-visible {
+  box-shadow: 0 0 0 0.25rem rgba(253, 253, 253, 0.5);
+}
+
+[data-bs-theme=dark] .skip-link {
+  color: black;
 }
 
 :root {

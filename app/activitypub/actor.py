@@ -56,6 +56,8 @@ def find_local_user(actor_url: str, allow_banned: bool = False) -> User:
 
 
 def validate_remote_actor(actor_url, actor=None, allow_banned=False):
+    if actor_url == "https://www.w3.org/ns/activitystreams#Public":
+        return False
     """Validate if a remote actor is allowed."""
     server, _ = extract_domain_and_actor(actor_url)
 

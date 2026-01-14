@@ -15,11 +15,11 @@
 {% endblock %}
 
 {% block end_scripts -%}
-    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}"></script>
+    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}" nonce={{ nonce }}></script>
 {% endblock -%}
 
 {% block app_content -%}
-<script src="/static/js/coolfieldset.js?v=3"></script>
+<script src="/static/js/coolfieldset.js?v=3" nonce={{ nonce }}></script>
 <script type="text/javascript" nonce="{{ nonce }}">
     var toBeHidden = Array();   // this list of comment IDs will be iterated over in setupHideButtons() and the 'hide' button clicked
 
@@ -111,10 +111,10 @@
                                         <table>
                                             <tr>
                                                 <td>{{ render_field(form.submit) }}</td>
-                                                <td>&nbsp;<a href="#"
+                                                <td>&nbsp;<a href="#" id="top_comment_preview_{{ post.id }}"
                                                     class="btn btn-outline-secondary"
-                                                    hx-post="{{ url_for('post.preview') }}"
-                                                    hx-target="#textarea_comment_to_preview">
+                                                    hx-post="{{ url_for('post.preview', type="comment", id=post.id, top=True) }}"
+                                                    hx-target="#textarea_comment_to_preview" hx-swap="innerHTML">
                                                     {{ _('Preview') }}
                                                 </a> <a href="#" id="insertImage" class="btn btn-outline-secondary {{ 'd-none' if markdown_editor }}">{{ _('Insert image') }}</a></td>
                                             </tr>

@@ -1,45 +1,27 @@
 {% if current_user.is_authenticated and current_user.verified -%}
-    {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-        <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}"
-             role="button"
-             aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}"
-             aria-live="assertive"
-             hx-post="/post/{{ post.id }}/upvote/default"
-             hx-trigger="click throttle:1s"
-             hx-target="closest .voting_buttons_new"
-             tabindex="0">
-            <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted, post.id) else 'fe-arrow-up' }}"></span>
-        </div>
-    {% endif -%}
-    <span class="score"
-          title="{{ post.up_votes }}, {{ post.down_votes }}"
-          aria-live="assertive"
-          aria-label="{{ _("Score: ") }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
-    {%- if (can_downvote_here or can_downvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-        <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}"
-             role="button"
-             aria-label="{{ _('DownVote button, %(count)d downvotes so far.', count=post.down_votes) }}"
-             aria-live="assertive"
-             hx-post="/post/{{ post.id }}/downvote/default"
-             hx-trigger="click throttle:1s"
-             hx-target="closest .voting_buttons_new"
-             tabindex="0">
-            <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted, post.id) else 'fe-arrow-down' }}"></span>
-        </div>
-    {%- endif -%}
+        {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
+                <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}" role="button" aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}" aria-live="assertive"
+                 hx-post="/post/{{ post.id }}/upvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
+                        <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted, post.id) else 'fe-arrow-up' }}"></span>
+                </div>
+        {% endif -%}
+        <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: %(score)s', score=shorten_number(post.up_votes - post.down_votes)) }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+        {%- if (can_downvote_here or can_downvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
+                <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}" role="button" aria-label="{{ _('DownVote button, %(count)d downvotes so far.', count=post.down_votes) }}" aria-live="assertive"
+                 hx-post="/post/{{ post.id }}/downvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
+                        <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted, post.id) else 'fe-arrow-down' }}"></span>
+                </div>
+        {%- endif -%}
 {% else -%}
     {% if not disable_voting -%}
         <div class="upvote_button digits_{{ digits(post.up_votes) }} {{ upvoted_class }} redirect_login">
-            <span class="fe fe-arrow-up"></span>
+                <span class="fe fe-arrow-up"></span>
         </div>
     {% endif -%}
-    <span class="score"
-          title="{{ post.up_votes }}, {{ post.down_votes }}"
-          aria-live="assertive"
-          aria-label="{{ _("Score: ") }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+    <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: %(score)s', score=shorten_number(post.up_votes - post.down_votes)) }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
     {%- if not disable_voting -%}
         <div class="downvote_button digits_{{ digits(post.down_votes) }} {{ downvoted_class }} redirect_login">
-            <span class="fe fe-arrow-down"></span>
+                <span class="fe fe-arrow-down"></span>
         </div>
     {%- endif -%}
 {% endif -%}

@@ -4,124 +4,136 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = "connect_oauth" %}
+{% set active_child = 'connect_oauth' %}
+
 {% block app_content %}
+
     <div class="row">
         <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav class="mb-2"
-                 aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 title="Navigation">
+            <nav class="mb-2"  id="breadcrumb_nav" title="Navigation">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/u/{{ user.link() }}">{{ user.display_name() }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Connect OAuth") }}</li>
+                    <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+                    <li class="breadcrumb-item"><a href="/u/{{ user.link() }}">{{ user.display_name() }}</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ _('Connect OAuth') }}</li>
                 </ol>
             </nav>
-            <h1>{{ _("Connect OAuth") }}</h1>
+            <h1>{{ _('Connect OAuth') }}</h1>
             {% include "user/_user_nav.html" %}
             <div class="mb-4 mt-4">
                 <div class="card-header">
-                    <h2>{{ _("OAuth Connections") }}</h2>
+                    <h2>{{ _('OAuth Connections') }}</h2>
                 </div>
                 <div class="card-body">
-                    <p>{{ _("Connect your account to these services to log in without a password.") }}</p>
+                    <p>{{ _('Connect your account to these services to log in without a password.') }}</p>
+
                     <div class="row mt-4 g-3">
                         <!-- Google -->
                         {% if oauth_providers.google %}
                             <div>
                                 <div class="card h-100">
                                     <h3 class="card-header d-flex align-items-center justify-content-center gap-2">
-                                        <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo" />
+                                        <img src="/static/images/tiny_g_logo.png" width="16" alt="Logo"/>
                                         Google
                                     </h3>
                                     <div class="card-body d-flex flex-column">
                                         {% if oauth_connections.google %}
                                             <p class="text-success">
-                                                <i class="fas fa-check-circle"></i> {{ _("Connected") }}
+                                                <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                             </p>
                                             <form method="post" class="mt-auto">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="disconnect_provider" value="google">
-                                                <button type="submit" class="btn btn-outline-danger w-100">{{ _("Disconnect") }}</button>
+                                                <button type="submit" class="btn btn-outline-danger w-100">
+                                                    {{ _('Disconnect') }}
+                                                </button>
                                             </form>
                                         {% else %}
                                             <p class="text-muted">
-                                                <i class="fas fa-times-circle"></i> {{ _("Not connected") }}
+                                                <i class="fas fa-times-circle"></i> {{ _('Not connected') }}
                                             </p>
                                             <a href="{{ url_for('auth.google_login') }}"
-                                               class="btn btn-primary mt-auto">{{ _("Connect Google") }}</a>
+                                               class="btn btn-primary mt-auto">
+                                                {{ _('Connect Google') }}
+                                            </a>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
                         {% endif %}
+
+
                         <!-- Mastodon -->
                         {% if oauth_providers.mastodon %}
                             <div>
                                 <div class="card h-100">
                                     <h3 class="card-header d-flex align-items-center justify-content-center gap-2">
-                                        <img src="/static/images/mastodon_ico.png" width="16" alt="Logo" />
+                                        <img src="/static/images/mastodon_ico.png" width="16" alt="Logo"/>
                                         Mastodon
                                     </h3>
                                     <div class="card-body d-flex flex-column">
                                         {% if oauth_connections.mastodon %}
                                             <p class="text-success">
-                                                <i class="fas fa-check-circle"></i> {{ _("Connected") }}
+                                                <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                             </p>
                                             <form method="post" class="mt-auto">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="disconnect_provider" value="mastodon">
-                                                <button type="submit" class="btn btn-outline-danger w-100">{{ _("Disconnect") }}</button>
+                                                <button type="submit" class="btn btn-outline-danger w-100">
+                                                    {{ _('Disconnect') }}
+                                                </button>
                                             </form>
                                         {% else %}
                                             <p class="text-muted">
-                                                <i class="fas fa-times-circle"></i> {{ _("Not connected") }}
+                                                <i class="fas fa-times-circle"></i> {{ _('Not connected') }}
                                             </p>
                                             <a href="{{ url_for('auth.mastodon_login') }}"
-                                               class="btn btn-primary mt-auto">{{ _("Connect Mastodon") }}</a>
+                                               class="btn btn-primary mt-auto">
+                                                {{ _('Connect Mastodon') }}
+                                            </a>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
                         {% endif %}
+
                         <!-- Discord -->
                         {% if oauth_providers.discord %}
                             <div>
                                 <div class="card h-100">
                                     <h3 class="card-header d-flex align-items-center justify-content-center gap-2">
-                                        <img src="/static/images/discord_ico.png" width="16" alt="Logo" />
+                                        <img src="/static/images/discord_ico.png" width="16" alt="Logo"/>
                                         Discord
                                     </h3>
                                     <div class="card-body d-flex flex-column w-100">
                                         {% if oauth_connections.discord %}
                                             <p class="text-success">
-                                                <i class="fas fa-check-circle"></i> {{ _("Connected") }}
+                                                <i class="fas fa-check-circle"></i> {{ _('Connected') }}
                                             </p>
                                             <form method="post" class="mt-auto">
                                                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                                 <input type="hidden" name="disconnect_provider" value="discord">
-                                                <button type="submit" class="btn btn-outline-danger w-100">{{ _("Disconnect") }}</button>
+                                                <button type="submit" class="btn btn-outline-danger w-100">
+                                                    {{ _('Disconnect') }}
+                                                </button>
                                             </form>
                                         {% else %}
                                             <p class="text-muted">
-                                                <i class="fas fa-times-circle"></i> {{ _("Not connected") }}
+                                                <i class="fas fa-times-circle"></i> {{ _('Not connected') }}
                                             </p>
                                             <a href="{{ url_for('auth.discord_login') }}"
-                                               class="btn btn-primary mt-auto">{{ _("Connect Discord") }}</a>
+                                               class="btn btn-primary mt-auto">
+                                                {{ _('Connect Discord') }}
+                                            </a>
                                         {% endif %}
                                     </div>
                                 </div>
                             </div>
                         {% endif %}
                     </div>
+
                     <div class="alert alert-info mt-3">
-                        <p>{{ _("Note: If you connect an OAuth provider, you can use it to log in to your account without a password.") }}</p>
-                        <p>{{ _("If you disconnect all OAuth providers, you will need to use your password to log in.") }}</p>
+                        <p>{{ _('Note: If you connect an OAuth provider, you can use it to log in to your account without a password.') }}</p>
+                        <p>{{ _('If you disconnect all OAuth providers, you will need to use your password to log in.') }}</p>
                     </div>
                 </div>
             </div>

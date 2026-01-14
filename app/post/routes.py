@@ -18,7 +18,7 @@ from flask import (
 from flask_babel import _, force_locale, gettext
 from flask_login import current_user
 from furl import furl
-from sqlalchemy import text, desc, Integer
+from sqlalchemy import text, desc, Integer, case
 from sqlalchemy.orm.exc import NoResultFound
 from ics import Calendar, DisplayAlarm
 import ics
@@ -41,6 +41,7 @@ from app.community.util import (
     send_to_remote_instance,
     flair_from_form,
     hashtags_used_in_community,
+    search_for_community,
 )
 from app.constants import (
     NOTIF_REPORT,
@@ -110,6 +111,7 @@ from app.post.forms import (
     NewReminderForm,
     ShareMastodonForm,
     ChooseEmojiForm,
+    MovePostForm,
 )
 from app.post.util import (
     post_replies,
@@ -137,6 +139,7 @@ from app.shared.post import (
     mod_restore_post,
     vote_for_poll,
     hide_post,
+    move_post,
 )
 from app.shared.reply import (
     make_reply,
@@ -205,6 +208,8 @@ from app.utils import (
     user_in_restricted_country,
     site_language_code,
     block_honey_pot,
+    joined_communities,
+    moderating_communities,
 )
 
 
@@ -216,26 +221,22 @@ def show_post(post_id: int):
         community: Community = post.community
 
         if community.banned or post.deleted:
-            if current_user.is_anonymous or not (
-                current_user.is_authenticated
-                and (current_user.is_admin() or current_user.is_staff())
-            ):
-                abort(404)
+            if post.deleted_by == post.user_id:
+                flash(_("This post has been deleted by the author."), "warning")
             else:
-                if post.deleted_by == post.user_id:
-                    flash(
-                        _(
-                            "This post has been deleted by the author and is only visible to staff and admins."
-                        ),
-                        "warning",
-                    )
-                else:
+                if current_user.is_authenticated and (
+                    community.is_moderator()
+                    or current_user.is_admin_or_staff()
+                    or current_user.id == post.user_id
+                ):
                     flash(
                         _(
                             "This post has been deleted and is only visible to staff and admins."
                         ),
                         "warning",
                     )
+                else:
+                    abort(404)
 
         if current_user.is_anonymous:
             if current_app.config["CONTENT_WARNING"]:
@@ -332,6 +333,7 @@ def show_post(post_id: int):
             current_user.is_authenticated
             and current_user.verified
             and form.validate_on_submit()
+            and not post.deleted
         ):
             try:
                 reply = make_reply(form, post, None, SRC_WEB)
@@ -921,7 +923,15 @@ def comment_emoji_reaction(comment_id, vote_direction, federate):
 @validation_required
 @approval_required
 def comment_emoji_list(comment_id):
-    emojis = Emoji.query.order_by(Emoji.token).all()
+    # order emoji by: instance_id=1 first, then trusted instances, then all others
+    emojis = (
+        Emoji.query.outerjoin(Instance, Emoji.instance_id == Instance.id)
+        .order_by(
+            case((Emoji.instance_id == 1, 0), (Instance.trusted == True, 1), else_=2),
+            Emoji.token,
+        )
+        .all()
+    )
     emoji_list = [
         {
             "id": e.id,
@@ -1039,9 +1049,13 @@ def continue_discussion(post_id, comment_id):
 
     # Voting history
     if current_user.is_authenticated:
+        recently_upvoted = recently_upvoted_posts(current_user.id)
+        recently_downvoted = recently_downvoted_posts(current_user.id)
         recently_upvoted_replies = recently_upvoted_post_replies(current_user.id)
         recently_downvoted_replies = recently_downvoted_post_replies(current_user.id)
     else:
+        recently_upvoted = []
+        recently_downvoted = []
         recently_upvoted_replies = []
         recently_downvoted_replies = []
 
@@ -1089,6 +1103,8 @@ def continue_discussion(post_id, comment_id):
         comment=comment,
         replies=replies,
         markdown_editor=current_user.is_authenticated and current_user.markdown_editor,
+        recently_upvoted=recently_upvoted,
+        recently_downvoted=recently_downvoted,
         recently_upvoted_replies=recently_upvoted_replies,
         recently_downvoted_replies=recently_downvoted_replies,
         community=post.community,
@@ -1405,12 +1421,6 @@ def post_options(post_id: int):
     if post.deleted:
         if current_user.is_anonymous:
             abort(404)
-        if (
-            not post.community.is_moderator()
-            and not current_user.is_admin()
-            and (post.deleted_by is not None and post.deleted_by != current_user.id)
-        ):
-            abort(401)
 
     existing_bookmark = []
     if current_user.is_authenticated:
@@ -1568,7 +1578,9 @@ def post_edit(post_id: int):
             try:
                 uploaded_file = (
                     request.files["image_file"]
-                    if post_type == POST_TYPE_IMAGE or post_type == POST_TYPE_EVENT
+                    if post_type == POST_TYPE_IMAGE
+                    or post_type == POST_TYPE_EVENT
+                    or post_type == POST_TYPE_VIDEO
                     else None
                 )
                 edit_post(form, post, post_type, SRC_WEB, uploaded_file=uploaded_file)
@@ -2197,6 +2209,9 @@ def post_sticky(post_id: int, mode):
 def post_hide(post_id: int, mode):
     post = Post.query.get_or_404(post_id)
     hide_post(post.id, mode == "yes", SRC_WEB)
+
+    # todo: remove post.id from redis cache used by get_deduped_post_ids() if "result_id" is in referrer()
+
     if mode == "yes":
         flash(_("%(name)s has been hidden.", name=post.title))
     else:
@@ -2353,6 +2368,74 @@ def post_reply_lock(post_id: int, post_reply_id: int, mode):
             )
         )
     )
+
+
+@bp.route("/post/<int:post_id>/move", methods=["GET", "POST"])
+@login_required
+def post_move(post_id: int):
+    post = Post.query.get_or_404(post_id)
+    if (
+        current_user.id == post.user_id
+        or post.community.is_moderator(current_user)
+        or (
+            post.community.is_local() and post.community.is_admin_or_staff(current_user)
+        )
+    ):
+        form = MovePostForm()
+        if form.validate_on_submit():
+            search = form.which_community.data.lower().strip()
+            if "@" not in search:
+                search += f'@{current_app.config["SERVER_NAME"]}'
+            community = search_for_community(f"!{search}", allow_fetch=False)
+            if community:
+                move_post(post_id, community.id, SRC_WEB)
+            else:
+                flash(_("Could not find that community."), "error")
+            return redirect(url_for("activitypub.post_ap", post_id=post_id))
+        else:
+            return render_template(
+                "post/post_move.html",
+                title=_('Move "%(post_title)s"', post_title=post.title),
+                form=form,
+                post=post,
+            )
+    else:
+        abort(403)
+
+
+@bp.route("/post/search_community_suggestions", methods=["POST"])
+def post_search_community_suggestions():
+    q = request.form.get("which_community", "").lower()
+
+    joined = joined_communities(current_user.get_id())
+    moderating = moderating_communities(current_user.get_id())
+    comms = []
+    already_added = set()
+    for c in moderating:
+        if c.id not in already_added:
+            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
+                comms.append(c.lemmy_link().replace("!", ""))
+            already_added.add(c.id)
+    for c in joined:
+        if c.id not in already_added:
+            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
+                comms.append(c.lemmy_link().replace("!", ""))
+            already_added.add(c.id)
+    for c in (
+        db.session.query(
+            Community.id, Community.ap_id, Community.title, Community.ap_domain
+        )
+        .filter(Community.banned == False)
+        .order_by(Community.title)
+        .all()
+    ):
+        if c.id not in already_added:
+            display_name = f"{c.title}@{c.ap_domain}"
+            if (c.ap_id and q in c.ap_id) or q in display_name.lower():
+                comms.append(display_name)
+            already_added.add(c.id)
+    html = "".join(f"<option value='{c}'>" for c in comms)
+    return html
 
 
 @bp.route(
@@ -3040,28 +3123,32 @@ def post_cross_post(post_id: int):
     post = Post.query.get_or_404(post_id)
     form = CrossPostForm()
 
-    form.which_community.choices = possible_communities()
-
     if form.validate_on_submit():
-        community = Community.query.get_or_404(form.which_community.data)
-        post_type = post_type_to_form_url_type(post.type, post.url)
-        response = make_response(
-            redirect(
-                url_for(
-                    "community.add_post",
-                    actor=community.link(),
-                    type=post_type,
-                    source=str(post.id),
+        community = search_for_community(
+            f"!{form.which_community.data}", allow_fetch=False
+        )
+        if community:
+            post_type = post_type_to_form_url_type(post.type, post.url)
+            response = make_response(
+                redirect(
+                    url_for(
+                        "community.add_post",
+                        actor=community.link(),
+                        type=post_type,
+                        source=str(post.id),
+                    )
                 )
             )
-        )
-        response.set_cookie(
-            "cross_post_community_id", str(community.id), max_age=timedelta(days=28)
-        )
-        response.delete_cookie("post_title")
-        response.delete_cookie("post_description")
-        response.delete_cookie("post_tags")
-        return response
+            response.set_cookie(
+                "cross_post_community_id", str(community.id), max_age=timedelta(days=28)
+            )
+            response.delete_cookie("post_title")
+            response.delete_cookie("post_description")
+            response.delete_cookie("post_tags")
+            return response
+        else:
+            flash(_("Could not find that community."), "error")
+            return redirect(url_for("post.post_cross_post", post_id=post_id))
     else:
         breadcrumbs = []
         breadcrumb = namedtuple("Breadcrumb", ["text", "url"])
@@ -3074,8 +3161,10 @@ def post_cross_post(post_id: int):
         breadcrumbs.append(breadcrumb)
 
         if request.cookies.get("cross_post_community_id"):
-            form.which_community.data = int(
-                request.cookies.get("cross_post_community_id")
+            form.which_community.data = (
+                Community.query.get(int(request.cookies.get("cross_post_community_id")))
+                .lemmy_link()
+                .replace("!", "")
             )
 
         return render_template(
@@ -3090,7 +3179,49 @@ def post_cross_post(post_id: int):
 @bp.route("/post_preview", methods=["POST"])
 @login_required
 def preview():
-    return markdown_to_html(request.form.get("body"))
+    preview_type = request.args.get("type", None)
+    preview_id = request.args.get("id", None)
+    preview_top = request.args.get("top", None)
+
+    oob_target = ""
+    target_id = ""
+    additional_classes = ""
+
+    if preview_top:
+        oob_target = oob_target + "top_"
+
+    if preview_type == "comment":
+        oob_target = oob_target + "comment_preview_"
+        if preview_top:
+            target_id = "#textarea_comment_to_preview"
+        else:
+            target_id = "#textarea_in_reply_to_preview_"
+            if preview_id:
+                target_id += preview_id
+    elif preview_type == "post":
+        oob_target = "post_preview_btn"
+        target_id = "#preview"
+
+    if preview_id:
+        oob_target = oob_target + preview_id
+
+    if preview_type == "comment" and not preview_top:
+        additional_classes = "mt-2"
+
+    preview_url = url_for(
+        "post.preview", type=preview_type, id=preview_id, top=preview_top
+    )
+
+    html_preview = markdown_to_html(request.form.get("body"))
+
+    return render_template(
+        "post/_post_preview.html",
+        preview=html_preview,
+        oob_target=oob_target,
+        preview_url=preview_url,
+        target_id=target_id,
+        additional_classes=additional_classes,
+    )
 
 
 @bp.route("/post/<int:post_id>/ical", methods=["GET"])

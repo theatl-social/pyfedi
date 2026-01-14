@@ -24,6 +24,7 @@ from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
 from app.activitypub.util import extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
+from app.community.util import is_bad_name
 from app.constants import (
     NOTIF_COMMUNITY,
     NOTIF_POST,
@@ -1345,24 +1346,7 @@ def register(app):
                     continue
 
                 # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                seven_things_plus = [
-                    "shit",
-                    "piss",
-                    "fuck",
-                    "cunt",
-                    "cocksucker",
-                    "motherfucker",
-                    "tits",
-                    "piracy",
-                    "196",
-                    "greentext",
-                    "usauthoritarianism",
-                    "enoughmuskspam",
-                    "political_weirdos",
-                    "4chan",
-                ]
-                if any(badword in c["name"].lower() for badword in seven_things_plus):
+                if is_bad_name(c["name"]):
                     continue
 
                 # convert the url to server, community

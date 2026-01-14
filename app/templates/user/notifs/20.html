@@ -1,11 +1,10 @@
 <tr class="align-middle">
     <td width="*">
         {% if notification.subtype == "post_reported" %}
-            <h4>{{ _("Post Reported") }}</h4>
+            <h4>{{ _('Post Reported') }}</h4>
             <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    <a class="border border-0"
-                       href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                    <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                         {{ notification.targets.orig_post_title }}
                     </a>
                 </div>
@@ -13,97 +12,83 @@
             <div class="accordion" id="accordion-{{ notification.id }}">
                 <div class="accordion-item">
                     <div class="accordion-header">
-                        <button class="accordion-button collapsed p-2"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#notification-{{ notification.id }}"
-                                aria-expanded="false"
-                                aria-controls="notification-{{ notification.id }}">{{ _("Post details") }}</button>
+                        <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                            {{ _("Post details") }}
+                        </button>
                     </div>
-                    <div id="notification-{{ notification.id }}"
-                         class="accordion-collapse collapse"
-                         data-bs-parent="#accordion-{{ notification.id }}">
+                    <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
                         <div class="mt-2 mx-2">
-                            <a style="border: 0"
-                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                            <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                                 {{ markdown_to_html(notification.targets.orig_post_body, allow_img=False) | safe }}
                             </a>
                         </div>
                         <div class="mt-2 mx-2">
-                            {{ _("Author") }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+                            {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         {% elif notification.subtype == "user_reported" %}
-            <h4>{{ _("User Reported") }}</h4>
+            <h4>{{ _('User Reported') }}</h4>
             <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    {{ _("Username") }}: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.suspect_user_user_name }}</a>
+                    {{ _('Username') }}: <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">{{ notification.targets.suspect_user_user_name }}</a>
+                    {% if notification.title != 'Reported user' -%}
+                        <br>{{ notification.title }}
+                    {% endif -%}
                 </div>
             </div>
             {% if notification.targets.reasons or notification.targets.description %}
                 <div class="accordion" id="accordion-{{ notification.id }}">
                     <div class="accordion-item">
                         <div class="accordion-header">
-                            <button class="accordion-button collapsed p-2"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#notification-{{ notification.id }}"
-                                    aria-expanded="false"
-                                    aria-controls="notification-{{ notification.id }}">{{ _("Post details") }}</button>
+                            <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                                {{ _("Post details") }}
+                            </button>
                         </div>
-                        <div id="notification-{{ notification.id }}"
-                             class="accordion-collapse collapse"
-                             data-bs-parent="#accordion-{{ notification.id }}">
-                            {% if notification.targets.reasons %}<p>{{ _("Reasons") }}: {{ notification.targets.reasons }}</p>{% endif %}
+                        <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
+                            {% if notification.targets.reasons %}
+                                <p>{{ _('Reasons') }}: {{ notification.targets.reasons }}</p>
+                            {% endif %}
                             {% if notification.targets.description %}
-                                <p>{{ _("Description") }}: {{ notification.targets.description }}</p>
+                                <p>{{ _('Description') }}: {{ notification.targets.description }}</p>
                             {% endif %}
                         </div>
                     </div>
                 </div>
             {% endif %}
         {% elif notification.subtype == "comment_reported" %}
-            <h4>{{ _("Comment Reported") }}</h4>
+            <h4>{{ _('Comment Reported') }}</h4>
             <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    <a class="border border-0"
-                       href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                    {{ notification.targets.orig_comment_body | shorten }}</a>
+                    <a  class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                        {{ notification.targets.orig_comment_body | shorten }}</a>
                 </div>
             </div>
             <div class="accordion" id="accordion-{{ notification.id }}">
                 <div class="accordion-item">
                     <div class="accordion-header">
-                        <button class="accordion-button collapsed p-2"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#notification-{{ notification.id }}"
-                                aria-expanded="false"
-                                aria-controls="notification-{{ notification.id }}">{{ _("Comment details") }}</button>
+                        <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                            {{ _("Comment details") }}
+                        </button>
                     </div>
-                    <div id="notification-{{ notification.id }}"
-                         class="accordion-collapse collapse"
-                         data-bs-parent="#accordion-{{ notification.id }}">
+                    <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
                         <div class="mt-2 mx-2">
-                            <a style="border: 0"
-                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                            <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                                 {{ markdown_to_html(notification.targets.orig_comment_body, allow_img=False) | safe }}
                             </a>
                         </div>
                         <div class="mt-2 mx-2">
-                            {{ _("Author") }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+                            {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         {% elif notification.subtype == "post_from_suspicious_domain" %}
-            <h4>{{ _("Post From Suspicious Domain") }}</h4>
+            <h4>{{ _('Post From Suspicious Domain') }}</h4>
             <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}"
-                       class="{% if not notification.read %}unread{% endif %}">
+                    <a href="{{ url_for('user.notification_goto', notification_id=notification.id) }}" class="{% if not notification.read %}unread{% endif %}">
                         {{ notification.targets.orig_post_title }}
                     </a>
                 </div>
@@ -111,34 +96,27 @@
             <div class="accordion" id="accordion-{{ notification.id }}">
                 <div class="accordion-item">
                     <div class="accordion-header">
-                        <button class="accordion-button collapsed p-2"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#notification-{{ notification.id }}"
-                                aria-expanded="false"
-                                aria-controls="notification-{{ notification.id }}">{{ _("More details") }}</button>
+                        <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                            {{ _("More details") }}
+                        </button>
                     </div>
-                    <div id="notification-{{ notification.id }}"
-                         class="accordion-collapse collapse"
-                         data-bs-parent="#accordion-{{ notification.id }}">
+                    <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
                         <div class="mt-2 mx-2">
-                            <a style="border: 0"
-                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                            <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                                 {{ markdown_to_html(notification.targets.orig_post_body, allow_img=False) | safe }}
                             </a>
                         </div>
                         <div class="mt-2 mx-2">
-                            {{ _("Author") }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+                            {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         {% elif notification.subtype == "post_with_suspicious_image" %}
-            <h4>{{ _("Post With Suspicious Image") }}</h4>
+            <h4>{{ _('Post With Suspicious Image') }}</h4>
             <div class="overflow-ellipses-parent text-truncate">
                 <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    <a class="border border-0"
-                       href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                    <a  class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                         {{ notification.targets.orig_post_title }}
                     </a>
                 </div>
@@ -146,37 +124,30 @@
             <div class="accordion" id="accordion-{{ notification.id }}">
                 <div class="accordion-item">
                     <div class="accordion-header">
-                        <button class="accordion-button collapsed p-2"
-                                type="button"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#notification-{{ notification.id }}"
-                                aria-expanded="false"
-                                aria-controls="notification-{{ notification.id }}">{{ _("More details") }}</button>
+                        <button class="accordion-button collapsed p-2" type="button" data-bs-toggle="collapse" data-bs-target="#notification-{{ notification.id }}" aria-expanded="false" aria-controls="notification-{{ notification.id }}">
+                            {{ _("More details") }}
+                        </button>
                     </div>
-                    <div id="notification-{{ notification.id }}"
-                         class="accordion-collapse collapse"
-                         data-bs-parent="#accordion-{{ notification.id }}">
+                    <div id="notification-{{ notification.id }}" class="accordion-collapse collapse" data-bs-parent="#accordion-{{ notification.id }}">
                         <div class="mt-2 mx-2">
-                            <a style="border: 0"
-                               href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                            <a style="border: 0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
                                 {{ markdown_to_html(notification.targets.orig_post_body, allow_img=False) | safe }}
                             </a>
                         </div>
                         <div class="mt-2 mx-2">
-                            {{ _("Author") }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
+                            {{ _('Author') }}: <a href="/u/{{ notification.targets.suspect_user_user_name }}">{{ notification.targets.suspect_user_user_name }}</a>
                         </div>
                     </div>
                 </div>
             </div>
         {% elif notification.subtype == "chat_conversation_reported" %}
-            <div class="overflow-ellipses-parent text-truncate">
-                <div class="child my-1 {% if not notification.read %}unread{% endif %}">
-                    <a class="border border-0"
-                       href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
-                        {{ notification.title }}
-                    </a>
-                </div>
-            </div>
+                    <div class="overflow-ellipses-parent text-truncate">
+                        <div class="child my-1 {% if not notification.read %}unread{% endif %}">
+                            <a class="border border-0" href="{{ url_for('user.notification_goto', notification_id=notification.id) }}">
+                                {{ notification.title }}
+                            </a>
+                        </div>
+                    </div>
         {% endif %}
     </td>
     {% include "user/notifs/_time_and_buttons.html" %}

@@ -1,43 +1,29 @@
 <div class="d-xl-none">
-    <select class="form-control form-select navigate_on_change" name="filter_by">
-        {% if not current_user.is_anonymous -%}
-            {% if enable_mod_filter -%}
-                <option value="/home/{{ sort }}/moderating" aria-label="{{ _('Posts from communities you moderate') }}" {{ 'selected'  if view_filter == 'moderating' }}>{{ _("Moderating") }}
-                </option>
-            {% endif -%}
-            <option value="/home/{{ sort }}/subscribed" aria-label="{{ _('Posts from joined communities') }}" {{ 'selected'  if view_filter == 'subscribed' }}>{{ _("Subscribed") }}
-            </option>
-        {% endif -%}
-        <option value="/home/{{ sort }}/local" aria-label="{{ _('Posts on this instance') }}" {{ 'selected'  if view_filter == 'local' }}>{{ _("Local") }}
-        </option>
-        <option value="/home/{{ sort }}/popular" aria-label="{{ _('Posts from popular communities') }}" {{ 'selected'  if view_filter == 'popular' }}>{{ _("Popular") }}
-        </option>
-        <option value="/home/{{ sort }}/all" aria-label="{{ _('No filter') }}" {{ 'selected'  if view_filter == 'all' }}>{{ _("All") }}
-        </option>
-    </select>
-</div>
-<div class="d-none d-xl-block view_filter btn-group mt-1 mb-2"
-     aria-label="{{ _('Post filters: ') }}">
+  <select class="form-control form-select navigate_on_change" name="filter_by">
     {% if not current_user.is_anonymous -%}
-        {% if enable_mod_filter -%}
-            <a href="/home/{{ sort }}/moderating"
-               class="btn {{ 'btn-primary' if view_filter == 'moderating' else 'btn-outline-secondary' }}"
-               rel="nofollow noindex"
-               title="{{ _('Posts from communities you moderate') }}">{{ _("Moderating") }}</a>
-        {% endif -%}
-        <a href="/home/{{ sort }}/subscribed"
-           class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}"
-           rel="nofollow noindex"
-           title="{{ _('Posts from joined communities') }}">{{ _("Subscribed") }}</a>
+      {% if enable_mod_filter -%}
+      <option value="/home/{{ sort }}/moderating" aria-label="{{ _('Posts from communities you moderate') }}" {{ 'selected'  if view_filter == 'moderating' }}>{{ _('Moderating') }}</option>
+      {% endif -%}
+      <option value="/home/{{ sort }}/subscribed" aria-label="{{ _('Posts from joined communities') }}" {{ 'selected'  if view_filter == 'subscribed' }}>{{ _('Subscribed') }}</option>
     {% endif -%}
-    <a href="/home/{{ sort }}/local"
-       class="btn {{ 'btn-primary' if view_filter == 'local' else 'btn-outline-secondary' }}"
-       rel="nofollow noindex"
-       title="{{ _('Posts on this instance') }}">{{ _("Local") }}</a><a href="/home/{{ sort }}/popular"
-   class="btn {{ 'btn-primary' if view_filter == 'popular' else 'btn-outline-secondary' }}"
-   rel="nofollow noindex"
-   title="{{ _('Posts from popular communities') }}">{{ _("Popular") }}</a><a href="/home/{{ sort }}/all"
-   class="btn {{ 'btn-primary' if view_filter == 'all' else 'btn-outline-secondary' }}"
-   rel="nofollow noindex"
-   title="{{ _('No filter') }}">{{ _("All") }}</a>
+    <option value="/home/{{ sort }}/local" aria-label="{{ _('Posts on this instance') }}" {{ 'selected'  if view_filter == 'local' }}>{{ _('Local') }}</option>
+    <option value="/home/{{ sort }}/popular" aria-label="{{ _('Posts from popular communities') }}" {{ 'selected'  if view_filter == 'popular' }}>{{ _('Popular') }}</option>
+    <option value="/home/{{ sort }}/all" aria-label="{{ _('No filter') }}" {{ 'selected'  if view_filter == 'all' }}>{{ _('All') }}</option>
+  </select>
+</div>
+<div class="d-none d-xl-block view_filter btn-group mt-1 mb-2">
+  {% if not current_user.is_anonymous -%}
+    {% if enable_mod_filter -%}
+      <a href="/home/{{ sort }}/moderating" class="btn {{ 'btn-primary' if view_filter == 'moderating' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from communities you moderate') }}">
+        {{ _('Moderating') }}
+    </a>{% endif -%}
+    <a href="/home/{{ sort }}/subscribed" class="btn {{ 'btn-primary' if view_filter == 'subscribed' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from joined communities') }}">
+      {{ _('Subscribed') }}
+    </a>{% endif -%}<a href="/home/{{ sort }}/local" class="btn {{ 'btn-primary' if view_filter == 'local' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts on this instance') }}">
+      {{ _('Local') }}
+    </a><a href="/home/{{ sort }}/popular" class="btn {{ 'btn-primary' if view_filter == 'popular' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('Posts from popular communities') }}">
+      {{ _('Popular') }}
+    </a><a href="/home/{{ sort }}/all" class="btn {{ 'btn-primary' if view_filter == 'all' else 'btn-outline-secondary' }}" rel="nofollow noindex" title="{{ _('No filter') }}">
+      {{ _('All') }}
+    </a>
 </div>

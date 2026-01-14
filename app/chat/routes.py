@@ -321,3 +321,21 @@ def chat_report(conversation_id):
             form=form,
             conversation=conversation,
         )
+
+
+@bp.route("/chat/refresh-conversation/<int:conversation_id>")
+@login_required
+def chat_conversation(conversation_id):
+    # reload a conversation when an SSE message arrives. See notifs.js
+    conversation = Conversation.query.get_or_404(conversation_id)
+    if current_user.is_admin() or conversation.is_member(current_user):
+        messages = conversation.messages.order_by(ChatMessage.created_at).all()
+        for message in messages:
+            if message.recipient_id == current_user.id:
+                message.read = True
+
+        return render_template(
+            "chat/_messages.html", messages=messages, current_user=current_user
+        )
+    else:
+        return ""

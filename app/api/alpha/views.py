@@ -27,7 +27,6 @@ from app.models import (
     Poll,
     Event,
     PollChoice,
-    Rating,
 )
 from app.post.util import tags_to_string, flair_to_string
 from app.utils import (
@@ -65,7 +64,7 @@ def post_view(
 ) -> dict:
     if isinstance(post, int):
         post = Post.query.get(post)
-        if post is None or post.deleted:
+        if post is None:
             raise NoResultFound
 
     # Variant 1 - models/post/post.dart
@@ -474,7 +473,7 @@ def user_view(
     user: User | int, variant, stub=False, user_id=None, flair_community_id=None
 ) -> dict:
     if isinstance(user, int):
-        user = User.query.filter_by(id=user).one()
+        user = User.query.get(user)
 
     # Variant 1 - models/person/person.dart
     if variant == 1:
@@ -484,6 +483,7 @@ def user_view(
             for column in user.__table__.columns
             if column.name in include
         }
+        v1["bot"] = v1["bot"] or user.bot_override or False
         v1.update(
             {
                 "published": user.created.isoformat(timespec="microseconds") + "Z",
@@ -789,7 +789,6 @@ def community_view(
         counts.update(
             {"published": community.created_at.isoformat(timespec="microseconds") + "Z"}
         )
-        counts.update({"total_ratings": community.total_ratings})
 
         # Return zero if stats are None
         stats_list = [
@@ -852,17 +851,6 @@ def community_view(
             "moderators": modlist,
             "discussion_languages": [],
         }
-
-        if user_id:
-            # Fetch user info for ratings
-            v3["can_rate"] = community.can_rate(user_id)[0]
-            my_rating = Rating.query.filter(
-                Rating.user_id == user_id, Rating.community_id == community.id
-            ).first()
-            if my_rating:
-                v3["my_rating"] = my_rating.rating
-            else:
-                v3["my_rating"] = None
 
         return v3
 

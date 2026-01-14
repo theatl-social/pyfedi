@@ -50,8 +50,17 @@ def run_search():
     q = (request.args.get("q") or "").strip()
     sort_by = request.args.get("sort_by", "")
     search_for = request.args.get("search_for", "posts")
+    nsfw = request.args.get("nsfw", "")
+    minimum_upvote = request.args.get("minimum_upvote", "")
 
-    if q != "" or type != 0 or language_id != 0 or community_id != 0:
+    if (
+        q != ""
+        or type != 0
+        or language_id != 0
+        or community_id != 0
+        or nsfw != ""
+        or minimum_upvote != ""
+    ):
         posts = None
         db.session.execute(text("SET work_mem = '100MB';"))
         if search_for == "posts":
@@ -63,8 +72,16 @@ def run_search():
                     posts = posts.filter(Post.from_bot == False)
                 if current_user.hide_nsfl == 1:
                     posts = posts.filter(Post.nsfl == False)
-                if current_user.hide_nsfw == 1:
+
+                if nsfw == "" and current_user.hide_nsfw == 1:
                     posts = posts.filter(Post.nsfw == False)
+                else:
+                    if nsfw == "exclude":
+                        posts = posts.filter(Post.nsfw == False)
+                    elif nsfw == "only":
+                        posts = posts.filter(Post.nsfw == True)
+                    elif nsfw == "include":
+                        pass
                 domains_ids = blocked_domains(current_user.id)
                 if domains_ids:
                     posts = posts.filter(
@@ -90,8 +107,18 @@ def run_search():
             else:
                 posts = posts.filter(Post.from_bot == False)
                 posts = posts.filter(Post.nsfl == False)
+                if nsfw == "exclude" or nsfw == "":
+                    posts = posts.filter(Post.nsfw == False)
+                elif nsfw == "only":
+                    posts = posts.filter(Post.nsfw == True)
+                elif nsfw == "include":
+                    pass
                 posts = posts.filter(Post.nsfw == False)
 
+            if minimum_upvote:
+                posts = posts.filter(
+                    Post.up_votes - Post.down_votes >= int(minimum_upvote)
+                )
             posts = posts.filter(Post.indexable == True)
             if q is not None:
                 posts = posts.search(q, sort=True if sort_by == "" else False)

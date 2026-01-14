@@ -149,14 +149,16 @@ async def redis_listener():
         try:
             logger.info("Starting Redis listener")
             pubsub = r.pubsub()
-            await pubsub.psubscribe("notifications:*", "http_posts:*")
+            await pubsub.psubscribe("notifications:*", "http_posts:*", "messages:*")
 
             async for message in pubsub.listen():
                 if message["type"] == "pmessage":
                     channel = message["channel"]
                     data = message["data"]
 
-                    if channel.startswith("notifications:"):
+                    if channel.startswith("notifications:") or channel.startswith(
+                        "messages:"
+                    ):
                         # Handle SSE notification messages
                         _, user_id = channel.split(":", 1)
                         logger.debug(f"Received Redis notification for user {user_id}")

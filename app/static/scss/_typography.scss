@@ -412,6 +412,12 @@ h1 {
   }
 }
 
+.fe-move {
+  &:before {
+    content: "\e95f";
+  }
+}
+
 .fe-video {
   position: relative;
   top: 2px;

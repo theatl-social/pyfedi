@@ -782,8 +782,8 @@ def save_icon_file(icon_file, directory="communities") -> File:
             img_height = None
             thumbnail_width = None
             thumbnail_height = None
-            final_ext = file_ext
-            thumbnail_ext = file_ext
+            final_ext = file_ext.lower()
+            thumbnail_ext = file_ext.lower()
             final_place_thumbnail = final_place
         elif file_ext.lower() == ".gif":  # handle animated gifs specially
             Image.MAX_IMAGE_PIXELS = 89478485
@@ -799,7 +799,7 @@ def save_icon_file(icon_file, directory="communities") -> File:
                 img_height = img.height
 
             # Create thumbnail
-            final_ext = file_ext
+            final_ext = file_ext.lower()
             thumbnail_ext = ".gif"
             final_place_thumbnail = os.path.join(
                 local_directory, new_filename + "_thumbnail.gif"
@@ -822,8 +822,8 @@ def save_icon_file(icon_file, directory="communities") -> File:
                 "MEDIA_IMAGE_THUMBNAIL_QUALITY"
             ]
 
-            final_ext = file_ext
-            thumbnail_ext = file_ext
+            final_ext = file_ext.lower()
+            thumbnail_ext = file_ext.lower()
 
             if image_format == "AVIF" or thumbnail_image_format == "AVIF":
                 import pillow_avif  # NOQA
@@ -971,8 +971,8 @@ def save_banner_file(banner_file, directory="communities") -> File:
         thumbnail_image_format = current_app.config["MEDIA_IMAGE_THUMBNAIL_FORMAT"]
         thumbnail_image_quality = current_app.config["MEDIA_IMAGE_THUMBNAIL_QUALITY"]
 
-        final_ext = file_ext
-        thumbnail_ext = file_ext
+        final_ext = file_ext.lower()
+        thumbnail_ext = file_ext.lower()
         img_width = img.width
         img_height = img.height
 
@@ -1325,3 +1325,24 @@ def publicize_community_task(community_id: int):
         f"https://programming.dev/api/v3/resolve_object?q={community.lemmy_link()}"
     )
     session.close()
+
+
+def is_bad_name(community_name: str) -> bool:
+    name_lower = community_name.lower()
+    # sort out the 'seven things you can't say on tv' names (cursewords), plus some "low effort" communities
+    seven_things_plus = [
+        "shit",
+        "piss",
+        "fuck",
+        "cunt",
+        "cocksucker",
+        "motherfucker",
+        "tits",
+        "piracy",
+        "greentext",
+        "usauthoritarianism",
+        "enoughmuskspam",
+        "political_weirdos",
+        "4chan",
+    ]
+    return any(badword in name_lower for badword in seven_things_plus)

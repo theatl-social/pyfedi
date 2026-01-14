@@ -5,38 +5,35 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
 {% from "_macros.html" import render_username, render_communityname, render_feedname -%}
+
 {% block app_content %}
-    <script src="/static/js/coolfieldset.js?v=3"></script>
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative add_reply main_pane">
-            <fieldset id="post_reply_op"
-                      class="coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3">
-                <legend class="w-auto">Original post</legend>
-                <h3>{{ post.title }}</h3>
-                {{ post.body_html|safe if post.body_html }}
+<script src="/static/js/coolfieldset.js?v=3" nonce={{ nonce }}></script>
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative add_reply main_pane">
+        <fieldset id="post_reply_op" class="coolfieldset  {{ 'collapsed' if request.cookies.get('fieldset_post_reply_op_state', 'collapsed') == 'collapsed' }} mt-3"><legend class="w-auto">Original post</legend>
+            <h3>{{ post.title }}</h3>
+            {{ post.body_html|safe if post.body_html }}
+        </fieldset>
+        {% if comment %}
+            <fieldset id="post_reply_comment" class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_comment_state', 'collapsed') == 'collapsed' }} mt-4 mb-4"><legend class="w-auto">Comment you are replying to</legend>
+                {{ comment.body_html|safe }}
             </fieldset>
-            {% if comment %}
-                <fieldset id="post_reply_comment"
-                          class="coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_comment_state', 'collapsed') == 'collapsed' }} mt-4 mb-4">
-                    <legend class="w-auto">Comment you are replying to</legend>
-                    {{ comment.body_html|safe }}
+        {% endif %}
+        <div class="position-relative">
+            <form method="post" role="form">
+                {{ form.csrf_token() }}
+                {{ render_field(form.body) }}
+                <fieldset id="post_reply_more_options" class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
+                    <legend>{{ _('More options') }}</legend>
+                    {{ render_field(form.notify_author) }}
+                    {{ render_field(form.distinguished) }}
+                    {{ render_field(form.language_id) }}
                 </fieldset>
-            {% endif %}
-            <div class="position-relative">
-                <form method="post" role="form">
-                    {{ form.csrf_token() }}
-                    {{ render_field(form.body) }}
-                    <fieldset id="post_reply_more_options"
-                              class="mt-2 coolfieldset {{ 'collapsed' if request.cookies.get('fieldset_post_reply_more_options_state', 'collapsed') == 'collapsed' }}">
-                        <legend>{{ _("More options") }}</legend>
-                        {{ render_field(form.notify_author) }}
-                        {{ render_field(form.distinguished) }}
-                        {{ render_field(form.language_id) }}
-                    </fieldset>
-                    {{ render_field(form.submit) }}
-                </form>
-                {% if markdown_editor %}
-                    <script nonce="{{ nonce }}">
+                {{ render_field(form.submit) }}
+            </form>
+
+            {% if markdown_editor %}
+                <script nonce="{{ nonce }}">
                     window.addEventListener("load", function () {
                         var downarea = new DownArea({
                             elem: document.querySelector('#body'),
@@ -46,12 +43,13 @@
                         });
                         setupAutoResize('body');
                     });
-                    </script>
-                {% endif %}
-            </div>
-        </main>
-        {% with community = post.community -%}
-            {% include "_side_pane.html" %}
-        {% endwith -%}
-    </div>
+                </script>
+            {% endif %}
+        </div>
+    </main>
+    {% with community = post.community -%}
+        {% include "_side_pane.html" %}
+    {% endwith -%}
+</div>
+
 {% endblock %}

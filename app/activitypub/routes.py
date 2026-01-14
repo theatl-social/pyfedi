@@ -62,6 +62,7 @@ from app.activitypub.util import (
     post_replies_for_ap,
     is_vote,
     find_instance_id,
+    resolve_remote_post_from_search,
 )
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
@@ -126,6 +127,7 @@ from app.utils import (
     joined_communities,
     moderating_communities_ids,
     moderating_communities_ids_all_users,
+    publish_sse_event,
 )
 
 
@@ -1575,7 +1577,10 @@ def process_inbox_request(request_json, store_ap_json):
                                         joined_via_feed=joined_via_feed,
                                     )
                                     session.add(member)
-                                    if not member.user.bot:
+                                    if (
+                                        User.query.get(join_request.user_id).bot
+                                        is False
+                                    ):
                                         community.subscriptions_count += 1
                                     community.last_active = utcnow()
                                     session.commit()
@@ -1979,10 +1984,6 @@ def process_inbox_request(request_json, store_ap_json):
 
                 if core_activity["type"] == "Dislike":  # Downvote
                     process_downvote(user, store_ap_json, request_json, announced)
-                    return
-
-                if core_activity["type"] == "Rate":  # Rate community
-                    process_rate(user, store_ap_json, request_json, announced)
                     return
 
                 if core_activity["type"] == "PollVote":  # Vote in a poll
@@ -2475,6 +2476,51 @@ def process_inbox_request(request_json, store_ap_json):
                         )
                     return
 
+                if core_activity["type"] == "Move":
+                    origin_community: Community = find_actor_or_create_cached(
+                        core_activity["origin"], community_only=True
+                    )
+                    target_community = find_actor_or_create_cached(
+                        core_activity["target"], community_only=True
+                    )
+                    post = Post.get_by_ap_id(core_activity["object"])
+                    if post is None and origin_community and target_community:
+                        # retrieve post from remote instance
+                        post = resolve_remote_post_from_search(core_activity["object"])
+                    if origin_community and target_community and post:
+                        if (
+                            user.id == post.user_id
+                            or origin_community.is_moderator(user)
+                            or (
+                                origin_community.instance_id == user.instance_id
+                                and origin_community.is_instance_admin(user)
+                            )
+                        ):
+                            post.move_to(target_community)
+                            session.commit()
+
+                            add_to_modlog(
+                                "move_post",
+                                actor=user,
+                                target_user=post.author,
+                                reason="",
+                                community=target_community,
+                                post=post,
+                                link_text=shorten_string(post.title),
+                                link=f"post/{post.id}",
+                            )
+                            if origin_community.is_local():
+                                announce_activity_to_followers(
+                                    origin_community, user, request_json
+                                )
+                            log_incoming_ap(
+                                id,
+                                APLOG_MOVE,
+                                APLOG_SUCCESS,
+                                saved_json,
+                                f"{user.user_name} moved post to {target_community.link()}",
+                            )
+
                 if core_activity["type"] == "Block":  # User Ban
                     """
                     Sent directly (not Announced) if a remote Admin is banning one of their own users from their site
@@ -2790,16 +2836,15 @@ def process_inbox_request(request_json, store_ap_json):
                         mod = user
                         post = None
                         post_reply = None
+                        target_ap_id = core_activity["object"]["object"]
                         if "/post/" in core_activity["object"]:
-                            post = Post.get_by_ap_id(core_activity["object"])
+                            post = Post.get_by_ap_id(target_ap_id)
                         elif "/comment/" in core_activity["object"]:
-                            post_reply = PostReply.get_by_ap_id(core_activity["object"])
+                            post_reply = PostReply.get_by_ap_id(target_ap_id)
                         else:
-                            post = Post.get_by_ap_id(core_activity["object"])
+                            post = Post.get_by_ap_id(target_ap_id)
                             if post is None:
-                                post_reply = PostReply.get_by_ap_id(
-                                    core_activity["object"]
-                                )
+                                post_reply = PostReply.get_by_ap_id(target_ap_id)
                         reason = (
                             core_activity["summary"]
                             if "summary" in core_activity
@@ -2983,7 +3028,11 @@ def process_inbox_request(request_json, store_ap_json):
                         return
 
                     if core_activity["object"]["type"] == "ChooseAnswer":
-                        post_reply = PostReply.get_by_ap_id(core_activity["object"])
+                        if isinstance(core_activity["object"], str):
+                            target_ap_id = core_activity["object"]
+                        else:
+                            target_ap_id = core_activity["object"]["object"]
+                        post_reply = PostReply.get_by_ap_id(target_ap_id)
                         if post_reply:
                             with redis_client.lock(
                                 f"lock:post_reply:{post_reply.id}",
@@ -3707,31 +3756,6 @@ def process_downvote(user, store_ap_json, request_json, announced):
         )
 
 
-def process_rate(user, store_ap_json, request_json, announced):
-    saved_json = request_json if store_ap_json else None
-    id = request_json["id"]
-    ap_id = (
-        request_json["object"] if not announced else request_json["object"]["object"]
-    )
-    if isinstance(ap_id, dict) and "id" in ap_id:
-        ap_id = ap_id["id"]
-    community = find_actor_or_create_cached(
-        ap_id, create_if_not_found=False, community_only=True
-    )
-    if community is None:
-        log_incoming_ap(
-            id, APLOG_RATE, APLOG_FAILURE, saved_json, "Unfound object " + ap_id
-        )
-        return
-    if not instance_banned(user.instance.domain):
-        community.rate(user, request_json["rating"])
-        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
-        if not announced:
-            announce_activity_to_followers(community, user, request_json)
-    else:
-        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, "Cannot rate this")
-
-
 def process_poll_vote(user, store_ap_json, request_json, announced):
     saved_json = request_json if store_ap_json else None
     id = request_json["id"]
@@ -3790,10 +3814,14 @@ def process_question_answer(user, store_ap_json, request_json, announced):
     post_reply = PostReply.get_by_ap_id(ap_id)
     if post_reply is None:
         log_incoming_ap(
-            id, APLOG_RATE, APLOG_FAILURE, saved_json, "Unfound object " + ap_id
+            id, APLOG_QA, APLOG_FAILURE, saved_json, "Unfound object " + ap_id
         )
         return
-    if not instance_banned(user.instance.domain):
+    if (not instance_banned(user.instance.domain)) and (
+        post_reply.user_id == post_reply.post.user_id
+        or post_reply.community.is_moderator(user)
+        or post_reply.author.is_instance_admin()
+    ):
         from app import redis_client
 
         with redis_client.lock(
@@ -3820,11 +3848,11 @@ def process_question_answer(user, store_ap_json, request_json, announced):
                 db.session.add(notify)
                 post_reply.author.unread_notifications += 1
             db.session.commit()
-        log_incoming_ap(id, APLOG_RATE, APLOG_SUCCESS, saved_json)
+        log_incoming_ap(id, APLOG_QA, APLOG_SUCCESS, saved_json)
         if not announced:
             announce_activity_to_followers(post_reply.community, user, request_json)
     else:
-        log_incoming_ap(id, APLOG_RATE, APLOG_IGNORED, saved_json, "Cannot set answer")
+        log_incoming_ap(id, APLOG_QA, APLOG_IGNORED, saved_json, "Cannot set answer")
 
 
 # Private Messages, for both Create / ChatMessage (PieFed / Lemmy), and Create / Note (Mastodon, NodeBB)
@@ -3832,14 +3860,32 @@ def process_question_answer(user, store_ap_json, request_json, announced):
 def process_chat(user, store_ap_json, core_activity, session):
     saved_json = core_activity if store_ap_json else None
     id = core_activity["id"]
-    sender = user
-    if not (
-        "to" in core_activity["object"]
-        and isinstance(core_activity["object"]["to"], list)
-        and len(core_activity["object"]["to"]) > 0
-    ):
+    sender = session.query(User).get(user.id)
+    recipient_ap_id = None
+
+    # activity['object']['to'] must exist in the activity
+    if "to" in core_activity["object"]:
+        if isinstance(core_activity["object"]["to"], str):
+            # activity['object']['to'] is a sole string
+            # jsonld arrays can be represented by the value alone to indicate the only element
+            recipient_ap_id = core_activity["object"]["to"]
+        elif (
+            isinstance(core_activity["object"]["to"], list)
+            and len(core_activity["object"]["to"]) > 0
+        ):
+            # activity['object']['to'] is an array with at least 1 element
+            recipient_ap_id = core_activity["object"]["to"][0]
+
+    if recipient_ap_id is None:
+        log_incoming_ap(
+            id,
+            APLOG_CHATMESSAGE,
+            APLOG_FAILURE,
+            saved_json,
+            "Chat recipient is invalid",
+        )
         return False
-    recipient_ap_id = core_activity["object"]["to"][0]
+
     recipient = find_actor_or_create_cached(recipient_ap_id)
     if recipient and recipient.is_local():
         if sender.created_very_recently():
@@ -3946,29 +3992,41 @@ def process_chat(user, store_ap_json, core_activity, session):
                 notification_text = "Updated message from "
                 message_id = updated_message.id
 
-            # Notify recipient
-            targets_data = {
-                "gen": "0",
-                "conversation_id": existing_conversation.id,
-                "message_id": message_id,
-            }
-            notify = Notification(
-                title=shorten_string(notification_text + sender.display_name()),
-                url=f"/chat/{existing_conversation.id}#message_{message_id}",
-                user_id=recipient.id,
-                author_id=sender.id,
-                notif_type=NOTIF_MESSAGE,
-                subtype="chat_message",
-                targets=targets_data,
-            )
-            session.add(notify)
-            recipient.unread_notifications += 1
-            existing_conversation.read = False
-            session.commit()
+            if recipient.is_local():
+                publish_sse_event(
+                    f"messages:{recipient.id}",
+                    json.dumps({"conversation": existing_conversation.id}),
+                )
+                # Notify recipient
+                targets_data = {
+                    "gen": "0",
+                    "conversation_id": existing_conversation.id,
+                    "message_id": message_id,
+                }
+                notify = Notification(
+                    title=shorten_string(notification_text + sender.display_name()),
+                    url=f"/chat/{existing_conversation.id}#message_{message_id}",
+                    user_id=recipient.id,
+                    author_id=sender.id,
+                    notif_type=NOTIF_MESSAGE,
+                    subtype="chat_message",
+                    targets=targets_data,
+                )
+                session.add(notify)
+                recipient.unread_notifications += 1
+                existing_conversation.read = False
+                session.commit()
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_SUCCESS, saved_json)
 
         return True
 
+    log_incoming_ap(
+        id,
+        APLOG_CHATMESSAGE,
+        APLOG_FAILURE,
+        saved_json,
+        "ChatMessage target is not local",
+    )
     return False
 
 

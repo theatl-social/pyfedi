@@ -97,6 +97,7 @@ from app.models import (
     AllowedInstances,
     InstanceBan,
     Tag,
+    Emoji,
 )
 
 
@@ -348,7 +349,7 @@ def is_local_image_url(url):
 
 def is_video_url(url: str) -> bool:
     common_video_extensions = [".mp4", ".webm"]
-    mime_type = mime_type_using_head(url)
+    mime_type = mime_type_using_head(url) if url.startswith("http") else None
     if mime_type:
         mime_type_parts = mime_type.split("/")
         return f".{mime_type_parts[1]}" in common_video_extensions
@@ -470,12 +471,102 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
     else:
         fn_string = gibberish(6)
 
+    code_placeholder = gibberish(10)
+
+    # substitute out the <code> snippets so that they don't inadvertently get formatted
+    code_snippets, clean_html = stash_code_html(html, code_placeholder)
+
+    # avoid returning empty anchors
+    re_empty_anchor = re.compile(
+        r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>'
+    )
+    clean_html = re_empty_anchor.sub(
+        r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html
+    )
+
+    # replace lemmy's spoiler markdown left in HTML
+    clean_html = clean_html.replace(
+        "<h2>:::</h2>", "<p>:::</p>"
+    )  # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
+    re_spoiler = re.compile(
+        r":{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}", re.S
+    )
+    clean_html = re_spoiler.sub(
+        r"<details><summary>\1</summary><p>\2</p></details>", clean_html
+    )
+
+    # replace strikethough markdown left in HTML
+    re_strikethough = re.compile(r"~~(.*)~~")
+    clean_html = re_strikethough.sub(r"<s>\1</s>", clean_html)
+
+    # replace subscript markdown left in HTML
+    re_subscript = re.compile(r"~([^~\r\n\t\f\v ]+)~")
+    clean_html = re_subscript.sub(r"<sub>\1</sub>", clean_html)
+
+    # replace superscript markdown left in HTML
+    re_superscript = re.compile(r"\^([^\^\r\n\t\f\v ]+)\^")
+    clean_html = re_superscript.sub(r"<sup>\1</sup>", clean_html)
+
+    # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
+    clean_html = re_embedded_mp4.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
+        clean_html,
+    )
+
+    # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
+    re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
+    clean_html = re_embedded_webm.sub(
+        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
+        clean_html,
+    )
+
+    # replace <img src> for mp3 with <audio>
+    re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
+    clean_html = re_embedded_mp3.sub(
+        r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html
+    )
+
+    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
+    re_fandom_hotlink = re.compile(
+        r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net'
+    )
+    clean_html = re_fandom_hotlink.sub(
+        r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
+        clean_html,
+    )
+
+    # replace ruby markdown like {漢字|かんじ}
+    re_ruby = re.compile(r"\{(.+?)\|(.+?)\}")
+    clean_html = re_ruby.sub(
+        r"<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>", clean_html
+    )
+
+    # replace :emoji: with images
+    emoji_replacements = get_emoji_replacements() if test_env is False else None
+    if emoji_replacements:
+        pattern = re.compile(
+            "|".join(re.escape(k) for k in emoji_replacements), re.IGNORECASE
+        )
+
+        clean_html = pattern.sub(
+            lambda m: "<img width=30 height=30 src='"
+            + emoji_replacements[m.group(0).lower()]
+            + "'>",
+            clean_html,
+        )
+
+    # bring back the <code> snippets
+    clean_html = pop_code(code_snippets, clean_html, code_placeholder)
+
     # Pre-escape angle brackets that aren't valid HTML tags before BeautifulSoup parsing
     # We need to distinguish between:
     # 1. Valid HTML tags (allowed or disallowed) - let BeautifulSoup handle them
     # 2. Invalid/non-HTML content in angle brackets - escape them
     def escape_non_html_brackets(match):
         tag_content = match.group(1).strip().lower()
+        if tag_content == "":
+            return f"&lt;{match.group(1)}&gt;"
         # Handle closing tags by removing the leading slash before extracting tag name
         if tag_content.startswith("/"):
             tag_name = tag_content[1:].split()[0]
@@ -669,10 +760,12 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
             if tag.name == "table":
                 tag.attrs["class"] = "table"
 
+    code_placeholder = gibberish(10)
+
     clean_html = str(soup)
 
     # substitute out the <code> snippets so that they don't inadvertently get formatted
-    code_snippets, clean_html = stash_code_html(clean_html)
+    code_snippets, clean_html = stash_code_html(clean_html, code_placeholder)
 
     # avoid returning empty anchors
     re_empty_anchor = re.compile(
@@ -741,14 +834,17 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
     )
 
     # bring back the <code> snippets
-    clean_html = pop_code(code_snippets, clean_html)
+    clean_html = pop_code(
+        code_snippets=code_snippets, text=clean_html, placeholder=code_placeholder
+    )
 
     return clean_html
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
+    placeholder = gibberish(6)
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_md(text)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Escape <...> unless they look like valid HTML tags
     def escape_tag(match):
@@ -776,7 +872,7 @@ def escape_non_html_angle_brackets(text: str) -> str:
     text = re.sub(r"<([^<>]+?)>", escape_tag, text)
 
     # Step 3: Restore code blocks
-    text = pop_code(code_snippets=code_snippets, text=text)
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
 
     return text
 
@@ -787,8 +883,10 @@ def handle_double_bolds(text: str) -> str:
     same sentence.
     """
 
+    placeholder = gibberish(6)
+
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_md(text)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Wrap **bold** sections with <strong></strong>
     # Regex is slightly modified from markdown2 source code
@@ -796,7 +894,7 @@ def handle_double_bolds(text: str) -> str:
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
     # Step 3: Restore code blocks
-    text = pop_code(code_snippets=code_snippets, text=text)
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
 
     return text
 
@@ -823,8 +921,10 @@ def handle_lemmy_autocomplete(text: str) -> str:
     ...which will be later converted to an instance-local link
     """
 
+    placeholder = gibberish(6)
+
     # Step 1: Extract inline and block code, replacing with placeholders
-    code_snippets, text = stash_code_md(text)
+    code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: ID all the markdown-formatted links and check the part in [] if it matches comm/person/feed formats
     def sub_non_formatted_actor(match):
@@ -842,7 +942,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
     text = re.sub(re_link, sub_non_formatted_actor, text)
 
     # Step 3: Restore code blocks
-    text = pop_code(code_snippets=code_snippets, text=text)
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
 
     return text
 
@@ -949,15 +1049,31 @@ def html_to_text(html) -> str:
     return soup.get_text()
 
 
+@cache.memoize(timeout=5000)
+def get_emoji_replacements():
+    return {e.token: e.url for e in db.session.query(Emoji)}
+
+
 def mastodon_extra_field_link(extra_field: str) -> str:
     soup = BeautifulSoup(extra_field, "html.parser")
     for tag in soup.find_all("a"):
         return tag["href"]
 
 
-def microblog_content_to_title(html: str) -> str:
+def microblog_content_to_title(html: str) -> Tuple[str, str]:
     title = ""
-    if "<p>" in html:
+    link = ""
+    if "<h1>" in html.lower():
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup.find_all("h1"):
+            text = tag.get_text(separator=" ")
+            if len(text) >= 5:
+                title = text
+                a = tag.find("a", href=True)
+                if a:
+                    link = a["href"]
+                break
+    elif "<p>" in html:
         soup = BeautifulSoup(html, "html.parser")
         for tag in soup.find_all("p"):
             title = tag.get_text(separator=" ")
@@ -984,7 +1100,7 @@ def microblog_content_to_title(html: str) -> str:
             title = shorten_string(title, 197)
         else:
             title = "(content in post body)"
-        return title.strip()
+        return title.strip(), link
 
     if end_index != -1:
         if question_index != -1 and question_index == end_index:
@@ -999,7 +1115,7 @@ def microblog_content_to_title(html: str) -> str:
                 break
         title = title[:i] + " ..." if i > 0 else ""
 
-    return title.strip()
+    return title.strip(), link
 
 
 def first_paragraph(html):
@@ -1026,21 +1142,28 @@ def community_link_to_href(link: str, server_name_override: str | None = None) -
     else:
         server_name = current_app.config["SERVER_NAME"]
 
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
+
     # Stash the <code> portions so they are not formatted
-    code_snippets, link = stash_code_html(link)
+    code_snippets, link = stash_code_html(link, code_placeholder)
 
     # Stash the existing links so they are not formatted
-    link_snippets, link = stash_link_html(link)
+    link_snippets, link = stash_link_html(link, link_placeholder)
 
     pattern = COMMUNITY_PATTERN
     server = r'<a href="https://' + server_name + r"/community/lookup/"
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r"!\g<1>@\g<2></a>", link)
 
     # Bring back the links
-    link = pop_link(link_snippets=link_snippets, text=link)
+    link = pop_link(
+        link_snippets=link_snippets, text=link, placeholder=link_placeholder
+    )
 
     # Bring back the <code> portions
-    link = pop_code(code_snippets=code_snippets, text=link)
+    link = pop_code(
+        code_snippets=code_snippets, text=link, placeholder=code_placeholder
+    )
 
     return link
 
@@ -1051,21 +1174,28 @@ def feed_link_to_href(link: str, server_name_override: str | None = None) -> str
     else:
         server_name = current_app.config["SERVER_NAME"]
 
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
+
     # Stash the <code> portions so they are not formatted
-    code_snippets, link = stash_code_html(link)
+    code_snippets, link = stash_code_html(link, code_placeholder)
 
     # Stash the existing links so they are not formatted
-    link_snippets, link = stash_link_html(link)
+    link_snippets, link = stash_link_html(link, link_placeholder)
 
     pattern = FEED_PATTERN
     server = r'<a href="https://' + server_name + r"/feed/lookup/"
     link = re.sub(pattern, server + r'\g<1>/\g<2>">' + r"~\g<1>@\g<2></a>", link)
 
     # Bring back the links
-    link = pop_link(link_snippets=link_snippets, text=link)
+    link = pop_link(
+        link_snippets=link_snippets, text=link, placeholder=link_placeholder
+    )
 
     # Bring back the <code> portions
-    link = pop_code(code_snippets=code_snippets, text=link)
+    link = pop_code(
+        code_snippets=code_snippets, text=link, placeholder=code_placeholder
+    )
 
     return link
 
@@ -1076,11 +1206,14 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     else:
         server_name = current_app.config["SERVER_NAME"]
 
+    code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
+
     # Stash the <code> portions so they are not formatted
-    code_snippets, link = stash_code_html(link)
+    code_snippets, link = stash_code_html(link, code_placeholder)
 
     # Stash the existing links so they are not formatted
-    link_snippets, link = stash_link_html(link)
+    link_snippets, link = stash_link_html(link, link_placeholder)
 
     # Substitute @user@instance.tld with <a> tags, but ignore if it has a preceding / or [ character
     pattern = PERSON_PATTERN
@@ -1091,32 +1224,36 @@ def person_link_to_href(link: str, server_name_override: str | None = None) -> s
     link = re.sub(pattern, replacement, link)
 
     # Bring back the links
-    link = pop_link(link_snippets=link_snippets, text=link)
+    link = pop_link(
+        link_snippets=link_snippets, text=link, placeholder=link_placeholder
+    )
 
     # Bring back the <code> portions
-    link = pop_code(code_snippets=code_snippets, text=link)
+    link = pop_code(
+        code_snippets=code_snippets, text=link, placeholder=code_placeholder
+    )
 
     return link
 
 
-def stash_code_html(text: str) -> tuple[list, str]:
+def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
     code_snippets = []
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}__"
 
     text = re.sub(r"<code>[\s\S]*?<\/code>", store_code, text)
 
     return (code_snippets, text)
 
 
-def stash_code_md(text: str) -> tuple[list, str]:
+def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
     code_snippets = []
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"__CODE_PLACEHOLDER_{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}__"
 
     # Fenced code blocks (```...```)
     text = re.sub(r"```[\s\S]*?```", store_code, text)
@@ -1126,28 +1263,28 @@ def stash_code_md(text: str) -> tuple[list, str]:
     return (code_snippets, text)
 
 
-def pop_code(code_snippets: list, text: str) -> str:
+def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
-        text = text.replace(f"__CODE_PLACEHOLDER_{i}__", code)
+        text = text.replace(f"{placeholder}{i}__", code)
 
     return text
 
 
-def stash_link_html(text: str) -> tuple[list, str]:
+def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
     link_snippets = []
 
     def store_link(match):
         link_snippets.append(match.group(0))
-        return f"__LINK_PLACEHOLDER_{len(link_snippets) - 1}__"
+        return f"{placeholder}{len(link_snippets) - 1}__"
 
     text = re.sub(r"<a href=[\s\S]*?<\/a>", store_link, text)
 
     return (link_snippets, text)
 
 
-def pop_link(link_snippets: list, text: str) -> str:
+def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     for i, link in enumerate(link_snippets):
-        text = text.replace(f"__LINK_PLACEHOLDER_{i}__", link)
+        text = text.replace(f"{placeholder}{i}__", link)
 
     return text
 
@@ -1366,7 +1503,7 @@ def blocked_referrers() -> List[str]:
 
 def block_honey_pot():
     # Return 403 for any IP address that has visited /honey/* too many times. See honey_pot()
-    if current_user.is_anonymous:
+    if current_user.is_anonymous and g.site.honeypot:
         from app import redis_client
 
         if redis_client.exists(f"ban:{ip_address()}"):
@@ -1889,6 +2026,19 @@ def can_create_post_reply(user, content: Community) -> bool:
     return True
 
 
+def can_upload_video():
+    upload_access = get_setting("allow_video_file_uploads", "no")
+    if upload_access == "no":
+        return False
+    elif upload_access == "user 1" and current_user.get_id() != 1:
+        return False
+    elif upload_access == "admins" and not current_user.is_admin_or_staff():
+        return False
+    elif upload_access == "users" and not current_user.is_authenticated():
+        return False
+    return True
+
+
 def reply_already_exists(user_id, post_id, parent_id, body) -> bool:
     if parent_id is None:
         num_matching_replies = db.session.execute(
@@ -1972,7 +2122,7 @@ def awaken_dormant_instance(instance):
             db.session.commit()
 
 
-def shorten_number(number):
+def shorten_number(number) -> str:
     if number < 1000:
         return str(number)
     elif number < 1000000:
@@ -2394,7 +2544,7 @@ def url_to_thumbnail_file(filename) -> File:
                 medium_image_format = current_app.config["MEDIA_IMAGE_MEDIUM_FORMAT"]
                 medium_image_quality = current_app.config["MEDIA_IMAGE_MEDIUM_QUALITY"]
 
-                final_ext = file_extension
+                final_ext = file_extension.lower()
 
                 if medium_image_format == "AVIF":
                     import pillow_avif  # NOQA

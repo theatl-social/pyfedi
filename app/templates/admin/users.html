@@ -5,186 +5,126 @@
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_username %}
-{% set active_child = "admin_users" %}
+{% set active_child = 'admin_users' %}
+
 {% block app_content %}
-    {% include 'admin/_tabbed_nav.html' %}
-    <br>
-    <div class="row">
-        <div class="col">
-            <h1>{{ _("Users") }}</h1>
-            <a class="btn btn-primary"
-               href="{{ url_for('admin.admin_users_add') }}"
-               style="float: right">{{ _("Add local user") }}</a>
-            <form id="searchUsers" method="get">
-                <div>
-                    <input type="search"
-                           name="search"
-                           placeholder="{{ _('Search') }}"
-                           value="{{ search }}">
-                    <input type="submit"
-                           name="submit_search"
-                           value="{{ _('Search') }}"
-                           class="btn btn-primary">
-                </div>
-                <div style="display:inline;">
-                    <label for="local_remote">Local/Remote:</label>
-                    <select name="local_remote" class="form-control-sm submit_on_change">
-                        <option value="">All</option>
-                        <option value="local" {{ 'selected' if local_remote == 'local' }}>Local
-                        </option>
-                        <option value="remote" {{ 'selected' if local_remote == 'remote' }}>Remote
-                        </option>
-                    </select>
-                </div>
-                <div style="display:inline;">
-                    <label for="last_seen">Active:</label>
-                    <select name="last_seen" class="form-control-sm submit_on_change">
-                        <option value="0">All</option>
-                        <option value="7" {{ 'selected' if last_seen == 7 }}>7 days
-                        </option>
-                        <option value="30" {{ 'selected' if last_seen == 30 }}>30 days
-                        </option>
-                    </select>
-                </div>
-                <input type="hidden" name="sort_by" value="{{ sort_by }}">
-            </form>
-            <table class="table table-striped mt-1">
+{% include 'admin/_tabbed_nav.html' %}
+<br>
+<div class="row">
+    <div class="col">
+        <h1>{{ _('Users') }}</h1>
+        <a class="btn btn-primary" href="{{ url_for('admin.admin_users_add') }}" style="float: right;">{{ _('Add local user') }}</a>
+        <form id="searchUsers" method="get">
+            <div>
+                <input type="search" name="search" placeholder="{{ _('Search') }}" value="{{ search }}">
+                <input type="submit" name="submit_search" value="{{ _('Search') }}" class="btn btn-primary">
+            </div>
+            <div style="display:inline;">
+                <label for="local_remote">Local/Remote: </label>
+                <select name="local_remote" class="form-control-sm submit_on_change">
+                    <option value="">All</option>
+                    <option value="local" {{ 'selected' if local_remote == 'local' }}>Local</option>
+                    <option value="remote" {{ 'selected' if local_remote == 'remote' }}>Remote</option>
+                </select>
+            </div>
+            <div style="display:inline;">
+                <label for="last_seen">Active: </label>
+                <select name="last_seen" class="form-control-sm submit_on_change">
+                    <option value="0">All</option>
+                    <option value="7" {{ 'selected' if last_seen == 7 }}>7 days</option>
+                    <option value="30" {{ 'selected' if last_seen == 30 }}>30 days</option>
+                </select>
+            </div>
+            <input type="hidden" name="sort_by" value="{{ sort_by }}">
+        </form>
+        <table class="table table-striped mt-1">
+            <tr>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="user_name{{' DESC' if sort_by == 'user_name ASC' else ' ASC' }}" class="btn" title="{{ _('Display name.') }}">
+                       {{ _('Name') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'user_name DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'user_name ASC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="banned{{' ASC' if sort_by == 'banned DESC' else ' DESC' }}" class="btn" title="{{ _('This user has been banned.') }}">
+                       {{ _('Banned') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'banned ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'banned DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="reports{{' ASC' if sort_by == 'reports DESC' else ' DESC' }}" class="btn" title="{{ _('How often a user has been reported.') }}">
+                       {{ _('Reports') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'reports ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reports DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="attitude{{' ASC' if sort_by == 'attitude DESC' else ' DESC' }}" class="btn" title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
+                       {{ _('Attitude') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="reputation{{' ASC' if sort_by == 'reputation DESC' else ' DESC' }}" class="btn" title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">
+                       {{ _('Reputation') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'reputation ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reputation DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="created{{' ASC' if sort_by == 'created DESC' else ' DESC' }}" class="btn" title="{{ _('Created') }}">
+                       {{ _('Created') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'created ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'created DESC' }}"></span>
+                   </button>
+               </th>
+               <th>
+                   <button form="searchUsers" name="sort_by_btn" value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}" class="btn" title="{{ _('Last seen.') }}">
+                       {{ _('Seen') }}
+                       <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
+                   </button>
+               </th>
+               <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for user in users.items %}
                 <tr>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="user_name{{' DESC' if sort_by == 'user_name ASC' else ' ASC' }}"
-                                class="btn"
-                                title="{{ _('Display name.') }}">
-                            {{ _("Name") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'user_name DESC' }}{{ 'fe fe-chevron-down' if sort_by == 'user_name ASC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="banned{{' ASC' if sort_by == 'banned DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('This user has been banned.') }}">
-                            {{ _("Banned") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'banned ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'banned DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="reports{{' ASC' if sort_by == 'reports DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('How often a user has been reported.') }}">
-                            {{ _("Reports") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'reports ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reports DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="attitude{{' ASC' if sort_by == 'attitude DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('Attitude: Percentage of up votes vs. down votes the account made.') }}">
-                            {{ _("Attitude") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'attitude ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'attitude DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="reputation{{' ASC' if sort_by == 'reputation DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('Reputation: The Karma of the account. Total up votes minus down votes they got.') }}">
-                            {{ _("Reputation") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'reputation ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'reputation DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="created{{' ASC' if sort_by == 'created DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('Created') }}">
-                            {{ _("Created") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'created ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'created DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>
-                        <button form="searchUsers"
-                                name="sort_by_btn"
-                                value="last_seen{{' ASC' if sort_by == 'last_seen DESC' else ' DESC' }}"
-                                class="btn"
-                                title="{{ _('Last seen.') }}">
-                            {{ _("Seen") }}
-                            <span class="{{ 'fe fe-chevron-up' if sort_by == 'last_seen ASC' }}{{ 'fe fe-chevron-down' if sort_by == 'last_seen DESC' }}"></span>
-                        </button>
-                    </th>
-                    <th>{{ _("Actions") }}</th>
+                    <td><span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span></td>
+                    <td><span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
+                        {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
+                        {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span></td>
+                    <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
+                    <td><span title="{{ _('Attitude') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
+                    <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
+                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ arrow.get(user.created).humanize(locale=locale) }}</span></td>
+                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
+                    <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
+                        <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ ('Delete') }}</a>,
+                        <br />
+                        {% if user.banned %}
+                            <a href="#" data-url="{{ url_for('user.unban_profile', actor=user.link(), redirect="/admin/users") }}" class="confirm_first send_post">{{ ('Unban') }}</a>
+                        {% else %}
+                            <a href="{{ url_for('user.ban_profile', actor=user.link()) }}" class="">{{ ('Ban') }}</a>
+                        {% endif %}
+                    </td>
                 </tr>
-                {% for user in users.items %}
-                    <tr>
-                        <td>
-                            <span title="{{ _('Name') }}">{{ render_username(user, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</span>
-                        </td>
-                        <td>
-                            <span title="{{ _('Banned') }}">{{ '<span class="red">Banned</span>'|safe if user.banned }}
-                            {{ '<span class="red">Banned posts</span>'|safe if user.ban_posts }}
-                            {{ '<span class="red">Banned comments</span>'|safe if user.ban_comments }}</span>
-                        </td>
-                        <td>
-                            <span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span>
-                        </td>
-                        <td>
-                            <span title="{{ _('Attitude') }}">
-                                {% if user.attitude %}
-                                    {{ (user.attitude * 100) | round | int }}%
-                                {% endif %}
-                            </span>
-                        </td>
-                        <td>
-                            <span title="{{ _('Reputation') }}">
-                                {% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}
-                            </span>
-                        </td>
-                        <td>
-                            <span title="{{ _('Created') }}: {{ user.created }}">{{ arrow.get(user.created).humanize(locale=locale) }}</span>
-                        </td>
-                        <td>
-                            <span title="{{ _("Last Seen") }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span>
-                        </td>
-                        <td>
-                            <a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ ('Edit') }}</a>,
-                            <a href="#"
-                               data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}"
-                               class="confirm_first send_post">{{ ('Delete') }}</a>,
-                            <br />
-                            {% if user.banned %}
-                                <a href="#" data-url="{{ url_for('user.unban_profile', actor=user.link() , redirect="/admin/users") }}" class="confirm_first send_post">{{ ('Unban') }}</a>
-                            {% else %}
-                                <a href="{{ url_for('user.ban_profile', actor=user.link() ) }}" class="">{{ ('Ban') }}</a>
-                            {% endif %}
-                        </td>
-                    </tr>
-                {% endfor %}
-            </table>
-            <nav aria-label="Pagination" class="mt-4" role="navigation">
+            {% endfor %}
+        </table>
+        <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
                 {% if prev_url %}
                     <a href="{{ prev_url }}" class="btn btn-primary">
-                        <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
                     </a>
                 {% endif %}
                 {% if next_url %}
                     <a href="{{ next_url }}" class="btn btn-primary">
-                        {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
                     </a>
                 {% endif %}
-            </nav>
-        </div>
+        </nav>
     </div>
-    <hr />
-    <div class="row">
-        <div class="col">{% include 'admin/_nav.html' %}</div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
     </div>
-    <hr />
+</div>
+<hr />
 {% endblock %}

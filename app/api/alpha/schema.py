@@ -65,7 +65,13 @@ listing_type_list = [
     "Moderating",
     "ModeratorView",
 ]
-community_listing_type_list = ["All", "Local", "Subscribed", "ModeratorView"]
+community_listing_type_list = [
+    "All",
+    "Local",
+    "Subscribed",
+    "Moderating",
+    "ModeratorView",
+]
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
@@ -76,6 +82,7 @@ post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
+search_nsfw = ["Exclude", "Include", "Only"]
 
 
 def validate_datetime_string(text):
@@ -462,6 +469,8 @@ class SearchRequest(DefaultSchema):
     )
     community_name = fields.String()
     community_id = fields.Integer()
+    minimun_upvotes = fields.Integer()
+    nsfw = fields.String(validate=validate.OneOf(search_nsfw))
 
 
 class SearchInstanceChooser(DefaultSchema):
@@ -685,8 +694,6 @@ class CommunityAggregates(DefaultSchema):
     active_weekly = fields.Integer()
     active_monthly = fields.Integer()
     active_6monthly = fields.Integer()
-    average_rating = fields.Float(allow_none=True)
-    total_ratings = fields.Integer(allow_none=True)
 
 
 class CommunityView(DefaultSchema):
@@ -946,8 +953,6 @@ class GetCommunityResponse(DefaultSchema):
     community_view = fields.Nested(CommunityView, required=True)
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
-    can_rate = fields.Boolean()
-    my_rating = fields.Integer(allow_none=True)
     site = fields.Nested(Site)
 
 
@@ -1021,15 +1026,6 @@ class ListCommunitiesResponse(DefaultSchema):
 class FollowCommunityRequest(DefaultSchema):
     community_id = fields.Integer(required=True)
     follow = fields.Boolean(required=True)
-
-
-class RateCommunityRequest(DefaultSchema):
-    community_id = fields.Integer(required=True)
-    rating = fields.Integer(
-        required=True,
-        allow_none=True,
-        metadata={"description": "Providing a null value removes your rating"},
-    )
 
 
 class BlockCommunityRequest(DefaultSchema):
@@ -1356,6 +1352,26 @@ class UserSetNoteRequest(DefaultSchema):
         validate=validate.Length(max=50),
         metadata={"description": "Pass a value of null to remove existing note"},
     )
+
+
+class UserBanRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+    ban_ip_address = fields.Boolean(required=True, allow_none=True)
+    purge_content = fields.Boolean(required=True, allow_none=True)
+    reason = fields.String(
+        required=True,
+        allow_none=True,
+        validate=validate.Length(max=50),
+        metadata={"description": "Note to add to modlog"},
+    )
+
+
+class UserUnbanRequest(DefaultSchema):
+    person_id = fields.Integer(required=True)
+
+
+class UserBanResponse(DefaultSchema):
+    person_view = fields.Nested(PersonView)
 
 
 class UserSetNoteResponse(UserSetFlairResponse):
@@ -2121,7 +2137,9 @@ class PollVoteResponse(DefaultSchema):
     post_view = fields.Nested(PostView, required=True)
 
 
-# Admin API Schemas
+# Admin API Schemas (Fork-specific)
+
+
 class AdminPrivateRegistrationRequest(DefaultSchema):
     username = fields.String(
         required=True,

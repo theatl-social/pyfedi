@@ -10,7 +10,7 @@
 {% endblock %}
 
 {% block app_content %}
-<script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+<script src="/static/js/tomselect/tom-select.complete.min.js" nonce={{ nonce }}></script>
         <div class="row">
             <div class="col mx-auto">
                 <div class="card mt-5" style="width: 500px; max-width: 100%;">
@@ -72,6 +72,17 @@
                                     <option value="date">{{ _('Recent first') }}</option>
                                     <option value="top">{{ _('Top') }}</option>
                                 </select>
+                            </div>
+                            <div class="form-group"><label class="form-control-label" for="type" aria-label="Sort results">{{ _('NSFW') }}</label>
+                                <select class="form-control form-select" id="nsfw" name="nsfw">
+                                    <option value="">{{ _('Use my profile settings') }}</option>
+                                    <option value="only">{{ _('Only NSFW') }}</option>
+                                    <option value="include">{{ _('Include NSFW') }}</option>
+                                    <option value="exclude">{{ _('No NSFW') }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group"><label class="form-control-label" for="minimum_upvote" aria-label="{{ _('Minimum score') }}">{{ _('Minimum score') }} ({{ _('optional') }})</label>
+                                <input class="form-control" id="minimum_upvote" name="minimum_upvote" type="text" inputmode="numeric" pattern="\d+">
                             </div>
                             <input class="btn btn-primary btn-md" id="submit" name="submit" type="submit" value="Search">
                         </form>

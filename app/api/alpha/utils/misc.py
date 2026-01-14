@@ -231,7 +231,11 @@ def get_resolve_object(auth, data, user_id=None, recursive=False):
                 if query.endswith(current_app.config["SERVER_NAME"]):
                     user_name = query[1:]
                     user_name = user_name.split("@")[0]
-                object = search_for_user(user_name.lower(), allow_fetch=bool(user_id))
+                    object = search_for_user(
+                        user_name.lower(), allow_fetch=bool(user_id)
+                    )
+                else:
+                    object = search_for_user(query.lower(), allow_fetch=bool(user_id))
                 if object:
                     return user_view(user=object, variant=7, user_id=user_id)
                 else:

@@ -202,6 +202,13 @@ def make_reply(input, post, parent_id, src, auth=None):
         distinguished = input.distinguished.data
         answer = False
 
+    if (
+        not post.community.is_moderator(user)
+        and not post.community.is_owner(user)
+        and not user.is_admin_or_staff()
+    ):
+        distinguished = False
+
     if parent_id:
         parent_reply = db.session.query(PostReply).filter_by(id=parent_id).one()
         if parent_reply.author.has_blocked_user(
@@ -284,7 +291,12 @@ def edit_reply(input, reply, post, src, auth=None):
     reply.community.last_active = utcnow()
     reply.edited_at = utcnow()
     reply.language_id = language_id
-    reply.distinguished = distinguished
+    if (
+        reply.community.is_moderator(user)
+        or reply.community.is_owner(user)
+        or user.is_admin_or_staff()
+    ):
+        reply.distinguished = distinguished
     db.session.commit()
 
     if src == SRC_WEB:

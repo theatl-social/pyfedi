@@ -124,8 +124,8 @@
             {% endif %}
         </style>
     {% endif -%}
-    <a href="#outer_container" class="skip-link" role="navigation" aria-label="Skip main navigation" tabindex="">Skip to main content</a>
-    <a href="#side_pane" class="skip-link" role="navigation" aria-label="Go to side pane" tabindex="">Go to side pane</a>
+    <a href="#outer_container" class="skip-link" role="navigation" tabindex="">{{ _('Skip to main content') }}</a>
+    <a href="#side_pane" class="skip-link" role="navigation" tabindex="">{{ _('Go to side pane') }}</a>
     <!-- Page content -->
     {% block navbar -%}
     <div class="navbar navbar-expand-lg sticky-lg-top">
@@ -326,7 +326,7 @@
 
     {% block scripts -%}
     {% endblock -%}
-    {{ bootstrap.load_js() }}
+    {{ str(bootstrap.load_js()).replace('<script ', '<script nonce="' + nonce + '" ')|safe }}
     <script type="text/javascript" src="{{ url_for('static', filename='js/htmx.min.js') }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/user-mentions.js', changed=getmtime('js/user-mentions.js')) }}" nonce="{{ nonce }}"></script>
     <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js', changed=getmtime('js/scripts.js')) }}" nonce="{{ nonce }}"></script>
@@ -335,7 +335,7 @@
             <!-- -->
         {% endif -%}
         <script src="{{ url_for('static', filename='js/lightbox/baguetteBox.js') }}" nonce="{{ nonce }}"></script>
-        {% if current_user.is_authenticated and current_user.markdown_editor -%}
+        {% if current_user.is_authenticated -%}
             <script type="text/javascript" src="{{ url_for('static', filename='js/markdown/downarea.js', changed=getmtime('js/markdown/downarea.js')) }}" nonce="{{ nonce }}"></script>
         {% endif -%}
         {% if notif_server and current_user.is_authenticated -%}
