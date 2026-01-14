@@ -65,6 +65,8 @@
             {{ render_field(form.default_sort) }}
             {{ render_field(form.default_comment_sort) }}
             {{ render_field(form.default_filter) }}
+            {{ render_field(form.max_hours_per_day) }}
+            <small class="field_hint d-none d-md-block">{{ _('You can have different values on each device.') }}</small>
             {{ render_field(form.federate_votes) }}
             <small class="field_hint d-md-none">{{ _('Long press to vote differently.') }}</small>
             <small class="field_hint d-none d-md-block">{{ _('Hold down the mouse button to vote differently.') }}</small>

@@ -120,6 +120,7 @@ class SettingsForm(FlaskForm):
         ('3', _l('All instances')),
     ]
     accept_private_messages = SelectField(_l('Accept private messages from'), choices=accept_from, coerce=int, render_kw={'class': 'form-select'})
+    max_hours_per_day = IntegerField(_l('Warn me after using PieFed for this many hours per day'), validators=[Optional()])
     additional_css = TextAreaField(_l('Additional CSS'))
     submit = SubmitField(_l('Save settings'))
 

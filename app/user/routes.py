@@ -584,6 +584,10 @@ def user_settings():
         flash(_('Your changes have been saved.'), 'success')
 
         resp = make_response(redirect(url_for('user.user_settings')))
+        if form.max_hours_per_day.data:
+            resp.set_cookie('max_hours_per_day', str(form.max_hours_per_day.data), expires=datetime(year=2099, month=12, day=30))
+        else:
+            resp.set_cookie('max_hours_per_day', '', expires=datetime.min)
         resp.set_cookie('compact_level', form.compaction.data, expires=datetime(year=2099, month=12, day=30))
         resp.set_cookie('low_bandwidth', '1' if form.low_bandwidth_mode.data else '0',
                         expires=datetime(year=2099, month=12, day=30))
@@ -612,6 +616,7 @@ def user_settings():
         form.code_style.data = current_user.code_style or 'fruity'
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
+        form.max_hours_per_day.data = request.cookies.get('max_hours_per_day', '');
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user)
 
