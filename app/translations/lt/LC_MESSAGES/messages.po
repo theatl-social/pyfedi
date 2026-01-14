@@ -9344,4 +9344,3 @@ msgstr ""
 
 #~ msgid "YEESSS - no images, only text"
 #~ msgstr ""
-

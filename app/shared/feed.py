@@ -19,15 +19,17 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
     elif isinstance(feed, int):
         feed_id = feed
         feed = db.session.query(Feed).get(feed_id)
-    
+
     user_id = authorise_api_user(auth) if src == SRC_API else current_user.id
 
     fm = db.session.query(FeedMember).filter_by(user_id=user_id, feed_id=feed_id).one()
 
     if not fm.is_owner:
-        task_selector('leave_feed', user_id=user_id, feed_id=feed_id)
-        
-        db.session.query(FeedMember).filter_by(user_id=user_id, feed_id=feed_id).delete()
+        task_selector("leave_feed", user_id=user_id, feed_id=feed_id)
+
+        db.session.query(FeedMember).filter_by(
+            user_id=user_id, feed_id=feed_id
+        ).delete()
         feed.subscriptions_count -= 1
         db.session.commit()
 
@@ -39,16 +41,26 @@ def leave_feed(feed: int | Feed, src, auth=None, bulk_leave=False):
                 feed_items = db.session.query(FeedItem).filter_by(feed_id=feed_id).all()
                 for feed_item in feed_items:
                     # Send the community unsub requests to celery - it will handle all the db commits and cache busting
-                    leave_community(community_id=feed_item.community_id, src=src, auth=auth, bulk_leave=bulk_leave)
+                    leave_community(
+                        community_id=feed_item.community_id,
+                        src=src,
+                        auth=auth,
+                        bulk_leave=bulk_leave,
+                    )
 
         if src == SRC_WEB and not bulk_leave:
-            flash(_('You have unsubscribed from the %(feed_name)s feed, '
-                    'please allow a couple minutes for it to fully process', feed_name = feed.title))
+            flash(
+                _(
+                    "You have unsubscribed from the %(feed_name)s feed, "
+                    "please allow a couple minutes for it to fully process",
+                    feed_name=feed.title,
+                )
+            )
     else:
         if src == SRC_API:
             raise Exception("You cannot leave your own feed")
         else:
-            flash(_('You cannot leave your own feed'), 'warning')
+            flash(_("You cannot leave your own feed"), "warning")
             return
 
     if src == SRC_API:

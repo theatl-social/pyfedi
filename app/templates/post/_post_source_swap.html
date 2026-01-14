@@ -10,9 +10,9 @@
 <ul>
     <li id="post_source_swap_{{ post_id }}" hx-swap-oob="true">
         <a href="#" class="dropdown-item no-underline"
-                hx-get="{{ url_for('post.post_source', post_id=post_id, state="show" if state == "hide" else "hide") }}" 
-                hx-trigger="click throttle:1s" 
-                hx-target="previous .post_body" 
+                hx-get="{{ url_for('post.post_source', post_id=post_id, state="show" if state == "hide" else "hide") }}"
+                hx-trigger="click throttle:1s"
+                hx-target="previous .post_body"
                 hx-swap="innerHTML">
             <span class="fe fe-source"></span>
             {% if state == "show" -%}

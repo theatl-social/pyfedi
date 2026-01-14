@@ -8682,4 +8682,3 @@ msgstr ""
 #: app/user/subscription.py:162
 msgid "Your donation has been cancelled."
 msgstr ""
-

@@ -9926,4 +9926,3 @@ msgstr "Twój datek został wycofany."
 
 #~ msgid "Polish"
 #~ msgstr "Polski"
-
