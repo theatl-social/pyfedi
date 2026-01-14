@@ -766,41 +766,64 @@ var currentlyVisible = true;
 function setupTimeTracking() {
     // Check for Page Visibility API support
     if (document.visibilityState) {
-        const lastUpdate = new Date(localStorage.getItem('lastUpdate')) || new Date();
+        let lastUpdate = new Date(localStorage.getItem('lastUpdate')) || new Date();
+        let lastDailyUpdate = new Date(localStorage.getItem('lastDailyUpdate')) || new Date();
 
        // Initialize variables to track time
        let timeSpent = parseInt(localStorage.getItem('timeSpent')) || 0;
+       let dailyTimeSpent = parseInt(localStorage.getItem('dailyTimeSpent')) || 0;
 
        displayTimeTracked();
 
-       timeTrackingInterval = setInterval(() => {
-          timeSpent += 2;
-          localStorage.setItem('timeSpent', timeSpent);
-          // Display timeSpent
-          displayTimeTracked();
-       }, 2000)
-
-
-       // Event listener for visibility changes
-       document.addEventListener("visibilitychange", function() {
+       // Function to update time tracking
+       const updateTimeTracking = () => {
           const currentDate = new Date();
 
+          // Check if we've crossed into a new month
           if (currentDate.getMonth() !== lastUpdate.getMonth() || currentDate.getFullYear() !== lastUpdate.getFullYear()) {
             // Reset counter for a new month
             timeSpent = 0;
             localStorage.setItem('timeSpent', timeSpent);
             localStorage.setItem('lastUpdate', currentDate.toString());
-            displayTimeTracked();
+            lastUpdate = currentDate;
           }
 
+          // Check if we've crossed into a new day
+          if (currentDate.getDate() !== lastDailyUpdate.getDate() ||
+              currentDate.getMonth() !== lastDailyUpdate.getMonth() ||
+              currentDate.getFullYear() !== lastDailyUpdate.getFullYear()) {
+            // Reset daily counter for a new day
+            dailyTimeSpent = 0;
+            localStorage.setItem('dailyTimeSpent', dailyTimeSpent);
+            localStorage.setItem('lastDailyUpdate', currentDate.toString());
+            lastDailyUpdate = currentDate;
+          }
+
+          timeSpent += 2;
+          dailyTimeSpent += 2;
+          localStorage.setItem('timeSpent', timeSpent);
+          localStorage.setItem('dailyTimeSpent', dailyTimeSpent);
+
+          // Display timeSpent
+          displayTimeTracked();
+
+          // Check if max_hours_per_day cookie is set and limit exceeded
+          const maxHoursPerDay = getCookie('max_hours_per_day');
+          if (maxHoursPerDay) {
+              const maxSecondsPerDay = parseFloat(maxHoursPerDay) * 3600;
+              if (dailyTimeSpent >= maxSecondsPerDay) {
+                  alert("Time to stop for the day");
+              }
+          }
+       };
+
+       timeTrackingInterval = setInterval(updateTimeTracking, 2000);
+
+       // Event listener for visibility changes
+       document.addEventListener("visibilitychange", function() {
           if (document.visibilityState === "visible") {
-              console.log('visible')
               currentlyVisible = true
-              timeTrackingInterval = setInterval(() => {
-                  timeSpent += 2;
-                  localStorage.setItem('timeSpent', timeSpent);
-                  displayTimeTracked();
-              }, 2000)
+              timeTrackingInterval = setInterval(updateTimeTracking, 2000);
           } else {
               currentlyVisible = false;
               if(timeTrackingInterval) {
