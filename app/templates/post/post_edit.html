@@ -11,11 +11,11 @@
 {% endblock %}
 
 {% block end_scripts -%}
-    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}"></script>
+    <script src="{{ url_for('static', filename='js/media_library.js', changed=getmtime('js/media_library.js')) }}" nonce={{ nonce }}></script>
 {% endblock -%}
 
 {% block app_content %}
-<script src="/static/js/coolfieldset.js?v=3"></script>
+<script src="/static/js/coolfieldset.js?v=3" nonce={{ nonce }}></script>
 <script nonce="{{ nonce }}">
     function checkAndCopyTitle(curr_url = "", swapped = {}) {
       const retrieved = document.getElementById('retrieved_title');
@@ -165,13 +165,22 @@
             {% elif post_type == POST_TYPE_VIDEO %}
                 {{ render_field(form.video_url) }}
                 <p class="small field_hint">{{ _('Provide a URL ending with .mp4 or .webm.') }}</p>
+                {% if can_upload_video() -%}
+                {{ render_field(form.image_file) }}
+                <p class="small field_hint">{{ _('Either provide an url OR upload a file but not both. Use common codecs like h.264 and mp3.') }}</p>
+                {% endif -%}
             {% endif %}
             {{ render_field(form.body) }}
 
             {% if not low_bandwidth -%}
                 <div class="row mb-3">
                     <div class="col-6">
-                        <a href="#" class="btn btn-outline-secondary" hx-post="{{ url_for('post.preview') }}" hx-target="#preview">{{ _('Preview') }}</a>
+                        <a href="#"
+                                id="post_preview_btn"
+                                class="btn btn-outline-secondary"
+                                hx-post="{{ url_for('post.preview', type="post") }}"
+                                hx-target="#preview">{{ _('Preview') }}
+                        </a>
                         <a href="#" class="btn btn-outline-secondary {{ 'd-none' if markdown_editor }}" id="insertImage">{{ _('Insert image') }}</a>
                     </div>
                     <div class="col-6 text-right">
@@ -319,7 +328,7 @@
         })();"
            title="Drag this to your bookmarks bar"
            style="cursor: grab; text-decoration: underline;">{{ _('Share on PieFed') }}</a></p>
-    <script src="/static/js/tomselect/tom-select.complete.min.js"></script>
+    <script src="/static/js/tomselect/tom-select.complete.min.js" nonce={{ nonce }}></script>
     <script nonce="{{ nonce }}">
       document.addEventListener("DOMContentLoaded", () => {
         new TomSelect(".tom-select", {

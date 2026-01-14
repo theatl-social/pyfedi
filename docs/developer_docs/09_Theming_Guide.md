@@ -38,7 +38,7 @@ Once again, let's look at the css file for the `Amethyst` theme as an example. L
     --accent-color-active: #b369ff;
     --accent-color-rgb: 151, 100, 255;
     --accent-color-hovered-rgb: 127, 65, 244;
-    
+
     --bs-link-color: var(--accent-color);
     --bs-link-hover-color: var(--accent-color-hovered);
     --bs-link-color-rgb: var(--accent-color-rgb);

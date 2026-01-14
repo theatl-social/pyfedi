@@ -115,9 +115,6 @@
                             </span>
                         </a>
                     {% endif -%}
-                    {% if current_user.is_authenticated -%}
-                        <a href="{{ url_for('community.rate', actor=community.link()) }}">{{ _('Rate community') }}</a>
-                    {% endif -%}
                 </div>
 
                 {% if current_user.is_authenticated or (community_flair and community_flair|length > 0) -%}

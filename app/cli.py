@@ -24,21 +24,70 @@ from app import db, plugins
 from app.activitypub.signature import RsaKeys, send_post_request, default_context
 from app.activitypub.util import extract_domain_and_actor, notify_about_post
 from app.auth.util import random_token
-from app.constants import NOTIF_COMMUNITY, NOTIF_POST, NOTIF_REPLY, POST_STATUS_SCHEDULED, POST_STATUS_PUBLISHED, \
-    POST_TYPE_LINK, POST_TYPE_POLL, POST_TYPE_IMAGE, NOTIF_REMINDER
+from app.community.util import is_bad_name
+from app.constants import (
+    NOTIF_COMMUNITY,
+    NOTIF_POST,
+    NOTIF_REPLY,
+    POST_STATUS_SCHEDULED,
+    POST_STATUS_PUBLISHED,
+    POST_TYPE_LINK,
+    POST_TYPE_POLL,
+    POST_TYPE_IMAGE,
+    NOTIF_REMINDER,
+)
 from app.email import send_email
-from app.models import Settings, BannedInstances, Role, User, RolePermission, Domain, ActivityPubLog, \
-    utcnow, Site, Instance, File, Notification, Post, CommunityMember, NotificationSubscription, PostReply, Language, \
-    Community, SendQueue, _store_files_in_s3, PostVote, Poll, \
-    ActivityBatch, Reminder
+from app.models import (
+    Settings,
+    BannedInstances,
+    Role,
+    User,
+    RolePermission,
+    Domain,
+    ActivityPubLog,
+    utcnow,
+    Site,
+    Instance,
+    File,
+    Notification,
+    Post,
+    CommunityMember,
+    NotificationSubscription,
+    PostReply,
+    Language,
+    Community,
+    SendQueue,
+    _store_files_in_s3,
+    PostVote,
+    Poll,
+    ActivityBatch,
+    Reminder,
+)
 from app.shared.tasks import task_selector
 from app.shared.tasks.maintenance import add_remote_communities, remove_old_bot_content
-from app.utils import retrieve_block_list, blocked_domains, retrieve_peertube_block_list, \
-    shorten_string, get_request, blocked_communities, gibberish, \
-    recently_upvoted_post_replies, recently_upvoted_posts, jaccard_similarity, \
-    get_redis_connection, instance_online, instance_gone_forever, find_next_occurrence, \
-    guess_mime_type, ensure_directory_exists, \
-    render_from_tpl, get_task_session, patch_db_session, get_setting, get_recipient_language
+from app.utils import (
+    retrieve_block_list,
+    blocked_domains,
+    retrieve_peertube_block_list,
+    shorten_string,
+    get_request,
+    blocked_communities,
+    gibberish,
+    recently_upvoted_post_replies,
+    recently_upvoted_posts,
+    jaccard_similarity,
+    get_redis_connection,
+    instance_online,
+    instance_gone_forever,
+    find_next_occurrence,
+    guess_mime_type,
+    ensure_directory_exists,
+    render_from_tpl,
+    get_task_session,
+    patch_db_session,
+    get_setting,
+    get_recipient_language,
+)
 
 
 def register(app):
@@ -48,30 +97,29 @@ def register(app):
         pass
 
     @translate.command()
-    @click.argument('lang')
+    @click.argument("lang")
     def init(lang):
         """Initialize a new language."""
-        if os.system('pybabel extract -F babel.cfg -k _l -o messages.pot .'):
-            raise RuntimeError('extract command failed')
-        if os.system(
-                'pybabel init -i messages.pot -d app/translations -l ' + lang):
-            raise RuntimeError('init command failed')
-        os.remove('messages.pot')
+        if os.system("pybabel extract -F babel.cfg -k _l -o messages.pot ."):
+            raise RuntimeError("extract command failed")
+        if os.system("pybabel init -i messages.pot -d app/translations -l " + lang):
+            raise RuntimeError("init command failed")
+        os.remove("messages.pot")
 
     @translate.command()
     def update():
         """Update all languages."""
-        if os.system('pybabel extract -F babel.cfg -k _l -o messages.pot .'):
-            raise RuntimeError('extract command failed')
-        if os.system('pybabel update -i messages.pot -d app/translations'):
-            raise RuntimeError('update command failed')
-        os.remove('messages.pot')
+        if os.system("pybabel extract -F babel.cfg -k _l -o messages.pot ."):
+            raise RuntimeError("extract command failed")
+        if os.system("pybabel update -i messages.pot -d app/translations"):
+            raise RuntimeError("update command failed")
+        os.remove("messages.pot")
 
     @translate.command()
     def compile():
         """Compile all languages."""
-        if os.system('pybabel compile -d app/translations'):
-            raise RuntimeError('compile command failed')
+        if os.system("pybabel compile -d app/translations"):
+            raise RuntimeError("compile command failed")
 
     @app.cli.command("keys")
     def keys():
@@ -86,47 +134,85 @@ def register(app):
         u.private_key = private_key
         u.public_key = public_key
         db.session.commit()
-        print('Admin keys have been reset')
+        print("Admin keys have been reset")
 
     @app.cli.command("init-db")
-    @click.option("--interactive", default='yes', help="Create admin user during setup.")
+    @click.option(
+        "--interactive", default="yes", help="Create admin user during setup."
+    )
     def init_db(interactive):
         with app.app_context():
             # Check if alembic_version table exists
             inspector = db.inspect(db.engine)
-            if 'alembic_version' not in inspector.get_table_names():
-                print("Error: alembic_version table not found. Please run 'flask db upgrade' first.")
+            if "alembic_version" not in inspector.get_table_names():
+                print(
+                    "Error: alembic_version table not found. Please run 'flask db upgrade' first."
+                )
                 return
 
             db.drop_all()
 
             # Drop PostgreSQL functions that are created by migrations but not dropped by drop_all()
             # These functions persist even after tables are dropped and cause errors on db.create_all(), later.
-            db.session.execute(text("DROP FUNCTION IF EXISTS post_search_vector_update() CASCADE"))
+            db.session.execute(
+                text("DROP FUNCTION IF EXISTS post_search_vector_update() CASCADE")
+            )
             db.session.commit()
 
             db.configure_mappers()
             db.create_all()
             private_key, public_key = RsaKeys.generate_keypair()
             db.session.add(
-                Site(name="PieFed", description='Explore Anything, Discuss Everything.', public_key=public_key,
-                     private_key=private_key, language_id=2))
-            db.session.add(Instance(domain=app.config['SERVER_NAME'],
-                                    software='PieFed'))  # Instance 1 is always the local instance
-            db.session.add(Settings(name='allow_nsfw', value=json.dumps(False)))
-            db.session.add(Settings(name='allow_nsfl', value=json.dumps(False)))
-            db.session.add(Settings(name='allow_dislike', value=json.dumps(True)))
-            db.session.add(Settings(name='allow_local_image_posts', value=json.dumps(True)))
-            db.session.add(Settings(name='allow_remote_image_posts', value=json.dumps(True)))
-            db.session.add(Settings(name='federation', value=json.dumps(True)))
-            banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
-                                'hexbear.net', 'hilariouschaos.com',
-                                'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
-                                'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
-                                'detroitriotcity.com',
-                                'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
-                                'yggdrasil.social', 'beefyboys.win', 'brighteon.social', 'cum.salon', 'wizard.casa',
-                                'maga.place']
+                Site(
+                    name="PieFed",
+                    description="Explore Anything, Discuss Everything.",
+                    public_key=public_key,
+                    private_key=private_key,
+                    language_id=2,
+                )
+            )
+            db.session.add(
+                Instance(domain=app.config["SERVER_NAME"], software="PieFed")
+            )  # Instance 1 is always the local instance
+            db.session.add(Settings(name="allow_nsfw", value=json.dumps(False)))
+            db.session.add(Settings(name="allow_nsfl", value=json.dumps(False)))
+            db.session.add(Settings(name="allow_dislike", value=json.dumps(True)))
+            db.session.add(
+                Settings(name="allow_local_image_posts", value=json.dumps(True))
+            )
+            db.session.add(
+                Settings(name="allow_remote_image_posts", value=json.dumps(True))
+            )
+            db.session.add(Settings(name="federation", value=json.dumps(True)))
+            banned_instances = [
+                "anonib.al",
+                "lemmygrad.ml",
+                "gab.com",
+                "rqd2.net",
+                "exploding-heads.com",
+                "hexbear.net",
+                "hilariouschaos.com",
+                "threads.net",
+                "noauthority.social",
+                "pieville.net",
+                "links.hackliberty.org",
+                "poa.st",
+                "freespeechextremist.com",
+                "bae.st",
+                "nicecrew.digital",
+                "detroitriotcity.com",
+                "pawoo.net",
+                "shitposter.club",
+                "spinster.xyz",
+                "catgirl.life",
+                "gameliberty.club",
+                "yggdrasil.social",
+                "beefyboys.win",
+                "brighteon.social",
+                "cum.salon",
+                "wizard.casa",
+                "maga.place",
+            ]
             for bi in banned_instances:
                 db.session.add(BannedInstances(domain=bi))
                 print("Added banned instance", bi)
@@ -134,72 +220,100 @@ def register(app):
             # Load initial domain block list
             block_list = retrieve_block_list()
             if block_list:
-                for domain in block_list.split('\n'):
+                for domain in block_list.split("\n"):
                     db.session.add(Domain(name=domain.strip(), banned=True))
-                print("Added 'No-QAnon' blocklist, see https://github.com/rimu/no-qanon")
+                print(
+                    "Added 'No-QAnon' blocklist, see https://github.com/rimu/no-qanon"
+                )
 
             # Load peertube domain block list
             block_list = retrieve_peertube_block_list()
             if block_list:
-                for domain in block_list.split('\n'):
+                for domain in block_list.split("\n"):
                     db.session.add(Domain(name=domain.strip(), banned=True))
                     db.session.add(BannedInstances(domain=domain.strip()))
-                print("Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/")
+                print(
+                    "Added 'Peertube Isolation' blocklist, see https://peertube_isolation.frama.io/"
+                )
 
             # Initial languages
-            db.session.add(Language(name='Undetermined', code='und'))
-            db.session.add(Language(code='en', name='English'))
-            db.session.add(Language(code='de', name='Deutsch'))
-            db.session.add(Language(code='es', name='Español'))
-            db.session.add(Language(code='fr', name='Français'))
-            db.session.add(Language(code='hi', name='हिन्दी'))
-            db.session.add(Language(code='ja', name='日本語'))
-            db.session.add(Language(code='zh', name='中文'))
-            db.session.add(Language(code='pl', name='Polski'))
+            db.session.add(Language(name="Undetermined", code="und"))
+            db.session.add(Language(code="en", name="English"))
+            db.session.add(Language(code="de", name="Deutsch"))
+            db.session.add(Language(code="es", name="Español"))
+            db.session.add(Language(code="fr", name="Français"))
+            db.session.add(Language(code="hi", name="हिन्दी"))
+            db.session.add(Language(code="ja", name="日本語"))
+            db.session.add(Language(code="zh", name="中文"))
+            db.session.add(Language(code="pl", name="Polski"))
 
             # Initial roles
             # These roles will create rows in the 'role' table with IDs of 1,2,3,4. There are some constants (ROLE_*) in
             # constants.py that will need to be updated if the role IDs ever change.
-            anon_role = Role(name='Anonymous user', weight=0)
+            anon_role = Role(name="Anonymous user", weight=0)
             db.session.add(anon_role)
 
-            auth_role = Role(name='Authenticated user', weight=1)
+            auth_role = Role(name="Authenticated user", weight=1)
             db.session.add(auth_role)
 
-            staff_role = Role(name='Staff', weight=2)
-            staff_role.permissions.append(RolePermission(permission='approve registrations'))
-            staff_role.permissions.append(RolePermission(permission='ban users'))
-            staff_role.permissions.append(RolePermission(permission='administer all communities'))
-            staff_role.permissions.append(RolePermission(permission='administer all users'))
+            staff_role = Role(name="Staff", weight=2)
+            staff_role.permissions.append(
+                RolePermission(permission="approve registrations")
+            )
+            staff_role.permissions.append(RolePermission(permission="ban users"))
+            staff_role.permissions.append(
+                RolePermission(permission="administer all communities")
+            )
+            staff_role.permissions.append(
+                RolePermission(permission="administer all users")
+            )
             db.session.add(staff_role)
 
-            admin_role = Role(name='Admin', weight=3)
-            admin_role.permissions.append(RolePermission(permission='approve registrations'))
-            admin_role.permissions.append(RolePermission(permission='change user roles'))
-            admin_role.permissions.append(RolePermission(permission='ban users'))
-            admin_role.permissions.append(RolePermission(permission='manage users'))
-            admin_role.permissions.append(RolePermission(permission='change instance settings'))
-            admin_role.permissions.append(RolePermission(permission='administer all communities'))
-            admin_role.permissions.append(RolePermission(permission='administer all users'))
-            admin_role.permissions.append(RolePermission(permission='edit cms pages'))
+            admin_role = Role(name="Admin", weight=3)
+            admin_role.permissions.append(
+                RolePermission(permission="approve registrations")
+            )
+            admin_role.permissions.append(
+                RolePermission(permission="change user roles")
+            )
+            admin_role.permissions.append(RolePermission(permission="ban users"))
+            admin_role.permissions.append(RolePermission(permission="manage users"))
+            admin_role.permissions.append(
+                RolePermission(permission="change instance settings")
+            )
+            admin_role.permissions.append(
+                RolePermission(permission="administer all communities")
+            )
+            admin_role.permissions.append(
+                RolePermission(permission="administer all users")
+            )
+            admin_role.permissions.append(RolePermission(permission="edit cms pages"))
             db.session.add(admin_role)
 
-            if interactive == 'yes':
+            if interactive == "yes":
                 # Admin user
-                print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
+                print(
+                    "The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use)."
+                )
                 user_name = input("Admin user name (ideally not 'admin'): ")
                 email = input("Admin email address: ")
                 password = input("Admin password: ")
-                while '@' in user_name or ' ' in user_name:
-                    print('User name cannot be an email address or have spaces.')
+                while "@" in user_name or " " in user_name:
+                    print("User name cannot be an email address or have spaces.")
                     user_name = input("Admin user name (ideally not 'admin'): ")
                 verification_token = random_token(16)
                 private_key, public_key = RsaKeys.generate_keypair()
-                admin_user = User(user_name=user_name, title=user_name,
-                                  email=email, verification_token=verification_token,
-                                  instance_id=1, email_unread_sent=False,
-                                  private_key=private_key, public_key=public_key,
-                                  alt_user_name=gibberish(randint(8, 20)))
+                admin_user = User(
+                    user_name=user_name,
+                    title=user_name,
+                    email=email,
+                    verification_token=verification_token,
+                    instance_id=1,
+                    email_unread_sent=False,
+                    private_key=private_key,
+                    public_key=public_key,
+                    alt_user_name=gibberish(randint(8, 20)),
+                )
                 admin_user.set_password(password)
                 admin_user.roles.append(admin_role)
                 admin_user.verified = True
@@ -212,7 +326,6 @@ def register(app):
             db.session.commit()
             print("Initial setup is finished.")
 
-
     @app.cli.command("reset-pwd")
     def reset_pwd():
         new_password = input("New password for user ID 1: ")
@@ -221,10 +334,9 @@ def register(app):
         admin_user = User.query.get(1)
         admin_user.set_password(new_password)
         db.session.commit()
-        print('Password has been set.')
+        print("Password has been set.")
 
-
-    @app.cli.command('testing')
+    @app.cli.command("testing")
     def testing():
         with app.app_context():
             # calculate active users for day/week/month/half year
@@ -238,30 +350,33 @@ def register(app):
             half_year = utcnow() - timedelta(weeks=26)  # 52 weeks/year divided by 2
 
             # get a list of the ids for communities
-            comm_ids = db.session.query(Community.id).filter(Community.banned == False).all()
+            comm_ids = (
+                db.session.query(Community.id).filter(Community.banned == False).all()
+            )
             comm_ids = [id for (id,) in comm_ids]  # flatten list of tuples
 
             for community_id in comm_ids:
                 for interval in day, week, month, half_year:
-                    count = db.session.execute(text('''
+                    count = db.session.execute(
+                        text("""
                                  SELECT count(*) FROM
                                  (
                                      SELECT p.user_id FROM "post" p
-                                     WHERE p.posted_at > :time_interval 
+                                     WHERE p.posted_at > :time_interval
                                          AND p.from_bot = False
                                          AND p.community_id = :community_id
                                      UNION
                                      SELECT pr.user_id FROM "post_reply" pr
                                      WHERE pr.posted_at > :time_interval
                                          AND pr.from_bot = False
-                                         AND pr.community_id = :community_id   
+                                         AND pr.community_id = :community_id
                                      UNION
                                      SELECT pv.user_id FROM "post_vote" pv
                                      INNER JOIN "user" u ON pv.user_id = u.id
                                      INNER JOIN "post" p ON pv.post_id = p.id
                                      WHERE pv.created_at > :time_interval
                                          AND u.bot = False
-                                         AND p.community_id = :community_id                            
+                                         AND p.community_id = :community_id
                                      UNION
                                      SELECT prv.user_id FROM "post_reply_vote" prv
                                      INNER JOIN "user" u ON prv.user_id = u.id
@@ -271,7 +386,9 @@ def register(app):
                                          AND u.bot = False
                                          AND p.community_id = :community_id
                                  ) AS activity
-                             '''), {'time_interval': interval, 'community_id': community_id}).scalar()
+                             """),
+                        {"time_interval": interval, "community_id": community_id},
+                    ).scalar()
 
                     # update the community stats in the db
                     try:
@@ -297,28 +414,43 @@ def register(app):
                         db.session.remove()
             print("Stats update complete.")
 
-    @app.cli.command('daily-maintenance-celery')
+    @app.cli.command("daily-maintenance-celery")
     def daily_maintenance_celery():
         """Schedule daily maintenance tasks via Celery background queue"""
         with app.app_context():
             from app.shared.tasks.maintenance import (
-                cleanup_old_notifications, cleanup_send_queue, process_expired_bans,
-                remove_old_community_content, update_hashtag_counts, delete_old_soft_deleted_content,
-                update_community_stats, cleanup_old_voting_data, unban_expired_users,
-                sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
-                recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-                archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser,
-                clean_up_tmp
+                cleanup_old_notifications,
+                cleanup_send_queue,
+                process_expired_bans,
+                remove_old_community_content,
+                update_hashtag_counts,
+                delete_old_soft_deleted_content,
+                update_community_stats,
+                cleanup_old_voting_data,
+                unban_expired_users,
+                sync_defederation_subscriptions,
+                check_instance_health,
+                monitor_healthy_instances,
+                recalculate_user_attitudes,
+                calculate_community_activity_stats,
+                cleanup_old_activitypub_logs,
+                archive_old_posts,
+                archive_old_users,
+                cleanup_old_read_posts,
+                refresh_instance_chooser,
+                clean_up_tmp,
             )
 
-            print(f'Scheduling daily maintenance tasks via Celery at {datetime.now()}')
+            print(f"Scheduling daily maintenance tasks via Celery at {datetime.now()}")
 
             if not current_app.debug:
-                sleep(uniform(0, 30))  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
+                sleep(
+                    uniform(0, 30)
+                )  # Cron jobs are not very granular so many instances will be doing this at the same time. A random delay avoids this.
 
             # Schedule all maintenance tasks (sync in debug mode, async in production)
             if current_app.debug:
-                if get_setting('enable_instance_chooser', False):
+                if get_setting("enable_instance_chooser", False):
                     refresh_instance_chooser()
                 cleanup_old_notifications()
                 cleanup_old_read_posts()
@@ -338,12 +470,12 @@ def register(app):
                 cleanup_old_activitypub_logs()
                 archive_old_posts()
                 archive_old_users()
-                if get_setting('auto_add_remote_communities', False):
+                if get_setting("auto_add_remote_communities", False):
                     add_remote_communities()
                 clean_up_tmp()
-                print('All maintenance tasks completed synchronously (debug mode)')
+                print("All maintenance tasks completed synchronously (debug mode)")
             else:
-                if get_setting('enable_instance_chooser', False):
+                if get_setting("enable_instance_chooser", False):
                     refresh_instance_chooser.delay()
                 cleanup_old_notifications.delay()
                 cleanup_old_read_posts.delay()
@@ -363,120 +495,158 @@ def register(app):
                 cleanup_old_activitypub_logs.delay()
                 archive_old_posts.delay()
                 archive_old_users.delay()
-                if get_setting('auto_add_remote_communities', False):
+                if get_setting("auto_add_remote_communities", False):
                     add_remote_communities.delay()
                 clean_up_tmp.delay()
-                print('All maintenance tasks scheduled successfully (production mode)')
+                print("All maintenance tasks scheduled successfully (production mode)")
 
-            plugins.fire_hook('cron_daily')
+            plugins.fire_hook("cron_daily")
 
-    @app.cli.command('daily-maintenance')
+    @app.cli.command("daily-maintenance")
     def daily_maintenance():
         from app.shared.tasks.maintenance import (
-            cleanup_old_notifications, cleanup_send_queue, process_expired_bans,
-            remove_old_community_content, update_hashtag_counts, delete_old_soft_deleted_content,
-            update_community_stats, cleanup_old_voting_data, unban_expired_users,
-            sync_defederation_subscriptions, check_instance_health, monitor_healthy_instances,
-            recalculate_user_attitudes, calculate_community_activity_stats, cleanup_old_activitypub_logs,
-            archive_old_posts, archive_old_users, cleanup_old_read_posts, refresh_instance_chooser,
-            clean_up_tmp
+            cleanup_old_notifications,
+            cleanup_send_queue,
+            process_expired_bans,
+            remove_old_community_content,
+            update_hashtag_counts,
+            delete_old_soft_deleted_content,
+            update_community_stats,
+            cleanup_old_voting_data,
+            unban_expired_users,
+            sync_defederation_subscriptions,
+            check_instance_health,
+            monitor_healthy_instances,
+            recalculate_user_attitudes,
+            calculate_community_activity_stats,
+            cleanup_old_activitypub_logs,
+            archive_old_posts,
+            archive_old_users,
+            cleanup_old_read_posts,
+            refresh_instance_chooser,
+            clean_up_tmp,
         )
 
         if not current_app.debug:
-            sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
-        print(f'1 {datetime.now()}')
-        if get_setting('enable_instance_chooser', False):
+            sleep(
+                uniform(0, 10)
+            )  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+        print(f"1 {datetime.now()}")
+        if get_setting("enable_instance_chooser", False):
             refresh_instance_chooser()
-        print(f'2 {datetime.now()}')
+        print(f"2 {datetime.now()}")
         cleanup_old_notifications()
-        print(f'3 {datetime.now()}')
+        print(f"3 {datetime.now()}")
         cleanup_old_read_posts()
-        print(f'4 {datetime.now()}')
+        print(f"4 {datetime.now()}")
         cleanup_send_queue()
-        print(f'5 {datetime.now()}')
+        print(f"5 {datetime.now()}")
         process_expired_bans()
-        print(f'6 {datetime.now()}')
+        print(f"6 {datetime.now()}")
         remove_old_community_content()
         remove_old_bot_content()
-        print(f'7 {datetime.now()}')
+        print(f"7 {datetime.now()}")
         update_hashtag_counts()
-        print(f'8 {datetime.now()}')
+        print(f"8 {datetime.now()}")
         update_community_stats()
-        print(f'9 {datetime.now()}')
+        print(f"9 {datetime.now()}")
         cleanup_old_voting_data()
-        print(f'10 {datetime.now()}')
+        print(f"10 {datetime.now()}")
         unban_expired_users()
-        print(f'11 {datetime.now()}')
+        print(f"11 {datetime.now()}")
         sync_defederation_subscriptions()
-        print(f'12 {datetime.now()}')
+        print(f"12 {datetime.now()}")
         check_instance_health.delay()
-        print(f'13 {datetime.now()}')
+        print(f"13 {datetime.now()}")
         monitor_healthy_instances.delay()
-        print(f'14 {datetime.now()}')
+        print(f"14 {datetime.now()}")
         recalculate_user_attitudes()
-        print(f'15 {datetime.now()}')
+        print(f"15 {datetime.now()}")
         calculate_community_activity_stats()
-        print(f'16 {datetime.now()}')
+        print(f"16 {datetime.now()}")
         cleanup_old_activitypub_logs()
-        print(f'17 {datetime.now()}')
-        if get_setting('auto_add_remote_communities', False):
+        print(f"17 {datetime.now()}")
+        if get_setting("auto_add_remote_communities", False):
             add_remote_communities()
-            print(f'18 {datetime.now()}')
+            print(f"18 {datetime.now()}")
         clean_up_tmp()
-        print(f'19 {datetime.now()}')
-        delete_old_soft_deleted_content()   # 35 mins
-        print(f'20 {datetime.now()}')
-        archive_old_posts()                 # 2 hours
-        print(f'21 {datetime.now()}')
+        print(f"19 {datetime.now()}")
+        delete_old_soft_deleted_content()  # 35 mins
+        print(f"20 {datetime.now()}")
+        archive_old_posts()  # 2 hours
+        print(f"21 {datetime.now()}")
         archive_old_users()
-        print(f'Finished {datetime.now()}')
+        print(f"Finished {datetime.now()}")
 
-    @app.cli.command('archive-old-posts')
+    @app.cli.command("archive-old-posts")
     def archive_old_p():
         with app.app_context():
             from app.shared.tasks.maintenance import archive_old_posts
 
             archive_old_posts()
-            print('Done')
+            print("Done")
 
-    @app.cli.command('send-queue')
+    @app.cli.command("send-queue")
     def send_queue():
         with app.app_context():
             session = get_task_session()
             try:
                 with patch_db_session(session):
                     from app import redis_client
+
                     try:  # avoid parallel runs of this task using Redis lock
-                        with redis_client.lock("lock:send-queue", timeout=300, blocking_timeout=1):
+                        with redis_client.lock(
+                            "lock:send-queue", timeout=300, blocking_timeout=1
+                        ):
                             # Check size of redis memory. Abort if > 200 MB used
                             try:
-                                if redis_client and current_app.config['REDIS_MEMORY_LIMIT'] != -1 and \
-                                        redis_client.memory_stats()['total.allocated'] > current_app.config['REDIS_MEMORY_LIMIT']:
-                                    print('Redis memory is quite full - stopping send queue to avoid making it worse.')
-                                    redis_client.set("pause_federation", "1", ex=600)   # this also stops incoming federation
+                                if (
+                                    redis_client
+                                    and current_app.config["REDIS_MEMORY_LIMIT"] != -1
+                                    and redis_client.memory_stats()["total.allocated"]
+                                    > current_app.config["REDIS_MEMORY_LIMIT"]
+                                ):
+                                    print(
+                                        "Redis memory is quite full - stopping send queue to avoid making it worse."
+                                    )
+                                    redis_client.set(
+                                        "pause_federation", "1", ex=600
+                                    )  # this also stops incoming federation
                                     return
                                 else:
                                     redis_client.set("pause_federation", "0", ex=600)
                             except:  # retrieving memory stats fails on recent versions of redis. Once the redis package is fixed this problem should go away.
                                 ...
                             if not current_app.debug:
-                                sleep(uniform(0, 10))  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
+                                sleep(
+                                    uniform(0, 10)
+                                )  # Cron jobs are not very granular so there is a danger all instances will send in the same instant. A random delay avoids this.
 
                             to_be_deleted = []
                             # Send all waiting Activities that are due to be sent
-                            for to_send in session.query(SendQueue).filter(SendQueue.send_after < utcnow()):
+                            for to_send in session.query(SendQueue).filter(
+                                SendQueue.send_after < utcnow()
+                            ):
                                 if instance_online(to_send.destination_domain):
                                     if to_send.retries <= to_send.max_retries:
-                                        send_post_request(to_send.destination, json.loads(to_send.payload), to_send.private_key,
-                                                          to_send.actor,
-                                                          retries=to_send.retries + 1)
+                                        send_post_request(
+                                            to_send.destination,
+                                            json.loads(to_send.payload),
+                                            to_send.private_key,
+                                            to_send.actor,
+                                            retries=to_send.retries + 1,
+                                        )
                                     to_be_deleted.append(to_send.id)
                                 elif instance_gone_forever(to_send.destination_domain):
                                     to_be_deleted.append(to_send.id)
                             # Remove them once sent - send_post_request will have re-queued them if they failed
                             if len(to_be_deleted):
-                                session.execute(text('DELETE FROM "send_queue" WHERE id IN :to_be_deleted'),
-                                                   {'to_be_deleted': tuple(to_be_deleted)})
+                                session.execute(
+                                    text(
+                                        'DELETE FROM "send_queue" WHERE id IN :to_be_deleted'
+                                    ),
+                                    {"to_be_deleted": tuple(to_be_deleted)},
+                                )
                                 session.commit()
 
                             publish_scheduled_posts()
@@ -485,13 +655,15 @@ def register(app):
 
                             reminders()
 
-                            plugins.fire_hook('cron_often')
+                            plugins.fire_hook("cron_often")
 
                     except redis.exceptions.LockError:
-                        print('Send queue is still running - stopping this process to avoid duplication.')
+                        print(
+                            "Send queue is still running - stopping this process to avoid duplication."
+                        )
                         return
                     except Exception as e:
-                        print('Could not connect to redis or other error occurred')
+                        print("Could not connect to redis or other error occurred")
                         raise e
             except Exception:
                 session.rollback()
@@ -499,98 +671,115 @@ def register(app):
             finally:
                 session.close()
 
-    @app.cli.command('reopen')
+    @app.cli.command("reopen")
     def reopen():
         from app import redis_client
-        redis_client.set('pause_federation', '666', ex=1)
-        print('Done')
 
-    @app.cli.command('publish-scheduled-posts')
+        redis_client.set("pause_federation", "666", ex=1)
+        print("Done")
+
+    @app.cli.command("publish-scheduled-posts")
     def publish_scheduled_posts_command():
         # for dev/debug purposes this is it's own separate cli command but once it's finished we'll want to remove the @app.cli.command decorator
         # so that instance admins don't need to set up another cron job
         publish_scheduled_posts()
 
     def publish_scheduled_posts():
-            for post in Post.query.filter(Post.status == POST_STATUS_SCHEDULED, Post.deleted == False,
-                                          Post.scheduled_for != None):
-                if post.timezone is None:
-                    post.timezone = post.author.timezone
-                if post.scheduled_for and post.timezone:
-                    date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
-                    if date_with_tz.astimezone(ZoneInfo('UTC')) > utcnow(naive=False):
-                        continue
-                    if post.repeat and post.repeat != 'none':
-                        next_occurrence = post.scheduled_for + find_next_occurrence(post)
-                    else:
-                        next_occurrence = None
-                    # One shot scheduled post
-                    if not next_occurrence:
-                        post.status = POST_STATUS_PUBLISHED
-                        post.scheduled_for = None
-                        post.posted_at = utcnow()
-                        post.edited_at = None
-                        post.title = render_from_tpl(post.title)
-                        if post.type == POST_TYPE_POLL:
-                            poll = Poll.query.get(post.id)
-                            time_difference = poll.end_poll - post.created_at
-                            poll.end_poll += time_difference
-                        db.session.commit()
+        for post in Post.query.filter(
+            Post.status == POST_STATUS_SCHEDULED,
+            Post.deleted == False,
+            Post.scheduled_for != None,
+        ):
+            if post.timezone is None:
+                post.timezone = post.author.timezone
+            if post.scheduled_for and post.timezone:
+                date_with_tz = post.scheduled_for.replace(
+                    tzinfo=ZoneInfo(post.timezone)
+                )
+                if date_with_tz.astimezone(ZoneInfo("UTC")) > utcnow(naive=False):
+                    continue
+                if post.repeat and post.repeat != "none":
+                    next_occurrence = post.scheduled_for + find_next_occurrence(post)
+                else:
+                    next_occurrence = None
+                # One shot scheduled post
+                if not next_occurrence:
+                    post.status = POST_STATUS_PUBLISHED
+                    post.scheduled_for = None
+                    post.posted_at = utcnow()
+                    post.edited_at = None
+                    post.title = render_from_tpl(post.title)
+                    if post.type == POST_TYPE_POLL:
+                        poll = Poll.query.get(post.id)
+                        time_difference = poll.end_poll - post.created_at
+                        poll.end_poll += time_difference
+                    db.session.commit()
 
-                        # Federate post
-                        task_selector('make_post', post_id=post.id)
+                    # Federate post
+                    task_selector("make_post", post_id=post.id)
 
-                        # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
-                        notify_about_post(post)
+                    # create Notification()s for all the people subscribed to this post.community, post.author, post.topic_id and feed
+                    notify_about_post(post)
 
-                    # Scheduled post with multiple occurences
-                    else:
-                        # Create a new instance and copy all fields
-                        scheduled_post = Post()
-                        for column in post.__table__.columns:
-                            setattr(scheduled_post, column.name, getattr(post, column.name))
-                        scheduled_post.id = None
-                        scheduled_post.ap_id = None
-                        scheduled_post.scheduled_for = None
-                        scheduled_post.posted_at = utcnow()
-                        scheduled_post.edited_at = None
-                        scheduled_post.status = POST_STATUS_PUBLISHED
-                        scheduled_post.title = render_from_tpl(scheduled_post.title)
-                        db.session.add(scheduled_post)
-                        db.session.commit()
+                # Scheduled post with multiple occurences
+                else:
+                    # Create a new instance and copy all fields
+                    scheduled_post = Post()
+                    for column in post.__table__.columns:
+                        setattr(scheduled_post, column.name, getattr(post, column.name))
+                    scheduled_post.id = None
+                    scheduled_post.ap_id = None
+                    scheduled_post.scheduled_for = None
+                    scheduled_post.posted_at = utcnow()
+                    scheduled_post.edited_at = None
+                    scheduled_post.status = POST_STATUS_PUBLISHED
+                    scheduled_post.title = render_from_tpl(scheduled_post.title)
+                    db.session.add(scheduled_post)
+                    db.session.commit()
 
-                        scheduled_post.generate_ap_id(scheduled_post.community)
-                        # Update the scheduled_for with the next occurrence date
-                        post.scheduled_for = next_occurrence
+                    scheduled_post.generate_ap_id(scheduled_post.community)
+                    # Update the scheduled_for with the next occurrence date
+                    post.scheduled_for = next_occurrence
 
-                        # Small hack to make image urls unique and avoid creating
-                        # a crosspost when scheduling an image post
-                        if post.type == POST_TYPE_IMAGE:
-                            uid = uuid.uuid4().hex
-                            if "?uid=" in post.image.source_url:
-                                post.image.source_url = re.sub(r"\?uid=.*$", f"?uid={uid}", post.image.source_url)
-                            else:
-                                post.image.source_url += f"?uid={uid}"
+                    # Small hack to make image urls unique and avoid creating
+                    # a crosspost when scheduling an image post
+                    if post.type == POST_TYPE_IMAGE:
+                        uid = uuid.uuid4().hex
+                        if "?uid=" in post.image.source_url:
+                            post.image.source_url = re.sub(
+                                r"\?uid=.*$", f"?uid={uid}", post.image.source_url
+                            )
+                        else:
+                            post.image.source_url += f"?uid={uid}"
 
-                        vote = PostVote(user_id=post.user_id, post_id=scheduled_post.id, author_id=scheduled_post.user_id,
-                                        effect=1)
-                        db.session.add(vote)
-                        db.session.commit()
+                    vote = PostVote(
+                        user_id=post.user_id,
+                        post_id=scheduled_post.id,
+                        author_id=scheduled_post.user_id,
+                        effect=1,
+                    )
+                    db.session.add(vote)
+                    db.session.commit()
 
-                        task_selector('make_post', post_id=scheduled_post.id)
-                        notify_about_post(scheduled_post)
+                    task_selector("make_post", post_id=scheduled_post.id)
+                    notify_about_post(scheduled_post)
 
-    @app.cli.command('send-batched-activities')
+    @app.cli.command("send-batched-activities")
     def send_batched_activities_command():
         send_batched_activities()
 
     def send_batched_activities():
-        instances_and_communities = db.session.execute(text("""SELECT DISTINCT instance_id, community_id 
-                                                                FROM "activity_batch" 
-                                                                ORDER BY instance_id, community_id""")).fetchall()
+        instances_and_communities = db.session.execute(
+            text("""SELECT DISTINCT instance_id, community_id
+                                                                FROM "activity_batch"
+                                                                ORDER BY instance_id, community_id""")
+        ).fetchall()
         current_instance = None
         for instances_and_community in instances_and_communities:
-            if current_instance is None or current_instance.id != instances_and_community[0]:
+            if (
+                current_instance is None
+                or current_instance.id != instances_and_community[0]
+            ):
                 current_instance = Instance.query.get(instances_and_community[0])
             community = Community.query.get(instances_and_community[1])
 
@@ -599,70 +788,93 @@ def register(app):
             to = ["https://www.w3.org/ns/activitystreams#Public"]
             cc = [community.ap_followers_url]
             announce = {
-                'id': announce_id,
-                'type': 'Announce',
-                'actor': actor,
-                'object': [],
-                '@context': default_context(),
-                'to': to,
-                'cc': cc
+                "id": announce_id,
+                "type": "Announce",
+                "actor": actor,
+                "object": [],
+                "@context": default_context(),
+                "to": to,
+                "cc": cc,
             }
-            payloads = ActivityBatch.query.filter(ActivityBatch.instance_id == current_instance.id, ActivityBatch.community_id == community.id).order_by(ActivityBatch.created)
+            payloads = ActivityBatch.query.filter(
+                ActivityBatch.instance_id == current_instance.id,
+                ActivityBatch.community_id == community.id,
+            ).order_by(ActivityBatch.created)
             delete_payloads = []
             for payload in payloads.all():
-                announce['object'].append(payload.payload)
+                announce["object"].append(payload.payload)
                 delete_payloads.append(payload.id)
-            send_post_request(current_instance.inbox, announce, community.private_key, community.public_url() + '#main-key')
+            send_post_request(
+                current_instance.inbox,
+                announce,
+                community.private_key,
+                community.public_url() + "#main-key",
+            )
             ActivityBatch.query.filter(ActivityBatch.id.in_(delete_payloads)).delete()
             db.session.commit()
 
     def reminders():
         pending_reminders = Reminder.query.filter(Reminder.remind_at < utcnow()).all()
         for pending_reminder in pending_reminders:
-            targets_data = {'gen': '0'}
+            targets_data = {"gen": "0"}
             with force_locale(get_recipient_language(pending_reminder.user_id)):
                 if pending_reminder.reminder_type == 1:
-                    post = db.session.query(Post).get(pending_reminder.reminder_destination)
-                    title = _('Reminder: %(title)s', title=post.title)
-                    url = f'/post/{post.id}'
-                    targets_data['post_id'] = post.id
+                    post = db.session.query(Post).get(
+                        pending_reminder.reminder_destination
+                    )
+                    title = _("Reminder: %(title)s", title=post.title)
+                    url = f"/post/{post.id}"
+                    targets_data["post_id"] = post.id
                 elif pending_reminder.reminder_type == 2:
-                    post_reply = db.session.query(PostReply).get(pending_reminder.reminder_destination)
-                    title = _('Reminder: comment on %(title)s', title=post_reply.post.title, )
-                    url = f'/post/{post_reply.post.id}/comment/{post_reply.id}'
-                    targets_data['comment_id'] = post_reply.id
+                    post_reply = db.session.query(PostReply).get(
+                        pending_reminder.reminder_destination
+                    )
+                    title = _(
+                        "Reminder: comment on %(title)s",
+                        title=post_reply.post.title,
+                    )
+                    url = f"/post/{post_reply.post.id}/comment/{post_reply.id}"
+                    targets_data["comment_id"] = post_reply.id
                 else:
                     db.session.delete(pending_reminder)
                     db.session.commit()
                     continue
-            notify = Notification(title=shorten_string(title, 140), url=url,
-                                  user_id=pending_reminder.user_id,
-                                  author_id=pending_reminder.user_id, notif_type=NOTIF_REMINDER,
-                                  subtype=None,
-                                  targets=targets_data)
+            notify = Notification(
+                title=shorten_string(title, 140),
+                url=url,
+                user_id=pending_reminder.user_id,
+                author_id=pending_reminder.user_id,
+                notif_type=NOTIF_REMINDER,
+                subtype=None,
+                targets=targets_data,
+            )
             db.session.add(notify)
-            db.session.execute(text('UPDATE "user" SET unread_notifications = unread_notifications + 1 WHERE id = :user_id'), {
-                'user_id': pending_reminder.user_id
-            })
+            db.session.execute(
+                text(
+                    'UPDATE "user" SET unread_notifications = unread_notifications + 1 WHERE id = :user_id'
+                ),
+                {"user_id": pending_reminder.user_id},
+            )
             db.session.delete(pending_reminder)
             db.session.commit()
 
-
-    @app.cli.command('move-files-to-s3')
+    @app.cli.command("move-files-to-s3")
     def move_files_to_s3():
         with app.app_context():
             from app.utils import move_file_to_s3
             import boto3
 
-            print('This will run for a long time, you should run it in a tmux session. Hit Ctrl+C now if not using tmux.')
+            print(
+                "This will run for a long time, you should run it in a tmux session. Hit Ctrl+C now if not using tmux."
+            )
             sleep(5.0)
             boto3_session = boto3.session.Session()
             s3 = boto3_session.client(
-                service_name='s3',
-                region_name=current_app.config['S3_REGION'],
-                endpoint_url=current_app.config['S3_ENDPOINT'],
-                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                service_name="s3",
+                region_name=current_app.config["S3_REGION"],
+                endpoint_url=current_app.config["S3_ENDPOINT"],
+                aws_access_key_id=current_app.config["S3_ACCESS_KEY"],
+                aws_secret_access_key=current_app.config["S3_ACCESS_SECRET"],
             )
             for community in Community.query.filter(Community.banned == False):
                 did_something = False
@@ -673,10 +885,13 @@ def register(app):
                     did_something = True
                     move_file_to_s3(community.image_id, s3)
                 if did_something:
-                    print(f'Moved image for community {community.link()}')
+                    print(f"Moved image for community {community.link()}")
 
-            for user in User.query.filter(User.deleted == False, User.banned == False,
-                                          User.last_seen > utcnow() - timedelta(days=180)):
+            for user in User.query.filter(
+                User.deleted == False,
+                User.banned == False,
+                User.last_seen > utcnow() - timedelta(days=180),
+            ):
                 did_something = False
                 if user.avatar_id:
                     did_something = True
@@ -685,28 +900,41 @@ def register(app):
                     did_something = True
                     move_file_to_s3(user.cover_id, s3)
                 if did_something:
-                    print(f'Moved image for user {user.link()}')
+                    print(f"Moved image for user {user.link()}")
             s3.close()
-            print('Done')
+            print("Done")
 
-    @app.cli.command('move-post-images-to-s3')
+    @app.cli.command("move-post-images-to-s3")
     def move_post_images_to_s3():
         with app.app_context():
             from app.utils import move_file_to_s3
             import boto3
+
             processed = 0
-            print('Beginning move of post images... this could take a long time. Use tmux.')
-            local_post_image_ids = list(db.session.execute(text(
-                'SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC')).scalars())
-            remote_post_image_ids = list(db.session.execute(text(
-                'SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC')).scalars())
+            print(
+                "Beginning move of post images... this could take a long time. Use tmux."
+            )
+            local_post_image_ids = list(
+                db.session.execute(
+                    text(
+                        'SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id = 1 ORDER BY id DESC'
+                    )
+                ).scalars()
+            )
+            remote_post_image_ids = list(
+                db.session.execute(
+                    text(
+                        'SELECT image_id FROM "post" WHERE deleted is false and image_id is not null and instance_id != 1 ORDER BY id DESC'
+                    )
+                ).scalars()
+            )
             boto3_session = boto3.session.Session()
             s3 = boto3_session.client(
-                service_name='s3',
-                region_name=current_app.config['S3_REGION'],
-                endpoint_url=current_app.config['S3_ENDPOINT'],
-                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                service_name="s3",
+                region_name=current_app.config["S3_REGION"],
+                endpoint_url=current_app.config["S3_ENDPOINT"],
+                aws_access_key_id=current_app.config["S3_ACCESS_KEY"],
+                aws_secret_access_key=current_app.config["S3_ACCESS_SECRET"],
             )
             for post_image_id in local_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
@@ -714,52 +942,66 @@ def register(app):
                 if processed % 5:
                     print(processed)
 
-            print('Finished moving local post images, doing remote ones now...')
+            print("Finished moving local post images, doing remote ones now...")
             for post_image_id in remote_post_image_ids:
                 move_file_to_s3(post_image_id, s3)
                 processed += 1
                 if processed % 5:
                     print(processed)
             s3.close()
-            print('Done')
+            print("Done")
 
-    @app.cli.command('move-more-post-images-to-s3')
+    @app.cli.command("move-more-post-images-to-s3")
     def move_more_post_images_to_s3():
         with app.app_context():
             import boto3
-            server_name = current_app.config['SERVER_NAME']
+
+            server_name = current_app.config["SERVER_NAME"]
             boto3_session = boto3.session.Session()
             s3 = boto3_session.client(
-                service_name='s3',
-                region_name=current_app.config['S3_REGION'],
-                endpoint_url=current_app.config['S3_ENDPOINT'],
-                aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                service_name="s3",
+                region_name=current_app.config["S3_REGION"],
+                endpoint_url=current_app.config["S3_ENDPOINT"],
+                aws_access_key_id=current_app.config["S3_ACCESS_KEY"],
+                aws_secret_access_key=current_app.config["S3_ACCESS_SECRET"],
             )
 
-            file_ids = list(db.session.execute(
-                text(f'select id from "file" where source_url like \'https://{server_name}/static%\'')).scalars())
+            file_ids = list(
+                db.session.execute(
+                    text(
+                        f"select id from \"file\" where source_url like 'https://{server_name}/static%'"
+                    )
+                ).scalars()
+            )
             for file_id in file_ids:
                 file = File.query.get(file_id)
                 content_type = guess_mime_type(file.source_url)
-                new_path = file.source_url.replace('/static/media/', "/")
-                s3_path = new_path.replace(f'https://{server_name}/', '')
-                new_path = new_path.replace(server_name, current_app.config['S3_PUBLIC_URL'])
-                local_file = file.source_url.replace(f'https://{server_name}/static/media/', 'app/static/media/')
+                new_path = file.source_url.replace("/static/media/", "/")
+                s3_path = new_path.replace(f"https://{server_name}/", "")
+                new_path = new_path.replace(
+                    server_name, current_app.config["S3_PUBLIC_URL"]
+                )
+                local_file = file.source_url.replace(
+                    f"https://{server_name}/static/media/", "app/static/media/"
+                )
                 if os.path.isfile(local_file):
                     try:
-                        s3.upload_file(local_file, current_app.config['S3_BUCKET'], s3_path,
-                                       ExtraArgs={'ContentType': content_type})
+                        s3.upload_file(
+                            local_file,
+                            current_app.config["S3_BUCKET"],
+                            s3_path,
+                            ExtraArgs={"ContentType": content_type},
+                        )
                     except Exception as e:
                         print(f"Error uploading {local_file}: {e}")
                     os.unlink(local_file)
                     file.source_url = new_path
                     print(new_path)
                 else:
-                    print('Could not find ' + local_file)
+                    print("Could not find " + local_file)
 
                 db.session.commit()
-        print('Done')
+        print("Done")
 
     @app.cli.command("spaceusage")
     def spaceusage():
@@ -777,10 +1019,10 @@ def register(app):
 
     @app.cli.command("remove_orphan_files")
     def remove_orphan_files():
-        """ Any user-uploaded file that does not have a corresponding entry in the File table should be deleted """
+        """Any user-uploaded file that does not have a corresponding entry in the File table should be deleted"""
         with app.app_context():
-            for file_path in list_files('app/static/media/users'):
-                if 'thumbnail' in file_path:
+            for file_path in list_files("app/static/media/users"):
+                if "thumbnail" in file_path:
                     f = File.query.filter(File.thumbnail_path == file_path).first()
                 else:
                     f = File.query.filter(File.file_path == file_path).first()
@@ -794,21 +1036,31 @@ def register(app):
             try:
                 with patch_db_session(session):
                     site = Site.query.get(1)
-                    users_to_notify = User.query.join(Notification, User.id == Notification.user_id).filter(
-                        User.ap_id == None,
-                        Notification.created_at > User.last_seen,
-                        Notification.read == False,
-                        User.email_unread_sent == False,  # they have not been emailed since last activity
-                        User.email_unread == True  # they want to be emailed
-                    ).all()
+                    users_to_notify = (
+                        User.query.join(Notification, User.id == Notification.user_id)
+                        .filter(
+                            User.ap_id == None,
+                            Notification.created_at > User.last_seen,
+                            Notification.read == False,
+                            User.email_unread_sent
+                            == False,  # they have not been emailed since last activity
+                            User.email_unread == True,  # they want to be emailed
+                        )
+                        .all()
+                    )
 
                     for user in users_to_notify:
-                        notifications = Notification.query.filter(Notification.user_id == user.id, Notification.read == False,
-                                                                  Notification.created_at > user.last_seen).all()
+                        notifications = Notification.query.filter(
+                            Notification.user_id == user.id,
+                            Notification.read == False,
+                            Notification.created_at > user.last_seen,
+                        ).all()
                         if notifications:
                             # Also get the top 20 posts since their last login
-                            posts = Post.query.join(CommunityMember, Post.community_id == CommunityMember.community_id).filter(
-                                CommunityMember.is_banned == False)
+                            posts = Post.query.join(
+                                CommunityMember,
+                                Post.community_id == CommunityMember.community_id,
+                            ).filter(CommunityMember.is_banned == False)
                             posts = posts.filter(CommunityMember.user_id == user.id)
                             if user.ignore_bots == 1:
                                 posts = posts.filter(Post.from_bot == False)
@@ -818,23 +1070,42 @@ def register(app):
                                 posts = posts.filter(Post.nsfw == False)
                             domains_ids = blocked_domains(user.id)
                             if domains_ids:
-                                posts = posts.filter(or_(Post.domain_id.not_in(domains_ids), Post.domain_id == None))
+                                posts = posts.filter(
+                                    or_(
+                                        Post.domain_id.not_in(domains_ids),
+                                        Post.domain_id == None,
+                                    )
+                                )
                             community_ids = blocked_communities(user.id)
                             if community_ids:
-                                posts = posts.filter(Post.community_id.not_in(community_ids))
-                            posts = posts.filter(Post.posted_at > user.last_seen).order_by(desc(Post.score))
+                                posts = posts.filter(
+                                    Post.community_id.not_in(community_ids)
+                                )
+                            posts = posts.filter(
+                                Post.posted_at > user.last_seen
+                            ).order_by(desc(Post.score))
                             posts = posts.limit(20).all()
 
                             # Send email!
-                            send_email(_('[PieFed] You have unread notifications'),
-                                       sender=f'{site.name} <{current_app.config["MAIL_FROM"]}>',
-                                       recipients=[user.email],
-                                       text_body=flask.render_template('email/unread_notifications.txt', user=user,
-                                                                       notifications=notifications, site=site),
-                                       html_body=flask.render_template('email/unread_notifications.html', user=user,
-                                                                       notifications=notifications,
-                                                                       posts=posts, site=site,
-                                                                       domain=current_app.config['SERVER_NAME']))
+                            send_email(
+                                _("[PieFed] You have unread notifications"),
+                                sender=f'{site.name} <{current_app.config["MAIL_FROM"]}>',
+                                recipients=[user.email],
+                                text_body=flask.render_template(
+                                    "email/unread_notifications.txt",
+                                    user=user,
+                                    notifications=notifications,
+                                    site=site,
+                                ),
+                                html_body=flask.render_template(
+                                    "email/unread_notifications.html",
+                                    user=user,
+                                    notifications=notifications,
+                                    posts=posts,
+                                    site=site,
+                                    domain=current_app.config["SERVER_NAME"],
+                                ),
+                            )
                             user.email_unread_sent = True
                             db.session.commit()
 
@@ -852,45 +1123,62 @@ def register(app):
                 with patch_db_session(session):
                     import email
 
-                    imap_host = current_app.config['BOUNCE_HOST']
-                    imap_user = current_app.config['BOUNCE_USERNAME']
-                    imap_pass = current_app.config['BOUNCE_PASSWORD']
+                    imap_host = current_app.config["BOUNCE_HOST"]
+                    imap_user = current_app.config["BOUNCE_USERNAME"]
+                    imap_pass = current_app.config["BOUNCE_PASSWORD"]
                     something_deleted = False
 
                     if imap_host:
-
                         # connect to host using SSL
                         imap = imaplib.IMAP4_SSL(imap_host, port=993)
 
                         ## login to server
                         imap.login(imap_user, imap_pass)
 
-                        imap.select('Inbox')
+                        imap.select("Inbox")
 
-                        tmp, data = imap.search(None, 'ALL')
-                        rgx = r'[\w\.-]+@[\w\.-]+'
+                        tmp, data = imap.search(None, "ALL")
+                        rgx = r"[\w\.-]+@[\w\.-]+"
 
                         emails = set()
 
                         for num in data[0].split():
-                            tmp, data = imap.fetch(num, '(RFC822)')
+                            tmp, data = imap.fetch(num, "(RFC822)")
                             email_message = email.message_from_bytes(data[0][1])
                             match = []
                             if not isinstance(email_message._payload, str):
                                 if isinstance(email_message._payload[0]._payload, str):
-                                    payload = email_message._payload[0]._payload.replace("\n", " ").replace("\r", " ")
+                                    payload = (
+                                        email_message._payload[0]
+                                        ._payload.replace("\n", " ")
+                                        .replace("\r", " ")
+                                    )
                                     match = re.findall(rgx, payload)
-                                elif isinstance(email_message._payload[0]._payload, list):
-                                    if isinstance(email_message._payload[0]._payload[0]._payload, str):
-                                        payload = email_message._payload[0]._payload[0]._payload.replace("\n", " ").replace("\r", " ")
+                                elif isinstance(
+                                    email_message._payload[0]._payload, list
+                                ):
+                                    if isinstance(
+                                        email_message._payload[0]._payload[0]._payload,
+                                        str,
+                                    ):
+                                        payload = (
+                                            email_message._payload[0]
+                                            ._payload[0]
+                                            ._payload.replace("\n", " ")
+                                            .replace("\r", " ")
+                                        )
                                         match = re.findall(rgx, payload)
 
                                 for m in match:
-                                    if current_app.config['SERVER_NAME'] not in m and current_app.config['SERVER_NAME'].upper() not in m:
+                                    if (
+                                        current_app.config["SERVER_NAME"] not in m
+                                        and current_app.config["SERVER_NAME"].upper()
+                                        not in m
+                                    ):
                                         emails.add(m)
-                                        print(str(num) + ' ' + m)
+                                        print(str(num) + " " + m)
 
-                            imap.store(num, '+FLAGS', '\\Deleted')
+                            imap.store(num, "+FLAGS", "\\Deleted")
                             something_deleted = True
 
                         if something_deleted:
@@ -901,7 +1189,9 @@ def register(app):
 
                         # Keep track of how many times email to an account has bounced. After 2 bounces, disable email sending to them
                         for bounced_email in emails:
-                            bounced_accounts = User.query.filter_by(email=bounced_email).all()
+                            bounced_accounts = User.query.filter_by(
+                                email=bounced_email
+                            ).all()
                             for account in bounced_accounts:
                                 if account.bounces is None:
                                     account.bounces = 0
@@ -923,7 +1213,9 @@ def register(app):
             session = get_task_session()
             try:
                 with patch_db_session(session):
-                    db.session.query(ActivityPubLog).filter(ActivityPubLog.created_at < utcnow() - timedelta(days=3)).delete()
+                    db.session.query(ActivityPubLog).filter(
+                        ActivityPubLog.created_at < utcnow() - timedelta(days=3)
+                    ).delete()
                     db.session.commit()
             except Exception:
                 session.rollback()
@@ -934,135 +1226,164 @@ def register(app):
     @app.cli.command("detect_vote_manipulation")
     def detect_vote_manipulation():
         with app.app_context():
-            print('Getting user ids...')
-            all_user_ids = [user.id for user in User.query.filter(User.last_seen > datetime.utcnow() - timedelta(days=7))]
-            print('Checking...')
+            print("Getting user ids...")
+            all_user_ids = [
+                user.id
+                for user in User.query.filter(
+                    User.last_seen > datetime.utcnow() - timedelta(days=7)
+                )
+            ]
+            print("Checking...")
             for i, first_user_id in enumerate(all_user_ids):
-                current_user_upvoted_posts = ['post/' + str(id) for id in recently_upvoted_posts(first_user_id)]
-                current_user_upvoted_replies = ['reply/' + str(id) for id in recently_upvoted_post_replies(first_user_id)]
+                current_user_upvoted_posts = [
+                    "post/" + str(id) for id in recently_upvoted_posts(first_user_id)
+                ]
+                current_user_upvoted_replies = [
+                    "reply/" + str(id)
+                    for id in recently_upvoted_post_replies(first_user_id)
+                ]
 
-                current_user_upvotes = set(current_user_upvoted_posts + current_user_upvoted_replies)
+                current_user_upvotes = set(
+                    current_user_upvoted_posts + current_user_upvoted_replies
+                )
                 if len(current_user_upvotes) > 12:
                     print(i)
                     for j in range(i + 1, len(all_user_ids)):
                         other_user_id = all_user_ids[j]
-                        if jaccard_similarity(current_user_upvotes, other_user_id) >= 95:
+                        if (
+                            jaccard_similarity(current_user_upvotes, other_user_id)
+                            >= 95
+                        ):
                             first_user = User.query.get(first_user_id)
                             other_user = User.query.get(other_user_id)
-                            print(f'{first_user.link()} votes the same as {other_user.link()}')
+                            print(
+                                f"{first_user.link()} votes the same as {other_user.link()}"
+                            )
 
     @app.cli.command("migrate_community_notifs")
     def migrate_community_notifs():
         with app.app_context():
-            member_infos = CommunityMember.query.filter(CommunityMember.notify_new_posts == True,
-                                                        CommunityMember.is_banned == False).all()
+            member_infos = CommunityMember.query.filter(
+                CommunityMember.notify_new_posts == True,
+                CommunityMember.is_banned == False,
+            ).all()
             for member_info in member_infos:
-                new_notification = NotificationSubscription(user_id=member_info.user_id,
-                                                            entity_id=member_info.community_id,
-                                                            type=NOTIF_COMMUNITY)
+                new_notification = NotificationSubscription(
+                    user_id=member_info.user_id,
+                    entity_id=member_info.community_id,
+                    type=NOTIF_COMMUNITY,
+                )
                 db.session.add(new_notification)
             db.session.commit()
-            print('Done')
+            print("Done")
 
     @app.cli.command("migrate_post_notifs")
     def migrate_post_notifs():
         with app.app_context():
             posts = Post.query.filter(Post.notify_author == True).all()
             for post in posts:
-                new_notification = NotificationSubscription(name=shorten_string(_('Replies to my post %(post_title)s',
-                                                                                  post_title=post.title)),
-                                                            user_id=post.user_id, entity_id=post.id,
-                                                            type=NOTIF_POST)
+                new_notification = NotificationSubscription(
+                    name=shorten_string(
+                        _("Replies to my post %(post_title)s", post_title=post.title)
+                    ),
+                    user_id=post.user_id,
+                    entity_id=post.id,
+                    type=NOTIF_POST,
+                )
                 db.session.add(new_notification)
             db.session.commit()
 
             post_replies = PostReply.query.filter(PostReply.notify_author == True).all()
             for reply in post_replies:
                 new_notification = NotificationSubscription(
-                    name=shorten_string(_('Replies to my comment on %(post_title)s',
-                                          post_title=reply.post.title)),
-                    user_id=post.user_id, entity_id=reply.id,
-                    type=NOTIF_REPLY)
+                    name=shorten_string(
+                        _(
+                            "Replies to my comment on %(post_title)s",
+                            post_title=reply.post.title,
+                        )
+                    ),
+                    user_id=post.user_id,
+                    entity_id=reply.id,
+                    type=NOTIF_REPLY,
+                )
                 db.session.add(new_notification)
             db.session.commit()
 
-            print('Done')
+            print("Done")
 
     @app.cli.command("populate_community_search")
     def populate_community_search():
         with app.app_context():
             # pull down the community.full.json
-            print('Pulling in the lemmyverse data ...')
-            resp = get_request('https://data.lemmyverse.net/data/community.full.json')
+            print("Pulling in the lemmyverse data ...")
+            resp = get_request("https://data.lemmyverse.net/data/community.full.json")
             community_json = resp.json()
             resp.close()
 
             # get the banned urls list
-            print('Getting the banned domains list ...')
-            banned_urls = list(db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars())
+            print("Getting the banned domains list ...")
+            banned_urls = list(
+                db.session.execute(
+                    text('SELECT domain FROM "banned_instances"')
+                ).scalars()
+            )
 
             # iterate over the entries and get out the url and the nsfw status in a new list
-            print('Generating the communities lists ...')
+            print("Generating the communities lists ...")
             all_communities = []
             all_sfw_communities = []
             for c in community_json:
                 # skip if the domain is banned
-                if c['baseurl'] in banned_urls:
+                if c["baseurl"] in banned_urls:
                     continue
 
                 # sort out any that have less than 50 posts
-                elif c['counts']['posts'] < 50:
+                elif c["counts"]["posts"] < 50:
                     continue
 
                 # sort out any that do not have greater than 10 active users over the past week
-                elif c['counts']['users_active_week'] < 10:
+                elif c["counts"]["users_active_week"] < 10:
                     continue
 
                 # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                seven_things_plus = [
-                    'shit', 'piss', 'fuck',
-                    'cunt', 'cocksucker', 'motherfucker', 'tits',
-                    'piracy', '196', 'greentext', 'usauthoritarianism',
-                    'enoughmuskspam', 'political_weirdos', '4chan'
-                ]
-                if any(badword in c['name'].lower() for badword in seven_things_plus):
+                if is_bad_name(c["name"]):
                     continue
 
                 # convert the url to server, community
-                server, community = extract_domain_and_actor(c['url'])
+                server, community = extract_domain_and_actor(c["url"])
 
                 # if the community is nsfw append to the all_communites only, if sfw, append to both
-                if c['nsfw']:
-                    all_communities.append(f'{community}@{server}')
+                if c["nsfw"]:
+                    all_communities.append(f"{community}@{server}")
                 else:
-                    all_communities.append(f'{community}@{server}')
-                    all_sfw_communities.append(f'{community}@{server}')
+                    all_communities.append(f"{community}@{server}")
+                    all_sfw_communities.append(f"{community}@{server}")
 
             # add those lists to dicts
             all_communities_json = {}
             all_sfw_communities_json = {}
-            all_communities_json['all_communities'] = all_communities
-            all_sfw_communities_json['all_sfw_communities'] = all_sfw_communities
+            all_communities_json["all_communities"] = all_communities
+            all_sfw_communities_json["all_sfw_communities"] = all_sfw_communities
 
             # write those files to disk as json
-            print('Saving the communities lists to app/static/tmp/ ...')
-            ensure_directory_exists('app/static/tmp')
-            with open('app/static/tmp/all_communities.json', 'w') as acj:
+            print("Saving the communities lists to app/static/tmp/ ...")
+            ensure_directory_exists("app/static/tmp")
+            with open("app/static/tmp/all_communities.json", "w") as acj:
                 json.dump(all_communities_json, acj)
 
-            with open('app/static/tmp/all_sfw_communities.json', 'w') as asfwcj:
+            with open("app/static/tmp/all_sfw_communities.json", "w") as asfwcj:
                 json.dump(all_sfw_communities_json, asfwcj)
 
-            print('Getting disposable email domain list...')
+            print("Getting disposable email domain list...")
             resp = get_request(
-                'https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt')
+                "https://raw.githubusercontent.com/disposable/disposable-email-domains/master/domains.txt"
+            )
             if resp.status_code == 200:
-                with open('app/static/tmp/disposable_domains.txt', 'w') as f:
-                    f.write(resp.content.decode('utf-8'))
+                with open("app/static/tmp/disposable_domains.txt", "w") as f:
+                    f.write(resp.content.decode("utf-8"))
                 resp.close()
 
-            print('Done!')
+            print("Done!")
 
     @app.cli.command("remove-unnecessary-images")
     def remove_unnecessary_images():
@@ -1070,31 +1391,41 @@ def register(app):
         # AS OF JUN 2025 link posts DO need a medium-sized version, as some mobile apps need larger images. DO NOT RUN THIS.
         with app.app_context():
             import boto3
-            sql = '''select file_path from "file" as f 
-                    inner join "post" as p on p.image_id  = f.id 
-                    where p.type = :type and f.file_path  is not null'''
-            files = list(db.session.execute(text(sql), {'type': POST_TYPE_LINK}).scalars())
+
+            sql = """select file_path from "file" as f
+                    inner join "post" as p on p.image_id  = f.id
+                    where p.type = :type and f.file_path  is not null"""
+            files = list(
+                db.session.execute(text(sql), {"type": POST_TYPE_LINK}).scalars()
+            )
             s3_files_to_delete = []
-            print('Gathering file list...')
+            print("Gathering file list...")
             for file in files:
                 if file:
-                    if file.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
-                        s3_path = file.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
+                    if (
+                        file.startswith(
+                            f'https://{current_app.config["S3_PUBLIC_URL"]}'
+                        )
+                        and _store_files_in_s3()
+                    ):
+                        s3_path = file.replace(
+                            f'https://{current_app.config["S3_PUBLIC_URL"]}/', ""
+                        )
                         s3_files_to_delete.append(s3_path)
                     elif os.path.isfile(file):
                         try:
                             os.unlink(file)
                         except FileNotFoundError:
                             ...
-            print(f'Sending list to S3 ({len(s3_files_to_delete)} files to delete)...')
+            print(f"Sending list to S3 ({len(s3_files_to_delete)} files to delete)...")
             if len(s3_files_to_delete) > 0:
                 boto3_session = boto3.session.Session()
                 s3 = boto3_session.client(
-                    service_name='s3',
-                    region_name=current_app.config['S3_REGION'],
-                    endpoint_url=current_app.config['S3_ENDPOINT'],
-                    aws_access_key_id=current_app.config['S3_ACCESS_KEY'],
-                    aws_secret_access_key=current_app.config['S3_ACCESS_SECRET'],
+                    service_name="s3",
+                    region_name=current_app.config["S3_REGION"],
+                    endpoint_url=current_app.config["S3_ENDPOINT"],
+                    aws_access_key_id=current_app.config["S3_ACCESS_KEY"],
+                    aws_secret_access_key=current_app.config["S3_ACCESS_SECRET"],
                 )
 
                 # S3 can only process 1000 files per delete operation, so we need to batch
@@ -1102,22 +1433,26 @@ def register(app):
                 total_deleted = 0
 
                 for i in range(0, len(s3_files_to_delete), batch_size):
-                    batch = s3_files_to_delete[i:i + batch_size]
+                    batch = s3_files_to_delete[i : i + batch_size]
                     delete_payload = {
-                        'Objects': [{'Key': key} for key in batch],
-                        'Quiet': True  # If True, successful deletions are not returned
+                        "Objects": [{"Key": key} for key in batch],
+                        "Quiet": True,  # If True, successful deletions are not returned
                     }
-                    s3.delete_objects(Bucket=current_app.config['S3_BUCKET'], Delete=delete_payload)
+                    s3.delete_objects(
+                        Bucket=current_app.config["S3_BUCKET"], Delete=delete_payload
+                    )
                     total_deleted += len(batch)
-                    print(f'Deleted batch {i // batch_size + 1}, progress: {total_deleted}/{len(s3_files_to_delete)} files')
+                    print(
+                        f"Deleted batch {i // batch_size + 1}, progress: {total_deleted}/{len(s3_files_to_delete)} files"
+                    )
 
                 s3.close()
-            print(f'Done, {len(s3_files_to_delete)} files deleted.')
+            print(f"Done, {len(s3_files_to_delete)} files deleted.")
 
     @app.cli.command("populate_post_reply_for_api")
     def populate_post_reply_for_api():
         with app.app_context():
-            sql = '''WITH RECURSIVE reply_path AS (
+            sql = """WITH RECURSIVE reply_path AS (
                         -- Base case: each reply starts with its own ID
                         SELECT
                             id,
@@ -1125,9 +1460,9 @@ def register(app):
                             ARRAY[0, id] AS path
                         FROM post_reply
                         WHERE parent_id IS NULL  -- Top-level replies
-                    
+
                         UNION ALL
-                    
+
                         -- Recursive case: build the path from parent replies
                         SELECT
                             pr.id,
@@ -1140,13 +1475,13 @@ def register(app):
                     SET path = reply_path.path
                     FROM reply_path
                     WHERE post_reply.id = reply_path.id;
-                    '''
+                    """
             db.session.execute(text(sql))
             db.session.commit()
 
-            db.session.execute(text('update post_reply set child_count = 0'))
+            db.session.execute(text("update post_reply set child_count = 0"))
 
-            sql = '''WITH unnested_paths AS (
+            sql = """WITH unnested_paths AS (
                         SELECT
                             UNNEST(path[2:array_length(path, 1) - 1]) AS parent_id  -- Exclude the last element (self)
                         FROM post_reply
@@ -1162,15 +1497,15 @@ def register(app):
                     UPDATE post_reply
                     SET child_count = COALESCE(child_counts.child_count, 0)
                     FROM child_counts
-                    WHERE post_reply.id = child_counts.parent_id;'''
+                    WHERE post_reply.id = child_counts.parent_id;"""
             db.session.execute(text(sql))
             db.session.commit()
 
-            sql = 'UPDATE post_reply SET root_id = path[1] WHERE path IS NOT NULL;'
+            sql = "UPDATE post_reply SET root_id = path[1] WHERE path IS NOT NULL;"
             db.session.execute(text(sql))
             db.session.commit()
 
-            print('Done!')
+            print("Done!")
 
     @app.cli.command("config_check")
     def config_check():
@@ -1188,44 +1523,62 @@ def register(app):
                     print("\n1. Checking required environment variables...")
 
                     # Check SERVER_NAME
-                    server_name = current_app.config.get('SERVER_NAME')
-                    if not server_name or server_name == 'localhost':
-                        errors.append("   ❌ SERVER_NAME is not set or using default value")
+                    server_name = current_app.config.get("SERVER_NAME")
+                    if not server_name or server_name == "localhost":
+                        errors.append(
+                            "   ❌ SERVER_NAME is not set or using default value"
+                        )
                     else:
                         # Check for common format issues
                         format_issues = []
-                        if server_name.startswith('http://') or server_name.startswith('https://'):
-                            format_issues.append("should not include protocol (http:// or https://)")
-                        if server_name.endswith('/'):
+                        if server_name.startswith("http://") or server_name.startswith(
+                            "https://"
+                        ):
+                            format_issues.append(
+                                "should not include protocol (http:// or https://)"
+                            )
+                        if server_name.endswith("/"):
                             format_issues.append("should not end with trailing slash")
-                        if ' ' in server_name:
+                        if " " in server_name:
                             format_issues.append("should not contain spaces")
                         if server_name.startswith("'") and server_name.endswith("'"):
                             format_issues.append("should not be wrapped in quotes")
 
                         if format_issues:
-                            errors.append(f"   ❌ SERVER_NAME format issues: {', '.join(format_issues)}")
+                            errors.append(
+                                f"   ❌ SERVER_NAME format issues: {', '.join(format_issues)}"
+                            )
                         else:
                             print(f"   ✅ SERVER_NAME is configured: {server_name}")
 
                     # Check SECRET_KEY
-                    secret_key = current_app.config.get('SECRET_KEY')
-                    if not secret_key or secret_key == 'you-will-never-guesss' or secret_key == 'change this to random characters':
-                        errors.append("   ❌ SECRET_KEY is not set or using default value")
+                    secret_key = current_app.config.get("SECRET_KEY")
+                    if (
+                        not secret_key
+                        or secret_key == "you-will-never-guesss"
+                        or secret_key == "change this to random characters"
+                    ):
+                        errors.append(
+                            "   ❌ SECRET_KEY is not set or using default value"
+                        )
                     elif len(secret_key) < 32:
-                        warnings.append("   ⚠️  SECRET_KEY should be at least 32 characters long")
+                        warnings.append(
+                            "   ⚠️  SECRET_KEY should be at least 32 characters long"
+                        )
                         print("   ✅ SECRET_KEY is configured (but short)")
                     else:
                         print("   ✅ SECRET_KEY is configured")
 
                     # Check DATABASE_URL
-                    database_url = current_app.config.get('SQLALCHEMY_DATABASE_URI')
+                    database_url = current_app.config.get("SQLALCHEMY_DATABASE_URI")
                     if not database_url:
                         errors.append("   ❌ DATABASE_URL is not set")
-                    elif database_url.startswith('sqlite://'):
-                        warnings.append("   ⚠️  Using SQLite database - consider PostgreSQL for production")
+                    elif database_url.startswith("sqlite://"):
+                        warnings.append(
+                            "   ⚠️  Using SQLite database - consider PostgreSQL for production"
+                        )
                         print("   ✅ DATABASE_URL is configured (SQLite)")
-                    elif database_url.startswith('postgresql'):
+                    elif database_url.startswith("postgresql"):
                         print("   ✅ DATABASE_URL is configured (PostgreSQL)")
                     else:
                         print("   ✅ DATABASE_URL is configured")
@@ -1233,66 +1586,111 @@ def register(app):
                     # Check numeric environment variables
                     print("\n   Checking numeric environment variables...")
                     numeric_vars = {
-                        'MAIL_PORT': current_app.config.get('MAIL_PORT'),
-                        'DB_POOL_SIZE': current_app.config.get('DB_POOL_SIZE'),
-                        'DB_MAX_OVERFLOW': current_app.config.get('DB_MAX_OVERFLOW'),
+                        "MAIL_PORT": current_app.config.get("MAIL_PORT"),
+                        "DB_POOL_SIZE": current_app.config.get("DB_POOL_SIZE"),
+                        "DB_MAX_OVERFLOW": current_app.config.get("DB_MAX_OVERFLOW"),
                     }
 
                     for var, value in numeric_vars.items():
                         if value is not None:
                             try:
                                 int_val = int(value)
-                                if var == 'MAIL_PORT' and (int_val < 1 or int_val > 65535):
-                                    warnings.append(f"   ⚠️  {var} should be between 1 and 65535")
+                                if var == "MAIL_PORT" and (
+                                    int_val < 1 or int_val > 65535
+                                ):
+                                    warnings.append(
+                                        f"   ⚠️  {var} should be between 1 and 65535"
+                                    )
                                 else:
                                     print(f"   ✅ {var} is valid: {int_val}")
                             except (ValueError, TypeError):
-                                errors.append(f"   ❌ {var} should be a number, got: {value}")
+                                errors.append(
+                                    f"   ❌ {var} should be a number, got: {value}"
+                                )
 
                     # Check boolean environment variables
                     print("\n   Checking boolean environment variables...")
-                    boolean_vars = ['MAIL_USE_TLS', 'SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY']
+                    boolean_vars = [
+                        "MAIL_USE_TLS",
+                        "SESSION_COOKIE_SECURE",
+                        "SESSION_COOKIE_HTTPONLY",
+                    ]
                     for var in boolean_vars:
                         env_value = os.environ.get(var)
                         if env_value is not None:
-                            if env_value.lower() in ['true', 'false', '1', '0', 'yes', 'no']:
+                            if env_value.lower() in [
+                                "true",
+                                "false",
+                                "1",
+                                "0",
+                                "yes",
+                                "no",
+                            ]:
                                 print(f"   ✅ {var} is valid: {env_value}")
                             else:
-                                warnings.append(f"   ⚠️  {var} should be true/false or 1/0, got: {env_value}")
+                                warnings.append(
+                                    f"   ⚠️  {var} should be true/false or 1/0, got: {env_value}"
+                                )
 
                     # Check URL format variables
                     print("\n   Checking URL format variables...")
                     url_vars = {
-                        'CACHE_REDIS_URL': current_app.config.get('CACHE_REDIS_URL'),
-                        'CELERY_BROKER_URL': current_app.config.get('CELERY_BROKER_URL'),
-                        'SENTRY_DSN': current_app.config.get('SENTRY_DSN'),
-                        'S3_ENDPOINT': current_app.config.get('S3_ENDPOINT'),
-                        'S3_PUBLIC_URL': current_app.config.get('S3_PUBLIC_URL'),
+                        "CACHE_REDIS_URL": current_app.config.get("CACHE_REDIS_URL"),
+                        "CELERY_BROKER_URL": current_app.config.get(
+                            "CELERY_BROKER_URL"
+                        ),
+                        "SENTRY_DSN": current_app.config.get("SENTRY_DSN"),
+                        "S3_ENDPOINT": current_app.config.get("S3_ENDPOINT"),
+                        "S3_PUBLIC_URL": current_app.config.get("S3_PUBLIC_URL"),
                     }
 
                     for var, value in url_vars.items():
                         if value:
                             format_issues = []
-                            if var in ['CACHE_REDIS_URL', 'CELERY_BROKER_URL'] and not (value.startswith('redis://') or value.startswith('unix://')):
-                                format_issues.append("should start with redis:// or unix://")
-                            if var == 'SENTRY_DSN' and not (value.startswith('https://') or value.startswith('http://')):
-                                format_issues.append("should start with https:// or http://")
-                            if var in ['S3_ENDPOINT'] and not (value.startswith('https://') or value.startswith('http://')):
-                                format_issues.append("should start with https:// or http://")
-                            if var in ['S3_PUBLIC_URL'] and value.startswith('https://'):
+                            if var in ["CACHE_REDIS_URL", "CELERY_BROKER_URL"] and not (
+                                value.startswith("redis://")
+                                or value.startswith("unix://")
+                            ):
+                                format_issues.append(
+                                    "should start with redis:// or unix://"
+                                )
+                            if var == "SENTRY_DSN" and not (
+                                value.startswith("https://")
+                                or value.startswith("http://")
+                            ):
+                                format_issues.append(
+                                    "should start with https:// or http://"
+                                )
+                            if var in ["S3_ENDPOINT"] and not (
+                                value.startswith("https://")
+                                or value.startswith("http://")
+                            ):
+                                format_issues.append(
+                                    "should start with https:// or http://"
+                                )
+                            if var in ["S3_PUBLIC_URL"] and value.startswith(
+                                "https://"
+                            ):
                                 format_issues.append("should start with https://")
-                            if value.endswith('/') and var in ['S3_ENDPOINT', 'S3_PUBLIC_URL']:
-                                format_issues.append("should not end with trailing slash")
+                            if value.endswith("/") and var in [
+                                "S3_ENDPOINT",
+                                "S3_PUBLIC_URL",
+                            ]:
+                                format_issues.append(
+                                    "should not end with trailing slash"
+                                )
 
                             if format_issues:
-                                warnings.append(f"   ⚠️  {var} format issues: {', '.join(format_issues)}")
+                                warnings.append(
+                                    f"   ⚠️  {var} format issues: {', '.join(format_issues)}"
+                                )
                             else:
                                 print(f"   ✅ {var} format is valid")
 
                     # Check database connection
                     print("\n2. Checking database connection...")
                     try:
-                        db.session.execute(text('SELECT 1'))
+                        db.session.execute(text("SELECT 1"))
                         print("   ✅ Database connection successful")
                     except Exception as e:
                         errors.append(f"   ❌ Database connection failed: {e}")
@@ -1305,17 +1703,15 @@ def register(app):
                             redis.ping()
                             print("   ✅ Redis connection successful")
                         else:
-                            warnings.append("   ⚠️  Redis connection could not be established")
+                            warnings.append(
+                                "   ⚠️  Redis connection could not be established"
+                            )
                     except Exception as e:
                         warnings.append(f"   ⚠️  Redis connection failed: {e}")
 
                     # Check write access to critical directories
                     print("\n4. Checking directory write permissions...")
-                    critical_dirs = [
-                        'app/static/tmp',
-                        'app/static/media',
-                        'logs'
-                    ]
+                    critical_dirs = ["app/static/tmp", "app/static/media", "logs"]
 
                     for dir_path in critical_dirs:
                         try:
@@ -1323,9 +1719,9 @@ def register(app):
                                 os.makedirs(dir_path, exist_ok=True)
 
                             # Test write access
-                            test_file = os.path.join(dir_path, 'config_check_test.txt')
-                            with open(test_file, 'w') as f:
-                                f.write('test')
+                            test_file = os.path.join(dir_path, "config_check_test.txt")
+                            with open(test_file, "w") as f:
+                                f.write("test")
                             os.remove(test_file)
                             print(f"   ✅ {dir_path} is writable")
                         except Exception as e:
@@ -1333,82 +1729,112 @@ def register(app):
 
                     # Check mail configuration
                     print("\n5. Checking mail configuration...")
-                    mail_server = current_app.config.get('MAIL_SERVER')
+                    mail_server = current_app.config.get("MAIL_SERVER")
                     if mail_server:
-                        print(f"   ✅ Mail server configured: {mail_server}. Visit /test_email in your browser to test.")
-                        mail_from = current_app.config.get('MAIL_FROM')
+                        print(
+                            f"   ✅ Mail server configured: {mail_server}. Visit /test_email in your browser to test."
+                        )
+                        mail_from = current_app.config.get("MAIL_FROM")
                         if mail_from:
                             print(f"   ✅ Mail from address: {mail_from}")
                         else:
                             warnings.append("   ⚠️  MAIL_FROM not configured")
-                        errors_to = current_app.config.get('ERRORS_TO')
+                        errors_to = current_app.config.get("ERRORS_TO")
                         if errors_to:
                             print(f"   ✅ Error messages sent to: {errors_to}")
                     else:
-                        warnings.append("   ⚠️  Mail server not configured - email functionality will be disabled")
+                        warnings.append(
+                            "   ⚠️  Mail server not configured - email functionality will be disabled"
+                        )
 
                     # Check cache configuration
                     print("\n6. Checking cache configuration...")
-                    cache_type = current_app.config.get('CACHE_TYPE')
+                    cache_type = current_app.config.get("CACHE_TYPE")
                     print(f"   ✅ Cache type: {cache_type}")
 
-                    if cache_type == 'FileSystemCache':
-                        cache_dir = current_app.config.get('CACHE_DIR')
+                    if cache_type == "FileSystemCache":
+                        cache_dir = current_app.config.get("CACHE_DIR")
                         if cache_dir:
                             try:
                                 os.makedirs(cache_dir, exist_ok=True)
                                 print(f"   ✅ Cache directory: {cache_dir}")
                             except Exception as e:
-                                errors.append(f"   ❌ Cache directory not accessible: {e}")
+                                errors.append(
+                                    f"   ❌ Cache directory not accessible: {e}"
+                                )
 
                     # Check S3 configuration (if used)
                     print("\n7. Checking S3 configuration...")
-                    s3_bucket = current_app.config.get('S3_BUCKET')
+                    s3_bucket = current_app.config.get("S3_BUCKET")
                     if s3_bucket:
-                        s3_required = ['S3_REGION', 'S3_ENDPOINT', 'S3_ACCESS_KEY', 'S3_ACCESS_SECRET', 'S3_PUBLIC_URL']
+                        s3_required = [
+                            "S3_REGION",
+                            "S3_ENDPOINT",
+                            "S3_ACCESS_KEY",
+                            "S3_ACCESS_SECRET",
+                            "S3_PUBLIC_URL",
+                        ]
                         s3_missing = []
                         for var in s3_required:
                             if not current_app.config.get(var):
                                 s3_missing.append(var)
 
                         if s3_missing:
-                            warnings.append(f"   ⚠️  S3 partially configured, missing: {', '.join(s3_missing)}")
+                            warnings.append(
+                                f"   ⚠️  S3 partially configured, missing: {', '.join(s3_missing)}"
+                            )
                         else:
                             print("   ✅ S3 configuration appears complete")
                     else:
-                        print("   ℹ️  S3 not configured (local file storage will be used)")
+                        print(
+                            "   ℹ️  S3 not configured (local file storage will be used)"
+                        )
 
                     # Check ActivityPub configuration
                     print("\n8. Checking ActivityPub configuration...")
-                    server_name = current_app.config.get('SERVER_NAME')
-                    if server_name and server_name != 'localhost' and '127.0.0.1' not in server_name:
-                        print(f"   ✅ Server name configured for federation: {server_name}")
+                    server_name = current_app.config.get("SERVER_NAME")
+                    if (
+                        server_name
+                        and server_name != "localhost"
+                        and "127.0.0.1" not in server_name
+                    ):
+                        print(
+                            f"   ✅ Server name configured for federation: {server_name}"
+                        )
 
                         # Check if we have a site with keys
                         site = Site.query.first()
                         if site and site.private_key and site.public_key:
                             print("   ✅ Site ActivityPub keys are configured")
                         else:
-                            warnings.append("   ⚠️  Site ActivityPub keys not found - run 'flask init-db' if this is a new installation")
+                            warnings.append(
+                                "   ⚠️  Site ActivityPub keys not found - run 'flask init-db' if this is a new installation"
+                            )
                     else:
-                        warnings.append("   ⚠️  SERVER_NAME not properly configured for federation")
+                        warnings.append(
+                            "   ⚠️  SERVER_NAME not properly configured for federation"
+                        )
 
                     admin = User.query.get(1)
                     if admin and admin.private_key and admin.public_key:
                         print("   ✅ Admin user configured")
                     else:
-                        warnings.append("   ⚠️  Admin user not found - run 'flask init-db' if this is a new installation")
+                        warnings.append(
+                            "   ⚠️  Admin user not found - run 'flask init-db' if this is a new installation"
+                        )
 
                     # Check migration system
                     print("\n9. Checking database migration system...")
                     try:
                         inspector = db.inspect(db.engine)
-                        if 'alembic_version' in inspector.get_table_names():
+                        if "alembic_version" in inspector.get_table_names():
                             print("   ✅ Database migration system is initialized")
                         else:
                             errors.append("   ❌ alembic_version table not found")
                     except Exception as e:
-                        errors.append(f"   ❌ Error checking database migration system: {e}")
+                        errors.append(
+                            f"   ❌ Error checking database migration system: {e}"
+                        )
 
                     # Summary
                     print("\n" + "=" * 40)
@@ -1416,7 +1842,9 @@ def register(app):
                     print("=" * 40)
 
                     if not errors and not warnings:
-                        print("✅ All checks passed! Your PieFed configuration looks good.")
+                        print(
+                            "✅ All checks passed! Your PieFed configuration looks good."
+                        )
                     else:
                         if errors:
                             print(f"❌ {len(errors)} error(s) found:")
@@ -1429,7 +1857,9 @@ def register(app):
                                 print(warning)
 
                         if errors:
-                            print("\n❌ Configuration has critical issues that need to be resolved.")
+                            print(
+                                "\n❌ Configuration has critical issues that need to be resolved."
+                            )
                             exit(1)
                         else:
                             print("\n⚠️  Configuration has warnings but should work.")
@@ -1452,7 +1882,7 @@ def parse_communities(interests_source, segment):
         if line == segment:
             include_in_output = True
             continue
-        elif line == '':
+        elif line == "":
             include_in_output = False
         if include_in_output:
             output.append(line)

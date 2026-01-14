@@ -8,16 +8,16 @@
 {% endif -%}
     {% if user.deleted -%}
         {% if current_user and current_user.is_authenticated and current_user.get_id() in admin_ids -%}
-            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}" aria-label="{{ _('Author') }}">
+            <a href="/u/{{ user.link() }}" title="{{ user.ap_id if user.ap_id != none else user.user_name }}">
                 [deleted]
             </a>
         {% else -%}
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
+        <a href="/u/{{ user.link() }}" class="author_link {{ 'donor' if user.stripe_subscription_id }}" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" />
+                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" decoding="async" referrerpolicy="no-referrer" />
             {% endif -%}
             {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
@@ -34,7 +34,7 @@
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
         {% endif -%}
-        {% if user.bot -%}
+        {% if user.bot or user.bot_override -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
         {% if current_user and user.id != current_user.id -%}
@@ -61,9 +61,9 @@
 
 {% macro render_communityname(community, add_domain=True, low_bandwidth=False, collapsed=False) -%}
     <span class="render_community">
-        <a href="/c/{{ community.link() }}" aria-label="{{ _('Go to community %(name)s', name=community.name) }}">
+        <a href="/c/{{ community.link() }}">
             {% if community.icon_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+                <img src="{{ community.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
             {% endif -%}
             {{ community.title }}{% if add_domain and not community.is_local() %}<span class="text-muted">@{{ community.ap_domain }}</span>{% endif %}
         </a>
@@ -72,9 +72,9 @@
 
 {% macro render_feedname(feed, add_domain=True, low_bandwidth=False, collapsed=False) -%}
     <span class="render_feed">
-        <a href="/f/{{ feed.link() }}" aria-label="{{ _('Go to feed %(name)s', name=feed.title) }}">
+        <a href="/f/{{ feed.link() }}">
             {% if feed.icon_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" />
+                <img src="{{ feed.icon_image('tiny') }}" class="community_icon rounded-circle" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" />
             {% endif -%}
             {{ feed.title }}{% if add_domain and not feed.is_local() %}<span class="text-muted">@{{ feed.ap_domain }}</span>{% endif %}
         </a>

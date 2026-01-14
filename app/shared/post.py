@@ -38,6 +38,7 @@ from app.models import (
     utcnow,
     Instance,
     Event,
+    Community,
 )
 from app.shared.tasks import task_selector
 from app.utils import (
@@ -65,6 +66,8 @@ from app.utils import (
     can_downvote,
     get_recipient_language,
     to_srgb,
+    can_upload_video,
+    is_video_url,
 )
 
 
@@ -279,6 +282,8 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
             ".avif",
             ".svg",
         ]
+        if type == POST_TYPE_VIDEO and can_upload_video():
+            allowed_extensions.extend([".mp4", ".webm", ".mov"])
         file_ext = os.path.splitext(uploaded_file.filename)[1]
         if file_ext.lower() not in allowed_extensions:
             raise Exception("filetype not allowed")
@@ -297,7 +302,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     db.session.commit()
 
     post.up_votes = 1
-    effect = user.instance.vote_weight
+    effect = 1.0
     post.score = post.up_votes * effect
     post.ranking = post.post_ranking(post.score, post.posted_at)
     post.ranking_scaled = int(post.ranking + community.scale_by())
@@ -486,7 +491,12 @@ def edit_post(
     # WARNING: beyond this point do not use the input variable as it can be either a dict or a form object!
 
     post.indexable = user.indexable
-    post.sticky = False if src == SRC_API else input.sticky.data
+    if (
+        post.community.is_moderator(user)
+        or post.community.is_owner(user)
+        or user.is_admin()
+    ):
+        post.sticky = False if src == SRC_API else input.sticky.data
     post.nsfw = nsfw
     post.nsfl = False if src == SRC_API else input.nsfl.data
     post.ai_generated = ai_generated
@@ -550,6 +560,19 @@ def edit_post(
                 domain = domain_from_url(post.url)
                 if domain:
                     domain.post_count -= 1
+                if (
+                    post.type == POST_TYPE_VIDEO
+                    and store_files_in_s3()
+                    and post.url.startswith(
+                        f'https://{current_app.config["S3_PUBLIC_URL"]}'
+                    )
+                ):
+                    from app.shared.tasks.maintenance import delete_from_s3
+
+                    if current_app.debug:
+                        delete_from_s3([post.url])
+                    else:
+                        delete_from_s3.delay([post.url])
 
         # remove any old tags
         post.tags.clear()
@@ -572,6 +595,8 @@ def edit_post(
             ".avif",
             ".svg",
         ]
+        if type == POST_TYPE_VIDEO and can_upload_video():
+            allowed_extensions.extend([".mp4", ".webm", ".mov"])
         file_ext = os.path.splitext(uploaded_file.filename)[1]
         if file_ext.lower() not in allowed_extensions:
             raise Exception("filetype not allowed")
@@ -608,7 +633,11 @@ def edit_post(
         if image_format == "AVIF":
             import pillow_avif  # NOQA  # do not remove
 
-        if not final_place.endswith(".svg") and not final_place.endswith(".gif"):
+        if (
+            not final_place.endswith(".svg")
+            and not final_place.endswith(".gif")
+            and not is_video_url(final_place)
+        ):
             img = Image.open(final_place)
             if "." + img.format.lower() in allowed_extensions:
                 img = ImageOps.exif_transpose(img)
@@ -634,7 +663,9 @@ def edit_post(
 
         url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
 
-        if current_app.config["IMAGE_HASHING_ENDPOINT"]:  # and not user.trustworthy():
+        if current_app.config["IMAGE_HASHING_ENDPOINT"] and not is_video_url(
+            final_place
+        ):
             hash = retrieve_image_hash(url)
             if hash and hash_matches_blocked_image(hash):
                 raise Exception("This image is blocked")
@@ -1131,6 +1162,45 @@ def lock_post(post_id: int, locked, src, auth=None):
             if src == SRC_WEB:
                 flash(_("%(name)s has been unlocked.", name=post.title))
             task_selector("unlock_post", user_id=user.id, post_id=post_id)
+
+    if src == SRC_API:
+        return user.id, post
+
+
+def move_post(post_id: int, target_id: int, src, auth=None):
+    if src == SRC_API:
+        user = authorise_api_user(auth, return_type="model")
+    else:
+        user = current_user
+
+    post = db.session.query(Post).get(post_id)
+    old_community_id = post.community_id
+    target_community = db.session.query(Community).get(target_id)
+
+    post.move_to(target_community)
+    db.session.commit()
+
+    add_to_modlog(
+        "move_post",
+        actor=user,
+        target_user=post.author,
+        reason="",
+        community=target_community,
+        post=post,
+        link_text=shorten_string(post.title),
+        link=f"post/{post.id}",
+    )
+
+    if src == SRC_WEB:
+        flash(_("%(name)s has been moved.", name=post.title))
+
+    task_selector(
+        "move_post",
+        user_id=user.id,
+        old_community_id=old_community_id,
+        new_community_id=target_community.id,
+        post_id=post_id,
+    )
 
     if src == SRC_API:
         return user.id, post

@@ -481,6 +481,12 @@ form {
   }
 }
 
+@media (max-width: 991.98px) {
+  .footer {
+    padding-bottom: 70px !important;
+  }
+}
+
 .communities_table {
   tbody tr th {
     padding: 0;
@@ -886,6 +892,10 @@ ul.form-multicheck-columns {
       height: 100%;
       border: 0;
   }
+
+  .blur {
+    filter: blur(24px);
+  }
 }
 
 time {
@@ -943,6 +953,8 @@ time {
 }
 
 .post_full .post_utilities_bar {
+  container-type: inline-size;
+
   .voting_buttons_new {
     margin-left: -15px;
   }
@@ -950,6 +962,27 @@ time {
   .post_reply_count {
     justify-content: left;
     margin-right: 8px;
+  }
+
+  @container (width < 400px) {
+    .flair_dropdown {
+      display: none;
+    }
+  }
+
+  @container (width < 350px) {
+    .voting_buttons_new .upvote_button, .voting_buttons_new .downvote_button {
+      min-width: 34px;
+    }
+    .voting_buttons_new .score {
+      display: none;
+    }
+  }
+
+  @container (width < 300px) {
+    .post_reply_count_text {
+      display: none;
+    }
   }
 }
 
@@ -2484,8 +2517,18 @@ form {
   }
 }
 
+.chat-input {
+  label {
+    display: none;
+  }
+}
+
 .alone_message {
   float: inline-start;
+}
+
+.vh-90 {
+  height: 90vh !important;
 }
 
 #subtopic_nav {
@@ -2652,6 +2695,7 @@ form {
     flex-wrap: wrap;
     gap: var(--bs-spacer-1);
     max-width: 100%;
+    row-gap: 0.3rem;
 
     overflow: hidden;
     user-select: none;
@@ -2800,8 +2844,8 @@ form {
 .emoji_button {
   color: rgba(var(--bs-link-color-rgb), var(--bs-link-opacity, 1));
   a svg {
-    width: 15px;
-    height: 15px;
+    width: 16px;
+    height: 16px;
   }
 }
 
@@ -2953,6 +2997,14 @@ form {
     &:visited {
       color: color-mix(in srgb, var(--bs-link-color) 65%, black);
     }
+}
+
+[data-bs-theme="dark"] .nav-link:focus-visible {
+  box-shadow: 0 0 0 .25rem rgba(253,253,253,.5);
+}
+
+[data-bs-theme="dark"] .skip-link {
+  color: black;
 }
 
 @import "scss/compact";

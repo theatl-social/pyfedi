@@ -29,7 +29,7 @@
                 <span class="fe fe-video" aria-hidden="true"></span>
         {% endif -%}
         {% if post.type == POST_TYPE_LINK and not embed -%}
-            <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}" aria-label="{{ _('All posts about this domain') }}">{{ post.domain.name }}</a>)
+            <span class="domain_link" aria-hidden="true">(<a href="/d/{{ post.domain_id }}">{{ post.domain.name }}</a>)
             {% if post.domain.post_warning -%}
                     <span class="fe fe-warning red" title="{{ post.domain.post_warning }}"></span>
             {% endif -%}
@@ -48,7 +48,7 @@
     {% if post.sticky -%}<span class="fe fe-sticky-right"></span>{% endif -%}
     {% if post.deleted -%}<span class="red fe fe-delete" title="{{ _('Post deleted') }}"></span>{% endif -%}
 </h3>
-<div class="author small">{% if show_post_community -%}<a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), _external=embed) }}" {{ 'target="_blank"' if embed }} aria-label="{{ _('Go to community %(name)s', name=post.community.name) }}">
+<div class="author small">{% if show_post_community -%}<a href="{{ url_for('activitypub.community_profile', actor=post.community.link(), _external=embed) }}" {{ 'target="_blank"' if embed }}>
     {% if post.community.icon_id and not low_bandwidth %}<img class="community_icon_small rounded-circle" src="{{ post.community.icon_image('tiny') }}" alt="Community icon" loading="lazy" />{% endif -%}
     c/{{ post.community.name }}</a><span class="community_instance text-muted {{ 'local' if post.community.is_local() }}">@{{ post.community.ap_domain }}</span> {% endif -%}
     by {{ render_username(post.author, htmx_redirect_back_to=request.path + '#post_' + str(post.id), current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
@@ -64,19 +64,19 @@
 {% set POST_TYPE_POLL = 5 -%}
 <div class="post_utilities_bar">
     <div class="post_replies_link">
-        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments:') }}">{{ post.reply_count }}</span><span class="visually-hidden"> comments</span></a>
+        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments: %(number)d', number=post.reply_count) }}">{{ post.reply_count }}</span><span class="visually-hidden"> comments</span></a>
     </div>
     <div class="voting_buttons_new" data-base-url="/post/{{ post.id }}" aria-live="assertive">
         {% if current_user.is_authenticated and current_user.verified -%}
                 {% if (can_upvote_here or can_upvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-                        <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}" role="button" aria-label="{{ _('UpVote button, %(count)d upvotes so far.', count=post.up_votes) }}" aria-live="assertive"
+                        <div class="upvote_button {{ 'voted_up' if in_sorted_list(recently_upvoted, post.id) }}" role="button" aria-label="{{ _('UpVote button.') }}" aria-live="assertive"
                          hx-post="/post/{{ post.id }}/upvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
                                 <span class="fe {{ 'fe-arrow-up-circle' if in_sorted_list(recently_upvoted, post.id) else 'fe-arrow-up' }}"></span>
                         </div>
                 {% endif -%}
-                <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+                <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: %(score)s', score=shorten_number(post.up_votes - post.down_votes)) }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
                 {%- if (can_downvote_here or can_downvote(current_user, post.community, communities_banned_from_list)) and not disable_voting -%}
-                        <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}" role="button" aria-label="{{ _('DownVote button, %(count)d downvotes so far.', count=post.down_votes) }}" aria-live="assertive"
+                        <div class="downvote_button {{ 'voted_down' if in_sorted_list(recently_downvoted, post.id) }}" role="button" aria-label="{{ _('DownVote button.') }}" aria-live="assertive"
                          hx-post="/post/{{ post.id }}/downvote/default" hx-trigger="click throttle:1s" hx-target="closest .voting_buttons_new" tabindex="0">
                                 <span class="fe {{ 'fe-arrow-down-circle' if in_sorted_list(recently_downvoted, post.id) else 'fe-arrow-down' }}"></span>
                         </div>
@@ -87,7 +87,7 @@
                         <span class="fe fe-arrow-up"></span>
                 </div>
             {% endif -%}
-            <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: ') }}{{ post.up_votes - post.down_votes }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
+            <span class="score" title="{{ post.up_votes }}, {{ post.down_votes }}" aria-live="assertive" aria-label="{{ _('Score: %(score)s', score=shorten_number(post.up_votes - post.down_votes)) }}.">{{ shorten_number(post.up_votes - post.down_votes) }}</span>
             {%- if not disable_voting -%}
                 <div class="downvote_button digits_{{ digits(post.down_votes) }} {{ downvoted_class }} redirect_login">
                         <span class="fe fe-arrow-down"></span>
@@ -110,7 +110,7 @@
             <a href="{{ url_for('post.post_cross_posts', post_id=post.id) }}" aria-label="{{ _('Show cross-posts') }}"
                title="{{ _('Show cross-posts') }}" data-bs-toggle="dropdown" rel="nofollow">
                <span class="fe fe-layers"></span>
-               <span aria-label="{{ _('Number of cross-posts:') }}">{{ post.cross_posts|length }}</span>
+               <span aria-label="{{ _('Number of cross-posts: %(number)d', number=post.cross_posts|length) }}">{{ post.cross_posts|length }}</span>
             </a>
             <ul class="dropdown-menu" style="width: 380px; white-space: nowrap; overflow: hidden">
                 <div
@@ -140,7 +140,7 @@
             {% endif -%}
             {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
                 <div class="post_translate_icon">
-                    <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
+                    <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#" aria-label="{{ _('Translate') }}"
                             hx-post="{{ url_for('post.post_teaser_translate', post_id=post.id) }}"
                             hx-trigger="click throttle:1s" hx-target="previous h3" hx-swap="outerHTML">
                         <span class="fe fe-translate"></span>
@@ -150,9 +150,9 @@
             {% if (moderated_community_ids and post.community_id in moderated_community_ids) or current_user.get_id() in admin_ids -%}
               <div class="dropdown" id="flair_dropdown_{{ post.id }}">
                 <a href='{{ url_for("post.post_set_flair", post_id=post.id) if low_bandwidth else '#' }}'
-                  data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                  data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" id="flair_link_{{ post.id }}"
                   rel="nofollow noindex"><span class="fe fe-label" title="{{ _('Set flair') }}"></span></a>
-                <ul class="dropdown-menu dropdown-menu-end overflow-auto" style="width: 320px;">
+                <ul class="dropdown-menu dropdown-menu-end overflow-auto" style="width: 320px;" aria-labelledby="flair_link_{{ post.id }}">
                   <div
                     hx-get="{{ url_for('post.post_flair_list', post_id=post.id) }}"
                     hx-trigger="intersect once"
@@ -164,9 +164,9 @@
             {% endif -%}
             <div class="dropdown" id="post_options_dropdown_{{ post.id }}">
                 <a href="{{ url_for('post.post_options', post_id=post.id) if low_bandwidth else '#' }}"
-                   data-bs-toggle="dropdown"
-                   rel="nofollow noindex"><span class="fe fe-options" title="Options"></span></a>
-                <ul class="dropdown-menu" style="width: 320px">
+                   data-bs-toggle="dropdown" aria-expanded="false" id="post_options_link_{{ post.id }}"
+                   rel="nofollow noindex"><span class="fe fe-options" title="{{ _('Options') }}"></span></a>
+                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="post_options_link_{{ post.id }}">
                     <div
                         hx-get="{{ url_for('post.post_options', post_id=post.id) }}"
                         hx-trigger="intersect once"
@@ -187,7 +187,7 @@
             {% if low_bandwidth -%}
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
-                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
@@ -210,7 +210,7 @@
             {% if low_bandwidth -%}
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
-                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                    <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
@@ -234,7 +234,7 @@
             {% if low_bandwidth -%}
                 <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Follow link') }}"><span class="fe fe-external"></span></a>
             {% else -%}
-                <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}"
+                <a href="{{ post.url }}" rel="nofollow ugc" class="post_link" target="_blank" aria-label="{{ _('Read article') }}"><span class="fe fe-external"></span><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
                          alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
@@ -260,7 +260,7 @@
             {% if low_bandwidth -%}
                 <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><span class="fe fe-reply"></span></a>
             {% else -%}
-                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}"
+                <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id) }}" aria-label="{{ _('Read post') }}"><img src="{{ post.image.thumbnail_url() }}" decoding="async" referrerpolicy="no-referrer"
                         alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" /></a>
             {% endif -%}
         </div>
@@ -283,14 +283,14 @@
 <div class="col post_teaser_body {{ 'reported' if post.id in reported_posts }}">
     {% if compact_thumbs and post.image_id -%}
         <div class="col_thumbnail thumbnail">
-            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-image"></span><img src="{{ post.image.medium_url() }}"
+            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><span class="fe fe-image"></span><img src="{{ post.image.medium_url() }}" decoding="async" referrerpolicy="no-referrer"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
         </div>
     {% endif -%}
     {{ render_title(post, sort=sort, current_user=current_user, request=request, locale=locale, show_post_community=show_post_community, low_bandwidth=low_bandwidth, reported_posts=reported_posts, user_flair=user_flair, admin_ids=admin_ids, user_notes=user_notes) }}
     {% if post.image_id and not low_bandwidth and not compact_thumbs -%}
         <div class="post_teaser_image_preview">
-            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}"
+            <a href="{{ post.image.view_url() }}" class="post_link" rel="nofollow ugc" aria-label="{{ _('View image') }}" target="_blank"><img src="{{ post.image.medium_url() }}" decoding="async" referrerpolicy="no-referrer"
                     alt="{{ post.image.alt_text if post.image.alt_text else '' }}" loading="lazy" class="{{ 'blur' if blur_content }}" width="{{ post.image.width }}" height="{{ post.image.height }}" /></a>
         </div>
     {% endif -%}
@@ -306,11 +306,11 @@
                 <div class="message_reaction_container me-1">
                     <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
                          hx-post="/post/{{ post.id }}/emoji_set"
-                         hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                         hx-vals="{&quot;emoji&quot;: &quot;{{ reaction['token'] }}&quot;}"
                          hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
-                    >
+                         title="{{ ', '.join(reaction['authors']) }}">
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" decoding="async" referrerpolicy="no-referrer">
                                             {% else -%}
                                                 {{ reaction['token'] }}
                                             {%- endif %}</div>
@@ -341,11 +341,11 @@
                         {% endif -%}
                         </video></p>
                 {% elif post.url.startswith('https://vimeo.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('vimeo.com/', 'player.vimeo.com/video/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://streamable.com') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('streamable.com/', 'streamable.com/e/') }}?loop=0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
-                    <div style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
+                    <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://loops.video/') -%}
                     <p>
                         <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
@@ -357,9 +357,9 @@
                         </video></p>
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
-                    <div class="video-wrapper" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
+                    <div class="video-wrapper {{ 'blur' if blur_content }}" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
                         <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None, autoplay='true') }}" rel="nofollow ugc" aria-label="{{ _('Read article') }}">
-                            <img src="https://img.youtube.com/vi/{{ post.youtube_video_id() }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288" loading="lazy">
+                            <img src="https://img.youtube.com/vi/{{ post.youtube_video_id() }}/hqdefault.jpg" alt="Video Thumbnail" width="512" height="288" loading="lazy" decoding="async" referrerpolicy="no-referrer">
                         </a>
                     </div>                {% endif -%}
                 {% if 'videos/watch' in post.url -%}
@@ -374,11 +374,11 @@
                     <div class="message_reaction_container me-1">
                         <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
                              hx-post="/post/{{ post.id }}/emoji_set"
-                             hx-vals='{"emoji": "{{ reaction['token'] }}"}'
+                             hx-vals="{&quot;emoji&quot;: &quot;{{ reaction['token'] }}&quot;}"
                              hx-target="#p_reactions_{{ post.id }}" hx-swap="outerHTML"
-                        >
+                             title="{{ ', '.join(reaction['authors']) }}">
                             <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                    <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" decoding="async" referrerpolicy="no-referrer">
                                                 {% else -%}
                                                     {{ reaction['token'] }}
                                                 {%- endif %}</div>

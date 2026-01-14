@@ -194,13 +194,18 @@ class Config(object):
         os.environ.get("DEFAULT_CONTENT_RETENTION") or -1
     )  # -1 = forever, no deletion
 
+    # How long to keep bot content (that isn't stickied and has no replies), in months
+    BOT_CONTENT_RETENTION = int(
+        os.environ.get("BOT_CONTENT_RETENTION") or 6
+    )  # -1 = forever, no deletion
+
     CONTENT_WARNING = int(os.environ.get("CONTENT_WARNING") or 0)
 
     TRANSLATE_ENDPOINT = os.environ.get("TRANSLATE_ENDPOINT") or ""
     TRANSLATE_KEY = os.environ.get("TRANSLATE_KEY") or ""
 
-    ALLOW_AI_CRAWLERS = os.environ.get('ALLOW_AI_CRAWLERS') or False
+    ALLOW_AI_CRAWLERS = os.environ.get("ALLOW_AI_CRAWLERS") or False
 
-    DETECT_AI_ENDPOINT = os.environ.get('DETECT_AI_ENDPOINT') or ''
+    DETECT_AI_ENDPOINT = os.environ.get("DETECT_AI_ENDPOINT") or ""
 
-    REDIS_MEMORY_LIMIT = int(os.environ.get('REDIS_MEMORY_LIMIT') or 200000000)
+    REDIS_MEMORY_LIMIT = int(os.environ.get("REDIS_MEMORY_LIMIT") or 200000000)

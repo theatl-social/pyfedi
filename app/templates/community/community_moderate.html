@@ -4,124 +4,92 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 aria-label="{{ _('Navigation') }}">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/communities">{{ _("Communities") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Moderation") }}</li>
-                </ol>
-            </nav>
-            {% include "community/_community_moderation_nav.html" %}
-            <div class="row">
-                <div class="col-12 col-md-10">
-                    <h1 class="mt-2">{{ _("Reports") }}</h1>
-                </div>
-                <div class="col-12 col-md-2 text-right">
-                    <!-- <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
-                </div>
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+              <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ _('Moderation') }}</li>
+          </ol>
+        </nav>
+        {% include "community/_community_moderation_nav.html" %}
+        <div class="row">
+            <div class="col-12 col-md-10">
+                <h1 class="mt-2">{{ _('Reports') }}</h1>
             </div>
-            <p>{{ _('See and handle all reports made about %(community)s', community=community.display_name() ) }}.</p>
-            {% if reports.items %}
-                <form method="get">
-                    <input type="search" name="search" value="{{ search }}">
-                    <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}>
-                    <label for="local_remote_local">Local</label>
-                    <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}>
-                    <label for="local_remote_remote">Remote</label>
-                    <input type="submit"
-                           name="submit"
-                           value="Search"
-                           class="btn btn-primary btn-sm">
-                </form>
-                <table class="table table-striped">
-                    <tr>
-                        <th>{{ _("Local/Remote") }}</th>
-                        <th>{{ _("Reasons") }}</th>
-                        <th>{{ _("Description") }}</th>
-                        <th>{{ _("Type") }}</th>
-                        <th>{{ _("Created") }}</th>
-                        <th>{{ _("Actions") }}</th>
-                    </tr>
-                    {% for report in reports.items %}
-                        <tr>
-                            <td>{{ 'Local' if report.is_local() else 'Remote' }}</td>
-                            <td>{{ report.reasons }}</td>
-                            <td>{{ report.description }}</td>
-                            <td>{{ report.type_text() }}</td>
-                            <td>{{ arrow.get(report.created_at).humanize(locale=locale) }}</td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-primary btn-sm dropdown-toggle"
-                                            type="button"
-                                            data-bs-toggle="dropdown"
-                                            aria-expanded="false">Actions</button>
-                                    <ul class="dropdown-menu">
-                                        {% if report.suspect_conversation_id %}
-                                            <li>
-                                                <a class="dropdown-item"
-                                                   href="/chat/{{ report.suspect_conversation_id }}#message">View</a>
-                                            </li>
-                                        {% elif report.suspect_post_reply_id %}
-                                            <li>
-                                                <a class="dropdown-item"
-                                                   href="/post/{{ report.suspect_post_id }}#comment_{{ report.suspect_post_reply_id }}">View</a>
-                                            </li>
-                                        {% elif report.suspect_post_id %}
-                                            <li>
-                                                <a class="dropdown-item" href="/post/{{ report.suspect_post_id }}">View</a>
-                                            </li>
-                                        {% elif report.suspect_user_id %}
-                                            <li>
-                                                <a class="dropdown-item" href="/user/{{ report.suspect_user_id }}">View</a>
-                                            </li>
-                                        {% endif %}
-                                        <div class="dropdown-divider"></div>
-                                        <li>
-                                            <a class="dropdown-item"
-                                               href="{{ url_for('community.community_moderate_report_escalate', community_id=community.id, report_id=report.id) }}">{{ _("Escalate") }}</a>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item"
-                                               href="{{ url_for('community.community_moderate_report_resolve', community_id=community.id, report_id=report.id) }}">{{ _("Resolve") }}</a>
-                                        </li>
-                                        <div class="dropdown-divider"></div>
-                                        <li>
-                                            <a class="confirm_first dropdown-item"
-                                               href="{{ url_for('community.community_moderate_report_ignore', community_id=community.id, report_id=report.id) }}">{{ _("Ignore") }}</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </table>
-                <nav aria-label="Pagination" class="mt-4" role="navigation">
-                    {% if prev_url %}
-                        <a href="{{ prev_url }}" class="btn btn-primary">
-                            <span aria-hidden="true">&larr;</span> {{ _("Previous page") }}
-                        </a>
-                    {% endif %}
-                    {% if next_url %}
-                        <a href="{{ next_url }}" class="btn btn-primary">
-                            {{ _("Next page") }} <span aria-hidden="true">&rarr;</span>
-                        </a>
-                    {% endif %}
-                </nav>
-            {% else %}
-                <p>{{ _("No reports yet") }}.</p>
-            {% endif %}
-        </main>
-    </div>
+            <div class="col-12 col-md-2 text-right">
+                <!-- <a class="btn btn-primary" href="{{ url_for('community.community_find_moderator', community_id=community.id) }}">{{ _('Add moderator') }}</a> -->
+            </div>
+        </div>
+        <p>{{ _('See and handle all reports made about %(community)s', community=community.display_name()) }}.</p>
+        {% if reports.items %}
+        <form method="get">
+            <input type="search" name="search" value="{{ search }}">
+            <input type="radio" name="local_remote" value="local" id="local_remote_local" {{ 'checked' if local_remote == 'local' }}><label for="local_remote_local"> Local</label>
+            <input type="radio" name="local_remote" value="remote" id="local_remote_remote" {{ 'checked' if local_remote == 'remote' }}><label for="local_remote_remote"> Remote</label>
+            <input type="submit" name="submit" value="Search" class="btn btn-primary btn-sm">
+        </form>
+        <table class="table table-striped">
+            <tr>
+               <th>{{ _('Local/Remote') }}</th>
+               <th>{{ _('Reasons') }}</th>
+               <th>{{ _('Description') }}</th>
+               <th>{{ _('Type') }}</th>
+               <th>{{ _('Created') }}</th>
+               <th>{{ _('Actions') }}</th>
+            </tr>
+            {% for report in reports.items %}
+                <tr>
+                    <td>{{ 'Local' if report.is_local() else 'Remote' }}</td>
+                    <td>{{ report.reasons }}</td>
+                    <td>{{ report.description }}</td>
+                    <td>{{ report.type_text() }}</td>
+                    <td>{{ arrow.get(report.created_at).humanize(locale=locale) }}</td>
+                    <td>
+                        <div class="dropdown">
+                          <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Actions
+                          </button>
+                          <ul class="dropdown-menu">
+                            {% if report.suspect_conversation_id %}
+                                <li><a class="dropdown-item" href="/chat/{{ report.suspect_conversation_id }}#message">View</a></li>
+                            {% elif report.suspect_post_reply_id %}
+                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}#comment_{{ report.suspect_post_reply_id }}">View</a></li>
+                            {% elif report.suspect_post_id %}
+                                <li><a class="dropdown-item" href="/post/{{ report.suspect_post_id }}">View</a></li>
+                            {% elif report.suspect_user_id %}
+                                <li><a class="dropdown-item" href="/user/{{ report.suspect_user_id }}">View</a></li>
+                            {% endif %}
+                            <div class="dropdown-divider"></div>
+                            <li><a class="dropdown-item" href="{{ url_for('community.community_moderate_report_escalate', community_id=community.id, report_id=report.id) }}">{{ _('Escalate') }}</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('community.community_moderate_report_resolve', community_id=community.id, report_id=report.id) }}">{{ _('Resolve') }}</a></li>
+                            <div class="dropdown-divider"></div>
+                            <li><a class="confirm_first dropdown-item" href="{{ url_for('community.community_moderate_report_ignore', community_id=community.id, report_id=report.id) }}">{{ _('Ignore') }}</a></li>
+                          </ul>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </table>
+        <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
+                {% if prev_url %}
+                    <a href="{{ prev_url }}" class="btn btn-primary">
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                    </a>
+                {% endif %}
+                {% if next_url %}
+                    <a href="{{ next_url }}" class="btn btn-primary">
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif %}
+        </nav>
+        {% else %}
+            <p>{{ _('No reports yet') }}.</p>
+        {% endif %}
+    </main>
+</div>
 {% endblock %}

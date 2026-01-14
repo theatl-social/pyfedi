@@ -11,7 +11,7 @@ Note: This guide uses `docker compose`. Depending on your docker setup, you may 
 ```bash
 git clone https://codeberg.org/rimu/pyfedi.git
 cd pyfedi/
-git checkout v1.3.x
+git checkout v1.4.x
 ```
 
 Change the 'git checkout' line to be the latest release. Check the branch name to find what to use after 'checkout' by
@@ -94,6 +94,9 @@ indicate successful configuration, warnings (⚠️) are usually fine to ignore,
 
 At this point you have PieFed listening on port 8030. You will need Nginx, etc as a reverse proxy to forward connections
 on port 443 to 8030, or a Cloudflare tunnel going to 8030, or wireguard, etc.
+
+You will have an easier time if Nginx runs on the host (if using Nginx) rather than in a container, so it can pass the client IP address through to PieFed
+more easily. Once everything else is set up, go to https://your-instance/test_ip and make sure it's detecting your IP address correctly.
 
 #### SETUP CRON (AUTOMATED) JOBS
 ```bash

@@ -49,7 +49,7 @@ def new_page():
 
         # After you do what you need, either return html or redirect the browser
         return ...
-    
+
     # Reaching this part of the code means that this is a GET request, not a form submission, return html for the browser
     return ...
 ```
@@ -110,5 +110,3 @@ Another option is to redirect the browser to a different url (view function). Th
 Routes that are part of the API typically return json to the client making the request. The structure of the json is specified in the api schema. The details of the API interface are found in the `API` guide.
 
 Finally, there are also some routes that return different formats depending on details of the request. These routes are usually specific routes that can either serve html for a browser or json for an ActivityPub request from another instance/client for server-to-server communication. More details on ActivityPub can be found in the `ActivityPub` guide.
-
-

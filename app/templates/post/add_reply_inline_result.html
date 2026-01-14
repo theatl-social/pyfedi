@@ -12,16 +12,16 @@
             [deleted]
         {% endif -%}
     {% else -%}
-        <a href="/u/{{ user.link() }}" aria-label="{{ _('Author') }}" class="author_link" title="" rel="author">
+        <a href="/u/{{ user.link() }}" class="author_link" title="" rel="author">
             {% if user.avatar_id and not low_bandwidth and not collapsed -%}
-                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" />
+                <img src="{{ user.avatar_thumbnail() }}" alt="" loading="lazy" class="{{ 'gif' if user.avatar_thumbnail().endswith('.gif') }}" decoding="async" referrerpolicy="no-referrer" />
             {% endif -%}
             {{ user.display_name() }}{% if add_domain and not user.is_local() %}<span class="text-muted">@{{ user.ap_domain }}</span>{% endif %}
         </a>
         {% if user.created_recently() -%}
             <span class="fe fe-new-account" title="New account"> </span>
         {% endif -%}
-        {% if user.bot -%}
+        {% if user.bot or user.bot_override -%}
             <span class="fe fe-bot-account" title="Bot account"> </span>
         {% endif -%}
         {% if user_flair and user.id in user_flair %}
@@ -109,11 +109,11 @@
                 <div class="dropdown">
                     <a
                         href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                        data-bs-toggle="dropdown" rel="nofollow noindex"
+                        data-bs-toggle="dropdown" rel="nofollow noindex" aria-expanded="false" id="comment_options_link_{{ post_reply.id }}"
                         aria-label="{{ _('Comment options') }}">
                         <span class="fe fe-options" title="Options"> </span>
                     </a>
-                    <ul class="dropdown-menu" style="width: 320px">
+                    <ul class="dropdown-menu" style="width: 320px" aria-labelledby="comment_options_link_{{ post_reply.id }}">
                         <div
                             hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
                             hx-trigger="intersect once"

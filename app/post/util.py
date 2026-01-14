@@ -342,6 +342,7 @@ def url_needs_archive(url) -> bool:
         "nzherald.co.nz",
         "theverge.com",
         "reuters.com",
+        "hilltimes.com",
     ]
     if url:
         try:

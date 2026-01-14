@@ -24,9 +24,6 @@ from sqlalchemy import text, desc, or_
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
-from pygments import highlight
-from pygments.lexers import JsonLexer, TextLexer
-from pygments.formatters import HtmlFormatter
 
 from app import db, celery, cache
 from app.activitypub.routes import (
@@ -67,7 +64,12 @@ from app.admin.util import (
     topics_for_form,
     move_community_images_to_here,
 )
-from app.community.util import save_icon_file, save_banner_file, search_for_community
+from app.community.util import (
+    save_icon_file,
+    save_banner_file,
+    search_for_community,
+    is_bad_name,
+)
 from app.community.routes import do_subscribe
 from app.constants import (
     REPORT_STATE_NEW,
@@ -142,6 +144,7 @@ from app.utils import (
     moderating_communities_ids,
     instance_allowed,
     trusted_instance_ids,
+    get_emoji_replacements,
 )
 from app.admin import bp
 
@@ -396,6 +399,7 @@ def admin_misc():
         site.default_filter = form.default_filter.data
         site.private_instance = form.private_instance.data
         site.language_id = form.language_id.data
+        site.honeypot = form.honeypot.data
         if site.id is None:
             db.session.add(site)
         db.session.commit()
@@ -418,6 +422,10 @@ def admin_misc():
             "nsfw_country_restriction", form.nsfw_country_restriction.data.strip()
         )
         set_setting("auto_decline_countries", form.auto_decline_countries.data.strip())
+        set_setting(
+            "cache_remote_images_locally", form.cache_remote_images_locally.data
+        )
+        set_setting("allow_video_file_uploads", form.allow_video_file_uploads.data)
         flash(_("Settings saved."))
     elif request.method == "GET":
         form.enable_downvotes.data = site.enable_downvotes
@@ -467,6 +475,13 @@ def admin_misc():
             "registration_approved_email", ""
         )
         form.ban_check_servers.data = get_setting("ban_check_servers", "")
+        form.honeypot.data = site.honeypot
+        form.cache_remote_images_locally.data = get_setting(
+            "cache_remote_images_locally", True
+        )
+        form.allow_video_file_uploads.data = get_setting(
+            "allow_video_file_uploads", "no"
+        )
     return render_template(
         "admin/misc.html", title=_("Misc settings"), form=form, close_form=close_form
     )
@@ -530,23 +545,6 @@ def admin_federation():
         banned_urls = list(
             db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars()
         )
-        seven_things_plus = [
-            "shit",
-            "piss",
-            "fuck",
-            "cunt",
-            "cocksucker",
-            "motherfucker",
-            "tits",
-            "memes",
-            "piracy",
-            "196",
-            "greentext",
-            "usauthoritarianism",
-            "enoughmuskspam",
-            "political_weirdos",
-            "4chan",
-        ]
 
         total_count = already_known_count = nsfw_count = low_content_count = (
             low_active_users_count
@@ -581,11 +579,7 @@ def admin_federation():
                 banned_count += 1
                 continue
 
-            # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-            # "low effort" communities
-            if any(
-                badword in community["name"].lower() for badword in seven_things_plus
-            ):
+            if is_bad_name(community["name"]):
                 bad_words_count += 1
                 continue
 
@@ -679,23 +673,6 @@ def admin_federation():
         banned_urls = list(
             db.session.execute(text('SELECT domain FROM "banned_instances"')).scalars()
         )
-        seven_things_plus = [
-            "shit",
-            "piss",
-            "fuck",
-            "cunt",
-            "cocksucker",
-            "motherfucker",
-            "tits",
-            "memes",
-            "piracy",
-            "196",
-            "greentext",
-            "usauthoritarianism",
-            "enoughmuskspam",
-            "political_weirdos",
-            "4chan",
-        ]
         is_lemmy = False
         is_mbin = False
         is_piefed = False
@@ -815,12 +792,7 @@ def admin_federation():
                 elif community["counts"]["users_active_week"] < min_users:
                     low_active_users_count += 1
                     continue
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(
-                    badword in community["community"]["name"].lower()
-                    for badword in seven_things_plus
-                ):
+                if is_bad_name(community["community"]["name"]):
                     bad_words_count += 1
                     continue
                 else:
@@ -903,12 +875,7 @@ def admin_federation():
                     low_active_users_count += 1
                     continue
 
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(
-                    badword in community["community"]["name"].lower()
-                    for badword in seven_things_plus
-                ):
+                if is_bad_name(community["community"]["name"]):
                     bad_words_count += 1
                     continue
                 else:
@@ -989,11 +956,7 @@ def admin_federation():
                 elif magazine["subscriptionsCount"] < min_users:
                     low_subscribed_users_count += 1
                     continue
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
-                # "low effort" communities
-                if any(
-                    badword in magazine["name"].lower() for badword in seven_things_plus
-                ):
+                if is_bad_name(magazine["name"]):
                     bad_words_count += 1
                     continue
                 else:
@@ -2560,7 +2523,6 @@ def admin_instance_edit(instance_id):
     if instance.software != "piefed":
         del form.hide
     if form.validate_on_submit():
-        instance.vote_weight = form.vote_weight.data
         instance.dormant = form.dormant.data
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
@@ -2582,7 +2544,6 @@ def admin_instance_edit(instance_id):
         flash(_("Saved"))
         return redirect(url_for("admin.admin_instances"))
     else:
-        form.vote_weight.data = instance.vote_weight
         form.dormant.data = instance.dormant
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
@@ -2935,6 +2896,7 @@ def admin_emoji_add():
         )
         db.session.add(e)
         db.session.commit()
+        cache.delete_memoized(get_emoji_replacements)
         flash(_("Emoji saved."))
         return redirect(url_for("admin.admin_emoji"))
 
@@ -2954,6 +2916,7 @@ def admin_emoji_edit(emoji_id):
         emoji.aliases = form.aliases.data
         emoji.category = form.category.data
         db.session.commit()
+        cache.delete_memoized(get_emoji_replacements)
         flash(_("Emoji saved."))
         return redirect(url_for("admin.admin_emoji"))
 
@@ -2969,6 +2932,7 @@ def admin_emoji_delete(emoji_id):
     emoji = Emoji.query.get_or_404(emoji_id)
     db.session.delete(emoji)
     db.session.commit()
+    cache.delete_memoized(get_emoji_replacements)
     flash(_("Emoji deleted."))
     return redirect(url_for("admin.admin_emoji"))
 

@@ -17,7 +17,7 @@
   {% if user.matrix_user_id -%}
   "sameAs": {{ ('https://matrix.to/#/' + user.matrix_user_id)|tojson }},
   {% endif -%}
-  {% if user.bot -%}
+  {% if user.bot or user.bot_override -%}
   "additionalType": "https://schema.org/SoftwareApplication",
   {% endif -%}
   "memberOf": [

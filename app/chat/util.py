@@ -1,4 +1,4 @@
-from flask import flash, current_app
+from flask import flash, current_app, json
 from flask_babel import _
 from flask_login import current_user
 
@@ -6,7 +6,7 @@ from app import db
 from app.activitypub.signature import send_post_request
 from app.constants import NOTIF_MESSAGE, SRC_WEB
 from app.models import User, ChatMessage, Notification, utcnow, Conversation
-from app.utils import shorten_string, gibberish, markdown_to_html
+from app.utils import shorten_string, gibberish, markdown_to_html, publish_sse_event
 
 
 def send_message(
@@ -28,6 +28,11 @@ def send_message(
             reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
             db.session.commit()
             if recipient.is_local():
+                publish_sse_event(
+                    f"messages:{recipient.id}",
+                    json.dumps({"conversation": conversation.id}),
+                )
+
                 # Notify local recipient
                 targets_data = {
                     "gen": "0",
@@ -90,8 +95,6 @@ def send_message(
                     user.public_url() + "#main-key",
                 )
 
-    if src == SRC_WEB:
-        flash(_("Message sent."))
     return reply
 
 

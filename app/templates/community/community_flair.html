@@ -4,66 +4,49 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 col-lg-8 position-relative main_pane">
-            <nav aria-label="breadcrumb"
-                 id="breadcrumb_nav"
-                 aria-label="{{ _('Navigation') }}">
-                <ol class="breadcrumb">
-                    <li class="breadcrumb-item">
-                        <a href="/">{{ _("Home") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="/communities">{{ _("Communities") }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _("Settings") }}</a>
-                    </li>
-                    <li class="breadcrumb-item active">{{ _("Flair") }}</li>
-                </ol>
-            </nav>
-            {% include "community/_community_moderation_nav.html" %}
-            <div class="row">
-                <div class="col-12 col-md-10">
-                    <h1 class="mt-2">{{ _('Flair in %(community)s', community=community.display_name() ) }}</h1>
-                </div>
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
+          <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
+            <li class="breadcrumb-item"><a href="/communities">{{ _('Communities') }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('activitypub.community_profile', actor=community.ap_id if community.ap_id is not none else community.name) }}">{{ (community.title + '@' + community.ap_domain)|shorten }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('community.community_edit', community_id=community.id) }}">{{ _('Settings') }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{ _('Flair') }}</li>
+          </ol>
+        </nav>
+        {% include "community/_community_moderation_nav.html" %}
+        <div class="row">
+            <div class="col-12 col-md-10">
+                <h1 class="mt-2">{{ _('Flair in %(community)s', community=community.display_name()) }}</h1>
             </div>
-            <a style="float: right"
-               class="btn btn-primary mt-2"
-               href="{{ url_for('community.community_flair_edit', community_id=community.id, flair_id=0) }}">{{ _("Add") }}</a>
-            <p>{{ _("Posts can be categorized using flair.") }}</p>
-            {% if flairs %}
-                <table class="table table-responsive">
-                    <thead>
-                        <tr>
-                            <th>{{ _("Flair") }}</th>
-                            <th>{{ _("Action") }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for flair in flairs %}
-                            <tr>
-                                <td>
-                                    <span style="color: {{ flair.text_color }};
-                                                 background-color: {{ flair.background_color }}">&nbsp;{{ flair.flair }}&nbsp;</span>
-                                </td>
-                                <td width="120">
-                                    <a href="{{ url_for('community.community_flair_edit', community_id=community.id, flair_id=flair.id) }}">{{ _("Edit") }}</a> |
-                                    <a href="#"
-                                       data-url="{{ url_for('community.community_flair_delete', community_id=community.id, flair_id=flair.id) }}"
-                                       class="confirm_first send_post">{{ _("Delete") }}</a>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            {% else -%}
-                <p>{{ _("This community has no flair yet.") }}</p>
-            {% endif -%}
-        </main>
-    </div>
+        </div>
+        <a style="float: right;" class="btn btn-primary mt-2" href="{{ url_for('community.community_flair_edit', community_id=community.id, flair_id=0) }}">{{ _('Add') }}</a>
+        <p>{{ _('Posts can be categorized using flair.') }}</p>
+        {% if flairs %}
+        <table class="table table-responsive">
+            <thead>
+                <tr>
+                    <th>{{ _('Flair') }}</th>
+                    <th>{{ _('Action') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for flair in flairs %}
+                    <tr>
+                        <td><span style="color: {{ flair.text_color}}; background-color: {{ flair.background_color }}">&nbsp;{{ flair.flair }}&nbsp;</span></td>
+                        <td width="120"><a href="{{ url_for('community.community_flair_edit', community_id=community.id, flair_id=flair.id) }}">{{ _('Edit') }}</a> |
+                            <a href="#" data-url="{{ url_for('community.community_flair_delete', community_id=community.id, flair_id=flair.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else -%}
+            <p>{{ _('This community has no flair yet.') }}</p>
+        {% endif -%}
+    </main>
+</div>
 {% endblock %}

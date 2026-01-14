@@ -23,11 +23,11 @@
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% if user.cover_image() != '' %}
             <div class="community_header" style="height: 240px; background-image: url({{ user.cover_image() }});">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+                <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
                   </ol>
                 </nav>
             </div>
@@ -39,11 +39,11 @@
             </h1>
         {% elif user.avatar_image() != '' %}
             <div class="row">
-                <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+                <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
                   <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                     <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                    <li class="breadcrumb-item active">{{ user.display_name()|shorten }}</li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ user.display_name()|shorten }}</li>
                   </ol>
                 </nav>
                 <div class="col-3 col-md-2">
@@ -68,11 +68,11 @@
                 </div>
             </div>
         {% else %}
-            <nav aria-label="breadcrumb" id="breadcrumb_nav" aria-label="{{ _('Navigation') }}">
+            <nav id="breadcrumb_nav" aria-label="{{ _('Breadcrumbs') }}">
               <ol class="breadcrumb">
                 <li class="breadcrumb-item"><a href="/">{{ _('Home') }}</a></li>
                 <li class="breadcrumb-item"><a href="/people">{{ _('People') }}</a></li>
-                <li class="breadcrumb-item active">{{ user.link()|shorten }}</li>
+                <li class="breadcrumb-item active" aria-current="page">{{ user.link()|shorten }}</li>
               </ol>
             </nav>
             <h1 class="mt-2">{{ user.display_name() if user.is_local() else user.display_name() + ', ' + user.ap_id }}
@@ -139,7 +139,7 @@
         <p class="small">{{ _('Instance') }}: <a href="{{ url_for('instance.instance_overview', instance_domain=user.instance_domain()) }}">{{ user.instance_domain() }}</a>
             {% if user.is_instance_admin() or (user.is_local() and user.get_id() in admin_ids) %}<span class="red">({{ _('Admin') }})</span>{% endif %}<br />
             {% if user.get_id() in admin_ids or user.is_staff() %}{{ _('Role permissions') }}: {% if user.get_id() in admin_ids %}{{ _('Admin') }}{% endif %} {% if user.is_staff() %}{{ _('Staff') }}{% endif %}<br />{% endif %}
-            {% if user.bot %}{{ _('Bot Account') }}<br />{% endif %}
+            {% if user.bot or user.bot_override %}{{ _('Bot Account') }}<br />{% endif %}
             {% if current_user.is_authenticated %}{{ _('Note') }}: {{ user.get_note(current_user) }}<br />{% endif %}
             {{ _('Joined') }}: {{ arrow.get(user.created).humanize(locale=locale) }}<br />
             {% if current_user.is_authenticated %}{{ _('Attitude') }}: <span title="{{ _('Ratio of upvotes cast to downvotes cast. Higher is more positive.') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span><br />{% endif %}

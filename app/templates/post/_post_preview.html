@@ -1,0 +1,11 @@
+{{ preview | safe }}
+
+<a
+        href="#"
+        id="{{ oob_target }}"
+        class="btn btn-outline-secondary {{ additional_classes if additional_classes else ""}}"
+        hx-post="{{ preview_url }}"
+        hx-target="{{ target_id }}"
+        hx-swap-oob="true">
+    {{ _('Update Preview') }}
+</a>

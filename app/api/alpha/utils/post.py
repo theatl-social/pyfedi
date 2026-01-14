@@ -89,6 +89,12 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
     liked_only = data["liked_only"] if "liked_only" in data else False
     saved_only = data["saved_only"] if "saved_only" in data else False
     ignore_sticky = data["ignore_sticky"] if "ignore_sticky" in data else False
+    minimum_upvotes = (
+        data["minimum_upvotes"]
+        if "minimum_upvotes" in data and data["minimum_upvotes"]
+        else None
+    )
+    nsfw = data["nsfw"] if "nsfw" in data else ""
 
     query = data["q"] if "q" in data else ""
 
@@ -357,8 +363,15 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
                 posts = posts.filter(Post.from_bot == False)
             if user.hide_nsfl == 1:
                 posts = posts.filter(Post.nsfl == False)
-            if user.hide_nsfw == 1:
+            if nsfw == "" and user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
+            else:
+                if nsfw == "exclude":
+                    posts = posts.filter(Post.nsfw == False)
+                elif nsfw == "only":
+                    posts = posts.filter(Post.nsfw == True)
+                elif nsfw == "include":
+                    pass
             if user.hide_gen_ai == 1:
                 posts = posts.filter(Post.ai_generated == False)
             if user.hide_read_posts and not query:
@@ -375,6 +388,16 @@ def get_post_list(auth, data, user_id=None, search_type="Posts") -> dict:
         filtered_out_community_ids = filtered_out_communities(user)
         if len(filtered_out_community_ids):
             posts = posts.filter(Post.community_id.not_in(filtered_out_community_ids))
+    else:
+        if nsfw == "exclude":
+            posts = posts.filter(Post.nsfw == False)
+        elif nsfw == "only":
+            posts = posts.filter(Post.nsfw == True)
+        elif nsfw == "include":
+            pass
+
+    if minimum_upvotes:
+        posts = posts.filter(Post.up_votes - Post.down_votes >= minimum_upvotes)
 
     if search_by_community and not ignore_sticky:
         posts = posts.order_by(desc(Post.sticky))
@@ -1277,7 +1300,7 @@ def put_post(auth, data):
         language_id = site_language_id()
     if "alt_text" in data:
         alt_text = data["alt_text"]
-    elif post.image.alt_text:
+    elif post.image and post.image.alt_text:
         alt_text = post.image.alt_text
     else:
         alt_text = ""

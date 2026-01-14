@@ -60,7 +60,7 @@ def fire_hook(hook_name: str, data: Any = None, **kwargs) -> Any:
 
     # Use data passed to the hook in our first function call
     result = data
-    
+
     # Iterate through every function registered to the fired hook
     for handler in sorted_handlers:
         try:
@@ -69,7 +69,7 @@ def fire_hook(hook_name: str, data: Any = None, **kwargs) -> Any:
         except Exception as e:
             # An exception in a plugin doesn't break anything, that plugin just gets skipped like nothing happened
             logger.error(f"Error in hook handler {handler.__name__}: {e}\n{traceback.format_exc()}")
-    
+
     # Return the data after all functions execute back to where the hook was fired
     return result
 ```

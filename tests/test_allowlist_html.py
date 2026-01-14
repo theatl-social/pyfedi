@@ -10,31 +10,28 @@ from app.utils import (
 
 
 class TestAllowlistHtml(unittest.TestCase):
-    # Use test_env={} to skip fediverse_domains() lookup which requires Flask app context
-    test_env = {"fn_string": "fn-test"}
-
     def test_basic_html(self):
         """Test basic HTML with allowed tags is preserved"""
         html = "<p>Basic paragraph</p>"
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertEqual(result, html)
 
     def test_disallowed_tags(self):
         """Test that disallowed tags are removed"""
         html = "<p>Paragraph with <script>alert('xss')</script> script</p>"
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertEqual(result, "<p>Paragraph with  script</p>")
 
     def test_nested_tags(self):
         """Test that allowed nested tags are preserved"""
         html = "<blockquote><p>Nested content</p></blockquote>"
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertEqual(result, html)
 
     def test_attributes(self):
         """Test that allowed attributes are preserved and others removed"""
         html = '<a href="https://example.com" onclick="alert(\'xss\')" style="color:red">Link</a>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertEqual(
             result,
             '<a href="https://example.com" rel="nofollow ugc" target="_blank">Link</a>',
@@ -42,13 +39,16 @@ class TestAllowlistHtml(unittest.TestCase):
 
     def test_empty_input(self):
         """Test empty input"""
-        self.assertEqual(allowlist_html("", test_env=self.test_env), "")
-        self.assertEqual(allowlist_html(None, test_env=self.test_env), "")
+        self.assertEqual(allowlist_html(""), "")
+        self.assertEqual(allowlist_html(None), "")
 
     def test_plain_text_urls(self):
         """Test that plain text URLs are converted to links"""
         markdown = "Visit https://example.com for more info."
-        result = markdown_to_html(markdown, test_env=self.test_env)
+        result = allowlist_html(
+            markdown_to_html(markdown, test_env={"fn_string": "fn-test"}),
+            test_env={"fn_string": "fn-test"},
+        )
         self.assertEqual(
             result,
             '<p>Visit <a href="https://example.com" rel="nofollow ugc" target="_blank">https://example.com</a> for more info.</p>\n',
@@ -57,7 +57,7 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_angle_brackets_in_text(self):
         """Test that angle brackets in plain text are escaped"""
         html = "<p>Text with <Book Title and Volume> needs escaping</p>"
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         print(f"Original: {html}")
         print(f"Result: {result}")
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
@@ -65,7 +65,7 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_angle_brackets_in_blockquote(self):
         """Test that angle brackets in blockquote are escaped"""
         html = "<blockquote><p><Book Title and Volume> Review Goes Here [5/10]</p></blockquote>"
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         print(f"Original: {html}")
         print(f"Result: {result}")
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
@@ -196,7 +196,7 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_enhanced_image_width_attribute(self):
         """Test that width attribute on img tag is preserved"""
         html = '<img src="cat.jpg" alt="Cat" width="200px"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('width="200px"', result)
         self.assertIn('src="cat.jpg"', result)
         self.assertIn('alt="Cat"', result)
@@ -204,21 +204,21 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_enhanced_image_height_attribute(self):
         """Test that height attribute on img tag is preserved"""
         html = '<img src="cat.jpg" alt="Cat" height="150px"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('height="150px"', result)
         self.assertIn('src="cat.jpg"', result)
 
     def test_enhanced_image_align_attribute(self):
         """Test that align attribute on img tag is preserved"""
         html = '<img src="cat.jpg" alt="Cat" align="left"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('align="left"', result)
         self.assertIn('src="cat.jpg"', result)
 
     def test_enhanced_image_all_attributes(self):
         """Test that all enhanced image attributes are preserved"""
         html = '<img src="cat.jpg" alt="Cat" width="200px" height="150px" align="right" class="thumbnail"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('width="200px"', result)
         self.assertIn('height="150px"', result)
         self.assertIn('align="right"', result)
@@ -229,14 +229,14 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_enhanced_image_title_attribute(self):
         """Test that title attribute on img tag is preserved"""
         html = '<img src="cat.jpg" alt="Cat" title="A cute cat"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('title="A cute cat"', result)
         self.assertIn('src="cat.jpg"', result)
 
     def test_enhanced_image_with_anchor(self):
         """Test that thumbnail wrapped in anchor preserves all attributes"""
         html = '<a href="full.jpg"><img src="thumb.jpg" alt="Cat" width="200px" align="left"/></a>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('<a href="full.jpg"', result)
         self.assertIn('width="200px"', result)
         self.assertIn('align="left"', result)
@@ -248,7 +248,7 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_enhanced_image_disallowed_attributes_removed(self):
         """Test that disallowed attributes on img are removed"""
         html = '<img src="cat.jpg" alt="Cat" width="200px" onclick="alert(\'xss\')" style="border:1px"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('width="200px"', result)
         self.assertIn('src="cat.jpg"', result)
         # Dangerous attributes should be removed
@@ -258,7 +258,7 @@ class TestAllowlistHtml(unittest.TestCase):
     def test_enhanced_image_loading_lazy_added(self):
         """Test that loading=lazy is added to images"""
         html = '<img src="cat.jpg" alt="Cat" width="200px"/>'
-        result = allowlist_html(html, test_env=self.test_env)
+        result = allowlist_html(html, test_env={"fn_string": "fn-test"})
         self.assertIn('loading="lazy"', result)
         self.assertIn('width="200px"', result)
 

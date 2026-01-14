@@ -50,7 +50,6 @@ from app.community.forms import (
     SetMyFlairForm,
     FindAndBanUserCommunityForm,
     CreateEventForm,
-    RateCommunityForm,
 )
 from app.community.util import (
     search_for_community,
@@ -120,7 +119,6 @@ from app.models import (
     UserFlair,
     post_tag,
     Tag,
-    Rating,
     hidden_posts,
 )
 from app.community import bp
@@ -132,7 +130,6 @@ from app.shared.community import (
     add_mod_to_community,
     remove_mod_from_community,
     get_comm_flair_list,
-    rate_community,
 )
 from app.utils import (
     get_setting,
@@ -1514,7 +1511,7 @@ def add_post(actor, type=None):
 
             uploaded_file = (
                 request.files["image_file"]
-                if type == "image" or type == "event"
+                if type == "image" or type == "event" or type == "video"
                 else None
             )
             post = make_post(
@@ -1608,13 +1605,20 @@ def add_post(actor, type=None):
         form.language_id.data not in community.language_ids()
         and len(community.language_ids()) > 0
     ):
-        flash(
-            _(
-                "This community prefers posts in %(language_names)s",
-                language_names=", ".join(community.language_names()),
-            ),
-            "warning",
-        )
+        language_names = ", ".join(community.language_names())
+        if (
+            not (
+                len(community.language_ids()) == 1 and community.language_ids()[0] == 1
+            )
+            and language_names
+        ):  # language id 1 is always "Undetermined"
+            flash(
+                _(
+                    "This community prefers posts in %(language_names)s",
+                    language_names=language_names,
+                ),
+                "warning",
+            )
 
     return render_template(
         "community/add_post.html",
@@ -3614,60 +3618,3 @@ def fixup_from_remote(actor: str):
         schedule_actor_refresh(community, override=True)
 
     return redirect(url_for("activitypub.community_profile", actor=actor))
-
-
-@bp.route("/c/<actor>/rate", methods=["GET", "POST"])
-@login_required
-@validation_required
-@approval_required
-def rate(actor: str):
-    form = RateCommunityForm()
-
-    community = actor_to_community(actor)
-
-    if community is not None:
-        if form.validate_on_submit():
-            try:
-                rate_community(community.id, form.rating.data, SRC_WEB)
-            except Exception as e:
-                if str(e) == "community_members_only" or str(e) == "wait_one_day":
-                    return redirect(url_for("community.rate_moderation_denied"))
-                else:
-                    raise e
-            flash(_("Your rating has been submitted."))
-            return redirect(f"/c/{community.link()}")
-        else:
-            return render_template("community/rate.html", form=form)
-    else:
-        abort(404)
-
-
-@bp.route("/c/<actor>/ratings", methods=["GET"])
-def community_ratings(actor: str):
-    community = actor_to_community(actor)
-    ratings = Rating.query.filter(Rating.community_id == community.id).order_by(
-        desc(Rating.created_at)
-    )
-    if community is not None:
-        return render_template(
-            "community/ratings.html",
-            ratings=ratings,
-            community=community,
-            title=_(
-                "%(community_name)s ratings", community_name=community.display_name()
-            ),
-            is_admin_or_staff=current_user.is_authenticated
-            and current_user.is_admin_or_staff(),
-        )
-
-
-@bp.route("/community/rate_moderation_denied", methods=["GET"])
-@login_required
-@validation_required
-@approval_required
-def rate_moderation_denied():
-    return render_template(
-        "generic_message.html",
-        title=_("Please try again tomorrow"),
-        message=_("You can rate a community once you’ve been part of it for a while."),
-    )

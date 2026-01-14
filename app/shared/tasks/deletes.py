@@ -73,7 +73,7 @@ def delete_post(send_async, user_id, post_id, reason=None):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = session.query(Post).filter_by(id=post_id).one()
+                post = session.query(Post).get(post_id)
                 delete_object(
                     user_id, post, is_post=True, reason=reason, session=session
                 )
@@ -90,7 +90,7 @@ def restore_post(send_async, user_id, post_id, reason=None):
         session = get_task_session()
         try:
             with patch_db_session(session):
-                post = session.query(Post).filter_by(id=post_id).one()
+                post = session.query(Post).get(post_id)
                 delete_object(
                     user_id,
                     post,

@@ -13,7 +13,7 @@ ActivityPub messages between servers take the form of json payloads. The exact s
 ```python
 @bp.route('/inbox', methods=['POST'])
 def shared_inbox():
-    
+
     # Lots of data cleaning and massaging goes here...
 
     process_inbox_request(request_json, store_ap_json)

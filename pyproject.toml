@@ -91,6 +91,7 @@ dev = [
     "mypy",
     "djlint==1.36.1",
     "bandit[toml]",
+    "pre-commit>=4.5.1",
 ]
 
 [tool.ruff]

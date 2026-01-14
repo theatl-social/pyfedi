@@ -53,6 +53,7 @@ from app.constants import (
     NOTIF_MENTION,
     POST_STATUS_REVIEWING,
     POST_STATUS_PUBLISHED,
+    POST_TYPE_VIDEO,
 )
 
 
@@ -110,7 +111,6 @@ class Instance(db.Model):
     inbox = db.Column(db.String(256))
     shared_inbox = db.Column(db.String(256))
     outbox = db.Column(db.String(256))
-    vote_weight = db.Column(db.Float, default=1.0)
     software = db.Column(db.String(50))
     version = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -199,14 +199,6 @@ class Instance(db.Model):
 
     def can_event(self):
         return self.software != "lemmy"
-
-    @classmethod
-    def weight(cls, domain: str):
-        if domain:
-            instance = db.session.query(cls).filter_by(domain=domain).first()
-            if instance:
-                return instance.vote_weight
-        return 1.0
 
     def __repr__(self):
         return "<Instance {}>".format(self.domain)
@@ -342,7 +334,7 @@ class Conversation(db.Model):
         ec = db.session.execute(
             text(sql), {"user_id_1": recipient.id, "user_id_2": sender.id}
         ).fetchone()
-        return Conversation.query.get(ec[0]) if ec else None
+        return db.session.query(Conversation).get(ec[0]) if ec else None
 
 
 conversation_member = db.Table(
@@ -701,8 +693,6 @@ class Community(db.Model):
     )  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
-    average_rating = db.Column(db.Float)
-    total_ratings = db.Column(db.Integer)
     always_translate = db.Column(db.Boolean)
     post_url_type = db.Column(db.String(15))
     question_answer = db.Column(
@@ -1094,53 +1084,6 @@ class Community(db.Model):
 
         return result
 
-    @cache.memoize(timeout=300)
-    def can_rate(self, user):
-        if isinstance(user, int):
-            user = User.query.get(user)
-
-        if not user:
-            return [False, "no user provided"]
-
-        # Returns [boolean, message] if the provided user is able to rate the community
-        if user.is_admin_or_staff():
-            return [True, ""]
-
-        if not user.subscribed(self.id):
-            return [False, "community members only"]
-        else:
-            cm = CommunityMember.query.filter(
-                CommunityMember.user_id == user.id,
-                CommunityMember.community_id == self.id,
-            ).first()
-            if cm and cm.created_at + timedelta(days=1) > utcnow():
-                return [False, "not subscribed for long enough"]
-
-        return [True, ""]
-
-    def rate(self, user, rating):
-        db.session.execute(
-            text(
-                'DELETE FROM "rating" WHERE user_id = :user_id AND community_id = :community_id'
-            ),
-            {"user_id": user.id, "community_id": self.id},
-        )
-        db.session.add(Rating(user_id=user.id, community_id=self.id, rating=rating))
-        db.session.commit()
-        db.session.execute(
-            text("""
-                            UPDATE "community"
-                            SET average_rating = (
-                                SELECT AVG(rating)
-                                FROM "rating"
-                                WHERE community_id = :community_id
-                            )
-                            WHERE id = :community_id
-                        """),
-            {"community_id": self.id},
-        )
-        db.session.commit()
-
     def delete_dependencies(self):
         from app import redis_client
 
@@ -1414,13 +1357,6 @@ class User(UserMixin, db.Model):
     )
     modlog_actor = db.relationship(
         "ModLog", lazy="dynamic", foreign_keys="ModLog.user_id", back_populates="author"
-    )
-    ratings = db.relationship(
-        "Rating",
-        lazy="dynamic",
-        foreign_keys="Rating.user_id",
-        cascade="all, delete-orphan",
-        back_populates="author",
     )
 
     hide_read_posts = db.Column(db.Boolean, default=False)
@@ -2232,7 +2168,6 @@ class Post(db.Model):
         cls, user: User, community: Community, request_json: dict, announce_id=None
     ):
         from app.activitypub.util import (
-            instance_weight,
             find_language_or_create,
             find_language,
             find_hashtag_or_create,
@@ -2247,6 +2182,7 @@ class Post(db.Model):
             html_to_text,
             microblog_content_to_title,
             blocked_phrases,
+            get_setting,
             is_image_url,
             is_video_url,
             domain_from_url,
@@ -2300,7 +2236,7 @@ class Post(db.Model):
             ap_announce_id=announce_id,
             up_votes=1,
             from_bot=user.bot or user.bot_override,
-            score=instance_weight(user.ap_domain),
+            score=1.0,
             instance_id=user.instance_id,
             indexable=user.indexable,
             microblog=microblog,
@@ -2318,7 +2254,7 @@ class Post(db.Model):
             "content" in request_json["object"]
             and request_json["object"]["content"] is not None
         ):
-            # prefer Markdown in 'source' in provided
+            # prefer Markdown in 'source' if provided
             if (
                 "source" in request_json["object"]
                 and isinstance(request_json["object"]["source"], dict)
@@ -2349,7 +2285,7 @@ class Post(db.Model):
                 post.body_html = allowlist_html(request_json["object"]["content"])
                 post.body = html_to_text(post.body_html)
             if microblog:
-                autogenerated_title = microblog_content_to_title(post.body_html)
+                autogenerated_title, link = microblog_content_to_title(post.body_html)
                 if len(autogenerated_title) < 20:
                     title = "[Microblog] " + autogenerated_title.strip()
                 else:
@@ -2363,6 +2299,8 @@ class Post(db.Model):
                 if "[NSFW]" in title.upper() or "(NSFW)" in title.upper():
                     post.nsfw = True
                 post.title = title
+                if link != "":
+                    post.url = link
         # Discard post if it contains certain phrases. Good for stopping spam floods.
         blocked_phrases_list = blocked_phrases()
         for blocked_phrase in blocked_phrases_list:
@@ -2484,6 +2422,14 @@ class Post(db.Model):
                         db.session.add(file)
             else:
                 post.type = constants.POST_TYPE_LINK
+                # remove unnecessary "cross-posted from..." message that Lemmy inserts (only on link posts where we have a UI showing cross-posts)
+                if post.body and "cross-posted from: https://" in post.body:
+                    lines = []
+                    for line in post.body.split("\n"):
+                        if not line.strip().startswith("cross-posted from: https://"):
+                            lines.append(line)
+                    post.body = "\n".join(lines)
+                    post.body_html = markdown_to_html(post.body)
             if "blogspot.com" in post.url:
                 return None
             domain = domain_from_url(post.url)
@@ -2750,7 +2696,11 @@ class Post(db.Model):
 
                 db.session.commit()
 
-            if post.image_id and not post.type == constants.POST_TYPE_VIDEO:
+            if (
+                post.image_id
+                and not post.type == constants.POST_TYPE_VIDEO
+                and get_setting("cache_remote_images_locally", True)
+            ):
                 if post.type == constants.POST_TYPE_IMAGE:
                     make_image_sizes(
                         post.image_id, 512, 1200, "posts", community.low_quality
@@ -2942,6 +2892,17 @@ class Post(db.Model):
         # Handle file deletions from disk before cascade deletes the File records
         if self.image_id and self.image:
             self.image.delete_from_disk(purge_cdn=False)
+        if (
+            self.type == POST_TYPE_VIDEO
+            and _store_files_in_s3()
+            and self.url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}')
+        ):
+            from app.shared.tasks.maintenance import delete_from_s3
+
+            if current_app.debug:
+                delete_from_s3([self.url])
+            else:
+                delete_from_s3.delay([self.url])
 
         for reply in self.replies:
             if reply.image_id and reply.image:
@@ -3156,6 +3117,34 @@ class Post(db.Model):
                     "name": f"#{tag.name}",
                 }
             )
+
+        # include emojis used in body text
+        if self.body and ":" in self.body:
+            from app.utils import guess_mime_type
+
+            EMOJI_RE = re.compile(r":([a-z0-9_+-]{1,20}):", re.IGNORECASE)
+            tokens = {f":{m.group(1).lower()}:" for m in EMOJI_RE.finditer(self.body)}
+
+            if tokens:
+                emojis = (
+                    db.session.query(Emoji)
+                    .filter(Emoji.token.in_(tokens))
+                    .order_by(Emoji.instance_id)
+                    .all()
+                )
+                for emoji in emojis:
+                    return_value.append(
+                        {
+                            "type": "Emoji",
+                            "name": emoji.token,
+                            "icon": {
+                                "type": "Image",
+                                "mediaType": guess_mime_type(emoji.url),
+                                "url": emoji.url,
+                            },
+                        }
+                    )
+
         return return_value
 
     def spoiler_flair(self):
@@ -3280,7 +3269,7 @@ class Post(db.Model):
                     db.session.commit()
             else:
                 if vote_direction == "upvote":
-                    effect = Instance.weight(user.ap_domain)
+                    effect = 1.0
                     spicy_effect = effect
                     # Make 'hot' sort more spicy by amplifying the effect of early upvotes
                     if self.up_votes + self.down_votes <= 10:
@@ -3342,6 +3331,20 @@ class Post(db.Model):
                 cache.delete_memoized(recently_upvoted_posts, user.id)
                 cache.delete_memoized(recently_downvoted_posts, user.id)
         return undo
+
+    def move_to(self, community: Community):
+        self.community_id = community.id
+        self.instance_id = community.instance_id
+        db.session.execute(
+            text(
+                "UPDATE post_reply SET community_id = :community_id, instance_id = :instance_id WHERE post_id = :post_id"
+            ),
+            {
+                "community_id": community.id,
+                "instance_id": community.instance_id,
+                "post_id": self.id,
+            },
+        )
 
     def update_reaction_cache(self):
         count = func.count(PostVote.id).label("count")
@@ -4578,6 +4581,7 @@ class ModLog(db.Model):
         "unlock_post": _l("Un-lock post"),
         "lock_post_reply": _l("Lock comment"),
         "unlock_post_reply": _l("Un-lock comment"),
+        "move_post": _l("Move post"),
     }
 
     def action_to_str(self):
@@ -4665,6 +4669,7 @@ class Site(db.Model):
     additional_js = db.Column(db.Text)
     private_instance = db.Column(db.Boolean, default=False)
     language_id = db.Column(db.Integer)
+    honeypot = db.Column(db.Boolean, default=True)
 
     @staticmethod
     def admins() -> List[User]:
@@ -5073,16 +5078,6 @@ class Reminder(db.Model):
     remind_at = db.Column(db.DateTime)
     reminder_type = db.Column(db.Integer)
     reminder_destination = db.Column(db.Integer)
-
-
-class Rating(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    community_id = db.Column(db.Integer, db.ForeignKey("community.id"), index=True)
-    created_at = db.Column(db.DateTime, index=True, default=utcnow)
-    rating = db.Column(db.Float)
-
-    author = db.relationship("User", lazy="joined", back_populates="ratings")
 
 
 class Emoji(db.Model):

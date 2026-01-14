@@ -32,7 +32,6 @@ from app.api.alpha.utils.community import (
     post_community_flair_create,
     put_community_flair_edit,
     post_community_flair_delete,
-    post_community_rate,
     post_community_leave_all,
 )
 from app.api.alpha.utils.domain import post_domain_block
@@ -118,6 +117,8 @@ from app.api.alpha.utils.user import (
     get_user_details,
     get_user_media,
     post_user_set_note,
+    post_user_ban,
+    post_user_unban,
 )
 from app.constants import *
 from app.utils import orjson_response, get_setting
@@ -314,19 +315,6 @@ def post_alpha_leave_all():
     auth = request.headers.get("Authorization")
     resp = post_community_leave_all(auth)
     return UserMeResponse().load(resp)
-
-
-@comm_bp.route("/community/rate", methods=["POST"])
-@comm_bp.doc(summary="Rate a community.")
-@comm_bp.arguments(RateCommunityRequest)
-@comm_bp.response(200, GetCommunityResponse)
-@comm_bp.alt_response(400, schema=DefaultError)
-def post_alpha_community_rate(data):
-    if not enable_api():
-        return abort(400, message="alpha api is not enabled")
-    auth = request.headers.get("Authorization")
-    resp = post_community_rate(auth, data)
-    return GetCommunityResponse().load(resp)
 
 
 @comm_bp.route("/community/block", methods=["POST"])
@@ -1342,6 +1330,32 @@ def post_alpha_user_note(data):
     return UserSetNoteResponse().load(resp)
 
 
+@user_bp.route("/user/ban", methods=["POST"])
+@user_bp.doc(summary="Ban a user")
+@user_bp.arguments(UserBanRequest)
+@user_bp.response(200, UserBanResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_ban(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_user_ban(auth, data)
+    return UserBanResponse().load(resp)
+
+
+@user_bp.route("/user/unban", methods=["POST"])
+@user_bp.doc(summary="Unban a user")
+@user_bp.arguments(UserUnbanRequest)
+@user_bp.response(200, UserBanResponse)
+@user_bp.alt_response(400, schema=DefaultError)
+def post_alpha_user_unban(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = post_user_unban(auth, data)
+    return UserBanResponse().load(resp)
+
+
 # Upload
 @upload_bp.route("/upload/image", methods=["POST"])
 @upload_bp.doc(summary="Upload a general image.")
@@ -1461,9 +1475,6 @@ def alpha_chat():
 @bp.route(
     "/api/alpha/user/mention/mark_as_read", methods=["POST"]
 )  # No DB support / Not available in app (using mark_all instead)
-@bp.route(
-    "/api/alpha/user/ban", methods=["POST"]
-)  # Admin function. No plans to implement
 @bp.route(
     "/api/alpha/user/banned", methods=["GET"]
 )  # Admin function. No plans to implement

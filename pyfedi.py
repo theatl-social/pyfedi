@@ -38,6 +38,7 @@ from app.utils import (
     can_create_post,
     can_upvote,
     can_downvote,
+    can_upload_video,
     shorten_number,
     ap_datetime,
     current_theme,
@@ -110,6 +111,7 @@ with app.app_context():
     app.jinja_env.globals["can_create"] = can_create_post
     app.jinja_env.globals["can_upvote"] = can_upvote
     app.jinja_env.globals["can_downvote"] = can_downvote
+    app.jinja_env.globals["can_upload_video"] = can_upload_video
     app.jinja_env.globals["show_explore"] = show_explore
     app.jinja_env.globals["in_sorted_list"] = in_sorted_list
     app.jinja_env.globals["theme"] = current_theme

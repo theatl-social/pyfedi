@@ -18,7 +18,7 @@ from PIL import Image, ImageOps
 from flask import current_app, request, g, url_for, json
 from flask_babel import _, force_locale, gettext
 from furl import furl
-from sqlalchemy import text, Integer
+from sqlalchemy import text, Integer, update
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
@@ -227,7 +227,6 @@ def post_to_page(post: Post):
         "name": post.title,
         "cc": [],
         "content": post.body_html if post.body_html else "",
-        "summary": post.body_html if post.body_html else "",
         "mediaType": "text/html",
         "source": {
             "content": post.body if post.body else "",
@@ -242,7 +241,15 @@ def post_to_page(post: Post):
         "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
         "replies": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/replies',
-        "language": {"identifier": post.language_code(), "name": post.language_name()},
+        "language": {
+            "identifier": post.language_code(),
+            "name": post.language_name(),
+        },
+        "interactionPolicy": {
+            "canQuote": {
+                "automaticApproval": ["https://www.w3.org/ns/activitystreams#Public"]
+            }
+        },
     }
     if post.language_id:
         activity_data["contentMap"] = {post.language_code(): activity_data["content"]}
@@ -345,6 +352,11 @@ def comment_model_to_json(reply: PostReply) -> dict:
         "flair": reply.author.community_flair(reply.community_id),
         "repliesEnabled": reply.replies_enabled,
         "answer": reply.answer,
+        "interactionPolicy": {
+            "canQuote": {
+                "automaticApproval": ["https://www.w3.org/ns/activitystreams#Public"]
+            }
+        },
     }
     if reply.edited_at:
         reply_data["updated"] = ap_datetime(reply.edited_at)
@@ -892,23 +904,53 @@ def refresh_user_profile_task(user_id):
                                 session.add(avatar)
                                 avatar_changed = True
                     if "image" in activity_json and activity_json["image"] is not None:
-                        if (
-                            user.cover_id
-                            and activity_json["image"]["url"] != user.cover.source_url
-                        ):
-                            user.cover.delete_from_disk()
-                        if not user.cover_id or (
-                            user.cover_id
-                            and activity_json["image"]["url"] != user.cover.source_url
-                        ):
-                            cover = File(source_url=activity_json["image"]["url"])
-                            user.cover = cover
-                            session.add(cover)
-                            cover_changed = True
+                        if isinstance(activity_json["image"], dict):
+                            if (
+                                user.cover_id
+                                and activity_json["image"]["url"]
+                                != user.cover.source_url
+                            ):
+                                user.cover.delete_from_disk()
+                            if not user.cover_id or (
+                                user.cover_id
+                                and activity_json["image"]["url"]
+                                != user.cover.source_url
+                            ):
+                                cover = File(source_url=activity_json["image"]["url"])
+                                user.cover = cover
+                                session.add(cover)
+                                cover_changed = True
+                        elif isinstance(activity_json["image"], list):
+                            if (
+                                user.cover_id
+                                and activity_json["image"][0]["url"]
+                                != user.cover.source_url
+                            ):
+                                user.cover.delete_from_disk()
+                            if not user.cover_id or (
+                                user.cover_id
+                                and activity_json["image"][0]["url"]
+                                != user.cover.source_url
+                            ):
+                                cover = File(
+                                    source_url=activity_json["image"][0]["url"]
+                                )
+                                user.cover = cover
+                                session.add(cover)
+                                cover_changed = True
+
                     session.commit()
-                    if user.avatar_id and avatar_changed:
+                    if (
+                        user.avatar_id
+                        and avatar_changed
+                        and get_setting("cache_remote_images_locally", True)
+                    ):
                         make_image_sizes(user.avatar_id, 40, 250, "users")
-                    if user.cover_id and cover_changed:
+                    if (
+                        user.cover_id
+                        and cover_changed
+                        and get_setting("cache_remote_images_locally", True)
+                    ):
                         make_image_sizes(user.cover_id, 700, 1600, "users")
                         cache.delete_memoized(User.cover_image, user)
     except Exception:
@@ -1583,9 +1625,19 @@ def actor_json_to_model(activity_json, address, server):
         if (
             "image" in activity_json
             and activity_json["image"] is not None
+            and isinstance(activity_json["image"], dict)
             and "url" in activity_json["image"]
         ):
             cover = File(source_url=activity_json["image"]["url"])
+            user.cover = cover
+            db.session.add(cover)
+        elif (
+            "image" in activity_json
+            and activity_json["image"] is not None
+            and isinstance(activity_json["image"], list)
+            and len(activity_json["image"]) > 0
+        ):  # bridgy-fed
+            cover = File(source_url=activity_json["image"][0]["url"])
             user.cover = cover
             db.session.add(cover)
         if "attachment" in activity_json and isinstance(
@@ -1614,9 +1666,9 @@ def actor_json_to_model(activity_json, address, server):
                 .filter_by(ap_profile_id=activity_json["id"].lower())
                 .one()
             )
-        if user.avatar_id:
+        if user.avatar_id and get_setting("cache_remote_images_locally", True):
             make_image_sizes(user.avatar_id, 40, 250, "users")
-        if user.cover_id:
+        if user.cover_id and get_setting("cache_remote_images_locally", True):
             make_image_sizes(user.cover_id, 878, None, "users")
         return user
     elif activity_json["type"] == "Group":
@@ -2695,16 +2747,6 @@ def new_instance_profile_task(instance_id: int):
         session.close()
 
 
-# alter the effect of upvotes based on their instance. Default to 1.0
-@cache.memoize(timeout=50)
-def instance_weight(domain):
-    if domain:
-        instance = db.session.query(Instance).filter_by(domain=domain).first()
-        if instance:
-            return instance.vote_weight
-    return 1.0
-
-
 def is_activitypub_request():
     return "application/ld+json" in request.headers.get(
         "Accept", ""
@@ -3371,11 +3413,8 @@ def create_post_reply(
             if "distinguished" in request_json["object"]
             else False
         )
-        answer = (
-            request_json["object"]["answer"]
-            if "answer" in request_json["object"]
-            else False
-        )
+        # answer field parsing removed upstream in v1.5.0 - using False as default
+        answer = False
 
         if "attachment" in request_json["object"]:
             attachment_list = []
@@ -3778,6 +3817,8 @@ def notify_about_post_task(post_id):
 
 
 def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: PostReply):
+    from app import redis_client
+
     if (
         parent_reply is None
     ):  # This happens when a new_reply is a top-level comment, not a comment on a comment
@@ -3812,11 +3853,34 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                     subtype="top_level_comment_on_followed_post",
                     targets=targets_data,
                 )
-                db.session.add(new_notification)
-                user = User.query.get(notify_id)
-                user.unread_notifications += 1
-                db.session.commit()
+                with redis_client.lock(
+                    f"lock:user:{notify_id}", timeout=10, blocking_timeout=6
+                ):
+                    db.session.add(new_notification)
+                    user = db.session.query(User).get(notify_id)
+                    user.unread_notifications += 1
+                    db.session.commit()
     else:
+        # Set notifications about parent_reply to read
+        db.session.execute(
+            update(Notification)
+            .where(Notification.user_id == new_reply.user_id)
+            .where(
+                Notification.targets["comment_id"].as_string() == str(parent_reply.id)
+            )
+            .values(read=True)
+        )
+        db.session.commit()
+
+        with redis_client.lock(
+            f"lock:user:{new_reply.user_id}", timeout=10, blocking_timeout=6
+        ):
+            user = db.session.query(User).get(new_reply.user_id)
+            user.unread_notifications = Notification.query.filter_by(
+                user_id=user.id, read=False
+            ).count()
+            db.session.commit()
+
         # Send notifications based on subscriptions
         send_notifs_to = set(notification_subscribers(parent_reply.id, NOTIF_REPLY))
         for notify_id in send_notifs_to:
@@ -3851,9 +3915,12 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
                         targets=targets_data,
                     )
                 db.session.add(new_notification)
-                user = User.query.get(notify_id)
-                user.unread_notifications += 1
-                db.session.commit()
+                with redis_client.lock(
+                    f"lock:user:{notify_id}", timeout=10, blocking_timeout=6
+                ):
+                    user = User.query.get(notify_id)
+                    user.unread_notifications += 1
+                    db.session.commit()
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
@@ -4112,11 +4179,13 @@ def update_post_from_activity(post: Post, request_json: dict):
         new_title = request_json["object"]["name"]
         post.microblog = False
     else:
-        autogenerated_title = microblog_content_to_title(post.body_html)
+        autogenerated_title, link = microblog_content_to_title(post.body_html)
         if len(autogenerated_title) < 20:
             new_title = "[Microblog] " + autogenerated_title.strip()
         else:
             new_title = autogenerated_title.strip()
+        if link != "":
+            post.url = link
         post.microblog = True
 
     if old_title != new_title:
@@ -4276,10 +4345,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                         if endpoint == "dislikes":
                             downvotes += object["totalItems"]
 
-        # this uses the instance the post is from, rather the instances of individual votes. Useful for promoting PeerTube vids over Lemmy posts.
-        multiplier = post.instance.vote_weight
-        if not multiplier:
-            multiplier = 1.0
+        multiplier = 1.0
         post.up_votes = upvotes * multiplier
         post.down_votes = downvotes
         post.score = upvotes - downvotes
@@ -4379,7 +4445,8 @@ def update_post_from_activity(post: Post, request_json: dict):
                 db.session.add(image)
                 db.session.commit()
                 post.image = image
-                make_image_sizes(image.id, 170, 512, "posts")
+                if get_setting("cache_remote_images_locally", True):
+                    make_image_sizes(image.id, 170, 512, "posts")
             else:
                 post.image_id = None
             db.session.commit()

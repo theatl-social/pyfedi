@@ -14,7 +14,7 @@
 {% else -%}
     {% set collapsed = (post_reply.score <= -10) and not no_collapse -%}
 {% endif -%}
-<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.has_been_reported() %} reported{% endif %}{% if post_reply.answer %} answer{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
+<div class="container comment{% if post_reply.score and post_reply.score <= -10 %} low_score{% endif %}{% if post_reply.distinguished %} distinguished{% endif %}{% if post_reply.author.id == post_reply.post.author.id %} original_poster{% endif %}{% if post_reply.author.id == current_user.get_id() %} my_comment{% endif %}{% if post_reply.has_been_reported() %} reported{% endif %}{% if post_reply.answer %} answer{% endif %}" id="comment_{{ post_reply.id }}"{% if post_reply.language_id and post_reply.language.code != 'en' %} lang="{{ post_reply.language.code }}"{% endif %} aria-level="{{ post_reply.depth+1 }}" role="treeitem">
     {% if not post_reply.author.indexable -%}<!--googleoff: all-->{% endif -%}
     {% if teaser -%}
     <div class="row">
@@ -79,10 +79,11 @@
                 <div class="message_reaction_container me-1">
                     <div class="message_reaction{{ ' reacted' if current_user.is_authenticated and current_user.lemmy_link() in reaction['authors'] }}"
                          hx-post="/comment/{{ post_reply.id }}/emoji_set"
-                         hx-vals='{"emoji": "{{ reaction['token'] }}"}'
-                         hx-target="#reactions_{{ post_reply.id }}" hx-swap="outerHTML">
+                         hx-vals="{&quot;emoji&quot;: &quot;{{ reaction['token'] }}&quot;}"
+                         hx-target="#reactions_{{ post_reply.id }}" hx-swap="outerHTML"
+                         title="{{ ', '.join(reaction['authors']) }}">
                         <div class="emoji">{% if reaction['url'] and reaction['url'].startswith('https://') -%}
-                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}">
+                                                <img src="{{ reaction['url'] }}" width="20" alt="{{ reaction['token'] }}" referrerpolicy="no-referrer">
                                             {%- else -%}
                                                 {{ reaction['token'] }}
                                             {%- endif %}</div>
@@ -118,7 +119,7 @@
         <div class="voting_buttons_new" data-base-url="/comment/{{ post_reply.id }}">
             {{ render_comment_voting_buttons(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, can_downvote_here=can_downvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies, recently_downvoted_replies=recently_downvoted_replies, upvoted_class=upvoted_class, downvoted_class=downvoted_class) }}
         </div>
-        <div class="emoji_button">
+        <div class="emoji_button hide_skinny_mobile">
             {{ render_emoji_button(post_reply, post_reply.post.community, current_user=current_user, can_upvote_here=can_upvote_here, communities_banned_from_list=communities_banned_from_list, disable_voting=disable_voting, recently_upvoted_replies=recently_upvoted_replies) }}
         </div>
         <div class="hide_button">
@@ -133,7 +134,7 @@
                 {{ render_reply_notification_toggle(dict(comment=post_reply), current_user=current_user) }}
             {% endif -%}
         </div>
-        {% if post_reply.community.question_answer -%}
+        {% if post_reply.community.question_answer and post_reply.depth < 3 -%}
             <div class="choose_answer_icon">
                 {% if post_reply.answer -%}
                 <a rel="nofollow noindex" title="{{ _('Un-choose answer') }}" href="#"
@@ -157,11 +158,11 @@
             <div class="dropdown">
                 <a
                     href="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) if low_bandwidth else '#' }}"
-                    data-bs-toggle="dropdown" rel="nofollow noindex"
+                    data-bs-toggle="dropdown" rel="nofollow noindex" aria-expanded="false" id="comment_options_link_{{ post_reply.id }}"
                     aria-label="{{ _('Comment options') }}">
                     <span class="fe fe-options" title="Options"> </span>
                 </a>
-                <ul class="dropdown-menu" style="width: 320px">
+                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="comment_options_link_{{ post_reply.id }}">
                     <div
                         hx-get="{{ url_for('post.post_reply_options', post_id=post_reply.post.id, comment_id=post_reply.id) }}"
                         hx-trigger="intersect once"

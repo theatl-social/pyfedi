@@ -1,6 +1,7 @@
 """
 Custom markdown2 extras for PieFed
 """
+
 import re
 from markdown2 import Extra, Stage
 
@@ -29,21 +30,21 @@ class EnhancedImages(Extra):
         -> <a href="full.jpg"><img src="thumb.jpg" alt="Cat" width="200px" /></a>
     """
 
-    name = 'enhanced-images'
+    name = "enhanced-images"
     # Run BEFORE LINKS stage to process markdown syntax
     order = (Stage.LINKS,), ()
 
     # Regex to find markdown image syntax with :: separated attributes
     # Matches: ![alt text :: attributes](url) or ![alt text :: attributes](url "title")
     _md_img_with_attrs_re = re.compile(
-        r'!\[([^\]]*?)\s*::\s*([^\]]+?)\]'  # ![alt text :: attributes]
-        r'\(([^\)]+?)\)',  # (url) or (url "title")
-        re.MULTILINE
+        r"!\[([^\]]*?)\s*::\s*([^\]]+?)\]"  # ![alt text :: attributes]
+        r"\(([^\)]+?)\)",  # (url) or (url "title")
+        re.MULTILINE,
     )
 
     def test(self, text):
         """Only run if there are markdown images with :: delimiter"""
-        return '![' in text and '::' in text
+        return "![" in text and "::" in text
 
     def run(self, text):
         """
@@ -61,21 +62,21 @@ class EnhancedImages(Extra):
         # Check if there are two URLs (thumbnail, fullsize)
         # Split by comma, but be careful about titles with commas
         full_url = None
-        if ',' in url_and_title:
+        if "," in url_and_title:
             # Check if there's a quoted title
             title_match = re.search(r'"([^"]*)"', url_and_title)
             if title_match:
                 # Extract the title and remove it temporarily
                 title = title_match.group(0)
-                url_part = url_and_title.replace(title, '').strip()
-                if ',' in url_part:
+                url_part = url_and_title.replace(title, "").strip()
+                if "," in url_part:
                     # Two URLs present
-                    urls = [u.strip() for u in url_part.split(',', 1)]
+                    urls = [u.strip() for u in url_part.split(",", 1)]
                     url_and_title = f"{urls[0]} {title}"
                     full_url = urls[1]
             else:
                 # No title, just split by comma
-                urls = [u.strip() for u in url_and_title.split(',', 1)]
+                urls = [u.strip() for u in url_and_title.split(",", 1)]
                 if len(urls) == 2:
                     url_and_title = urls[0]
                     full_url = urls[1]
@@ -84,50 +85,54 @@ class EnhancedImages(Extra):
         custom_attrs = {}
 
         # Process alignment
-        if 'align-left' in attrs_string:
-            custom_attrs['align'] = 'left'
-        elif 'align-right' in attrs_string:
-            custom_attrs['align'] = 'right'
-        elif 'align-center' in attrs_string:
-            custom_attrs['align'] = 'center'
+        if "align-left" in attrs_string:
+            custom_attrs["align"] = "left"
+        elif "align-right" in attrs_string:
+            custom_attrs["align"] = "right"
+        elif "align-center" in attrs_string:
+            custom_attrs["align"] = "center"
 
         # Process width attribute: width=200px, width=50%, etc.
-        width_match = re.search(r'width\s*=\s*([^\s]+)', attrs_string)
+        width_match = re.search(r"width\s*=\s*([^\s]+)", attrs_string)
         if width_match:
-            custom_attrs['width'] = width_match.group(1)
+            custom_attrs["width"] = width_match.group(1)
 
         # Process height attribute
-        height_match = re.search(r'height\s*=\s*([^\s]+)', attrs_string)
+        height_match = re.search(r"height\s*=\s*([^\s]+)", attrs_string)
         if height_match:
-            custom_attrs['height'] = height_match.group(1)
+            custom_attrs["height"] = height_match.group(1)
 
         # Process class attribute
         class_match = re.search(r'class\s*=\s*["\']?([^"\'\s]+)["\']?', attrs_string)
         if class_match:
-            custom_attrs['class'] = class_match.group(1)
+            custom_attrs["class"] = class_match.group(1)
 
         # Store the attributes in the Markdown instance for later retrieval
         # Create a unique marker using a counter to ensure uniqueness
-        if not hasattr(self.md, '_enhanced_images_counter'):
+        if not hasattr(self.md, "_enhanced_images_counter"):
             self.md._enhanced_images_counter = 0
         self.md._enhanced_images_counter += 1
         marker_id = f"enhanced-img-{self.md._enhanced_images_counter}"
 
         # Store in markdown instance
-        if not hasattr(self.md, '_enhanced_images_attrs'):
+        if not hasattr(self.md, "_enhanced_images_attrs"):
             self.md._enhanced_images_attrs = {}
         self.md._enhanced_images_attrs[marker_id] = {
-            'attrs': custom_attrs,
-            'full_url': full_url
+            "attrs": custom_attrs,
+            "full_url": full_url,
         }
 
         # Return raw HTML instead of markdown so we can control the output exactly
         # Parse title if present
         title_match = re.search(r'"([^"]*)"', url_and_title)
-        title_attr = f' title="{title_match.group(1)}"' if title_match else ''
+        title_attr = f' title="{title_match.group(1)}"' if title_match else ""
 
         # Get the URL (first part before any title)
-        url = url_and_title.split('"')[0].strip() if '"' in url_and_title else url_and_title.split()[0]
+        url = (
+            url_and_title.split('"')[0].strip()
+            if '"' in url_and_title
+            else url_and_title.split()[0]
+        )
 
         # Create the HTML and hash it to protect from smarty-pants and other processing
         # Use double quotes since the HTML is protected by hashing
@@ -143,11 +148,13 @@ def apply_enhanced_image_attributes(html: str, md_instance) -> str:
     Apply stored enhanced image attributes to HTML output.
     Call this after markdown2.markdown() to add custom attributes to enhanced images.
     """
-    if not hasattr(md_instance, '_enhanced_images_attrs'):
+    if not hasattr(md_instance, "_enhanced_images_attrs"):
         return html
 
     # Match img tags with data-enhanced-img attribute
-    img_pattern = re.compile(r'<img\s+([^>]*?data-enhanced-img=[^>]*?)(/?>)', re.IGNORECASE)
+    img_pattern = re.compile(
+        r"<img\s+([^>]*?data-enhanced-img=[^>]*?)(/?>)", re.IGNORECASE
+    )
 
     def add_attrs(match):
         attrs_str = match.group(1)
@@ -160,17 +167,17 @@ def apply_enhanced_image_attributes(html: str, md_instance) -> str:
 
         marker_id = marker_match.group(1)
         stored_data = md_instance._enhanced_images_attrs.get(marker_id, {})
-        custom_attrs = stored_data.get('attrs', {})
-        full_url = stored_data.get('full_url')
+        custom_attrs = stored_data.get("attrs", {})
+        full_url = stored_data.get("full_url")
 
         # Remove data-enhanced-img attribute
-        new_attrs = re.sub(r'\s*data-enhanced-img="[^"]+"', '', attrs_str)
+        new_attrs = re.sub(r'\s*data-enhanced-img="[^"]+"', "", attrs_str)
 
         # Add custom attributes
         for attr_name, attr_value in custom_attrs.items():
             new_attrs += f' {attr_name}="{attr_value}"'
 
-        img_tag = f'<img {new_attrs}{closing}'
+        img_tag = f"<img {new_attrs}{closing}"
 
         # Wrap in anchor if needed
         if full_url:
