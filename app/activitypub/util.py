@@ -2675,510 +2675,497 @@ def notify_about_post_reply(parent_reply: Union[PostReply, None], new_reply: Pos
 
 
 def update_post_reply_from_activity(reply: PostReply, request_json: dict):
-    # Check if this update is more recent than what we currently have - activities can arrive in the wrong order
-    if 'updated' in request_json['object'] and reply.ap_updated is not None:
+    from app import redis_client
+    with redis_client.lock(f"lock:post_reply:{reply.id}", timeout=10, blocking_timeout=6):
+        if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
+            if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
+                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
+            reply.body_html = allowlist_html(request_json['object']['content'])
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
+                reply.body = request_json['object']['source']['content']
+                reply.body_html = markdown_to_html(reply.body)          # prefer Markdown if provided, overwrite version obtained from HTML
+            else:
+                reply.body = html_to_text(reply.body_html)
+        # Language
+        if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+            language = find_language_or_create(request_json['object']['language']['identifier'],
+                                               request_json['object']['language']['name'])
+            reply.language_id = language.id
+
+        # Distinguished
+        if 'distinguished' in request_json['object']:
+            reply.distinguished = request_json['object']['distinguished']
+
+        if 'repliesEnabled' in request_json['object']:
+            reply.replies_enabled = request_json['object']['repliesEnabled']
+
+        reply.edited_at = utcnow()
+
+        if 'attachment' in request_json['object']:
+            attachment_list = []
+            if isinstance(request_json['object']['attachment'], dict):
+                attachment_list.append(request_json['object']['attachment'])
+            elif isinstance(request_json['object']['attachment'], list):
+                attachment_list = request_json['object']['attachment']
+            for attachment in attachment_list:
+                url = alt_text = ''
+                if 'href' in attachment:
+                    url = attachment['href']
+                if 'url' in attachment:
+                    url = attachment['url']
+                if 'name' in attachment:
+                    alt_text = attachment['name']
+                if url:
+                    reply.body = reply.body + f"\n\n![{alt_text}]({url})"
+            if attachment_list:
+                reply.body_html = markdown_to_html(reply.body)
+
         try:
-            new_updated = datetime.fromisoformat(request_json['object']['updated'])
+            reply.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
         except ValueError:
-            new_updated = datetime.now(timezone.utc)
-        if reply.ap_updated.replace(tzinfo=timezone.utc) > new_updated.replace(tzinfo=timezone.utc):
-            return
-    if 'content' in request_json['object']:   # Kbin, Mastodon, etc provide their posts as html
-        if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
-            request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
-        reply.body_html = allowlist_html(request_json['object']['content'])
-        if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
-            'mediaType' in request_json['object']['source'] and request_json['object']['source']['mediaType'] == 'text/markdown':
-            reply.body = request_json['object']['source']['content']
-            reply.body_html = markdown_to_html(reply.body)          # prefer Markdown if provided, overwrite version obtained from HTML
-        else:
-            reply.body = html_to_text(reply.body_html)
-    # Language
-    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
-        language = find_language_or_create(request_json['object']['language']['identifier'],
-                                           request_json['object']['language']['name'])
-        reply.language_id = language.id
+            reply.ap_updated = utcnow()
 
-    # Distinguished
-    if 'distinguished' in request_json['object']:
-        reply.distinguished = request_json['object']['distinguished']
-
-    if 'repliesEnabled' in request_json['object']:
-        reply.replies_enabled = request_json['object']['repliesEnabled']
-
-    reply.edited_at = utcnow()
-
-    if 'attachment' in request_json['object']:
-        attachment_list = []
-        if isinstance(request_json['object']['attachment'], dict):
-            attachment_list.append(request_json['object']['attachment'])
-        elif isinstance(request_json['object']['attachment'], list):
-            attachment_list = request_json['object']['attachment']
-        for attachment in attachment_list:
-            url = alt_text = ''
-            if 'href' in attachment:
-                url = attachment['href']
-            if 'url' in attachment:
-                url = attachment['url']
-            if 'name' in attachment:
-                alt_text = attachment['name']
-            if url:
-                reply.body = reply.body + f"\n\n![{alt_text}]({url})"
-        if attachment_list:
-            reply.body_html = markdown_to_html(reply.body)
-
-    try:
-        reply.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
-    except ValueError:
-        reply.ap_updated = utcnow()
-
-    # Check for Mentions of local users (that weren't in the original)
-    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
-        for json_tag in request_json['object']['tag']:
-            if 'type' in json_tag and json_tag['type'] == 'Mention':
-                profile_id = json_tag['href'] if 'href' in json_tag else None
-                if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                    profile_id = profile_id.lower()
-                    if reply.parent_id:
-                        reply_parent = PostReply.query.get(reply.parent_id)
-                    else:
-                        reply_parent = reply.post
-                    if reply_parent and profile_id != reply_parent.author.ap_profile_id:
-                        recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
-                        if recipient:
-                            if reply.instance.software == 'mbin' or reply.instance.software in MICROBLOG_APPS:
-                                # ignore Mention of post author
-                                if recipient.id == reply.post.user_id:
-                                    continue
-
-                                # ignore Mentions mirroring a Mention made in a post body
-                                notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
-                                                                               Notification.notif_type == NOTIF_MENTION,
-                                                                               Notification.subtype == "post_mention",
-                                                                               Notification.targets.op("->>")("post_id").cast(Integer) == reply.post_id).first()
-                                if notifs:
-                                    continue
-
-                                # ignore Mentions mirroring a Mention someone else made in the comment chain
-                                ids = []
-                                for element in reply.path:
-                                    if element == 0 or element == reply.id:
+        # Check for Mentions of local users (that weren't in the original)
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list) and len(request_json['object']['tag']) > 1:
+            for json_tag in request_json['object']['tag']:
+                if 'type' in json_tag and json_tag['type'] == 'Mention':
+                    profile_id = json_tag['href'] if 'href' in json_tag else None
+                    if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                        profile_id = profile_id.lower()
+                        if reply.parent_id:
+                            reply_parent = PostReply.query.get(reply.parent_id)
+                        else:
+                            reply_parent = reply.post
+                        if reply_parent and profile_id != reply_parent.author.ap_profile_id:
+                            recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                            if recipient:
+                                if reply.instance.software == 'mbin' or reply.instance.software in MICROBLOG_APPS:
+                                    # ignore Mention of post author
+                                    if recipient.id == reply.post.user_id:
                                         continue
-                                    ids.append(element)
+
+                                    # ignore Mentions mirroring a Mention made in a post body
                                     notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
                                                                                    Notification.notif_type == NOTIF_MENTION,
-                                                                                   Notification.subtype == "comment_mention",
-                                                                                   Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                                                                                   Notification.subtype == "post_mention",
+                                                                                   Notification.targets.op("->>")("post_id").cast(Integer) == reply.post_id).first()
                                     if notifs:
                                         continue
 
-                                # ignore Mentions generated because a local user authored a comment further up in the comment chain
-                                ids = tuple(ids)
-                                user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
-                                if recipient.id in user_ids:
-                                    continue
+                                    # ignore Mentions mirroring a Mention someone else made in the comment chain
+                                    ids = []
+                                    for element in reply.path:
+                                        if element == 0 or element == reply.id:
+                                            continue
+                                        ids.append(element)
+                                        notifs = db.session.query(Notification).filter(Notification.user_id == recipient.id,
+                                                                                       Notification.notif_type == NOTIF_MENTION,
+                                                                                       Notification.subtype == "comment_mention",
+                                                                                       Notification.targets.op("->>")("comment_id").cast(Integer).in_(ids)).first()
+                                        if notifs:
+                                            continue
 
-                            blocked_senders = blocked_users(recipient.id)
-                            if reply.user_id not in blocked_senders:
-                                existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                                  Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
-                                if not existing_notification:
-                                    author = User.query.get(reply.user_id)
-                                    targets_data = {'gen': '0',
-                                                    'post_id': reply.post_id,
-                                                    'comment_id': reply.id,
-                                                    'comment_body': reply.body,
-                                                    'author_user_name': author.ap_id if author.ap_id else author.user_name
-                                                    }
-                                    with force_locale(get_recipient_language(recipient.id)):
-                                        notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
-                                                                    url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
-                                                                    author_id=reply.user_id, notif_type=NOTIF_MENTION,
-                                                                    subtype='comment_mention',
-                                                                    targets=targets_data)
-                                        recipient.unread_notifications += 1
-                                        db.session.add(notification)
+                                    # ignore Mentions generated because a local user authored a comment further up in the comment chain
+                                    ids = tuple(ids)
+                                    user_ids = db.session.execute(text('SELECT user_id FROM "post_reply" WHERE id IN :ids'), {'ids': ids}).scalars()
+                                    if recipient.id in user_ids:
+                                        continue
 
-    db.session.commit()
+                                blocked_senders = blocked_users(recipient.id)
+                                if reply.user_id not in blocked_senders:
+                                    existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
+                                                                                      Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                                    if not existing_notification:
+                                        author = User.query.get(reply.user_id)
+                                        targets_data = {'gen': '0',
+                                                        'post_id': reply.post_id,
+                                                        'comment_id': reply.id,
+                                                        'comment_body': reply.body,
+                                                        'author_user_name': author.ap_id if author.ap_id else author.user_name
+                                                        }
+                                        with force_locale(get_recipient_language(recipient.id)):
+                                            notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
+                                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                                        author_id=reply.user_id, notif_type=NOTIF_MENTION,
+                                                                        subtype='comment_mention',
+                                                                        targets=targets_data)
+                                            recipient.unread_notifications += 1
+                                            db.session.add(notification)
+
+        db.session.commit()
 
 
 def update_post_from_activity(post: Post, request_json: dict):
-    # Check if this update is more recent than what we currently have - activities can arrive in the wrong order if we have been offline
-    if 'updated' in request_json['object'] and post.ap_updated is not None:
+    from app import redis_client
+    with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+        # redo body without checking if it's changed
+        if 'content' in request_json['object'] and request_json['object']['content'] is not None:
+            # prefer Markdown in 'source' in provided
+            if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
+                    request_json['object']['source']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['source']['content']
+                post.body_html = markdown_to_html(post.body)
+            elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
+                post.body_html = allowlist_html(request_json['object']['content'])
+                post.body = html_to_text(post.body_html)
+            elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
+                post.body = request_json['object']['content']
+                post.body_html = markdown_to_html(post.body)
+            else:
+                if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
+                    request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
+                post.body_html = allowlist_html(request_json['object']['content'])
+                post.body = html_to_text(post.body_html)
+
+        # title
+        old_title = post.title
+        if 'name' in request_json['object']:
+            new_title = request_json['object']['name']
+            post.microblog = False
+        else:
+            autogenerated_title, link = microblog_content_to_title(post.body_html)
+            if len(autogenerated_title) < 20:
+                new_title = '[Microblog] ' + autogenerated_title.strip()
+            else:
+                new_title = autogenerated_title.strip()
+            if link != '':
+                post.url = link
+            post.microblog = True
+
+        if old_title != new_title:
+            post.title = new_title
+            if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper() or '[COMBAT]' in new_title.upper():
+                post.nsfl = True
+            if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
+                post.nsfw = True
+        if 'sensitive' in request_json['object']:
+            post.nsfw = request_json['object']['sensitive']
+        if 'nsfl' in request_json['object']:
+            post.nsfl = request_json['object']['nsfl']
+
+        # Language
+        old_language_id = post.language_id
+        new_language = None
+        if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
+            new_language = find_language_or_create(request_json['object']['language']['identifier'],
+                                                   request_json['object']['language']['name'])
+        elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
+            new_language = find_language(next(iter(request_json['object']['contentMap'])))
+        if new_language and (new_language.id != old_language_id):
+            post.language_id = new_language.id
+
+        # Tags
+        if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
+            post.tags.clear()
+            # change back when lemmy supports flairs
+            # post.flair.clear()
+            flair_tags = []
+            for json_tag in request_json['object']['tag']:
+                if json_tag['type'] == 'Hashtag':
+                    if json_tag['name'][
+                       1:].lower() != post.community.name.lower():  # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
+                        hashtag = find_hashtag_or_create(json_tag['name'])
+                        if hashtag:
+                            post.tags.append(hashtag)
+                if json_tag['type'] == 'lemmy:CommunityTag':
+                    # change back when lemmy supports flairs
+                    # flair = find_flair_or_create(json_tag, post.community_id)
+                    # if flair:
+                    #    post.flair.append(flair)
+                    flair_tags.append(json_tag)
+                if 'type' in json_tag and json_tag['type'] == 'Mention':
+                    profile_id = json_tag['href'] if 'href' in json_tag else None
+                    if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
+                        profile_id = profile_id.lower()
+                        recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                        if recipient:
+                            blocked_senders = blocked_users(recipient.id)
+                            if post.user_id not in blocked_senders:
+                                existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
+                                                                                  Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
+                                if not existing_notification:
+                                    author = User.query.get(post.user_id)
+                                    targets_data = {'gen': '0',
+                                                    'post_id': post.id,
+                                                    'post_title': post.title,
+                                                    'post_body': post.body,
+                                                    'author_user_name': author.ap_id if author.ap_id else author.user_name
+                                                    }
+                                    notification = Notification(user_id=recipient.id,
+                                                                title=_(f"You have been mentioned in post {post.id}"),
+                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                author_id=post.user_id, notif_type=NOTIF_MENTION,
+                                                                subtype='post_mention',
+                                                                targets=targets_data)
+                                    recipient.unread_notifications += 1
+                                    db.session.add(notification)
+            # remove when lemmy supports flairs
+            # for now only clear tags if there's new ones or if maybe another PieFed instance is trying to remove them
+            if len(flair_tags) > 0 or post.instance.software == 'piefed':
+                post.flair.clear()
+                for ft in flair_tags:
+                    flair = find_flair_or_create(ft, post.community_id)
+                    if flair:
+                        post.flair.append(flair)
+
+        post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
         try:
-            new_updated = datetime.fromisoformat(request_json['object']['updated'])
+            post.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
         except ValueError:
-            new_updated = datetime.now(timezone.utc)
-        if post.ap_updated.replace(tzinfo=timezone.utc) > new_updated.replace(tzinfo=timezone.utc):
-            return
+            post.ap_updated = utcnow()
+        post.edited_at = utcnow()
 
-    # redo body without checking if it's changed
-    if 'content' in request_json['object'] and request_json['object']['content'] is not None:
-        # prefer Markdown in 'source' in provided
-        if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
-                request_json['object']['source']['mediaType'] == 'text/markdown':
-            post.body = request_json['object']['source']['content']
-            post.body_html = markdown_to_html(post.body)
-        elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/html':
-            post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = html_to_text(post.body_html)
-        elif 'mediaType' in request_json['object'] and request_json['object']['mediaType'] == 'text/markdown':
-            post.body = request_json['object']['content']
-            post.body_html = markdown_to_html(post.body)
-        else:
-            if not (request_json['object']['content'].startswith('<p>') or request_json['object']['content'].startswith('<blockquote>')):
-                request_json['object']['content'] = '<p>' + request_json['object']['content'] + '</p>'
-            post.body_html = allowlist_html(request_json['object']['content'])
-            post.body = html_to_text(post.body_html)
-
-    # title
-    old_title = post.title
-    if 'name' in request_json['object']:
-        new_title = request_json['object']['name']
-        post.microblog = False
-    else:
-        autogenerated_title, link = microblog_content_to_title(post.body_html)
-        if len(autogenerated_title) < 20:
-            new_title = '[Microblog] ' + autogenerated_title.strip()
-        else:
-            new_title = autogenerated_title.strip()
-        if link != '':
-            post.url = link
-        post.microblog = True
-
-    if old_title != new_title:
-        post.title = new_title
-        if '[NSFL]' in new_title.upper() or '(NSFL)' in new_title.upper() or '[COMBAT]' in new_title.upper():
-            post.nsfl = True
-        if '[NSFW]' in new_title.upper() or '(NSFW)' in new_title.upper():
-            post.nsfw = True
-    if 'sensitive' in request_json['object']:
-        post.nsfw = request_json['object']['sensitive']
-    if 'nsfl' in request_json['object']:
-        post.nsfl = request_json['object']['nsfl']
-
-    # Language
-    old_language_id = post.language_id
-    new_language = None
-    if 'language' in request_json['object'] and isinstance(request_json['object']['language'], dict):
-        new_language = find_language_or_create(request_json['object']['language']['identifier'],
-                                               request_json['object']['language']['name'])
-    elif 'contentMap' in request_json['object'] and isinstance(request_json['object']['contentMap'], dict):
-        new_language = find_language(next(iter(request_json['object']['contentMap'])))
-    if new_language and (new_language.id != old_language_id):
-        post.language_id = new_language.id
-
-    # Tags
-    if 'tag' in request_json['object'] and isinstance(request_json['object']['tag'], list):
-        post.tags.clear()
-        # change back when lemmy supports flairs
-        # post.flair.clear()
-        flair_tags = []
-        for json_tag in request_json['object']['tag']:
-            if json_tag['type'] == 'Hashtag':
-                if json_tag['name'][
-                   1:].lower() != post.community.name.lower():  # Lemmy adds the community slug as a hashtag on every post in the community, which we want to ignore
-                    hashtag = find_hashtag_or_create(json_tag['name'])
-                    if hashtag:
-                        post.tags.append(hashtag)
-            if json_tag['type'] == 'lemmy:CommunityTag':
-                # change back when lemmy supports flairs
-                # flair = find_flair_or_create(json_tag, post.community_id)
-                # if flair:
-                #    post.flair.append(flair)
-                flair_tags.append(json_tag)
-            if 'type' in json_tag and json_tag['type'] == 'Mention':
-                profile_id = json_tag['href'] if 'href' in json_tag else None
-                if profile_id and isinstance(profile_id, str) and profile_id.startswith('https://' + current_app.config['SERVER_NAME']):
-                    profile_id = profile_id.lower()
-                    recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
-                    if recipient:
-                        blocked_senders = blocked_users(recipient.id)
-                        if post.user_id not in blocked_senders:
-                            existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                              Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
-                            if not existing_notification:
-                                author = User.query.get(post.user_id)
-                                targets_data = {'gen': '0',
-                                                'post_id': post.id,
-                                                'post_title': post.title,
-                                                'post_body': post.body,
-                                                'author_user_name': author.ap_id if author.ap_id else author.user_name
-                                                }
-                                notification = Notification(user_id=recipient.id,
-                                                            title=_(f"You have been mentioned in post {post.id}"),
-                                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
-                                                            author_id=post.user_id, notif_type=NOTIF_MENTION,
-                                                            subtype='post_mention',
-                                                            targets=targets_data)
-                                recipient.unread_notifications += 1
-                                db.session.add(notification)
-        # remove when lemmy supports flairs
-        # for now only clear tags if there's new ones or if maybe another PieFed instance is trying to remove them
-        if len(flair_tags) > 0 or post.instance.software == 'piefed':
-            post.flair.clear()
-            for ft in flair_tags:
-                flair = find_flair_or_create(ft, post.community_id)
-                if flair:
-                    post.flair.append(flair)
-
-    post.comments_enabled = request_json['object']['commentsEnabled'] if 'commentsEnabled' in request_json['object'] else True
-    try:
-        post.ap_updated = datetime.fromisoformat(request_json['object']['updated']) if 'updated' in request_json['object'] else utcnow()
-    except ValueError:
-        post.ap_updated = utcnow()
-    post.edited_at = utcnow()
-
-    if request_json['object']['type'] == 'Video':
-        # fetching individual user details to attach to votes is probably too convoluted, so take the instance's word for it
-        upvotes = 1  # from OP
-        downvotes = 0
-        endpoints = ['likes', 'dislikes']
-        for endpoint in endpoints:
-            if endpoint in request_json['object']:
-                try:
-                    object_request = get_request(request_json['object'][endpoint], headers={'Accept': 'application/activity+json'})
-                except httpx.HTTPError:
-                    time.sleep(3)
+        if request_json['object']['type'] == 'Video':
+            # fetching individual user details to attach to votes is probably too convoluted, so take the instance's word for it
+            upvotes = 1  # from OP
+            downvotes = 0
+            endpoints = ['likes', 'dislikes']
+            for endpoint in endpoints:
+                if endpoint in request_json['object']:
                     try:
                         object_request = get_request(request_json['object'][endpoint], headers={'Accept': 'application/activity+json'})
                     except httpx.HTTPError:
-                        object_request = None
-                if object_request and object_request.status_code == 200:
-                    try:
-                        object = object_request.json()
-                    except:
+                        time.sleep(3)
+                        try:
+                            object_request = get_request(request_json['object'][endpoint], headers={'Accept': 'application/activity+json'})
+                        except httpx.HTTPError:
+                            object_request = None
+                    if object_request and object_request.status_code == 200:
+                        try:
+                            object = object_request.json()
+                        except:
+                            object_request.close()
+                            object = None
                         object_request.close()
-                        object = None
-                    object_request.close()
-                    if object and 'totalItems' in object:
-                        if endpoint == 'likes':
-                            upvotes += object['totalItems']
-                        if endpoint == 'dislikes':
-                            downvotes += object['totalItems']
+                        if object and 'totalItems' in object:
+                            if endpoint == 'likes':
+                                upvotes += object['totalItems']
+                            if endpoint == 'dislikes':
+                                downvotes += object['totalItems']
 
-        multiplier = 1.0
-        post.up_votes = upvotes * multiplier
-        post.down_votes = downvotes
-        post.score = upvotes - downvotes
-        post.ranking = post.post_ranking(post.score, post.posted_at)
-        post.ranking_scaled = int(post.ranking + post.community.scale_by())
-        # return now for PeerTube, otherwise rest of this function breaks the post
-        db.session.commit()
-        return
-
-    if request_json['object']['type'] == 'Question':
-        # an Update is probably just informing us of new totals, but it could be an Edit to the Poll itself (totalItems for all choices will be 0)
-        mode = 'single'
-        if 'oneOf' in request_json['object']:
-            votes = request_json['object']['oneOf']
-        elif 'anyOf' in request_json['object']:
-            votes = request_json['object']['anyOf']
-            mode = 'multiple'
-        else:
+            multiplier = 1.0
+            post.up_votes = upvotes * multiplier
+            post.down_votes = downvotes
+            post.score = upvotes - downvotes
+            post.ranking = post.post_ranking(post.score, post.posted_at)
+            post.ranking_scaled = int(post.ranking + post.community.scale_by())
+            # return now for PeerTube, otherwise rest of this function breaks the post
+            db.session.commit()
             return
 
-        total_vote_count = 0
-        for vote in votes:
-            if not 'name' in vote:
-                continue
-            if not 'replies' in vote:
-                continue
-            if not 'totalItems' in vote['replies']:
-                continue
+        if request_json['object']['type'] == 'Question':
+            # an Update is probably just informing us of new totals, but it could be an Edit to the Poll itself (totalItems for all choices will be 0)
+            mode = 'single'
+            if 'oneOf' in request_json['object']:
+                votes = request_json['object']['oneOf']
+            elif 'anyOf' in request_json['object']:
+                votes = request_json['object']['anyOf']
+                mode = 'multiple'
+            else:
+                return
 
-            total_vote_count += vote['replies']['totalItems']
+            total_vote_count = 0
+            for vote in votes:
+                if not 'name' in vote:
+                    continue
+                if not 'replies' in vote:
+                    continue
+                if not 'totalItems' in vote['replies']:
+                    continue
 
-        if total_vote_count == 0:  # Edit, not a totals update
-            poll = Poll.query.filter_by(post_id=post.id).first()
-            if poll:
-                if not 'endTime' in request_json['object']:
-                    return
-                poll.end_poll = request_json['object']['endTime']
-                poll.mode = mode
+                total_vote_count += vote['replies']['totalItems']
 
-                db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'),
-                                   {'post_id': post.id})
-                db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
+            if total_vote_count == 0:  # Edit, not a totals update
+                poll = Poll.query.filter_by(post_id=post.id).first()
+                if poll:
+                    if not 'endTime' in request_json['object']:
+                        return
+                    poll.end_poll = request_json['object']['endTime']
+                    poll.mode = mode
 
-                i = 1
-                for vote in votes:
-                    new_choice = PollChoice(post_id=post.id, choice_text=vote['name'], sort_order=i)
-                    db.session.add(new_choice)
-                    i += 1
+                    db.session.execute(text('DELETE FROM "poll_choice_vote" WHERE post_id = :post_id'),
+                                       {'post_id': post.id})
+                    db.session.execute(text('DELETE FROM "poll_choice" WHERE post_id = :post_id'), {'post_id': post.id})
+
+                    i = 1
+                    for vote in votes:
+                        new_choice = PollChoice(post_id=post.id, choice_text=vote['name'], sort_order=i)
+                        db.session.add(new_choice)
+                        i += 1
+                    db.session.commit()
+                return
+
+            # totals Update
+            for vote in votes:
+                choice = PollChoice.query.filter_by(post_id=post.id, choice_text=vote['name']).first()
+                if choice:
+                    choice.num_votes = vote['replies']['totalItems']
+            db.session.commit()
+            # no URLs in Polls to worry about, so return now
+            return
+
+        old_db_entry_to_delete = None
+
+        if request_json['object']['type'] == 'Event':
+            event = Event.query.filter_by(post_id=post.id).first()
+            if event:
+                event.start = datetime.fromisoformat(request_json['object']['startTime'])
+                event.end = datetime.fromisoformat(request_json['object']['endTime'])
+                event.timezone = request_json['object']['timezone']
+                event.max_attendees = request_json['object']['maximumAttendeeCapacity']
+                event.participant_count = request_json['object']['participantCount']
+                event.online_link = request_json['object']['onlineLink']
+                event.join_mode = request_json['object']['joinMode']
+                event.external_participation_url = request_json['object']['externalParticipationUrl']
+                event.anonymous_participation = request_json['object']['anonymousParticipation']
+                event.online = request_json['object']['isOnline']
+                event.buy_tickets_link = request_json['object']['buyTicketsLink']
+                event.event_fee_currency = request_json['object']['feeCurrency']
+                event.event_fee_amount = request_json['object']['feeAmount']
+                if post.image:
+                    post.image.delete_from_disk()
+                    old_db_entry_to_delete = post.image_id
+                if 'image' in request_json['object']:
+                    image = File(source_url=request_json['object']['image']['url'])
+                    db.session.add(image)
+                    db.session.commit()
+                    post.image = image
+                    if get_setting('cache_remote_images_locally', True):
+                        make_image_sizes(image.id, 170, 512, 'posts')
+                else:
+                    post.image_id = None
                 db.session.commit()
-            return
 
-        # totals Update
-        for vote in votes:
-            choice = PollChoice.query.filter_by(post_id=post.id, choice_text=vote['name']).first()
-            if choice:
-                choice.num_votes = vote['replies']['totalItems']
-        db.session.commit()
-        # no URLs in Polls to worry about, so return now
-        return
+        # Links
+        old_url = post.url
+        new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
+        if ('attachment' in request_json['object'] and
+                isinstance(request_json['object']['attachment'], list) and
+                len(request_json['object']['attachment']) > 0 and
+                'type' in request_json['object']['attachment'][0]):
 
-    old_db_entry_to_delete = None
+            for attachment in request_json['object']['attachment']:
+                if attachment['type'] == 'Link':
+                    if 'href' in attachment:
+                        new_url = attachment['href']  # Lemmy < 0.19.4
+                    elif 'url' in attachment:
+                        new_url = attachment['url']  # NodeBB
+                    if new_url:
+                        break
+                elif attachment['type'] == 'Document':
+                    new_url = attachment['url']  # Mastodon
+                    if new_url:
+                        break
+                elif attachment['type'] == 'Audio':  # WordPress podcast
+                    new_url = attachment['url']
+                    if 'name' in attachment:
+                        post.title = attachment['name']
+                    if new_url:
+                        break
+            # Lastly, check for image posts. Mbin sends link posts with both image and link and we want to ignore the image in that case.
+            if not new_url:
+                for attachment in request_json['object']['attachment']:
+                    if attachment['type'] == 'Image':
+                        new_url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
 
-    if request_json['object']['type'] == 'Event':
-        event = Event.query.filter_by(post_id=post.id).first()
-        if event:
-            event.start = datetime.fromisoformat(request_json['object']['startTime'])
-            event.end = datetime.fromisoformat(request_json['object']['endTime'])
-            event.timezone = request_json['object']['timezone']
-            event.max_attendees = request_json['object']['maximumAttendeeCapacity']
-            event.participant_count = request_json['object']['participantCount']
-            event.online_link = request_json['object']['onlineLink']
-            event.join_mode = request_json['object']['joinMode']
-            event.external_participation_url = request_json['object']['externalParticipationUrl']
-            event.anonymous_participation = request_json['object']['anonymousParticipation']
-            event.online = request_json['object']['isOnline']
-            event.buy_tickets_link = request_json['object']['buyTicketsLink']
-            event.event_fee_currency = request_json['object']['feeCurrency']
-            event.event_fee_amount = request_json['object']['feeAmount']
+        if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'],
+                                                                 dict):  # Mastodon / a.gup.pe
+            new_url = request_json['object']['attachment']['url']
+        if new_url:
+            new_domain = domain_from_url(new_url)
+            if new_domain.banned:
+                db.session.commit()
+                return  # reject change to url if new domain is banned
+        if old_url != new_url:
             if post.image:
                 post.image.delete_from_disk()
                 old_db_entry_to_delete = post.image_id
-            if 'image' in request_json['object']:
-                image = File(source_url=request_json['object']['image']['url'])
-                db.session.add(image)
-                db.session.commit()
-                post.image = image
-                if get_setting('cache_remote_images_locally', True):
-                    make_image_sizes(image.id, 170, 512, 'posts')
-            else:
-                post.image_id = None
-            db.session.commit()
-
-    # Links
-    old_url = post.url
-    new_url = '' if post.type == POST_TYPE_EVENT else None      # events don't have a url to set new_url to '' to avoid triggering the "this url has changed" code.
-    if ('attachment' in request_json['object'] and
-            isinstance(request_json['object']['attachment'], list) and
-            len(request_json['object']['attachment']) > 0 and
-            'type' in request_json['object']['attachment'][0]):
-
-        for attachment in request_json['object']['attachment']:
-            if attachment['type'] == 'Link':
-                if 'href' in attachment:
-                    new_url = attachment['href']  # Lemmy < 0.19.4
-                elif 'url' in attachment:
-                    new_url = attachment['url']  # NodeBB
-                if new_url:
-                    break
-            elif attachment['type'] == 'Document':
-                new_url = attachment['url']  # Mastodon
-                if new_url:
-                    break
-            elif attachment['type'] == 'Audio':  # WordPress podcast
-                new_url = attachment['url']
-                if 'name' in attachment:
-                    post.title = attachment['name']
-                if new_url:
-                    break
-        # Lastly, check for image posts. Mbin sends link posts with both image and link and we want to ignore the image in that case.
-        if not new_url:
-            for attachment in request_json['object']['attachment']:
-                if attachment['type'] == 'Image':
-                    new_url = attachment['url']  # PixelFed, PieFed, Lemmy >= 0.19.4
-
-    if 'attachment' in request_json['object'] and isinstance(request_json['object']['attachment'],
-                                                             dict):  # Mastodon / a.gup.pe
-        new_url = request_json['object']['attachment']['url']
-    if new_url:
-        new_domain = domain_from_url(new_url)
-        if new_domain.banned:
-            db.session.commit()
-            return  # reject change to url if new domain is banned
-    if old_url != new_url:
-        if post.image:
-            post.image.delete_from_disk()
-            old_db_entry_to_delete = post.image_id
-        if new_url:
-            thumbnail_url, embed_url = fixup_url(new_url)
-            post.url = embed_url
-            image = None
-            if is_image_url(new_url):
-                post.type = POST_TYPE_IMAGE
-                image = File(source_url=new_url)
-                if isinstance(request_json['object']['attachment'], list) and \
-                        'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
-                    image.alt_text = request_json['object']['attachment'][0]['name']
-            else:
-                if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
-                    image = File(source_url=request_json['object']['image']['url'])
+            if new_url:
+                thumbnail_url, embed_url = fixup_url(new_url)
+                post.url = embed_url
+                image = None
+                if is_image_url(new_url):
+                    post.type = POST_TYPE_IMAGE
+                    image = File(source_url=new_url)
+                    if isinstance(request_json['object']['attachment'], list) and \
+                            'name' in request_json['object']['attachment'][0] and request_json['object']['attachment'][0]['name'] is not None:
+                        image.alt_text = request_json['object']['attachment'][0]['name']
                 else:
-                    # Let's see if we can do better than the source instance did!
-                    opengraph = opengraph_parse(thumbnail_url)
-                    if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
-                        filename = opengraph.get('og:image') or opengraph.get('og:image:url')
-                        if not filename.startswith('/'):
-                            image = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
-                if is_video_hosting_site(embed_url) or is_video_url(new_url):
-                    post.type = POST_TYPE_VIDEO
+                    if 'image' in request_json['object'] and 'url' in request_json['object']['image']:
+                        image = File(source_url=request_json['object']['image']['url'])
+                    else:
+                        # Let's see if we can do better than the source instance did!
+                        opengraph = opengraph_parse(thumbnail_url)
+                        if opengraph and (opengraph.get('og:image', '') != '' or opengraph.get('og:image:url', '') != ''):
+                            filename = opengraph.get('og:image') or opengraph.get('og:image:url')
+                            if not filename.startswith('/'):
+                                image = File(source_url=filename, alt_text=shorten_string(opengraph.get('og:title'), 295))
+                    if is_video_hosting_site(embed_url) or is_video_url(new_url):
+                        post.type = POST_TYPE_VIDEO
+                    else:
+                        post.type = POST_TYPE_LINK
+                if image:
+                    db.session.add(image)
+                    db.session.commit()
+                    post.image = image
+                    make_image_sizes(image.id, 170, 512, 'posts')  # the 512 sized image is for masonry view
                 else:
-                    post.type = POST_TYPE_LINK
-            if image:
-                db.session.add(image)
-                db.session.commit()
-                post.image = image
-                make_image_sizes(image.id, 170, 512, 'posts')  # the 512 sized image is for masonry view
-            else:
-                old_db_entry_to_delete = None
+                    old_db_entry_to_delete = None
 
-            # url domain
-            old_domain = domain_from_url(old_url) if old_url else None
-            if old_domain != new_domain:
-                # notify about links to banned websites.
-                already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
-                targets_data = {'gen': '0',
-                                'post_id': post.id,
-                                'orig_post_title': post.title,
-                                'orig_post_body': post.body,
-                                'orig_post_domain': post.domain,
-                                }
-                if new_domain.notify_mods:
-                    for community_member in post.community.moderators():
-                        notify = Notification(title='Suspicious content', url=post.ap_id,
-                                              user_id=community_member.user_id,
-                                              author_id=1, notif_type=NOTIF_REPORT,
-                                              subtype='post_from_suspicious_domain',
-                                              targets=targets_data)
-                        db.session.add(notify)
-                        already_notified.add(community_member.user_id)
-                if new_domain.notify_admins:
-                    for admin in Site.admins():
-                        if admin.id not in already_notified:
-                            targets_data = {'gen': '0',
-                                            'post_id': post.id,
-                                            'orig_post_title': post.title,
-                                            'orig_post_body': post.body,
-                                            'orig_post_domain': post.domain,
-                                            }
-                            notify = Notification(title='Suspicious content',
-                                                  url=post.ap_id, user_id=admin.id,
+                # url domain
+                old_domain = domain_from_url(old_url) if old_url else None
+                if old_domain != new_domain:
+                    # notify about links to banned websites.
+                    already_notified = set()  # often admins and mods are the same people - avoid notifying them twice
+                    targets_data = {'gen': '0',
+                                    'post_id': post.id,
+                                    'orig_post_title': post.title,
+                                    'orig_post_body': post.body,
+                                    'orig_post_domain': post.domain,
+                                    }
+                    if new_domain.notify_mods:
+                        for community_member in post.community.moderators():
+                            notify = Notification(title='Suspicious content', url=post.ap_id,
+                                                  user_id=community_member.user_id,
                                                   author_id=1, notif_type=NOTIF_REPORT,
                                                   subtype='post_from_suspicious_domain',
                                                   targets=targets_data)
                             db.session.add(notify)
-                new_domain.post_count += 1
-                post.domain = new_domain
+                            already_notified.add(community_member.user_id)
+                    if new_domain.notify_admins:
+                        for admin in Site.admins():
+                            if admin.id not in already_notified:
+                                targets_data = {'gen': '0',
+                                                'post_id': post.id,
+                                                'orig_post_title': post.title,
+                                                'orig_post_body': post.body,
+                                                'orig_post_domain': post.domain,
+                                                }
+                                notify = Notification(title='Suspicious content',
+                                                      url=post.ap_id, user_id=admin.id,
+                                                      author_id=1, notif_type=NOTIF_REPORT,
+                                                      subtype='post_from_suspicious_domain',
+                                                      targets=targets_data)
+                                db.session.add(notify)
+                    new_domain.post_count += 1
+                    post.domain = new_domain
 
-            # Fix-up cross posts (Posts which link to the same url as other posts)
-            if post.cross_posts is not None:
-                post.calculate_cross_posts(url_changed=True)
+                # Fix-up cross posts (Posts which link to the same url as other posts)
+                if post.cross_posts is not None:
+                    post.calculate_cross_posts(url_changed=True)
 
-        else:
-            post.type = POST_TYPE_ARTICLE
-            post.url = ''
-            post.image_id = None
-            if post.cross_posts is not None:  # unlikely, but not impossible
-                post.calculate_cross_posts(delete_only=True)
+            else:
+                post.type = POST_TYPE_ARTICLE
+                post.url = ''
+                post.image_id = None
+                if post.cross_posts is not None:  # unlikely, but not impossible
+                    post.calculate_cross_posts(delete_only=True)
 
-    db.session.commit()
-    if old_db_entry_to_delete:
-        File.query.filter_by(id=old_db_entry_to_delete).delete()
         db.session.commit()
+        if old_db_entry_to_delete:
+            File.query.filter_by(id=old_db_entry_to_delete).delete()
+            db.session.commit()
 
 
 def undo_vote(comment, post, target_ap_id, user):
