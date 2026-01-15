@@ -1783,10 +1783,10 @@ class Post(db.Model):
             else:
                 post.type = constants.POST_TYPE_LINK
                 # remove unnecessary "cross-posted from..." message that Lemmy inserts (only on link posts where we have a UI showing cross-posts)
-                if post.body and 'cross-posted from: https://' in post.body:
+                if post.body and ('cross-posted from: https://' in post.body or 'cross-posted from:  https://' in post.body):
                     lines = []
                     for line in post.body.split('\n'):
-                        if not 'cross-posted from:  https://' in line.strip():
+                        if not 'cross-posted from:  https://' in line.strip() and not 'cross-posted from: https://' in line.strip():
                             lines.append(line)
                     post.body = '\n'.join(lines)
                     post.body_html = markdown_to_html(post.body)
