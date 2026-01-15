@@ -1652,7 +1652,7 @@ def post_search_community_suggestions():
             if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
                 comms.append(c.lemmy_link().replace('!', ''))
             already_added.add(c.id)
-    for c in db.session.query(Community.id, Community.ap_id, Community.title, Community.ap_domain).filter(
+    for c in db.session.query(Community).filter(
             Community.banned == False).order_by(Community.title).all():
         if c.id not in already_added:
             if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
