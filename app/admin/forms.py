@@ -61,8 +61,7 @@ class SiteMiscForm(FlaskForm):
     default_theme = SelectField(_l('Default theme'), coerce=str, render_kw={'class': 'form-select'})
     additional_css = TextAreaField(_l('Additional CSS'))
     additional_js = TextAreaField(_l('Additional JS'))
-    filters = [('subscribed', _l('Subscribed')),
-               ('local', _l('Local')),
+    filters = [('local', _l('Local')),
                ('popular', _l('Popular')),
                ('all', _l('All')),
                ]

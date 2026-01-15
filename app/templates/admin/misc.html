@@ -26,6 +26,7 @@
             {{ render_field(form.additional_js) }}
             <p class="small field_hint">{{ _('JavaScript in this field will be added to every page. Do not include &lt;script&gt; tags.') }}</p>
             {{ render_field(form.default_filter) }}
+            <p class="small field_hint">{{ _('This is for anonymous users. Logged-in users always default to Subscribed') }}</p>
             {{ render_field(form.enable_downvotes) }}
             {{ render_field(form.enable_gif_reply_rep_decrease) }}
             {{ render_field(form.enable_chan_image_filter) }}

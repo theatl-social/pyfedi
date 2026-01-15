@@ -66,8 +66,11 @@ def home_page(sort, view_filter):
 
     if view_filter is None:
         view_filter = current_user.default_filter if current_user.is_authenticated else g.site.default_filter
+        # anonymous users cannot use "subscribed"
+        if current_user.is_anonymous and view_filter == 'subscribed':
+            view_filter = 'popular'
         if view_filter is None:
-            view_filter = 'subscribed'
+            view_filter = 'subscribed' if current_user.is_authenticated else 'popular'
 
     # If nothing has changed since their last visit, return HTTP 304
     current_etag = f"{sort}_{view_filter}_{hash(str(g.site.last_active))}"
