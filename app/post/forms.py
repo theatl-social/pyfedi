@@ -58,7 +58,7 @@ class CrossPostForm(FlaskForm):
     which_community = StringField(_l('Community to post to'), validators=[DataRequired()],
                                   render_kw={'list': 'community_suggestions',
                                              'hx-post': '/post/search_community_suggestions',
-                                             'hx-trigger': 'keyup changed delay: 500ms',
+                                             'hx-trigger': 'keyup changed delay:500ms',
                                              'hx-target': '#community_suggestions',
                                              'hx-swap': 'innerHTML settle:0ms',
                                              'autocomplete': 'off'})
@@ -124,7 +124,7 @@ class MovePostForm(FlaskForm):
     which_community = StringField(_l('Community to move this post to'), validators=[DataRequired()],
                                  render_kw={'list': 'community_suggestions',
                                             'hx-post': '/post/search_community_suggestions',
-                                            'hx-trigger': 'keyup changed delay: 500ms',
+                                            'hx-trigger': 'keyup changed delay:500ms',
                                             'hx-target': '#community_suggestions',
                                             'hx-swap': 'innerHTML settle:0ms',
                                             'autocomplete': 'off'})
