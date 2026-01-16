@@ -1500,7 +1500,7 @@ def can_create_post(user, content: Community) -> bool:
     else:
         if instance_banned(user.instance.domain):   # don't allow posts from defederated instances
             return False
-        if user.ap_domain == 'lemmy.world' and user.created_very_recently() and user.post_count > 3:    # new lemmy.world users can only do 3 posts in their first 24h
+        if user.created_very_recently() and user.post_count > 3:    # new users can only do 3 posts in their first 24h
             return False
 
     if content.banned:
