@@ -135,7 +135,8 @@ def _get_user_moderates(user):
 
     moderates = Community.query.filter_by(banned=False).join(CommunityMember).filter(
         CommunityMember.user_id == user.id). \
-        filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
+        filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner)). \
+        order_by(Community.name)
 
     # Hide private mod communities unless user is admin or viewing their own profile
     if current_user.is_anonymous or (user.id != current_user.id and not current_user.is_admin()):
@@ -166,7 +167,7 @@ def _get_user_subscribed_communities(user):
     if current_user.is_authenticated and (user.id == current_user.get_id()
                                           or current_user.is_staff() or current_user.is_admin()
                                           or user.show_subscribed_communities):
-        return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).all()
+        return Community.query.filter_by(banned=False).join(CommunityMember).filter(CommunityMember.user_id == user.id).order_by(Community.name).all()
     return []
 
 
@@ -616,7 +617,7 @@ def user_settings():
         form.code_style.data = current_user.code_style or 'fruity'
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
-        form.max_hours_per_day.data = request.cookies.get('max_hours_per_day', '');
+        form.max_hours_per_day.data = request.cookies.get('max_hours_per_day', '')
 
     return render_template('user/edit_settings.html', title=_('Change settings'), form=form, user=current_user)
 
