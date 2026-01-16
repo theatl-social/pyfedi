@@ -1519,6 +1519,7 @@ class Post(db.Model):
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
     sticky = db.Column(db.Boolean, default=False, index=True)
+    instance_sticky = db.Column(db.Boolean, default=False, index=True)
     ai_generated = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
     indexable = db.Column(db.Boolean, default=True, index=True)
