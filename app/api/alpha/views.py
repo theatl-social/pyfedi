@@ -43,6 +43,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                    'ai_generated': post.ai_generated if post.ai_generated is not None else False})
         if post.body:
             v1['body'] = post.body
+        if post.deleted and (user_id is None or user_id not in g.admin_ids):
+            v1['body'] = ''
         if post.edited_at:
             v1['edited_at'] = post.edited_at.isoformat(timespec="microseconds") + 'Z'
         if post.deleted == True:
