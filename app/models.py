@@ -1629,6 +1629,9 @@ class Post(db.Model):
                 microblog = True
             else:
                 return None
+            if 'to' in request_json and len(request_json['to']) == 1:
+                if request_json['to'][0].endswith('/followers'):  # Mastodon followers-only posts cannot be accepted because all posts are public in PieFed
+                    return None
         else:
             title = request_json['object']['name'].strip()
         nsfl_in_title = '[NSFL]' in title.upper() or '(NSFL)' in title.upper() or '[COMBAT]' in title.upper()
