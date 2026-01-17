@@ -1430,7 +1430,7 @@ def process_inbox_request(request_json, store_ap_json):
                     post = Post.get_by_ap_id(core_activity['object'])
                     if post is None and origin_community and target_community:
                         # retrieve post from remote instance
-                        post = resolve_remote_post_from_search(core_activity['object'])
+                        post = resolve_remote_post_from_search(core_activity['object'].replace('/context', ''))
                     if origin_community and target_community and post:
                         if user.id == post.user_id or origin_community.is_moderator(user) or (origin_community.instance_id == user.instance_id and origin_community.is_instance_admin(user)):
                             post.move_to(target_community)
@@ -2003,6 +2003,11 @@ def post_nice(community_name, post_id, slug):
     return post_ap(post_id)
 
 
+@bp.route('/c/<community_name>/p/<int:post_id>/<slug>/context', methods=['GET'])
+def post_context_nice(community_name, post_id, slug):
+    return post_ap_context(post_id)
+
+
 @bp.route('/post/<int:post_id>/replies', methods=['GET'])
 def post_replies_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
@@ -2035,7 +2040,7 @@ def post_ap_context(post_id):
         else:
             replies_collection = {}
         replies_collection['@context'] = default_context()
-        replies_collection['id'] = f'https://{current_app.config["SERVER_NAME"]}/post/{post_id}/context'
+        replies_collection['id'] = f'{post.public_url()}/context'
         replies_collection['name'] = post.title
         replies_collection['attributedTo'] = post.community.profile_id()
         replies_collection['audience'] = post.community.profile_id()

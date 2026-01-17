@@ -400,7 +400,7 @@ def move_object(session, user_id, object, origin, target):
       'id': move_id,
       'type': 'Move',
       'actor': user.public_url(),
-      'object': object.public_url(),
+      'object': f'{object.public_url()}/context',
       '@context': default_context(),
       'origin': origin.public_url(),
       'target': target.public_url(),
