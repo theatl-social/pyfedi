@@ -2603,7 +2603,7 @@ class PostReply(db.Model):
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_('Blocked phrase in comment'))
-        if 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
+        if request_json and 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
             reply.indexable = False
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
