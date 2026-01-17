@@ -550,7 +550,7 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
         )
 
         clean_html = pattern.sub(
-            lambda m: "<img width=30 height=30 src='"
+            lambda m: "<img referrerpolicy='no-referrer' width=30 height=30 src='"
             + emoji_replacements[m.group(0).lower()]
             + "'>",
             clean_html,
@@ -1973,10 +1973,8 @@ def can_create_post(user, content: Community) -> bool:
         ):  # don't allow posts from defederated instances
             return False
         if (
-            user.ap_domain == "lemmy.world"
-            and user.created_very_recently()
-            and user.post_count > 3
-        ):  # new lemmy.world users can only do 3 posts in their first 24h
+            user.created_very_recently() and user.post_count > 3
+        ):  # new users can only do 3 posts in their first 24h
             return False
 
     if content.banned:

@@ -1483,7 +1483,7 @@ class UserSaveSettingsRequest(DefaultSchema):
         metadata={"description": "Overrides the show_nsfw field if provided"},
     )
     genai_visibility = fields.String(
-        validate=validate.OneOf(nsfw_visibility_list),
+        validate=validate.OneOf(ai_visibility_list),
         metadata={"description": "Overrides the show_genai field if provided"},
     )
     reply_collapse_threshold = fields.Integer(

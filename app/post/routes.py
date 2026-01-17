@@ -2422,17 +2422,14 @@ def post_search_community_suggestions():
                 comms.append(c.lemmy_link().replace("!", ""))
             already_added.add(c.id)
     for c in (
-        db.session.query(
-            Community.id, Community.ap_id, Community.title, Community.ap_domain
-        )
+        db.session.query(Community)
         .filter(Community.banned == False)
         .order_by(Community.title)
         .all()
     ):
         if c.id not in already_added:
-            display_name = f"{c.title}@{c.ap_domain}"
-            if (c.ap_id and q in c.ap_id) or q in display_name.lower():
-                comms.append(display_name)
+            if (c.ap_id and q in c.ap_id) or q in c.lemmy_link().lower():
+                comms.append(c.lemmy_link().replace("!", ""))
             already_added.add(c.id)
     html = "".join(f"<option value='{c}'>" for c in comms)
     return html

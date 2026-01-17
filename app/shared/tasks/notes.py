@@ -201,6 +201,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
             }
         )
         cc.append(recipient.public_url())
+    tag.extend(reply.tags_for_activitypub())
     language = {"identifier": reply.language_code(), "name": reply.language_name()}
     content_map = {reply.language_code(): reply.body_html}
     source = {"content": reply.body, "mediaType": "text/markdown"}

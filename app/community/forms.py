@@ -233,6 +233,27 @@ class SearchRemoteCommunity(FlaskForm):
     )
     submit = SubmitField(_l("Search"))
 
+    def validate(self, extra_validators=None):
+        if not super().validate():
+            return False
+        if self.address.data.strip() == "":
+            self.address.errors.append(_l("Address is required."))
+            return False
+        elif self.address.data.strip().startswith("https://"):
+            return True
+        else:
+            if not self.address.data.strip().startswith("!"):
+                self.address.errors.append(_l("Address must start with !"))
+                return False
+            elif "@" not in self.address.data.strip():
+                self.address.errors.append(_l("Address must include @"))
+                return False
+            elif "/" in self.address.data.strip():
+                self.address.errors.append(_l("/ cannot be in address"))
+                return False
+
+        return True
+
 
 class BanUserCommunityForm(FlaskForm):
     reason = StringField(
