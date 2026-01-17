@@ -278,6 +278,7 @@ def _get_user_moderates(user):
         .join(CommunityMember)
         .filter(CommunityMember.user_id == user.id)
         .filter(or_(CommunityMember.is_moderator, CommunityMember.is_owner))
+        .order_by(Community.name)
     )
 
     # Hide private mod communities unless user is admin or viewing their own profile
@@ -329,6 +330,7 @@ def _get_user_subscribed_communities(user):
             Community.query.filter_by(banned=False)
             .join(CommunityMember)
             .filter(CommunityMember.user_id == user.id)
+            .order_by(Community.name)
             .all()
         )
     return []
@@ -869,6 +871,14 @@ def user_settings():
         flash(_("Your changes have been saved."), "success")
 
         resp = make_response(redirect(url_for("user.user_settings")))
+        if form.max_hours_per_day.data:
+            resp.set_cookie(
+                "max_hours_per_day",
+                str(form.max_hours_per_day.data),
+                expires=datetime(year=2099, month=12, day=30),
+            )
+        else:
+            resp.set_cookie("max_hours_per_day", "", expires=datetime.min)
         resp.set_cookie(
             "compact_level",
             form.compaction.data,
@@ -904,6 +914,7 @@ def user_settings():
         form.code_style.data = current_user.code_style or "fruity"
         form.additional_css.data = current_user.additional_css
         form.show_subscribed_communities.data = current_user.show_subscribed_communities
+        form.max_hours_per_day.data = request.cookies.get("max_hours_per_day", "")
 
     return render_template(
         "user/edit_settings.html",
