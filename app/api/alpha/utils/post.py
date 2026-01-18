@@ -1085,6 +1085,8 @@ def post_post_feature(auth, data):
             cache.delete_memoized(instance_sticky_posts)
             cache.delete_memoized(instance_sticky_post_ids)
             db.session.commit()
+        else:
+            raise Exception('Only admin users can feature a post locally')
 
     post_json = post_view(post=post, variant=4, user_id=user_id)
     return post_json
