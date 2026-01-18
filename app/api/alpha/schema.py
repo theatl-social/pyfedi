@@ -19,7 +19,7 @@ community_listing_type_list = ["All", "Local", "Subscribed", "Moderating", "Mode
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
-feature_type_list = ["Community"] # "Local" for pinning to top of site isn't supported yet
+feature_type_list = ["Community", "Local"] # "Local" for pinning to top of site isn't supported yet
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
@@ -380,6 +380,7 @@ class Post(DefaultSchema):
     published = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     removed = fields.Boolean(required=True)
     sticky = fields.Boolean(required=True)
+    instance_sticky = fields.Boolean(required=True)
     title = fields.String(required=True)
     user_id = fields.Integer(required=True)
     alt_text = fields.String()
@@ -1359,7 +1360,7 @@ class HidePostRequest(DefaultSchema):
 class FeaturePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     featured = fields.Boolean(required=True)
-    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
+    feature_type = fields.String(validate=validate.OneOf(feature_type_list), metadata={"default": "Community"})
 
 
 class RemovePostRequest(DefaultSchema):
@@ -1412,7 +1413,7 @@ class ListPostsRequest(Schema):
     liked_only = fields.Boolean(metadata={"default": False})
     feed_id = fields.Integer()
     topic_id = fields.Integer()
-    ignore_sticky = fields.Boolean(metadata={"default": False, "description": "If filtering by community, ignores a post's sticky state"})
+    ignore_sticky = fields.Boolean(metadata={"default": False, "description": "Ignores a post's sticky state when sorting"})
 
 
 class ListPostsRequest2(ListPostsRequest):

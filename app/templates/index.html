@@ -31,8 +31,10 @@
             {% for post in posts -%}
                 {% include 'post/_post_teaser.html' %}
             {% else -%}
-                <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
-                <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
+                {% if not instance_stickies -%}
+                    <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
+                    <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
+                {% endif -%}
             {% endfor -%}
         </div>
 

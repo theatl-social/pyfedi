@@ -30,7 +30,7 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
 
     # Variant 1 - models/post/post.dart
     if variant == 1:
-        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky', 'emoji_reactions']
+        include = ['id', 'title', 'user_id', 'community_id', 'deleted', 'sticky', 'instance_sticky', 'emoji_reactions']
         v1 = {column.name: getattr(post, column.name) for column in post.__table__.columns if column.name in include}
 
         v1.update({'published': post.posted_at.isoformat(timespec="microseconds") + 'Z',
