@@ -53,8 +53,29 @@
                 </a>
             </li>
         {% else -%}
-            <li><a href="{{ url_for('post.post_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex"><span class="fe fe-sticky"></span>
-                {{ _('Sticky') }}</a></li>
+            <li>
+                <a href="{{ url_for('post.post_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                    <span class="fe fe-sticky"></span>
+                    {{ _('Sticky') }}
+                </a>
+            </li>
+        {% endif -%}
+        {% if current_user.get_id() in admin_ids -%}
+            {% if post.instance_sticky -%}
+                <li>
+                    <a href="{{ url_for('post.post_instance_sticky', post_id=post.id, mode='no') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                        <span class="fe fe-unsticky text-success"></span>
+                        {{ _('Un-sticky from instance') }}
+                    </a>
+                </li>
+            {% else -%}
+                <li>
+                    <a href="{{ url_for('post.post_instance_sticky', post_id=post.id, mode='yes') }}" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                        <span class="fe fe-sticky text-success"></span>
+                        {{ _('Sticky to instance') }}
+                    </a>
+                </li>
+            {% endif -%}
         {% endif -%}
         {% if post.comments_enabled -%}
             <li>

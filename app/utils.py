@@ -2924,6 +2924,8 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
     elif sort == 'active':
         post_id_where.append('p.reply_count > 0 ')
         post_id_sort = 'ORDER BY p.last_active DESC'
+    # Filter out posts stickied to the instance, they are handled separately
+    post_id_where.append('p.instance_sticky is false ')
     final_post_id_sql = f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     post_ids = db.session.execute(text(final_post_id_sql), params).all()
     post_ids = dedupe_post_ids(post_ids, limit_to_visible=(community_ids[0] != -1))
@@ -2949,6 +2951,118 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     elif sort == 'active':
         posts = posts.order_by(desc(Post.last_active))
     return posts
+
+
+@cache.memoize(timeout=3600)
+def instance_sticky_post_ids():
+    post_ids = db.session.execute(text('SELECT id FROM "post" WHERE instance_sticky = :sticky AND deleted = :deleted AND status > 0'),
+                                  {"sticky": True, "deleted": False}).all()
+    post_ids = [post_id[0] for post_id in post_ids]
+    return post_ids
+
+
+@cache.memoize(timeout=3600)
+def instance_sticky_posts(sort: str):
+    posts = Post.query.filter(Post.instance_sticky == True, Post.deleted == False, Post.status > 0)
+    if sort == '' or sort == 'hot':
+        posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort == 'scaled':
+        posts = posts.order_by(desc(Post.ranking_scaled)).order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort.startswith('top'):
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == 'new':
+        posts = posts.order_by(desc(Post.posted_at))
+    elif sort == 'old':
+        posts = posts.order_by(asc(Post.posted_at))
+    elif sort == 'active':
+        posts = posts.order_by(desc(Post.last_active))
+    return posts.all()
+
+
+def get_instance_stickies(community_ids: List[int], sort: str):
+    posts = instance_sticky_posts(sort=sort)
+    visible_posts = []
+    if len(community_ids) == 1 and community_ids[0] < 0:
+        all_communities = True
+    else:
+        all_communities = False
+
+    # Check each post in turn and only return list of posts that should be displayed
+    if current_user.is_anonymous:
+        for post in posts:
+            # Only show NSFW/NSFL to anon users if content warning enabled
+            if not current_app.config['CONTENT_WARNING']:
+                if post.nsfw or post.nsfl:
+                    continue
+            # Community not in main feed view filter
+            if post.community_id not in community_ids and not all_communities:
+                continue
+
+            # Post should be visible
+            visible_posts.append(post)
+    else:
+        hidden_post_ids = db.session.execute(text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+                                             {"user_id": current_user.id}).all()
+        hidden_post_ids = [post_id[0] for post_id in hidden_post_ids]
+        if current_user.hide_read_posts:
+            read_post_ids = db.session.execute(text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                                               {"user_id": current_user.id}).all()
+            read_post_ids = [read_post_id[0] for read_post_id in read_post_ids]
+        else:
+            read_post_ids = []
+        domain_ids = blocked_domains(current_user.id)
+        instance_ids = blocked_or_banned_instances(current_user.id)
+        blocked_community_ids = blocked_communities(current_user.id)
+        blocked_accounts = blocked_users(current_user.id)
+        banned_from = communities_banned_from(current_user.id)
+
+        for post in posts:
+            # All the different reasons a post might be filtered out
+            # Community not in main feed view filter
+            if post.community_id not in community_ids and not all_communities:
+                continue
+            # User hides bot posts
+            if current_user.ignore_bots == 1 and post.from_bot:
+                continue
+            # User hides NSFL posts
+            if current_user.hide_nsfl == 1 and post.nsfl:
+                continue
+            # User hides NSFW posts
+            if current_user.hide_nsfw == 1 and post.nsfw:
+                continue
+            # User has marked post as read and hides read posts
+            if post.id in read_post_ids:
+                continue
+            # User hides gen AI posts
+            if current_user.hide_gen_ai == 1 and post.ai_generated:
+                continue
+            # User has hidden the post
+            if post.id in hidden_post_ids:
+                continue
+            # User does not have the post's language enabled
+            if current_user.read_language_ids and len(current_user.read_language_ids) > 0:
+                if post.language_id is not None and post.language_id not in current_user.read_language_ids:
+                    continue
+            # User has blocked the post's domain
+            if post.domain_id is not None and post.domain_id in domain_ids:
+                continue
+            # User has blocked the post's instance
+            if post.instance_id is not None and post.instance_id in instance_ids:
+                continue
+            # User has blocked the post's community
+            if post.community_id in blocked_community_ids:
+                continue
+            # User has blocked the post's author
+            if post.user_id in blocked_accounts:
+                continue
+            # User has been banned from the post's community
+            if post.community_id in banned_from:
+                continue
+
+            # We made it past all the filters, this post should be displayed
+            visible_posts.append(post)
+    
+    return visible_posts
 
 
 def total_comments_on_post_and_cross_posts(post_id):

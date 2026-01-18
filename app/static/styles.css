@@ -1256,6 +1256,12 @@ ul.form-multicheck-columns li {
 .post_list {
   clear: both;
 }
+.post_list .instance_sticky {
+  border-bottom: solid 2px var(--bs-success-border-subtle);
+}
+.post_list .instance_sticky > .post_teaser {
+  border-bottom: none !important;
+}
 .post_list .post_teaser {
   border-bottom: solid 2px #ddd;
   padding-top: 8px;

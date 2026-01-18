@@ -665,6 +665,15 @@ ul.form-multicheck-columns {
 
 .post_list {
   clear: both;
+
+  .instance_sticky {
+    border-bottom: solid 2px var(--bs-success-border-subtle);
+
+    > .post_teaser {
+      border-bottom: none !important;
+    }
+  }
+
   .post_teaser {
 
     border-bottom: solid 2px $light-grey;

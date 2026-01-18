@@ -23,6 +23,11 @@
             </div>
         </div>
         <div class="post_list h-feed">
+            {% for post in instance_stickies -%}
+                <div class="bg-secondary-subtle instance_sticky">
+                    {% include 'post/_post_teaser.html' %}
+                </div>
+            {% endfor -%}
             {% for post in posts -%}
                 {% include 'post/_post_teaser.html' %}
             {% else -%}
