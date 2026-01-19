@@ -613,7 +613,10 @@ def honey_pot(whatever=None):
         redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
 
     if whatever:
-        return show_post(int(whatever))
+        try:
+            return show_post(int(whatever))
+        except Exception as e:
+            pass
     return ''
 
 
