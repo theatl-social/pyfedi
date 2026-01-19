@@ -497,6 +497,8 @@ server {
         expires max;
         access_log off;
     }
+    
+    client_max_body_size 100M;
 
 }
 ```
