@@ -2325,8 +2325,8 @@ def process_chat(user, store_ap_json, core_activity, session):
         return False
         
     recipient = find_actor_or_create_cached(recipient_ap_id)
-    recipient = session.query(User).get(recipient.id)   # for some reason find_actor_or_create_cached was giving me a user from the wrong DB session, causing an exception later on.
     if recipient and recipient.is_local():
+        recipient = session.query(User).get(recipient.id)  # for some reason find_actor_or_create_cached was giving me a user from the wrong DB session, causing an exception later on.
         if sender.created_very_recently():
             log_incoming_ap(id, APLOG_CHATMESSAGE, APLOG_FAILURE, saved_json, 'Sender is too new')
             return True
