@@ -530,10 +530,6 @@ def handle_bold_em(text: str) -> str:
     re_bold = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
-    # Third, sub any that are single for italics
-    re_em = re.compile(r"(\*|_)(?=\S)(.*?\S)\1", re.S)
-    text = re_em.sub(r"<em>\2</em>", text)
-
     # Step 3: Restore code blocks
     text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
 
