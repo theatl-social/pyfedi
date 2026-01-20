@@ -672,6 +672,13 @@ ul.form-multicheck-columns {
     > .post_teaser {
       border-bottom: none !important;
     }
+
+    .post_teaser_title_a::before {
+      font-family: 'Feather' !important;
+      content: "\e9d5 ";
+      color: var(--bs-success);
+      margin-right: 0.25em;
+    }
   }
 
   .post_teaser {
