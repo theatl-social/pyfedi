@@ -304,7 +304,7 @@ class SearchRequest(DefaultSchema):
     })
     community_name = fields.String()
     community_id = fields.Integer()
-    minimun_upvotes = fields.Integer()
+    minimum_upvotes = fields.Integer()
     nsfw = fields.String(validate=validate.OneOf(search_nsfw))
 
 
