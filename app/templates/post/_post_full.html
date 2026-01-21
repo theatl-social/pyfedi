@@ -40,7 +40,11 @@
                     {% else -%}
                         [{{ _('deleted') }}]
                     {% endif -%}
-                {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
+                {% if user_flair and post.author.id in user_flair -%}
+                    <span class="user_flair">{{ user_flair[post.author.id] }}</span>
+                {% elif post.author.id in user_pronouns and user_pronouns[post.author.id] not in post.author.display_name() %}
+                    <span class="user_flair pronouns">{{ user_pronouns[post.author.id] }}</span>
+                {% endif %}
                 {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
             {% endif -%}
         </div>
@@ -391,7 +395,11 @@
             {% else -%}
                 [{{ _('deleted') }}]
             {% endif -%}
-            {% if user_flair and post.author.id in user_flair %}<span class="user_flair">{{ user_flair[post.author.id] }}</span>{% endif %}
+            {% if user_flair and post.author.id in user_flair -%}
+                <span class="user_flair">{{ user_flair[post.author.id] }}</span>
+            {% elif post.author.id in user_pronouns and user_pronouns[post.author.id] not in post.author.display_name() %}
+                <span class="user_flair pronouns">{{ user_pronouns[post.author.id] }}</span>
+            {% endif %}
             {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
         {% endif -%}
     </div>

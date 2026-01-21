@@ -60,7 +60,7 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    site_language_code, block_honey_pot, joined_communities, moderating_communities
+    site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns
 
 
 @login_required_if_private_instance
@@ -325,7 +325,8 @@ def show_post(post_id: int):
                                    recipient_language_id=recipient_language_id,
                                    recipient_language_code=recipient_language_code,
                                    recipient_language_name=recipient_language_name,
-                                   author_banned=author_banned
+                                   author_banned=author_banned,
+                                   user_pronouns=user_pronouns()
                                    )
         response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link',
@@ -699,6 +700,7 @@ def continue_discussion(post_id, comment_id):
                                recently_upvoted_replies=recently_upvoted_replies,
                                recently_downvoted_replies=recently_downvoted_replies,
                                community=post.community, parent_id=parent_id,
+                               user_pronouns = user_pronouns(),
                                SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None)
 
@@ -758,6 +760,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
                                show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                                user_flair=user_flair if current_user.is_authenticated else {},
+                               user_pronouns=user_pronouns(),
                                upvoted_class='',
                                downvoted_class='')
     response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
@@ -865,6 +868,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
                                recipient_language_code=recipient_language_code,
                                recipient_language_name=recipient_language_name,
                                in_reply_to=in_reply_to, author_banned=author_banned,
+                               user_pronouns=user_pronouns(),
                                low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1')
     else:
         content = request.form.get('body', '').strip()

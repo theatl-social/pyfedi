@@ -14,10 +14,11 @@ from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.shared.domain import block_domain, unblock_domain
-from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_or_banned_instances, \
+from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, \
+    blocked_or_banned_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
     return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
-    moderating_communities_ids, block_honey_pot
+    moderating_communities_ids, block_honey_pot, user_pronouns
 
 
 @bp.route('/d/<domain_id>', methods=['GET', 'POST'])
@@ -88,6 +89,7 @@ def show_domain(domain_id):
                                    next_url=next_url, prev_url=prev_url, form=form,
                                    content_filters=content_filters, recently_upvoted=recently_upvoted,
                                    recently_downvoted=recently_downvoted,
+                                   user_pronouns=user_pronouns(),
                                    reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                    joined_communities=joined_or_modding_communities(current_user.get_id()),
                                    moderated_community_ids=moderating_communities_ids(current_user.get_id()),

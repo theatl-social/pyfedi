@@ -29,7 +29,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
     communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
-    blocked_or_banned_instances, blocked_communities, block_honey_pot
+    blocked_or_banned_instances, blocked_communities, block_honey_pot, user_pronouns
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -750,6 +750,7 @@ def show_feed(feed):
                                recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                                reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                user_notes=user_notes(current_user.get_id()),
+                               user_pronouns=user_pronouns(),
                                inoculation=inoculation[
                                    randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,

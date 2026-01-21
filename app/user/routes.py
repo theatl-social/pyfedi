@@ -42,7 +42,7 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_or_banned_instances, blocked_domains, get_task_session, \
-    patch_db_session, user_in_restricted_country, referrer
+    patch_db_session, user_in_restricted_country, referrer, user_pronouns
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -330,6 +330,7 @@ def edit_profile(actor):
             # Log error but don't fail the profile update
             current_app.logger.error(f"LDAP sync failed for user {current_user.user_name}: {e}")
 
+        cache.delete_memoized(user_pronouns)
         flash(_('Your changes have been saved.'), 'success')
 
         return redirect(url_for('user.edit_profile', actor=actor))

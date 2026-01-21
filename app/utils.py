@@ -38,7 +38,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select
+from sqlalchemy import text, or_, desc, asc, event, select, func
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -56,7 +56,7 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji, UserExtraField
 
 
 # Flask's render_template function, with support for themes added
@@ -3758,6 +3758,19 @@ def rewrite_href(url: str) -> str:
                 return f'/comment/{post_reply.id}'
 
     return url
+
+
+@cache.memoize(timeout=600)
+def user_pronouns() -> defaultdict:
+    result = defaultdict(str)
+    pronouns = db.session.query(UserExtraField).filter(func.lower(UserExtraField.label) == 'pronouns')
+    for pronoun in pronouns:
+        if len(pronoun.text) <= 22:
+            if '<' in pronoun.text and '>' in pronoun.text:
+                result[pronoun.user_id] = html_to_text(pronoun.text)
+            else:
+                result[pronoun.user_id] = pronoun.text
+    return result
 
 
 def expand_hex_color(text: str) -> str:
