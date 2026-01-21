@@ -400,6 +400,7 @@ def post_lazy_replies(post_id, nonce):
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff() if current_user.is_authenticated else False,
                            low_bandwidth=request.cookies.get('low_bandwidth', '0') == '1',
                            user_flair=user_flair if current_user.is_authenticated else {},
+                           user_pronouns=user_pronouns(),
                            upvoted_class='',
                            downvoted_class='')
 
