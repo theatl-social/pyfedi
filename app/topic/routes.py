@@ -20,9 +20,10 @@ from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
     gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, blocked_communities, \
-    recently_upvoted_posts, recently_downvoted_posts, blocked_or_banned_instances, blocked_users, joined_or_modding_communities, \
+    recently_upvoted_posts, recently_downvoted_posts, blocked_or_banned_instances, blocked_users, \
+    joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
-    approval_required, block_honey_pot
+    approval_required, block_honey_pot, user_pronouns
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -184,6 +185,7 @@ def show_topic(topic_path):
                                moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                show_post_community=True, recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
+                               user_pronouns=user_pronouns(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,

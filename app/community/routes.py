@@ -55,7 +55,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
     approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
-    moderating_communities_ids_all_users, block_honey_pot
+    moderating_communities_ids_all_users, block_honey_pot, user_pronouns
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
@@ -624,6 +624,7 @@ def show_community(community: Community):
                            community_flair=get_comm_flair_list(community),
                            recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
                            community_feeds=community_feeds,
+                           user_pronouns=user_pronouns(),
                            canonical=community.profile_id(), can_upvote_here=can_upvote(user, community),
                            can_downvote_here=can_downvote(user, community),
                            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed",
