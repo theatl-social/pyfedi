@@ -3010,19 +3010,11 @@ def get_instance_stickies(community_ids: List[int], sort: str):
             read_post_ids = [read_post_id[0] for read_post_id in read_post_ids]
         else:
             read_post_ids = []
-        domain_ids = blocked_domains(current_user.id)
-        instance_ids = blocked_or_banned_instances(current_user.id)
-        blocked_community_ids = blocked_communities(current_user.id)
-        blocked_accounts = blocked_users(current_user.id)
-        banned_from = communities_banned_from(current_user.id)
 
         for post in posts:
             # All the different reasons a post might be filtered out
             # Community not in main feed view filter
             if post.community_id not in community_ids and not all_communities:
-                continue
-            # User hides bot posts
-            if current_user.ignore_bots == 1 and post.from_bot:
                 continue
             # User hides NSFL posts
             if current_user.hide_nsfl == 1 and post.nsfl:
@@ -3033,30 +3025,8 @@ def get_instance_stickies(community_ids: List[int], sort: str):
             # User has marked post as read and hides read posts
             if post.id in read_post_ids:
                 continue
-            # User hides gen AI posts
-            if current_user.hide_gen_ai == 1 and post.ai_generated:
-                continue
             # User has hidden the post
             if post.id in hidden_post_ids:
-                continue
-            # User does not have the post's language enabled
-            if current_user.read_language_ids and len(current_user.read_language_ids) > 0:
-                if post.language_id is not None and post.language_id not in current_user.read_language_ids:
-                    continue
-            # User has blocked the post's domain
-            if post.domain_id is not None and post.domain_id in domain_ids:
-                continue
-            # User has blocked the post's instance
-            if post.instance_id is not None and post.instance_id in instance_ids:
-                continue
-            # User has blocked the post's community
-            if post.community_id in blocked_community_ids:
-                continue
-            # User has blocked the post's author
-            if post.user_id in blocked_accounts:
-                continue
-            # User has been banned from the post's community
-            if post.community_id in banned_from:
                 continue
 
             # We made it past all the filters, this post should be displayed
