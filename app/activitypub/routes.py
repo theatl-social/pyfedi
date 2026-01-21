@@ -35,7 +35,7 @@ from app.utils import gibberish, get_setting, community_membership, ap_datetime,
     community_moderators, html_to_text, add_to_modlog, instance_banned, get_redis_connection, \
     feed_membership, get_task_session, patch_db_session, \
     blocked_phrases, orjson_response, moderating_communities, joined_communities, moderating_communities_ids, \
-    moderating_communities_ids_all_users, publish_sse_event
+    moderating_communities_ids_all_users, publish_sse_event, blocked_users
 
 
 @bp.route('/testredis')
@@ -2209,7 +2209,7 @@ def process_upvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_LIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
     if can_upvote(user, liked.community) and not instance_banned(user.instance.domain):
-        if isinstance(liked, (Post, PostReply)):
+        if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(liked.author.id):
             liked.vote(user, 'upvote', emoji)
             log_incoming_ap(id, APLOG_LIKE, APLOG_SUCCESS, saved_json)
             if not announced:
@@ -2229,11 +2229,13 @@ def process_downvote(user, store_ap_json, request_json, announced):
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_FAILURE, saved_json, 'Unfound object ' + ap_id)
         return
     if can_downvote(user, liked.community) and not instance_banned(user.instance.domain):
-        if isinstance(liked, (Post, PostReply)):
+        if isinstance(liked, (Post, PostReply)) and user.id not in blocked_users(liked.author.id):
             liked.vote(user, 'downvote', None)
             log_incoming_ap(id, APLOG_DISLIKE, APLOG_SUCCESS, saved_json)
             if not announced:
                 announce_activity_to_followers(liked.community, user, request_json, can_batch=True)
+        else:
+            log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
     else:
         log_incoming_ap(id, APLOG_DISLIKE, APLOG_IGNORED, saved_json, 'Cannot downvote this')
 
