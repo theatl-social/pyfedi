@@ -911,11 +911,13 @@ def post_options(post_id: int):
             abort(404)
 
     existing_bookmark = []
+    hidden = False
     if current_user.is_authenticated:
         existing_bookmark = PostBookmark.query.filter(PostBookmark.post_id == post_id,
                                                       PostBookmark.user_id == current_user.id).first()
+        hidden = current_user.has_hidden_post(post)
 
-    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark)
+    return render_template('post/post_options.html', post=post, existing_bookmark=existing_bookmark, hidden=hidden)
 
 
 @bp.route('/post/<int:post_id>/comment/<int:comment_id>/options_menu', methods=['GET'])

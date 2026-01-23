@@ -99,12 +99,21 @@
             </a>
         </li>
     {% endif -%}
-    <li>
-        <a href="#" data-url="{{ url_for('post.post_hide', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
-            <span class="fe fe-hide"></span>
-            {{ _('Hide this post from me') }}
-        </a>
-    </li>
+    {% if hidden -%}
+        <li>
+            <a href="#" data-url="{{ url_for('post.post_hide', post_id=post.id, mode='no') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-hide"></span>
+                {{ _('Stop hiding this post from me') }}
+            </a>
+        </li>
+    {% else -%}
+        <li>
+            <a href="#" data-url="{{ url_for('post.post_hide', post_id=post.id, mode='yes') }}" style="white-space: normal" class="send_post dropdown-item no-underline" rel="nofollow noindex">
+                <span class="fe fe-hide"></span>
+                {{ _('Hide this post from me') }}
+            </a>
+        </li>
+    {% endif -%}
     {% if post.user_id == current_user.id and not post.mea_culpa -%}
         <li>
             <a href="{{ url_for('post.post_mea_culpa', post_id=post.id) }}" style="white-space: normal" class="dropdown-item no-underline">
