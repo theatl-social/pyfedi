@@ -548,14 +548,14 @@ def shared_inbox():
     try:
         request_json = request.get_json(force=True)
     except werkzeug.exceptions.BadRequest as e:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description)
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Unable to parse json body: ' + e.description +  str(request.user_agent))
         return '', 400
     except BlockingIOError:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Client disconnected while sending JSON body')
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Client disconnected while sending JSON body ' + str(request.user_agent))
         return '', 400
 
     if request_json is None:
-        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Empty JSON body')
+        log_incoming_ap('', APLOG_NOTYPE, APLOG_FAILURE, None, 'Empty JSON body ' + str(request.user_agent))
         return "", 400
 
     pause_federation = redis_client.get('pause_federation')
