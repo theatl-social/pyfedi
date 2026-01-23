@@ -2761,10 +2761,12 @@ form {
         }
 
         .emoji {
-          margin: 1px 3px;
+          margin: 3px 3px;
+          padding: 3px 0px;
           height: 1.2143em;
           width: 1.2143em;
           flex-shrink: 0;
+          overflow: hidden;
 
           img {
             margin-top: -2px;
@@ -2781,6 +2783,7 @@ form {
         font-size: 90%;
         margin: 0 3px;
         line-height: 1.0317em;
+        align-self: center;
     }
 
     .message_reaction:hover .message_reaction_count {
