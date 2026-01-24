@@ -27,6 +27,7 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
+from app.auth.util import send_email_verification, random_token
 from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
@@ -1672,6 +1673,29 @@ def admin_user_edit(user_id):
             form.role.data = user.roles[0].id
 
     return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user)
+
+@bp.route('/user/<int:user_id>/resend_email', methods=['POST'])
+@permission_required('administer all users')
+@login_required
+def admin_user_resend_email(user_id):
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    if not is_htmx:
+        abort(400)
+    
+    user = User.query.get_or_404(user_id)
+    
+    # Create verification token if it doesn't exist already or else verification is impossible
+    if not user.verification_token:
+        user.verification_token = random_token(16)
+        db.session.commit()
+
+    try:
+        send_email_verification(user)
+        message = "Verification email sent!"
+    except Exception as e:
+        message = "Problem sending email: " + str(e)
+    
+    return message
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
