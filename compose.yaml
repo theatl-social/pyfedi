@@ -1,12 +1,43 @@
 services:
 
   db:
-    shm_size: 512mb
+    shm_size: 2gb
     image: postgres:17
     restart: unless-stopped
     user: "1000:1000"
     env_file:
      - ./.env.docker
+    command:
+      - postgres
+      # Memory
+      - -c
+      - shared_buffers=1GB
+      - -c
+      - effective_cache_size=3GB
+      - -c
+      - work_mem=32MB
+      - -c
+      - maintenance_work_mem=256MB
+
+      # WAL / checkpoints
+      - -c
+      - checkpoint_completion_target=0.9
+      - -c
+      - wal_buffers=16MB
+      - -c
+      - max_wal_size=4GB
+      - -c
+      - min_wal_size=1GB
+
+      # Query planner
+      - -c
+      - random_page_cost=1.1
+      - -c
+      - effective_io_concurrency=200
+
+      # Connections
+      - -c
+      - max_connections=150
     volumes:
      - ./pgdata:/var/lib/postgresql/data
     networks:
