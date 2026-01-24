@@ -139,7 +139,8 @@ def after_request(response):
                     # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
                     if current_user.is_authenticated:
                         response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
-            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
+            if current_app.config['HTTP_PROTOCOL'] == 'https':
+                response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
                 response.headers['X-Frame-Options'] = 'DENY'
