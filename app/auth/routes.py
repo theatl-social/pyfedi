@@ -25,6 +25,7 @@ from app.auth.util import (
     handle_banned_user,
     get_country,
     send_email_verification,
+    random_token,
 )
 from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
@@ -103,6 +104,12 @@ def resend_email():
     if form.validate_on_submit():
         form.email.data = form.email.data.strip()
         user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
+
+        # Create verification token if it doesn't exist already or else verification is impossible
+        if not user.verification_token:
+            user.verification_token = random_token(16)
+            db.session.commit()
+
         if user:
             try:
                 send_email_verification(user)
