@@ -27,6 +27,16 @@
             {{ render_field(form.bot_override) }}
             {{ render_field(form.suppress_crossposts) }}
             {{ render_field(form.verified) }}
+            {% if not user.verified -%}
+                <p>
+                    <a class="btn btn-primary" href="#" role="button"
+                            hx-post="{{ url_for('admin.admin_user_resend_email', user_id=user.id) }}" 
+                            hx-target="this" 
+                            hx-swap="outerHTML">
+                        {{ _('Resend verification email') }}
+                    </a>
+                </p>
+            {% endif -%}
             {{ render_field(form.banned) }}
             {{ render_field(form.ban_posts) }}
             {{ render_field(form.ban_comments) }}
