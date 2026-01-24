@@ -356,7 +356,6 @@ def user_profile(actor):
             else:
                 return ''
         if is_activitypub_request():
-            server = current_app.config['SERVER_NAME']
             actor_data = {"@context": default_context(),
                           "type": "Person" if not user.bot else "Service",
                           "id": user.public_url(),
@@ -374,7 +373,7 @@ def user_profile(actor):
                               "publicKeyPem": user.public_key
                           },
                           "endpoints": {
-                              "sharedInbox": f"https://{server}/inbox"
+                              "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
                           },
                           "published": ap_datetime(user.created),
                           }
@@ -485,7 +484,7 @@ def community_profile(actor):
                               "publicKeyPem": community.public_key
                           },
                           "endpoints": {
-                              "sharedInbox": f"https://{server}/inbox"
+                              "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
                           },
                           "published": ap_datetime(community.created_at),
                           "updated": ap_datetime(community.last_active),
@@ -2460,7 +2459,7 @@ def feed_profile(actor, feed_owner=None):
                               "publicKeyPem": feed.public_key
                           },
                           "endpoints": {
-                              "sharedInbox": f"https://{server}/inbox"
+                              "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
                           },
                           "published": ap_datetime(feed.created_at),
                           "updated": ap_datetime(feed.last_edit),
