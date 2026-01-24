@@ -190,10 +190,13 @@ def register(app):
                 print('The admin user created here should be reserved for admin tasks and not used as a primary daily identity (unless this instance will only be for personal use).')
                 user_name = input("Admin user name (ideally not 'admin'): ")
                 email = input("Admin email address: ")
-                password = input("Admin password: ")
                 while '@' in user_name or ' ' in user_name:
                     print('User name cannot be an email address or have spaces.')
                     user_name = input("Admin user name (ideally not 'admin'): ")
+                password = input("Admin password: ")
+                while len(password) < 8:
+                    print('Password must be at least 8 characters')
+                    password = input("Admin password: ")
                 verification_token = random_token(16)
                 private_key, public_key = RsaKeys.generate_keypair()
                 admin_user = User(user_name=user_name, title=user_name,
