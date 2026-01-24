@@ -35,6 +35,16 @@
                     <option value="30" {{ 'selected' if last_seen == 30 }}>30 days</option>
                 </select>
             </div>
+            <div style="display:inline">
+                <label for="verified">
+                    {{ _('Email verified?' ) }}
+                </label>
+                <select name="verified" class="form-control-sm submit_on_change">
+                    <option value="">Any</option>
+                    <option value="verified" {{ 'selected' if verified == 'verified' }}>Yes</option>
+                    <option value="unverified" {{ 'selected' if verified == 'unverified' }}>No</option>
+                </select>
+            <div>
             <input type="hidden" name="sort_by" value="{{ sort_by }}">
         </form>
         <table class="table table-striped mt-1">

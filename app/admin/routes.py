@@ -1435,6 +1435,7 @@ def admin_users():
     local_remote = request.args.get('local_remote', '')
     sort_by = request.args.get('sort_by', 'last_seen DESC')
     last_seen = request.args.get('last_seen', 0, type=int)
+    verified = request.args.get('verified', '')
 
     sort_by_btn = request.args.get('sort_by_btn', '')
     if sort_by_btn:
@@ -1451,6 +1452,10 @@ def admin_users():
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     if 'attitude' in sort_by:
         users = users.filter(User.attitude != None)
+    if verified == 'verified':
+        users = users.filter(User.verified == True)
+    elif verified == 'unverified':
+        users = users.filter(User.verified == False)
     users = users.order_by(safe_order_by(sort_by, User, {'user_name', 'banned', 'reports', 'attitude', 'reputation', 'created', 'last_seen'}))
     users = users.paginate(page=page, per_page=500, error_out=False)
 
@@ -1461,8 +1466,7 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
-                           user_notes=user_notes(current_user.get_id()),
-                           )
+                           user_notes=user_notes(current_user.get_id()), verified=verified)
 
 
 @bp.route('/content', methods=['GET'])
