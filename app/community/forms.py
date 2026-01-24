@@ -160,7 +160,7 @@ class SearchRemoteCommunity(FlaskForm):
         if self.address.data.strip() == '':
             self.address.errors.append(_l('Address is required.'))
             return False
-        elif self.address.data.strip().startswith('https://'):
+        elif self.address.data.strip().startswith('https://') or self.address.data.strip().startswith('http://'):
             return True
         else:
             if not self.address.data.strip().startswith('!'):

@@ -133,7 +133,7 @@ def feed_add_remote():
             ...
         elif '@' in address:
             new_feed = search_for_feed('~' + address)
-        elif address.startswith('https://'):
+        elif address.startswith('https://') or address.startswith('http://'):
             server, feed = extract_domain_and_actor(address)
             new_feed = search_for_feed('~' + feed + '@' + server)
         else:

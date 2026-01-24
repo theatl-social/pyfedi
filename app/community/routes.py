@@ -172,7 +172,7 @@ def add_remote():
             ...
         elif '@' in address:
             new_community = search_for_community('!' + address)
-        elif address.startswith('https://'):
+        elif address.startswith('https://') or address.startswith('http://'):
             server, community = extract_domain_and_actor(address)
             new_community = search_for_community('!' + community + '@' + server)
         else:

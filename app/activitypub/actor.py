@@ -230,7 +230,7 @@ def fetch_actor_from_webfinger(address: str, server: str):
 def create_actor_from_remote(actor_address: str, community_only=False,
                              feed_only=False) -> User | Community | Feed | None:
     """Create a new actor from remote data."""
-    if actor_address.startswith('https://'):
+    if actor_address.startswith('https://') or actor_address.startswith('http://'):
         server, address = extract_domain_and_actor(actor_address)
         actor_json = fetch_remote_actor_data(actor_address)
     else:
@@ -286,7 +286,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False, allow_ba
         return None
 
     # For remote actors
-    if actor_url.startswith('https://'):
+    if actor_url.startswith('https://') or actor_url.startswith('http://'):
         actor = find_remote_actor(actor_url)
 
         if actor:
