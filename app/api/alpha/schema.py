@@ -659,6 +659,11 @@ class GetCommunityResponse(DefaultSchema):
     site = fields.Nested(Site)
 
 
+class GetFeedRequest(DefaultSchema):
+    id = fields.Integer()
+    name = fields.String()
+
+
 class GetSuggestCompletionRequest(DefaultSchema):
     q = fields.String()
 
