@@ -1825,10 +1825,15 @@ def new_instance_profile_task(instance_id: int):
     try:
         with patch_db_session(session):
             instance: Instance = session.query(Instance).get(instance_id)
+            protocol = 'https'
             try:
-                instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
+                instance_data = get_request(f"{protocol}://{instance.domain}", headers={'Accept': 'application/activity+json'})
             except:
-                return
+                try:
+                    instance_data = get_request(f"http://{instance.domain}", headers={'Accept': 'application/activity+json'})
+                    protocol = 'http'
+                except:
+                    return
             if instance_data.status_code == 200:
                 try:
                     instance_json = instance_data.json()
@@ -1836,16 +1841,16 @@ def new_instance_profile_task(instance_id: int):
                 except Exception:
                     instance_json = {}
                 if 'type' in instance_json and instance_json['type'] == 'Application':
-                    instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
+                    instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"{protocol}://{instance.domain}/inbox"
                     instance.outbox = instance_json['outbox']
                 else:  # it's pretty much always /inbox so just assume that it is for whatever this instance is running
-                    instance.inbox = f"https://{instance.domain}/inbox"
+                    instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
                 # retrieve list of Admins from /api/v3/site, update InstanceRole
                 try:
-                    response = get_request(f'https://{instance.domain}/api/v3/site')
+                    response = get_request(f'{protocol}://{instance.domain}/api/v3/site')
                 except:
                     response = None
 
@@ -1876,13 +1881,13 @@ def new_instance_profile_task(instance_id: int):
                                         InstanceRole.role == 'admin').delete()
                                     session.commit()
             elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
-                instance.inbox = f"https://{instance.domain}/inbox"
+                instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
             headers = {'Accept': 'application/activity+json'}
             try:
-                nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
+                nodeinfo = get_request(f"{protocol}://{instance.domain}/.well-known/nodeinfo", headers=headers)
                 if nodeinfo.status_code == 200:
                     nodeinfo_json = nodeinfo.json()
                     for links in nodeinfo_json['links']:
