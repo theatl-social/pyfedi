@@ -1691,9 +1691,9 @@ def admin_user_resend_email(user_id):
 
     try:
         send_email_verification(user)
-        message = "Verification email sent!"
+        message = _("Verification email sent!")
     except Exception as e:
-        message = "Problem sending email: " + str(e)
+        message = _("Problem sending email: ") + str(e)
     
     return message
 
