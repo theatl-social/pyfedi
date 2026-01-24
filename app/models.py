@@ -1515,6 +1515,7 @@ class Post(db.Model):
     mea_culpa = db.Column(db.Boolean, default=False)
     has_embed = db.Column(db.Boolean, default=False)
     reply_count = db.Column(db.Integer, default=0, index=True)
+    reply_count_cross_posted = db.Column(db.Integer, default=0)
     score = db.Column(db.Integer, default=0, index=True)  # used for 'top' ranking
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
@@ -2570,6 +2571,7 @@ class PostReply(db.Model):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
             reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound
         from app.activitypub.util import notify_about_post_reply
+        from app import redis_client
 
         if session is None:
             session = db.session
@@ -2667,14 +2669,25 @@ class PostReply(db.Model):
             cache.delete_memoized(recently_upvoted_post_replies, user.id)
 
         reply.ap_id = reply.profile_id()
-        if not user.bot:
-            post.reply_count += 1
-            post.community.post_reply_count += 1
-            post.community.last_active = post.last_active = utcnow()
-        session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
-                           {'user_id': user.id})
-        session.execute(text('UPDATE "site" SET last_active = NOW()'))
-        session.commit()
+
+        with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+            if not user.bot:
+                post.reply_count += 1
+                post.community.post_reply_count += 1
+                post.community.last_active = post.last_active = utcnow()
+            session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
+                               {'user_id': user.id})
+            session.execute(text('UPDATE "site" SET last_active = NOW()'))
+            session.commit()
+
+            # update reply_count_cross_posted
+            if post.cross_posts and len(post.cross_posts) > 0:
+                ids = [post.id, *post.cross_posts]
+
+                total = (session.query(db.func.sum(Post.reply_count)).filter(Post.id.in_(ids)).scalar()) or 0
+                session.query(Post).filter(Post.id.in_(ids)).update({"reply_count_cross_posted": total}, synchronize_session=False)
+
+                session.commit()
 
         # LLM Detection
         if reply.body and '—' in reply.body and user.created_very_recently():

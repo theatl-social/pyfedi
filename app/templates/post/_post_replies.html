@@ -1,5 +1,5 @@
 {% if replies or more_replies -%}
-<h2 class="visually-hidden">{{ post.reply_count }} {{ _('Comments') }}</h2>
+<h2 class="visually-hidden">{{ post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count }} {{ _('Comments') }}</h2>
 <div class="row">
     <div class="col">
         {% if current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}

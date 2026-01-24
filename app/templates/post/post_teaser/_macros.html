@@ -68,7 +68,7 @@
 {% set POST_TYPE_POLL = 5 -%}
 <div class="post_utilities_bar">
     <div class="post_replies_link">
-        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments: %(number)d', number=post.reply_count) }}">{{ post.reply_count }}</span><span class="visually-hidden"> comments</span></a>
+        <a href="{{ post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id, sort='new' if sort == 'active' else None) }}#post_replies" {{ 'target="_blank"' if embed }} aria-label="{{ _('View comments') }}"><span class="fe fe-reply"></span> <span aria-label="{{ _('Number of comments: %(number)d', number=post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count) }}">{{ post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count }}</span><span class="visually-hidden"> comments</span></a>
     </div>
     <div class="voting_buttons_new" data-base-url="/post/{{ post.id }}" aria-live="assertive">
         {% if current_user.is_authenticated and current_user.verified -%}

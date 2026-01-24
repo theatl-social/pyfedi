@@ -459,7 +459,7 @@
     <div class="post_utilities_bar">
         <div class="post_reply_count">
             <a href="#post_replies">
-                <span class="fe fe-reply"></span><span class="post_reply_count_text"> {{ post.reply_count }}</span>
+                <span class="fe fe-reply"></span><span class="post_reply_count_text"> {{ post.reply_count_cross_posted if post.reply_count_cross_posted else post.reply_count }}</span>
             </a>
         </div>
         <div class="voting_buttons_new" aria-live="assertive" data-base-url="/post/{{ post.id}}">
