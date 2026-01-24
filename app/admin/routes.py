@@ -2014,7 +2014,7 @@ def admin_community_move(community_id, new_owner):
         else:
             move_community_images_to_here.delay(community.id)
 
-        new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
+        new_url = f'{current_app.config["SERVER_URL"]}/c/{community.link()}'
         flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.',
                 community_name=old_name, new_url=new_url))
 

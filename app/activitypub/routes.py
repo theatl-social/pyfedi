@@ -338,14 +338,14 @@ def user_profile(actor):
         else:
             user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
             user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
             if user is None:
-                user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor.lower()}', ap_id=None).first()
+                user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
 
     if user is not None:
         if request.method == 'HEAD':
@@ -1912,7 +1912,7 @@ def community_followers(actor):
     if community is not None:
         result = {
             "@context": default_context(),
-            "id": f'https://{current_app.config["SERVER_NAME"]}/c/{actor}/followers',
+            "id": f'{current_app.config["SERVER_URL"]}/c/{actor}/followers',
             "type": "Collection",
             "totalItems": community_members(community.id),
             "items": []
@@ -2619,7 +2619,7 @@ def feed_followers(actor):
         if feed is not None:
             result = {
                 "@context": default_context(),
-                "id": f'https://{current_app.config["SERVER_NAME"]}/f/{actor}/followers',
+                "id": f'{current_app.config["SERVER_URL"]}/f/{actor}/followers',
                 "type": "Collection",
                 "totalItems": db.session.query(FeedMember).filter_by(feed_id=feed.id).count(),
                 "items": []

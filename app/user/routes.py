@@ -729,7 +729,7 @@ def ban_profile(actor):
         if '@' in actor:
             user = find_actor_or_create(actor, create_if_not_found=False)
         else:
-            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+            user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
         if user is None:
             abort(404)
 
@@ -790,7 +790,7 @@ def block_profile(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
 
@@ -835,7 +835,7 @@ def user_block_instance(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
     block_remote_instance(user.instance_id, SRC_WEB)
@@ -865,7 +865,7 @@ def unblock_profile(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
 
@@ -901,7 +901,7 @@ def report_profile(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
     if user is None:
         abort(404)
     form = ReportUserForm()
@@ -966,7 +966,7 @@ def delete_profile(actor):
         if '@' in actor:
             user = find_actor_or_create(actor, create_if_not_found=False)
         else:
-            user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+            user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}',
                                         create_if_not_found=False)
         if user is None:
             abort(404)
@@ -1994,7 +1994,7 @@ def user_feeds(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
 
     if user is None:
         abort(404)
@@ -2018,7 +2018,7 @@ def show_profile_rss(actor):
     if '@' in actor:
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
-        user = find_actor_or_create(f'https://{current_app.config["SERVER_NAME"]}/u/{actor}', create_if_not_found=False)
+        user = find_actor_or_create(f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False)
 
     if user is not None:
         # If nothing has changed since their last visit, return HTTP 304

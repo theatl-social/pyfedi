@@ -151,7 +151,7 @@ def post_to_page(post: Post):
         "stickied": post.sticky,
         "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
-        "replies": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/replies',
+        "replies": f'{current_app.config["SERVER_URL"]}/post/{post.id}/replies',
         "language": {
             "identifier": post.language_code(),
             "name": post.language_name()

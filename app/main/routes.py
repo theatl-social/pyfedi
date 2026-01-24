@@ -892,7 +892,7 @@ def test_s3():
 @bp.route('/test_hashing')
 @debug_mode_only
 def test_hashing():
-    hash = retrieve_image_hash(f'https://{current_app.config["SERVER_NAME"]}/static/images/apple-touch-icon.png')
+    hash = retrieve_image_hash(f'{current_app.config["SERVER_URL"]}/static/images/apple-touch-icon.png')
     if hash:
         return 'Ok'
     else:
@@ -1061,7 +1061,7 @@ def static_manifest():
         manifest = json.load(f)
 
     # Modify manifest
-    manifest['id'] = f'https://{current_app.config["SERVER_NAME"]}'
+    manifest['id'] = f'{current_app.config["SERVER_URL"]}'
     manifest['name'] = g.site.name if g.site.name else 'PieFed'
     manifest['description'] = g.site.description if g.site.description else ''
     

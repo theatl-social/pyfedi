@@ -305,7 +305,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False, allow_ba
     else:
         user: User = User.query.filter(or_(User.user_name == actor_url)).filter_by(ap_id=None).first()
         if user is None:
-            user = User.query.filter_by(ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor_url.lower()}',
+            user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor_url.lower()}',
                                         ap_id=None).first()
         return user
 
