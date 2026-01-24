@@ -75,7 +75,7 @@ def join_community(send_async, user_id, community_id, src):
             session.add(join_request)
             session.commit()
 
-            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+            follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
             follow = {
               'id': follow_id,
               'type': 'Follow',
@@ -129,7 +129,7 @@ def leave_community(send_async, user_id, community_id):
            instance_banned(community.instance.domain)):
             return
 
-        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
         follow = {
           'id': follow_id,
           'type': 'Follow',
@@ -137,7 +137,7 @@ def leave_community(send_async, user_id, community_id):
           'object': community.public_url(),
           'to': [community.public_url()]
         }
-        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
         undo = {
           'id': undo_id,
           'type': 'Undo',
@@ -182,8 +182,8 @@ def leave_feed(send_async, user_id, feed_id):
         
         # This code is based on feed.feed_unsubscribe and leave_community above
         if not feed.instance.gone_forever:
-            follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{uuid}"
-            undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+            follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{uuid}"
+            undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
             follow = {
                 "actor": user.public_url(),
                 "to": [feed.public_url()],

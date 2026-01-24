@@ -178,7 +178,7 @@ def show_topic(topic_path):
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                tags=hashtags_used_in_communities(community_ids, content_filters),
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
-                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
+                               rss_feed=f"{current_app.config['SERVER_URL']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
                                reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                user_notes=user_notes(current_user.get_id()),
@@ -217,21 +217,21 @@ def show_topic_rss(topic_path):
         posts = post_ids_to_models(post_ids, 'new')
 
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}")
+        fg.id(f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}")
         fg.title(f'{topic.name} on {g.site.name}')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}", rel='alternate')
-        fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+        fg.link(href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}", rel='alternate')
+        fg.logo(f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png")
         fg.subtitle(' ')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}.rss", rel='self')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}.rss", rel='self')
         fg.language('en')
 
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith('text/'):

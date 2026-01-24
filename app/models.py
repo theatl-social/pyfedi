@@ -230,7 +230,7 @@ class Conversation(db.Model):
         return ''
         # most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
         # if most_recent_message and most_recent_message.ap_id:
-        #    return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
+        #    return f"{current_app.config.server_name()}/private_message/{most_recent_message.id}"
         # else:
         #    return ''
 
@@ -388,7 +388,7 @@ class File(db.Model):
                     os.unlink(self.file_path)
                 except FileNotFoundError:
                     ...
-                purge_from_cache.append(self.file_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+                purge_from_cache.append(self.file_path.replace('app/', f"{current_app.config['SERVER_URL']}/"))
 
         if self.thumbnail_path:
             if self.thumbnail_path.startswith(
@@ -402,7 +402,7 @@ class File(db.Model):
                 except FileNotFoundError:
                     ...
                 purge_from_cache.append(
-                    self.thumbnail_path.replace('app/', f"https://{current_app.config['SERVER_NAME']}/"))
+                    self.thumbnail_path.replace('app/', f"{current_app.config['SERVER_URL']}/"))
         if self.source_url:
             if self.source_url.startswith(f'https://{current_app.config["S3_PUBLIC_URL"]}') and _store_files_in_s3():
                 s3_path = self.source_url.replace(f'https://{current_app.config["S3_PUBLIC_URL"]}/', '')
@@ -410,7 +410,7 @@ class File(db.Model):
                 purge_from_cache.append(self.source_url)
             elif self.source_url.startswith('http') and current_app.config['SERVER_NAME'] in self.source_url:
                 try:
-                    os.unlink(self.source_url.replace(f"https://{current_app.config['SERVER_NAME']}/", 'app/'))
+                    os.unlink(self.source_url.replace(f"{current_app.config['SERVER_URL']}/", 'app/'))
                 except FileNotFoundError:
                     ...
                 purge_from_cache.append(self.source_url)
@@ -724,21 +724,21 @@ class Community(db.Model):
         return self.id in [cb.community_id for cb in community_bans]
 
     def profile_id(self):
-        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['SERVER_URL']}/c/{self.name}"
         return retval.lower()
 
     def public_url(self):
-        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.name}"
+        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['SERVER_URL']}/c/{self.name}"
         return result
 
     def is_local(self):
-        return self.ap_id is None or self.profile_id().startswith(f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}")
+        return self.ap_id is None or self.profile_id().startswith(f"{current_app.config['SERVER_URL']}")
 
     def local_url(self):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
+            return f"{current_app.config['SERVER_URL']}/c/{self.ap_id}"
 
     def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
@@ -1332,11 +1332,11 @@ class User(UserMixin, db.Model):
             join(CommunityMember).filter(CommunityMember.is_banned == False, CommunityMember.user_id == self.id).all()
 
     def profile_id(self):
-        result = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
+        result = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['SERVER_URL']}/u/{self.user_name.lower()}"
         return result
 
     def public_url(self):
-        return self.ap_public_url if self.ap_public_url else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+        return self.ap_public_url if self.ap_public_url else f"{current_app.config['SERVER_URL']}/u/{self.user_name}"
 
     def created_recently(self):
         return self.created and self.created > utcnow() - timedelta(days=7)
@@ -1917,7 +1917,7 @@ class Post(db.Model):
                                     from app.utils import get_recipient_language
                                     with force_locale(get_recipient_language(recipient.id)):
                                         notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in post {post.id}"),
-                                                                    url=f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                    url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                                                     author_id=post.user_id, notif_type=NOTIF_MENTION,
                                                                     subtype='post_mention',
                                                                     targets=targets_data)
@@ -2224,7 +2224,7 @@ class Post(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/post/{self.id}"
+            return f"{current_app.config['SERVER_URL']}/post/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -2766,7 +2766,7 @@ class PostReply(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/comment/{self.id}"
+            return f"{current_app.config['SERVER_URL']}/comment/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -3722,11 +3722,11 @@ class Feed(db.Model):
                 return SUBSCRIPTION_NONMEMBER
 
     def profile_id(self):
-        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        retval = self.ap_profile_id if self.ap_profile_id else f"{current_app.config['SERVER_URL']}/f/{self.name}"
         return retval.lower()
 
     def public_url(self):
-        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/f/{self.name}"
+        result = self.ap_public_url if self.ap_public_url else f"{current_app.config['SERVER_URL']}/f/{self.name}"
         return result
 
     def is_local(self):
@@ -3736,7 +3736,7 @@ class Feed(db.Model):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
+            return f"{current_app.config['SERVER_URL']}/f/{self.ap_id}"
 
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(NotificationSubscription.entity_id == self.id,

@@ -66,6 +66,7 @@ app_bcrypt = Bcrypt()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    app.config["SERVER_URL"] = f"{app.config['HTTP_PROTOCOL']}://{app.config['SERVER_NAME']}"
 
     if app.config['SENTRY_DSN']:
         import sentry_sdk

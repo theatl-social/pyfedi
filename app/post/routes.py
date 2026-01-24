@@ -507,7 +507,7 @@ def post_oembed(post_id):
             "version": "1.0",
             "type": "rich",
             "provider_name": g.site.name,
-            "provider_url": f"https://{current_app.config['SERVER_NAME']}",
+            "provider_url": f"{current_app.config['SERVER_URL']}",
             "title": post.title,
             "html": f"<p><iframe src='{iframe_url}' class='piefed-embed' style='max-width: 100%; border: 0' width='400' allowfullscreen='allowfullscreen'></iframe><script src='https://{current_app.config['SERVER_NAME']}/static/js/embed.js' async='async'></script></p>",
             "width": 400,
@@ -1063,7 +1063,7 @@ def post_edit(post_id: int):
                 # This is fallback for existing entries
                 if not path:
                     path = "app/" + post.image.source_url.replace(
-                        f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/", ""
+                        f"{current_app.config['SERVER_URL']}/", ""
                     )
                 if not path.startswith('http'):
                     try:
@@ -1925,7 +1925,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                 "actor": current_user.public_url(),
                 "to": ["https://www.w3.org/ns/activitystreams#Public"],
                 "object": {
-                    'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                     'type': 'Delete',
                     'actor': current_user.public_url(),
                     'audience': post.community.public_url(),
@@ -1940,7 +1940,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                 "cc": [post.community.public_url()],
                 "audience": post.community.public_url(),
                 "type": "Undo",
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+                "id": f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
             }
             if was_mod_deletion:
                 delete_json['object']['summary'] = "Deleted by mod"
@@ -1953,7 +1953,7 @@ def post_reply_restore(post_id: int, comment_id: int):
 
             else:  # local community - send it to followers on remote instances
                 announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
                     "type": 'Announce',
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"

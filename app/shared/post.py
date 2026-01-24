@@ -500,7 +500,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             else:
                 raise Exception('filetype not allowed')
 
-        url = f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+        url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
 
         if current_app.config['IMAGE_HASHING_ENDPOINT'] and not is_video_url(final_place):
             hash = retrieve_image_hash(url)
@@ -824,7 +824,7 @@ def report_post(post: Post, input, src, auth=None):
             if moderator.is_local():
                 with force_locale(get_recipient_language(moderator.id)):
                     notification = Notification(user_id=mod.user_id, title=gettext('A post has been reported'),
-                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                                 author_id=reporter_user.id, notif_type=NOTIF_REPORT,
                                                 subtype='post_reported',
                                                 targets=targets_data)

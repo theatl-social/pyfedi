@@ -408,7 +408,7 @@ def delete_post_from_community_task(post_id, user_id):
 
                 if not community.local_only:
                     delete_json = {
-                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                         'type': 'Delete',
                         'actor': user.public_url(),
                         'audience': post.community.public_url(),
@@ -424,7 +424,7 @@ def delete_post_from_community_task(post_id, user_id):
                         send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
                     else:  # local community - send it to followers on remote instances
                         announce = {
-                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
                             "type": 'Announce',
                             "to": [
                                 "https://www.w3.org/ns/activitystreams#Public"
@@ -472,7 +472,7 @@ def delete_post_reply_from_community_task(post_reply_id, user_id):
                 # federate delete
                 if not post.community.local_only:
                     delete_json = {
-                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                         'type': 'Delete',
                         'actor': user.public_url(),
                         'audience': post.community.public_url(),
@@ -489,7 +489,7 @@ def delete_post_reply_from_community_task(post_reply_id, user_id):
 
                     else:  # local community - send it to followers on remote instances
                         announce = {
-                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
                             "type": 'Announce',
                             "to": [
                                 "https://www.w3.org/ns/activitystreams#Public"

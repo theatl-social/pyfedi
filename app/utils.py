@@ -1847,9 +1847,9 @@ def finalize_user_setup(user):
 
     # Only set AP profile IDs if they haven't been set already
     if user.ap_profile_id is None:
-        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
-        user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
-        user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
+        user.ap_profile_id = f"{current_app.config['SERVER_URL']}/u/{user.user_name}".lower()
+        user.ap_public_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name}"
+        user.ap_inbox_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name.lower()}/inbox"
 
     # find all notifications from this registration and mark them as read
     reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION, author_id=user.id)

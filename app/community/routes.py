@@ -609,35 +609,35 @@ def show_community(community: Community):
         is_dead = False
 
     resp = make_response(render_template('community/community.html', community=community, title=community.title,
-                           breadcrumbs=breadcrumbs, is_dead=is_dead,
-                           is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
-                           comments=comments, upcoming_events=upcoming_events, has_events=has_events,
-                           description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
-                           POST_TYPE_LINK=POST_TYPE_LINK,
-                           POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
-                           SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
-                           SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER,
-                           SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                           etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}",
-                           related_communities=related_communities,
-                           next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
-                           community_flair=get_comm_flair_list(community),
-                           recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                           community_feeds=community_feeds,
-                           user_pronouns=user_pronouns(),
-                           canonical=community.profile_id(), can_upvote_here=can_upvote(user, community),
-                           can_downvote_here=can_downvote(user, community),
-                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed",
-                           rss_feed_name=f"{community.title} on {g.site.name}",
-                           content_filters=content_filters, sort=sort, flair=flair, show_post_community=False,
-                           tags=hashtags_used_in_community(community.id, content_filters),
-                           reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
-                           user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
-                           moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-                           inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                           post_layout=post_layout, content_type=content_type, current_app=current_app,
-                           user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
-                           current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
+                                         breadcrumbs=breadcrumbs, is_dead=is_dead,
+                                         is_moderator=is_moderator, is_owner=is_owner, is_admin=is_admin, mods=mod_list, posts=posts,
+                                         comments=comments, upcoming_events=upcoming_events, has_events=has_events,
+                                         description=description, og_image=og_image, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                                         POST_TYPE_LINK=POST_TYPE_LINK,
+                                         POST_TYPE_VIDEO=POST_TYPE_VIDEO, POST_TYPE_POLL=POST_TYPE_POLL,
+                                         SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING,
+                                         SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER,
+                                         SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                                         etag=f"{community.id}{sort}{post_layout}_{hash(community.last_active)}",
+                                         related_communities=related_communities,
+                                         next_url=next_url, prev_url=prev_url, low_bandwidth=low_bandwidth, un_moderated=un_moderated,
+                                         community_flair=get_comm_flair_list(community),
+                                         recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                         community_feeds=community_feeds,
+                                         user_pronouns=user_pronouns(),
+                                         canonical=community.profile_id(), can_upvote_here=can_upvote(user, community),
+                                         can_downvote_here=can_downvote(user, community),
+                                         rss_feed=f"{current_app.config['SERVER_URL']}/community/{community.link()}/feed",
+                                         rss_feed_name=f"{community.title} on {g.site.name}",
+                                         content_filters=content_filters, sort=sort, flair=flair, show_post_community=False,
+                                         tags=hashtags_used_in_community(community.id, content_filters),
+                                         reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                                         user_notes=user_notes(current_user.get_id()), banned_from_community=banned_from_community,
+                                         moderated_community_ids=moderating_communities_ids(current_user.get_id()),
+                                         inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
+                                         post_layout=post_layout, content_type=content_type, current_app=current_app,
+                                         user_has_feeds=user_has_feeds, current_feed_id=current_feed_id,
+                                         current_feed_title=current_feed_title, user_flair=user_flair, sticky_posts=sticky_posts))
     if current_user.is_anonymous:
         resp.headers.set('Cache-Control', 'public, max-age=30')
     else:
@@ -673,27 +673,27 @@ def show_community_rss(actor):
         description = shorten_string(community.description, 150) if community.description else None
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.id(f"{current_app.config['SERVER_URL']}/c/{actor}")
         fg.title(f'{community.title} on {g.site.name}')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}", rel='alternate')
         if og_image:
             fg.logo(og_image)
         else:
-            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+            fg.logo(f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png")
         if description:
             fg.subtitle(description)
         else:
             fg.subtitle(' ')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}/feed", rel='self')
         fg.language('en')
 
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith('text/'):
@@ -822,7 +822,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                                     "to": [community.public_url()],
                                     "object": community.public_url(),
                                     "type": "Follow",
-                                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                                    "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                                 }
                                 send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key', timeout=10)
 
@@ -867,13 +867,13 @@ def unsubscribe(actor):
                 # Undo the Follow
                 if '@' in actor:  # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
-                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == 'ovo.st':
                             join_request = CommunityJoinRequest.query.filter_by(user_id=current_user.id,
                                                                                 community_id=community.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
-                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
+                        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
                         follow = {
                             "actor": current_user.public_url(),
                             "to": [community.public_url()],
@@ -936,7 +936,7 @@ def join_then_add(actor):
                     "to": [community.public_url()],
                     "object": community.public_url(),
                     "type": "Follow",
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                    "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                 }
                 send_post_request(community.ap_inbox_url, follow, current_user.private_key,
                                   current_user.public_url() + '#main-key')

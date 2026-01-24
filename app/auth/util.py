@@ -409,7 +409,7 @@ def find_user(user_name):
     if not user:
         user = User.query.filter_by(email=username, ap_id=None, deleted=False).first()
     if not user:
-        ap_id = f"https://{current_app.config['SERVER_NAME']}/u/{username.lower()}"
+        ap_id = f"{current_app.config['SERVER_URL']}/u/{username.lower()}"
         user = User.query.filter(User.ap_profile_id.ilike(ap_id), User.deleted.is_(False)).first()
 
     return user

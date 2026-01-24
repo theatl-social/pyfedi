@@ -98,8 +98,8 @@ def local_communities():
 
 def post_to_activity(post: Post, community: Community):
     # local PieFed posts do not have a create or announce id
-    create_id = post.ap_create_id if post.ap_create_id else f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
-    announce_id = post.ap_announce_id if post.ap_announce_id else f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+    create_id = post.ap_create_id if post.ap_create_id else f"{current_app.config['SERVER_URL']}/activities/create/{gibberish(15)}"
+    announce_id = post.ap_announce_id if post.ap_announce_id else f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
     activity_data = {
         "actor": community.public_url(),
         "to": [
@@ -619,7 +619,7 @@ def refresh_user_profile_task(user_id):
                     try:
                         site = session.query(Site).get(1)
                         actor_data = signed_get_request(user.ap_public_url, site.private_key,
-                                                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                                                        f"{current_app.config['SERVER_URL']}/actor#main-key")
                     except:
                         return
                 if actor_data.status_code == 200:
@@ -2428,10 +2428,10 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                     with force_locale(get_recipient_language(recipient.id)):
                         notification = Notification(user_id=recipient.id, title=gettext(
                             f"You have been mentioned in comment {post_reply.id}"),
-                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                            author_id=user.id, notif_type=NOTIF_MENTION,
-                            subtype='comment_mention',
-                            targets=targets_data)
+                                                    url=f"{current_app.config['SERVER_URL']}/comment/{post_reply.id}",
+                                                    author_id=user.id, notif_type=NOTIF_MENTION,
+                                                    subtype='comment_mention',
+                                                    targets=targets_data)
                         recipient.unread_notifications += 1
                         db.session.add(notification)
                         db.session.commit()
@@ -2775,7 +2775,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                 blocked_senders = blocked_users(recipient.id)
                                 if reply.user_id not in blocked_senders:
                                     existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                                      Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                                                                                      Notification.url == f"{current_app.config['SERVER_URL']}/comment/{reply.id}").first()
                                     if not existing_notification:
                                         author = User.query.get(reply.user_id)
                                         targets_data = {'gen': '0',
@@ -2786,7 +2786,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                                         }
                                         with force_locale(get_recipient_language(recipient.id)):
                                             notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
-                                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                                        url=f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                                                                         author_id=reply.user_id, notif_type=NOTIF_MENTION,
                                                                         subtype='comment_mention',
                                                                         targets=targets_data)
@@ -2883,7 +2883,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                             blocked_senders = blocked_users(recipient.id)
                             if post.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                                  Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
+                                                                                  Notification.url == f"{current_app.config['SERVER_URL']}/post/{post.id}").first()
                                 if not existing_notification:
                                     author = User.query.get(post.user_id)
                                     targets_data = {'gen': '0',
@@ -2894,7 +2894,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                                                     }
                                     notification = Notification(user_id=recipient.id,
                                                                 title=_(f"You have been mentioned in post {post.id}"),
-                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                                                 author_id=post.user_id, notif_type=NOTIF_MENTION,
                                                                 subtype='post_mention',
                                                                 targets=targets_data)
@@ -3272,7 +3272,7 @@ def process_report(user, reported, request_json, session):
         already_notified = set()
         for mod in reported.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
+                                        url=f"{current_app.config['SERVER_URL']}/post/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='post_reported',
                                         targets=targets_data)
@@ -3309,7 +3309,7 @@ def process_report(user, reported, request_json, session):
         already_notified = set()
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
+                                        url=f"{current_app.config['SERVER_URL']}/comment/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='comment_reported',
                                         targets=targets_data)
@@ -3334,12 +3334,12 @@ def lemmy_site_data():
                 "sidebar": site.sidebar,
                 "published": site.created_at.isoformat(),
                 "updated": site.updated.isoformat(),
-                "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+                "icon": f"{current_app.config['SERVER_URL']}{logo}",
                 "banner": "",
                 "description": site.description,
-                "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+                "actor_id": f"{current_app.config['SERVER_URL']}/",
                 "last_refreshed_at": site.updated.isoformat(),
-                "inbox_url": f"https://{current_app.config['SERVER_NAME']}/inbox",
+                "inbox_url": f"{current_app.config['SERVER_URL']}/inbox",
                 "public_key": site.public_key,
                 "instance_id": 1
             },
@@ -3525,11 +3525,11 @@ def remote_object_to_json(uri):
     elif object_request.status_code == 401:
         site = Site.query.get(1)
         try:
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
         except httpx.HTTPError:
             time.sleep(3)
             try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
             except httpx.HTTPError:
                 return None
         try:
@@ -3795,11 +3795,11 @@ def verify_object_from_source(request_json):
     elif object_request.status_code == 401:
         site = Site.query.get(1)
         try:
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
         except httpx.HTTPError:
             time.sleep(3)
             try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
             except httpx.HTTPError:
                 return None
         try:
@@ -3972,7 +3972,7 @@ def proactively_delete_content(community: Community, ap_id: str):
         deletor = db.session.query(User).get(1)
     if deletor:
 
-        delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+        delete_id = f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}"
         to = ["https://www.w3.org/ns/activitystreams#Public"]
         cc = [community.public_url()]
         delete = {
@@ -3986,7 +3986,7 @@ def proactively_delete_content(community: Community, ap_id: str):
           'summary': 'Automatic deletion due to block'
         }
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         to = ["https://www.w3.org/ns/activitystreams#Public"]

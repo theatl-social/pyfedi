@@ -109,9 +109,9 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
         community = None
         communities = []
         cc = []
-        target = f"https://{current_app.config['SERVER_NAME']}/"
+        target = f"{current_app.config['SERVER_URL']}/"
 
-    block_id = f"https://{current_app.config['SERVER_NAME']}/activities/block/{gibberish(15)}"
+    block_id = f"{current_app.config['SERVER_URL']}/activities/block/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     block = {
       'id': block_id,
@@ -132,7 +132,7 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
 
     if is_undo:
         del block['@context']
-        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
         undo = {
           'id': undo_id,
           'type': 'Undo',
@@ -168,7 +168,7 @@ def ban_person(session, user_id, mod_id, community_id, expiry, reason, is_undo=F
     # community ban - local mod / local communities
     # (just 1 for community ban of a local or remote user, but all joined if site ban of remote user)
     for community in communities:
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         cc = [community.ap_followers_url]
         announce = {
           'id': announce_id,

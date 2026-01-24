@@ -980,20 +980,20 @@ def activitypub_application():
     application_data = {
         '@context': default_context(),
         'type': 'Application',
-        'id': f"https://{current_app.config['SERVER_NAME']}/",
+        'id': f"{current_app.config['SERVER_URL']}/",
         'name': 'PieFed',
         'summary': g.site.name + ' - ' + g.site.description,
         'published': ap_datetime(g.site.created_at),
         'updated': ap_datetime(g.site.updated),
-        'inbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
-        'outbox': f"https://{current_app.config['SERVER_NAME']}/site_outbox",
+        'inbox': f"{current_app.config['SERVER_URL']}/inbox",
+        'outbox': f"{current_app.config['SERVER_URL']}/site_outbox",
         'icon': {
             'type': 'Image',
-            'url': f"https://{current_app.config['SERVER_NAME']}/static/images/piefed_logo_icon_t_75.png"
+            'url': f"{current_app.config['SERVER_URL']}/static/images/piefed_logo_icon_t_75.png"
         },
         'publicKey': {
-            'id': f"https://{current_app.config['SERVER_NAME']}/#main-key",
-            'owner': f"https://{current_app.config['SERVER_NAME']}/",
+            'id': f"{current_app.config['SERVER_URL']}/#main-key",
+            'owner': f"{current_app.config['SERVER_URL']}/",
             'publicKeyPem': g.site.public_key
         }
     }
@@ -1011,19 +1011,19 @@ def instance_actor():
     application_data = {
         '@context': default_context(),
         'type': 'Application',
-        'id': f"https://{current_app.config['SERVER_NAME']}/actor",
+        'id': f"{current_app.config['SERVER_URL']}/actor",
         'preferredUsername': f"{current_app.config['SERVER_NAME']}",
-        'url': f"https://{current_app.config['SERVER_NAME']}/about",
+        'url': f"{current_app.config['SERVER_URL']}/about",
         'manuallyApprovesFollowers': True,
-        'inbox': f"https://{current_app.config['SERVER_NAME']}/actor/inbox",
-        'outbox': f"https://{current_app.config['SERVER_NAME']}/actor/outbox",
+        'inbox': f"{current_app.config['SERVER_URL']}/actor/inbox",
+        'outbox': f"{current_app.config['SERVER_URL']}/actor/outbox",
         'publicKey': {
-            'id': f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
-            'owner': f"https://{current_app.config['SERVER_NAME']}/actor",
+            'id': f"{current_app.config['SERVER_URL']}/actor#main-key",
+            'owner': f"{current_app.config['SERVER_URL']}/actor",
             'publicKeyPem': g.site.public_key
         },
         'endpoints': {
-            'sharedInbox': f"https://{current_app.config['SERVER_NAME']}/inbox",
+            'sharedInbox': f"{current_app.config['SERVER_URL']}/inbox",
         }
     }
     resp = jsonify(application_data)
@@ -1108,7 +1108,7 @@ def list_feeds():
         feeds_list = []
         for f in public_feeds:
             if f['feed'].is_local():
-                feeds_list.append(f"https://{current_app.config['SERVER_NAME']}/f/{f['feed'].machine_name}")
+                feeds_list.append(f"{current_app.config['SERVER_URL']}/f/{f['feed'].machine_name}")
         site_data['site_view']['public_feeds'] = feeds_list
         site_data['site_view']['counts']['public_feeds'] = len(feeds_list)
         resp = jsonify(site_data)

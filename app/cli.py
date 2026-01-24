@@ -208,9 +208,9 @@ def register(app):
                 admin_user.roles.append(admin_role)
                 admin_user.verified = True
                 admin_user.last_seen = utcnow()
-                admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-                admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-                admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
+                admin_user.ap_profile_id = f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name.lower()}"
+                admin_user.ap_public_url = f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name}"
+                admin_user.ap_inbox_url = f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name.lower()}/inbox"
                 db.session.add(admin_user)
 
             db.session.commit()
@@ -598,7 +598,7 @@ def register(app):
                 current_instance = Instance.query.get(instances_and_community[0])
             community = Community.query.get(instances_and_community[1])
 
-            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
             actor = community.public_url()
             to = ["https://www.w3.org/ns/activitystreams#Public"]
             cc = [community.ap_followers_url]

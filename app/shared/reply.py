@@ -331,7 +331,7 @@ def report_reply(reply, input, src, auth=None):
             if moderator.is_local():
                 with force_locale(get_recipient_language(moderator.id)):
                     notification = Notification(user_id=mod.user_id, title=gettext('A comment has been reported'),
-                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                url=f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                                                 author_id=reporter_user.id, notif_type=NOTIF_REPORT,
                                                 subtype='comment_reported',
                                                 targets=targets_data)

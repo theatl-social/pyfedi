@@ -234,7 +234,7 @@ def show_profile(user):
                            show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
                            reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                            moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-                           rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed" if user.post_count > 0 else None,
+                           rss_feed=f"{current_app.config['SERVER_URL']}/u/{user.link()}/feed" if user.post_count > 0 else None,
                            rss_feed_name=f"{user.display_name()} on {g.site.name}" if user.post_count > 0 else None,
                            user_has_public_feeds=user_has_public_feeds, user_public_feeds=user_public_feeds,
                            overview_items=overview_items, overview_next_url=overview_next_url,
@@ -392,9 +392,9 @@ def export_user_settings(user):
     user_dict['display_name'] = user.title
     user_dict['bio'] = user.about
     if user.avatar_image() != '':
-        user_dict['avatar'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        user_dict['avatar'] = f"{current_app.config['SERVER_URL']}/{user.avatar_image()}"
     if user.cover_image() != '':
-        user_dict['banner'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        user_dict['banner'] = f"{current_app.config['SERVER_URL']}/{user.cover_image()}"
     user_dict['matrix_id'] = user.matrix_user_id
     user_dict['bot_account'] = user.bot
     if user.hide_nsfw == 1:
@@ -516,9 +516,9 @@ def export_user_settings(user):
     user_dict['interface_language'] = user.interface_language
     user_dict['reply_collapse_threshold'] = user.reply_collapse_threshold
     if user.avatar_image() != '':
-        user_dict['avatar_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+        user_dict['avatar_image'] = f"{current_app.config['SERVER_URL']}/{user.avatar_image()}"
     if user.cover_image() != '':
-        user_dict['cover_image'] = f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+        user_dict['cover_image'] = f"{current_app.config['SERVER_URL']}/{user.cover_image()}"
     user_dict['user_blocks'] = blocked_users
 
     # setup the BytesIO buffer
@@ -766,7 +766,7 @@ def unban_profile(actor):
         if '@' in actor:
             user = find_actor_or_create(actor, create_if_not_found=False, allow_banned=True)
         else:
-            user = find_actor_or_create(f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/u/{actor}",
+            user = find_actor_or_create(f"{current_app.config['SERVER_URL']}/u/{actor}",
                                         create_if_not_found=False, allow_banned=True)
         if user is None:
             abort(404)
@@ -1073,7 +1073,7 @@ def send_deletion_requests(user_id):
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": [
                 "https://www.w3.org/ns/activitystreams#Public"
@@ -1258,7 +1258,7 @@ def import_settings_task(user_id, filename):
                                         "to": [community.public_url()],
                                         "object": community.public_url(),
                                         "type": "Follow",
-                                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                                        "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                                     }
                                     send_post_request(community.ap_inbox_url, follow, user.private_key,
                                                       user.public_url() + '#main-key')
@@ -2031,18 +2031,18 @@ def show_profile_rss(actor):
         description = shorten_string(user.about, 150) if user.about else None
         og_image = user.avatar_image() if user.avatar_id else None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.id(f"{current_app.config['SERVER_URL']}/c/{actor}")
         fg.title(f'{user.display_name()} on {g.site.name}')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}", rel='alternate')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}", rel='alternate')
         if og_image:
             fg.logo(og_image)
         else:
-            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+            fg.logo(f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png")
         if description:
             fg.subtitle(description)
         else:
             fg.subtitle(' ')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed", rel='self')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}/feed", rel='self')
         fg.language('en')
 
         already_added = set()
@@ -2058,9 +2058,9 @@ def show_profile_rss(actor):
             fe = fg.add_entry()
             fe.title(post.title.strip())
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
                     continue

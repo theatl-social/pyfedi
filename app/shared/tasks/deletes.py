@@ -141,7 +141,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
     #    if user.has_blocked_instance(community.instance.id) or instance_banned(community.instance.domain):
     #        return
 
-    delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    delete_id = f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     delete = {
@@ -159,7 +159,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
 
     if is_restore:
         del delete['@context']
-        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
         undo = {
           'id': undo_id,
           'type': 'Undo',
@@ -181,7 +181,7 @@ def delete_object(user_id, object, is_post=False, is_restore=False, reason=None,
             del delete['@context']
             object_json=delete
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {
@@ -294,7 +294,7 @@ def delete_message(message, recipient, is_restore=False):
     if recipient.is_local():
         return
 
-    delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+    delete_id = f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}"
     delete = {
       'id': delete_id,
       'type': 'Delete',
@@ -306,7 +306,7 @@ def delete_message(message, recipient, is_restore=False):
 
     if is_restore:
         del delete['@context']
-        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
         undo = {
           'id': undo_id,
           'type': 'Undo',
