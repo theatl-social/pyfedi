@@ -838,7 +838,8 @@ def register(app):
                                        html_body=flask.render_template('email/unread_notifications.html', user=user,
                                                                        notifications=notifications,
                                                                        posts=posts, site=site,
-                                                                       domain=current_app.config['SERVER_NAME']))
+                                                                       domain=current_app.config['SERVER_NAME'],
+                                                                       protocol=current_app.config['HTTP_PROTOCOL']))
                             user.email_unread_sent = True
                             db.session.commit()
 
