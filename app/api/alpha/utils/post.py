@@ -41,6 +41,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     query = data['q'] if 'q' in data else ''
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     if auth:
         user_id = authorise_api_user(auth)
 
@@ -689,6 +692,9 @@ def get_post_replies(auth, data):
     post_id = data['post_id'] if 'post_id' in data else None
     parent_id = data['parent_id'] if 'parent_id' in data else None
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     if auth:
         user_details = authorise_api_user(auth, return_type='dict')
         user_id = user_details['id']
@@ -1099,6 +1105,9 @@ def get_post_like_list(auth, data):
     post_id = data['post_id']
     page = data['page'] if 'page' in data else 1
     limit = data['limit'] if 'limit' in data else 50
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user = authorise_api_user(auth, return_type='model')
     post = Post.query.get(post_id)

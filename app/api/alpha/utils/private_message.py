@@ -1,6 +1,6 @@
 from sqlalchemy import desc, or_, text
 
-from app import db
+from app import db, current_app
 from app.api.alpha.views import private_message_view
 from app.constants import NOTIF_MESSAGE, NOTIF_REPORT
 from app.chat.util import send_message, update_message
@@ -13,6 +13,9 @@ def get_private_message_list(auth, data):
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 10
     unread_only = data['unread_only'] if 'unread_only' in data else False
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user_id = authorise_api_user(auth)
 
@@ -48,6 +51,9 @@ def get_private_message_conversation(auth, data):
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 10
     person_id = int(data['person_id'])
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user_id = authorise_api_user(auth)
 

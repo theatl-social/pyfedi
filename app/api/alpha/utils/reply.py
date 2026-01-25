@@ -37,6 +37,9 @@ def get_reply_list(auth, data, user_details=None):
     sort = data['sort'] if 'sort' in data else 'New'
     type = data['type_'] if 'type_' in data else 'All'
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     # LIKED_ONLY
     vote_effect = None
     by_liked_only = False
@@ -597,6 +600,9 @@ def get_reply_like_list(auth, data):
     comment_id = data['comment_id']
     page = data['page'] if 'page' in data else 1
     limit = data['limit'] if 'limit' in data else 50
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user = authorise_api_user(auth, return_type='model')
     post_reply = PostReply.query.filter_by(id=comment_id).one()
