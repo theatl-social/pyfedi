@@ -8,6 +8,7 @@ import io
 import mimetypes
 import math
 import random
+import time
 import urllib
 import warnings
 from collections import defaultdict, OrderedDict
@@ -3834,3 +3835,19 @@ def human_filesize(size_bytes):
         size_bytes /= 1024.0
         i += 1
     return f"{size_bytes:.1f} {units[i]}"
+
+
+def debug_checkpoint(name: str):
+    """
+    Record a named debug checkpoint.
+    Returns (timestamp, delta_since_last_checkpoint)
+    """
+    now = time.time()
+    if not hasattr(g, "_debug_checkpoints"):
+        g._debug_checkpoints = []
+
+    last_time = g._debug_checkpoints[-1][1] if g._debug_checkpoints else None
+    delta = now - last_time if last_time else 0
+
+    g._debug_checkpoints.append((name, now))
+    return now, delta
