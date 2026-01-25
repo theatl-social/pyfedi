@@ -1123,7 +1123,7 @@ class User(UserMixin, db.Model):
         return content
 
     def is_local(self):
-        return self.ap_id is None or self.ap_profile_id.startswith(f"{current_app.config['HTTP_PROTOCOL']}://" + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_profile_id.startswith(current_app.config['SERVER_URL'])
 
     def waiting_for_approval(self):
         application = UserRegistration.query.filter_by(user_id=self.id, status=0).first()
@@ -1603,7 +1603,7 @@ class Post(db.Model):
     )
 
     def is_local(self):
-        return self.ap_id is None or self.ap_id.startswith(f"{current_app.config['HTTP_PROTOCOL']}://" + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_id.startswith(current_app.config['SERVER_URL'])
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
@@ -1901,7 +1901,7 @@ class Post(db.Model):
                 for json_tag in request_json['object']['tag']:
                     if 'type' in json_tag and json_tag['type'] == 'Mention':
                         profile_id = json_tag['href'] if 'href' in json_tag else None
-                        if profile_id and isinstance(profile_id, str) and profile_id.startswith(f"{current_app.config['HTTP_PROTOCOL']}://" + current_app.config['SERVER_NAME']):
+                        if profile_id and isinstance(profile_id, str) and profile_id.startswith(current_app.config['SERVER_URL']):
                             profile_id = profile_id.lower()
                             recipient = User.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
                             if recipient:
@@ -2190,16 +2190,16 @@ class Post(db.Model):
             if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
                 slug = slugify(self.title, max_length=100 - len(current_app.config["SERVER_NAME"]))
                 if slug:
-                    self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
+                    self.ap_id = f'{current_app.config["SERVER_URL"]}/c/{community.name}/p/{self.id}/{slug}'
                     self.slug = f'/c/{community.name}/p/{self.id}/{slug}'
                 else:
                     # Post title can't be slugified, fall back to old url structure
-                    self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                    self.ap_id = f'{current_app.config["SERVER_URL"]}/post/{self.id}'
                     self.slug = f'/post/{self.id}'
         else:
             # Make the ActivityPub ID of a post in the format of instance.tld/post/post_id
             if self.ap_id is None or self.ap_id == '' or len(self.ap_id) == 10:
-                self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                self.ap_id = f'{current_app.config["SERVER_URL"]}/post/{self.id}'
                 self.slug = f'/post/{self.id}'
 
     def generate_slug(self, community: Community):
@@ -2769,7 +2769,7 @@ class PostReply(db.Model):
             return 'English'
 
     def is_local(self):
-        return self.ap_id is None or self.ap_id.startswith(f"{current_app.config['HTTP_PROTOCOL']}://" + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.ap_id.startswith(current_app.config['SERVER_URL'])
 
     @classmethod
     def get_by_ap_id(cls, ap_id):
@@ -3743,7 +3743,7 @@ class Feed(db.Model):
         return result
 
     def is_local(self):
-        return self.ap_id is None or self.profile_id().startswith(f"{current_app.config['HTTP_PROTOCOL']}://" + current_app.config['SERVER_NAME'])
+        return self.ap_id is None or self.profile_id().startswith(current_app.config['SERVER_URL'])
 
     def local_url(self):
         if self.is_local():
