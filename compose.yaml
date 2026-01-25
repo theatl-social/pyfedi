@@ -38,6 +38,8 @@ services:
       # Connections
       - -c
       - max_connections=150
+      - -c
+      - jit=off
     volumes:
      - ./pgdata:/var/lib/postgresql/data
     networks:
