@@ -3839,8 +3839,9 @@ def human_filesize(size_bytes):
 
 def debug_checkpoint(name: str):
     """
-    Record a named debug checkpoint.
-    Returns (timestamp, delta_since_last_checkpoint)
+    record a named debug checkpoint.
+    returns (timestamp, delta_since_last_checkpoint)
+    use in jinja like this: {{ dbg_checkpoint('some label') }}
     """
     now = time.time()
     if not hasattr(g, "_debug_checkpoints"):

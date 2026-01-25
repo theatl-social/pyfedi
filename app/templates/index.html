@@ -4,12 +4,11 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_form %}
-{% from "_macros.html" import render_communityname, dbg_checkpoint %}
+{% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
 {% set active_child = 'home' %}
 
 {% block app_content %}
-{{ dbg_checkpoint('start') }}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         {% if announcement -%}
@@ -25,15 +24,12 @@
         </div>
         <div class="post_list h-feed">
             {% for post in posts -%}
-                {{ dbg_checkpoint(post.id) }}
                 {% include 'post/_post_teaser.html' %}
             {% else -%}
                 <p>{{ _('No posts yet. Join some communities to see more.') }}</p>
                 <p><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
             {% endfor -%}
         </div>
-
-        {{ dbg_checkpoint('end posts') }}
 
         <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
                 {% if prev_url %}
@@ -127,7 +123,6 @@
 
         {% include "_inoculation_links.html" %}
     </aside>
-    {{ dbg_checkpoint('end aside') }}
     <a href="/honey" class="visually-hidden" tabindex="-1" aria-hidden="true">Do not click this</a>
 </div>
 {% endblock %}
