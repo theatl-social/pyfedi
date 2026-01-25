@@ -84,6 +84,9 @@ def get_user_list(auth, data):
 
     query = data['q'] if 'q' in data else ''
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     user_id = authorise_api_user(auth) if auth else None
 
     if type == 'Local':
@@ -171,6 +174,9 @@ def get_user_replies(auth, data, mentions=False):
     sort = data['sort'] if 'sort' in data else "New"
     unread_only = data['unread_only'] if 'unread_only' in data else True
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     user_details = authorise_api_user(auth, return_type='dict')
     user_id = user_details['id']
 
@@ -245,6 +251,9 @@ def get_user_replies(auth, data, mentions=False):
 def get_user_media(auth, data):
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 50
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     try:
         user_id = authorise_api_user(auth)
@@ -603,6 +612,9 @@ def get_user_notifications(auth, data):
     # get the page for pagination from the data.page
     page = int(data['page']) if 'page' in data else 1
     limit = int(data['limit']) if 'limit' in data else 10
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     # items dict
     items = []

@@ -353,7 +353,7 @@ class PollChoice(DefaultSchema):
 
 class PostPoll(DefaultSchema):
     end_poll = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
-    mode = fields.String(required=True, metadata={"example": "single", "description": "single or multiple - determines whether people can vote for one or multiple options"})
+    mode = fields.String(required=True, validate=validate.OneOf(['single', 'multiple']), metadata={"example": "single", "description": "single or multiple - determines whether people can vote for one or multiple options"})
     local_only = fields.Boolean(metadata={"default": False})
     latest_vote = fields.String(validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
     choices = fields.List(fields.Nested(PollChoice), required=True, validate=validate.Length(max=10))
