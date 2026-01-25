@@ -1,0 +1,3 @@
+Contact: mailto:contact@piefed.social
+Preferred-Languages: en
+Canonical: https://piefed.social/.well-known/security.txt

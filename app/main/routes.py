@@ -528,6 +528,13 @@ def robots():
     return resp
 
 
+@bp.route('/.well-known/security.txt')
+def security():
+    resp = make_response(render_template('security.txt'))
+    resp.mimetype = 'text/plain'
+    return resp
+
+
 @bp.route('/sitemap.xml')
 @cache.cached(timeout=6000)
 def sitemap():
