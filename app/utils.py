@@ -67,6 +67,10 @@ def render_template(template_name: str, **context) -> Response:
     else:
         content = flask.render_template(template_name, **context)
 
+    if current_app.config['HTTP_PROTOCOL'] == 'mixed':  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
+        server_name = current_app.config['SERVER_NAME']
+        content = content.replace(f"https://{server_name}", f"http://{server_name}")
+
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
     if current_user.is_anonymous:
