@@ -60,14 +60,14 @@ from app.models import Settings, Domain, Instance, BannedInstances, User, Commun
 
 
 # Flask's render_template function, with support for themes added
-def render_template(template_name: str, **context) -> Response:
+def render_template(template_name: str, skip_protocol_replacement: bool = False, **context) -> Response:
     theme = current_theme()
     if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
         content = flask.render_template(f'themes/{theme}/{template_name}', **context)
     else:
         content = flask.render_template(template_name, **context)
 
-    if current_app.config['HTTP_PROTOCOL'] == 'mixed':  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
+    if not skip_protocol_replacement and current_app.config['HTTP_PROTOCOL'] == 'mixed':  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
         server_name = current_app.config['SERVER_NAME']
         content = content.replace(f"https://{server_name}", f"http://{server_name}")
 

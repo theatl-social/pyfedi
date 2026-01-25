@@ -1111,14 +1111,8 @@ def activity_json(activity_id):
         json_md = "`" + pretty_json + "`"
         json_html = markdown_to_html(json_md)
 
-    return render_template(
-        'admin/activity_json.html',
-        title=_('Activity JSON'),
-        json_html=json_html,
-        activity=activity,
-        current_app=current_app,
-    )
-
+    return render_template('admin/activity_json.html', title=_('Activity JSON'), json_html=json_html,
+        activity=activity, current_app=current_app, skip_protocol_replacement=True)
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')
