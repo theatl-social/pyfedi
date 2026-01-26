@@ -302,6 +302,15 @@ class Language(db.Model):
     name = db.Column(db.String(50))
 
 
+class CommunityInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(25), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey('community.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    inviter_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 community_language = db.Table('community_language',
                               db.Column('community_id', db.Integer, db.ForeignKey('community.id')),
                               db.Column('language_id', db.Integer, db.ForeignKey('language.id')),
@@ -562,8 +571,10 @@ class Community(db.Model):
 
     banned = db.Column(db.Boolean, default=False)
     restricted_to_mods = db.Column(db.Boolean, default=False)
-    local_only = db.Column(db.Boolean, default=False)  # only users on this instance can post
-    private = db.Column(db.Boolean, default=False)     # only owner can view - for unapproved rss
+    local_only = db.Column(db.Boolean, default=False)  # only users on this instance can post. no federation.
+    private = db.Column(db.Boolean, default=False)     # only members can view. no federation.
+    encrypted = db.Column(db.Boolean, default=False)
+    invitations = db.Column(db.Integer, default=0)     # 0 = anyone can join, 1 = must be invited by a member, 2 = must be invited by a mod, 3 = must be invited by owner
     new_mods_wanted = db.Column(db.Boolean, default=False)
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
