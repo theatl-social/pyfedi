@@ -612,7 +612,10 @@ def user_settings():
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
-        form.compaction.data = request.cookies.get('compact_level', '')
+        if request.cookies.get('compact_level', None) is None and current_app.config['HTTP_PROTOCOL'] == 'mixed':
+            form.compaction.data = 'compact-min compact-max'
+        else:
+            form.compaction.data = request.cookies.get('compact_level', '')
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
         form.code_style.data = current_user.code_style or 'fruity'

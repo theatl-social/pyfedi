@@ -3837,6 +3837,13 @@ def human_filesize(size_bytes):
     return f"{size_bytes:.1f} {units[i]}"
 
 
+def compaction_level():
+    compact_level = request.cookies.get('compact_level', None)
+    if current_app.config['HTTP_PROTOCOL'] == 'mixed' and compact_level is None:
+        compact_level = 'compact-min compact-max'
+    return compact_level
+
+
 def debug_checkpoint(name: str):
     """
     record a named debug checkpoint.
