@@ -124,7 +124,7 @@ def register(app):
                                 'hexbear.net', 'hilariouschaos.com',
                                 'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
-                                'detroitriotcity.com',
+                                'detroitriotcity.com', 'gregtech.eu',
                                 'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
                                 'yggdrasil.social', 'beefyboys.win', 'brighteon.social', 'cum.salon', 'wizard.casa',
                                 'maga.place']
