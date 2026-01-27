@@ -192,23 +192,46 @@
                                 </li>
                             {% endif -%}
                             <li class="nav-item dropdown{% if active_parent == 'account' %} active{% endif %} account_menu_parent">
-                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">{{ _('Account') }}</a>
+                                <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="/u/{{ current_user.link() }}" aria-haspopup="true" aria-expanded="false">
+                                    {{ _('Account') }}
+                                </a>
                                 <ul class="dropdown-menu text-end text-lg-start">
-                                  <li><a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a></li>
-                                  <li><a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}" href="/scheduled_posts">{{ _('Scheduled posts') }}</a></li>
-                                          {% if current_user.is_authenticated -%}
-                                    {% if current_user.stripe_subscription_id -%}
-                                        <li><a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a></li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'view_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}">{{ _('View profile') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'edit_profile' %} active{% endif %}" href="/u/{{ current_user.link() }}/profile">{{ _('Edit profile') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'chats' %} active{% endif %}" href="/chat">{{ _('Chats') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'bookmarks' %} active{% endif %}" href="/bookmarks">{{ _('Bookmarks') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'alerts' %} active{% endif %}" href="/alerts">{{ _('Activity Alerts') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'scheduled_posts' %} active{% endif %}" href="/scheduled_posts">{{ _('Scheduled posts') }}</a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item{% if active_child == 'hidden_posts' %} active{% endif %}" href="/hidden_posts">{{ _('Hidden posts') }}</a>
+                                    </li>
+                                    {% if current_user.is_authenticated -%}
+                                        {% if current_user.stripe_subscription_id -%}
+                                            <li>
+                                                <a class="dropdown-item{% if active_child == 'donate' %} active{% endif %}" href="/donate">{{ _('Manage donations') }}</a>
+                                            </li>
+                                        {% endif -%}
+                                        {% if current_user.hide_read_posts -%}
+                                            <li>
+                                                <a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a>
+                                            </li>
+                                        {% endif -%}
+                                        <li>
+                                            <a class="dropdown-item" href="/auth/logout">{{ _('Log out') }}</a>
+                                        </li>
                                     {% endif -%}
-                                    {% if current_user.hide_read_posts -%}
-                                        <li><a class="dropdown-item{% if active_child == 'read_posts' %} active{% endif %}" href="/read-posts">{{ _('Read Posts') }}</a></li>
-                                    {% endif -%}
-                                    <li><a class="dropdown-item" href="/auth/logout">{{ _('Log out') }}</a></li>
-                                  {% endif -%}
                                 </ul>
                             </li>
                             {% if current_user.is_admin_or_staff() %}
