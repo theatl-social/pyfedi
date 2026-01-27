@@ -918,7 +918,7 @@ def admin_federation():
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
         form.defederation_subscription.data = '\n'.join([instance.domain for instance in DefederationSubscription.query.all()])
         form.blocked_phrases.data = g.site.blocked_phrases
-        form.blocked_actors.data = get_setting('actor_blocked_words', '88')
+        form.blocked_actors.data = get_setting('actor_blocked_words', '')
         form.blocked_bio.data = get_setting('actor_bio_blocked_words', '')
         form.auto_add_remote_communities.data = get_setting('auto_add_remote_communities', False)
 
