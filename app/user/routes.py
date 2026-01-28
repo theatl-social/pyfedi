@@ -1793,6 +1793,25 @@ def user_scheduled_posts(type='posts', filter='all'):
                            )
 
 
+@bp.route('/hidden_posts')
+@login_required
+def user_hidden_posts():
+    low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
+    page = request.args.get('page', 1, type=int)
+    title = _('Hidden posts')
+    post_ids = db.session.execute(text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+                               {"user_id": current_user.id}).all()
+    post_ids = [post_id[0] for post_id in post_ids]
+    posts = Post.query.filter(Post.id.in_(post_ids))
+
+    posts = posts.paginate(page=page, per_page=100, error_out=False)
+    next_url = url_for('user.user_hidden_posts', page=posts.next_num) if posts.has_next else None
+    prev_url = url_for('user.user_hidden_posts', page=posts.prev_num) if posts.has_prev and page != 1 else None
+
+    return render_template('user/hidden_posts.html', title=title, posts=posts, low_bandwidth=low_bandwidth,
+                           user=current_user, site=g.site, next_url=next_url, prev_url=prev_url)
+
+
 @bp.route('/u/<actor>/fediverse_redirect', methods=['GET', 'POST'])
 def fediverse_redirect(actor):
     actor = actor.strip()
