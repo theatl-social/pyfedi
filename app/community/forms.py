@@ -544,6 +544,10 @@ class DeleteCommunityForm(FlaskForm):
     submit = SubmitField(_l('Delete community'))
 
 
+class InviteAcceptForm(FlaskForm):
+    submit = SubmitField(_l('Accept invitation'))
+
+
 class RetrieveRemotePost(FlaskForm):
     address = StringField(_l('Full URL'),
                           render_kw={'placeholder': 'e.g. https://lemmy.world/post/123', 'autofocus': True},

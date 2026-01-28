@@ -23,7 +23,7 @@ from app.community.forms import SearchRemoteCommunity, CreateDiscussionForm, Cre
     DeleteCommunityForm, AddCommunityForm, EditCommunityForm, AddModeratorForm, BanUserCommunityForm, \
     EscalateReportForm, ResolveReportForm, CreateVideoForm, CreatePollForm, EditCommunityWikiPageForm, \
     InviteCommunityForm, MoveCommunityForm, EditCommunityFlairForm, SetMyFlairForm, FindAndBanUserCommunityForm, \
-    CreateEventForm
+    CreateEventForm, InviteAcceptForm
 from app.community.util import search_for_community, actor_to_community, \
     save_icon_file, save_banner_file, \
     delete_post_from_community, delete_post_reply_from_community, \
@@ -32,14 +32,14 @@ from app.constants import SUBSCRIPTION_MEMBER, SUBSCRIPTION_OWNER, POST_TYPE_LIN
     SUBSCRIPTION_PENDING, SUBSCRIPTION_MODERATOR, REPORT_STATE_NEW, REPORT_STATE_ESCALATED, REPORT_STATE_RESOLVED, \
     REPORT_STATE_DISCARDED, POST_TYPE_VIDEO, NOTIF_COMMUNITY, NOTIF_POST, POST_TYPE_POLL, MICROBLOG_APPS, SRC_WEB, \
     NOTIF_REPORT, NOTIF_NEW_MOD, NOTIF_BAN, NOTIF_UNBAN, NOTIF_REPORT_ESCALATION, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_TYPE_EVENT
+    POST_TYPE_EVENT, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY
 from app.email import send_email
 from app.inoculation import inoculation
 from app.models import User, Community, CommunityMember, CommunityJoinRequest, CommunityBan, Post, Site, \
     File, utcnow, Report, Notification, Topic, PostReply, \
     NotificationSubscription, Language, ModLog, CommunityWikiPage, \
     CommunityWikiPageRevision, read_posts, Feed, FeedItem, CommunityBlock, CommunityFlair, post_flair, UserFlair, \
-    post_tag, Tag, hidden_posts
+    post_tag, Tag, hidden_posts, CommunityInvitation
 from app.community import bp
 from app.post.util import tags_to_string
 from app.shared.community import invite_with_chat, invite_with_email, subscribe_community, add_mod_to_community, \
@@ -1251,6 +1251,8 @@ def community_edit(community_id: int):
             form.nsfw.data = community.nsfw
             form.ai_generated.data = community.ai_generated
             form.local_only.data = community.local_only
+            form.private.data = community.private
+            form.invitations.data = community.invitations
             form.new_mods_wanted.data = community.new_mods_wanted
             form.restricted_to_mods.data = community.restricted_to_mods
             form.topic.data = community.topic_id if community.topic_id else None
@@ -2415,6 +2417,16 @@ def community_invite(actor):
         return redirect(referrer())
 
     if community is not None:
+        if community.invitations == INVITE_MEMBERS_ONLY and not community.is_member(current_user):
+            flash(_('Sorry, you cannot invite people to this community.'), 'warning')
+            return redirect(referrer())
+        elif community.invitations == INVITE_MODS_ONLY and not community.is_moderator():
+            flash(_('Sorry, you cannot invite people to this community.'), 'warning')
+            return redirect(referrer())
+        elif community.invitations == INVITE_OWNER_ONLY and not community.is_owner():
+            flash(_('Sorry, you cannot invite people to this community.'), 'warning')
+            return redirect(referrer())
+
         if form.validate_on_submit():
             chat_invites = 0
             email_invites = 0
@@ -2438,11 +2450,45 @@ def community_invite(actor):
                   total_invites=total_invites, chat_invites=chat_invites, email_invites=email_invites))
             return redirect('/c/' + community.link())
 
+        if community.is_local() and community.local_only:
+            flash(_('This community can only be accessed by people who have a %(domain)s account. People on other instances will need to make an account here to participate.', domain=current_app.config['SERVER_NAME']))
         return render_template('community/invite.html', title=_('Invite to community'), form=form, community=community,
                                current_app=current_app,
                                )
     else:
         abort(404)
+
+
+@bp.route('/<actor>/accept_invite/<token>', methods=['GET', 'POST'])
+@limiter.limit("10 per 1 minutes", methods=['GET', 'POST'])
+@login_required
+def community_invite_accept(actor, token):
+    if current_user.banned:
+        return show_ban_message()
+    if '@' in token:
+        flash(_('Ask %(token)s to send an invite to %(current_user)s', token=token, current_user=current_user.lemmy_link()))
+        return redirect('/')
+    form = InviteAcceptForm()
+
+    community = actor_to_community(actor)
+
+    if community.is_member(current_user):
+        flash(_('You are already a member.'))
+        return redirect('/c/' + actor)
+
+    invites = db.session.query(CommunityInvitation).filter_by(token=token). \
+        filter(CommunityInvitation.user_id == current_user.id, CommunityInvitation.community_id == community.id).all()
+
+    if len(invites) > 0:
+        if form.validate_on_submit():
+            do_subscribe(actor, current_user.id)
+            for invite in invites:
+                db.session.delete(invite)
+            db.session.commit()
+            return redirect('/c/' + actor)
+        return render_template('generic_form.html', form=form, title=_('Accept invitation to %(community_name)s', community_name=community.display_name()))
+    else:
+        abort(403)
 
 
 @bp.route('/lookup/<community>/<domain>')
