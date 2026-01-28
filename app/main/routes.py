@@ -129,7 +129,7 @@ def home_page(sort, view_filter):
                        result_id=result_id) if page > 0 else None
 
     # Active Communities
-    active_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False)
+    active_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False).filter_by(private=False)
     if current_user.is_authenticated:  # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -143,8 +143,8 @@ def home_page(sort, view_filter):
 
     # New Communities
     cutoff = utcnow() - timedelta(days=30)
-    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False). \
-        filter(Community.created_at > cutoff)
+    new_communities = Community.query.filter_by(banned=False).filter_by(nsfw=False).filter_by(nsfl=False).\
+        filter_by(private=False).filter(Community.created_at > cutoff)
     if current_user.is_authenticated:  # do not show communities current user is banned from
         banned_from = communities_banned_from(current_user.id)
         if banned_from:
@@ -263,6 +263,24 @@ def list_communities():
     topics = topics_for_form(0)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
+
+    # filter private communities: show only to members
+    if current_user.is_authenticated:
+        # for authenticated users, show non-private communities OR private communities where they are members
+        member_check = db.session.query(CommunityMember.community_id).filter(
+            CommunityMember.user_id == current_user.id,
+            CommunityMember.is_banned == False
+        ).subquery()
+        communities = communities.filter(
+            or_(
+                Community.private == False,
+                Community.id.in_(member_check)
+            )
+        )
+    else:
+        # For anonymous users, only show non-private communities
+        communities = communities.filter_by(private=False)
+
     if search_param == '':
         pass
     else:

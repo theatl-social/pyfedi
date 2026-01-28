@@ -53,6 +53,23 @@ def get_community_list(auth, data):
     else:
         communities = Community.query.filter_by(banned=False)
 
+    # filter private communities: show only to members
+    if user_id:
+        # for authenticated users, show non-private communities OR private communities where they are members
+        member_check = db.session.query(CommunityMember.community_id).filter(
+            CommunityMember.user_id == user_id,
+            CommunityMember.is_banned == False
+        ).subquery()
+        communities = communities.filter(
+            or_(
+                Community.private == False,
+                Community.id.in_(member_check)
+            )
+        )
+    else:
+        # for anonymous users, only show non-private communities
+        communities = communities.filter(Community.private == False)
+
     if user_id:
         banned_from = communities_banned_from(user_id)
         if banned_from:

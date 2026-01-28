@@ -358,8 +358,7 @@ class File(db.Model):
             if self.file_path.startswith('http'):
                 return self.file_path
             file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-            scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
-            return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
+            return f"/{file_path}"
         else:
             return ''
 
@@ -369,8 +368,7 @@ class File(db.Model):
         if self.file_path.startswith('http'):
             return self.file_path
         file_path = self.file_path[4:] if self.file_path.startswith('app/') else self.file_path
-        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
-        return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
+        return f"/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -381,8 +379,7 @@ class File(db.Model):
         if self.thumbnail_path.startswith('http'):
             return self.thumbnail_path
         thumbnail_path = self.thumbnail_path[4:] if self.thumbnail_path.startswith('app/') else self.thumbnail_path
-        scheme = 'http' if current_app.config['SERVER_NAME'] == '127.0.0.1:5000' else 'https'
-        return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
+        return f"/{thumbnail_path}"
 
     def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
@@ -574,7 +571,7 @@ class Community(db.Model):
     local_only = db.Column(db.Boolean, default=False)  # only users on this instance can post. no federation.
     private = db.Column(db.Boolean, default=False)     # only members can view. no federation.
     encrypted = db.Column(db.Boolean, default=False)
-    invitations = db.Column(db.Integer, default=0)     # 0 = anyone can join, 1 = must be invited by a member, 2 = must be invited by a mod, 3 = must be invited by owner
+    invitations = db.Column(db.Integer, default=0)     # 0 = anyone can join, 1 = apply to join, 2 = must be invited by a member, 3 = must be invited by a mod, 4 = must be invited by owner
     new_mods_wanted = db.Column(db.Boolean, default=False)
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
@@ -1673,6 +1670,8 @@ class Post(db.Model):
             post.nsfl = True
         if community.ai_generated:
             post.ai_generated = True
+        if community.private:
+            post.indexable = False
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             # prefer Markdown in 'source' if provided
             if 'source' in request_json['object'] and isinstance(request_json['object']['source'], dict) and \
@@ -2620,6 +2619,8 @@ class PostReply(db.Model):
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_('Blocked phrase in comment'))
         if request_json and 'searchableBy' in request_json['object'] and request_json['object']['searchableBy'] != 'https://www.w3.org/ns/activitystreams#Public':
+            reply.indexable = False
+        if post.community.private:
             reply.indexable = False
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post

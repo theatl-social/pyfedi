@@ -1960,6 +1960,8 @@ def user_followers(actor):
 def comment_ap(comment_id):
     reply = PostReply.query.get_or_404(comment_id)
     if is_activitypub_request():
+        if reply.community.local_only:
+            abort(403)
         reply_data = comment_model_to_json(reply) if request.method == 'GET' else []
         resp = jsonify(reply_data)
         resp.content_type = 'application/activity+json'
@@ -1982,6 +1984,8 @@ def post_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post: Post = Post.query.get_or_404(post_id)
         if post.is_local():
+            if post.community.local_only:
+                abort(403)
             if request.method == 'GET':
                 post_data = post_to_page(post)
                 post_data['@context'] = default_context()

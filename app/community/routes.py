@@ -93,12 +93,25 @@ def add_local():
         if form.url.data.strip().lower().startswith('/c/'):
             form.url.data = form.url.data[3:]
         form.url.data = slugify(form.url.data.strip(), separator='_').lower()
-        private_key, public_key = RsaKeys.generate_keypair()
+        show_popular = True
+        show_all = True
+        if form.private.data:
+            form.local_only.data = True
+            show_popular = False
+            show_all = False
+        if form.local_only.data:
+            private_key = None
+            public_key = None
+        else:
+            private_key, public_key = RsaKeys.generate_keypair()
+            form.invitations.data = 0
         community = Community(title=form.community_name.data, name=form.url.data,
                               description=piefed_markdown_to_lemmy_markdown(form.description.data),
                               nsfw=form.nsfw.data, private_key=private_key,
                               public_key=public_key, description_html=markdown_to_html(form.description.data),
                               local_only=form.local_only.data, posting_warning=form.posting_warning.data,
+                              private=form.private.data, invitations=form.invitations.data,
+                              show_popular=show_popular, show_all=show_all,
                               ap_profile_id='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data.lower(),
                               ap_public_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data,
                               ap_followers_url='https://' + current_app.config['SERVER_NAME'] + '/c/' + form.url.data + '/followers',
@@ -661,6 +674,9 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, 'application/rss+xml')
 
+        if community.private:
+            abort(403)
+
         score = request.args.get('score', 0, int)
 
         posts = Post.query.filter(Post.community_id == community.id).filter(Post.from_bot == False, Post.deleted == False,
@@ -721,6 +737,8 @@ def show_community_ical(actor):
     else:
         community: Community = Community.query.filter_by(name=actor, banned=False, ap_id=None).first()
     if community is not None:
+        if community.private:
+            abort(403)
         posts = Post.query.filter(Post.community_id == community.id, Post.type == POST_TYPE_EVENT).\
             filter(Post.from_bot == False, Post.deleted == False, Post.status > POST_STATUS_REVIEWING).\
             order_by(desc(Post.created_at)).limit(50).all()
@@ -1160,6 +1178,12 @@ def community_edit(community_id: int):
         if g.site.enable_nsfw is False:
             form.nsfw.render_kw = {'disabled': True}
         if form.validate_on_submit():
+            if form.private.data:
+                form.local_only.data = True
+                community.show_popular = False
+                community.show_all = False
+            else:
+                form.invitations.data = 0
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(form.description.data)
             community.description_html = markdown_to_html(form.description.data, anchors_new_tab=False)
@@ -1167,6 +1191,8 @@ def community_edit(community_id: int):
             community.nsfw = form.nsfw.data
             community.ai_generated = form.ai_generated.data
             community.local_only = form.local_only.data
+            community.private = form.private.data
+            community.invitations = form.invitations.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
             community.topic_id = form.topic.data if form.topic.data > 0 else None

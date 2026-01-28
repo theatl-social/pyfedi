@@ -63,6 +63,25 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if community_id or community_name:
         search_by_community = True
+        # check private community access
+        if community_id:
+            community = Community.query.get(community_id)
+        else:
+            # parse community_name to get the community
+            if '@' not in community_name:
+                community_name_lookup = f"{community_name}@{current_app.config['SERVER_NAME']}"
+            else:
+                community_name_lookup = community_name
+            name, ap_domain = community_name_lookup.split('@')
+            community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+
+        if community and community.private:
+            # community is private, check if user is a member
+            if not user_id:
+                raise Exception('Private community - authentication required')
+            else:
+                if not community.is_member(user):
+                    raise Exception('Private community - membership required')
     else:
         search_by_community = False
 
@@ -215,7 +234,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if search_type == 'Url':
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
         else:
-            posts = posts.search(query, sort=sort == 'Relevance')
+            posts = posts.search(query, sort=sort == 'Relevance').filter(Post.indexable == True)
 
     if user_id:
         if liked_only:
@@ -398,6 +417,27 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
     topic_id = int(data['topic_id']) if 'topic_id' in data else None
     community_name = data['community_name'] if 'community_name' in data else None
     person_id = int(data['person_id']) if 'person_id' in data else None
+
+    if community_id or community_name:
+        # check private community access
+        if community_id:
+            community = Community.query.get(community_id)
+        else:
+            # parse community_name to get the community
+            if '@' not in community_name:
+                community_name_lookup = f"{community_name}@{current_app.config['SERVER_NAME']}"
+            else:
+                community_name_lookup = community_name
+            name, ap_domain = community_name_lookup.split('@')
+            community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+
+        if community and community.private:
+            # community is private, check if user is a member
+            if not user_id:
+                raise Exception('Private community - authentication required')
+            else:
+                if not community.is_member(user):
+                    raise Exception('Private community - membership required')
 
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)

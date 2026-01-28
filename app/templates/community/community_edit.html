@@ -61,6 +61,9 @@
             {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
             {{ render_field(form.local_only) }}
+            {{ render_field(form.private) }}
+            <small class="field_hint">{{ _('Private communities do not federate and are only visible to members') }}.</small>
+            {{ render_field(form.invitations) }}
             {{ render_field(form.question_answer) }}
             {{ render_field(form.new_mods_wanted) }}
             {{ render_field(form.downvote_accept_mode) }}

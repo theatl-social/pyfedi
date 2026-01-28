@@ -69,6 +69,7 @@ def get_reply_list(auth, data, user_details=None):
             replies = PostReply.query.search(query, sort=sort == 'Relevance')
         else:
             replies = replies.search(query, sort=sort == 'Relevance')
+        replies = replies.filter(PostReply.indexable == True)
         
     if replies:
         if type == 'Local':
