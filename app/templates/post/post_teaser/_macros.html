@@ -351,6 +351,7 @@
                 {% elif post.url.startswith('https://www.redgifs.com/watch/') -%}
                     <div class="{{ 'blur' if blur_content }}" style="padding-bottom: 56.25%; position: relative;"><iframe loading="lazy" style="position: absolute; top: 0px; left: 0px; width: 100%; height: 100%;" src="{{ post.url.replace('redgifs.com/watch/', 'redgifs.com/ifr/') }}" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; fullscreen"  width="100%" height="100%" frameborder="0"></iframe></div>
                 {% elif post.url.startswith('https://loops.video/') -%}
+                    {% if post.image -%}
                     <p>
                         <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
                         {% if post.image.source_url.endswith('.mp4') -%}
@@ -359,6 +360,9 @@
                             <source src="{{ post.image.source_url }}" type="video/webm" />
                         {% endif -%}
                         </video></p>
+                    {% else -%}
+                        <p><a href="{{ post.url }}">View video</a></p>
+                    {% endif -%}
                 {% endif -%}
                 {% if 'youtube.com' in post.url -%}
                     <div class="video-wrapper {{ 'blur' if blur_content }}" data-src="https://www.youtube.com/embed/{{ post.youtube_embed() }}">
