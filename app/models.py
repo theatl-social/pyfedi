@@ -3206,7 +3206,7 @@ class PostVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), index=True)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id', ondelete='CASCADE'), index=True)
     effect = db.Column(db.Float, index=True)
     emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -3225,7 +3225,7 @@ class PostReplyVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # who voted
     author_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)  # the author of the reply voted on - who's reputation is affected
-    post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id'), index=True)
+    post_reply_id = db.Column(db.Integer, db.ForeignKey('post_reply.id', ondelete='CASCADE'), index=True)
     effect = db.Column(db.Float)
     emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
