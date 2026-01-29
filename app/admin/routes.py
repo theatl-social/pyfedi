@@ -1914,6 +1914,7 @@ def admin_instance_edit(instance_id):
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
+        instance.admin_note = form.admin_note.data
         instance.inbox = form.inbox.data
 
         if instance.software == 'piefed':
@@ -1931,6 +1932,7 @@ def admin_instance_edit(instance_id):
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
+        form.admin_note.data = instance.admin_note
         form.inbox.data = instance.inbox
         if instance.software == 'piefed':
             hide = db.session.execute(text('SELECT hide FROM "instance_chooser" WHERE domain = :domain'),
