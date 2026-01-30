@@ -98,7 +98,7 @@ def webfinger():
                                                                                                      ap_id=None).first()
             if object is None:
                 profile_id = f"{current_app.config['SERVER_URL']}/c/{actor.strip().lower()}"
-                object = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
+                object = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None, local_only=False).first()
                 type = 'Group'
                 if object is None:
                     object = Feed.query.filter_by(name=actor.strip(), ap_id=None).first()
@@ -457,6 +457,8 @@ def community_profile(actor):
         community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
     if community is not None:
         if is_activitypub_request():
+            if community.local_only or community.private:
+                abort(403)
             server = current_app.config['SERVER_NAME']
             actor_data = {"@context": default_context(),
                           "type": "Group",
@@ -1960,7 +1962,7 @@ def user_followers(actor):
 def comment_ap(comment_id):
     reply = PostReply.query.get_or_404(comment_id)
     if is_activitypub_request():
-        if reply.community.local_only:
+        if reply.community.local_only or reply.community.private:
             abort(403)
         reply_data = comment_model_to_json(reply) if request.method == 'GET' else []
         resp = jsonify(reply_data)
@@ -1984,7 +1986,7 @@ def post_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
         post: Post = Post.query.get_or_404(post_id)
         if post.is_local():
-            if post.community.local_only:
+            if post.community.local_only or post.community.private:
                 abort(403)
             if request.method == 'GET':
                 post_data = post_to_page(post)
@@ -2572,6 +2574,8 @@ def feed_following(actor):
     items = []
     for fi in feed_items:
         c = Community.query.get(fi.community_id)
+        if c.local_only or c.private:
+            continue
         items.append(c.public_url())
     result = {
         "@context": default_context(),

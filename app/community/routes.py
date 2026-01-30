@@ -55,7 +55,7 @@ from app.utils import get_setting, render_template, markdown_to_html, validation
     instance_software, domain_from_email, referrer, flair_for_form, find_flair_id, login_required_if_private_instance, \
     possible_communities, reported_posts, user_notes, login_required, get_task_session, patch_db_session, \
     approval_required, permission_required, aged_account_required, communities_banned_from_all_users, \
-    moderating_communities_ids_all_users, block_honey_pot, user_pronouns
+    moderating_communities_ids_all_users, block_honey_pot, user_pronouns, community_membership_private
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
 from app.shared.community import leave_community
@@ -150,6 +150,7 @@ def add_local():
         cache.delete_memoized(community_membership, current_user, community)
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(moderating_communities, current_user.id)
+        cache.delete_memoized(community_membership_private, current_user.id)
         return redirect('/c/' + community.name)
     else:
         form.publicize.data = not current_app.debug
@@ -1239,6 +1240,7 @@ def community_edit(community_id: int):
 
             cache.delete_memoized(moderating_communities, current_user.id)
             cache.delete_memoized(joined_communities, current_user.id)
+            cache.delete_memoized(community_membership_private, current_user.id)
 
             # just borrow federation code for now (replacing most of this function with a call to edit_community in app.shared.community can be done "later")
             task_selector('edit_community', user_id=current_user.id, community_id=community.id)
@@ -2479,6 +2481,7 @@ def community_invite_accept(actor, token):
             for invite in invites:
                 db.session.delete(invite)
             db.session.commit()
+            cache.delete_memoized(community_membership_private, current_user.id)
             return redirect('/c/' + actor)
         return render_template('generic_form.html', form=form, title=_('Accept invitation to %(community_name)s', community_name=community.display_name()))
     else:

@@ -18,7 +18,7 @@ from app.utils import render_template, permission_required, user_filters_posts, 
     blocked_or_banned_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
     return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
-    moderating_communities_ids, block_honey_pot, user_pronouns
+    moderating_communities_ids, block_honey_pot, user_pronouns, community_membership_private
 
 
 @bp.route('/d/<domain_id>', methods=['GET', 'POST'])
@@ -60,7 +60,9 @@ def show_domain(domain_id):
                 if instance_ids:
                     posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
                 content_filters = user_filters_posts(current_user.id)
+                posts = posts.filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.id))))
             else:
+                posts = posts.filter(Community.private == False)
                 content_filters = {}
 
             # don't show posts a user has already interacted with
@@ -118,7 +120,7 @@ def show_domain_rss(domain_id):
 
             posts = Post.query.join(Community, Community.id == Post.community_id). \
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
-                       Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
+                       Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Community.private == False). \
                 order_by(desc(Post.posted_at)).limit(20)
 
             fg = FeedGenerator()

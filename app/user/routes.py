@@ -42,7 +42,8 @@ from app.utils import render_template, markdown_to_html, user_access, markdown_t
     login_required_if_private_instance, recently_upvoted_posts, recently_downvoted_posts, recently_upvoted_post_replies, \
     recently_downvoted_post_replies, reported_posts, user_notes, login_required, get_setting, filtered_out_communities, \
     moderating_communities_ids, is_valid_xml_utf8, blocked_or_banned_instances, blocked_domains, get_task_session, \
-    patch_db_session, user_in_restricted_country, referrer, user_pronouns
+    patch_db_session, user_in_restricted_country, referrer, user_pronouns, community_membership_private, \
+    intlist_to_strlist
 
 
 @bp.route('/people', methods=['GET', 'POST'])
@@ -60,7 +61,7 @@ def show_profile_by_id(user_id):
 
 def _get_user_posts(user, post_page):
     """Get posts for a user based on current user's permissions."""
-    base_query = Post.query.filter_by(user_id=user.id)
+    base_query = Post.query.filter_by(user_id=user.id).filter(Post.community_id.not_in(community_membership_private(user.id)))
 
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
@@ -78,7 +79,7 @@ def _get_user_posts(user, post_page):
 
 def _get_user_post_replies(user, replies_page):
     """Get post replies for a user based on current user's permissions."""
-    base_query = PostReply.query.filter_by(user_id=user.id)
+    base_query = PostReply.query.filter_by(user_id=user.id).filter(PostReply.community_id.not_in(community_membership_private(user.id)))
 
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
@@ -101,18 +102,19 @@ def _get_user_posts_and_replies(user, page):
     offset_val = (page - 1) * per_page
     next_page = False
 
+    private = ','.join(intlist_to_strlist(community_membership_private(user_id)))
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND community_id NOT IN ({private})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id} AND community_id NOT IN ({private})"
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id}) AND community_id NOT IN ({private})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id}) AND community_id NOT IN ({private})"
     else:
         # Everyone else sees only non-deleted posts/replies
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND community_id NOT IN ({private}) AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND community_id NOT IN ({private}) AND deleted = 'False'"
 
     full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
     query_result = db.session.execute(text(full_query))

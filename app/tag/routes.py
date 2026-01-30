@@ -15,9 +15,10 @@ from app.inoculation import inoculation
 from app.models import Post, Community, Tag, post_tag, Topic, FeedItem, Feed
 from app.tag import bp
 from app.topic.routes import get_all_child_topic_ids
-from app.utils import render_template, permission_required, user_filters_posts, blocked_or_banned_instances, blocked_users, \
+from app.utils import render_template, permission_required, user_filters_posts, blocked_or_banned_instances, \
+    blocked_users, \
     blocked_domains, mimetype_from_url, \
-    blocked_communities, login_required, moderating_communities_ids
+    blocked_communities, login_required, moderating_communities_ids, community_membership_private
 
 
 @bp.route('/tag/<tag>', methods=['GET'])
@@ -51,7 +52,9 @@ def show_tag(tag):
             if blocked_accounts:
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
             content_filters = user_filters_posts(current_user.id)
+            posts = posts.filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.id))))
         else:
+            posts = posts.filter(Community.private == False)
             content_filters = {}
 
         community_ids = []
@@ -121,6 +124,7 @@ def show_tag_rss(tag):
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
+        posts = posts.filter(Community.private == False)
         posts = posts.order_by(desc(Post.posted_at)).limit(20).all()
 
         description = None

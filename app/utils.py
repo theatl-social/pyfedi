@@ -2848,6 +2848,9 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         else:
             post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
+        if private_community_ids := community_membership_private(current_user.id):
+            post_id_where.append(f'(c.private is false OR c.id IN :private_community_ids) ')
+            params['private_community_ids'] = tuple(private_community_ids)
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
         if current_user.hide_nsfl == 1:
@@ -3823,6 +3826,19 @@ def save_new_gif(new_frames, old_gif_information, new_path):
                        background = old_gif_information['background'],
                        extension = old_gif_information['extension'] ,
                        transparency = old_gif_information['transparency'])
+
+
+@cache.memoize(timeout=100)
+def community_membership_private(user_id: int) -> List[int]:
+    community_ids = db.session.execute(text("""SELECT c.id FROM "community" as c 
+                                                INNER JOIN community_member cm on c.id = cm.community_id
+                                                WHERE c.private is true AND cm.user_id = :user_id AND cm.is_banned is false"""),
+                                       {'user_id': user_id}).scalars()
+    return list(community_ids)
+
+
+def intlist_to_strlist(input: List[int]) -> List[str]:
+    return [str(x) for x in input]
 
 
 def human_filesize(size_bytes):

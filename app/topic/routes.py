@@ -210,7 +210,7 @@ def show_topic_rss(topic_path):
             topic_ids = [topic.id]
 
         community_ids = db.session.execute(
-            text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+            text('SELECT id FROM community WHERE banned is false AND private is false AND topic_id IN :topic_ids'),
             {'topic_ids': tuple(topic_ids)}).scalars()
         post_ids = get_deduped_post_ids('', list(community_ids), 'new')
         post_ids = paginate_post_ids(post_ids, 0, page_length=100)
