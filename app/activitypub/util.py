@@ -3328,6 +3328,32 @@ def process_report(user, reported, request_json, session):
         ...
 
 
+def process_quote_boost(core_activity: dict, post_ap: str, their_post_ap: str):
+    import urllib.parse
+    post = Post.get_by_ap_id(post_ap)
+    if post is None:
+        post = PostReply.get_by_ap_id(post_ap)
+    if post is not None and post.author.is_local():
+
+        accept_activity = {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+              "QuoteRequest": "https://w3id.org/fep/044f#QuoteRequest"
+            }
+          ],
+          "type": "Accept",
+          "to": core_activity['actor'],
+          "id": f"{current_app.config['SERVER_URL']}/activities/{gibberish(15)}",
+          "actor": post.author.public_url(),
+          "object": core_activity,
+          "result": f"{current_app.config['SERVER_URL']}/quote_boost_auth?stamp={urllib.parse.quote(post.public_url(), safe='')};{urllib.parse.quote(their_post_ap, safe='')}"
+        }
+        to = find_actor_or_create_cached(core_activity['actor'])
+        if to and to.instance.inbox:
+            send_post_request(to.instance.inbox, accept_activity, post.author.private_key, post.author.public_url() + '#main-key')
+
+
 def lemmy_site_data():
     site = g.site
     logo = site.logo if site.logo else '/static/images/piefed_logo_icon_t_75.png'

@@ -18,7 +18,8 @@ from app.activitypub.util import users_total, active_half_year, active_month, lo
     process_report, ensure_domains_match, resolve_remote_post, refresh_community_profile, \
     comment_model_to_json, restore_post_or_comment, ban_user, unban_user, \
     log_incoming_ap, find_community, site_ban_remove_data, community_ban_remove_data, verify_object_from_source, \
-    post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search, proactively_delete_content
+    post_replies_for_ap, is_vote, find_instance_id, resolve_remote_post_from_search, proactively_delete_content, \
+    process_quote_boost
 from app.community.routes import show_community
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.constants import *
@@ -1727,6 +1728,12 @@ def process_inbox_request(request_json, store_ap_json):
                         return
 
                     log_incoming_ap(id, APLOG_MONITOR, APLOG_PROCESSING, request_json, 'Unmatched activity')
+
+                if core_activity['type'] == 'QuoteRequest':
+                    post_ap = core_activity['object']
+                    their_post_ap = core_activity['instrument']['id']
+                    process_quote_boost(core_activity, post_ap, their_post_ap)
+                    log_incoming_ap(id, APLOG_QUOTEBOOST, APLOG_SUCCESS, saved_json)
         except Exception:
             session.rollback()
             raise
@@ -2647,3 +2654,39 @@ def activitypub_external_interaction():
         community = find_actor_or_create_cached(uri, community_only=True)
         if community:
             return redirect(f'/community/{community.link()}/subscribe')
+
+
+@bp.route('/quote_boost_auth')
+def quote_boost_auth():
+    import urllib.parse
+    if request.args.get('stamp') is None:
+        return abort(404)
+    stamp = request.args.get('stamp')
+    local_post_id = stamp[:stamp.index(';')]
+    remote_post_id = stamp[stamp.index(';')+1:]
+    response_payload = {
+        '@context': [
+            'https://www.w3.org/ns/activitystreams',
+            {
+                'gts': 'https://gotosocial.org/ns#',
+                'QuoteAuthorization': {
+                    '@id': 'https://w3id.org/fep/044f#QuoteAuthorization',
+                    '@type': '@id',
+                },
+                'interactingObject': {
+                    '@id': 'gts:interactingObject',
+                },
+                'interactionTarget': {
+                    '@id': 'gts:interactionTarget',
+                },
+            },
+        ],
+        'id': current_app.config['SERVER_URL'] + '/quoteAuth?stamp=' + urllib.parse.quote(local_post_id, safe='') + ';' + urllib.parse.quote(remote_post_id, safe=''),
+        'type': 'QuoteAuthorization',
+        'attributedTo': current_app.config['SERVER_URL'],
+        'interactionTarget': local_post_id,
+        'interactingObject': remote_post_id,
+    }
+    response = make_response(response_payload)
+    response.headers['Content-Type'] = 'application/activity+json'
+    return response

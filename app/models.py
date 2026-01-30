@@ -685,6 +685,8 @@ class Community(db.Model):
                                             ).filter(CommunityMember.is_banned == False).all()
 
     def is_member(self, user):
+        if user.is_anonymous:
+            return False
         if user is None:
             return CommunityMember.query.filter(CommunityMember.user_id == current_user.get_id(),
                                                 CommunityMember.community_id == self.id,

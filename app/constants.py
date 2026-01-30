@@ -110,6 +110,7 @@ APLOG_QA = (True, 'QA')
 APLOG_REPORT = (True, 'Report')
 APLOG_USERBAN = (True, 'User Ban')
 APLOG_LOCK = (True, 'Post Lock')
+APLOG_QUOTEBOOST = (True, 'Quote Boost')
 
 APLOG_UNDO_FOLLOW = (True, 'Undo Follow')
 APLOG_UNDO_DELETE = (True, 'Undo Delete')
