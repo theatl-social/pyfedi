@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", function () {
         setupVotingDialogHandlers,
         setupKeyboardShortcuts,
         setupCommunityNameInput,
+        setupCommunityConditionalFields,
         setupShowMoreLinks,
         setupSubmitOnInputChange
     ];
@@ -678,6 +679,50 @@ function setupCommunityNameInput() {
           urlInput.value = titleToURL(communityNameInput.value);
        });
    }
+}
+
+function setupCommunityConditionalFields() {
+    const localOnlyField = document.getElementById('local_only_field');
+    const privateField = document.getElementById('private_field');
+    const invitationsField = document.getElementById('invitations_field');
+
+    if (!localOnlyField || !privateField || !invitationsField) {
+        return; // Not on the community edit page
+    }
+
+    // Get the actual checkbox/select elements within the divs
+    const localOnlyCheckbox = localOnlyField.querySelector('input[type="checkbox"]');
+    const privateCheckbox = privateField.querySelector('input[type="checkbox"]');
+    const invitationsSelect = invitationsField.querySelector('select');
+
+    if (!localOnlyCheckbox || !privateCheckbox || !invitationsSelect) {
+        return;
+    }
+
+    // Function to update field states based on current values
+    function updateFieldStates() {
+        // Private is only enabled when local_only is checked
+        if (localOnlyCheckbox.checked) {
+            privateCheckbox.disabled = false;
+        } else {
+            privateCheckbox.disabled = true;
+            privateCheckbox.checked = false; // Uncheck if disabling
+        }
+
+        // Invitations is only enabled when private is checked
+        if (privateCheckbox.checked && !privateCheckbox.disabled) {
+            invitationsSelect.disabled = false;
+        } else {
+            invitationsSelect.disabled = true;
+        }
+    }
+
+    // Set initial state
+    updateFieldStates();
+
+    // Add event listeners
+    localOnlyCheckbox.addEventListener('change', updateFieldStates);
+    privateCheckbox.addEventListener('change', updateFieldStates);
 }
 
 

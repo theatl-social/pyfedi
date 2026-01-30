@@ -24,16 +24,19 @@
                         </div>
                     {% endif -%}
                 </div>
-                {% if is_moderator or is_owner or is_admin -%}
-                  <div class="row mb-2">
+
+                <div class="row mb-2">
+                  {% if is_moderator or is_owner or is_admin -%}
                     <div class="col-6">
                       <a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="w-100 btn btn-primary">{{ _('Settings') }}</a>
                     </div>
+                  {% endif -%}
+                  {% if community.can_invite() -%}
                     <div class="col-6">
                       <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite others') }}</a>
                     </div>
-                  </div>
-                {% endif %}
+                  {% endif -%}
+                </div>
                 <form method="get" action="/search">
                     <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
                     <input type="hidden" name="community" value="{{ community.id }}">

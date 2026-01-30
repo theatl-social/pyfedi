@@ -35,7 +35,7 @@ from app import db, login, cache, celery, httpx_client, constants, app_bcrypt
 from app.constants import SUBSCRIPTION_NONMEMBER, SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER, \
     SUBSCRIPTION_BANNED, SUBSCRIPTION_PENDING, NOTIF_USER, NOTIF_COMMUNITY, NOTIF_TOPIC, NOTIF_POST, NOTIF_REPLY, \
     ROLE_ADMIN, ROLE_STAFF, NOTIF_FEED, NOTIF_DEFAULT, NOTIF_REPORT, NOTIF_MENTION, POST_STATUS_REVIEWING, \
-    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO
+    POST_STATUS_PUBLISHED, POST_TYPE_VIDEO, INVITE_MEMBERS_ONLY, INVITE_MODS_ONLY, INVITE_OWNER_ONLY
 
 
 def utcnow(naive=True):
@@ -706,6 +706,19 @@ class Community(db.Model):
                        self.moderators())
         else:
             return any(moderator.user_id == user.id and moderator.is_owner for moderator in self.moderators())
+
+    def can_invite(self, user=None):
+        if user is None and current_user.is_anonymous:
+            return False
+        else:
+            u = current_user if user is None else user
+            if self.invitations == INVITE_MEMBERS_ONLY and not self.is_member(u):
+                return False
+            elif self.invitations == INVITE_MODS_ONLY and not self.is_moderator(u):
+                return False
+            elif self.invitations == INVITE_OWNER_ONLY and not self.is_owner(u):
+                return False
+            return True
 
     def num_owners(self):
         result = 0

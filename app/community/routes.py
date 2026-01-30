@@ -2417,13 +2417,7 @@ def community_invite(actor):
         return redirect(referrer())
 
     if community is not None:
-        if community.invitations == INVITE_MEMBERS_ONLY and not community.is_member(current_user):
-            flash(_('Sorry, you cannot invite people to this community.'), 'warning')
-            return redirect(referrer())
-        elif community.invitations == INVITE_MODS_ONLY and not community.is_moderator():
-            flash(_('Sorry, you cannot invite people to this community.'), 'warning')
-            return redirect(referrer())
-        elif community.invitations == INVITE_OWNER_ONLY and not community.is_owner():
+        if not community.can_invite():
             flash(_('Sorry, you cannot invite people to this community.'), 'warning')
             return redirect(referrer())
 
