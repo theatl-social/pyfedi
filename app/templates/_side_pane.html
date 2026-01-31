@@ -39,7 +39,7 @@
                 </div>
                 <form method="get" action="/search">
                     <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
-                    <input type="hidden" name="community" value="{{ community.id }}">
+                    <input type="hidden" name="community_id" value="{{ community.id }}">
                 </form>
                 {% if community_flair and len(community_flair) > 0 -%}
                     <div class="post_flair_sidepane">

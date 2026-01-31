@@ -6,6 +6,7 @@ from sqlalchemy import or_, desc, text
 from app import limiter, db
 from app.activitypub.util import resolve_remote_post_from_search
 from app.community.forms import RetrieveRemotePost
+from app.community.util import search_for_community
 from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
@@ -27,7 +28,7 @@ def run_search():
         banned_from = []
 
     page = request.args.get('page', 1, type=int)
-    community_id = request.args.get('community', 0, type=int)
+    community = request.args.get('community', '')
     language_id = request.args.get('language', 0, type=int)
     type = request.args.get('type', 0, type=int)
     software = request.args.get('software', '')
@@ -37,6 +38,14 @@ def run_search():
     search_for = request.args.get('search_for', 'posts')
     nsfw = request.args.get('nsfw', '')
     minimum_upvote = request.args.get('minimum_upvote', '')
+
+    community_id = request.args.get('community_id', 0, int)
+    if community_id == 0 and community:
+        if not community.startswith('!'):
+            community = f'!{community}'
+        community_obj = search_for_community(community, allow_fetch=False)
+        if community_obj:
+            community_id = community_obj.id
 
     if q != '' or type != 0 or language_id != 0 or community_id != 0 or nsfw != '' or minimum_upvote != '':
         posts = None
