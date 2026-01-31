@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-01-11 11:22+1300\n"
-"PO-Revision-Date: 2025-10-04 01:10+0000\n"
+"PO-Revision-Date: 2026-01-17 00:47+0000\n"
 "Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
+"Language-Team: Finnish <http://translate.piefed.social/projects/piefed/"
+"main-web-app/fi/>\n"
 "Language: fi\n"
-"Language-Team: Finnish <http://translate.piefed.social/projects/piefed"
-"/main-web-app/fi/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:52
@@ -101,11 +102,11 @@ msgstr "Moderaattori poistettu"
 
 #: app/models.py:3394
 msgid "Featured post"
-msgstr "Esille nostettu julkaisu"
+msgstr "Kiinnitetty julkaisu"
 
 #: app/models.py:3395
 msgid "Unfeatured post"
-msgstr ""
+msgstr "Kiinnittämätön julkaisu"
 
 #: app/models.py:3396
 msgid "Deleted post"
@@ -160,9 +161,8 @@ msgid "Un-lock comment"
 msgstr "Poista kommentin lukitus"
 
 #: app/models.py:3409
-#, fuzzy
 msgid "Move post"
-msgstr "Lukitse julkaisu"
+msgstr "Siirrä julkaisu"
 
 #: app/auth/routes.py:139 app/auth/util.py:455 app/post/routes.py:827
 #: app/shared/auth.py:68 app/utils.py:2240
@@ -400,7 +400,7 @@ msgstr "Suljettu"
 
 #: app/admin/forms.py:49
 msgid "Registration mode"
-msgstr ""
+msgstr "Vaatimukset rekisteröitymiselle"
 
 #: app/admin/forms.py:50
 msgid "Question to ask people applying for an account"
@@ -441,11 +441,11 @@ msgstr "Oletusaihe"
 
 #: app/admin/forms.py:60 app/user/forms.py:123
 msgid "Additional CSS"
-msgstr ""
+msgstr "Omat CSS-lisäykset"
 
 #: app/admin/forms.py:61
 msgid "Additional JS"
-msgstr ""
+msgstr "Omat JS-lisäykset"
 
 #: app/admin/forms.py:62 app/templates/_view_filter_nav.html:7
 #: app/templates/_view_filter_nav.html:21
@@ -470,7 +470,7 @@ msgstr "Suosittu"
 
 #: app/admin/forms.py:67 app/user/forms.py:96
 msgid "Default home filter"
-msgstr ""
+msgstr "Kotinäkymän julkaisusuodatin"
 
 #: app/admin/forms.py:69
 msgid "Cache remote images locally"
@@ -490,7 +490,7 @@ msgstr "Yksityinen instanssi – vaadi sisäänkirjautuminen selaamiseen"
 
 #: app/admin/forms.py:73
 msgid "Show Rational Discourse Toolkit in sidebar"
-msgstr ""
+msgstr "Näytä Työkaluja tietopohjaisen keskusteluun -kenttä sivupalkissa"
 
 #: app/admin/forms.py:74
 #, fuzzy
@@ -663,9 +663,8 @@ msgid "NSFW community"
 msgstr "Yhteisön sisältö ei sovellu työpaikalle (NSFW)"
 
 #: app/admin/forms.py:137
-#, fuzzy
 msgid "Only AI-generated content"
-msgstr "Poistettu sisältö"
+msgstr "Vain \"tekoälyllä\" tuotettua sisältöä"
 
 #: app/admin/forms.py:138
 msgid "Banned - no new posts accepted"
@@ -796,7 +795,7 @@ msgstr "Federointiasetukset"
 
 #: app/admin/forms.py:167
 msgid "Always show translation icon on posts"
-msgstr ""
+msgstr "Näytä käännösikoni kaikissa julkaisuissa"
 
 #: app/admin/forms.py:168
 msgid "Old posts can be archived"
@@ -1017,7 +1016,7 @@ msgstr "Tämä salasana on liian helppo arvattava."
 
 #: app/admin/forms.py:297
 msgid "Flag their posts as from a bot"
-msgstr ""
+msgstr "Merkitse käyttäjän julkaisut botin tekemiksi"
 
 #: app/admin/forms.py:298
 msgid "Suppress cross-posts"
@@ -1053,7 +1052,7 @@ msgstr ""
 
 #: app/admin/forms.py:325
 msgid "Test mode"
-msgstr ""
+msgstr "Kokeilutila"
 
 #: app/admin/forms.py:326 app/admin/routes.py:1804
 msgid "Send newsletter"
@@ -1124,7 +1123,7 @@ msgstr ""
 
 #: app/admin/forms.py:368 app/templates/admin/emoji.html:26
 msgid "Category"
-msgstr ""
+msgstr "Kategoria"
 
 #: app/admin/routes.py:218 app/admin/routes.py:250 app/admin/routes.py:291
 #: app/feed/routes.py:238
@@ -1194,6 +1193,8 @@ msgid ""
 "LOG_ACTIVITYPUB_TO_DB is off so no incoming activities are being logged "
 "to the database."
 msgstr ""
+"LOG_ACTIVITYPUB_TO_DB on kytkettynä pois, joten saapuvia aktiviteetteja ei "
+"kirjata lokitietokantaan."
 
 #: app/admin/routes.py:1084
 msgid "ActivityPub Log"
@@ -1501,7 +1502,7 @@ msgstr "Vähimmäispituus 8, enimmäispituus 128"
 
 #: app/auth/forms.py:20 app/user/forms.py:65
 msgid "Low bandwidth mode"
-msgstr ""
+msgstr "Matalan kaistanleveyden tila"
 
 #: app/auth/forms.py:22
 msgid "Log In"
@@ -1520,6 +1521,8 @@ msgstr "Miksi haluaisit liittyä sivustolle?"
 #: app/auth/forms.py:35
 msgid "I agree to the terms of service & privacy policy (see links in footer)"
 msgstr ""
+"Hyväksyn käyttöehdot ja tietosuojakäytännön (ks. linkit sivun alimmassa "
+"osassa)"
 
 #: app/auth/forms.py:36
 msgid "Enter captcha code"
@@ -1528,52 +1531,52 @@ msgstr "Syötä captcha-koodi"
 #: app/auth/forms.py:39 app/auth/util.py:362 app/templates/base.html:243
 #: app/templates/themes/dillo/base.html:108
 msgid "Register"
-msgstr ""
+msgstr "Rekisteröidy"
 
 #: app/auth/forms.py:54
 msgid "User names cannot contain spaces."
-msgstr ""
+msgstr "Käyttäjänimissä ei voi olla välilyöntejä."
 
 #: app/auth/forms.py:60
 msgid "User names can only contain letters, numbers, and underscores."
-msgstr ""
+msgstr "Käyttäjänimien on koostuttava kirjaimista, numeroista ja alaviivoista."
 
 #: app/auth/forms.py:72 app/auth/forms.py:76 app/community/forms.py:67
 #: app/community/forms.py:71 app/feed/forms.py:47
 msgid "This name is in use already."
-msgstr ""
+msgstr "Tämä nimi on jo käytössä."
 
 #: app/auth/forms.py:86
 msgid "Maximum password length is 128 characters."
-msgstr ""
+msgstr "Salasanan enimmäispituus on 128 merkkiä."
 
 #: app/auth/forms.py:110
 msgid "Request password reset"
-msgstr ""
+msgstr "Pyydä salasanan palautusta"
 
 #: app/auth/forms.py:116
 msgid "Set password"
-msgstr ""
+msgstr "Aseta salasana"
 
 #: app/auth/forms.py:120
 msgid "Please make it stop"
-msgstr ""
+msgstr "Tee niistä loppu"
 
 #: app/auth/forms.py:121
 msgid "A little is ok"
-msgstr ""
+msgstr "Pienen määrän voin sietää"
 
 #: app/auth/forms.py:122
 msgid "Bring it on"
-msgstr ""
+msgstr "Sisulla siitä selviää"
 
 #: app/auth/forms.py:124
 msgid "How tired of Trump and Musk news are you?"
-msgstr ""
+msgstr "Kuinka väsynyt olet uutisiin Trumpista ja Muskista?"
 
 #: app/auth/forms.py:126 app/auth/forms.py:131 app/post/forms.py:120
 msgid "Choose"
-msgstr ""
+msgstr "Valitse"
 
 #: app/auth/forms.py:130
 msgid "Choose some topics you are interested in"
@@ -1581,7 +1584,7 @@ msgstr "Valitse itseäsi kiinnostavia aihepiirejä"
 
 #: app/auth/forms.py:136
 msgid "Set email"
-msgstr ""
+msgstr "Sähköpostiosoitteesi"
 
 #: app/auth/oauth_util.py:38
 msgid ""
@@ -1599,19 +1602,19 @@ msgstr ""
 
 #: app/auth/oauth_util.py:136 app/auth/util.py:164
 msgid "Sorry, we are not accepting registrations from your country."
-msgstr ""
+msgstr "Valitettavasti emme vastaanota rekisteröitymisiä maastasi."
 
 #: app/auth/oauth_util.py:146
 msgid "Login failed due to a problem with the OAuth server."
-msgstr ""
+msgstr "Kirjautuminen epäonnistui OAuth-palvelinongelman takia."
 
 #: app/auth/oauth_util.py:162 app/auth/routes.py:261 app/auth/util.py:436
 msgid "This account has been deleted."
-msgstr ""
+msgstr "Tämä käyttäjätili on poistettu."
 
 #: app/auth/onboarding.py:22
 msgid "Which server do you want to join?"
-msgstr ""
+msgstr "Mille palvelimelle tahdot liittyä?"
 
 #: app/auth/onboarding.py:60
 msgid ""
@@ -1634,42 +1637,46 @@ msgid ""
 "Please join some communities you're interested in and then go to the home"
 " page by clicking on the logo above."
 msgstr ""
+"Liity joihinkin itseäsi kiinnostaviin yhteisöihin ja palaa aloitussivulle "
+"painamalla yläreunan logoa."
 
 #: app/auth/routes.py:82
 msgid "Account under review"
-msgstr ""
+msgstr "Käyttäjätiliä tarkastetaan"
 
 #: app/auth/routes.py:87 app/templates/auth/permission_denied.html:12
 #: app/templates/chat/blocked.html:13 app/templates/chat/denied.html:14
 #: app/templates/topic/suggestion_denied.html:14
 msgid "Sorry"
-msgstr ""
+msgstr "Pahoittelut"
 
 #: app/auth/routes.py:87
 msgid ""
 "You are not able to do this action due to being a very new account or "
 "because of a low reputation."
 msgstr ""
+"Toiminto on estetty, koska käyttäjätilisi on hyvin uusi tai sen maine on "
+"heikko."
 
 #: app/auth/routes.py:92 app/templates/auth/check_email.html:12
 msgid "Check your email"
-msgstr ""
+msgstr "Tarkista sähköpostisi"
 
 #: app/auth/routes.py:105
 msgid "Sorry, you cannot use that email address."
-msgstr ""
+msgstr "Valitsemaasi sähköpostiosoitetta ei voi käyttää PieFedissä."
 
 #: app/auth/routes.py:110
 msgid "Check your email for a link to reset your password."
-msgstr ""
+msgstr "Tarkista sähköpostisi saadaksesi salasananpalautuslinkin."
 
 #: app/auth/routes.py:113
 msgid "No account with that email address exists"
-msgstr ""
+msgstr "Tämä ei ole minkään käyttäjätilin sähköpostiosoite"
 
 #: app/auth/routes.py:114
 msgid "Reset Password"
-msgstr ""
+msgstr "Salasanan palautus"
 
 #: app/auth/routes.py:128
 #, python-format
@@ -1677,18 +1684,20 @@ msgid ""
 "Your password has been reset. Please use it to log in with user name of "
 "%(name)s."
 msgstr ""
+"Salasanasi on palautettu. Käytä sitä yhdessä käyttäjätunnuksen %(name)s "
+"kanssa."
 
 #: app/auth/routes.py:142 app/auth/routes.py:157
 msgid "Thank you for verifying your email address."
-msgstr ""
+msgstr "Kiitos sähköpostiosoitteen vahvistamisesta."
 
 #: app/auth/routes.py:159
 msgid "Email address validation failed."
-msgstr ""
+msgstr "Sähköpostiosoite vahvistettu."
 
 #: app/auth/routes.py:223
 msgid "This Google account is already connected to another user."
-msgstr ""
+msgstr "Tämä Google-tunnus on jo liitetty toiseen käyttäjätiliin."
 
 #: app/auth/routes.py:230
 msgid "Your Google account has been connected successfully."
@@ -1701,37 +1710,37 @@ msgstr ""
 
 #: app/auth/routes.py:311
 msgid "This Mastodon account is already connected to another user."
-msgstr ""
+msgstr "Tämä Mastodon-tili on jo liitetty toiseen käyttäjätiliin."
 
 #: app/auth/routes.py:318
 msgid "Your Mastodon account has been connected successfully."
-msgstr ""
+msgstr "Mastodon-käyttäjätilisi yhdistäminen onnistui."
 
 #: app/auth/routes.py:321
 #, python-format
 msgid "Failed to connect Mastodon account: %(error)s"
-msgstr ""
+msgstr "Mastodon-käyttäjätiliin yhdistäminen epäonnistui: %(error)s"
 
 #: app/auth/routes.py:359
 msgid "This Discord account is already connected to another user."
-msgstr ""
+msgstr "Tämä Discord-tili on jo liitetty toiseen käyttäjätiliin."
 
 #: app/auth/routes.py:366
 msgid "Your Discord account has been connected successfully."
-msgstr ""
+msgstr "Discord-käyttäjätilisi yhdistäminen onnistui."
 
 #: app/auth/routes.py:369
 #, python-format
 msgid "Failed to connect Discord account: %(error)s"
-msgstr ""
+msgstr "Discord-käyttäjätiliin yhdistäminen epäonnistui: %(error)s"
 
 #: app/auth/util.py:174
 msgid "Sorry, you cannot use that email address"
-msgstr ""
+msgstr "Valitettavasti syöttämääsi sähköpostiosoitetta ei voi käyttää"
 
 #: app/auth/util.py:178
 msgid "Sorry, you cannot use that user name"
-msgstr ""
+msgstr "Antamaasi käyttäjätunnusta ei voi käyttää"
 
 #: app/auth/util.py:186
 msgid "Sorry, this username pattern is not allowed."
@@ -1745,82 +1754,86 @@ msgstr ""
 #, python-format
 msgid "Your username contained special letters so it was changed to %(name)s."
 msgstr ""
+"Käyttäjätunnuksesi sisälsi erikoismerkkejä, joten se muutettiin muotoon "
+"%(name)s."
 
 #: app/auth/util.py:390 app/auth/util.py:420 app/shared/auth.py:44
 msgid "No account exists with that user name."
-msgstr ""
+msgstr "Antamaasi käyttäjätiliä ei ole."
 
 #: app/auth/util.py:425 app/shared/auth.py:50
 msgid ""
 "Invalid password. Please <a href=\"/auth/reset_password_request\">reset "
 "your password</a>."
 msgstr ""
+"Väärä salasana. Palauta <a href=\"/auth/reset_password_request\""
+">salasanasi</a>."
 
 #: app/auth/util.py:428 app/shared/auth.py:53
 msgid "Invalid password"
-msgstr ""
+msgstr "Väärä salasana"
 
 #: app/auth/util.py:445
 msgid "Login failed"
-msgstr ""
+msgstr "Kirjautuminen epäonnistui"
 
 #: app/auth/util.py:511 app/templates/base.html:291
 #: app/templates/user/edit_profile.html:28
 msgid "Login"
-msgstr ""
+msgstr "Kirjaudu"
 
 #: app/chat/forms.py:10
 msgid "Message"
-msgstr ""
+msgstr "Viesti"
 
 #: app/chat/forms.py:11
 msgid "Type a message here..."
-msgstr ""
+msgstr "Kirjoita viesti tähän..."
 
 #: app/chat/forms.py:12
 msgid "Reply"
-msgstr ""
+msgstr "Vastaa"
 
 #: app/chat/forms.py:16 app/post/forms.py:28 app/templates/base.html:220
 #: app/templates/themes/dillo/base.html:166 app/templates/user/user_ban.html:14
 #: app/user/forms.py:151
 msgid "Spam"
-msgstr ""
+msgstr "Roskaposti"
 
 #: app/chat/forms.py:17 app/post/forms.py:28
 #: app/templates/user/user_ban.html:15 app/user/forms.py:152
 msgid "Harassment"
-msgstr ""
+msgstr "Häirintä"
 
 #: app/chat/forms.py:18 app/post/forms.py:29
 #: app/templates/user/user_ban.html:16 app/user/forms.py:153
 msgid "Threatening violence"
-msgstr ""
+msgstr "Väkivaltauhkaus"
 
 #: app/chat/forms.py:19 app/templates/user/user_ban.html:17
 #: app/user/forms.py:154
 msgid "Promoting hate / genocide"
-msgstr ""
+msgstr "Vihanlietsonta tai kansanmurhaan kiihottaminen"
 
 #: app/chat/forms.py:20 app/post/forms.py:30
 #: app/templates/user/user_ban.html:18 app/user/forms.py:155
 msgid "Misinformation / disinformation"
-msgstr ""
+msgstr "Väärää tietoa / valeuutinen"
 
 #: app/chat/forms.py:21 app/post/forms.py:31
 #: app/templates/user/user_ban.html:19 app/user/forms.py:156
 msgid "Racism, sexism, transphobia"
-msgstr ""
+msgstr "Rasismi, seksismi, transfobia"
 
 #: app/chat/forms.py:22 app/post/forms.py:33
 #: app/templates/user/user_ban.html:20 app/user/forms.py:159
 msgid "Minor abuse or sexualization"
-msgstr ""
+msgstr "Alaikäisten hyväksikäyttö tai seksualisointi"
 
 #: app/chat/forms.py:23 app/post/forms.py:34
 #: app/templates/user/user_ban.html:21 app/user/forms.py:160
 msgid "Non-consensual intimate media"
-msgstr ""
+msgstr "Luvatta luotu intiimi sisältö"
 
 #: app/chat/forms.py:24 app/post/forms.py:35
 #: app/templates/user/user_ban.html:22 app/user/forms.py:161
@@ -1830,43 +1843,43 @@ msgstr ""
 #: app/chat/forms.py:24 app/post/forms.py:35
 #: app/templates/user/user_ban.html:23 app/user/forms.py:161
 msgid "Impersonation"
-msgstr ""
+msgstr "Identiteettivarkaus"
 
 #: app/chat/forms.py:25 app/post/forms.py:36
 #: app/templates/user/user_ban.html:24 app/user/forms.py:162
 msgid "Copyright violation"
-msgstr ""
+msgstr "Tekijänoikeusloukkaus"
 
 #: app/chat/forms.py:25 app/post/forms.py:36
 #: app/templates/user/user_ban.html:25 app/user/forms.py:162
 msgid "Trademark violation"
-msgstr ""
+msgstr "Tavaramerkkiloukkaus"
 
 #: app/chat/forms.py:26 app/post/forms.py:37
 #: app/templates/user/user_ban.html:26 app/user/forms.py:163
 msgid "Self-harm or suicide"
-msgstr ""
+msgstr "Itsensä vahingoittaminen tai itsemurha"
 
 #: app/chat/forms.py:27 app/community/forms.py:482 app/post/forms.py:38
 #: app/user/forms.py:164
 msgid "Other"
-msgstr ""
+msgstr "Muu"
 
 #: app/chat/forms.py:28 app/community/forms.py:158 app/community/forms.py:484
 #: app/post/forms.py:39 app/post/forms.py:75 app/post/forms.py:80
 #: app/user/forms.py:142 app/user/forms.py:165
 msgid "Reason"
-msgstr ""
+msgstr "Syy"
 
 #: app/chat/forms.py:29 app/community/forms.py:485 app/post/forms.py:40
 #: app/user/forms.py:166
 msgid "More info"
-msgstr ""
+msgstr "Lisätietoja"
 
 #: app/chat/forms.py:31 app/community/forms.py:487 app/post/forms.py:42
 #: app/templates/user/show_profile.html:131 app/user/forms.py:168
 msgid "Report"
-msgstr ""
+msgstr "Ilmianna"
 
 #: app/chat/routes.py:64
 #, python-format
@@ -1875,48 +1888,49 @@ msgstr ""
 
 #: app/chat/routes.py:85
 msgid "Send"
-msgstr ""
+msgstr "Lähetä"
 
 #: app/chat/routes.py:96 app/templates/chat/new_message.html:14
 #, python-format
 msgid "New message to \"%(recipient_name)s\""
-msgstr ""
+msgstr "Uusi viesti käyttäjälle \"%(recipient_name)s\""
 
 #: app/chat/routes.py:151
 msgid "Conversation deleted"
-msgstr ""
+msgstr "Keskustelu poistettu"
 
 #: app/chat/routes.py:174
 msgid "Instance blocked."
-msgstr ""
+msgstr "Instanssi estetty."
 
 #: app/chat/routes.py:221
 msgid "This conversation has been reported, thank you!"
-msgstr ""
+msgstr "Keskustelu ilmiannettu. Kiitos!"
 
 #: app/chat/routes.py:226
 msgid "Report conversation"
-msgstr ""
+msgstr "Ilmianna keskustelu"
 
 #: app/community/forms.py:38
 msgid "Create"
-msgstr ""
+msgstr "Luo"
 
 #: app/community/forms.py:53
 msgid "Community urls can only contain letters, numbers, and underscores."
 msgstr ""
+"Yhteisön osoite voi koostua vain kirjaimista, numeroista ja alaviivoista."
 
 #: app/community/forms.py:59 app/feed/forms.py:39
 msgid "A community with this url already exists."
-msgstr ""
+msgstr "Yhteisön URL jo käytössä."
 
 #: app/community/forms.py:65 app/feed/forms.py:45
 msgid "This name was used in the past and cannot be reused."
-msgstr ""
+msgstr "Tätä nimeä on käytetty aiemmin, eikä sitä voi uudelleenkäyttää."
 
 #: app/community/forms.py:88
 msgid "Everyone"
-msgstr ""
+msgstr "Kuka tahansa"
 
 #: app/community/forms.py:89 app/community/forms.py:126
 msgid "Community members"
@@ -1938,23 +1952,23 @@ msgstr "Salli alaäänet näiltä:"
 #: app/community/forms.py:104 app/templates/community/add_post.html:13
 #: app/templates/search/start.html:45
 msgid "Link"
-msgstr ""
+msgstr "Linkki"
 
 #: app/community/forms.py:105 app/templates/community/add_post.html:14
 #: app/templates/search/start.html:44
 msgid "Discussion"
-msgstr ""
+msgstr "Keskustelu"
 
 #: app/community/forms.py:106 app/community/forms.py:268
 #: app/community/forms.py:319 app/templates/community/add_post.html:15
 #: app/templates/search/start.html:46
 msgid "Image"
-msgstr ""
+msgstr "Kuva"
 
 #: app/community/forms.py:107 app/templates/community/add_post.html:16
 #: app/templates/search/start.html:47
 msgid "Video"
-msgstr ""
+msgstr "Video"
 
 #: app/community/forms.py:108 app/templates/community/add_post.html:18
 #: app/templates/community/add_post.html:20 app/templates/search/start.html:48
@@ -1964,20 +1978,19 @@ msgstr ""
 #: app/community/forms.py:109 app/templates/community/add_post.html:23
 #: app/templates/community/add_post.html:25
 msgid "Event"
-msgstr ""
+msgstr "Tapahtuma"
 
 #: app/community/forms.py:111
-#, fuzzy
 msgid "Default post type"
-msgstr "Oletusaihe"
+msgstr "Julkaisun oletustyyppi"
 
 #: app/community/forms.py:113
 msgid "Friendly urls"
-msgstr ""
+msgstr "Ihmisille ymmärrettävät URL:t"
 
 #: app/community/forms.py:114
 msgid "Post ids only"
-msgstr ""
+msgstr "Vain julkaisujen ID:t"
 
 #: app/community/forms.py:115
 msgid "Post url structure to use in this community"
@@ -1985,27 +1998,27 @@ msgstr ""
 
 #: app/community/forms.py:123 app/community/forms.py:177 app/post/forms.py:15
 msgid "Body"
-msgstr ""
+msgstr "Tekstisisältö"
 
 #: app/community/forms.py:124
 msgid "Mods and admins"
-msgstr ""
+msgstr "Moderaattorit ja ylläpitäjät"
 
 #: app/community/forms.py:125
 msgid "Trusted accounts"
-msgstr ""
+msgstr "Luotetut käyttäjätilit"
 
 #: app/community/forms.py:127
 msgid "Any account"
-msgstr ""
+msgstr "Kaikki käyttäjätilit"
 
 #: app/community/forms.py:129
 msgid "Who can edit"
-msgstr ""
+msgstr "Kuka voi muokata"
 
 #: app/community/forms.py:136 app/community/forms.py:167
 msgid "Find"
-msgstr ""
+msgstr "Etsi"
 
 #: app/community/forms.py:140
 msgid "Amend the report description if necessary"
@@ -2017,20 +2030,20 @@ msgstr ""
 
 #: app/community/forms.py:145
 msgid "Note for mod log"
-msgstr ""
+msgstr "Merkintä moderointilokiin"
 
 #: app/community/forms.py:146
 msgid "Also resolve all other reports about the same thing."
-msgstr ""
+msgstr "Merkitse myös tapahtuman muut ilmiannot käsitellyiksi."
 
 #: app/community/forms.py:147
 #: app/templates/community/community_moderate_report_resolve.html:13
 msgid "Resolve report"
-msgstr ""
+msgstr "Käsittele ilmianto"
 
 #: app/community/forms.py:151
 msgid "Community address"
-msgstr ""
+msgstr "Yhteisön internetosoite"
 
 #: app/community/forms.py:154 app/feed/forms.py:106 app/search/routes.py:195
 #: app/templates/admin/communities.html:19
@@ -2049,7 +2062,7 @@ msgstr ""
 #: app/templates/tag/tags.html:29 app/templates/tag/tags_blocked.html:29
 #: app/templates/themes/dillo/base.html:69
 msgid "Search"
-msgstr ""
+msgstr "Etsi"
 
 #: app/community/forms.py:159
 msgid "Ban until"
@@ -2057,11 +2070,11 @@ msgstr ""
 
 #: app/community/forms.py:160
 msgid "Also delete all their posts"
-msgstr ""
+msgstr "Poista samalla käyttäjän tekemät julkaisut"
 
 #: app/community/forms.py:161
 msgid "Also delete all their comments"
-msgstr ""
+msgstr "Poista samalla käyttäjän kommentit"
 
 #: app/community/forms.py:162
 #: app/templates/community/community_moderate_subscribers.html:98
@@ -2088,74 +2101,74 @@ msgstr ""
 
 #: app/community/forms.py:181 app/templates/post/post_options.html:57
 msgid "Sticky"
-msgstr ""
+msgstr "Kiinnitetty"
 
 #: app/community/forms.py:182 app/post/forms.py:88
 #: app/templates/auth/instance_chooser.html:42
 #: app/templates/list_communities.html:162
 #: app/templates/post/_flair_choices.html:12 app/templates/search/start.html:76
 msgid "NSFW"
-msgstr ""
+msgstr "NSFW"
 
 #: app/community/forms.py:183 app/post/forms.py:89
 msgid "Gore/gross"
-msgstr ""
+msgstr "Väkivaltainen/ällöttävä"
 
 #: app/community/forms.py:184 app/post/forms.py:90
 #: app/templates/post/_flair_choices.html:14
 msgid "AI generated"
-msgstr ""
+msgstr "\"Tekoälyllä\" luotu"
 
 #: app/community/forms.py:185 app/post/forms.py:17
 #: app/templates/post/_post_notification_toggle.html:5
 #: app/templates/post/_reply_notification_toggle.html:4
 #: app/templates/post/reply/_macros.html:35
 msgid "Notify about replies"
-msgstr ""
+msgstr "Ilmoita vastauksista"
 
 #: app/community/forms.py:186 app/post/forms.py:19
 #: app/templates/auth/instance_chooser.html:26
 #: app/templates/list_communities.html:144 app/templates/search/start.html:51
 msgid "Language"
-msgstr ""
+msgstr "Kieli"
 
 #: app/community/forms.py:188
 msgid "Publish at"
-msgstr ""
+msgstr "Julkaisuajankohta:"
 
 #: app/community/forms.py:189
 msgid "Repeat"
-msgstr ""
+msgstr "Toistuvuus"
 
 #: app/community/forms.py:190 app/templates/user/scheduled_posts.html:38
 msgid "Daily"
-msgstr ""
+msgstr "Päivittäin"
 
 #: app/community/forms.py:191 app/templates/user/scheduled_posts.html:40
 msgid "Weekly"
-msgstr ""
+msgstr "Viikottain"
 
 #: app/community/forms.py:191 app/templates/user/scheduled_posts.html:42
 msgid "Monthly"
-msgstr ""
+msgstr "Kuukausittain"
 
 #: app/community/forms.py:193 app/community/forms.py:337
 #: app/templates/user/scheduled_posts.html:27
 #: app/templates/user/scheduled_posts.html:35 app/user/forms.py:36
 msgid "Timezone"
-msgstr ""
+msgstr "Aikavyöhyke"
 
 #: app/community/forms.py:194
 msgid "Publish"
-msgstr ""
+msgstr "Julkaise"
 
 #: app/community/forms.py:203
 msgid "NSFW posts are not allowed."
-msgstr ""
+msgstr "NSFW-julkaisut kielletty."
 
 #: app/community/forms.py:210
 msgid "NSFL posts are not allowed."
-msgstr ""
+msgstr "NSFL-julkaisut kielletty."
 
 #: app/community/forms.py:218
 msgid "Choose a time in the future."
@@ -2169,16 +2182,16 @@ msgstr ""
 #: app/community/forms.py:355 app/community/forms.py:359
 #, python-format
 msgid "Links to %(domain)s are not allowed."
-msgstr ""
+msgstr "Linkittäminen kielletty: %(domain)s."
 
 #: app/community/forms.py:254
 msgid "Video file (mp4 or webm)"
-msgstr ""
+msgstr "Videotiedosto (mp4 tai webm)"
 
 #: app/community/forms.py:261
 #, python-format
 msgid "Videos from %(domain)s are not allowed."
-msgstr ""
+msgstr "Videot kielletty lähteestä %(domain)s."
 
 #: app/community/forms.py:267
 msgid "Alt text"
@@ -2191,31 +2204,31 @@ msgstr ""
 
 #: app/community/forms.py:318
 msgid "Replace Image"
-msgstr ""
+msgstr "Vaihda kuva"
 
 #: app/community/forms.py:333
 msgid "Start"
-msgstr ""
+msgstr "Alkaa"
 
 #: app/community/forms.py:334
 msgid "End"
-msgstr ""
+msgstr "Päättyy"
 
 #: app/community/forms.py:335
 msgid "Banner"
-msgstr ""
+msgstr "Yläkuva"
 
 #: app/community/forms.py:336
 msgid "More information link"
-msgstr ""
+msgstr "Lisätietoja-linkki"
 
 #: app/community/forms.py:339
 msgid "Cost"
-msgstr ""
+msgstr "Hinta"
 
 #: app/community/forms.py:340
 msgid "Maximum number of attendees"
-msgstr ""
+msgstr "Osallistujien enimmäismäärä"
 
 #: app/community/forms.py:341 app/templates/admin/instances.html:23
 #: app/templates/admin/instances.html:100
@@ -2231,51 +2244,51 @@ msgstr ""
 
 #: app/community/forms.py:343
 msgid "Address"
-msgstr ""
+msgstr "Osoite"
 
 #: app/community/forms.py:344
 msgid "City"
-msgstr ""
+msgstr "Paikkakunta"
 
 #: app/community/forms.py:345
 msgid "Country"
-msgstr ""
+msgstr "Maa"
 
 #: app/community/forms.py:351
 msgid "Free"
-msgstr ""
+msgstr "Ilmainen"
 
 #: app/community/forms.py:351 app/templates/user/choose_plan.html:39
 msgid "Donation"
-msgstr ""
+msgstr "Lahjoitus"
 
 #: app/community/forms.py:351
 msgid "Paid"
-msgstr ""
+msgstr "Maksullinen"
 
 #: app/community/forms.py:375 app/community/forms.py:377
 msgid "This time is in the past."
-msgstr ""
+msgstr "Aika on menneisyydessä."
 
 #: app/community/forms.py:380
 msgid "Start must be less than end."
-msgstr ""
+msgstr "Alun on oltava ennen loppua."
 
 #: app/community/forms.py:386
 msgid "Online link is required for online events."
-msgstr ""
+msgstr "Verkkotapahtumiin vaaditaan linkki."
 
 #: app/community/forms.py:391
 msgid "Address is required for physical events."
-msgstr ""
+msgstr "Läsnätapahtumiin on merkittävä osoite."
 
 #: app/community/forms.py:394
 msgid "City is required for physical events."
-msgstr ""
+msgstr "Läsnätapahtumiin on merkittävä paikkakunta."
 
 #: app/community/forms.py:397
 msgid "Country is required for physical events."
-msgstr ""
+msgstr "Läsnätapahtumiin on merkittävä maa."
 
 #: app/community/forms.py:420
 msgid "Mode"
@@ -2283,25 +2296,25 @@ msgstr ""
 
 #: app/community/forms.py:420
 msgid "Voters choose one option"
-msgstr ""
+msgstr "Äänestäjä voi valita yhden vaihtoehdon"
 
 #: app/community/forms.py:421
 msgid "Voters choose many options"
-msgstr ""
+msgstr "Äänestäjä voi valita useita vaihtoehtoja"
 
 #: app/community/forms.py:424
 msgid "30 minutes"
-msgstr ""
+msgstr "30 minuuttia"
 
 #: app/community/forms.py:425 app/templates/_home_nav.html:20
 #: app/templates/_home_nav.html:56
 msgid "1 hour"
-msgstr ""
+msgstr "1 tunti"
 
 #: app/community/forms.py:426 app/templates/_home_nav.html:23
 #: app/templates/_home_nav.html:61
 msgid "6 hours"
-msgstr ""
+msgstr "6 tuntia"
 
 #: app/community/forms.py:427 app/templates/_home_nav.html:26
 #: app/templates/_home_nav.html:66
@@ -2310,19 +2323,19 @@ msgstr ""
 #: app/templates/community/_community_nav.html:431
 #: app/templates/feed/_feed_nav.html:73
 msgid "12 hours"
-msgstr ""
+msgstr "12 tuntia"
 
 #: app/community/forms.py:428 app/templates/admin/content.html:34
 msgid "1 day"
-msgstr ""
+msgstr "1 päivä"
 
 #: app/community/forms.py:429 app/templates/admin/content.html:35
 msgid "3 days"
-msgstr ""
+msgstr "3 päivää"
 
 #: app/community/forms.py:430 app/templates/admin/content.html:36
 msgid "7 days"
-msgstr ""
+msgstr "7 päivää"
 
 #: app/community/forms.py:432
 msgid "End voting in"
@@ -2330,27 +2343,27 @@ msgstr ""
 
 #: app/community/forms.py:434
 msgid "Accept votes from this instance only"
-msgstr ""
+msgstr "Salli äänet vain tältä instanssilta"
 
 #: app/community/forms.py:456
 msgid "Polls can't be scheduled more than once"
-msgstr ""
+msgstr "Kyselyille ei voi luoda toistuvia ajastuksia"
 
 #: app/community/forms.py:465
 msgid "Polls need options for people to choose from"
-msgstr ""
+msgstr "Kyselyissä on oltava ihmisille jotain valittavaksi"
 
 #: app/community/forms.py:468
 msgid "Provide at least two choices"
-msgstr ""
+msgstr "Anna ainakin kaksi vastausvaihtoehtoa"
 
 #: app/community/forms.py:471
 msgid "Maximum 15 choices"
-msgstr ""
+msgstr "Enimmillään 15 vaihtoehtoa"
 
 #: app/community/forms.py:476
 msgid "Breaks instance rules"
-msgstr ""
+msgstr "Rikkoo instanssin sääntöjä"
 
 #: app/community/forms.py:477
 msgid "Abandoned by moderators"
@@ -2358,71 +2371,71 @@ msgstr "Moderaattoriensa hylkäämä"
 
 #: app/community/forms.py:478
 msgid "Cult"
-msgstr ""
+msgstr "Kultti"
 
 #: app/community/forms.py:479
 msgid "Scam"
-msgstr ""
+msgstr "Huijaus"
 
 #: app/community/forms.py:480
 msgid "Alt-right pipeline"
-msgstr ""
+msgstr "Äärioikeiston tiedotuskanava"
 
 #: app/community/forms.py:481 app/post/forms.py:29
 msgid "Hate / genocide"
-msgstr ""
+msgstr "Vihaa / kansanmurhaa"
 
 #: app/community/forms.py:504 app/community/routes.py:1299
 msgid "Delete community"
-msgstr ""
+msgstr "Poista yhteisö"
 
 #: app/community/forms.py:508
 msgid "Full URL"
-msgstr ""
+msgstr "Täysimuotoinen URL"
 
 #: app/community/forms.py:511
 msgid "Retrieve"
-msgstr ""
+msgstr "Nouda"
 
 #: app/community/forms.py:515
 msgid "To"
-msgstr ""
+msgstr "Kutsuttavat"
 
 #: app/community/forms.py:516
 msgid "Email addresses or fediverse handles, one per line"
-msgstr ""
+msgstr "Sähköpostiosoitteet tai fediverse-tunnukset, yksi per rivi"
 
 #: app/community/forms.py:518 app/templates/community/invite.html:16
 msgid "Invite"
-msgstr ""
+msgstr "Kutsu"
 
 #: app/community/forms.py:522
 msgid "Use new lines instead of commas."
-msgstr ""
+msgstr "Käytä rivinvaihtoja pilkkujen sijaan."
 
 #: app/community/forms.py:525
 msgid "Maximum of 50 at a time."
-msgstr ""
+msgstr "Enimmillään 50 henkilöä kerrallaan."
 
 #: app/community/forms.py:529
 msgid "The old community is locked"
-msgstr ""
+msgstr "Aiempi yhteisö on lukittu"
 
 #: app/community/forms.py:530
 msgid "Move notification post in old community"
-msgstr ""
+msgstr "Siirtotiedotusjulkaisu aiemmassa yhteisössä"
 
 #: app/community/forms.py:531
 msgid "Request move"
-msgstr ""
+msgstr "Pyydä siirtoa"
 
 #: app/community/forms.py:536
 msgid "Text color"
-msgstr ""
+msgstr "Tekstin väri"
 
 #: app/community/forms.py:537
 msgid "Background color"
-msgstr ""
+msgstr "Taustaväri"
 
 #: app/community/forms.py:538
 msgid "Blur images and thumbnails for posts with this flair"
@@ -2430,16 +2443,16 @@ msgstr ""
 
 #: app/community/routes.py:83
 msgid "Community creation has been restricted to admins on this site"
-msgstr ""
+msgstr "Yhteisöjen luonti on tällä sivustolla rajattu ylläpidolle"
 
 #: app/community/routes.py:136
 msgid "Your new community has been created."
-msgstr ""
+msgstr "Yhteisösi on nyt perustettu."
 
 #: app/community/routes.py:144 app/templates/community/add_local.html:13
 #: app/templates/community/community_edit.html:26
 msgid "Create community"
-msgstr ""
+msgstr "Luo yhteisö"
 
 #: app/community/routes.py:159
 msgid "Adding remote communities is restricted to admin and staff users only."
@@ -2454,7 +2467,7 @@ msgstr ""
 
 #: app/community/routes.py:183 app/community/routes.py:2444
 msgid "Community not found."
-msgstr ""
+msgstr "Yhteisöä ei löytynyt."
 
 #: app/community/routes.py:185 app/community/routes.py:2447
 msgid ""
@@ -2475,7 +2488,7 @@ msgstr ""
 
 #: app/community/routes.py:243 app/community/routes.py:248
 msgid "This community is only visible to logged in users."
-msgstr ""
+msgstr "Yhteisö on tarkasteltavissa vain sisäänkirjautuneille."
 
 #: app/community/routes.py:307 app/post/routes.py:126
 #, python-format
@@ -2528,7 +2541,7 @@ msgstr ""
 #: app/templates/user/show_profile.html:44
 #: app/templates/user/show_profile.html:73
 msgid "Home"
-msgstr ""
+msgstr "Aloitussivu"
 
 #: app/community/routes.py:555 app/templates/_side_pane.html:199
 #: app/templates/communities_menu.html:37 app/templates/explore.html:15
@@ -2546,30 +2559,34 @@ msgid ""
 "This instance no longer online, so posts and comments will only be "
 "visible locally"
 msgstr ""
+"Tämä instanssi on poistunut Internetistä, joten julkaisusi ja kommenttisi "
+"tänne näkyvät vain omalla instanssillasi"
 
 #: app/community/routes.py:799 app/shared/tasks/follows.py:50
 msgid "You cannot join this community"
-msgstr ""
+msgstr "Et voi liittyä tähän yhteisöön"
 
 #: app/community/routes.py:830 app/community/routes.py:947
 #: app/shared/tasks/follows.py:95
 #, python-format
 msgid "You joined %(community_name)s"
-msgstr ""
+msgstr "Liityit yhteisöön %(community_name)s"
 
 #: app/community/routes.py:899
 #, python-format
 msgid "You left %(community_name)s"
-msgstr ""
+msgstr "Poistuit yhteisöstä %(community_name)s"
 
 #: app/community/routes.py:905 app/feed/routes.py:974
 msgid "You need to make someone else the owner before unsubscribing."
 msgstr ""
+"Sinun on asetettava joku muu yhteisön omistajaksi ennen yhteisöstä "
+"poistumista."
 
 #: app/community/routes.py:1032
 #, python-format
 msgid "Your post was not accepted because %(reason)s"
-msgstr ""
+msgstr "Julkaisuasi ei hyväksytty, koska %(reason)s"
 
 #: app/community/routes.py:1101
 #, fuzzy, python-format
@@ -2578,27 +2595,27 @@ msgstr "Aseta %(user_name)s yhteisön omistajaksi"
 
 #: app/community/routes.py:1103
 msgid "Add post to community"
-msgstr ""
+msgstr "Lisää julkaisu yhteisöön"
 
 #: app/community/routes.py:1127
 msgid "A community has been reported"
-msgstr ""
+msgstr "Yhteisö on ilmiannettu"
 
 #: app/community/routes.py:1140
 msgid "Community has been reported, thank you!"
-msgstr ""
+msgstr "Yhteisö on ilmiannettu. Kiitos!"
 
 #: app/community/routes.py:1143
 msgid "Report community"
-msgstr ""
+msgstr "Ilmianna yhteisö"
 
 #: app/community/routes.py:1255
 msgid "Icon removed!"
-msgstr ""
+msgstr "Pikkukuva poistettu!"
 
 #: app/community/routes.py:1271 app/user/routes.py:379
 msgid "Banner removed!"
-msgstr ""
+msgstr "Yläkuva poistettu!"
 
 #: app/community/routes.py:1319
 #: app/templates/community/community_mod_list.html:43
@@ -2611,12 +2628,14 @@ msgid ""
 "A community must have one or more owners. Make someone else an owner "
 "before removing this owner."
 msgstr ""
+"Yhteisöllä on oltava vähintään yksi omistaja. Määritä joku omistajaksi ennen "
+"tämän omistajan poistamista."
 
 #: app/community/routes.py:1421
 #: app/templates/community/community_find_moderator.html:14
 #, python-format
 msgid "Add moderator to %(community)s"
-msgstr ""
+msgstr "Lisää moderaattori yhteisöön %(community)s"
 
 #: app/community/routes.py:1450 app/post/routes.py:1414 app/user/routes.py:1594
 #, python-format
@@ -2631,12 +2650,12 @@ msgstr ""
 #: app/community/routes.py:1503
 #, python-format
 msgid "Posts by %(name)s have been deleted."
-msgstr ""
+msgstr "Käyttäjän %(name)s julkaisut on poistettu."
 
 #: app/community/routes.py:1509
 #, python-format
 msgid "Comments by %(name)s have been deleted."
-msgstr ""
+msgstr "Käyttäjän %(name)s kommentit on poistettu."
 
 #: app/community/routes.py:1544
 msgid "Ban from community"
@@ -2649,29 +2668,29 @@ msgstr ""
 
 #: app/community/routes.py:1643
 msgid "Your request has been sent to the site admins."
-msgstr ""
+msgstr "Pyyntösi on lähetetty sivuston ylläpitäjille."
 
 #: app/community/routes.py:1676 app/community/routes.py:1756
 #, python-format
 msgid "Moderation of %(community)s"
-msgstr ""
+msgstr "Yhteisön %(community)s moderointi"
 
 #: app/community/routes.py:1822
 msgid "Community Wiki"
-msgstr ""
+msgstr "Yhteisön wiki"
 
 #: app/community/routes.py:1856
 #: app/templates/community/community_wiki_list.html:26
 msgid "Add wiki page"
-msgstr ""
+msgstr "Lisää wiki-sivu"
 
 #: app/community/routes.py:1989
 msgid "Reverted to old version of the page."
-msgstr ""
+msgstr "Sivu palautettu aiempaan tilaansa."
 
 #: app/community/routes.py:2029
 msgid "Edit wiki page"
-msgstr ""
+msgstr "Muokkaa wiki-sivua"
 
 #: app/community/routes.py:2054
 #, python-format
@@ -2680,24 +2699,24 @@ msgstr ""
 
 #: app/community/routes.py:2075
 msgid "Page deleted"
-msgstr ""
+msgstr "Sivu poistettu"
 
 #: app/community/routes.py:2103
 #, python-format
 msgid "Mod Log of %(community)s"
-msgstr ""
+msgstr "Moderointiloki: %(community)s"
 
 #: app/community/routes.py:2132
 msgid "Admin has been notified about this report."
-msgstr ""
+msgstr "Ylläpidolle on kerrottu tästä ilmiannosta."
 
 #: app/community/routes.py:2182
 msgid "Report resolved."
-msgstr ""
+msgstr "Ilmianto käsitelty."
 
 #: app/community/routes.py:2222
 msgid "Report ignored."
-msgstr ""
+msgstr "Ilmianto sivuutettu."
 
 #: app/community/routes.py:2252
 #, python-format
@@ -2739,7 +2758,7 @@ msgstr ""
 
 #: app/community/routes.py:2387
 msgid "Sorry your account is too new to do this."
-msgstr ""
+msgstr "Valitettavasti tilisi on tähän liian uusi."
 
 #: app/community/routes.py:2410
 #, python-format
@@ -2750,7 +2769,7 @@ msgstr ""
 
 #: app/community/routes.py:2414
 msgid "Invite to community"
-msgstr ""
+msgstr "Kutsu yhteisöön"
 
 #: app/community/routes.py:2454
 msgid "Search result for remote community"
@@ -2762,11 +2781,11 @@ msgstr ""
 
 #: app/community/routes.py:2531
 msgid "This function is only for admins"
-msgstr ""
+msgstr "Toiminto vain ylläpidolle"
 
 #: app/community/routes.py:2537
 msgid "This is a local community"
-msgstr ""
+msgstr "Tämä on paikallinen yhteisö"
 
 #: app/dev/forms.py:12
 msgid "Populate Communities"
@@ -2934,11 +2953,11 @@ msgstr ""
 
 #: app/main/forms.py:11 app/post/forms.py:65
 msgid "Next"
-msgstr ""
+msgstr "Seuraava"
 
 #: app/main/forms.py:16 app/templates/user/stripe_result.html:16
 msgid "Continue"
-msgstr ""
+msgstr "Jatka"
 
 #: app/main/routes.py:117
 msgid "Create an account to tailor this feed to your interests."
@@ -2952,7 +2971,7 @@ msgstr "Selaa aihepiirin mukaan"
 
 #: app/main/routes.py:466
 msgid "Moderation Log"
-msgstr ""
+msgstr "Moderointiloki"
 
 #: app/main/routes.py:819
 #, python-format
@@ -2966,10 +2985,11 @@ msgstr ""
 #: app/main/routes.py:968
 msgid "Please click the link in your email inbox to verify your account."
 msgstr ""
+"Avaa saapunut viesti sähköpostilaatikostasi vahvistaaksesi käyttäjätilisi."
 
 #: app/main/routes.py:1141
 msgid "Content warning"
-msgstr ""
+msgstr "Sisältövaroitus"
 
 #: app/main/routes.py:1147
 msgid "This page is intentionally left blank."
@@ -2978,46 +2998,47 @@ msgstr ""
 #: app/main/routes.py:1147
 msgid "We don't track you, so there's not much data to make graphs of."
 msgstr ""
+"Koska emme seuraa sinua, meillä ei ole paljoakaan dataa, josta luoda "
+"kaavioita."
 
 #: app/post/forms.py:18
 msgid "Distinguish as moderator comment"
-msgstr ""
+msgstr "Korosta moderaattorin kommenttina"
 
 #: app/post/forms.py:28 app/user/forms.py:150
 msgid "Breaks community rules"
-msgstr ""
+msgstr "Rikkoo yhteisön sääntöjä"
 
 #: app/post/forms.py:32 app/user/forms.py:158
 msgid "Sharing personal info - doxing"
-msgstr ""
+msgstr "Toisen henkilökohtaisten tietojen jakamista – doksausta"
 
 #: app/post/forms.py:54 app/post/routes.py:1465
 #: app/templates/post/post_mea_culpa.html:13
 msgid "I changed my mind"
-msgstr ""
+msgstr "Muutin mieleni"
 
 #: app/post/forms.py:58
-#, fuzzy
 msgid "Community to post to"
-msgstr "Yhteisö"
+msgstr "Kohdeyhteisö"
 
 #: app/post/forms.py:70 app/post/forms.py:76 app/post/forms.py:82
 #: app/templates/admin/instances.html:91
 #: app/templates/list_communities.html:169
 msgid "Yes"
-msgstr ""
+msgstr "Kyllä"
 
 #: app/post/forms.py:81
 msgid "Also delete replies to this comment"
-msgstr ""
+msgstr "Poista myös kommenttiin tulleet vastaukset"
 
 #: app/post/forms.py:95
 msgid "When would you like to be reminded?"
-msgstr ""
+msgstr "Milloin haluaisit muistutuksen?"
 
 #: app/post/forms.py:96
 msgid "e.g. 'in 2 weeks'"
-msgstr ""
+msgstr "esim. \"2 viikon päästä\""
 
 #: app/post/forms.py:109 app/post/forms.py:111
 msgid "Invalid."
@@ -3025,48 +3046,46 @@ msgstr ""
 
 #: app/post/forms.py:115
 msgid "Mastodon instance domain name"
-msgstr ""
+msgstr "Mastodon-instanssin domain-nimi"
 
 #: app/post/forms.py:116
-#, fuzzy
 msgid "Share"
-msgstr "Tallenna"
+msgstr "Jaa"
 
 #: app/post/forms.py:124
-#, fuzzy
 msgid "Community to move this post to"
-msgstr "Yhteisöä ei löytynyt tältä instanssilta"
+msgstr "Julkaisun uusi yhteisö"
 
 #: app/post/forms.py:131 app/templates/community/community_move.html:16
 msgid "Move"
-msgstr ""
+msgstr "Siirrä"
 
 #: app/post/routes.py:75
 msgid "This post has been deleted by the author."
-msgstr ""
+msgstr "Aloittaja poisti julkaisun."
 
 #: app/post/routes.py:78 app/post/routes.py:422 app/post/routes.py:643
 msgid "This post has been deleted and is only visible to staff and admins."
-msgstr ""
+msgstr "Julkaisu on poistettu ja näkyy vain ylläpidolle."
 
 #: app/post/routes.py:85 app/post/routes.py:89
 msgid "This post is only visible to logged in users."
-msgstr ""
+msgstr "Julkaisu näkyy vain kirjautuneille käyttäjille."
 
 #: app/post/routes.py:103 app/post/routes.py:430
 #, python-format
 msgid "%(name)s has indicated they made a mistake in this post."
-msgstr ""
+msgstr "%(name)s ilmoittaa tehneensä virheen tässä julkaisussa."
 
 #: app/post/routes.py:135
 #, python-format
 msgid "This post is scheduled to be published at %(when)s in %(_tz)s"
-msgstr ""
+msgstr "Tämä julkaisu julkaistaan %(when)s (aikavyöhyke %(_tz)s)"
 
 #: app/post/routes.py:145 app/post/routes.py:796
 #, python-format
 msgid "Your reply was not accepted because %(reason)s"
-msgstr ""
+msgstr "Vastaustasi ei hyväksytty, koska %(reason)s"
 
 #: app/post/routes.py:419 app/post/routes.py:641
 msgid ""
@@ -3095,7 +3114,7 @@ msgstr ""
 
 #: app/post/routes.py:771 app/post/routes.py:833
 msgid "Comments have been disabled."
-msgstr ""
+msgstr "Kommentointi on estetty."
 
 #: app/post/routes.py:784 app/post/routes.py:838
 #, python-format
@@ -3104,47 +3123,47 @@ msgstr ""
 
 #: app/post/routes.py:830
 msgid "You are not permitted to comment in this community"
-msgstr ""
+msgstr "Sinulla ei ole kommentointioikeuksia tässä yhteisössä"
 
 #: app/post/routes.py:840
 msgid "This comment cannot be replied to."
-msgstr ""
+msgstr "Tähän kommenttiin ei voi vastata."
 
 #: app/post/routes.py:938
 msgid "Something went wrong and a post could not be found."
-msgstr ""
+msgstr "Jokin meni pieleen, eikä julkaisua voida löytää."
 
 #: app/post/routes.py:1022 app/shared/reply.py:221 app/user/routes.py:332
 #: app/user/routes.py:584 app/user/routes.py:701 app/user/routes.py:1411
 #: app/user/routes.py:1455 app/user/routes.py:1482 app/user/routes.py:1951
 msgid "Your changes have been saved."
-msgstr ""
+msgstr "Muutokset tallennettu."
 
 #: app/post/routes.py:1024
 #, python-format
 msgid "Your edit was not accepted because %(reason)s"
-msgstr ""
+msgstr "Muutoksiasi ei tallennettu, koska %(reason)s"
 
 #: app/post/routes.py:1093 app/templates/post/post_edit.html:125
 msgid "Edit post"
-msgstr ""
+msgstr "Muokkaa julkaisua"
 
 #: app/post/routes.py:1124
 #, python-format
 msgid "Are you sure you want to delete the post \"%(post_title)s\"?"
-msgstr ""
+msgstr "Haluatko varmasti poistaa julkaisun \"%(post_title)s\"?"
 
 #: app/post/routes.py:1140
 msgid "Post deleted."
-msgstr ""
+msgstr "Julkaisu poistettu."
 
 #: app/post/routes.py:1160
 msgid "Post has been restored."
-msgstr ""
+msgstr "Julkaisu palautettu."
 
 #: app/post/routes.py:1174
 msgid "Post purged."
-msgstr ""
+msgstr "Julkaisu poistettu pysyvästi."
 
 #: app/post/routes.py:1246 app/post/routes.py:1271
 #, python-format
@@ -3171,15 +3190,15 @@ msgstr ""
 
 #: app/post/routes.py:1338
 msgid "Post has already been reported, thank you!"
-msgstr ""
+msgstr "Julkaisu on jo ilmiannettu, kiitos!"
 
 #: app/post/routes.py:1342
 msgid "Post has been reported, thank you!"
-msgstr ""
+msgstr "Julkaisu on ilmiannettu, kiitos!"
 
 #: app/post/routes.py:1347
 msgid "Report post"
-msgstr ""
+msgstr "Ilmianna julkaisu"
 
 #: app/post/routes.py:1358 app/post/routes.py:1697 app/user/routes.py:1549
 #, python-format
@@ -3271,15 +3290,15 @@ msgstr ""
 
 #: app/post/routes.py:1885
 msgid "Are you sure you want to delete this comment?"
-msgstr ""
+msgstr "Haluatko varmasti poistaa tämän kommentin?"
 
 #: app/post/routes.py:1911 app/shared/reply.py:276 app/shared/reply.py:440
 msgid "Comment restored."
-msgstr ""
+msgstr "Kommentti palautettu."
 
 #: app/post/routes.py:1988
 msgid "Comment purged."
-msgstr ""
+msgstr "Kommentti poistettu pysyvästi."
 
 #: app/post/routes.py:1990
 msgid "Comments that have been replied to cannot be purged."
@@ -3434,7 +3453,7 @@ msgstr ""
 #: app/templates/user/_read_posts_nav.html:8
 #: app/templates/user/_user_nav.html:5
 msgid "Trending now"
-msgstr ""
+msgstr "Suosituimmat juuri nyt"
 
 #: app/templates/_home_nav.html:4 app/templates/_home_nav.html:48
 #: app/templates/community/_community_nav.html:13
@@ -3448,13 +3467,13 @@ msgstr ""
 #: app/templates/user/_read_posts_nav.html:9 app/user/forms.py:74
 #: app/user/forms.py:83
 msgid "Hot"
-msgstr ""
+msgstr "Suosituimmat"
 
 #: app/templates/_home_nav.html:6 app/templates/_home_nav.html:95
 #: app/templates/themes/dillo/_home_nav.html:9
 #: app/templates/user/_user_nav.html:6
 msgid "Latest posts"
-msgstr ""
+msgstr "Uusimmat julkaisut"
 
 #: app/templates/_home_nav.html:7 app/templates/_home_nav.html:96
 #: app/templates/community/_community_nav.html:18
@@ -3467,12 +3486,12 @@ msgstr ""
 #: app/templates/themes/dillo/_home_nav.html:10 app/user/forms.py:76
 #: app/user/forms.py:85
 msgid "New"
-msgstr ""
+msgstr "Uudet"
 
 #: app/templates/_home_nav.html:9 app/templates/_home_nav.html:97
 #: app/templates/user/_read_posts_nav.html:5
 msgid "Oldest posts"
-msgstr ""
+msgstr "Vanhimmat julkaisut"
 
 #: app/templates/_home_nav.html:10 app/templates/_home_nav.html:98
 #: app/templates/community/_community_nav.html:23
@@ -3484,14 +3503,14 @@ msgstr ""
 #: app/templates/post/_post_replies.html:24 app/user/forms.py:77
 #: app/user/forms.py:86
 msgid "Old"
-msgstr ""
+msgstr "Vanhat"
 
 #: app/templates/_home_nav.html:12 app/templates/_home_nav.html:99
 #: app/templates/themes/dillo/_home_nav.html:12
 #: app/templates/user/_read_posts_nav.html:14
 #: app/templates/user/_user_nav.html:7
 msgid "Recently commented on"
-msgstr ""
+msgstr "Äskettäin kommentoidut"
 
 #: app/templates/_home_nav.html:13 app/templates/_home_nav.html:100
 #: app/templates/admin/communities.html:89
@@ -3507,17 +3526,17 @@ msgstr ""
 #: app/templates/user/show_profile.html:153
 #: app/templates/user/user_preview.html:30 app/user/forms.py:78
 msgid "Active"
-msgstr ""
+msgstr "Aktiiviset"
 
 #: app/templates/_home_nav.html:15 app/templates/_home_nav.html:101
 #: app/templates/user/_user_nav.html:8 app/templates/user/_user_nav.html:9
 msgid "Trending in niche communities"
-msgstr ""
+msgstr "Pienten yhteisöjen puhutuimmat"
 
 #: app/templates/_home_nav.html:16 app/templates/_home_nav.html:102
 #: app/user/forms.py:79
 msgid "Scaled"
-msgstr ""
+msgstr "Skaalattu"
 
 #: app/templates/_home_nav.html:18 app/templates/_home_nav.html:51
 #: app/templates/community/_community_nav.html:71
@@ -3529,29 +3548,29 @@ msgstr ""
 #: app/templates/user/_read_posts_nav.html:12 app/user/forms.py:75
 #: app/user/forms.py:84
 msgid "Top"
-msgstr ""
+msgstr "Parhaat"
 
 #: app/templates/_home_nav.html:19
 msgid "Most upvotes in the last hour"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisen tunnin aikana"
 
 #: app/templates/_home_nav.html:22
 msgid "Most upvotes in the last 6 hours"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisten 6 tunnin aikana"
 
 #: app/templates/_home_nav.html:25
 #: app/templates/community/_community_nav.html:32
 #: app/templates/community/_community_nav.html:263
 #: app/templates/feed/_feed_nav.html:29
 msgid "Most upvotes in the last 12 hours"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisten 12 tunnin aikana"
 
 #: app/templates/_home_nav.html:28
 #: app/templates/community/_community_nav.html:37
 #: app/templates/community/_community_nav.html:268
 #: app/templates/feed/_feed_nav.html:34
 msgid "Most upvotes in the last day"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisen vuorokauden aikana"
 
 #: app/templates/_home_nav.html:29 app/templates/_home_nav.html:71
 #: app/templates/community/_community_nav.html:81
@@ -3559,14 +3578,14 @@ msgstr ""
 #: app/templates/community/_community_nav.html:436
 #: app/templates/feed/_feed_nav.html:78
 msgid "Day"
-msgstr ""
+msgstr "Päivä"
 
 #: app/templates/_home_nav.html:31
 #: app/templates/community/_community_nav.html:42
 #: app/templates/community/_community_nav.html:273
 #: app/templates/feed/_feed_nav.html:39
 msgid "Most upvotes in the last week"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisimmän viikon aikana"
 
 #: app/templates/_home_nav.html:32 app/templates/_home_nav.html:76
 #: app/templates/community/_community_nav.html:86
@@ -3574,14 +3593,14 @@ msgstr ""
 #: app/templates/community/_community_nav.html:441
 #: app/templates/feed/_feed_nav.html:83
 msgid "Week"
-msgstr ""
+msgstr "Viikko"
 
 #: app/templates/_home_nav.html:34
 #: app/templates/community/_community_nav.html:47
 #: app/templates/community/_community_nav.html:278
 #: app/templates/feed/_feed_nav.html:44
 msgid "Most upvotes in the last month"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisimmän kuukauden aikana"
 
 #: app/templates/_home_nav.html:35 app/templates/_home_nav.html:81
 #: app/templates/community/_community_nav.html:91
@@ -3589,14 +3608,14 @@ msgstr ""
 #: app/templates/community/_community_nav.html:446
 #: app/templates/feed/_feed_nav.html:88
 msgid "Month"
-msgstr ""
+msgstr "Kuukausi"
 
 #: app/templates/_home_nav.html:37
 #: app/templates/community/_community_nav.html:52
 #: app/templates/community/_community_nav.html:283
 #: app/templates/feed/_feed_nav.html:49
 msgid "Most upvotes in the last year"
-msgstr ""
+msgstr "Eniten ylä-ääniä viimeisimmän vuoden aikana"
 
 #: app/templates/_home_nav.html:38 app/templates/_home_nav.html:86
 #: app/templates/community/_community_nav.html:96
@@ -3604,14 +3623,14 @@ msgstr ""
 #: app/templates/community/_community_nav.html:451
 #: app/templates/feed/_feed_nav.html:93
 msgid "Year"
-msgstr ""
+msgstr "Vuosi"
 
 #: app/templates/_home_nav.html:40
 #: app/templates/community/_community_nav.html:57
 #: app/templates/community/_community_nav.html:288
 #: app/templates/feed/_feed_nav.html:54
 msgid "Most upvotes all time"
-msgstr ""
+msgstr "Eniten ylä-ääniä ikinä saaneet"
 
 #: app/templates/_home_nav.html:41 app/templates/_home_nav.html:91
 #: app/templates/community/_community_nav.html:101
@@ -3619,7 +3638,7 @@ msgstr ""
 #: app/templates/community/_community_nav.html:456
 #: app/templates/feed/_feed_nav.html:98
 msgid "All Time"
-msgstr ""
+msgstr "Koko aika"
 
 #: app/templates/_home_nav.html:46 app/templates/themes/dillo/_home_nav.html:1
 #: app/templates/themes/dillo/_home_nav.html:2
@@ -3629,7 +3648,7 @@ msgstr ""
 
 #: app/templates/_inoculation_links.html:4
 msgid "Rational Discourse Toolkit"
-msgstr ""
+msgstr "Työkaluja tietopohjaisen keskusteluun"
 
 #: app/templates/_insert_image_dialog.html:4
 #: app/templates/post/add_reply_inline.html:35 app/templates/post/post.html:119
@@ -3902,19 +3921,19 @@ msgstr ""
 
 #: app/templates/_side_pane.html:169
 msgid "Active users in the past month"
-msgstr ""
+msgstr "Aktiiiset käyttäjät viimeisen kuukauden aikana"
 
 #: app/templates/_side_pane.html:169
 msgid "Monthly Users"
-msgstr ""
+msgstr "Kuukausittaiset käyttäjät"
 
 #: app/templates/_side_pane.html:170
 msgid "Active users in the past 6 months"
-msgstr ""
+msgstr "Aktiiviset käyttäjät viimeisen 6 kuukauden aikana"
 
 #: app/templates/_side_pane.html:170
 msgid "Users / 6 Months"
-msgstr ""
+msgstr "Käyttäjiä / 6 kuukautta"
 
 #: app/templates/_side_pane.html:182
 #: app/templates/themes/dillo/_side_pane.html:70
@@ -3930,7 +3949,7 @@ msgstr ""
 #: app/templates/themes/dillo/index.html:33
 #: app/templates/topic/show_topic.html:131
 msgid "More communities"
-msgstr ""
+msgstr "Lisää yhteisöjä"
 
 #: app/templates/_side_pane.html:210
 msgid "More feeds"
@@ -3938,7 +3957,7 @@ msgstr ""
 
 #: app/templates/_view_filter_nav.html:5 app/templates/_view_filter_nav.html:17
 msgid "Posts from communities you moderate"
-msgstr ""
+msgstr "Viestit moderoimistasi yhteisöistä"
 
 #: app/templates/_view_filter_nav.html:5 app/templates/_view_filter_nav.html:18
 #: app/templates/communities_menu.html:17 app/templates/topics_menu.html:14
@@ -3949,24 +3968,24 @@ msgstr ""
 #: app/templates/_view_filter_nav.html:7 app/templates/_view_filter_nav.html:20
 #: app/templates/themes/dillo/_view_filter_nav.html:4
 msgid "Posts from joined communities"
-msgstr ""
+msgstr "Julkaisut yhteisöistä, joiden jäsen olet"
 
 #: app/templates/_view_filter_nav.html:9 app/templates/_view_filter_nav.html:22
 #: app/templates/themes/dillo/_view_filter_nav.html:8
 msgid "Posts on this instance"
-msgstr ""
+msgstr "Julkaisut tältä instanssilta"
 
 #: app/templates/_view_filter_nav.html:10
 #: app/templates/_view_filter_nav.html:24
 #: app/templates/themes/dillo/_view_filter_nav.html:11
 msgid "Posts from popular communities"
-msgstr ""
+msgstr "Suosittujen yhteisöjen julkaisut"
 
 #: app/templates/_view_filter_nav.html:11
 #: app/templates/_view_filter_nav.html:26
 #: app/templates/themes/dillo/_view_filter_nav.html:14
 msgid "No filter"
-msgstr ""
+msgstr "Ei suodatinta"
 
 #: app/templates/_view_filter_nav.html:14
 #: app/templates/themes/dillo/_view_filter_nav.html:1
@@ -3980,27 +3999,27 @@ msgstr ""
 #: app/templates/themes/dillo/_side_pane.html:128
 #, python-format
 msgid "About %(site_name)s"
-msgstr ""
+msgstr "Tietoja: %(site_name)s"
 
 #: app/templates/about.html:16
 msgid "Team"
-msgstr ""
+msgstr "Ylläpitäjät"
 
 #: app/templates/about.html:21
 msgid "Contact"
-msgstr ""
+msgstr "Yhteystiedot"
 
 #: app/templates/about.html:23
 msgid "About Us"
-msgstr ""
+msgstr "Meistä"
 
 #: app/templates/about.html:31
 msgid "Legal Information"
-msgstr ""
+msgstr "Oikeudelliset tiedot"
 
 #: app/templates/about.html:33
 msgid "Our Privacy Policy"
-msgstr ""
+msgstr "Tietosuojakäytäntömme"
 
 #: app/templates/base.html:53 app/templates/post/post_embed.html:52
 #: app/templates/themes/dillo/base.html:28
@@ -4009,13 +4028,13 @@ msgstr "PieFed"
 
 #: app/templates/base.html:133 app/templates/themes/dillo/base.html:63
 msgid "To home page"
-msgstr ""
+msgstr "Aloitussivulle"
 
 #: app/templates/base.html:144 app/templates/base.html:231
 #: app/templates/themes/dillo/base.html:79
 #: app/templates/user/notifications.html:20 app/user/routes.py:1170
 msgid "Notifications"
-msgstr ""
+msgstr "Ilmoitukset"
 
 #: app/templates/base.html:178 app/templates/base.html:190
 #: app/templates/base.html:284
@@ -4027,7 +4046,7 @@ msgstr ""
 #: app/templates/themes/dillo/base.html:204 app/user/subscription.py:27
 #: app/user/subscription.py:31
 msgid "Donate"
-msgstr ""
+msgstr "Lahjoita"
 
 #: app/templates/base.html:195 app/templates/themes/dillo/base.html:148
 msgid "Account"
@@ -4159,19 +4178,19 @@ msgstr ""
 
 #: app/templates/communities_menu.html:7
 msgid "Filter communities..."
-msgstr ""
+msgstr "Suodata yhteisöjä..."
 
 #: app/templates/communities_menu.html:11
 #: app/templates/communities_menu.html:35
 msgid "Local communities"
-msgstr ""
+msgstr "Paikalliset yhteisöt"
 
 #: app/templates/communities_menu.html:12
 #: app/templates/communities_menu.html:36 app/templates/modlog.html:38
 #: app/templates/themes/dillo/base.html:95
 #: app/templates/themes/dillo/base.html:120 app/templates/topics_menu.html:11
 msgid "All communities"
-msgstr ""
+msgstr "Kaikki yhteisöt"
 
 #: app/templates/communities_menu.html:24 app/templates/topics_menu.html:21
 msgid "Joined communities"
@@ -4292,11 +4311,11 @@ msgstr ""
 
 #: app/templates/index.html:52 app/templates/themes/dillo/_side_pane.html:108
 msgid "New communities"
-msgstr ""
+msgstr "Uusimmat yhteisöt"
 
 #: app/templates/index.html:62
 msgid "More new communities"
-msgstr ""
+msgstr "Lisää uusia yhteisöjä"
 
 #: app/templates/index.html:69 app/templates/search/results.html:75
 #: app/templates/themes/dillo/_side_pane.html:116
@@ -5151,7 +5170,7 @@ msgstr ""
 
 #: app/templates/admin/instances.html:48 app/templates/admin/instances.html:88
 msgid "Known Communities"
-msgstr ""
+msgstr "Tunnetut yhteisöt"
 
 #: app/templates/admin/instances.html:49 app/templates/admin/instances.html:89
 msgid "Known Users"
@@ -6851,7 +6870,7 @@ msgstr ""
 
 #: app/templates/post/_post_replies.html:38
 msgid "Comments from other communities"
-msgstr ""
+msgstr "Kommentit muista yhteisöistä"
 
 #: app/templates/post/_post_replies.html:43
 #, python-format
@@ -7668,7 +7687,7 @@ msgstr ""
 #: app/templates/user/connect_oauth.html:17
 #: app/templates/user/connect_oauth.html:20 app/user/routes.py:654
 msgid "Connect OAuth"
-msgstr ""
+msgstr "OAuth-yhteys"
 
 #: app/templates/user/alerts.html:15
 msgid "Alerts"
@@ -7805,7 +7824,7 @@ msgstr ""
 
 #: app/templates/user/connect_oauth.html:24
 msgid "OAuth Connections"
-msgstr ""
+msgstr "OAuth-yhteydet"
 
 #: app/templates/user/connect_oauth.html:27
 msgid "Connect your account to these services to log in without a password."
@@ -7846,12 +7865,15 @@ msgid ""
 "Note: If you connect an OAuth provider, you can use it to log in to your "
 "account without a password."
 msgstr ""
+"Huom: Yhdistettyäsi OAuth-palveluntarjoajaan voit kirjautua ilman salasanaa."
 
 #: app/templates/user/connect_oauth.html:136
 msgid ""
 "If you disconnect all OAuth providers, you will need to use your password"
 " to log in."
 msgstr ""
+"Jos katkaiset yhteydet kaikkiin OAuth-palveluntarjoajiin, voit kirjautua "
+"vain salasanalla."
 
 #: app/templates/user/delete_account.html:15
 #: app/templates/user/edit_settings.html:17
@@ -8436,7 +8458,7 @@ msgstr ""
 
 #: app/templates/user/alerts/_communities.html:3
 msgid "You will be notified of new posts in these communities"
-msgstr ""
+msgstr "Saat tiedon uusista julkaisuista näissä yhteisöissä"
 
 #: app/templates/user/alerts/_communities.html:8
 msgid "Visit Community"
@@ -8622,7 +8644,7 @@ msgstr ""
 
 #: app/topic/forms.py:10
 msgid "Suggested communities"
-msgstr ""
+msgstr "Ehdotetut yhteisöt"
 
 #: app/topic/forms.py:11
 msgid "Comma seperated list of community suggestions"
@@ -9447,4 +9469,3 @@ msgstr ""
 
 #~ msgid "Votes are weighted at %(weight)dx."
 #~ msgstr ""
-

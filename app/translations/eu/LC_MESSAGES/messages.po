@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-01-11 11:22+1300\n"
-"PO-Revision-Date: 2026-01-04 01:47+0000\n"
+"PO-Revision-Date: 2026-01-13 09:47+0000\n"
 "Last-Translator: Thadah Denyse <thadahdenyse@protonmail.com>\n"
+"Language-Team: Basque <http://translate.piefed.social/projects/piefed/"
+"main-web-app/eu/>\n"
 "Language: eu\n"
-"Language-Team: Basque <http://translate.piefed.social/projects/piefed"
-"/main-web-app/eu/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.12.1\n"
 
 #: app/__init__.py:52
@@ -160,9 +161,8 @@ msgid "Un-lock comment"
 msgstr "Desblokeatu iruzkina"
 
 #: app/models.py:3409
-#, fuzzy
 msgid "Move post"
-msgstr "Irakurri argitalpena"
+msgstr "Mugitu argitalpena"
 
 #: app/auth/routes.py:139 app/auth/util.py:455 app/post/routes.py:827
 #: app/shared/auth.py:68 app/utils.py:2240
@@ -337,22 +337,20 @@ msgid "No"
 msgstr "Ez"
 
 #: app/admin/forms.py:35
-#, fuzzy
 msgid "User ID 1"
-msgstr "1. erabiltzaile IDa"
+msgstr "1 erabiltzaile IDa"
 
 #: app/admin/forms.py:36
 msgid "Admins and staff"
-msgstr ""
+msgstr "Administratzaileak eta pertsonala"
 
 #: app/admin/forms.py:37
-#, fuzzy
 msgid "Any user"
-msgstr "Debekatu erabiltzailea"
+msgstr "Edozein erabiltzaile"
 
 #: app/admin/forms.py:39
 msgid "Allow video file uploads"
-msgstr ""
+msgstr "Baimendu bideo fitxategiak kargatzea"
 
 #: app/admin/forms.py:41
 msgid "Allow NSFW communities"
@@ -470,7 +468,7 @@ msgstr "Hasierako iragazki lehenetsia"
 
 #: app/admin/forms.py:69
 msgid "Cache remote images locally"
-msgstr ""
+msgstr "Cacheatu urruneko irudiak lokalean"
 
 #: app/admin/forms.py:70
 msgid "Log ActivityPub JSON for debugging"
@@ -494,7 +492,7 @@ msgstr "Utzi administratzaile ez direnei urruneko komunitateak gehitzen"
 
 #: app/admin/forms.py:75
 msgid "Honeypot to block bad crawlers"
-msgstr ""
+msgstr "Ezti-ontzia arakatzaile txarrak blokeatzeko"
 
 #: app/admin/forms.py:81
 msgid "Enable instance chooser"
@@ -2198,7 +2196,7 @@ msgstr "%(domain)s-eko estekak ez dira onartzen."
 
 #: app/community/forms.py:254
 msgid "Video file (mp4 or webm)"
-msgstr ""
+msgstr "Bideo fitxategia (mp4 edo webm)"
 
 #: app/community/forms.py:261
 #, python-format
@@ -3050,9 +3048,8 @@ msgid "I changed my mind"
 msgstr "Iritziz aldatu dut"
 
 #: app/post/forms.py:58
-#, fuzzy
 msgid "Community to post to"
-msgstr "Komunitatea esteka hau argitaratzeko"
+msgstr "Komunitatea argitaratzeko"
 
 #: app/post/forms.py:70 app/post/forms.py:76 app/post/forms.py:82
 #: app/templates/admin/instances.html:91
@@ -3085,18 +3082,16 @@ msgid "Share"
 msgstr "Partekatu"
 
 #: app/post/forms.py:124
-#, fuzzy
 msgid "Community to move this post to"
-msgstr "Komunitatea esteka hau argitaratzeko"
+msgstr "Komunitatea argitalpen hau mugitzeko"
 
 #: app/post/forms.py:131 app/templates/community/community_move.html:16
 msgid "Move"
 msgstr "Mugitu"
 
 #: app/post/routes.py:75
-#, fuzzy
 msgid "This post has been deleted by the author."
-msgstr "Erabiltzaile hau ezabatua izan da."
+msgstr "Argitalpen hau egileak ezabatu du."
 
 #: app/post/routes.py:78 app/post/routes.py:422 app/post/routes.py:643
 msgid "This post has been deleted and is only visible to staff and admins."
@@ -3281,14 +3276,13 @@ msgid "Set flair for %(post_title)s"
 msgstr "Ezarri %(post_title)s-(r)en bereizgarria"
 
 #: app/post/routes.py:1624 app/post/routes.py:2171
-#, fuzzy
 msgid "Could not find that community."
-msgstr "Ezin zara komunitate honetan sartu"
+msgstr "Ezin izan da komunitate hori aurkitu."
 
 #: app/post/routes.py:1627 app/templates/post/post_move.html:14
-#, fuzzy, python-format
+#, python-format
 msgid "Move \"%(post_title)s\""
-msgstr "Salatu \"%(post_title)s\""
+msgstr "Mugitu \"%(post_title)s\""
 
 #: app/post/routes.py:1669
 msgid ""
@@ -3448,9 +3442,9 @@ msgid "%(name)s has been unlocked."
 msgstr "%(name)s desblokeatu da."
 
 #: app/shared/post.py:928
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been moved."
-msgstr "%(name)s blokeatu egin da."
+msgstr "%(name)s mugitu egin da."
 
 #: app/shared/reply.py:183
 msgid "Your comment has been added."
@@ -5343,13 +5337,15 @@ msgstr "Hau haien eskaera onartu ondoren bidaliko da. Erabili markdown."
 
 #: app/templates/admin/misc.html:63
 msgid "Other random stuff"
-msgstr ""
+msgstr "Beste ausazko gauza"
 
 #: app/templates/admin/misc.html:65
 msgid ""
 "Turn this off to save storage and reduce server load. Increases load on "
 "clients."
 msgstr ""
+"Desaktibatu hau biltegiratzea aurrezteko eta zerbitzariaren karga "
+"murrizteko. Bezeroen karga handitzen du."
 
 #: app/templates/admin/misc.html:80
 msgid "Danger Zone! - Instance Deletion"
@@ -6898,9 +6894,8 @@ msgid "Reported. Check post for issues."
 msgstr "Salatua. Begiratu argitalpena arazorik dagoen ikusteko."
 
 #: app/templates/post/_post_full.html:41 app/templates/post/_post_full.html:392
-#, fuzzy
 msgid "deleted"
-msgstr "Ezabatu"
+msgstr "ezabatuta"
 
 #: app/templates/post/_post_full.html:88
 msgid "Go to image"
@@ -7002,9 +6997,8 @@ msgid "Set flair"
 msgstr "Ezarri bereizgarria"
 
 #: app/templates/post/_post_preview.html:10
-#, fuzzy
 msgid "Update Preview"
-msgstr "Aurreikusi"
+msgstr "Eguneratu aurreikuspena"
 
 #: app/templates/post/_post_replies.html:7
 msgid "Translate all comments"
@@ -7340,6 +7334,8 @@ msgid ""
 "Either provide an url OR upload a file but not both. Use common codecs "
 "like h.264 and mp3."
 msgstr ""
+"Eman URL bat EDO kargatu fitxategi bat, baina ez biak. Erabili ohiko "
+"kodekak, h.264 eta mp3 bezala."
 
 #: app/templates/post/post_edit.html:215
 msgid "Poll choices"
@@ -7419,9 +7415,8 @@ msgid "Purge"
 msgstr "Garbitu"
 
 #: app/templates/post/post_options.html:35
-#, fuzzy
 msgid "Move to another community"
-msgstr "Bidali argitalpenak beste komunitate batera modu gurutzatuan"
+msgstr "Mugitu beste komunitate batera"
 
 #: app/templates/post/post_options.html:52
 msgid "Un-sticky"
@@ -7645,27 +7640,24 @@ msgid "Recent first"
 msgstr "Duela gutxikoak lehenago"
 
 #: app/templates/search/start.html:78
-#, fuzzy
 msgid "Use my profile settings"
-msgstr "E-postaren ezarpen gehiago"
+msgstr "Erabili nire profilaren ezarpenak"
 
 #: app/templates/search/start.html:79
-#, fuzzy
 msgid "Only NSFW"
-msgstr "Behin bakarrik"
+msgstr "NSFW soilik"
 
 #: app/templates/search/start.html:80
 msgid "Include NSFW"
-msgstr ""
+msgstr "Sartu NSFW"
 
 #: app/templates/search/start.html:81
-#, fuzzy
 msgid "No NSFW"
-msgstr "nsfw"
+msgstr "NSFWrik ez"
 
 #: app/templates/search/start.html:84
 msgid "Minimum score"
-msgstr ""
+msgstr "Gutxieneko puntuazioa"
 
 #: app/templates/search/start.html:89
 msgid "Example searches:"
@@ -9821,4 +9813,3 @@ msgstr "Zure dohaintza bertan behera utzi da."
 
 #~ msgid "Votes are weighted at %(weight)dx."
 #~ msgstr "Botoak %(weight)dx-tan haztatzen dira."
-
