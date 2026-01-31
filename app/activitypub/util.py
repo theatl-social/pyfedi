@@ -132,7 +132,7 @@ def post_to_page(post: Post):
     activity_data = {
         "type": "Page",
         "id": post.ap_id,
-        "context": f'{post.public_url()}/context',
+        "context": f"{current_app.config['SERVER_URL']}/post/{post.id}/context",
         "attributedTo": post.author.ap_public_url,
         "to": [
             post.community.public_url(),
@@ -228,7 +228,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         ],
         "type": "Note",
         "id": reply.ap_id,
-        "context": f'{reply.post.public_url()}/context',
+        "context": f"{current_app.config['SERVER_URL']}/post/{reply.post.id}/context",
         "attributedTo": reply.author.public_url(),
         "inReplyTo": reply.in_reply_to(),
         "to": [

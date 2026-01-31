@@ -2022,11 +2022,6 @@ def post_nice(community_name, post_id, slug):
     return post_ap(post_id)
 
 
-@bp.route('/c/<community_name>/p/<int:post_id>/<slug>/context', methods=['GET'])
-def post_context_nice(community_name, post_id, slug):
-    return post_ap_context(post_id)
-
-
 @bp.route('/post/<int:post_id>/replies', methods=['GET'])
 def post_replies_ap(post_id):
     if (request.method == 'GET' or request.method == 'HEAD') and is_activitypub_request():
