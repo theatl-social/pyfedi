@@ -653,7 +653,7 @@ def honey_pot(whatever=None):
     if whatever:
         try:
             return show_post(int(whatever))
-        except Exception as e:
+        except Exception:
             pass
     return ''
 

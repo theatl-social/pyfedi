@@ -2849,7 +2849,7 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
             post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
         if private_community_ids := community_membership_private(current_user.id):
-            post_id_where.append(f'(c.private is false OR c.id IN :private_community_ids) ')
+            post_id_where.append('(c.private is false OR c.id IN :private_community_ids) ')
             params['private_community_ids'] = tuple(private_community_ids)
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
