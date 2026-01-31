@@ -159,10 +159,10 @@
             </li>
         {% endif -%}
         <li>
-            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}"
+            <a class="dropdown-item no-underline" role="button" style="white-space: normal" aria-label="{{ _('Block post author @%(author_name)s', author_name=post.author.user_name if not post.deleted else '') }}"
                     hx-post="/post/{{ post.id }}/block_user" hx-trigger="click throttle:1s"tabindex="0">
                 <span class="fe fe-block"></span>
-                {{ _('Block post author @%(author_name)s', author_name=post.author.user_name) }}
+                {{ _('Block post author @%(author_name)s', author_name=post.author.user_name if not post.deleted else '') }}
             </a>
         </li>
         <li>
