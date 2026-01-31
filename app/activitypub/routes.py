@@ -2676,7 +2676,7 @@ def quote_boost_auth():
                 },
             },
         ],
-        'id': current_app.config['SERVER_URL'] + '/quoteAuth?stamp=' + urllib.parse.quote(local_post_id, safe='') + ';' + urllib.parse.quote(remote_post_id, safe=''),
+        'id': current_app.config['SERVER_URL'] + '/quote_boost_auth?stamp=' + urllib.parse.quote(local_post_id, safe='') + ';' + urllib.parse.quote(remote_post_id, safe=''),
         'type': 'QuoteAuthorization',
         'attributedTo': current_app.config['SERVER_URL'],
         'interactionTarget': local_post_id,
