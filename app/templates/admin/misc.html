@@ -64,6 +64,7 @@
             <h3>{{ _('Other random stuff') }}</h3>
             {{ render_field(form.cache_remote_images_locally) }}
             <p class="small field_hint">{{ _('Turn this off to save storage and reduce server load. Increases load on clients.') }}</p>
+            {{ render_field(form.enable_report_em_dash_replies) }}
             {{ render_field(form.log_activitypub_json) }}
             {{ render_field(form.public_modlog) }}
             {{ render_field(form.private_instance) }}

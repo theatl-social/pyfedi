@@ -289,6 +289,7 @@ def admin_misc():
         set_setting('auto_decline_countries', form.auto_decline_countries.data.strip())
         set_setting('cache_remote_images_locally', form.cache_remote_images_locally.data)
         set_setting('allow_video_file_uploads', form.allow_video_file_uploads.data)
+        set_setting('enable_report_em_dash_replies', form.enable_report_em_dash_replies.data)
         flash(_('Settings saved.'))
     elif request.method == 'GET':
         form.enable_downvotes.data = site.enable_downvotes
@@ -325,6 +326,7 @@ def admin_misc():
         form.honeypot.data = site.honeypot
         form.cache_remote_images_locally.data = get_setting('cache_remote_images_locally', True)
         form.allow_video_file_uploads.data = get_setting('allow_video_file_uploads', 'no')
+        form.enable_report_em_dash_replies.data = get_setting('enable_report_em_dash_replies', True)
     return render_template('admin/misc.html', title=_('Misc settings'), form=form, close_form=close_form)
 
 

@@ -2595,7 +2595,7 @@ class PostReply(db.Model):
     def new(cls, user: User, post: Post, in_reply_to, body, body_html, notify_author, language_id, distinguished, answer,
             request_json: dict = None, announce_id=None, session=None):
         from app.utils import shorten_string, blocked_phrases, recently_upvoted_post_replies, reply_already_exists, \
-            reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound
+            reply_is_just_link_to_gif_reaction, reply_is_stupid, wilson_confidence_lower_bound, get_setting
         from app.activitypub.util import notify_about_post_reply
         from app import redis_client
 
@@ -2718,7 +2718,7 @@ class PostReply(db.Model):
                 session.commit()
 
         # LLM Detection
-        if reply.body and '—' in reply.body and user.created_very_recently():
+        if reply.body and '—' in reply.body and user.created_very_recently() and get_setting('enable_report_em_dash_replies', True):
             # usage of em-dash is highly suspect.
             from app.utils import notify_admin
             # notify admin

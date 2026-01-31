@@ -68,6 +68,7 @@ class SiteMiscForm(FlaskForm):
     default_filter = SelectField(_l('Default home filter'), choices=filters, validators=[DataRequired()], coerce=str,
                                  render_kw={'class': 'form-select'})
     cache_remote_images_locally = BooleanField(_l('Cache remote images locally'))
+    enable_report_em_dash_replies = BooleanField(_l('Report comments containing an em dash (—) from newly created users - likely spam / AI.'))
     log_activitypub_json = BooleanField(_l('Log ActivityPub JSON for debugging'))
     public_modlog = BooleanField(_l('Show moderation actions publicly'))
     private_instance = BooleanField(_l('Private instance - require login to browse'))
