@@ -16,14 +16,14 @@ from app.chat.util import send_message
 from app.constants import *
 from app.email import send_email
 from app.models import CommunityBlock, CommunityMember, Notification, NotificationSubscription, User, Conversation, \
-    Community, Language, File, CommunityFlair, utcnow
+    Community, Language, File, CommunityFlair, utcnow, CommunityInvitation
 from app.shared.tasks import task_selector
 from app.shared.upload import process_upload
 from app.user.utils import search_for_user
 from app.utils import authorise_api_user, blocked_communities, shorten_string, markdown_to_html, \
     instance_banned, community_membership, joined_communities, moderating_communities, is_image_url, \
     communities_banned_from, piefed_markdown_to_lemmy_markdown, community_moderators, add_to_modlog, \
-    get_recipient_language, moderating_communities_ids, moderating_communities_ids_all_users
+    get_recipient_language, moderating_communities_ids, moderating_communities_ids_all_users, gibberish
 
 
 # function can be shared between WEB and API (only API calls it for now)
@@ -124,7 +124,7 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
 
     recipient = search_for_user(handle)
     if recipient and not recipient.banned and not instance_banned(recipient.instance.domain):
-        community = db.session.query(Community).get(community_id)
+        community: Community = db.session.query(Community).get(community_id)
         if community.banned:
             return 0
 
@@ -134,14 +134,32 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
         db.session.add(conversation)
         db.session.commit()
 
-        message = f"Hi there,\n\nI think you might appreciate this community, check it out: https://{current_app.config['SERVER_NAME']}/c/{community.link()}.\n\n"
+        if not community.private:
+            message = f"Hi there,\n\nI think you might appreciate this community, check it out: {current_app.config['SERVER_URL']}/c/{community.link()}.\n\n"
+        else:
+            message = f"Hi there,\n\nI think you might appreciate the private community called {community.display_name()} on {current_app.config['SERVER_NAME']}.\n\n"
         if recipient.is_local():
-            message += f"If you'd like to join it use this link: https://{current_app.config['SERVER_NAME']}/c/{community.link()}/subscribe."
+            if community.invitations <= INVITE_APPLY:
+                message += f"If you'd like to join it use this link: {current_app.config['SERVER_URL']}/c/{community.link()}/subscribe."
+            else:
+                community_invite = create_invite_token(community, recipient, user)
+                message += f"If you'd like to join it use this link: {current_app.config['SERVER_URL']}/community/{community.link()}/accept_invite/{community_invite}."
         else:
             if recipient.instance.software.lower() == 'piefed':
-                message += f"Join the community by going to https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain}/subscribe or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote."
+                if community.invitations <= INVITE_APPLY:
+                    message += f"Join the community by going to https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain}/subscribe or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote."
+                else:
+                    community_invite = create_invite_token(community, recipient, user)
+                    if community.local_only:
+                        message += f"Join the community by going to {current_app.config['SERVER_URL']}/community/{community.link()}/accept_invite/{community_invite}. You need to be logged in to a {current_app.config['SERVER_NAME']} account for this."
+                    else:
+                        message += f"Join the community by going to https://{recipient.instance.domain}/community/{community.link()}@{community.ap_domain}/accept_invite/{community_invite} or if that doesn't work try pasting {community.lemmy_link()} into this form: https://{recipient.instance.domain}/community/add_remote."
             elif recipient.instance.software.lower() == 'lemmy' or recipient.instance.software.lower() == 'mbin':
-                message += f"Join the community by clicking 'Join' at https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain} or if that doesn't work try pasting {community.lemmy_link()} into your search function."
+                if community.invitations <= INVITE_APPLY:
+                    message += f"Join the community by clicking 'Join' at https://{recipient.instance.domain}/c/{community.link()}@{community.ap_domain} or if that doesn't work try pasting {community.lemmy_link()} into your search function."
+                else:
+                    community_invite = create_invite_token(community, recipient, user)
+                    message += f"Join the community by going to {current_app.config['SERVER_URL']}/community/{community.link()}/accept_invite/{community_invite}. You need to be logged in to a {current_app.config['SERVER_NAME']} account for this."
             else:
                 message = render_template('email/invite_to_community.txt', user=user, community=community,
                                           host=current_app.config['SERVER_NAME'])
@@ -152,6 +170,19 @@ def invite_with_chat(community_id: int, handle: str, src, auth=None):
     return 0
 
 
+def create_invite_token(community, recipient, user) -> str:
+    existing_invite = db.session.query(CommunityInvitation).filter(CommunityInvitation.community_id == community.id,
+                                                                   CommunityInvitation.user_id == recipient.id).first()
+    if existing_invite:
+        return existing_invite.token
+    else:
+        community_invite = CommunityInvitation(token=gibberish(15), community_id=community.id,
+                                               user_id=recipient.id, inviter_id=user.id)
+        db.session.add(community_invite)
+        db.session.commit()
+        return community_invite.token
+
+
 def invite_with_email(community_id: int, to: str, src, auth=None):
     if src == SRC_API:
         user_id = authorise_api_user(auth)
@@ -159,12 +190,16 @@ def invite_with_email(community_id: int, to: str, src, auth=None):
     else:
         user = current_user
 
-    community = db.session.query(Community).get(community_id)
+    community: Community = db.session.query(Community).get(community_id)
     if community.banned:
         return 0
 
+    subscribe = 'subscribe'
+    if community.invitations > INVITE_APPLY:
+        subscribe = f'accept_invite/{user.lemmy_link()}'
+
     message = render_template('email/invite_to_community.txt', user=user, community=community,
-                              host=current_app.config['SERVER_NAME'])
+                              host=current_app.config['SERVER_URL'], subscribe=subscribe)
 
     send_email(f"{community.display_name()} on {current_app.config['SERVER_NAME']}",
                f"{user.display_name()} <{current_app.config['MAIL_FROM']}>",

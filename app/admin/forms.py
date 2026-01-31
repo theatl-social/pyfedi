@@ -206,6 +206,7 @@ class EditInstanceForm(FlaskForm):
     trusted = BooleanField(_l('Trusted'))
     hide = BooleanField(_l('Hide from instance chooser'))
     posting_warning = TextAreaField(_l('Posting warning'))
+    admin_note = TextAreaField(_l('Notes about this instance (only visible to other admins)'))
     inbox = StringField(_l('Inbox'))
     submit = SubmitField(_l('Save'))
 

@@ -314,7 +314,7 @@ Edit `gunicorn.conf.py` and change `worker_tmp_dir` if needed.
 
 You will want to [tune PostgreSQL](https://pgtune.leopard.in.ua/). [More on this](https://www.enterprisedb.com/postgres-tutorials/how-tune-postgresql-memory).
 If you have more than 4 GB of RAM, consider [turning on 'huge pages'](https://www.percona.com/blog/why-linux-hugepages-are-super-important-for-database-servers-a-case-with-postgresql/)
-also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
+also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages). Turn off JIT by adding `jit=off` to your postgresql config.
 
 [PgBouncer](https://www.pgbouncer.org) can be helpful for instances with > 800 MAU.
 
@@ -497,6 +497,8 @@ server {
         expires max;
         access_log off;
     }
+    
+    client_max_body_size 100M;
 
 }
 ```

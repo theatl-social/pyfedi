@@ -63,7 +63,7 @@ def add_object(session, user_id, object, community_id=None):
     if community.local_only or not community.instance.online():
         return
 
-    add_id = f"https://{current_app.config['SERVER_NAME']}/activities/add/{gibberish(15)}"
+    add_id = f"{current_app.config['SERVER_URL']}/activities/add/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     add = {
@@ -81,7 +81,7 @@ def add_object(session, user_id, object, community_id=None):
     if community.is_local():
         del add['@context']
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {

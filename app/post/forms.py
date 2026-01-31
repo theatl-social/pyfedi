@@ -25,7 +25,10 @@ class EditReplyForm(NewReplyForm):
 
 
 class ReportPostForm(FlaskForm):
-    reason_choices = [('1', _l('Breaks community rules')), ('7', _l('Spam')), ('2', _l('Harassment')),
+    reason_choices = [('1', _l('Breaks community rules')),
+                      ('7', _l('Spam')),
+                      ('17', _l('AI content that needs flair')),
+                      ('2', _l('Harassment')),
                       ('3', _l('Threatening violence')), ('4', _l('Hate / genocide')),
                       ('15', _l('Misinformation / disinformation')),
                       ('16', _l('Racism, sexism, transphobia')),

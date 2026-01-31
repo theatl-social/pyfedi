@@ -14,10 +14,11 @@ from app.domain.forms import PostWarningForm
 from app.inoculation import inoculation
 from app.models import Post, Domain, Community, DomainBlock, read_posts
 from app.shared.domain import block_domain, unblock_domain
-from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, blocked_or_banned_instances, \
+from app.utils import render_template, permission_required, user_filters_posts, blocked_domains, \
+    blocked_or_banned_instances, \
     recently_upvoted_posts, recently_downvoted_posts, mimetype_from_url, request_etag_matches, \
     return_304, joined_or_modding_communities, login_required_if_private_instance, reported_posts, \
-    moderating_communities_ids, block_honey_pot
+    moderating_communities_ids, block_honey_pot, user_pronouns, community_membership_private
 
 
 @bp.route('/d/<domain_id>', methods=['GET', 'POST'])
@@ -59,7 +60,9 @@ def show_domain(domain_id):
                 if instance_ids:
                     posts = posts.filter(or_(Post.instance_id.not_in(instance_ids), Post.instance_id == None))
                 content_filters = user_filters_posts(current_user.id)
+                posts = posts.filter(or_(Community.private == False, Community.id.in_(community_membership_private(current_user.id))))
             else:
+                posts = posts.filter(Community.private == False)
                 content_filters = {}
 
             # don't show posts a user has already interacted with
@@ -88,10 +91,11 @@ def show_domain(domain_id):
                                    next_url=next_url, prev_url=prev_url, form=form,
                                    content_filters=content_filters, recently_upvoted=recently_upvoted,
                                    recently_downvoted=recently_downvoted,
+                                   user_pronouns=user_pronouns(),
                                    reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                    joined_communities=joined_or_modding_communities(current_user.get_id()),
                                    moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-                                   rss_feed=f"https://{current_app.config['SERVER_NAME']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
+                                   rss_feed=f"{current_app.config['SERVER_URL']}/d/{domain.id}/feed" if domain.post_count > 0 else None,
                                    rss_feed_name=f"{domain.name} on {g.site.name}" if domain.post_count > 0 else None,
                                    inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                    )
@@ -116,16 +120,16 @@ def show_domain_rss(domain_id):
 
             posts = Post.query.join(Community, Community.id == Post.community_id). \
                 filter(Post.from_bot == False, Post.domain_id == domain.id, Community.banned == False,
-                       Post.deleted == False, Post.status > POST_STATUS_REVIEWING). \
+                       Post.deleted == False, Post.status > POST_STATUS_REVIEWING, Community.private == False). \
                 order_by(desc(Post.posted_at)).limit(20)
 
             fg = FeedGenerator()
-            fg.id(f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}")
+            fg.id(f"{current_app.config['SERVER_URL']}/d/{domain_id}")
             fg.title(f'{domain.name} on {g.site.name}')
-            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/d/{domain_id}", rel='alternate')
-            fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+            fg.link(href=f"{current_app.config['SERVER_URL']}/d/{domain_id}", rel='alternate')
+            fg.logo(f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png")
             fg.subtitle(' ')
-            fg.link(href=f"https://{current_app.config['SERVER_NAME']}/c/{domain_id}/feed", rel='self')
+            fg.link(href=f"{current_app.config['SERVER_URL']}/c/{domain_id}/feed", rel='self')
             fg.language('en')
 
             already_added = set()
@@ -134,9 +138,9 @@ def show_domain_rss(domain_id):
                 fe = fg.add_entry()
                 fe.title(post.title)
                 if post.slug:
-                    fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                    fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
                 else:
-                    fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                    fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
                 if post.url:
                     if post.url in already_added:
                         continue

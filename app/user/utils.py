@@ -30,7 +30,7 @@ def purge_user_then_delete_task(user_id, flush):
             for post in user.posts:
                 if not post.community.local_only:
                     delete_json = {
-                        'id': f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                        'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                         'type': 'Delete',
                         'actor': user.public_url(),
                         'audience': post.community.public_url(),
@@ -47,7 +47,7 @@ def purge_user_then_delete_task(user_id, flush):
 
                     else:  # local community - send it to followers on remote instances, using Announce
                         announce = {
-                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                            "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
                             "type": 'Announce',
                             "to": [
                                 "https://www.w3.org/ns/activitystreams#Public"
@@ -76,7 +76,7 @@ def purge_user_then_delete_task(user_id, flush):
                 payload = {
                     "@context": default_context(),
                     "actor": user.public_url(),
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                     "object": user.public_url(),
                     "to": [
                         "https://www.w3.org/ns/activitystreams#Public"
@@ -100,13 +100,13 @@ def unsubscribe_from_community(community, user):
     if community.instance.gone_forever or community.instance.dormant:
         return
 
-    undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+    undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
     follow = {
         "actor": user.public_url(),
         "to": [community.public_url()],
         "object": community.public_url(),
         "type": "Follow",
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+        "id": f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
     }
     undo = {
         'actor': user.public_url(),
@@ -171,7 +171,7 @@ def search_for_user(address: str, allow_fetch: bool = True):
                     site = Site.query.get(1)
                     for attempt in [1,2]:
                         try:
-                            object_request = signed_get_request(links['href'], site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                            object_request = signed_get_request(links['href'], site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
                         except httpx.HTTPError:
                             if attempt == 1:
                                 time.sleep(3)

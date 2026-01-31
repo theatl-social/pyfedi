@@ -116,6 +116,11 @@ class ResetPasswordForm(FlaskForm):
     submit = SubmitField(_l('Set password'))
 
 
+class ResendEmailForm(FlaskForm):
+    email = EmailField(_l('Email'), validators=[DataRequired(), Email()], render_kw={'autofocus': True})
+    submit = SubmitField(_l('Resend verification email'))
+
+
 class ChooseTrumpMuskForm(FlaskForm):
     options = [(1, _l('Please make it stop')),
                (0, _l('A little is ok')),

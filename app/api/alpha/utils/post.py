@@ -41,6 +41,9 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     query = data['q'] if 'q' in data else ''
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     if auth:
         user_id = authorise_api_user(auth)
 
@@ -60,6 +63,25 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
 
     if community_id or community_name:
         search_by_community = True
+        # check private community access
+        if community_id:
+            community = Community.query.get(community_id)
+        else:
+            # parse community_name to get the community
+            if '@' not in community_name:
+                community_name_lookup = f"{community_name}@{current_app.config['SERVER_NAME']}"
+            else:
+                community_name_lookup = community_name
+            name, ap_domain = community_name_lookup.split('@')
+            community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+
+        if community and community.private:
+            # community is private, check if user is a member
+            if not user_id:
+                raise Exception('Private community - authentication required')
+            else:
+                if not community.is_member(user):
+                    raise Exception('Private community - membership required')
     else:
         search_by_community = False
 
@@ -221,7 +243,7 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if search_type == 'Url':
             posts = posts.filter(Post.url.ilike(f"%{query}%"))
         else:
-            posts = posts.search(query, sort=sort == 'Relevance')
+            posts = posts.search(query, sort=sort == 'Relevance').filter(Post.indexable == True)
 
     if user_id:
         if liked_only:
@@ -243,11 +265,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
             if nsfw == '' and user.hide_nsfw == 1:
                 posts = posts.filter(Post.nsfw == False)
             else:
-                if nsfw == 'exclude':
+                if nsfw == 'Exclude':
                     posts = posts.filter(Post.nsfw == False)
-                elif nsfw == 'only':
+                elif nsfw == 'Only':
                     posts = posts.filter(Post.nsfw == True)
-                elif nsfw == 'include':
+                elif nsfw == 'Include':
                     pass
             if user.hide_gen_ai == 1:
                 posts = posts.filter(Post.ai_generated == False)
@@ -269,11 +291,11 @@ def get_post_list(auth, data, user_id=None, search_type='Posts') -> dict:
         if len(filtered_out_community_ids):
             posts = posts.filter(Post.community_id.not_in(filtered_out_community_ids))
     else:
-        if nsfw == 'exclude':
+        if nsfw == 'Exclude':
             posts = posts.filter(Post.nsfw == False)
-        elif nsfw == 'only':
+        elif nsfw == 'Only':
             posts = posts.filter(Post.nsfw == True)
-        elif nsfw == 'include':
+        elif nsfw == 'Include':
             pass
 
     if minimum_upvotes:
@@ -409,6 +431,27 @@ def get_post_list2(auth, data, user_id=None, search_type='Posts') -> dict:
     topic_id = int(data['topic_id']) if 'topic_id' in data else None
     community_name = data['community_name'] if 'community_name' in data else None
     person_id = int(data['person_id']) if 'person_id' in data else None
+
+    if community_id or community_name:
+        # check private community access
+        if community_id:
+            community = Community.query.get(community_id)
+        else:
+            # parse community_name to get the community
+            if '@' not in community_name:
+                community_name_lookup = f"{community_name}@{current_app.config['SERVER_NAME']}"
+            else:
+                community_name_lookup = community_name
+            name, ap_domain = community_name_lookup.split('@')
+            community = Community.query.filter_by(name=name, ap_domain=ap_domain).first()
+
+        if community and community.private:
+            # community is private, check if user is a member
+            if not user_id:
+                raise Exception('Private community - authentication required')
+            else:
+                if not community.is_member(user):
+                    raise Exception('Private community - membership required')
 
     if user_id and user_id != person_id:
         blocked_person_ids = blocked_users(user_id)
@@ -702,6 +745,9 @@ def get_post_replies(auth, data):
     limit = int(data['limit']) if 'limit' in data else 20
     post_id = data['post_id'] if 'post_id' in data else None
     parent_id = data['parent_id'] if 'parent_id' in data else None
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     if auth:
         user_details = authorise_api_user(auth, return_type='dict')
@@ -1128,6 +1174,9 @@ def get_post_like_list(auth, data):
     post_id = data['post_id']
     page = data['page'] if 'page' in data else 1
     limit = data['limit'] if 'limit' in data else 50
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user = authorise_api_user(auth, return_type='model')
     post = Post.query.get(post_id)

@@ -110,6 +110,6 @@ def send_community_follow(community_id: int, join_request_id: int, user_id: int)
                 "to": [community.public_url()],
                 "object": community.public_url(),
                 "type": "Follow",
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request_id}"
+                "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request_id}"
             }
             send_post_request(community.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key')

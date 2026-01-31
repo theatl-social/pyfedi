@@ -43,6 +43,8 @@ def post_view(post: Post | int, variant, stub=False, user_id=None, my_vote=0, co
                    'ai_generated': post.ai_generated if post.ai_generated is not None else False})
         if post.body:
             v1['body'] = post.body
+        if post.deleted and (user_id is None or user_id not in g.admin_ids):
+            v1['body'] = ''
         if post.edited_at:
             v1['edited_at'] = post.edited_at.isoformat(timespec="microseconds") + 'Z'
         if post.deleted == True:
@@ -1004,7 +1006,7 @@ def private_message_view(cm: ChatMessage, variant, report=None) -> dict:
     if ap_id is None:
         # old CMs will be missing an ap_id
         if creator['instance_id'] == 1:
-            ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{cm.id}"
+            ap_id = f"{current_app.config['SERVER_URL']}/private_message/{cm.id}"
         else:
             # CMs from remote instances can't be re-created so fudge something here to keep validator happy
             ap_id = f"{creator['actor_id']}/message/{cm.id}"
@@ -1101,10 +1103,10 @@ def site_view(user) -> dict:
 
     site = {
         "enable_downvotes": g.site.enable_downvotes,
-        "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+        "icon": f"{current_app.config['SERVER_URL']}{logo}",
         "registration_mode": g.site.registration_mode,
         "name": g.site.name,
-        "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+        "actor_id": f"{current_app.config['SERVER_URL']}/",
         "user_count": users_total(),
         "all_languages": []
     }
@@ -1178,7 +1180,7 @@ def site_instance_chooser_view():
         'description': g.site.description or '',
         'about': g.site.about_html or '',
         'sidebar': g.site.sidebar_html or '',
-        'logo_url': f"https://{current_app.config['SERVER_NAME']}{logo}",
+        'logo_url': f"{current_app.config['SERVER_URL']}{logo}",
         'maturity': maturity,
         'mau': active_month(),
         'can_make_communities': not g.site.community_creation_admin_only,

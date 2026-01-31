@@ -27,6 +27,7 @@ from app.admin.forms import FederationForm, SiteMiscForm, SiteProfileForm, EditC
 from flask_wtf import FlaskForm
 from app.admin.util import unsubscribe_from_everything_then_delete, unsubscribe_from_community, send_newsletter, \
     topics_for_form, move_community_images_to_here
+from app.auth.util import send_email_verification, random_token
 from app.community.util import save_icon_file, save_banner_file, search_for_community, is_bad_name
 from app.community.routes import do_subscribe
 from app.constants import REPORT_STATE_NEW, REPORT_STATE_ESCALATED, POST_STATUS_REVIEWING, ROLE_ADMIN
@@ -917,7 +918,7 @@ def admin_federation():
         form.allowlist.data = '\n'.join([instance.domain for instance in instances])
         form.defederation_subscription.data = '\n'.join([instance.domain for instance in DefederationSubscription.query.all()])
         form.blocked_phrases.data = g.site.blocked_phrases
-        form.blocked_actors.data = get_setting('actor_blocked_words', '88')
+        form.blocked_actors.data = get_setting('actor_blocked_words', '')
         form.blocked_bio.data = get_setting('actor_bio_blocked_words', '')
         form.auto_add_remote_communities.data = get_setting('auto_add_remote_communities', False)
 
@@ -1110,14 +1111,8 @@ def activity_json(activity_id):
         json_md = "`" + pretty_json + "`"
         json_html = markdown_to_html(json_md)
 
-    return render_template(
-        'admin/activity_json.html',
-        title=_('Activity JSON'),
-        json_html=json_html,
-        activity=activity,
-        current_app=current_app,
-    )
-
+    return render_template('admin/activity_json.html', title=_('Activity JSON'), json_html=json_html,
+        activity=activity, current_app=current_app, skip_protocol_replacement=True)
 
 
 @bp.route('/activity_json/<int:activity_id>/replay')
@@ -1434,6 +1429,7 @@ def admin_users():
     local_remote = request.args.get('local_remote', '')
     sort_by = request.args.get('sort_by', 'last_seen DESC')
     last_seen = request.args.get('last_seen', 0, type=int)
+    verified = request.args.get('verified', '')
 
     sort_by_btn = request.args.get('sort_by_btn', '')
     if sort_by_btn:
@@ -1450,6 +1446,10 @@ def admin_users():
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     if 'attitude' in sort_by:
         users = users.filter(User.attitude != None)
+    if verified == 'verified':
+        users = users.filter(User.verified == True)
+    elif verified == 'unverified':
+        users = users.filter(User.verified == False)
     users = users.order_by(safe_order_by(sort_by, User, {'user_name', 'banned', 'reports', 'attitude', 'reputation', 'created', 'last_seen'}))
     users = users.paginate(page=page, per_page=500, error_out=False)
 
@@ -1460,8 +1460,7 @@ def admin_users():
 
     return render_template('admin/users.html', title=_('Users'), next_url=next_url, prev_url=prev_url, users=users,
                            local_remote=local_remote, search=search, sort_by=sort_by, last_seen=last_seen,
-                           user_notes=user_notes(current_user.get_id()),
-                           )
+                           user_notes=user_notes(current_user.get_id()), verified=verified)
 
 
 @bp.route('/content', methods=['GET'])
@@ -1672,6 +1671,29 @@ def admin_user_edit(user_id):
             form.role.data = user.roles[0].id
 
     return render_template('admin/edit_user.html', title=_('Edit user'), form=form, user=user)
+
+@bp.route('/user/<int:user_id>/resend_email', methods=['POST'])
+@permission_required('administer all users')
+@login_required
+def admin_user_resend_email(user_id):
+    is_htmx = request.headers.get('HX-Request') == 'true'
+    if not is_htmx:
+        abort(400)
+    
+    user = User.query.get_or_404(user_id)
+    
+    # Create verification token if it doesn't exist already or else verification is impossible
+    if not user.verification_token:
+        user.verification_token = random_token(16)
+        db.session.commit()
+
+    try:
+        send_email_verification(user)
+        message = _("Verification email sent!")
+    except Exception as e:
+        message = _("Problem sending email: ") + str(e)
+    
+    return message
 
 
 @bp.route('/users/add', methods=['GET', 'POST'])
@@ -1892,6 +1914,7 @@ def admin_instance_edit(instance_id):
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
+        instance.admin_note = form.admin_note.data
         instance.inbox = form.inbox.data
 
         if instance.software == 'piefed':
@@ -1909,6 +1932,7 @@ def admin_instance_edit(instance_id):
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
+        form.admin_note.data = instance.admin_note
         form.inbox.data = instance.inbox
         if instance.software == 'piefed':
             hide = db.session.execute(text('SELECT hide FROM "instance_chooser" WHERE domain = :domain'),
@@ -1986,7 +2010,7 @@ def admin_community_move(community_id, new_owner):
         else:
             move_community_images_to_here.delay(community.id)
 
-        new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
+        new_url = f'{current_app.config["SERVER_URL"]}/c/{community.link()}'
         flash(_('%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.',
                 community_name=old_name, new_url=new_url))
 

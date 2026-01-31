@@ -110,6 +110,7 @@ APLOG_QA = (True, 'QA')
 APLOG_REPORT = (True, 'Report')
 APLOG_USERBAN = (True, 'User Ban')
 APLOG_LOCK = (True, 'Post Lock')
+APLOG_QUOTEBOOST = (True, 'Quote Boost')
 
 APLOG_UNDO_FOLLOW = (True, 'Undo Follow')
 APLOG_UNDO_DELETE = (True, 'Undo Delete')
@@ -124,3 +125,8 @@ APLOG_ANNOUNCE = (True, 'Announce')
 APLOG_PT_VIEW = (True, 'PeerTube View')
 
 REQUEST_TIMEOUT = 2
+
+INVITE_APPLY = 1
+INVITE_MEMBERS_ONLY = 2
+INVITE_MODS_ONLY = 3
+INVITE_OWNER_ONLY = 4

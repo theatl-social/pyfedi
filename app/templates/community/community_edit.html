@@ -60,7 +60,6 @@
             {{ render_field(form.nsfw) }}
             {{ render_field(form.ai_generated) }}
             {{ render_field(form.restricted_to_mods) }}
-            {{ render_field(form.local_only) }}
             {{ render_field(form.question_answer) }}
             {{ render_field(form.new_mods_wanted) }}
             {{ render_field(form.downvote_accept_mode) }}
@@ -70,6 +69,20 @@
             {{ render_field(form.default_post_type) }}
             {{ render_field(form.post_url_type) }}
             <small class="field_hint">{{ _('Some languages, e.g. Japanese, do not work well with friendly urls.') }}</small>
+
+            <fieldset class="coolfieldset mb-4 mt-4">
+                <legend>{{ _('Access control') }}</legend>
+                <div id="local_only_field">
+                    {{ render_field(form.local_only) }}
+                </div>
+                <div id="private_field">
+                    {{ render_field(form.private) }}
+                    <small class="field_hint">{{ _('Private communities do not federate and are only visible to members') }}.</small>
+                </div>
+                <div id="invitations_field">
+                    {{ render_field(form.invitations) }}
+                </div>
+            </fieldset>
 
             <div class="row mb-4 mt-4">
                 <div class="col-auto">

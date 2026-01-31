@@ -7,7 +7,8 @@ from sqlalchemy import func
 
 from app import db, limiter, oauth
 from app.auth import bp
-from app.auth.forms import LoginForm, RegisterByMastodonForm, RegistrationForm, ResetPasswordForm, ResetPasswordRequestForm
+from app.auth.forms import LoginForm, RegisterByMastodonForm, RegistrationForm, ResetPasswordForm, \
+    ResetPasswordRequestForm, ResendEmailForm
 from app.auth.oauth_util import (
     handle_oauth_authorize,
     finalize_user_login,
@@ -23,6 +24,8 @@ from app.auth.util import (
     render_registration_form,
     handle_banned_user,
     get_country,
+    send_email_verification,
+    random_token,
 )
 from app.email import send_password_reset_email, send_registration_approved_email
 from app.models import User, UserRegistration
@@ -90,6 +93,33 @@ def not_trustworthy():
 @bp.route('/check_email', methods=['GET'])
 def check_email():
     return render_template('auth/check_email.html', title=_('Check your email'))
+
+
+@bp.route('/resend_email', methods=['GET', 'POST'])
+@limiter.limit("20 per day;10 per 5 minutes", methods=['POST'])
+def resend_email():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    form = ResendEmailForm()
+    if form.validate_on_submit():
+        form.email.data = form.email.data.strip()
+        user = User.query.filter(func.lower(User.email) == func.lower(form.email.data)).filter_by(ap_id=None, deleted=False).first()
+
+        # Create verification token if it doesn't exist already or else verification is impossible
+        if not user.verification_token:
+            user.verification_token = random_token(16)
+            db.session.commit()
+
+        if user:
+            try:
+                send_email_verification(user)
+                flash(_("Verification email sent!"))
+                return redirect(url_for('auth.check_email'))
+            except Exception:
+                flash(_("Problem sending email, please contact the administrator for support"), 'warning')
+                return redirect(url_for('auth.resend_email'))
+    
+    return render_template('auth/resend_email_request.html', title=_('Resend verification email'), form=form)
 
 
 @bp.route('/reset_password_request', methods=['GET', 'POST'])

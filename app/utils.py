@@ -8,6 +8,7 @@ import io
 import mimetypes
 import math
 import random
+import time
 import urllib
 import warnings
 from collections import defaultdict, OrderedDict
@@ -38,7 +39,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select
+from sqlalchemy import text, or_, desc, asc, event, select, func
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -56,16 +57,20 @@ from captcha.image import ImageCaptcha
 from app.models import Settings, Domain, Instance, BannedInstances, User, Community, DomainBlock, IpBan, \
     Site, Post, utcnow, Filter, CommunityMember, InstanceBlock, CommunityBan, Topic, UserBlock, Language, \
     File, ModLog, CommunityBlock, Feed, FeedMember, CommunityFlair, CommunityJoinRequest, Notification, UserNote, \
-    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji
+    PostReply, PostReplyBookmark, AllowedInstances, InstanceBan, Tag, Emoji, UserExtraField
 
 
 # Flask's render_template function, with support for themes added
-def render_template(template_name: str, **context) -> Response:
+def render_template(template_name: str, skip_protocol_replacement: bool = False, **context) -> Response:
     theme = current_theme()
     if theme != '' and os.path.exists(f'app/templates/themes/{theme}/{template_name}'):
         content = flask.render_template(f'themes/{theme}/{template_name}', **context)
     else:
         content = flask.render_template(template_name, **context)
+
+    if not skip_protocol_replacement and current_app.config['HTTP_PROTOCOL'] == 'mixed':  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
+        server_name = current_app.config['SERVER_NAME']
+        content = content.replace(f"https://{server_name}", f"http://{server_name}")
 
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
@@ -529,10 +534,6 @@ def handle_bold_em(text: str) -> str:
     # Second, sub any that are just bold
     re_bold = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
     text = re_bold.sub(r"<strong>\2</strong>", text)
-
-    # Third, sub any that are single for italics
-    re_em = re.compile(r"(\*|_)(?=\S)(.*?\S)\1", re.S)
-    text = re_em.sub(r"<em>\2</em>", text)
 
     # Step 3: Restore code blocks
     text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
@@ -1851,9 +1852,9 @@ def finalize_user_setup(user):
 
     # Only set AP profile IDs if they haven't been set already
     if user.ap_profile_id is None:
-        user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
-        user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
-        user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
+        user.ap_profile_id = f"{current_app.config['SERVER_URL']}/u/{user.user_name}".lower()
+        user.ap_public_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name}"
+        user.ap_inbox_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name.lower()}/inbox"
 
     # find all notifications from this registration and mark them as read
     reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION, author_id=user.id)
@@ -2847,6 +2848,9 @@ def get_deduped_post_ids(result_id: str, community_ids: List[int], sort: str, ha
         else:
             post_id_where.append('p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 ')
     else:
+        if private_community_ids := community_membership_private(current_user.id):
+            post_id_where.append(f'(c.private is false OR c.id IN :private_community_ids) ')
+            params['private_community_ids'] = tuple(private_community_ids)
         if current_user.ignore_bots == 1:
             post_id_where.append('p.from_bot is false ')
         if current_user.hide_nsfl == 1:
@@ -3848,6 +3852,19 @@ def rewrite_href(url: str) -> str:
     return url
 
 
+@cache.memoize(timeout=600)
+def user_pronouns() -> defaultdict:
+    result = defaultdict(str)
+    pronouns = db.session.query(UserExtraField).filter(func.lower(UserExtraField.label) == 'pronouns')
+    for pronoun in pronouns:
+        if len(pronoun.text) <= 22:
+            if '<' in pronoun.text and '>' in pronoun.text:
+                result[pronoun.user_id] = html_to_text(pronoun.text)
+            else:
+                result[pronoun.user_id] = pronoun.text
+    return result
+
+
 def expand_hex_color(text: str) -> str:
     new_text = ("#" +
                 text[1] * 2 +
@@ -3895,6 +3912,19 @@ def save_new_gif(new_frames, old_gif_information, new_path):
                        transparency = old_gif_information['transparency'])
 
 
+@cache.memoize(timeout=100)
+def community_membership_private(user_id: int) -> List[int]:
+    community_ids = db.session.execute(text("""SELECT c.id FROM "community" as c 
+                                                INNER JOIN community_member cm on c.id = cm.community_id
+                                                WHERE c.private is true AND cm.user_id = :user_id AND cm.is_banned is false"""),
+                                       {'user_id': user_id}).scalars()
+    return list(community_ids)
+
+
+def intlist_to_strlist(input: List[int]) -> List[str]:
+    return [str(x) for x in input]
+
+
 def human_filesize(size_bytes):
     """Convert bytes to human-readable string (e.g. 1.2 MB)."""
     if size_bytes == 0:
@@ -3905,3 +3935,27 @@ def human_filesize(size_bytes):
         size_bytes /= 1024.0
         i += 1
     return f"{size_bytes:.1f} {units[i]}"
+
+
+def compaction_level():
+    compact_level = request.cookies.get('compact_level', None)
+    if current_app.config['HTTP_PROTOCOL'] == 'mixed' and compact_level is None:
+        compact_level = 'compact-min compact-max'
+    return compact_level
+
+
+def debug_checkpoint(name: str):
+    """
+    record a named debug checkpoint.
+    returns (timestamp, delta_since_last_checkpoint)
+    use in jinja like this: {{ dbg_checkpoint('some label') }}
+    """
+    now = time.time()
+    if not hasattr(g, "_debug_checkpoints"):
+        g._debug_checkpoints = []
+
+    last_time = g._debug_checkpoints[-1][1] if g._debug_checkpoints else None
+    delta = now - last_time if last_time else 0
+
+    g._debug_checkpoints.append((name, now))
+    return now, delta

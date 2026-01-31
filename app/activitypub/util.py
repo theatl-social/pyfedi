@@ -98,8 +98,8 @@ def local_communities():
 
 def post_to_activity(post: Post, community: Community):
     # local PieFed posts do not have a create or announce id
-    create_id = post.ap_create_id if post.ap_create_id else f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
-    announce_id = post.ap_announce_id if post.ap_announce_id else f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+    create_id = post.ap_create_id if post.ap_create_id else f"{current_app.config['SERVER_URL']}/activities/create/{gibberish(15)}"
+    announce_id = post.ap_announce_id if post.ap_announce_id else f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
     activity_data = {
         "actor": community.public_url(),
         "to": [
@@ -151,7 +151,7 @@ def post_to_page(post: Post):
         "stickied": post.sticky,
         "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
-        "replies": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/replies',
+        "replies": f'{current_app.config["SERVER_URL"]}/post/{post.id}/replies',
         "language": {
             "identifier": post.language_code(),
             "name": post.language_name()
@@ -619,7 +619,7 @@ def refresh_user_profile_task(user_id):
                     try:
                         site = session.query(Site).get(1)
                         actor_data = signed_get_request(user.ap_public_url, site.private_key,
-                                                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                                                        f"{current_app.config['SERVER_URL']}/actor#main-key")
                     except:
                         return
                 if actor_data.status_code == 200:
@@ -1825,10 +1825,15 @@ def new_instance_profile_task(instance_id: int):
     try:
         with patch_db_session(session):
             instance: Instance = session.query(Instance).get(instance_id)
+            protocol = 'https'
             try:
-                instance_data = get_request(f"https://{instance.domain}", headers={'Accept': 'application/activity+json'})
+                instance_data = get_request(f"{protocol}://{instance.domain}", headers={'Accept': 'application/activity+json'})
             except:
-                return
+                try:
+                    instance_data = get_request(f"http://{instance.domain}", headers={'Accept': 'application/activity+json'})
+                    protocol = 'http'
+                except:
+                    return
             if instance_data.status_code == 200:
                 try:
                     instance_json = instance_data.json()
@@ -1836,16 +1841,16 @@ def new_instance_profile_task(instance_id: int):
                 except Exception:
                     instance_json = {}
                 if 'type' in instance_json and instance_json['type'] == 'Application':
-                    instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"https://{instance.domain}/inbox"
+                    instance.inbox = instance_json['inbox'] if 'inbox' in instance_json else f"{protocol}://{instance.domain}/inbox"
                     instance.outbox = instance_json['outbox']
                 else:  # it's pretty much always /inbox so just assume that it is for whatever this instance is running
-                    instance.inbox = f"https://{instance.domain}/inbox"
+                    instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
                 # retrieve list of Admins from /api/v3/site, update InstanceRole
                 try:
-                    response = get_request(f'https://{instance.domain}/api/v3/site')
+                    response = get_request(f'{protocol}://{instance.domain}/api/v3/site')
                 except:
                     response = None
 
@@ -1876,13 +1881,13 @@ def new_instance_profile_task(instance_id: int):
                                         InstanceRole.role == 'admin').delete()
                                     session.commit()
             elif instance_data.status_code == 406 or instance_data.status_code == 404:  # Mastodon and PeerTube do 406, a.gup.pe does 404
-                instance.inbox = f"https://{instance.domain}/inbox"
+                instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
             headers = {'Accept': 'application/activity+json'}
             try:
-                nodeinfo = get_request(f"https://{instance.domain}/.well-known/nodeinfo", headers=headers)
+                nodeinfo = get_request(f"{protocol}://{instance.domain}/.well-known/nodeinfo", headers=headers)
                 if nodeinfo.status_code == 200:
                     nodeinfo_json = nodeinfo.json()
                     for links in nodeinfo_json['links']:
@@ -2428,10 +2433,10 @@ def create_post_reply(store_ap_json, community: Community, in_reply_to, request_
                     with force_locale(get_recipient_language(recipient.id)):
                         notification = Notification(user_id=recipient.id, title=gettext(
                             f"You have been mentioned in comment {post_reply.id}"),
-                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
-                            author_id=user.id, notif_type=NOTIF_MENTION,
-                            subtype='comment_mention',
-                            targets=targets_data)
+                                                    url=f"{current_app.config['SERVER_URL']}/comment/{post_reply.id}",
+                                                    author_id=user.id, notif_type=NOTIF_MENTION,
+                                                    subtype='comment_mention',
+                                                    targets=targets_data)
                         recipient.unread_notifications += 1
                         db.session.add(notification)
                         db.session.commit()
@@ -2775,7 +2780,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                 blocked_senders = blocked_users(recipient.id)
                                 if reply.user_id not in blocked_senders:
                                     existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                                      Notification.url == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}").first()
+                                                                                      Notification.url == f"{current_app.config['SERVER_URL']}/comment/{reply.id}").first()
                                     if not existing_notification:
                                         author = User.query.get(reply.user_id)
                                         targets_data = {'gen': '0',
@@ -2786,7 +2791,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                                         }
                                         with force_locale(get_recipient_language(recipient.id)):
                                             notification = Notification(user_id=recipient.id, title=gettext(f"You have been mentioned in comment {reply.id}"),
-                                                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                                        url=f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                                                                         author_id=reply.user_id, notif_type=NOTIF_MENTION,
                                                                         subtype='comment_mention',
                                                                         targets=targets_data)
@@ -2798,7 +2803,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 
 def update_post_from_activity(post: Post, request_json: dict):
     from app import redis_client
-    with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+    with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=6):
         # redo body without checking if it's changed
         if 'content' in request_json['object'] and request_json['object']['content'] is not None:
             # prefer Markdown in 'source' in provided
@@ -2883,7 +2888,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                             blocked_senders = blocked_users(recipient.id)
                             if post.user_id not in blocked_senders:
                                 existing_notification = Notification.query.filter(Notification.user_id == recipient.id,
-                                                                                  Notification.url == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}").first()
+                                                                                  Notification.url == f"{current_app.config['SERVER_URL']}/post/{post.id}").first()
                                 if not existing_notification:
                                     author = User.query.get(post.user_id)
                                     targets_data = {'gen': '0',
@@ -2894,7 +2899,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                                                     }
                                     notification = Notification(user_id=recipient.id,
                                                                 title=_(f"You have been mentioned in post {post.id}"),
-                                                                url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                                                url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                                                 author_id=post.user_id, notif_type=NOTIF_MENTION,
                                                                 subtype='post_mention',
                                                                 targets=targets_data)
@@ -3272,7 +3277,7 @@ def process_report(user, reported, request_json, session):
         already_notified = set()
         for mod in reported.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A post has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
+                                        url=f"{current_app.config['SERVER_URL']}/post/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='post_reported',
                                         targets=targets_data)
@@ -3309,7 +3314,7 @@ def process_report(user, reported, request_json, session):
         already_notified = set()
         for mod in post.community.moderators():
             notification = Notification(user_id=mod.user_id, title=_('A comment has been reported'),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
+                                        url=f"{current_app.config['SERVER_URL']}/comment/{reported.id}",
                                         author_id=user.id, notif_type=NOTIF_REPORT,
                                         subtype='comment_reported',
                                         targets=targets_data)
@@ -3323,6 +3328,32 @@ def process_report(user, reported, request_json, session):
         ...
 
 
+def process_quote_boost(core_activity: dict, post_ap: str, their_post_ap: str):
+    import urllib.parse
+    post = Post.get_by_ap_id(post_ap)
+    if post is None:
+        post = PostReply.get_by_ap_id(post_ap)
+    if post is not None and post.author.is_local():
+
+        accept_activity = {
+          "@context": [
+            "https://www.w3.org/ns/activitystreams",
+            {
+              "QuoteRequest": "https://w3id.org/fep/044f#QuoteRequest"
+            }
+          ],
+          "type": "Accept",
+          "to": core_activity['actor'],
+          "id": f"{current_app.config['SERVER_URL']}/activities/{gibberish(15)}",
+          "actor": post.author.public_url(),
+          "object": core_activity,
+          "result": f"{current_app.config['SERVER_URL']}/quote_boost_auth?stamp={urllib.parse.quote(post.public_url(), safe='')};{urllib.parse.quote(their_post_ap, safe='')}"
+        }
+        to = find_actor_or_create_cached(core_activity['actor'])
+        if to and to.instance.inbox:
+            send_post_request(to.instance.inbox, accept_activity, post.author.private_key, post.author.public_url() + '#main-key')
+
+
 def lemmy_site_data():
     site = g.site
     logo = site.logo if site.logo else '/static/images/piefed_logo_icon_t_75.png'
@@ -3334,12 +3365,12 @@ def lemmy_site_data():
                 "sidebar": site.sidebar,
                 "published": site.created_at.isoformat(),
                 "updated": site.updated.isoformat(),
-                "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+                "icon": f"{current_app.config['SERVER_URL']}{logo}",
                 "banner": "",
                 "description": site.description,
-                "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+                "actor_id": f"{current_app.config['SERVER_URL']}/",
                 "last_refreshed_at": site.updated.isoformat(),
-                "inbox_url": f"https://{current_app.config['SERVER_NAME']}/inbox",
+                "inbox_url": f"{current_app.config['SERVER_URL']}/inbox",
                 "public_key": site.public_key,
                 "instance_id": 1
             },
@@ -3525,11 +3556,11 @@ def remote_object_to_json(uri):
     elif object_request.status_code == 401:
         site = Site.query.get(1)
         try:
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
         except httpx.HTTPError:
             time.sleep(3)
             try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
             except httpx.HTTPError:
                 return None
         try:
@@ -3795,11 +3826,11 @@ def verify_object_from_source(request_json):
     elif object_request.status_code == 401:
         site = Site.query.get(1)
         try:
-            object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+            object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
         except httpx.HTTPError:
             time.sleep(3)
             try:
-                object_request = signed_get_request(uri, site.private_key, f"https://{current_app.config['SERVER_NAME']}/actor#main-key")
+                object_request = signed_get_request(uri, site.private_key, f"{current_app.config['SERVER_URL']}/actor#main-key")
             except httpx.HTTPError:
                 return None
         try:
@@ -3972,7 +4003,7 @@ def proactively_delete_content(community: Community, ap_id: str):
         deletor = db.session.query(User).get(1)
     if deletor:
 
-        delete_id = f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}"
+        delete_id = f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}"
         to = ["https://www.w3.org/ns/activitystreams#Public"]
         cc = [community.public_url()]
         delete = {
@@ -3986,7 +4017,7 @@ def proactively_delete_content(community: Community, ap_id: str):
           'summary': 'Automatic deletion due to block'
         }
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         to = ["https://www.w3.org/ns/activitystreams#Public"]

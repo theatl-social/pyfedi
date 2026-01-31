@@ -20,9 +20,10 @@ from app.topic import bp
 from app.topic.forms import SuggestTopicsForm
 from app.utils import render_template, user_filters_posts, validation_required, mimetype_from_url, login_required, \
     gibberish, get_deduped_post_ids, paginate_post_ids, post_ids_to_models, blocked_communities, \
-    recently_upvoted_posts, recently_downvoted_posts, blocked_or_banned_instances, blocked_users, joined_or_modding_communities, \
+    recently_upvoted_posts, recently_downvoted_posts, blocked_or_banned_instances, blocked_users, \
+    joined_or_modding_communities, \
     login_required_if_private_instance, communities_banned_from, reported_posts, user_notes, moderating_communities_ids, \
-    approval_required, block_honey_pot
+    approval_required, block_honey_pot, user_pronouns
 
 
 @bp.route('/topic/<path:topic_path>', methods=['GET'])
@@ -177,13 +178,14 @@ def show_topic(topic_path):
                                sub_topics=sub_topics, topic_path=topic_path, breadcrumbs=breadcrumbs,
                                tags=hashtags_used_in_communities(community_ids, content_filters),
                                joined_communities=joined_or_modding_communities(current_user.get_id()),
-                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
+                               rss_feed=f"{current_app.config['SERVER_URL']}/topic/{topic_path}.rss",
                                rss_feed_name=f"{current_topic.name} on {g.site.name}", content_type=content_type,
                                reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
                                user_notes=user_notes(current_user.get_id()),
                                moderated_community_ids=moderating_communities_ids(current_user.get_id()),
                                show_post_community=True, recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
+                               user_pronouns=user_pronouns(),
                                inoculation=inoculation[randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
                                POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
                                POST_TYPE_VIDEO=POST_TYPE_VIDEO,
@@ -208,28 +210,28 @@ def show_topic_rss(topic_path):
             topic_ids = [topic.id]
 
         community_ids = db.session.execute(
-            text('SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids'),
+            text('SELECT id FROM community WHERE banned is false AND private is false AND topic_id IN :topic_ids'),
             {'topic_ids': tuple(topic_ids)}).scalars()
         post_ids = get_deduped_post_ids('', list(community_ids), 'new')
         post_ids = paginate_post_ids(post_ids, 0, page_length=100)
         posts = post_ids_to_models(post_ids, 'new')
 
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}")
+        fg.id(f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}")
         fg.title(f'{topic.name} on {g.site.name}')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}", rel='alternate')
-        fg.logo(f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png")
+        fg.link(href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}", rel='alternate')
+        fg.logo(f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png")
         fg.subtitle(' ')
-        fg.link(href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}.rss", rel='self')
+        fg.link(href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}.rss", rel='self')
         fg.language('en')
 
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith('text/'):

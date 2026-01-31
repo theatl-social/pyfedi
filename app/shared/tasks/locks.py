@@ -89,7 +89,7 @@ def lock_object(session, user_id, object, is_undo=False):
     if community.local_only or not community.instance.online():
         return
 
-    lock_id = f"https://{current_app.config['SERVER_NAME']}/activities/lock/{gibberish(15)}"
+    lock_id = f"{current_app.config['SERVER_URL']}/activities/lock/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     lock = {
@@ -105,7 +105,7 @@ def lock_object(session, user_id, object, is_undo=False):
 
     if is_undo:
         del lock['@context']
-        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
         undo = {
           'id': undo_id,
           'type': 'Undo',
@@ -125,7 +125,7 @@ def lock_object(session, user_id, object, is_undo=False):
             del lock['@context']
             object=lock
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {

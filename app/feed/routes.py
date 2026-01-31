@@ -29,7 +29,7 @@ from app.utils import show_ban_message, piefed_markdown_to_lemmy_markdown, markd
     paginate_post_ids, get_deduped_post_ids, get_request, post_ids_to_models, recently_upvoted_posts, \
     recently_downvoted_posts, joined_or_modding_communities, login_required_if_private_instance, \
     communities_banned_from, reported_posts, user_notes, login_required, moderating_communities_ids, approval_required, \
-    blocked_or_banned_instances, blocked_communities, block_honey_pot
+    blocked_or_banned_instances, blocked_communities, block_honey_pot, user_pronouns
 
 
 @bp.route('/feed/new', methods=['GET', 'POST'])
@@ -133,7 +133,7 @@ def feed_add_remote():
             ...
         elif '@' in address:
             new_feed = search_for_feed('~' + address)
-        elif address.startswith('https://'):
+        elif address.startswith('https://') or address.startswith('http://'):
             server, feed = extract_domain_and_actor(address)
             new_feed = search_for_feed('~' + feed + '@' + server)
         else:
@@ -551,13 +551,13 @@ def _feed_remove_community(community_id: int, current_feed_id: int):
                 # Undo the Follow
                 if not community.is_local():  # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
-                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == 'ovo.st':
                             join_request = db.session.query(CommunityJoinRequest).filter_by(user_id=user.id,
                                                                                             community_id=community.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
-                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
+                        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
                         follow = {
                             "actor": user.public_url(),
                             "to": [community.public_url()],
@@ -736,26 +736,27 @@ def show_feed(feed):
             content_filters = {}
 
         resp = make_response(render_template('feed/show_feed.html', title=_(current_feed.name), posts=posts, feed=current_feed,
-                               sort=sort, owner=owner,
-                               page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
-                               feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
-                               tags=hashtags_used_in_communities(feed_community_ids, content_filters),
-                               sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
-                               rss_feed=f"https://{current_app.config['SERVER_NAME']}/f/{feed.path()}.rss",
-                               rss_feed_name=f"{current_feed.name} on {g.site.name}",
-                               communities_banned_from_list=communities_banned_from_list,
-                               show_post_community=True,
-                               joined_communities=joined_or_modding_communities(current_user.get_id()),
-                               moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-                               recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
-                               reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
-                               user_notes=user_notes(current_user.get_id()),
-                               inoculation=inoculation[
+                                             sort=sort, owner=owner,
+                                             page=page, post_layout=post_layout, next_url=next_url, prev_url=prev_url,
+                                             feed_communities=feed_communities, content_filters=user_filters_posts(current_user.id) if current_user.is_authenticated else {},
+                                             tags=hashtags_used_in_communities(feed_community_ids, content_filters),
+                                             sub_feeds=sub_feeds, feed_path=feed.path(), breadcrumbs=breadcrumbs,
+                                             rss_feed=f"{current_app.config['SERVER_URL']}/f/{feed.path()}.rss",
+                                             rss_feed_name=f"{current_feed.name} on {g.site.name}",
+                                             communities_banned_from_list=communities_banned_from_list,
+                                             show_post_community=True,
+                                             joined_communities=joined_or_modding_communities(current_user.get_id()),
+                                             moderated_community_ids=moderating_communities_ids(current_user.get_id()),
+                                             recently_upvoted=recently_upvoted, recently_downvoted=recently_downvoted,
+                                             reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
+                                             user_notes=user_notes(current_user.get_id()),
+                                             user_pronouns=user_pronouns(),
+                                             inoculation=inoculation[
                                    randint(0, len(inoculation) - 1)] if g.site.show_inoculation_block else None,
-                               POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
-                               POST_TYPE_VIDEO=POST_TYPE_VIDEO,
-                               SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
-                               ))
+                                             POST_TYPE_LINK=POST_TYPE_LINK, POST_TYPE_IMAGE=POST_TYPE_IMAGE,
+                                             POST_TYPE_VIDEO=POST_TYPE_VIDEO,
+                                             SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER, SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
+                                             ))
         if current_user.is_anonymous:
             resp.headers.set('Cache-Control', 'public, max-age=30')
         else:
@@ -866,7 +867,7 @@ def do_feed_subscribe(actor, user_id, src=SRC_WEB):
                             "to": [feed.public_url()],
                             "object": feed.public_url(),
                             "type": "Follow",
-                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                            "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                         }
                         send_post_request(feed.ap_inbox_url, follow, user.private_key, user.public_url() + '#main-key',
                                           timeout=10)
@@ -921,13 +922,13 @@ def feed_unsubscribe(actor):
                 # Undo the Follow
                 if '@' in actor:  # this is a remote feed, so activitypub is needed
                     if not feed.instance.gone_forever:
-                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
                         if feed.instance.domain == 'ovo.st':
                             join_request = FeedJoinRequest.query.filter_by(user_id=current_user.id,
                                                                            feed_id=feed.id).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
-                        undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
+                                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
+                        undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
                         follow = {
                             "actor": current_user.public_url(),
                             "to": [feed.public_url()],
@@ -994,7 +995,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         "@context": default_context(),
         "type": "Announce",
         "actor": feed.ap_public_url,
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+        "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
     }
 
     # build the object json
@@ -1002,7 +1003,7 @@ def announce_feed_add_remove_to_subscribers(action: str, feed_id: int, community
         "@context": "https://www.w3.org/ns/activitystreams",
         "type": action,
         "actor": feed.ap_public_url,
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/feedadd/{gibberish(15)}",
+        "id": f"{current_app.config['SERVER_URL']}/activities/feedadd/{gibberish(15)}",
         "object": {
             "type": "Group",
             "id": community.ap_public_url
@@ -1059,7 +1060,7 @@ def announce_feed_delete_to_subscribers(user_id, feed_id):
         "@context": default_context(),
         "type": "Delete",
         "actor": user.ap_public_url,
-        "id": f"https://{current_app.config['SERVER_NAME']}/delete/{gibberish(15)}",
+        "id": f"{current_app.config['SERVER_URL']}/delete/{gibberish(15)}",
         "object": {
             "type": "Feed",
             "id": feed.ap_public_url

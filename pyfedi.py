@@ -19,7 +19,8 @@ from app.models import Site
 from app.utils import getmtime, gibberish, shorten_string, shorten_url, digits, user_access, community_membership, \
     can_create_post, can_upvote, can_downvote, shorten_number, ap_datetime, current_theme, community_link_to_href, \
     in_sorted_list, role_access, first_paragraph, person_link_to_href, feed_membership, html_to_text, remove_images, \
-    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize, can_upload_video
+    notif_id_to_string, feed_link_to_href, get_setting, set_setting, show_explore, human_filesize, can_upload_video, \
+    debug_checkpoint, compaction_level
 
 app = create_app()
 cli.register(app)
@@ -66,6 +67,8 @@ with app.app_context():
     app.jinja_env.globals['first_paragraph'] = first_paragraph
     app.jinja_env.globals['html_to_text'] = html_to_text
     app.jinja_env.globals['csrf_token'] = generate_csrf
+    app.jinja_env.globals['debug_checkpoint'] = debug_checkpoint
+    app.jinja_env.globals['compaction_level'] = compaction_level
     app.jinja_env.filters['community_links'] = community_link_to_href
     app.jinja_env.filters['feed_links'] = feed_link_to_href
     app.jinja_env.filters['person_links'] = person_link_to_href
@@ -139,7 +142,8 @@ def after_request(response):
                     # strict-dynamic allows scripts dynamically added by nonce-validated scripts (needed for htmx)
                     if current_user.is_authenticated:
                         response.headers['Content-Security-Policy'] = f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
-            response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
+            if current_app.config['HTTP_PROTOCOL'] == 'https':
+                response.headers['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload'
             response.headers['X-Content-Type-Options'] = 'nosniff'
             if '/embed' not in request.path:
                 response.headers['X-Frame-Options'] = 'DENY'

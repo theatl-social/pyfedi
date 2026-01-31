@@ -120,14 +120,6 @@
                   <li><a id="modal-tos-link" href="" target="_blank" class="d-none">{{ _('Terms of service') }}</a></li>
                   <li><a id="modal-instance-link" href="" target="_blank">{{ _('Visit server') }}</a></li>
                 </ul>
-                
-                <!--<h6 class="mt-3">{{ _('Blocked servers') }}</h6>
-                <div class="small">
-                  <div><span id="hexbear-status"></span> hexbear.net</div>
-                  <div><span id="hilariouschaos-status"></span> hilariouschaos.com</div>
-                  <div><span id="lemmygrad-status"></span> lemmygrad.ml</div>
-                  <div><span id="lemmy-status"></span> lemmy.ml</div>
-                </div>-->
               </div>
             </div>
           </div>
@@ -540,7 +532,8 @@
             'hexbear.net': 'hexbear-status',
             'hilariouschaos.com': 'hilariouschaos-status',
             'lemmygrad.ml': 'lemmygrad-status',
-            'lemmy.ml': 'lemmy-status'
+            'lemmy.ml': 'lemmy-status',
+            'gregtech.eu': 'lemvotes-status',
         };
         
         const defederatedDomains = instance.defederation || [];
@@ -553,13 +546,6 @@
             
             if (isDefederated) {
                 countDefederated += 1
-                // Green tick for blocked
-                //statusElement.innerHTML = '<span class="text-success">✓</span>';
-                //statusElement.title = `Defederated from ${domain}`;
-            } else {
-                // Red cross for federated
-                //statusElement.innerHTML = '<span class="text-danger">✗</span>';
-                //statusElement.title = `Federated with ${domain}`;
             }
         });
 

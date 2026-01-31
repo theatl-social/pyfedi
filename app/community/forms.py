@@ -28,9 +28,18 @@ class AddCommunityForm(FlaskForm):
     posting_warning = StringField(_l('Posting warning'), validators=[Length(max=512)])
     icon_file = FileField(_l('Icon image'), render_kw={'accept': 'image/*'})
     banner_file = FileField(_l('Banner image'), render_kw={'accept': 'image/*'})
-    nsfw = BooleanField('NSFW')
-    ai_generated = BooleanField('Only AI-generated content')
-    local_only = BooleanField('Local only')
+    nsfw = BooleanField(_l('NSFW'))
+    ai_generated = BooleanField(_l('Only AI-generated content'))
+    local_only = BooleanField(_l('Local only'))
+    private = BooleanField(_l('Private'))
+    joining_options = [
+        (0, _l('Anyone can join')),
+        #(1, _l('Apply to join')),
+        (2, _l('Invitation by a member required')),
+        (3, _l('Invitation by moderator required')),
+        (4, _l('Invitation by owner required')),
+    ]
+    invitations = SelectField(_l('Joining process'), coerce=int, choices=joining_options)
     publicize = BooleanField('Announce this community to newcommunities@lemmy.world')
     question_answer = BooleanField('Question & answer community')
     languages = MultiCheckboxField(_l('Languages'), coerce=int, validators=[Optional()],
@@ -82,6 +91,15 @@ class EditCommunityForm(FlaskForm):
     nsfw = BooleanField(_l('NSFW community'))
     ai_generated = BooleanField('Only AI-generated content')
     local_only = BooleanField(_l('Only accept posts from current instance'))
+    private = BooleanField(_l('Private'))
+    joining_options = [
+        (0, _l('Anyone can join')),
+        #(1, _l('Apply to join')),
+        (2, _l('Invitation by a member required')),
+        (3, _l('Invitation by moderator required')),
+        (4, _l('Invitation by owner required')),
+    ]
+    invitations = SelectField(_l('Joining process'), coerce=int, choices=joining_options)
     question_answer = BooleanField('Question & answer community')
     restricted_to_mods = BooleanField(_l('Only moderators can post'))
     new_mods_wanted = BooleanField(_l('New moderators wanted'))
@@ -160,7 +178,7 @@ class SearchRemoteCommunity(FlaskForm):
         if self.address.data.strip() == '':
             self.address.errors.append(_l('Address is required.'))
             return False
-        elif self.address.data.strip().startswith('https://'):
+        elif self.address.data.strip().startswith('https://') or self.address.data.strip().startswith('http://'):
             return True
         else:
             if not self.address.data.strip().startswith('!'):
@@ -524,6 +542,10 @@ class SetMyFlairForm(FlaskForm):
 
 class DeleteCommunityForm(FlaskForm):
     submit = SubmitField(_l('Delete community'))
+
+
+class InviteAcceptForm(FlaskForm):
+    submit = SubmitField(_l('Accept invitation'))
 
 
 class RetrieveRemotePost(FlaskForm):
