@@ -60,7 +60,8 @@ from app.utils import render_template, markdown_to_html, validation_required, \
     block_bots, flair_for_form, login_required_if_private_instance, retrieve_image_hash, posts_with_blocked_images, \
     possible_communities, user_notes, login_required, get_recipient_language, user_filters_posts, \
     total_comments_on_post_and_cross_posts, approval_required, libretranslate_string, user_in_restricted_country, \
-    site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns
+    site_language_code, block_honey_pot, joined_communities, moderating_communities, user_pronouns, \
+    instance_sticky_posts, instance_sticky_post_ids
 
 
 @login_required_if_private_instance
@@ -1487,6 +1488,26 @@ def post_sticky(post_id: int, mode):
         flash(_('%(name)s has been stickied.', name=post.title))
     else:
         flash(_('%(name)s has been un-stickied.', name=post.title))
+    return redirect(referrer(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)))
+
+
+@bp.route('/post/<int:post_id>/instance_sticky/<mode>', methods=['GET'])
+@login_required
+def post_instance_sticky(post_id: int, mode):
+    post = Post.query.get_or_404(post_id)
+    
+    if current_user.is_admin():
+        if mode == 'yes':
+            post.instance_sticky = True
+            flash(_('%(name)s has been stickied to the instance.', name=post.title))
+        else:
+            post.instance_sticky = False
+            flash(_('%(name)s has been un-stickied from the instance.', name=post.title))
+        
+        cache.delete_memoized(instance_sticky_posts)
+        cache.delete_memoized(instance_sticky_post_ids)
+        db.session.commit()
+    
     return redirect(referrer(post.slug if post.slug else url_for('activitypub.post_ap', post_id=post.id)))
 
 
