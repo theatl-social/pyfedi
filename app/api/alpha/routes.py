@@ -602,7 +602,7 @@ def post_alpha_post_lock(data):
 @post_bp.arguments(HidePostRequest)
 @post_bp.response(200, GetPostResponse)
 @post_bp.alt_response(400, schema=DefaultError)
-def post_alpha_post_lock(data):
+def post_alpha_post_hide(data):
     if not enable_api():
         return abort(400, message="alpha api is not enabled")
     auth = request.headers.get('Authorization')

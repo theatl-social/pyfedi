@@ -665,6 +665,22 @@ ul.form-multicheck-columns {
 
 .post_list {
   clear: both;
+
+  .instance_sticky {
+    border-bottom: solid 2px var(--bs-success-border-subtle);
+
+    > .post_teaser {
+      border-bottom: none !important;
+    }
+
+    .post_teaser_title_a::before {
+      font-family: 'Feather' !important;
+      content: "\e9d5 ";
+      color: var(--bs-success);
+      margin-right: 0.25em;
+    }
+  }
+
   .post_teaser {
 
     border-bottom: solid 2px $light-grey;

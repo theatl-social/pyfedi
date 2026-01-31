@@ -38,7 +38,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     get_redis_connection, subscribed_feeds, joined_or_modding_communities, login_required_if_private_instance, \
     pending_communities, retrieve_image_hash, possible_communities, remove_tracking_from_link, reported_posts, \
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
-    num_topics, referrer, block_honey_pot, user_pronouns
+    num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
     Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
@@ -114,11 +114,19 @@ def home_page(sort, view_filter):
         community_ids = [-1]  # Special value to indicate 'All'
     elif view_filter == 'moderating':
         community_ids = modded_communities
+    
+    community_ids = list(community_ids)
 
-    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort, tag)
+    post_ids = get_deduped_post_ids(result_id, community_ids, sort, tag)
     has_next_page = len(post_ids) > page + 1 * page_length
     post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
     posts = post_ids_to_models(post_ids, sort)
+
+    if page == 0:
+        # First page of the home feed, include any instance-wide stickies if they are present and visible
+        instance_stickies = get_instance_stickies(community_ids=community_ids, sort=sort)
+    else:
+        instance_stickies = []
 
     if current_user.is_anonymous:
         flash(_('Create an account to tailor this feed to your interests.'))
@@ -185,7 +193,7 @@ def home_page(sort, view_filter):
                            communities_banned_from_list=communities_banned_from_list,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url,
-                           prev_url=prev_url,
+                           prev_url=prev_url, instance_stickies=instance_stickies,
                            title=f"{g.site.name} - {g.site.description}",
                            description=shorten_string(html_to_text(g.site.sidebar), 150),
                            content_filters=content_filters, sort=sort, view_filter=view_filter,
@@ -645,7 +653,7 @@ def honey_pot(whatever=None):
     if whatever:
         try:
             return show_post(int(whatever))
-        except Exception as e:
+        except Exception:
             pass
     return ''
 
