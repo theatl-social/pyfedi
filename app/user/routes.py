@@ -105,16 +105,25 @@ def _get_user_posts_and_replies(user, page):
     private = ','.join(intlist_to_strlist(community_membership_private(user_id)))
     if current_user.is_authenticated and (current_user.is_admin() or current_user.is_staff()):
         # Admins see everything
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND community_id NOT IN ({private})"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id} AND community_id NOT IN ({private})"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id}) AND community_id NOT IN ({private})"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id}) AND community_id NOT IN ({private})"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
     else:
         # Everyone else sees only non-deleted posts/replies
-        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND community_id NOT IN ({private}) AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
-        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND community_id NOT IN ({private}) AND deleted = 'False'"
+        post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
+        reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
 
     full_query = post_select + " UNION " + reply_select + f" ORDER BY posted_at DESC LIMIT {per_page + 1} OFFSET {offset_val};"
     query_result = db.session.execute(text(full_query))
