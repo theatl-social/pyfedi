@@ -1060,7 +1060,7 @@ def mark_post_read(post_ids: List[int], read: bool, user_id: int):
     if read is True:
         for post_id in post_ids:
             db.session.execute(text(
-                'INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp) ON CONFLICT (user_id, read_post_id) DO NOTHING'),
+                'INSERT INTO "read_posts" (user_id, read_post_id, interacted_at) VALUES (:user_id, :post_id, :stamp) ON CONFLICT (user_id, read_post_id) DO UPDATE SET interacted_at = EXCLUDED.interacted_at'),
                 {"user_id": user_id, "post_id": post_id, "stamp": utcnow()})
         db.session.commit()
     else:
