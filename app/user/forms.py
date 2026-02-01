@@ -48,6 +48,10 @@ class ProfileForm(FlaskForm):
         if not matrix_user_id.data.strip().startswith('@'):
             raise ValidationError(_l('Matrix user ids start with @'))
 
+    def validate_title(self, field):
+        if field.data.strip.lower() == '[deleted]':
+            raise ValidationError(_l('Invalid display name'))
+
 
 class SettingsForm(FlaskForm):
     interface_language = SelectField(_l('Interface language'), coerce=str, validators=[Optional()],

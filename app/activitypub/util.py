@@ -672,6 +672,9 @@ def refresh_user_profile_task(user_id):
                     user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
                     user.indexable = new_indexable
 
+                    if user.title.strip().lower() == '[deleted]':
+                        user.title = ''
+
                     avatar_changed = cover_changed = False
                     if 'icon' in activity_json and activity_json['icon'] is not None:
                         if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
@@ -1125,6 +1128,9 @@ def actor_json_to_model(activity_json, address, server):
             user.about_html = markdown_to_html(user.about)          # prefer Markdown if provided, overwrite version obtained from HTML
         else:
             user.about = html_to_text(user.about_html)
+
+        if user.title.strip().lower() == '[deleted]':
+            user.title = ''
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
             if isinstance(activity_json['icon'], dict) and 'url' in activity_json['icon']:
