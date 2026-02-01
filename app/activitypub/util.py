@@ -1129,7 +1129,7 @@ def actor_json_to_model(activity_json, address, server):
         else:
             user.about = html_to_text(user.about_html)
 
-        if user.title.strip().lower() == '[deleted]':
+        if user.title and user.title.strip().lower() == '[deleted]':
             user.title = ''
 
         if 'icon' in activity_json and activity_json['icon'] is not None:
