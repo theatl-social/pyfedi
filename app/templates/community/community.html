@@ -119,7 +119,7 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
-        {% if community.private and current_user.is_anonymous or not community.is_member(current_user) -%}
+        {% if community.private and (current_user.is_anonymous or not community.is_member(current_user)) -%}
             <p class="mt-4">{{ _('You need to be a member to see the contents of this private community.') }}</p>
         {% else %}
             {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}

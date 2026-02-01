@@ -63,7 +63,7 @@
         {% endif -%}
     {% endblock %}
     {% block about_community %}
-        {% if upcoming_events and not (community.private and current_user.is_anonymous or not community.is_member(current_user)) -%}
+        {% if upcoming_events and not (community.private and (current_user.is_anonymous or not community.is_member(current_user))) -%}
         <div class="card mt-3" id="upcoming_events">
             <div class="card-header">
                 <h2><span class="fe fe-event"></span> {{ _('Upcoming events') }}</h2>
@@ -109,7 +109,7 @@
                     <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                     <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}
-                {% if not (community.private and current_user.is_anonymous or not community.is_member(current_user)) -%}
+                {% if not (community.private and (current_user.is_anonymous or not community.is_member(current_user))) -%}
                     {% if len(mods) > 0 and not community.private_mods -%}
                         <hr><a href="/modlog?communities={{ community.id }}" class="modlog_link">{{ _('Modlog') }}</a>
                         <h3>Moderators</h3>
