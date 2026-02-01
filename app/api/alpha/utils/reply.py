@@ -254,7 +254,7 @@ def get_reply_list(auth, data, user_details=None):
         if sort == 'Hot' or sort == 'Scaled':
             replies = replies.order_by(desc(PostReply.ranking)).order_by(desc(PostReply.posted_at))
         elif sort == 'Active':
-            replies = replies.order_by(PostReply.posted_at)
+            replies = replies.order_by(desc(PostReply.posted_at))
         elif sort == 'Top' or sort == 'TopAll':
             replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == 'TopHour':
