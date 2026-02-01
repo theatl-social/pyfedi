@@ -370,21 +370,26 @@ def redirect_next_page():
 def process_login(form: LoginForm):
     ip = ip_address()
     country = get_country(ip)
+    username = form.user_name.data.strip()
+    password = form.password.data.strip()
+
+    # attempt authentication with LDAP first (if enabled), then fall back to local
+    user = None
+    ldap_sync = True
 
     if current_app.config['LDAP_READ_ENABLE']:
-        user = validate_user_ldap_login(form.user_name.data.strip(), form.password.data.strip(), ip)
-        if user is None:
-            return redirect(url_for("auth.login"))
-        ldap_sync = False
-    else:
-        ldap_sync = True
-        user = find_user(form.user_name.data.strip())
+        user = validate_user_ldap_login(username, password, ip)
+        if user is not None:  # LDAP authentication succeeded
+            ldap_sync = False  # setting it to false avoids writing to LDAP later on
 
+    if user is None:
+        # Either LDAP is disabled or LDAP auth failed - try local authentication
+        user = find_user(username)
         if not user:
             flash(_("No account exists with that user name."), "error")
             return redirect(url_for("auth.login"))
 
-        if not validate_user_login(user, form.password.data.strip(), ip):
+        if not validate_user_login(user, password, ip):
             return redirect(url_for("auth.login"))
 
     if requires_email_verification(user):
