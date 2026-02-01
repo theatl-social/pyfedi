@@ -1796,7 +1796,7 @@ def user_alerts(type='posts', filter='all'):
 @login_required
 def user_scheduled_posts(type='posts', filter='all'):
     low_bandwidth = request.cookies.get('low_bandwidth', '0') == '1'
-    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id).all()
+    entities = Post.query.filter(Post.deleted == False, Post.status == POST_STATUS_SCHEDULED, Post.user_id == current_user.id).order_by(Post.scheduled_for).all()
     title = _('Scheduled posts')
 
     return render_template('user/scheduled_posts.html', title=title, entities=entities,
