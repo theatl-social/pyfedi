@@ -466,8 +466,11 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
                 if not tag.attrs.get('href', "").startswith("#"):
                     tag.attrs['rel'] = 'nofollow ugc'
                     tag.attrs['target'] = a_target
-                    if furl(tag['href']).host in instance_domains:
+                    f = furl(tag['href'])
+                    if f.host in instance_domains:
                         tag['href'] = rewrite_href(tag['href'])
+                    elif f.scheme == 'javascript':
+                        tag['href'] = ''
                 else:
                     # This is a same-page anchor - a footnote, give unique suffix for href
                     tag.attrs['href'] = tag.attrs.get('href', '') + '-' + fn_string

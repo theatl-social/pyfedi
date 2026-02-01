@@ -55,6 +55,12 @@ class TestMarkdownToHtml(unittest.TestCase):
         self.assertTrue("<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n</ul>" in result)
         self.assertTrue("<ol>\n<li>First</li>\n<li>Second</li>\n</ol>" in result)
 
+    def test_javascript_links(self):
+        """Test that angle brackets are properly escaped"""
+        markdown = "here is some text [click](javascript:alert(1)) here is some more text"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        self.assertTrue("javascript" not in result)
+
     def test_angle_brackets(self):
         """Test that angle brackets are properly escaped"""
         markdown = "Text with <tags> should be escaped"
