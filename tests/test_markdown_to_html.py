@@ -56,7 +56,7 @@ class TestMarkdownToHtml(unittest.TestCase):
         self.assertTrue("<ol>\n<li>First</li>\n<li>Second</li>\n</ol>" in result)
 
     def test_javascript_links(self):
-        """Test that angle brackets are properly escaped"""
+        """Test that bad links are nuked"""
         markdown = "here is some text [click](javascript:alert(1)) here is some more text"
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         self.assertTrue("javascript" not in result)
