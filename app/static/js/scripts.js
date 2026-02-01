@@ -709,11 +709,12 @@ function setupCommunityConditionalFields() {
             privateCheckbox.checked = false; // Uncheck if disabling
         }
 
-        // Invitations is only enabled when private is checked
+        // Invitations field is only shown when private is checked
         if (privateCheckbox.checked && !privateCheckbox.disabled) {
-            invitationsSelect.disabled = false;
+            invitationsField.style.display = '';
         } else {
-            invitationsSelect.disabled = true;
+            invitationsSelect.selectedIndex = 0; // Set to "Anyone can join"
+            invitationsField.style.display = 'none';
         }
     }
 
