@@ -886,9 +886,9 @@ Add openssl path to LIBRARY_PATH :
 ## Notes for Windows (WSL 2 - Ubuntu 22.04 LTS - Python 3.9.16)
 
 **Important:**
-    Python 3.10+ or 3.11+ may cause some package or compatibility errors. If you are having issues installing packages from
-    `requirements.txt`, try using Python 3.8 or 3.9 instead with `pyenv` (https://github.com/pyenv/pyenv).
-    Follow all the setup instructions in the pyenv documentation and setup any version of either Python 3.8 or 3.9.
+    Python 3.14+ may cause some package or compatibility errors. If you are having issues installing packages from
+    `requirements.txt`, try using Python 3.9 instead with `pyenv` (https://github.com/pyenv/pyenv).
+    Follow all the setup instructions in the pyenv documentation and setup Python 3.9.
     If you are getting installation errors or missing packages with pyenv, run 
 
 ```bash
