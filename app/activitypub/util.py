@@ -672,7 +672,7 @@ def refresh_user_profile_task(user_id):
                     user.accept_private_messages = activity_json['acceptPrivateMessages'] if 'acceptPrivateMessages' in activity_json else 3
                     user.indexable = new_indexable
 
-                    if user.title.strip().lower() == '[deleted]':
+                    if user.title and user.title.strip().lower() == '[deleted]':
                         user.title = ''
 
                     avatar_changed = cover_changed = False
