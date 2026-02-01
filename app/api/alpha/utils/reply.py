@@ -136,7 +136,7 @@ def get_reply_list(auth, data, user_details=None):
     depth_first = False
     next_page = None
     if replies:
-        # if replies isn't None, then response is just a list of commments, not a threaded conversation
+        # if replies isn't None, then response is just a list of comments, not a threaded conversation
 
         # safe to just remove any replies by blocked users (won't cause gaps in threaded convo)
         if user_id and (add_creator_in_view == True or user_id != data['person_id']):
