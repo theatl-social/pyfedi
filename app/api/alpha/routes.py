@@ -35,7 +35,7 @@ from app.api.alpha.utils.community import (
     post_community_leave_all,
 )
 from app.api.alpha.utils.domain import post_domain_block
-from app.api.alpha.utils.feed import get_feed_list
+from app.api.alpha.utils.feed import get_feed_list, get_feed
 from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
 from app.api.alpha.utils.post import (
     get_post_list,
@@ -489,6 +489,20 @@ def post_alpha_community_flair_delete(data):
 
 
 # Feed
+@feed_bp.route("/feed", methods=["GET"])
+@feed_bp.doc(summary="Get a feed")
+@feed_bp.arguments(GetFeedRequest, location="query")
+@feed_bp.response(200, FeedView)
+@feed_bp.alt_response(400, schema=DefaultError)
+def get_alpha_feed(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get("Authorization")
+    resp = get_feed(auth, data)
+    validated = FeedView().load(resp)
+    return orjson_response(validated)
+
+
 @feed_bp.route("/feed/list", methods=["GET"])
 @feed_bp.doc(summary="Get list of feeds")
 @feed_bp.arguments(FeedListRequest, location="query")

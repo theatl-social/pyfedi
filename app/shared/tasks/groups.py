@@ -63,11 +63,9 @@ def edit_community(send_async, user_id, community_id):
                 if not community.is_moderator(user):
                     return
 
-                announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
-                update_id = f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}"
-                group_id = (
-                    f"https://{current_app.config['SERVER_NAME']}/c/{community.name}"
-                )
+                announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
+                update_id = f"{current_app.config['SERVER_URL']}/activities/update/{gibberish(15)}"
+                group_id = f"{current_app.config['SERVER_URL']}/c/{community.name}"
                 group = {
                     "id": group_id,
                     "type": "Group",
@@ -81,7 +79,7 @@ def edit_community(send_async, user_id, community_id):
                     "featured": group_id + "/featured",
                     "followers": group_id + "/followers",
                     "endpoints": {
-                        "sharedInbox": f"https://{current_app.config['SERVER_NAME']}/inbox"
+                        "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox"
                     },
                     "inbox": group_id + "/inbox",
                     "outbox": group_id + "/outbox",
@@ -104,7 +102,7 @@ def edit_community(send_async, user_id, community_id):
                     else:
                         group["icon"] = {
                             "type": "Image",
-                            "url": f"https://{current_app.config['SERVER_NAME']}{community.icon_image()}",
+                            "url": f"{current_app.config['SERVER_URL']}{community.icon_image()}",
                         }
                 if community.image_id:
                     if community.header_image().startswith("http"):
@@ -115,7 +113,7 @@ def edit_community(send_async, user_id, community_id):
                     else:
                         group["image"] = {
                             "type": "Image",
-                            "url": f"https://{current_app.config['SERVER_NAME']}{community.header_image()}",
+                            "url": f"{current_app.config['SERVER_URL']}{community.header_image()}",
                         }
                 language = []
                 for community_language in community.languages:

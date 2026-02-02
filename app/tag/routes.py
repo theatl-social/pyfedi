@@ -35,6 +35,7 @@ from app.utils import (
     blocked_communities,
     login_required,
     moderating_communities_ids,
+    community_membership_private,
 )
 
 
@@ -79,7 +80,14 @@ def show_tag(tag):
             if blocked_accounts:
                 posts = posts.filter(Post.user_id.not_in(blocked_accounts))
             content_filters = user_filters_posts(current_user.id)
+            posts = posts.filter(
+                or_(
+                    Community.private == False,
+                    Community.id.in_(community_membership_private(current_user.id)),
+                )
+            )
         else:
+            posts = posts.filter(Community.private == False)
             content_filters = {}
 
         community_ids = []
@@ -160,7 +168,7 @@ def show_tag(tag):
             category=category,
             category_id=category_id,
             moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-            rss_feed=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
+            rss_feed=f"{current_app.config['SERVER_URL']}/tag/{tag.name}/feed",
             rss_feed_name=f"#{tag.display_as} on {g.site.name}",
             inoculation=inoculation[randint(0, len(inoculation) - 1)]
             if g.site.show_inoculation_block
@@ -187,30 +195,29 @@ def show_tag_rss(tag):
 
         if current_user.is_anonymous or current_user.ignore_bots == 1:
             posts = posts.filter(Post.from_bot == False)
+        posts = posts.filter(Community.private == False)
         posts = posts.order_by(desc(Post.posted_at)).limit(20).all()
 
         description = None
         og_image = None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}")
+        fg.id(f"{current_app.config['SERVER_URL']}/tag/{tag.name}")
         fg.title(f"#{tag.display_as} on {g.site.name}")
         fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}",
-            rel="alternate",
+            href=f"{current_app.config['SERVER_URL']}/tag/{tag.name}", rel="alternate"
         )
         if og_image:
             fg.logo(og_image)
         else:
             fg.logo(
-                f"https://{current_app.config['SERVER_NAME']}{g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'}"
+                f"{current_app.config['SERVER_URL']}{g.site.logo_152 if g.site.logo_152 else '/static/images/apple-touch-icon.png'}"
             )
         if description:
             fg.subtitle(description)
         else:
             fg.subtitle(" ")
         fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/tag/{tag.name}/feed",
-            rel="self",
+            href=f"{current_app.config['SERVER_URL']}/tag/{tag.name}/feed", rel="self"
         )
         fg.language("en")
 
@@ -218,11 +225,9 @@ def show_tag_rss(tag):
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(
-                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-                )
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith("text/"):

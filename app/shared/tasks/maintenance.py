@@ -748,7 +748,9 @@ def monitor_healthy_instances():
 
                         for admin in instance_data["admins"]:
                             profile_id = admin["person"]["actor_id"]
-                            if profile_id.startswith("https://"):
+                            if profile_id.startswith(
+                                "https://"
+                            ) or profile_id.startswith("http://"):
                                 admin_profile_ids.append(profile_id.lower())
                                 user = find_actor_or_create(profile_id)
                                 if user and not instance.user_is_admin(user.id):

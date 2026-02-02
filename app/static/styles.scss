@@ -359,7 +359,7 @@ div.navbar {
 }
 
 form {
-  > .mb-3 {
+  .mb-3 {
     margin-bottom: 1.1rem;
 
     &.required {
@@ -665,6 +665,22 @@ ul.form-multicheck-columns {
 
 .post_list {
   clear: both;
+
+  .instance_sticky {
+    border-bottom: solid 2px var(--bs-success-border-subtle);
+
+    > .post_teaser {
+      border-bottom: none !important;
+    }
+
+    .post_teaser_title_a::before {
+      font-family: 'Feather' !important;
+      content: "\e9d5 ";
+      color: var(--bs-success);
+      margin-right: 0.25em;
+    }
+  }
+
   .post_teaser {
 
     border-bottom: solid 2px $light-grey;
@@ -2726,6 +2742,7 @@ form {
         border: 1px solid var(--bs-border-color);
         border-radius: 21px;
         box-shadow: inset 0 0 5px 0 rgba(0, 0, 0, 0.1);
+        height: 30px;
 
         transition:
             transform 100ms linear,
@@ -2761,10 +2778,13 @@ form {
         }
 
         .emoji {
-          margin: 1px 3px;
-          height: 1.2143em;
-          width: 1.2143em;
+          margin: 2px 3px;
+          padding: 2px 0px;
+          height: 20px;
+          width: 20px;
           flex-shrink: 0;
+          overflow: hidden;
+          font-size: 17px;
 
           img {
             margin-top: -2px;
@@ -2781,6 +2801,7 @@ form {
         font-size: 90%;
         margin: 0 3px;
         line-height: 1.0317em;
+        align-self: center;
     }
 
     .message_reaction:hover .message_reaction_count {

@@ -34,6 +34,8 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["post_id"],
             ["post.id"],
+            name="post_vote_post_id_fkey",
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],
@@ -56,6 +58,8 @@ def upgrade():
         sa.ForeignKeyConstraint(
             ["post_reply_id"],
             ["post_reply.id"],
+            name="post_reply_vote_post_reply_id_fkey",
+            ondelete="CASCADE",
         ),
         sa.ForeignKeyConstraint(
             ["user_id"],

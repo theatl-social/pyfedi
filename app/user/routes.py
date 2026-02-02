@@ -139,6 +139,9 @@ from app.utils import (
     patch_db_session,
     user_in_restricted_country,
     referrer,
+    user_pronouns,
+    community_membership_private,
+    intlist_to_strlist,
 )
 
 
@@ -162,7 +165,9 @@ def show_profile_by_id(user_id):
 
 def _get_user_posts(user, post_page):
     """Get posts for a user based on current user's permissions."""
-    base_query = Post.query.filter_by(user_id=user.id)
+    base_query = Post.query.filter_by(user_id=user.id).filter(
+        Post.community_id.not_in(community_membership_private(user.id))
+    )
 
     if current_user.is_authenticated and (
         current_user.is_admin() or current_user.is_staff()
@@ -197,7 +202,9 @@ def _get_user_posts(user, post_page):
 
 def _get_user_post_replies(user, replies_page):
     """Get post replies for a user based on current user's permissions."""
-    base_query = PostReply.query.filter_by(user_id=user.id)
+    base_query = PostReply.query.filter_by(user_id=user.id).filter(
+        PostReply.community_id.not_in(community_membership_private(user.id))
+    )
 
     if current_user.is_authenticated and (
         current_user.is_admin() or current_user.is_staff()
@@ -232,6 +239,7 @@ def _get_user_posts_and_replies(user, page):
     offset_val = (page - 1) * per_page
     next_page = False
 
+    private = ",".join(intlist_to_strlist(community_membership_private(user_id)))
     if current_user.is_authenticated and (
         current_user.is_admin() or current_user.is_staff()
     ):
@@ -240,14 +248,23 @@ def _get_user_posts_and_replies(user, page):
             f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id}"
         )
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id = {user_id}"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
     elif current_user.is_authenticated and current_user.id == user_id:
         # Users see their own posts/replies including soft-deleted ones they deleted
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND (deleted = 'False' OR deleted_by = {user_id})"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
     else:
         # Everyone else sees only non-deleted posts/replies
         post_select = f"SELECT id, posted_at, 'post' AS type FROM post WHERE user_id = {user_id} AND deleted = 'False' and status > {POST_STATUS_REVIEWING}"
         reply_select = f"SELECT id, posted_at, 'reply' AS type FROM post_reply WHERE user_id={user_id} AND deleted = 'False'"
+        if private:
+            post_select += f" AND community_id NOT IN ({private})"
+            reply_select += f"AND community_id NOT IN ({private})"
 
     full_query = (
         post_select
@@ -455,7 +472,7 @@ def show_profile(user):
         show_deleted=current_user.is_authenticated and current_user.is_admin_or_staff(),
         reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
         moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-        rss_feed=f"https://{current_app.config['SERVER_NAME']}/u/{user.link()}/feed"
+        rss_feed=f"{current_app.config['SERVER_URL']}/u/{user.link()}/feed"
         if user.post_count > 0
         else None,
         rss_feed_name=f"{user.display_name()} on {g.site.name}"
@@ -597,6 +614,7 @@ def edit_profile(actor):
                 f"LDAP sync failed for user {current_user.user_name}: {e}"
             )
 
+        cache.delete_memoized(user_pronouns)
         flash(_("Your changes have been saved."), "success")
 
         return redirect(url_for("user.edit_profile", actor=actor))
@@ -666,12 +684,10 @@ def export_user_settings(user):
     user_dict["bio"] = user.about
     if user.avatar_image() != "":
         user_dict["avatar"] = (
-            f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+            f"{current_app.config['SERVER_URL']}/{user.avatar_image()}"
         )
     if user.cover_image() != "":
-        user_dict["banner"] = (
-            f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
-        )
+        user_dict["banner"] = f"{current_app.config['SERVER_URL']}/{user.cover_image()}"
     user_dict["matrix_id"] = user.matrix_user_id
     user_dict["bot_account"] = user.bot
     if user.hide_nsfw == 1:
@@ -793,11 +809,11 @@ def export_user_settings(user):
     user_dict["reply_collapse_threshold"] = user.reply_collapse_threshold
     if user.avatar_image() != "":
         user_dict["avatar_image"] = (
-            f"https://{current_app.config['SERVER_NAME']}/{user.avatar_image()}"
+            f"{current_app.config['SERVER_URL']}/{user.avatar_image()}"
         )
     if user.cover_image() != "":
         user_dict["cover_image"] = (
-            f"https://{current_app.config['SERVER_NAME']}/{user.cover_image()}"
+            f"{current_app.config['SERVER_URL']}/{user.cover_image()}"
         )
     user_dict["user_blocks"] = blocked_users
 
@@ -908,7 +924,13 @@ def user_settings():
         form.feed_auto_follow.data = current_user.feed_auto_follow
         form.feed_auto_leave.data = current_user.feed_auto_leave
         form.read_languages.data = current_user.read_language_ids
-        form.compaction.data = request.cookies.get("compact_level", "")
+        if (
+            request.cookies.get("compact_level", None) is None
+            and current_app.config["HTTP_PROTOCOL"] == "mixed"
+        ):
+            form.compaction.data = "compact-min compact-max"
+        else:
+            form.compaction.data = request.cookies.get("compact_level", "")
         form.accept_private_messages.data = current_user.accept_private_messages
         form.font.data = current_user.font
         form.code_style.data = current_user.code_style or "fruity"
@@ -1060,7 +1082,7 @@ def ban_profile(actor):
             user = find_actor_or_create(actor, create_if_not_found=False)
         else:
             user = find_actor_or_create(
-                f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                f'{current_app.config["SERVER_URL"]}/u/{actor}',
                 create_if_not_found=False,
             )
         if user is None:
@@ -1115,7 +1137,7 @@ def unban_profile(actor):
             )
         else:
             user = find_actor_or_create(
-                f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/u/{actor}",
+                f"{current_app.config['SERVER_URL']}/u/{actor}",
                 create_if_not_found=False,
                 allow_banned=True,
             )
@@ -1142,8 +1164,7 @@ def block_profile(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
     if user is None:
         abort(404)
@@ -1195,8 +1216,7 @@ def user_block_instance(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
     if user is None:
         abort(404)
@@ -1228,8 +1248,7 @@ def unblock_profile(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
     if user is None:
         abort(404)
@@ -1269,8 +1288,7 @@ def report_profile(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
     if user is None:
         abort(404)
@@ -1369,7 +1387,7 @@ def delete_profile(actor):
             user = find_actor_or_create(actor, create_if_not_found=False)
         else:
             user = find_actor_or_create(
-                f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
+                f'{current_app.config["SERVER_URL"]}/u/{actor}',
                 create_if_not_found=False,
             )
         if user is None:
@@ -1505,7 +1523,7 @@ def send_deletion_requests(user_id):
         payload = {
             "@context": default_context(),
             "actor": user.public_url(),
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+            "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
             "object": user.public_url(),
             "to": ["https://www.w3.org/ns/activitystreams#Public"],
             "removeData": True,
@@ -1750,7 +1768,7 @@ def import_settings_task(user_id, filename):
                                         "to": [community.public_url()],
                                         "object": community.public_url(),
                                         "type": "Follow",
-                                        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}",
+                                        "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}",
                                     }
                                     send_post_request(
                                         community.ap_inbox_url,
@@ -2584,11 +2602,15 @@ def user_alerts(type="posts", filter="all"):
 @login_required
 def user_scheduled_posts(type="posts", filter="all"):
     low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
-    entities = Post.query.filter(
-        Post.deleted == False,
-        Post.status == POST_STATUS_SCHEDULED,
-        Post.user_id == current_user.id,
-    ).all()
+    entities = (
+        Post.query.filter(
+            Post.deleted == False,
+            Post.status == POST_STATUS_SCHEDULED,
+            Post.user_id == current_user.id,
+        )
+        .order_by(Post.scheduled_for)
+        .all()
+    )
     title = _("Scheduled posts")
 
     return render_template(
@@ -2598,6 +2620,43 @@ def user_scheduled_posts(type="posts", filter="all"):
         low_bandwidth=low_bandwidth,
         user=current_user,
         site=g.site,
+    )
+
+
+@bp.route("/hidden_posts")
+@login_required
+def user_hidden_posts():
+    low_bandwidth = request.cookies.get("low_bandwidth", "0") == "1"
+    page = request.args.get("page", 1, type=int)
+    title = _("Hidden posts")
+    post_ids = db.session.execute(
+        text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+        {"user_id": current_user.id},
+    ).all()
+    post_ids = [post_id[0] for post_id in post_ids]
+    posts = Post.query.filter(Post.id.in_(post_ids))
+
+    posts = posts.paginate(page=page, per_page=100, error_out=False)
+    next_url = (
+        url_for("user.user_hidden_posts", page=posts.next_num)
+        if posts.has_next
+        else None
+    )
+    prev_url = (
+        url_for("user.user_hidden_posts", page=posts.prev_num)
+        if posts.has_prev and page != 1
+        else None
+    )
+
+    return render_template(
+        "user/hidden_posts.html",
+        title=title,
+        posts=posts,
+        low_bandwidth=low_bandwidth,
+        user=current_user,
+        site=g.site,
+        next_url=next_url,
+        prev_url=prev_url,
     )
 
 
@@ -2888,8 +2947,7 @@ def user_feeds(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
 
     if user is None:
@@ -2920,8 +2978,7 @@ def show_profile_rss(actor):
         user = find_actor_or_create(actor, create_if_not_found=False)
     else:
         user = find_actor_or_create(
-            f'https://{current_app.config["SERVER_NAME"]}/u/{actor}',
-            create_if_not_found=False,
+            f'{current_app.config["SERVER_URL"]}/u/{actor}', create_if_not_found=False
         )
 
     if user is not None:
@@ -2943,26 +3000,20 @@ def show_profile_rss(actor):
         description = shorten_string(user.about, 150) if user.about else None
         og_image = user.avatar_image() if user.avatar_id else None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.id(f"{current_app.config['SERVER_URL']}/c/{actor}")
         fg.title(f"{user.display_name()} on {g.site.name}")
-        fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}",
-            rel="alternate",
-        )
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}", rel="alternate")
         if og_image:
             fg.logo(og_image)
         else:
             fg.logo(
-                f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png"
+                f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
             )
         if description:
             fg.subtitle(description)
         else:
             fg.subtitle(" ")
-        fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed",
-            rel="self",
-        )
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}/feed", rel="self")
         fg.language("en")
 
         already_added = set()
@@ -2978,11 +3029,9 @@ def show_profile_rss(actor):
             fe = fg.add_entry()
             fe.title(post.title.strip())
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(
-                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-                )
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 if post.url in already_added:
                     continue

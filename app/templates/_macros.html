@@ -1,5 +1,10 @@
 {# Shared utility macros used across multiple templates #}
 
+{% macro dbg_checkpoint(name) %}
+    {% set now, delta = debug_checkpoint(name) %}
+    <small style="color: red;">[{{ name }}] {{ "%.3f"|format(now) }} s{% if delta > 0 %} (+{{ "%.3f"|format(delta) }} s){% endif %}</small>
+{% endmacro %}
+
 {% macro render_username(user, add_domain=True, htmx_redirect_back_to=None, current_user=None, low_bandwidth=False, collapsed=False, admin_ids=None, user_notes=None, inline=False) -%}
 {% if not inline -%}
     <div class="render_username" xmlns="http://www.w3.org/1999/xhtml">

@@ -125,7 +125,7 @@ We have supplied a ruff.toml config file in the root of the project.
 ```bash
 git clone https://codeberg.org/rimu/pyfedi.git
 cd pyfedi
-git checkout v1.4.x
+git checkout v1.5.x
 ```
 
 Change the 'git checkout' line to be the latest release. Check the branch name to find what to use after 'checkout' by
@@ -314,7 +314,7 @@ Edit `gunicorn.conf.py` and change `worker_tmp_dir` if needed.
 
 You will want to [tune PostgreSQL](https://pgtune.leopard.in.ua/). [More on this](https://www.enterprisedb.com/postgres-tutorials/how-tune-postgresql-memory).
 If you have more than 4 GB of RAM, consider [turning on 'huge pages'](https://www.percona.com/blog/why-linux-hugepages-are-super-important-for-database-servers-a-case-with-postgresql/)
-also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages).
+also [see this](https://pganalyze.com/blog/5mins-postgres-tuning-huge-pages). Turn off JIT by adding `jit=off` to your postgresql config.
 
 [PgBouncer](https://www.pgbouncer.org) can be helpful for instances with > 800 MAU.
 
@@ -497,6 +497,8 @@ server {
         expires max;
         access_log off;
     }
+
+    client_max_body_size 100M;
 
 }
 ```
@@ -884,9 +886,9 @@ Add openssl path to LIBRARY_PATH :
 ## Notes for Windows (WSL 2 - Ubuntu 22.04 LTS - Python 3.9.16)
 
 **Important:**
-    Python 3.10+ or 3.11+ may cause some package or compatibility errors. If you are having issues installing packages from
-    `requirements.txt`, try using Python 3.8 or 3.9 instead with `pyenv` (https://github.com/pyenv/pyenv).
-    Follow all the setup instructions in the pyenv documentation and setup any version of either Python 3.8 or 3.9.
+    Python 3.14+ may cause some package or compatibility errors. If you are having issues installing packages from
+    `requirements.txt`, try using Python 3.9 instead with `pyenv` (https://github.com/pyenv/pyenv).
+    Follow all the setup instructions in the pyenv documentation and setup Python 3.9.
     If you are getting installation errors or missing packages with pyenv, run
 
 ```bash

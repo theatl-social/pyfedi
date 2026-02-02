@@ -3,15 +3,24 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
+
 {% block app_content %}
     <div class="row">
         <div class="col col-login mx-auto">
             <div class="card mt-5">
                 <div class="card-body p-6">
-                    <div class="card-title text-center">{{ _("Check your email") }}</div>
-                    <p>{{ _("We sent you an email containing a link that you need to click to enable your account.") }}</p>
+                    <div class="card-title text-center">{{ _('Check your email') }}</div>
+                    <p>
+                        {{ _('We sent you an email containing a link that you need to click to enable your account.') }}
+                    </p>
+                    <p>
+                        <a class="btn btn-primary" href="{{ url_for('auth.resend_email') }}">
+                            {{ _('Request a new verification email') }}
+                        </a>
+                    </p>
                 </div>
             </div>
         </div>
     </div>
+
 {% endblock %}

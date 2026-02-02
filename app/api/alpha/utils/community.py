@@ -75,6 +75,9 @@ def get_community_list(auth, data):
     user = authorise_api_user(auth, return_type="model") if auth else None
     user_id = user.id if user else None
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     query = data["q"] if "q" in data else ""
     if user_id and "@" in query and "." in query and query.startswith("!"):
         search_for_community(query)
@@ -94,6 +97,23 @@ def get_community_list(auth, data):
         )
     else:
         communities = Community.query.filter_by(banned=False)
+
+    # filter private communities: show only to members
+    if user_id:
+        # for authenticated users, show non-private communities OR private communities where they are members
+        member_check = (
+            db.session.query(CommunityMember.community_id)
+            .filter(
+                CommunityMember.user_id == user_id, CommunityMember.is_banned == False
+            )
+            .subquery()
+        )
+        communities = communities.filter(
+            or_(Community.private == False, Community.id.in_(member_check))
+        )
+    else:
+        # for anonymous users, only show non-private communities
+        communities = communities.filter(Community.private == False)
 
     if user_id:
         banned_from = communities_banned_from(user_id)
@@ -369,6 +389,9 @@ def get_community_moderate_bans(auth, data):
     # get the page for pagination from the data.page
     page = int(data["page"]) if "page" in data else 1
     limit = int(data["limit"]) if "limit" in data else 10
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     # validate that the user is a mod or owner of the community, or an instance admin
     if not (

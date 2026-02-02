@@ -99,11 +99,13 @@ def process_upload(image_file, destination="posts", user_id=None):
 
             file_size = os.path.getsize(final_place)
 
-            url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+            url = (
+                f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+            )
         else:
             raise Exception("filetype not allowed")
     else:
-        url = f"https://{current_app.config['SERVER_NAME']}/{final_place.replace('app/', '')}"
+        url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
 
     # Move uploaded file to S3
     if store_files_in_s3():

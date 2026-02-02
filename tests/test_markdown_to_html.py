@@ -12,6 +12,11 @@ class TestMarkdownToHtml(unittest.TestCase):
             result, "<p><strong>Bold</strong> and <em>italic</em> text</p>\n"
         )
 
+        markdown = "**Bold**, *italics*, __underscore bold__, and _underscore italics_, each next to a punctuation mark."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><strong>Bold</strong>, <em>italics</em>, <strong>underscore bold</strong>, and <em>underscore italics</em>, each next to a punctuation mark.</p>\n"
+        self.assertEqual(target_html, result)
+
     def test_paragraphs(self):
         """Test paragraph formatting"""
         markdown = "First paragraph\n\nSecond paragraph"
@@ -54,6 +59,14 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         self.assertTrue("<ul>\n<li>Item 1</li>\n<li>Item 2</li>\n</ul>" in result)
         self.assertTrue("<ol>\n<li>First</li>\n<li>Second</li>\n</ol>" in result)
+
+    def test_javascript_links(self):
+        """Test that bad links are nuked"""
+        markdown = (
+            "here is some text [click](javascript:alert(1)) here is some more text"
+        )
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        self.assertTrue("javascript" not in result)
 
     def test_angle_brackets(self):
         """Test that angle brackets are properly escaped"""
@@ -320,6 +333,29 @@ And if you want to add your score to the database to help your fellow Bookworms 
         markdown = "Here is a footnote ref[^1].\n\n[^1]:\n    indented *line*\n    **formatted** line with `code` and || spoilers ||"
         result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
         target_html = '<p>Here is a footnote ref<sup class="footnote-ref" id="fnref-1-fn-test"><a href="#fn-1-fn-test">1</a></sup>.</p>\n<div class="footnotes">\n<hr/>\n<ol>\n<li id="fn-1-fn-test">\n<p>indented <em>line</em><br/>\n<strong>formatted</strong> line with <code>code</code> and <tg-spoiler>spoilers</tg-spoiler>\xa0<a class="footnoteBackLink" href="#fnref-1-fn-test">↩</a></p>\n</li>\n</ol>\n</div>\n'
+        self.assertEqual(target_html, result)
+
+    def test_double_underscore_bold(self):
+        """Test using double underscores to signify bold"""
+
+        # Basic functionality
+        markdown = "Here is a __bold__ word."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p>Here is a <strong>bold</strong> word.</p>\n"
+        self.assertEqual(target_html, result)
+
+        # Multiple places in a sentence
+        markdown = "Here are __two__ bold __words__."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = (
+            "<p>Here are <strong>two</strong> bold <strong>words</strong>.</p>\n"
+        )
+        self.assertEqual(target_html, result)
+
+        # Bold and italics
+        markdown = "***This*** is ___bold and italics___."
+        result = markdown_to_html(markdown, test_env={"fn_string": "fn-test"})
+        target_html = "<p><em><strong>This</strong></em> is <em><strong>bold and italics</strong></em>.</p>\n"
         self.assertEqual(target_html, result)
 
 

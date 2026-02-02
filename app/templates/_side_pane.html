@@ -24,19 +24,22 @@
                         </div>
                     {% endif -%}
                 </div>
-                {% if is_moderator or is_owner or is_admin -%}
-                  <div class="row mb-2">
+
+                <div class="row mb-2">
+                  {% if is_moderator or is_owner or is_admin -%}
                     <div class="col-6">
                       <a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="w-100 btn btn-primary">{{ _('Settings') }}</a>
                     </div>
+                  {% endif -%}
+                  {% if community.can_invite() -%}
                     <div class="col-6">
                       <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/invite" rel="nofollow noindex">{{ _('Invite others') }}</a>
                     </div>
-                  </div>
-                {% endif %}
+                  {% endif -%}
+                </div>
                 <form method="get" action="/search">
                     <input type="search" id="search_community" name="q" class="form-control" placeholder="{{ _('Search this community') }}" />
-                    <input type="hidden" name="community" value="{{ community.id }}">
+                    <input type="hidden" name="community_id" value="{{ community.id }}">
                 </form>
                 {% if community_flair and community_flair|length > 0 -%}
                     <div class="post_flair_sidepane">
@@ -60,7 +63,7 @@
         {% endif -%}
     {% endblock %}
     {% block about_community %}
-        {% if upcoming_events -%}
+        {% if upcoming_events and not (community.private and (current_user.is_anonymous or not community.is_member(current_user))) -%}
         <div class="card mt-3" id="upcoming_events">
             <div class="card-header">
                 <h2><span class="fe fe-event"></span> {{ _('Upcoming events') }}</h2>
@@ -91,31 +94,12 @@
                       {{ _('This community does not federate with other instances.') }}
                     </p>
                 {% endif -%}
+                {% if community.private -%}
+                    <p class="border bg-body-secondary border-secondary rounded-pill text-center px-3 py-1">
+                      {{ _('This community is private and only visible to members.') }}
+                    </p>
+                {% endif -%}
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
-
-                <div class="community_rating">
-                    {% if community.average_rating -%}
-                        <a href="{{ url_for('community.community_ratings', actor=community.link()) }}">
-                            <span class="stars">
-                              {% set rating = community.average_rating %}
-                              {% for i in range(1, 6) %}
-                                <span class="star">
-                                  {% if rating >= i %}
-                                    <span class="full">★</span>
-                                  {% elif rating >= i - 0.5 %}
-                                    <span class="half">
-                                      <span class="filled">★</span>
-                                      <span class="empty">★</span>
-                                    </span>
-                                  {% else %}
-                                    <span class="empty">★</span>
-                                  {% endif %}
-                                </span>
-                              {% endfor %}
-                            </span>
-                        </a>
-                    {% endif -%}
-                </div>
 
                 {% if current_user.is_authenticated or (community_flair and community_flair|length > 0) -%}
                     <hr>
@@ -125,54 +109,56 @@
                     <p>{{ current_user.display_name() }} {% if current_user.id in user_flair %}<span class="user_flair">{{ user_flair[current_user.id] }}</span>{% endif %}
                     <a href="{{ url_for('community.community_my_flair', actor=community.link()) }}">{{ _('Set my flair')}}</a></p>
                 {% endif %}
-                {% if mods|length > 0 and not community.private_mods -%}
-                    <hr><a href="/modlog?communities={{ community.id }}" class="modlog_link">{{ _('Modlog') }}</a>
-                    <h3>Moderators</h3>
-                    <ul class="moderator_list">
-                        {% for mod in mods -%}
-                            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
-                        {% endfor -%}
-                    </ul>
-                    {% if un_moderated -%}
-                        <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
-                    {% endif -%}
-                {% endif -%}
-                {% if community.content_retention != -1 -%}
-                    <p>{{ _('Posts older than %(number)s days will be removed.', number=community.content_retention) }}</p>
-                {% endif -%}
-                {% if rss_feed and not community.is_local() -%}
-                    <ul>
-                        <li><p><a href="{{ community.public_url() }}">{{ _('View community on original server') }}</a></p></li>
-                        {% if instance_domain -%}
-                        <li><p><a href="/community/{{ community.link() }}/move">{{ _('Move community to %(instance_domain)s', instance_domain=instance_domain) }}</a></p></li>
+                {% if not (community.private and (current_user.is_anonymous or not community.is_member(current_user))) -%}
+                    {% if mods|length > 0 and not community.private_mods -%}
+                        <hr><a href="/modlog?communities={{ community.id }}" class="modlog_link">{{ _('Modlog') }}</a>
+                        <h3>Moderators</h3>
+                        <ul class="moderator_list">
+                            {% for mod in mods -%}
+                                <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
+                            {% endfor -%}
+                        </ul>
+                        {% if un_moderated -%}
+                            <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                         {% endif -%}
-                        <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
-                    </ul>
-                {% endif -%}
-                {% if not community.is_local() and not current_user.is_anonymous and current_user.is_admin() -%}
-                    <ul>
-                        <li><p><a href="{{ url_for('community.fixup_from_remote', actor=community.ap_id) }}">{{ _("Refresh community information from remote") }}</a></p></li>
-                    </ul>
-                {% endif -%}
-                <hr>
-                <div>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(total=False) }} {{ _('Local Subscribers') }}</span>
-                </div>
-                <div>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_count) }} {{ _('Posts') }}</span>
-                    <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_reply_count) }} {{ _('Comments') }}</span>
-                </div>
-                <div>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ community.humanize_subscribers(value=community.active_daily) }} {{ _('Daily Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ community.humanize_subscribers(value=community.active_weekly) }} {{ _('Weekly Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ community.humanize_subscribers(value=community.active_monthly) }} {{ _('Monthly Users') }}</span>
-                    <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
-                </div>
-                {% if rss_feed -%}
-                <p class="mt-2 mb-0">
-                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
-                </p>
+                    {% endif -%}
+                    {% if community.content_retention != -1 -%}
+                        <p>{{ _('Posts older than %(number)s days will be removed.', number=community.content_retention) }}</p>
+                    {% endif -%}
+                    {% if rss_feed and not community.is_local() -%}
+                        <ul>
+                            <li><p><a href="{{ community.public_url() }}">{{ _('View community on original server') }}</a></p></li>
+                            {% if instance_domain -%}
+                            <li><p><a href="/community/{{ community.link() }}/move">{{ _('Move community to %(instance_domain)s', instance_domain=instance_domain) }}</a></p></li>
+                            {% endif -%}
+                            <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
+                        </ul>
+                    {% endif -%}
+                    {% if not community.is_local() and not current_user.is_anonymous and current_user.is_admin() -%}
+                        <ul>
+                            <li><p><a href="{{ url_for('community.fixup_from_remote', actor=community.ap_id) }}">{{ _("Refresh community information from remote") }}</a></p></li>
+                        </ul>
+                    {% endif -%}
+                    <hr>
+                    <div>
+                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers() }} {{ _('Subscribers') }}</span>
+                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(total=False) }} {{ _('Local Subscribers') }}</span>
+                    </div>
+                    <div>
+                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_count) }} {{ _('Posts') }}</span>
+                        <span class="badge text-bg-secondary">{{ community.humanize_subscribers(value=community.post_reply_count) }} {{ _('Comments') }}</span>
+                    </div>
+                    <div>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 24 hours') }}">{{ community.humanize_subscribers(value=community.active_daily) }} {{ _('Daily Users') }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 7 days') }}">{{ community.humanize_subscribers(value=community.active_weekly) }} {{ _('Weekly Users') }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past month') }}">{{ community.humanize_subscribers(value=community.active_monthly) }} {{ _('Monthly Users') }}</span>
+                        <span class="badge text-bg-secondary" title="{{ _('Active users in the past 6 months') }}">{{ community.humanize_subscribers(community.active_6monthly) }} {{ _('Users / 6 Months') }}</span>
+                    </div>
+                    {% if rss_feed -%}
+                    <p class="mt-2 mb-0">
+                        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                    </p>
+                    {% endif -%}
                 {% endif -%}
             </div>
         </div>

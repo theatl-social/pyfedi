@@ -91,7 +91,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction, emoji):
             type = vote_to_undo
         else:
             type = "Like" if vote_direction == "upvote" else "Dislike"
-        vote_id = f"https://{current_app.config['SERVER_NAME']}/activities/{type.lower()}/{gibberish(15)}"
+        vote_id = f"{current_app.config['SERVER_URL']}/activities/{type.lower()}/{gibberish(15)}"
 
         # public actor URL
         public_actor = user.public_url()
@@ -110,7 +110,9 @@ def send_vote(user_id, object, vote_to_undo, vote_direction, emoji):
 
         # Create undo
         if vote_to_undo:
-            undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+            undo_id = (
+                f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
+            )
 
             # Undo payload
             vote_public_copy = vote_public.copy()
@@ -135,7 +137,7 @@ def send_vote(user_id, object, vote_to_undo, vote_direction, emoji):
             del payload_copy["@context"]
 
             # Create announcement with the selected payload
-            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
             actor = community.public_url()
             to = ["https://www.w3.org/ns/activitystreams#Public"]
             cc = [community.ap_followers_url]
@@ -234,7 +236,7 @@ def vote_for_poll(send_async, user_id, post_id, choice_text):
         user = session.query(User).get(user_id)
         if post:
             type = "PollVote"
-            poll_vote_id = f"https://{current_app.config['SERVER_NAME']}/activities/{type.lower()}/{gibberish(15)}"
+            poll_vote_id = f"{current_app.config['SERVER_URL']}/activities/{type.lower()}/{gibberish(15)}"
 
             # public actor URL
             public_actor = user.public_url()
@@ -257,7 +259,7 @@ def vote_for_poll(send_async, user_id, post_id, choice_text):
                 del payload["@context"]
 
                 # Create announcement with the selected payload
-                announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+                announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
                 actor = post.community.public_url()
                 to = ["https://www.w3.org/ns/activitystreams#Public"]
                 cc = [post.community.ap_followers_url]

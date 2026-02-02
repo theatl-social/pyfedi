@@ -98,6 +98,8 @@ from app.utils import (
     num_topics,
     referrer,
     block_honey_pot,
+    user_pronouns,
+    get_instance_stickies,
 )
 from app.models import (
     Community,
@@ -146,8 +148,11 @@ def home_page(sort, view_filter):
             if current_user.is_authenticated
             else g.site.default_filter
         )
+        # anonymous users cannot use "subscribed"
+        if current_user.is_anonymous and view_filter == "subscribed":
+            view_filter = "popular"
         if view_filter is None:
-            view_filter = "subscribed"
+            view_filter = "subscribed" if current_user.is_authenticated else "popular"
 
     # If nothing has changed since their last visit, return HTTP 304
     current_etag = f"{sort}_{view_filter}_{hash(str(g.site.last_active))}"
@@ -185,16 +190,23 @@ def home_page(sort, view_filter):
             {"user_id": current_user.id},
         ).scalars()
     elif view_filter == "local":
-        community_ids = db.session.execute(
-            text(
-                f"SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}"
-            )
-        ).scalars()
+        if current_user.is_anonymous:
+            community_ids = db.session.execute(
+                text(
+                    f"SELECT id FROM community as c WHERE c.private is false and c.instance_id = 1 {low_quality_filter}"
+                )
+            ).scalars()
+        else:
+            community_ids = db.session.execute(
+                text(
+                    f"SELECT id FROM community as c WHERE c.instance_id = 1 {low_quality_filter}"
+                )
+            ).scalars()
     elif view_filter == "popular":
         if current_user.is_anonymous:
             community_ids = db.session.execute(
                 text(
-                    "SELECT id FROM community as c WHERE c.show_popular is true AND c.low_quality is false"
+                    "SELECT id FROM community as c WHERE c.show_popular is true and c.private is false AND c.low_quality is false"
                 )
             ).scalars()
         else:
@@ -208,10 +220,20 @@ def home_page(sort, view_filter):
     elif view_filter == "moderating":
         community_ids = modded_communities
 
-    post_ids = get_deduped_post_ids(result_id, list(community_ids), sort, tag)
+    community_ids = list(community_ids)
+
+    post_ids = get_deduped_post_ids(result_id, community_ids, sort, tag)
     has_next_page = len(post_ids) > page + 1 * page_length
     post_ids = paginate_post_ids(post_ids, page, page_length=page_length)
     posts = post_ids_to_models(post_ids, sort)
+
+    if page == 0:
+        # First page of the home feed, include any instance-wide stickies if they are present and visible
+        instance_stickies = get_instance_stickies(
+            community_ids=community_ids, sort=sort
+        )
+    else:
+        instance_stickies = []
 
     if current_user.is_anonymous:
         flash(_("Create an account to tailor this feed to your interests."))
@@ -248,6 +270,7 @@ def home_page(sort, view_filter):
         Community.query.filter_by(banned=False)
         .filter_by(nsfw=False)
         .filter_by(nsfl=False)
+        .filter_by(private=False)
     )
     if (
         current_user.is_authenticated
@@ -276,6 +299,7 @@ def home_page(sort, view_filter):
         Community.query.filter_by(banned=False)
         .filter_by(nsfw=False)
         .filter_by(nsfl=False)
+        .filter_by(private=False)
         .filter(Community.created_at > cutoff)
     )
     if (
@@ -334,6 +358,7 @@ def home_page(sort, view_filter):
             etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}",
             next_url=next_url,
             prev_url=prev_url,
+            instance_stickies=instance_stickies,
             title=f"{g.site.name} - {g.site.description}",
             description=shorten_string(html_to_text(g.site.sidebar), 150),
             content_filters=content_filters,
@@ -349,6 +374,7 @@ def home_page(sort, view_filter):
             else None,
             enable_mod_filter=enable_mod_filter,
             has_topics=num_topics() > 0,
+            user_pronouns=user_pronouns(),
         )
     )
     resp.headers.set("Vary", "Accept, Cookie, Accept-Language")
@@ -429,6 +455,25 @@ def list_communities():
     topics = topics_for_form(0)
     languages = Language.query.order_by(Language.name).all()
     communities = Community.query.filter_by(banned=False)
+
+    # filter private communities: show only to members
+    if current_user.is_authenticated:
+        # for authenticated users, show non-private communities OR private communities where they are members
+        member_check = (
+            db.session.query(CommunityMember.community_id)
+            .filter(
+                CommunityMember.user_id == current_user.id,
+                CommunityMember.is_banned == False,
+            )
+            .subquery()
+        )
+        communities = communities.filter(
+            or_(Community.private == False, Community.id.in_(member_check))
+        )
+    else:
+        # For anonymous users, only show non-private communities
+        communities = communities.filter_by(private=False)
+
     if search_param == "":
         pass
     else:
@@ -793,6 +838,13 @@ def robots():
     return resp
 
 
+@bp.route("/.well-known/security.txt")
+def security():
+    resp = make_response(render_template("security.txt"))
+    resp.mimetype = "text/plain"
+    return resp
+
+
 @bp.route("/sitemap.xml")
 @cache.cached(timeout=6000)
 def sitemap():
@@ -889,7 +941,10 @@ def honey_pot(whatever=None):
         redis_client.set(f"ban:{ip}", 1, ex=86400 * 7)
 
     if whatever:
-        return show_post(int(whatever))
+        try:
+            return show_post(int(whatever))
+        except Exception:
+            pass
     return ""
 
 
@@ -1268,7 +1323,7 @@ def test_s3():
 @debug_mode_only
 def test_hashing():
     hash = retrieve_image_hash(
-        f'https://{current_app.config["SERVER_NAME"]}/static/images/apple-touch-icon.png'
+        f'{current_app.config["SERVER_URL"]}/static/images/apple-touch-icon.png'
     )
     if hash:
         return "Ok"
@@ -1372,20 +1427,20 @@ def activitypub_application():
     application_data = {
         "@context": default_context(),
         "type": "Application",
-        "id": f"https://{current_app.config['SERVER_NAME']}/",
+        "id": f"{current_app.config['SERVER_URL']}/",
         "name": "PieFed",
         "summary": g.site.name + " - " + g.site.description,
         "published": ap_datetime(g.site.created_at),
         "updated": ap_datetime(g.site.updated),
-        "inbox": f"https://{current_app.config['SERVER_NAME']}/inbox",
-        "outbox": f"https://{current_app.config['SERVER_NAME']}/site_outbox",
+        "inbox": f"{current_app.config['SERVER_URL']}/inbox",
+        "outbox": f"{current_app.config['SERVER_URL']}/site_outbox",
         "icon": {
             "type": "Image",
-            "url": f"https://{current_app.config['SERVER_NAME']}/static/images/piefed_logo_icon_t_75.png",
+            "url": f"{current_app.config['SERVER_URL']}/static/images/piefed_logo_icon_t_75.png",
         },
         "publicKey": {
-            "id": f"https://{current_app.config['SERVER_NAME']}/#main-key",
-            "owner": f"https://{current_app.config['SERVER_NAME']}/",
+            "id": f"{current_app.config['SERVER_URL']}/#main-key",
+            "owner": f"{current_app.config['SERVER_URL']}/",
             "publicKeyPem": g.site.public_key,
         },
     }
@@ -1403,19 +1458,19 @@ def instance_actor():
     application_data = {
         "@context": default_context(),
         "type": "Application",
-        "id": f"https://{current_app.config['SERVER_NAME']}/actor",
+        "id": f"{current_app.config['SERVER_URL']}/actor",
         "preferredUsername": f"{current_app.config['SERVER_NAME']}",
-        "url": f"https://{current_app.config['SERVER_NAME']}/about",
+        "url": f"{current_app.config['SERVER_URL']}/about",
         "manuallyApprovesFollowers": True,
-        "inbox": f"https://{current_app.config['SERVER_NAME']}/actor/inbox",
-        "outbox": f"https://{current_app.config['SERVER_NAME']}/actor/outbox",
+        "inbox": f"{current_app.config['SERVER_URL']}/actor/inbox",
+        "outbox": f"{current_app.config['SERVER_URL']}/actor/outbox",
         "publicKey": {
-            "id": f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
-            "owner": f"https://{current_app.config['SERVER_NAME']}/actor",
+            "id": f"{current_app.config['SERVER_URL']}/actor#main-key",
+            "owner": f"{current_app.config['SERVER_URL']}/actor",
             "publicKeyPem": g.site.public_key,
         },
         "endpoints": {
-            "sharedInbox": f"https://{current_app.config['SERVER_NAME']}/inbox",
+            "sharedInbox": f"{current_app.config['SERVER_URL']}/inbox",
         },
     }
     resp = jsonify(application_data)
@@ -1457,7 +1512,7 @@ def static_manifest():
         manifest = json.load(f)
 
     # Modify manifest
-    manifest["id"] = f'https://{current_app.config["SERVER_NAME"]}'
+    manifest["id"] = f'{current_app.config["SERVER_URL"]}'
     manifest["name"] = g.site.name if g.site.name else "PieFed"
     manifest["description"] = g.site.description if g.site.description else ""
 
@@ -1509,7 +1564,7 @@ def list_feeds():
         for f in public_feeds:
             if f["feed"].is_local():
                 feeds_list.append(
-                    f"https://{current_app.config['SERVER_NAME']}/f/{f['feed'].machine_name}"
+                    f"{current_app.config['SERVER_URL']}/f/{f['feed'].machine_name}"
                 )
         site_data["site_view"]["public_feeds"] = feeds_list
         site_data["site_view"]["counts"]["public_feeds"] = len(feeds_list)
