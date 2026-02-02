@@ -24,6 +24,7 @@ def validate_and_fix_user_activitypub_setup():
     try:
         # Check if tables exist (skip in test mode before db.create_all())
         from sqlalchemy import inspect
+        from sqlalchemy.orm import lazyload
 
         inspector = inspect(db.engine)
         if "user" not in inspector.get_table_names():
@@ -41,13 +42,19 @@ def validate_and_fix_user_activitypub_setup():
         # 1. Verified (activated)
         # 2. Not deleted or banned
         # 3. Missing ActivityPub private key (indicator of incomplete setup)
-        incomplete_users = User.query.filter(
-            User.instance_id == 1,  # Local users only
-            User.verified == True,  # Only activated users
-            User.banned == False,
-            User.deleted == False,
-            User.private_key == None,  # Missing ActivityPub setup
-        ).all()
+        # Use lazyload to prevent eager loading of Instance (avoids schema mismatch
+        # errors when migrations haven't been run yet)
+        incomplete_users = (
+            User.query.options(lazyload(User.instance))
+            .filter(
+                User.instance_id == 1,  # Local users only
+                User.verified == True,  # Only activated users
+                User.banned == False,
+                User.deleted == False,
+                User.private_key == None,  # Missing ActivityPub setup
+            )
+            .all()
+        )
 
         if not incomplete_users:
             current_app.logger.info("No users with incomplete ActivityPub setup found")
@@ -89,8 +96,21 @@ def validate_and_fix_user_activitypub_setup():
         }
 
     except Exception as e:
-        current_app.logger.error(f"Error during user ActivityPub validation: {e}")
-        return {"error": str(e), "users_fixed": 0}
+        error_msg = str(e)
+        # Check for schema mismatch errors (missing columns)
+        if "UndefinedColumn" in error_msg or "does not exist" in error_msg:
+            current_app.logger.warning(
+                f"Database schema mismatch during startup validation: {e}. "
+                "This usually means database migrations need to be run. "
+                "Run 'flask db upgrade' to apply pending migrations."
+            )
+        else:
+            current_app.logger.error(f"Error during user ActivityPub validation: {e}")
+        return {
+            "error": str(e),
+            "users_fixed": 0,
+            "migration_needed": "UndefinedColumn" in error_msg,
+        }
 
 
 def run_startup_validations():
