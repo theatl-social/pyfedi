@@ -25,7 +25,9 @@ def send_message(
     for recipient in conversation.members:
         if recipient.id != user.id:
             reply.recipient_id = recipient.id
-            reply.ap_id = f"https://{current_app.config['SERVER_NAME']}/private_message/{reply.id}"
+            reply.ap_id = (
+                f"{current_app.config['SERVER_URL']}/private_message/{reply.id}"
+            )
             db.session.commit()
             if recipient.is_local():
                 publish_sse_event(
@@ -62,7 +64,7 @@ def send_message(
                 # Federate reply
                 reply_json = {
                     "actor": user.public_url(),
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/create/{gibberish(15)}",
                     "object": {
                         "attributedTo": user.public_url(),
                         "content": reply.body_html,
@@ -133,7 +135,7 @@ def update_message(reply: ChatMessage):
         # Federate reply
         reply_json = {
             "actor": user.public_url(),
-            "id": f"https://{current_app.config['SERVER_NAME']}/activities/update/{gibberish(15)}",
+            "id": f"{current_app.config['SERVER_URL']}/activities/update/{gibberish(15)}",
             "object": {
                 "attributedTo": user.public_url(),
                 "content": reply.body_html,

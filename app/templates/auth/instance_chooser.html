@@ -6,176 +6,148 @@
 {% from 'bootstrap5/form.html' import render_form %}
 {% from "_macros.html" import render_communityname %}
 {% from "post/post_teaser/_macros.html" import render_article, render_link, render_poll, render_image, render_video %}
+
 {% block app_content %}
-    <div class="row">
-        <main class="col-12 position-relative main_pane">
-            <h1 class="mt-2">{{ title }}</h1>
-            <p class="mt-4 mb-4">
-                <a href="/auth/register" class="btn btn-primary">{{ _('Join %(domain)s', domain=instance_domain) }}</a>
-                <a href="#begin_searching" class="btn btn-outline-secondary">{{ _("I don't know, help me") }}</a>
-            </p>
-            <form id="begin_searching">
-                <div class="row">
-                    <div class="col col-3">
-                        <label for="search">{{ _("Search") }}</label>
-                        <input type="search" name="q" id="search" class="form-control">
-                    </div>
-                    <div class="col col-3">
-                        <label for="primary_language">
-                            <span class="d-none d-md-inline">{{ _("Primary language") }}</span><span class="d-md-none">{{ _("Language") }}</span>
-                        </label>
-                        <select name="language"
-                                id="primary_language"
-                                class="form-control form-select">
-                            <option value="">{{ _("Any") }}</option>
-                            {% for language in languages -%}
-                                <option value="{{ language.code }}">{{ language.name }}</option>
-                            {% endfor -%}
-                        </select>
-                    </div>
-                    <div class="col col-3">
-                        <label for="newbie">
-                            <span class="d-none d-md-inline">{{ _("Good for newbies") }}</span><span class="d-md-none">{{ _("Newbies") }}</span>
-                        </label>
-                        <select name="newbie" id="newbie" class="form-control form-select">
-                            <option value="yes">{{ _("Newbie-friendly") }}</option>
-                            <option value="no">{{ _("Choose your own adventure") }}</option>
-                        </select>
-                    </div>
-                    <div class="col col-3">
-                        <label for="nsfw">{{ _("NSFW") }}</label>
-                        <select name="nsfw" id="nsfw" class="form-control form-select">
-                            <option value="all">{{ _("I don't care") }}</option>
-                            <option value="yes">{{ _("NSFW content available") }}</option>
-                            <option value="no">{{ _("No NSFW content") }}</option>
-                        </select>
-                    </div>
-                </div>
-            </form>
-            <!-- Loading indicator -->
-            <div id="loading-indicator" class="text-center d-none mt-3">
-                <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                </div>
+<div class="row">
+    <main class="col-12 position-relative main_pane">
+
+        <h1 class="mt-2">{{ title }}</h1>
+
+        <p class="mt-4 mb-4"><a href="/auth/register" class="btn btn-primary">{{ _('Join %(domain)s', domain=instance_domain) }}</a>
+        <a href="#begin_searching" class="btn btn-outline-secondary">{{ _("I don't know, help me") }}</a>
+        </p>
+        <form id="begin_searching">
+        <div class="row">
+            <div class="col col-3">
+                <label for="search">{{ _('Search') }}</label>
+                <input type="search" name="q" id="search" class="form-control">
             </div>
-            <!-- Results will be populated here by JavaScript -->
-            <hr>
-            <div id="search-results" class="row mt-3 instance_chooser_results"></div>
-            <div class="row">
-                <div class="col">
-                    <p>{{ _("These servers are ordered by speed so it may vary depending on time of day, etc") }}</p>
-                </div>
+            <div class="col col-3">
+                <label for="primary_language"><span class="d-none d-md-inline">{{ _('Primary language') }}</span><span class="d-md-none">{{ _('Language') }}</span></label>
+                <select name="language" id="primary_language" class="form-control form-select">
+                    <option value="">{{ _('Any') }}</option>
+                    {% for language in languages -%}
+                        <option value="{{ language.code }}">{{ language.name }}</option>
+                    {% endfor -%}
+                </select>
             </div>
-        </main>
-    </div>
-    <!-- Instance Details Modal -->
-    <div class="modal fade"
-         id="instanceModal"
-         tabindex="-1"
-         aria-labelledby="instanceModalLabel"
-         aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="instanceModalLabel">{{ _("Server details") }}</h5>
-                    <button type="button"
-                            class="btn-close"
-                            data-bs-dismiss="modal"
-                            aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-3 text-center">
-                            <img id="modal-logo"
-                                 src=""
-                                 alt="Instance Logo"
-                                 class="img-fluid mb-3"
-                                 style="max-width: 100px">
-                            <h5 id="modal-name"></h5>
-                            <p class="text-muted" id="modal-domain"></p>
-                            <a id="modal-join-link" href="" class="btn btn-primary" target="_blank">{{ _("Join this server") }}</a>
-                        </div>
-                        <div class="col-md-9">
-                            <h6>{{ _("Description") }}</h6>
-                            <p id="modal-elevator-pitch"></p>
-                            <div id="modal-description-section" class="mb-3">
-                                <h6>{{ _("About") }}</h6>
-                                <p id="modal-description"></p>
-                            </div>
-                            <div id="modal-about-section" class="mb-3">
-                                <h6>{{ _("More details") }}</h6>
-                                <div id="modal-about"></div>
-                            </div>
-                            <div id="modal-sidebar-section" class="mb-3">
-                                <h6>{{ _("Community guidelines") }}</h6>
-                                <div id="modal-sidebar"></div>
-                            </div>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <h6>{{ _("Instance Info") }}</h6>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <strong>{{ _("Stability") }}:</strong> <span id="modal-maturity"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Age") }}:</strong> <span id="modal-months"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Uptime") }}:</strong> <span id="modal-uptime"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Newbie friendly") }}:</strong> <span id="modal-newbie"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Primary language") }}:</strong> <span id="modal-language"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Registration") }}:</strong> <span id="modal-registration"></span>
-                                        </li>
-                                        <li>
-                                            <strong>{{ _("Defederation") }}:</strong> <span id="modal-defederation"></span>
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div class="col-md-6">
-                                    <h6>{{ _("Links") }}</h6>
-                                    <ul class="list-unstyled">
-                                        <li>
-                                            <a id="modal-tos-link" href="" target="_blank" class="d-none">{{ _("Terms of service") }}</a>
-                                        </li>
-                                        <li>
-                                            <a id="modal-instance-link" href="" target="_blank">{{ _("Visit server") }}</a>
-                                        </li>
-                                    </ul>
-                                    <!--<h6 class="mt-3">{{ _('Blocked servers') }}</h6>
-                <div class="small">
-                  <div><span id="hexbear-status"></span> hexbear.net</div>
-                  <div><span id="hilariouschaos-status"></span> hilariouschaos.com</div>
-                  <div><span id="lemmygrad-status"></span> lemmygrad.ml</div>
-                  <div><span id="lemmy-status"></span> lemmy.ml</div>
-                </div>-->
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _("Close") }}</button>
-                </div>
+            <div class="col col-3">
+                <label for="newbie"><span class="d-none d-md-inline">{{ _('Good for newbies') }}</span><span class="d-md-none">{{ _('Newbies') }}</span></label>
+                <select name="newbie" id="newbie" class="form-control form-select">
+                    <option value="yes">{{ _('Newbie-friendly') }}</option>
+                    <option value="no">{{ _('Choose your own adventure') }}</option>
+                </select>
+            </div>
+            <div class="col col-3">
+                <label for="nsfw">{{ _('NSFW') }}</label>
+                <select name="nsfw" id="nsfw" class="form-control form-select">
+                    <option value="all">{{ _("I don't care") }}</option>
+                    <option value="yes">{{ _('NSFW content available') }}</option>
+                    <option value="no">{{ _('No NSFW content') }}</option>
+                </select>
             </div>
         </div>
+        </form>
+
+        <!-- Loading indicator -->
+        <div id="loading-indicator" class="text-center d-none mt-3">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+
+        <!-- Results will be populated here by JavaScript -->
+        <hr>
+        <div id="search-results" class="row mt-3 instance_chooser_results">
+        </div>
+        <div class="row">
+            <div class="col"><p>{{ _('These servers are ordered by speed so it may vary depending on time of day, etc') }}</p></div>
+        </div>
+    </main>
+</div>
+
+<!-- Instance Details Modal -->
+<div class="modal fade" id="instanceModal" tabindex="-1" aria-labelledby="instanceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="instanceModalLabel">{{ _('Server details') }}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-3 text-center">
+            <img id="modal-logo" src="" alt="Instance Logo" class="img-fluid mb-3" style="max-width: 100px;">
+            <h5 id="modal-name"></h5>
+            <p class="text-muted" id="modal-domain"></p>
+            <a id="modal-join-link" href="" class="btn btn-primary" target="_blank">{{ _('Join this server') }}</a>
+          </div>
+          <div class="col-md-9">
+            <h6>{{ _('Description') }}</h6>
+            <p id="modal-elevator-pitch"></p>
+
+            <div id="modal-description-section" class="mb-3">
+              <h6>{{ _('About') }}</h6>
+              <p id="modal-description"></p>
+            </div>
+
+            <div id="modal-about-section" class="mb-3">
+              <h6>{{ _('More details') }}</h6>
+              <div id="modal-about"></div>
+            </div>
+
+            <div id="modal-sidebar-section" class="mb-3">
+              <h6>{{ _('Community guidelines') }}</h6>
+              <div id="modal-sidebar"></div>
+            </div>
+
+            <div class="row">
+              <div class="col-md-6">
+                <h6>{{ _('Instance Info') }}</h6>
+                <ul class="list-unstyled">
+                  <li><strong>{{ _('Stability') }}:</strong> <span id="modal-maturity"></span></li>
+                  <li><strong>{{ _('Age') }}:</strong> <span id="modal-months"></span></li>
+                  <li><strong>{{ _('Uptime') }}:</strong> <span id="modal-uptime"></span></li>
+                  <li><strong>{{ _('Newbie friendly') }}:</strong> <span id="modal-newbie"></span></li>
+                  <li><strong>{{ _('Primary language') }}:</strong> <span id="modal-language"></span></li>
+                  <li><strong>{{ _('Registration') }}:</strong> <span id="modal-registration"></span></li>
+                  <li><strong>{{ _('Defederation') }}:</strong> <span id="modal-defederation"></span></li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <h6>{{ _('Links') }}</h6>
+                <ul class="list-unstyled">
+                  <li><a id="modal-tos-link" href="" target="_blank" class="d-none">{{ _('Terms of service') }}</a></li>
+                  <li><a id="modal-instance-link" href="" target="_blank">{{ _('Visit server') }}</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ _('Close') }}</button>
+      </div>
     </div>
+  </div>
+</div>
+
 {% endblock %}
+
 {% block end_scripts -%}
-    <script nonce="{{ nonce }}">
+<script nonce="{{ nonce }}">
     window.pingResults = {};
 
     async function pingServers() {
       const preCheck = [
-        {% for instance in instances -%}"https://{{ instance['domain'] }}/health",{% endfor %}
+        {% for instance in instances -%}
+          "https://{{ instance['domain'] }}/health",
+        {% endfor %}
       ];
       const servers = [
-        {% for instance in instances -%}"https://{{ instance['domain'] }}/health2",{% endfor %}
+        {% for instance in instances -%}
+          "https://{{ instance['domain'] }}/health2",
+        {% endfor %}
       ];
 
       const timeoutMs = 3000; // 3 seconds
@@ -560,7 +532,8 @@
             'hexbear.net': 'hexbear-status',
             'hilariouschaos.com': 'hilariouschaos-status',
             'lemmygrad.ml': 'lemmygrad-status',
-            'lemmy.ml': 'lemmy-status'
+            'lemmy.ml': 'lemmy-status',
+            'gregtech.eu': 'lemvotes-status',
         };
 
         const defederatedDomains = instance.defederation || [];
@@ -573,13 +546,6 @@
 
             if (isDefederated) {
                 countDefederated += 1
-                // Green tick for blocked
-                //statusElement.innerHTML = '<span class="text-success">✓</span>';
-                //statusElement.title = `Defederated from ${domain}`;
-            } else {
-                // Red cross for federated
-                //statusElement.innerHTML = '<span class="text-danger">✗</span>';
-                //statusElement.title = `Federated with ${domain}`;
             }
         });
 
@@ -626,5 +592,5 @@
 
     pingServers();
 
-    </script>
+</script>
 {% endblock -%}

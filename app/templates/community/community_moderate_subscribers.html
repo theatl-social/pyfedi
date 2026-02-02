@@ -96,9 +96,6 @@
                                 <li><a class="dropdown-item" href="/u/{{ user.link() }}/report">Report</a></li>
                                 <div class="dropdown-divider"></div>
                                 <li><a class="dropdown-item" href="{{ url_for('community.community_ban_user', community_id=community.id, user_id=user.id) }}" class="confirm_first">{{ _('Ban') }}</a></li>
-                                {% if current_user.get_id() in admin_ids and community.is_local() and not user.is_local() %}
-                                    <li><a class="dropdown-item confirm_first" href="{{ url_for('community.community_kick_user', community_id=community.id, user_id=user.id) }}">{{ _('Kick') }}</a></li>
-                                {% endif %}
                               </ul>
                             </div>
                         </td>

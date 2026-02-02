@@ -22,7 +22,11 @@ from sqlalchemy import text, Integer, update
 from sqlalchemy.exc import IntegrityError
 
 from app import db, cache, celery
-from app.activitypub.signature import signed_get_request
+from app.activitypub.signature import (
+    signed_get_request,
+    send_post_request,
+    default_context,
+)
 from app.constants import *
 from app.models import (
     User,
@@ -97,6 +101,7 @@ from app.utils import (
     blocked_or_banned_instances,
     instance_community_ids,
     banned_instances,
+    instance_banned,
 )
 
 
@@ -187,12 +192,12 @@ def post_to_activity(post: Post, community: Community):
     create_id = (
         post.ap_create_id
         if post.ap_create_id
-        else f"https://{current_app.config['SERVER_NAME']}/activities/create/{gibberish(15)}"
+        else f"{current_app.config['SERVER_URL']}/activities/create/{gibberish(15)}"
     )
     announce_id = (
         post.ap_announce_id
         if post.ap_announce_id
-        else f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        else f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
     )
     activity_data = {
         "actor": community.public_url(),
@@ -218,7 +223,7 @@ def post_to_page(post: Post):
     activity_data = {
         "type": "Page",
         "id": post.ap_id,
-        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/context',
+        "context": f"{current_app.config['SERVER_URL']}/post/{post.id}/context",
         "attributedTo": post.author.ap_public_url,
         "to": [
             post.community.public_url(),
@@ -240,7 +245,7 @@ def post_to_page(post: Post):
         "stickied": post.sticky,
         "audience": post.community.public_url(),
         "tag": post.tags_for_activitypub(),
-        "replies": f'https://{current_app.config["SERVER_NAME"]}/post/{post.id}/replies',
+        "replies": f'{current_app.config["SERVER_URL"]}/post/{post.id}/replies',
         "language": {"identifier": post.language_code(), "name": post.language_name()},
         "interactionPolicy": {
             "canQuote": {
@@ -331,7 +336,7 @@ def comment_model_to_json(reply: PostReply) -> dict:
         ],
         "type": "Note",
         "id": reply.ap_id,
-        "context": f'https://{current_app.config["SERVER_NAME"]}/post/{reply.post_id}/context',
+        "context": f"{current_app.config['SERVER_URL']}/post/{reply.post.id}/context",
         "attributedTo": reply.author.public_url(),
         "inReplyTo": reply.in_reply_to(),
         "to": ["https://www.w3.org/ns/activitystreams#Public", reply.to()],
@@ -792,7 +797,7 @@ def refresh_user_profile_task(user_id):
                         actor_data = signed_get_request(
                             user.ap_public_url,
                             site.private_key,
-                            f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                            f"{current_app.config['SERVER_URL']}/actor#main-key",
                         )
                     except:
                         return
@@ -876,6 +881,9 @@ def refresh_user_profile_task(user_id):
                         else 3
                     )
                     user.indexable = new_indexable
+
+                    if user.title and user.title.strip().lower() == "[deleted]":
+                        user.title = ""
 
                     avatar_changed = cover_changed = False
                     if "icon" in activity_json and activity_json["icon"] is not None:
@@ -1600,6 +1608,9 @@ def actor_json_to_model(activity_json, address, server):
             )  # prefer Markdown if provided, overwrite version obtained from HTML
         else:
             user.about = html_to_text(user.about_html)
+
+        if user.title and user.title.strip().lower() == "[deleted]":
+            user.title = ""
 
         if "icon" in activity_json and activity_json["icon"] is not None:
             if (
@@ -2607,6 +2618,11 @@ def find_instance_id(server):
         return new_instance.id
 
 
+def find_instance_by_domain(server):
+    server = server.strip().lower()
+    return db.session.query(Instance).filter_by(domain=server).first()
+
+
 def new_instance_profile(instance_id: int):
     if instance_id:
         if current_app.debug:
@@ -2623,13 +2639,21 @@ def new_instance_profile_task(instance_id: int):
     try:
         with patch_db_session(session):
             instance: Instance = session.query(Instance).get(instance_id)
+            protocol = "https"
             try:
                 instance_data = get_request(
-                    f"https://{instance.domain}",
+                    f"{protocol}://{instance.domain}",
                     headers={"Accept": "application/activity+json"},
                 )
             except:
-                return
+                try:
+                    instance_data = get_request(
+                        f"http://{instance.domain}",
+                        headers={"Accept": "application/activity+json"},
+                    )
+                    protocol = "http"
+                except:
+                    return
             if instance_data.status_code == 200:
                 try:
                     instance_json = instance_data.json()
@@ -2640,17 +2664,19 @@ def new_instance_profile_task(instance_id: int):
                     instance.inbox = (
                         instance_json["inbox"]
                         if "inbox" in instance_json
-                        else f"https://{instance.domain}/inbox"
+                        else f"{protocol}://{instance.domain}/inbox"
                     )
                     instance.outbox = instance_json["outbox"]
                 else:  # it's pretty much always /inbox so just assume that it is for whatever this instance is running
-                    instance.inbox = f"https://{instance.domain}/inbox"
+                    instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
                 # retrieve list of Admins from /api/v3/site, update InstanceRole
                 try:
-                    response = get_request(f"https://{instance.domain}/api/v3/site")
+                    response = get_request(
+                        f"{protocol}://{instance.domain}/api/v3/site"
+                    )
                 except:
                     response = None
 
@@ -2695,14 +2721,15 @@ def new_instance_profile_task(instance_id: int):
             elif (
                 instance_data.status_code == 406 or instance_data.status_code == 404
             ):  # Mastodon and PeerTube do 406, a.gup.pe does 404
-                instance.inbox = f"https://{instance.domain}/inbox"
+                instance.inbox = f"{protocol}://{instance.domain}/inbox"
                 instance.updated_at = utcnow()
                 session.commit()
 
             headers = {"Accept": "application/activity+json"}
             try:
                 nodeinfo = get_request(
-                    f"https://{instance.domain}/.well-known/nodeinfo", headers=headers
+                    f"{protocol}://{instance.domain}/.well-known/nodeinfo",
+                    headers=headers,
                 )
                 if nodeinfo.status_code == 200:
                     nodeinfo_json = nodeinfo.json()
@@ -3567,7 +3594,7 @@ def create_post_reply(
                             title=gettext(
                                 f"You have been mentioned in comment {post_reply.id}"
                             ),
-                            url=f"https://{current_app.config['SERVER_NAME']}/comment/{post_reply.id}",
+                            url=f"{current_app.config['SERVER_URL']}/comment/{post_reply.id}",
                             author_id=user.id,
                             notif_type=NOTIF_MENTION,
                             subtype="comment_mention",
@@ -4091,7 +4118,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                     existing_notification = Notification.query.filter(
                                         Notification.user_id == recipient.id,
                                         Notification.url
-                                        == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                        == f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                                     ).first()
                                     if not existing_notification:
                                         author = User.query.get(reply.user_id)
@@ -4112,7 +4139,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
                                                 title=gettext(
                                                     f"You have been mentioned in comment {reply.id}"
                                                 ),
-                                                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                                                url=f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                                                 author_id=reply.user_id,
                                                 notif_type=NOTIF_MENTION,
                                                 subtype="comment_mention",
@@ -4127,7 +4154,7 @@ def update_post_reply_from_activity(reply: PostReply, request_json: dict):
 def update_post_from_activity(post: Post, request_json: dict):
     from app import redis_client
 
-    with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+    with redis_client.lock(f"lock:post:{post.id}", timeout=30, blocking_timeout=6):
         # redo body without checking if it's changed
         if (
             "content" in request_json["object"]
@@ -4254,7 +4281,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                                 existing_notification = Notification.query.filter(
                                     Notification.user_id == recipient.id,
                                     Notification.url
-                                    == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                    == f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                 ).first()
                                 if not existing_notification:
                                     author = User.query.get(post.user_id)
@@ -4272,7 +4299,7 @@ def update_post_from_activity(post: Post, request_json: dict):
                                         title=_(
                                             f"You have been mentioned in post {post.id}"
                                         ),
-                                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                        url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                         author_id=post.user_id,
                                         notif_type=NOTIF_MENTION,
                                         subtype="post_mention",
@@ -4756,7 +4783,7 @@ def process_report(user, reported, request_json, session):
             notification = Notification(
                 user_id=mod.user_id,
                 title=_("A post has been reported"),
-                url=f"https://{current_app.config['SERVER_NAME']}/post/{reported.id}",
+                url=f"{current_app.config['SERVER_URL']}/post/{reported.id}",
                 author_id=user.id,
                 notif_type=NOTIF_REPORT,
                 subtype="post_reported",
@@ -4806,7 +4833,7 @@ def process_report(user, reported, request_json, session):
             notification = Notification(
                 user_id=mod.user_id,
                 title=_("A comment has been reported"),
-                url=f"https://{current_app.config['SERVER_NAME']}/comment/{reported.id}",
+                url=f"{current_app.config['SERVER_URL']}/comment/{reported.id}",
                 author_id=user.id,
                 notif_type=NOTIF_REPORT,
                 subtype="comment_reported",
@@ -4822,6 +4849,35 @@ def process_report(user, reported, request_json, session):
         ...
 
 
+def process_quote_boost(core_activity: dict, post_ap: str, their_post_ap: str):
+    import urllib.parse
+
+    post = Post.get_by_ap_id(post_ap)
+    if post is None:
+        post = PostReply.get_by_ap_id(post_ap)
+    if post is not None and post.author.is_local():
+        accept_activity = {
+            "@context": [
+                "https://www.w3.org/ns/activitystreams",
+                {"QuoteRequest": "https://w3id.org/fep/044f#QuoteRequest"},
+            ],
+            "type": "Accept",
+            "to": core_activity["actor"],
+            "id": f"{current_app.config['SERVER_URL']}/activities/{gibberish(15)}",
+            "actor": post.author.public_url(),
+            "object": core_activity,
+            "result": f"{current_app.config['SERVER_URL']}/quote_boost_auth?stamp={urllib.parse.quote(post.public_url(), safe='')};{urllib.parse.quote(their_post_ap, safe='')}",
+        }
+        to = find_actor_or_create_cached(core_activity["actor"])
+        if to and to.instance.inbox:
+            send_post_request(
+                to.instance.inbox,
+                accept_activity,
+                post.author.private_key,
+                post.author.public_url() + "#main-key",
+            )
+
+
 def lemmy_site_data():
     site = g.site
     logo = site.logo if site.logo else "/static/images/piefed_logo_icon_t_75.png"
@@ -4833,12 +4889,12 @@ def lemmy_site_data():
                 "sidebar": site.sidebar,
                 "published": site.created_at.isoformat(),
                 "updated": site.updated.isoformat(),
-                "icon": f"https://{current_app.config['SERVER_NAME']}{logo}",
+                "icon": f"{current_app.config['SERVER_URL']}{logo}",
                 "banner": "",
                 "description": site.description,
-                "actor_id": f"https://{current_app.config['SERVER_NAME']}/",
+                "actor_id": f"{current_app.config['SERVER_URL']}/",
                 "last_refreshed_at": site.updated.isoformat(),
-                "inbox_url": f"https://{current_app.config['SERVER_NAME']}/inbox",
+                "inbox_url": f"{current_app.config['SERVER_URL']}/inbox",
                 "public_key": site.public_key,
                 "instance_id": 1,
             },
@@ -5031,7 +5087,7 @@ def remote_object_to_json(uri):
             object_request = signed_get_request(
                 uri,
                 site.private_key,
-                f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                f"{current_app.config['SERVER_URL']}/actor#main-key",
             )
         except httpx.HTTPError:
             time.sleep(3)
@@ -5039,7 +5095,7 @@ def remote_object_to_json(uri):
                 object_request = signed_get_request(
                     uri,
                     site.private_key,
-                    f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                    f"{current_app.config['SERVER_URL']}/actor#main-key",
                 )
             except httpx.HTTPError:
                 return None
@@ -5358,7 +5414,7 @@ def verify_object_from_source(request_json):
             object_request = signed_get_request(
                 uri,
                 site.private_key,
-                f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                f"{current_app.config['SERVER_URL']}/actor#main-key",
             )
         except httpx.HTTPError:
             time.sleep(3)
@@ -5366,7 +5422,7 @@ def verify_object_from_source(request_json):
                 object_request = signed_get_request(
                     uri,
                     site.private_key,
-                    f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                    f"{current_app.config['SERVER_URL']}/actor#main-key",
                 )
             except httpx.HTTPError:
                 return None
@@ -5568,3 +5624,57 @@ def is_vote(activity: dict) -> bool:
         return False
 
     return False
+
+
+def proactively_delete_content(community: Community, ap_id: str):
+    deletor = None
+    # Try to find a local moderator to send the Delete
+    for moderator in community.moderators():
+        moderator_account = db.session.query(User).get(moderator.user_id)
+        if moderator_account.is_local():
+            deletor = moderator_account
+            break
+    # Use admin account if there is not one.
+    if deletor is None:
+        deletor = db.session.query(User).get(1)
+    if deletor:
+        delete_id = (
+            f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}"
+        )
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        cc = [community.public_url()]
+        delete = {
+            "id": delete_id,
+            "type": "Delete",
+            "actor": deletor.public_url(),
+            "object": ap_id,
+            "audience": community.public_url(),
+            "to": to,
+            "cc": cc,
+            "summary": "Automatic deletion due to block",
+        }
+
+        announce_id = (
+            f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
+        )
+        actor = community.public_url()
+        cc = [community.ap_followers_url]
+        to = ["https://www.w3.org/ns/activitystreams#Public"]
+        announce = {
+            "id": announce_id,
+            "type": "Announce",
+            "actor": actor,
+            "object": delete,
+            "@context": default_context(),
+            "to": to,
+            "cc": cc,
+        }
+        domain = furl(ap_id).host
+        instance = find_instance_by_domain(domain)
+        if instance and instance.inbox:
+            send_post_request(
+                instance.inbox,
+                announce,
+                community.private_key,
+                community.public_url() + "#main-key",
+            )

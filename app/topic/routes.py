@@ -56,6 +56,7 @@ from app.utils import (
     moderating_communities_ids,
     approval_required,
     block_honey_pot,
+    user_pronouns,
 )
 
 
@@ -305,7 +306,7 @@ def show_topic(topic_path):
             breadcrumbs=breadcrumbs,
             tags=hashtags_used_in_communities(community_ids, content_filters),
             joined_communities=joined_or_modding_communities(current_user.get_id()),
-            rss_feed=f"https://{current_app.config['SERVER_NAME']}/topic/{topic_path}.rss",
+            rss_feed=f"{current_app.config['SERVER_URL']}/topic/{topic_path}.rss",
             rss_feed_name=f"{current_topic.name} on {g.site.name}",
             content_type=content_type,
             reported_posts=reported_posts(current_user.get_id(), g.admin_ids),
@@ -314,6 +315,7 @@ def show_topic(topic_path):
             show_post_community=True,
             recently_upvoted=recently_upvoted,
             recently_downvoted=recently_downvoted,
+            user_pronouns=user_pronouns(),
             inoculation=inoculation[randint(0, len(inoculation) - 1)]
             if g.site.show_inoculation_block
             else None,
@@ -345,7 +347,7 @@ def show_topic_rss(topic_path):
 
         community_ids = db.session.execute(
             text(
-                "SELECT id FROM community WHERE banned is false AND topic_id IN :topic_ids"
+                "SELECT id FROM community WHERE banned is false AND private is false AND topic_id IN :topic_ids"
             ),
             {"topic_ids": tuple(topic_ids)},
         ).scalars()
@@ -354,20 +356,18 @@ def show_topic_rss(topic_path):
         posts = post_ids_to_models(post_ids, "new")
 
         fg = FeedGenerator()
-        fg.id(
-            f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}"
-        )
+        fg.id(f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}")
         fg.title(f"{topic.name} on {g.site.name}")
         fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}",
+            href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}",
             rel="alternate",
         )
         fg.logo(
-            f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png"
+            f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
         )
         fg.subtitle(" ")
         fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/topic/{last_topic_machine_name}.rss",
+            href=f"{current_app.config['SERVER_URL']}/topic/{last_topic_machine_name}.rss",
             rel="self",
         )
         fg.language("en")
@@ -376,11 +376,9 @@ def show_topic_rss(topic_path):
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(
-                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-                )
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith("text/"):

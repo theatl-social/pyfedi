@@ -5,33 +5,22 @@
                 <div class="row">
                     <div class="col-6">
                         {% if current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MEMBER, SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER] -%}
-                            <a class="w-100 btn btn-primary"
-                               href="/community/{{ community.link() }}/unsubscribe"
-                               rel="nofollow">{{ _("Leave") }}</a>
+                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Leave') }}</a>
                         {% elif current_user.is_authenticated and community_membership(current_user, community) == SUBSCRIPTION_PENDING -%}
-                            <a class="w-100 btn btn-outline-secondary"
-                               href="/community/{{ community.link() }}/unsubscribe"
-                               rel="nofollow">{{ _("Pending") }}</a>
+                            <a class="w-100 btn btn-outline-secondary" href="/community/{{ community.link() }}/unsubscribe" rel="nofollow">{{ _('Pending') }}</a>
                         {% else -%}
-                            <a class="w-100 btn btn-primary"
-                               href="/community/{{ community.link() }}/subscribe"
-                               rel="nofollow">{{ _("Join") }}</a>
+                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/subscribe" rel="nofollow">{{ _('Join') }}</a>
                         {% endif -%}
                     </div>
                     {% if not community.restricted_to_mods or (community.restricted_to_mods and current_user.is_authenticated and community_membership(current_user, community) in [SUBSCRIPTION_MODERATOR, SUBSCRIPTION_OWNER]) -%}
                         <div class="col-6">
-                            <a class="w-100 btn btn-primary"
-                               href="/community/{{ community.link() }}/submit">{{ _("Create post") }}</a>
+                            <a class="w-100 btn btn-primary" href="/community/{{ community.link() }}/submit">{{ _('Create post') }}</a>
                         </div>
                     {% endif -%}
                 </div>
                 <form method="get" action="/search">
-                    <input type="search"
-                           id="search_community"
-                           name="q"
-                           class="form-control mt-2"
-                           placeholder="{{ _('Search this community') }}" />
-                    <input type="hidden" name="community" value="{{ community.id }}">
+                    <input type="search" id="search_community" name="q" class="form-control mt-2" placeholder="{{ _('Search this community') }}" />
+                    <input type="hidden" name="community_id" value="{{ community.id }}">
                 </form>
             </div>
         </div>
@@ -39,131 +28,112 @@
     {% block about_community %}
         <div class="card mt-3" id="about_community">
             <div class="card-header">
-                <h2>{{ community.title }}</h2>
+                 <h2>{{ community.title }}</h2>
             </div>
             <div class="card-body">
                 <p>{{ community.description_html|community_links|feed_links|safe if community.description_html else '' }}</p>
                 <p>{{ community.rules_html|safe if community.rules_html else '' }}</p>
-                <p>
-                    {{ _("Members") if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}
-                    <br>
-                    {{ _("Posts") }}: {{ community.post_count }}
-                    <br>
-                    {{ _("Comments") }}: {{ community.post_reply_count }}
+                <p>{{ _('Members') if community.is_local() else _('Local members') }}: {{ community.subscriptions_count }}<br>
+                    {{ _('Posts') }}: {{ community.post_count }}<br>
+                    {{ _('Comments') }}: {{ community.post_reply_count }}
                 </p>
                 {% if mods|length > 0 and not community.private_mods -%}
                     <h3>Moderators</h3>
                     <ul class="moderator_list">
                         {% for mod in mods -%}
-                            <li>
-                                {{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}
-                            </li>
+                            <li>{{ render_username(mod, current_user=current_user, low_bandwidth=low_bandwidth, admin_ids=admin_ids, user_notes=user_notes) }}</li>
                         {% endfor -%}
                     </ul>
                     {% if un_moderated -%}
-                        <p class="red small">{{ _("Moderators have not been active recently.") }}</p>
+                    <p class="red small">{{ _('Moderators have not been active recently.') }}</p>
                     {% endif -%}
                 {% endif -%}
                 {% if rss_feed and not community.is_local() -%}
                     <ul>
-                        <li>
-                            <p>
-                                <a href="{{ community.public_url() }}">{{ _("View community on original server") }}</a>
-                            </p>
-                        </li>
-                        <li>
-                            <p>
-                                <a href="{{ url_for('search.retrieve_remote_post') }}">{{ _("Retrieve a post from the original server") }}</a>
-                            </p>
-                        </li>
+                        <li><p><a href="{{ community.public_url() }}">{{ _('View community on original server') }}</a></p></li>
+                        <li><p><a href="{{ url_for('search.retrieve_remote_post') }}">{{ _('Retrieve a post from the original server') }}</a></p></li>
                     </ul>
                 {% endif -%}
                 {% if community.local_only -%}
-                    <p>
-                        {{ _('Only people on %(instance_domain)s can post or reply in this community.', instance_domain=instance_domain) }}
-                    </p>
+                <p>{{ _('Only people on %(instance_domain)s can post or reply in this community.', instance_domain=instance_domain) }}</p>
                 {% endif -%}
                 {% if rss_feed -%}
-                    <p class="mt-4">
-                        <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
-                    </p>
+                <p class="mt-4">
+                    <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
+                </p>
                 {% endif -%}
             </div>
         </div>
         {% if related_communities -%}
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h2>{{ _("Related communities") }}</h2>
-                </div>
-                <div class="card-body">
-                    <ul class="list-group list-group-flush">
-                        {% for community in related_communities -%}
-                            <li class="list-group-item">{{ render_communityname(community) }}</li>
-                        {% endfor -%}
-                    </ul>
-                    <p class="mt-4">
-                        <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a>
-                    </p>
-                </div>
+        <div class="card mt-3">
+            <div class="card-header">
+                 <h2>{{ _('Related communities') }}</h2>
             </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for community in related_communities -%}
+                        <li class="list-group-item">
+                            {{ render_communityname(community) }}
+                        </li>
+                    {% endfor -%}
+                </ul>
+                <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a></p>
+            </div>
+        </div>
         {% endif -%}
     {% endblock %}
     {% block community_settings %}
         {% if is_moderator or is_admin -%}
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h2>{{ _("Community Settings") }}</h2>
-                </div>
-                <div class="card-body">
-                    {% if is_moderator or is_owner or is_admin -%}
-                        <p>
-                            <a href="/community/{{ community.link() }}/moderate"
-                               class="btn btn-primary">{{ _("Moderate") }}</a>
-                        </p>
-                    {% endif -%}
-                    {% if is_owner or is_admin -%}
-                        <p>
-                            <a href="{{ url_for('community.community_edit', community_id=community.id) }}"
-                               class="btn btn-primary">{{ _("Settings") }}</a>
-                        </p>
-                    {% endif -%}
-                    {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
-                        <p>
-                            <a class="btn btn-primary btn-warning"
-                               href="{{ url_for('community.community_delete', community_id=community.id) }}"
-                               rel="nofollow">Delete community</a>
-                        </p>
-                    {% endif -%}
-                </div>
+        <div class="card mt-3">
+            <div class="card-header">
+                 <h2>{{ _('Community Settings') }}</h2>
             </div>
+            <div class="card-body">
+                {% if is_moderator or is_owner or is_admin -%}
+                <p><a href="/community/{{ community.link() }}/moderate" class="btn btn-primary">{{ _('Moderate') }}</a></p>
+                {% endif -%}
+                {% if is_owner or is_admin -%}
+                    <p><a href="{{ url_for('community.community_edit', community_id=community.id) }}" class="btn btn-primary">{{ _('Settings') }}</a></p>
+                {% endif -%}
+                {% if community.is_local() and (community.is_owner() or current_user.is_admin()) -%}
+                    <p><a class="btn btn-primary btn-warning" href="{{ url_for('community.community_delete', community_id=community.id) }}" rel="nofollow">Delete community</a></p>
+                {% endif -%}
+            </div>
+        </div>
         {% endif -%}
     {% endblock %}
 {% endif %}
+
 {% if new_communities and new_communities|length > 0 -%}
-    <h2 class="mt-0" style="border: none; padding-left: 0; margin-top: 0;">{{ _("New communities") }}</h2>
-    {% for community in new_communities %}<p>{{ render_communityname(community) }}</p>{% endfor %}
-    <hr>
+<h2 class="mt-0" style="border: none; padding-left: 0; margin-top: 0;">{{ _('New communities') }}</h2>
+    {% for community in new_communities %}
+            <p>{{ render_communityname(community) }}</p>
+    {% endfor %}
+<hr>
 {% endif -%}
+
 {% if active_communities -%}
-    <h2 style="border: none; padding-left: 0;">{{ _("Active communities") }}</h2>
-    {% for community in active_communities %}<p>{{ render_communityname(community) }}</p>{% endfor %}
-    <p class="mt-4">
-        <a class="btn btn-primary" href="/communities">{{ _("More communities") }}</a> |
-        <a class="btn btn-primary" href="/topics">{{ _("Browse topics") }}</a>
-    </p>
-</div>
+<h2 style="border: none; padding-left: 0;">{{ _('Active communities') }}</h2>
+            {% for community in active_communities %}
+                <p>{{ render_communityname(community) }}</p>
+            {% endfor %}
+        <p class="mt-4"><a class="btn btn-primary" href="/communities">{{ _('More communities') }}</a> |
+            <a class="btn btn-primary" href="/topics">{{ _('Browse topics') }}</a>
+        </p>
+    </div>
 </div>
 <hr>
 {% endif -%}
+
 <h2 style="border: none; padding-left: 0;">{{ _('About %(site_name)s', site_name=g.site.name) }}</h2>
-<p>
-    <strong>{{ g.site.description|safe }}</strong>
-</p>
-<p>{{ g.site.sidebar|safe }}</p>
-{% if rss_feed %}
+    <p><strong>{{ g.site.description|safe }}</strong></p>
+    <p>{{ g.site.sidebar|safe }}</p>
+    {% if rss_feed %}
     <p class="mt-4">
         <a class="no-underline" href="{{ rss_feed }}" rel="nofollow"><span class="fe fe-rss"></span> RSS feed</a>
     </p>
-{% endif %}
+    {% endif %}
+
 <hr>
+
 {% include "_inoculation_links.html" %}

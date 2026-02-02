@@ -6,6 +6,7 @@ from sqlalchemy import or_, desc, text
 from app import limiter, db
 from app.activitypub.util import resolve_remote_post_from_search
 from app.community.forms import RetrieveRemotePost
+from app.community.util import search_for_community
 from app.constants import POST_STATUS_REVIEWING
 from app.models import Post, Language, Community, Instance, PostReply
 from app.search import bp
@@ -23,6 +24,7 @@ from app.utils import (
     login_required_if_private_instance,
     moderating_communities_ids,
     get_setting,
+    user_pronouns,
 )
 
 
@@ -42,7 +44,7 @@ def run_search():
         banned_from = []
 
     page = request.args.get("page", 1, type=int)
-    community_id = request.args.get("community", 0, type=int)
+    community = request.args.get("community", "")
     language_id = request.args.get("language", 0, type=int)
     type = request.args.get("type", 0, type=int)
     software = request.args.get("software", "")
@@ -52,6 +54,14 @@ def run_search():
     search_for = request.args.get("search_for", "posts")
     nsfw = request.args.get("nsfw", "")
     minimum_upvote = request.args.get("minimum_upvote", "")
+
+    community_id = request.args.get("community_id", 0, int)
+    if community_id == 0 and community:
+        if not community.startswith("!"):
+            community = f"!{community}"
+        community_obj = search_for_community(community, allow_fetch=False)
+        if community_obj:
+            community_id = community_obj.id
 
     if (
         q != ""
@@ -192,6 +202,7 @@ def run_search():
                 Post.deleted == False,
                 Post.status > POST_STATUS_REVIEWING,
             )
+            replies = replies.filter(PostReply.indexable == True)
             if q is not None:
                 replies = replies.search(q, sort=True if sort_by == "" else False)
             if type != 0:
@@ -267,6 +278,7 @@ def run_search():
             show_post_community=True,
             recently_upvoted=recently_upvoted,
             recently_downvoted=recently_downvoted,
+            user_pronouns=user_pronouns(),
             moderated_community_ids=moderating_communities_ids(current_user.get_id()),
         )
 

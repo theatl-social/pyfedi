@@ -57,9 +57,7 @@ def report_object(session, user_id, object, summary, instance_ids):
     if community.local_only or not community.instance.online():
         return
 
-    flag_id = (
-        f"https://{current_app.config['SERVER_NAME']}/activities/flag/{gibberish(15)}"
-    )
+    flag_id = f"{current_app.config['SERVER_URL']}/activities/flag/{gibberish(15)}"
     to = [community.public_url()]
     flag = {
         "id": flag_id,

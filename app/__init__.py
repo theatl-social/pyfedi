@@ -94,6 +94,14 @@ app_bcrypt = Bcrypt()
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    if (
+        app.config["HTTP_PROTOCOL"] == "mixed"
+    ):  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
+        app.config["SERVER_URL"] = f"https://{app.config['SERVER_NAME']}"
+    else:
+        app.config["SERVER_URL"] = (
+            f"{app.config['HTTP_PROTOCOL']}://{app.config['SERVER_NAME']}"
+        )
 
     if app.config["SENTRY_DSN"]:
         import sentry_sdk
@@ -105,8 +113,8 @@ def create_app(config_class=Config):
 
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
 
-    app.config["API_TITLE"] = "PieFed 1.5 Alpha API"
-    app.config["API_VERSION"] = "alpha 1.5"
+    app.config["API_TITLE"] = "PieFed 1.6 Alpha API"
+    app.config["API_VERSION"] = "alpha 1.6"
     app.config["OPENAPI_VERSION"] = "3.1.1"
     if app.config["SERVE_API_DOCS"]:
         app.config["OPENAPI_URL_PREFIX"] = "/api/alpha"
@@ -143,7 +151,7 @@ def create_app(config_class=Config):
                 {"url": "https://piefed.world"},
             ],
             "info": {
-                "title": "PieFed 1.5 Alpha API",
+                "title": "PieFed 1.6 Alpha API",
                 "contact": {
                     "name": "Developer",
                     "url": "https://codeberg.org/rimu/pyfedi",

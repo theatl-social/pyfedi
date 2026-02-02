@@ -53,7 +53,7 @@ def unsubscribe_from_everything_then_delete_task(user_id):
                         payload = {
                             "@context": default_context(),
                             "actor": user.public_url(),
-                            "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                            "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                             "object": user.public_url(),
                             "to": ["https://www.w3.org/ns/activitystreams#Public"],
                             "type": "Delete",
@@ -86,15 +86,13 @@ def unsubscribe_from_community(community, user):
     if community.instance.gone_forever:
         return
 
-    undo_id = (
-        f"https://{current_app.config['SERVER_NAME']}/activities/undo/" + gibberish(15)
-    )
+    undo_id = f"{current_app.config['SERVER_URL']}/activities/undo/" + gibberish(15)
     follow = {
         "actor": user.public_url(),
         "to": [community.public_url()],
         "object": community.public_url(),
         "type": "Follow",
-        "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}",
+        "id": f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}",
     }
     undo = {
         "actor": user.public_url(),
@@ -336,14 +334,16 @@ def move_community_images_to_here(community_id):
                         if (
                             post.image.source_url
                             and not post.image.source_url.startswith(
-                                f"https://{current_app.config['SERVER_NAME']}"
+                                f"{current_app.config['SERVER_URL']}"
                             )
                         ):
                             if post.image.source_url.startswith("app/static/media"):
                                 # If it's already on this server but doesn't have SERVER_NAME in the URL, just update the URL
                                 if os.path.isfile(post.image.source_url):
                                     new_path = f"static/media/{post.image.source_url.replace('app/static/media/', '')}"
-                                    post.image.source_url = f"https://{current_app.config['SERVER_NAME']}/{new_path}"
+                                    post.image.source_url = (
+                                        f"{current_app.config['SERVER_URL']}/{new_path}"
+                                    )
                                     db.session.commit()
                             else:
                                 # Download the image to app/static/tmp, then move to app/static/media
@@ -411,7 +411,7 @@ def move_community_images_to_here(community_id):
 
                                             # Update the post image source_url
                                             new_path = f"static/media/posts/{new_filename[0:2]}/{new_filename[2:4]}/{new_filename}{file_extension}"
-                                            post.image.source_url = f"https://{current_app.config['SERVER_NAME']}/{new_path}"
+                                            post.image.source_url = f"{current_app.config['SERVER_URL']}/{new_path}"
                                             db.session.commit()
                                 except httpx.HTTPError as e:
                                     current_app.logger.error(

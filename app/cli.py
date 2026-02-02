@@ -201,6 +201,7 @@ def register(app):
                 "bae.st",
                 "nicecrew.digital",
                 "detroitriotcity.com",
+                "gregtech.eu",
                 "pawoo.net",
                 "shitposter.club",
                 "spinster.xyz",
@@ -297,10 +298,13 @@ def register(app):
                 )
                 user_name = input("Admin user name (ideally not 'admin'): ")
                 email = input("Admin email address: ")
-                password = input("Admin password: ")
                 while "@" in user_name or " " in user_name:
                     print("User name cannot be an email address or have spaces.")
                     user_name = input("Admin user name (ideally not 'admin'): ")
+                password = input("Admin password: ")
+                while len(password) < 8:
+                    print("Password must be at least 8 characters")
+                    password = input("Admin password: ")
                 verification_token = random_token(16)
                 private_key, public_key = RsaKeys.generate_keypair()
                 admin_user = User(
@@ -318,9 +322,11 @@ def register(app):
                 admin_user.roles.append(admin_role)
                 admin_user.verified = True
                 admin_user.last_seen = utcnow()
-                admin_user.ap_profile_id = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}"
-                admin_user.ap_public_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name}"
-                admin_user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{admin_user.user_name.lower()}/inbox"
+                admin_user.ap_profile_id = f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name.lower()}"
+                admin_user.ap_public_url = (
+                    f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name}"
+                )
+                admin_user.ap_inbox_url = f"{current_app.config['SERVER_URL']}/u/{admin_user.user_name.lower()}/inbox"
                 db.session.add(admin_user)
 
             db.session.commit()
@@ -783,7 +789,7 @@ def register(app):
                 current_instance = Instance.query.get(instances_and_community[0])
             community = Community.query.get(instances_and_community[1])
 
-            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
             actor = community.public_url()
             to = ["https://www.w3.org/ns/activitystreams#Public"]
             cc = [community.ap_followers_url]
@@ -1104,6 +1110,7 @@ def register(app):
                                     posts=posts,
                                     site=site,
                                     domain=current_app.config["SERVER_NAME"],
+                                    protocol=current_app.config["HTTP_PROTOCOL"],
                                 ),
                             )
                             user.email_unread_sent = True
@@ -1345,7 +1352,6 @@ def register(app):
                 elif c["counts"]["users_active_week"] < 10:
                     continue
 
-                # sort out the 'seven things you can't say on tv' names (cursewords), plus some
                 if is_bad_name(c["name"]):
                     continue
 

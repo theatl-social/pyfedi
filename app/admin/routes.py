@@ -64,6 +64,7 @@ from app.admin.util import (
     topics_for_form,
     move_community_images_to_here,
 )
+from app.auth.util import send_email_verification, random_token
 from app.community.util import (
     save_icon_file,
     save_banner_file,
@@ -426,6 +427,9 @@ def admin_misc():
             "cache_remote_images_locally", form.cache_remote_images_locally.data
         )
         set_setting("allow_video_file_uploads", form.allow_video_file_uploads.data)
+        set_setting(
+            "enable_report_em_dash_replies", form.enable_report_em_dash_replies.data
+        )
         flash(_("Settings saved."))
     elif request.method == "GET":
         form.enable_downvotes.data = site.enable_downvotes
@@ -481,6 +485,9 @@ def admin_misc():
         )
         form.allow_video_file_uploads.data = get_setting(
             "allow_video_file_uploads", "no"
+        )
+        form.enable_report_em_dash_replies.data = get_setting(
+            "enable_report_em_dash_replies", True
         )
     return render_template(
         "admin/misc.html", title=_("Misc settings"), form=form, close_form=close_form
@@ -1172,7 +1179,7 @@ def admin_federation():
             [instance.domain for instance in DefederationSubscription.query.all()]
         )
         form.blocked_phrases.data = g.site.blocked_phrases
-        form.blocked_actors.data = get_setting("actor_blocked_words", "88")
+        form.blocked_actors.data = get_setting("actor_blocked_words", "")
         form.blocked_bio.data = get_setting("actor_bio_blocked_words", "")
         form.auto_add_remote_communities.data = get_setting(
             "auto_add_remote_communities", False
@@ -1420,6 +1427,7 @@ def activity_json(activity_id):
         json_html=json_html,
         activity=activity,
         current_app=current_app,
+        skip_protocol_replacement=True,
     )
 
 
@@ -1602,6 +1610,7 @@ def admin_community_edit(community_id):
         community.ignore_remote_gen_ai = form.ignore_remote_gen_ai.data
         community.always_translate = form.always_translate.data
         community.can_be_archived = form.can_be_archived.data
+        community.downvote_accept_mode = form.downvote_accept_mode.data
 
         icon_file = request.files["icon_file"]
         if icon_file and icon_file.filename != "":
@@ -1672,6 +1681,7 @@ def admin_community_edit(community_id):
         form.ignore_remote_gen_ai.data = community.ignore_remote_gen_ai
         form.always_translate.data = community.always_translate
         form.can_be_archived.data = community.can_be_archived
+        form.downvote_accept_mode.data = community.downvote_accept_mode
     return render_template(
         "admin/edit_community.html",
         title=_("Edit community"),
@@ -1828,6 +1838,7 @@ def admin_users():
     local_remote = request.args.get("local_remote", "")
     sort_by = request.args.get("sort_by", "last_seen DESC")
     last_seen = request.args.get("last_seen", 0, type=int)
+    verified = request.args.get("verified", "")
 
     sort_by_btn = request.args.get("sort_by_btn", "")
     if sort_by_btn:
@@ -1855,6 +1866,10 @@ def admin_users():
         users = users.filter(User.last_seen > utcnow() - timedelta(days=last_seen))
     if "attitude" in sort_by:
         users = users.filter(User.attitude != None)
+    if verified == "verified":
+        users = users.filter(User.verified == True)
+    elif verified == "unverified":
+        users = users.filter(User.verified == False)
     users = users.order_by(
         safe_order_by(
             sort_by,
@@ -1908,6 +1923,7 @@ def admin_users():
         sort_by=sort_by,
         last_seen=last_seen,
         user_notes=user_notes(current_user.get_id()),
+        verified=verified,
     )
 
 
@@ -2214,6 +2230,30 @@ def admin_user_edit(user_id):
     )
 
 
+@bp.route("/user/<int:user_id>/resend_email", methods=["POST"])
+@permission_required("administer all users")
+@login_required
+def admin_user_resend_email(user_id):
+    is_htmx = request.headers.get("HX-Request") == "true"
+    if not is_htmx:
+        abort(400)
+
+    user = User.query.get_or_404(user_id)
+
+    # Create verification token if it doesn't exist already or else verification is impossible
+    if not user.verification_token:
+        user.verification_token = random_token(16)
+        db.session.commit()
+
+    try:
+        send_email_verification(user)
+        message = _("Verification email sent!")
+    except Exception as e:
+        message = _("Problem sending email: ") + str(e)
+
+    return message
+
+
 @bp.route("/users/add", methods=["GET", "POST"])
 @permission_required("administer all users")
 @login_required
@@ -2467,7 +2507,6 @@ def admin_instances():
                 "domain",
                 "software",
                 "version",
-                "vote_weight",
                 "trusted",
                 "last_seen",
                 "last_successful_send",
@@ -2527,6 +2566,7 @@ def admin_instance_edit(instance_id):
         instance.gone_forever = form.gone_forever.data
         instance.trusted = form.trusted.data
         instance.posting_warning = form.posting_warning.data
+        instance.admin_note = form.admin_note.data
         instance.inbox = form.inbox.data
 
         if instance.software == "piefed":
@@ -2548,6 +2588,7 @@ def admin_instance_edit(instance_id):
         form.gone_forever.data = instance.gone_forever
         form.trusted.data = instance.trusted
         form.posting_warning.data = instance.posting_warning
+        form.admin_note.data = instance.admin_note
         form.inbox.data = instance.inbox
         if instance.software == "piefed":
             hide = db.session.execute(
@@ -2661,7 +2702,7 @@ def admin_community_move(community_id, new_owner):
         else:
             move_community_images_to_here.delay(community.id)
 
-        new_url = f'https://{current_app.config["SERVER_NAME"]}/c/{community.link()}'
+        new_url = f'{current_app.config["SERVER_URL"]}/c/{community.link()}'
         flash(
             _(
                 "%(community_name)s is now %(new_url)s. Contact the initiator of this request to let them know.",

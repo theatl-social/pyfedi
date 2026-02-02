@@ -63,9 +63,7 @@ def remove_object(session, user_id, object, community_id=None):
     if community.local_only or not community.instance.online():
         return
 
-    remove_id = (
-        f"https://{current_app.config['SERVER_NAME']}/activities/remove/{gibberish(15)}"
-    )
+    remove_id = f"{current_app.config['SERVER_URL']}/activities/remove/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     remove = {
@@ -85,7 +83,9 @@ def remove_object(session, user_id, object, community_id=None):
     if community.is_local():
         del remove["@context"]
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = (
+            f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
+        )
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {

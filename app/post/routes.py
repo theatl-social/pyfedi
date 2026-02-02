@@ -210,6 +210,9 @@ from app.utils import (
     block_honey_pot,
     joined_communities,
     moderating_communities,
+    user_pronouns,
+    instance_sticky_posts,
+    instance_sticky_post_ids,
 )
 
 
@@ -608,6 +611,7 @@ def show_post(post_id: int):
             recipient_language_code=recipient_language_code,
             recipient_language_name=recipient_language_name,
             author_banned=author_banned,
+            user_pronouns=user_pronouns(),
         )
         response.headers.set("Vary", "Accept, Cookie, Accept-Language")
         response.headers.set(
@@ -711,6 +715,7 @@ def post_lazy_replies(post_id, nonce):
         else False,
         low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
         user_flair=user_flair if current_user.is_authenticated else {},
+        user_pronouns=user_pronouns(),
         upvoted_class="",
         downvoted_class="",
     )
@@ -844,7 +849,7 @@ def post_oembed(post_id):
             "version": "1.0",
             "type": "rich",
             "provider_name": g.site.name,
-            "provider_url": f"https://{current_app.config['SERVER_NAME']}",
+            "provider_url": f"{current_app.config['SERVER_URL']}",
             "title": post.title,
             "html": f"<p><iframe src='{iframe_url}' class='piefed-embed' style='max-width: 100%; border: 0' width='400' allowfullscreen='allowfullscreen'></iframe><script src='https://{current_app.config['SERVER_NAME']}/static/js/embed.js' async='async'></script></p>",
             "width": 400,
@@ -1088,6 +1093,11 @@ def continue_discussion(post_id, comment_id):
         if parent_comment and not parent_comment.deleted:
             parent_id = comment.parent_id
 
+    # user flair
+    user_flair = {}
+    for u_flair in UserFlair.query.filter(UserFlair.community_id == post.community_id):
+        user_flair[u_flair.user_id] = u_flair.flair
+
     response = render_template(
         "post/continue_discussion.html",
         title=_("Discussing %(title)s", title=post.title),
@@ -1109,6 +1119,9 @@ def continue_discussion(post_id, comment_id):
         recently_downvoted_replies=recently_downvoted_replies,
         community=post.community,
         parent_id=parent_id,
+        community_flair=get_comm_flair_list(post.community),
+        user_pronouns=user_pronouns(),
+        user_flair=user_flair,
         SUBSCRIPTION_OWNER=SUBSCRIPTION_OWNER,
         SUBSCRIPTION_MODERATOR=SUBSCRIPTION_MODERATOR,
         inoculation=inoculation[randint(0, len(inoculation) - 1)]
@@ -1192,6 +1205,7 @@ def continue_discussion_ajax(post_id, comment_id, nonce):
         else False,
         low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
         user_flair=user_flair if current_user.is_authenticated else {},
+        user_pronouns=user_pronouns(),
         upvoted_class="",
         downvoted_class="",
     )
@@ -1364,6 +1378,7 @@ def add_reply_inline(post_id: int, comment_id: int, nonce):
             recipient_language_name=recipient_language_name,
             in_reply_to=in_reply_to,
             author_banned=author_banned,
+            user_pronouns=user_pronouns(),
             low_bandwidth=request.cookies.get("low_bandwidth", "0") == "1",
         )
     else:
@@ -1423,13 +1438,18 @@ def post_options(post_id: int):
             abort(404)
 
     existing_bookmark = []
+    hidden = False
     if current_user.is_authenticated:
         existing_bookmark = PostBookmark.query.filter(
             PostBookmark.post_id == post_id, PostBookmark.user_id == current_user.id
         ).first()
+        hidden = current_user.has_hidden_post(post)
 
     return render_template(
-        "post/post_options.html", post=post, existing_bookmark=existing_bookmark
+        "post/post_options.html",
+        post=post,
+        existing_bookmark=existing_bookmark,
+        hidden=hidden,
     )
 
 
@@ -1627,8 +1647,7 @@ def post_edit(post_id: int):
                 # This is fallback for existing entries
                 if not path:
                     path = "app/" + post.image.source_url.replace(
-                        f"{current_app.config['HTTP_PROTOCOL']}://{current_app.config['SERVER_NAME']}/",
-                        "",
+                        f"{current_app.config['SERVER_URL']}/", ""
                     )
                 if not path.startswith("http"):
                     try:
@@ -2197,6 +2216,32 @@ def post_sticky(post_id: int, mode):
         flash(_("%(name)s has been stickied.", name=post.title))
     else:
         flash(_("%(name)s has been un-stickied.", name=post.title))
+    return redirect(
+        referrer(
+            post.slug if post.slug else url_for("activitypub.post_ap", post_id=post.id)
+        )
+    )
+
+
+@bp.route("/post/<int:post_id>/instance_sticky/<mode>", methods=["GET"])
+@login_required
+def post_instance_sticky(post_id: int, mode):
+    post = Post.query.get_or_404(post_id)
+
+    if current_user.is_admin():
+        if mode == "yes":
+            post.instance_sticky = True
+            flash(_("%(name)s has been stickied to the instance.", name=post.title))
+        else:
+            post.instance_sticky = False
+            flash(
+                _("%(name)s has been un-stickied from the instance.", name=post.title)
+            )
+
+        cache.delete_memoized(instance_sticky_posts)
+        cache.delete_memoized(instance_sticky_post_ids)
+        db.session.commit()
+
     return redirect(
         referrer(
             post.slug if post.slug else url_for("activitypub.post_ap", post_id=post.id)
@@ -2800,7 +2845,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                 "actor": current_user.public_url(),
                 "to": ["https://www.w3.org/ns/activitystreams#Public"],
                 "object": {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/delete/{gibberish(15)}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
                     "type": "Delete",
                     "actor": current_user.public_url(),
                     "audience": post.community.public_url(),
@@ -2816,7 +2861,7 @@ def post_reply_restore(post_id: int, comment_id: int):
                 "cc": [post.community.public_url()],
                 "audience": post.community.public_url(),
                 "type": "Undo",
-                "id": f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}",
+                "id": f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}",
             }
             if was_mod_deletion:
                 delete_json["object"]["summary"] = "Deleted by mod"
@@ -2836,7 +2881,7 @@ def post_reply_restore(post_id: int, comment_id: int):
 
             else:  # local community - send it to followers on remote instances
                 announce = {
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
                     "type": "Announce",
                     "to": ["https://www.w3.org/ns/activitystreams#Public"],
                     "actor": post.community.public_url(),

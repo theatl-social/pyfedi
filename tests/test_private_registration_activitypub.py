@@ -188,8 +188,11 @@ class TestFinalizeUserSetupBehavior(unittest.TestCase):
         from app.utils import finalize_user_setup
         from app.models import utcnow
 
-        # Setup mocks
-        mock_app.config = {"SERVER_NAME": "example.com"}
+        # Setup mocks - SERVER_URL is derived from SERVER_NAME in app/__init__.py
+        mock_app.config = {
+            "SERVER_NAME": "example.com",
+            "SERVER_URL": "https://example.com",
+        }
         mock_rsa.generate_keypair.return_value = ("private_key_data", "public_key_data")
         mock_plugins.fire_hook.return_value = MagicMock()
 

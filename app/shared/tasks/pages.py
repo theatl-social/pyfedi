@@ -157,7 +157,7 @@ def send_post(post_id, edit=False, session=None):
                     .filter(
                         Notification.user_id == recipient.id,
                         Notification.url
-                        == f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                        == f"{current_app.config['SERVER_URL']}/post/{post.id}",
                     )
                     .first()
                 )
@@ -175,7 +175,7 @@ def send_post(post_id, edit=False, session=None):
                     notification = Notification(
                         user_id=recipient.id,
                         title=gettext(f"You have been mentioned in post {post.id}"),
-                        url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                        url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                         author_id=user.id,
                         notif_type=NOTIF_MENTION,
                         subtype="post_mention",
@@ -273,11 +273,11 @@ def send_post(post_id, edit=False, session=None):
             image_url = post.image.source_url
         elif post.image.file_path:
             image_url = post.image.file_path.replace(
-                "app/static/", f"https://{current_app.config['SERVER_NAME']}/static/"
+                "app/static/", f"{current_app.config['SERVER_URL']}/static/"
             )
         elif post.image.thumbnail_path:
             image_url = post.image.thumbnail_path.replace(
-                "app/static/", f"https://{current_app.config['SERVER_NAME']}/static/"
+                "app/static/", f"{current_app.config['SERVER_URL']}/static/"
             )
         page["image"] = {"type": "Image", "url": image_url}
     if post.type == POST_TYPE_POLL:
@@ -318,7 +318,9 @@ def send_post(post_id, edit=False, session=None):
         page["feeAmount"] = event.event_fee_amount
 
     activity = "create" if not edit else "update"
-    create_id = f"https://{current_app.config['SERVER_NAME']}/activities/{activity}/{gibberish(15)}"
+    create_id = (
+        f"{current_app.config['SERVER_URL']}/activities/{activity}/{gibberish(15)}"
+    )
     type = "Create" if not edit else "Update"
     create = {
         "id": create_id,
@@ -341,7 +343,7 @@ def send_post(post_id, edit=False, session=None):
         if community.is_local():
             del create["@context"]
 
-            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
             cc = [community.ap_followers_url]
             group_announce = {
                 "id": announce_id,
@@ -519,16 +521,14 @@ def move_object(session, user_id, object, origin, target):
     if community.local_only or not community.instance.online():
         return
 
-    move_id = (
-        f"https://{current_app.config['SERVER_NAME']}/activities/move/{gibberish(15)}"
-    )
+    move_id = f"{current_app.config['SERVER_URL']}/activities/move/{gibberish(15)}"
     to = ["https://www.w3.org/ns/activitystreams#Public"]
     cc = [community.public_url()]
     move = {
         "id": move_id,
         "type": "Move",
         "actor": user.public_url(),
-        "object": object.public_url(),
+        "object": f"{object.public_url()}/context",
         "@context": default_context(),
         "origin": origin.public_url(),
         "target": target.public_url(),
@@ -539,7 +539,9 @@ def move_object(session, user_id, object, origin, target):
     if community.is_local():
         del move["@context"]
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = (
+            f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
+        )
         actor = community.public_url()
         cc = [community.ap_followers_url]
         announce = {

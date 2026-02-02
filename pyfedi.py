@@ -38,7 +38,6 @@ from app.utils import (
     can_create_post,
     can_upvote,
     can_downvote,
-    can_upload_video,
     shorten_number,
     ap_datetime,
     current_theme,
@@ -56,6 +55,9 @@ from app.utils import (
     set_setting,
     show_explore,
     human_filesize,
+    can_upload_video,
+    debug_checkpoint,
+    compaction_level,
 )
 
 app = create_app()
@@ -119,6 +121,8 @@ with app.app_context():
     app.jinja_env.globals["first_paragraph"] = first_paragraph
     app.jinja_env.globals["html_to_text"] = html_to_text
     app.jinja_env.globals["csrf_token"] = generate_csrf
+    app.jinja_env.globals["debug_checkpoint"] = debug_checkpoint
+    app.jinja_env.globals["compaction_level"] = compaction_level
     app.jinja_env.filters["community_links"] = community_link_to_href
     app.jinja_env.filters["feed_links"] = feed_link_to_href
     app.jinja_env.filters["person_links"] = person_link_to_href
@@ -216,9 +220,10 @@ def after_request(response):
                         response.headers["Content-Security-Policy"] = (
                             f"script-src 'self' 'nonce-{g.nonce}' 'strict-dynamic'; object-src 'none'; base-uri 'none';"
                         )
-            response.headers["Strict-Transport-Security"] = (
-                "max-age=63072000; includeSubDomains; preload"
-            )
+            if current_app.config["HTTP_PROTOCOL"] == "https":
+                response.headers["Strict-Transport-Security"] = (
+                    "max-age=63072000; includeSubDomains; preload"
+                )
             response.headers["X-Content-Type-Options"] = "nosniff"
             if "/embed" not in request.path:
                 response.headers["X-Frame-Options"] = "DENY"

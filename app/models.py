@@ -54,17 +54,10 @@ from app.constants import (
     POST_STATUS_REVIEWING,
     POST_STATUS_PUBLISHED,
     POST_TYPE_VIDEO,
+    INVITE_MEMBERS_ONLY,
+    INVITE_MODS_ONLY,
+    INVITE_OWNER_ONLY,
 )
-
-
-# Helper function to conditionally create TSVector columns (PostgreSQL only)
-def create_tsvector_type(*args, **kwargs):
-    """Create TSVectorType for PostgreSQL, Text for SQLite (testing)"""
-    db_url = os.environ.get("DATABASE_URL", "")
-    if db_url.startswith("sqlite"):
-        # Use Text column for SQLite - full text search won't work but tests can run
-        return db.Text
-    return TSVectorType(*args, **kwargs)
 
 
 def utcnow(naive=True):
@@ -136,6 +129,7 @@ class Instance(db.Model):
     trusted = db.Column(db.Boolean, default=False, index=True)
     posting_warning = db.Column(db.String(512))
     nodeinfo_href = db.Column(db.String(100))
+    admin_note = db.Column(db.Text)
 
     posts = db.relationship("Post", backref="instance", lazy="dynamic")
     post_replies = db.relationship("PostReply", backref="instance", lazy="dynamic")
@@ -309,7 +303,7 @@ class Conversation(db.Model):
         return ""
         # most_recent_message = self.messages.order_by(desc(ChatMessage.created_at)).first()
         # if most_recent_message and most_recent_message.ap_id:
-        #    return f"https://{current_app.config['SERVER_NAME']}/private_message/{most_recent_message.id}"
+        #    return f"{current_app.config.server_name()}/private_message/{most_recent_message.id}"
         # else:
         #    return ''
 
@@ -390,6 +384,15 @@ class Language(db.Model):
     name = db.Column(db.String(50))
 
 
+class CommunityInvitation(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(25), index=True)
+    community_id = db.Column(db.Integer, db.ForeignKey("community.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    inviter_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    created_at = db.Column(db.DateTime, default=utcnow)
+
+
 community_language = db.Table(
     "community_language",
     db.Column("community_id", db.Integer, db.ForeignKey("community.id")),
@@ -441,34 +444,26 @@ class File(db.Model):
             else:
                 return self.source_url
         elif self.file_path:
-            if self.file_path.startswith("https://"):
+            if self.file_path.startswith("http"):
                 return self.file_path
             file_path = (
                 self.file_path[4:]
                 if self.file_path.startswith("app/")
                 else self.file_path
             )
-            scheme = (
-                "http"
-                if current_app.config["SERVER_NAME"] == "127.0.0.1:5000"
-                else "https"
-            )
-            return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
+            return f"/{file_path}"
         else:
             return ""
 
     def medium_url(self):
         if self.file_path is None:
             return self.thumbnail_url()
-        if self.file_path.startswith("https://"):
+        if self.file_path.startswith("http"):
             return self.file_path
         file_path = (
             self.file_path[4:] if self.file_path.startswith("app/") else self.file_path
         )
-        scheme = (
-            "http" if current_app.config["SERVER_NAME"] == "127.0.0.1:5000" else "https"
-        )
-        return f"{scheme}://{current_app.config['SERVER_NAME']}/{file_path}"
+        return f"/{file_path}"
 
     def thumbnail_url(self):
         if self.thumbnail_path is None:
@@ -476,17 +471,14 @@ class File(db.Model):
                 return self.source_url
             else:
                 return ""
-        if self.thumbnail_path.startswith("https://"):
+        if self.thumbnail_path.startswith("http"):
             return self.thumbnail_path
         thumbnail_path = (
             self.thumbnail_path[4:]
             if self.thumbnail_path.startswith("app/")
             else self.thumbnail_path
         )
-        scheme = (
-            "http" if current_app.config["SERVER_NAME"] == "127.0.0.1:5000" else "https"
-        )
-        return f"{scheme}://{current_app.config['SERVER_NAME']}/{thumbnail_path}"
+        return f"/{thumbnail_path}"
 
     def delete_from_disk(self, purge_cdn=True):
         purge_from_cache = []
@@ -510,7 +502,7 @@ class File(db.Model):
                     ...
                 purge_from_cache.append(
                     self.file_path.replace(
-                        "app/", f"https://{current_app.config['SERVER_NAME']}/"
+                        "app/", f"{current_app.config['SERVER_URL']}/"
                     )
                 )
 
@@ -533,7 +525,7 @@ class File(db.Model):
                     ...
                 purge_from_cache.append(
                     self.thumbnail_path.replace(
-                        "app/", f"https://{current_app.config['SERVER_NAME']}/"
+                        "app/", f"{current_app.config['SERVER_URL']}/"
                     )
                 )
         if self.source_url:
@@ -555,7 +547,7 @@ class File(db.Model):
                 try:
                     os.unlink(
                         self.source_url.replace(
-                            f"https://{current_app.config['SERVER_NAME']}/", "app/"
+                            f"{current_app.config['SERVER_URL']}/", "app/"
                         )
                     )
                 except FileNotFoundError:
@@ -690,7 +682,7 @@ class Community(db.Model):
     posting_warning = db.Column(db.String(512))
     downvote_accept_mode = db.Column(
         db.Integer, default=0
-    )  # 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
+    )  # -1 = None, 0 = All, 2 = Community members, 4 = This instance, 6 = Trusted instances
     rss_url = db.Column(db.String(2048))
     can_be_archived = db.Column(db.Boolean, default=True, index=True)
     always_translate = db.Column(db.Boolean)
@@ -718,10 +710,14 @@ class Community(db.Model):
     restricted_to_mods = db.Column(db.Boolean, default=False)
     local_only = db.Column(
         db.Boolean, default=False
-    )  # only users on this instance can post
+    )  # only users on this instance can post. no federation.
     private = db.Column(
         db.Boolean, default=False
-    )  # only owner can view - for unapproved rss
+    )  # only members can view. no federation.
+    encrypted = db.Column(db.Boolean, default=False)
+    invitations = db.Column(
+        db.Integer, default=0
+    )  # 0 = anyone can join, 1 = apply to join, 2 = must be invited by a member, 3 = must be invited by a mod, 4 = must be invited by owner
     new_mods_wanted = db.Column(db.Boolean, default=False)
     searchable = db.Column(db.Boolean, default=True)
     private_mods = db.Column(db.Boolean, default=False)
@@ -739,7 +735,7 @@ class Community(db.Model):
     ignore_remote_gen_ai = db.Column(db.Boolean, default=False)
 
     search_vector = db.Column(
-        create_tsvector_type("name", "title", "description", "rules", auto_index=False)
+        TSVectorType("name", "title", "description", "rules", auto_index=False)
     )
 
     posts = db.relationship("Post", lazy="dynamic", cascade="all, delete-orphan")
@@ -864,6 +860,8 @@ class Community(db.Model):
         )
 
     def is_member(self, user):
+        if user.is_anonymous:
+            return False
         if user is None:
             return CommunityMember.query.filter(
                 CommunityMember.user_id == current_user.get_id(),
@@ -898,6 +896,19 @@ class Community(db.Model):
                 for moderator in self.moderators()
             )
 
+    def can_invite(self, user=None):
+        if user is None and current_user.is_anonymous:
+            return False
+        else:
+            u = current_user if user is None else user
+            if self.invitations == INVITE_MEMBERS_ONLY and not self.is_member(u):
+                return False
+            elif self.invitations == INVITE_MODS_ONLY and not self.is_moderator(u):
+                return False
+            elif self.invitations == INVITE_OWNER_ONLY and not self.is_owner(u):
+                return False
+            return True
+
     def num_owners(self):
         result = 0
         for moderator in self.moderators():
@@ -931,7 +942,7 @@ class Community(db.Model):
         retval = (
             self.ap_profile_id
             if self.ap_profile_id
-            else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+            else f"{current_app.config['SERVER_URL']}/c/{self.name}"
         )
         return retval.lower()
 
@@ -939,20 +950,20 @@ class Community(db.Model):
         result = (
             self.ap_public_url
             if self.ap_public_url
-            else f"https://{current_app.config['SERVER_NAME']}/c/{self.name}"
+            else f"{current_app.config['SERVER_URL']}/c/{self.name}"
         )
         return result
 
     def is_local(self):
         return self.ap_id is None or self.profile_id().startswith(
-            "https://" + current_app.config["SERVER_NAME"]
+            f"{current_app.config['SERVER_URL']}"
         )
 
     def local_url(self):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/c/{self.ap_id}"
+            return f"{current_app.config['SERVER_URL']}/c/{self.ap_id}"
 
     def humanize_subscribers(self, total=True, **kwargs):
         """Return an abbreviated, human readable number of followers (e.g. 1.2k instead of 1215)"""
@@ -1062,7 +1073,7 @@ class Community(db.Model):
                 result.append(
                     {
                         "type": "lemmy:CommunityTag",
-                        "id": f'https://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
+                        "id": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.link()}/tag/{flair.id}',
                         "display_name": flair.flair,
                         "text_color": flair.text_color,
                         "background_color": flair.background_color,
@@ -1335,7 +1346,7 @@ class User(UserMixin, db.Model):
     ap_domain = db.Column(db.String(255))
 
     search_vector = db.Column(
-        create_tsvector_type("user_name", "about", "keywords", auto_index=False)
+        TSVectorType("user_name", "about", "keywords", auto_index=False)
     )
     activity = db.relationship(
         "ActivityLog", backref="account", lazy="dynamic", cascade="all, delete-orphan"
@@ -1480,7 +1491,7 @@ class User(UserMixin, db.Model):
 
     def is_local(self):
         return self.ap_id is None or self.ap_profile_id.startswith(
-            "https://" + current_app.config["SERVER_NAME"]
+            current_app.config["SERVER_URL"]
         )
 
     def waiting_for_approval(self):
@@ -1743,7 +1754,7 @@ class User(UserMixin, db.Model):
         result = (
             self.ap_profile_id
             if self.ap_profile_id
-            else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name.lower()}"
+            else f"{current_app.config['SERVER_URL']}/u/{self.user_name.lower()}"
         )
         return result
 
@@ -1751,7 +1762,7 @@ class User(UserMixin, db.Model):
         return (
             self.ap_public_url
             if self.ap_public_url
-            else f"https://{current_app.config['SERVER_NAME']}/u/{self.user_name}"
+            else f"{current_app.config['SERVER_URL']}/u/{self.user_name}"
         )
 
     def created_recently(self):
@@ -2002,13 +2013,15 @@ class Post(db.Model):
     mea_culpa = db.Column(db.Boolean, default=False)
     has_embed = db.Column(db.Boolean, default=False)
     reply_count = db.Column(db.Integer, default=0, index=True)
+    reply_count_cross_posted = db.Column(db.Integer, default=0)
     score = db.Column(db.Integer, default=0, index=True)  # used for 'top' ranking
     nsfw = db.Column(db.Boolean, default=False, index=True)
     nsfl = db.Column(db.Boolean, default=False, index=True)
     sticky = db.Column(db.Boolean, default=False, index=True)
+    instance_sticky = db.Column(db.Boolean, default=False, index=True)
     ai_generated = db.Column(db.Boolean, default=False, index=True)
     notify_author = db.Column(db.Boolean, default=True)
-    indexable = db.Column(db.Boolean, default=True)
+    indexable = db.Column(db.Boolean, default=True, index=True)
     from_bot = db.Column(db.Boolean, default=False, index=True)
     created_at = db.Column(
         db.DateTime, index=True, default=utcnow
@@ -2065,7 +2078,7 @@ class Post(db.Model):
     )  # When the remote instance edited the Post. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
     search_vector = db.Column(
-        create_tsvector_type(
+        TSVectorType(
             "title", "body", weights={"title": "A", "body": "B"}, auto_index=False
         )
     )
@@ -2152,7 +2165,7 @@ class Post(db.Model):
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith(
-            "https://" + current_app.config["SERVER_NAME"]
+            current_app.config["SERVER_URL"]
         )
 
     @classmethod
@@ -2259,6 +2272,8 @@ class Post(db.Model):
             post.nsfl = True
         if community.ai_generated:
             post.ai_generated = True
+        if community.private:
+            post.indexable = False
         if (
             "content" in request_json["object"]
             and request_json["object"]["content"] is not None
@@ -2604,9 +2619,7 @@ class Post(db.Model):
                         if (
                             profile_id
                             and isinstance(profile_id, str)
-                            and profile_id.startswith(
-                                "https://" + current_app.config["SERVER_NAME"]
-                            )
+                            and profile_id.startswith(current_app.config["SERVER_URL"])
                         ):
                             profile_id = profile_id.lower()
                             recipient = User.query.filter_by(
@@ -2636,7 +2649,7 @@ class Post(db.Model):
                                             title=gettext(
                                                 f"You have been mentioned in post {post.id}"
                                             ),
-                                            url=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}",
+                                            url=f"{current_app.config['SERVER_URL']}/post/{post.id}",
                                             author_id=post.user_id,
                                             notif_type=NOTIF_MENTION,
                                             subtype="post_mention",
@@ -3010,16 +3023,16 @@ class Post(db.Model):
                     self.title, max_length=100 - len(current_app.config["SERVER_NAME"])
                 )
                 if slug:
-                    self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/c/{community.name}/p/{self.id}/{slug}'
+                    self.ap_id = f'{current_app.config["SERVER_URL"]}/c/{community.name}/p/{self.id}/{slug}'
                     self.slug = f"/c/{community.name}/p/{self.id}/{slug}"
                 else:
                     # Post title can't be slugified, fall back to old url structure
-                    self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                    self.ap_id = f'{current_app.config["SERVER_URL"]}/post/{self.id}'
                     self.slug = f"/post/{self.id}"
         else:
             # Make the ActivityPub ID of a post in the format of instance.tld/post/post_id
             if self.ap_id is None or self.ap_id == "" or len(self.ap_id) == 10:
-                self.ap_id = f'{current_app.config["HTTP_PROTOCOL"]}://{current_app.config["SERVER_NAME"]}/post/{self.id}'
+                self.ap_id = f'{current_app.config["SERVER_URL"]}/post/{self.id}'
                 self.slug = f"/post/{self.id}"
 
     def generate_slug(self, community: Community):
@@ -3047,7 +3060,7 @@ class Post(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/post/{self.id}"
+            return f"{current_app.config['SERVER_URL']}/post/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -3117,7 +3130,7 @@ class Post(db.Model):
             return_value.append(
                 {
                     "type": "lemmy:CommunityTag",
-                    "id": f'https://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
+                    "id": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/c/{self.community.link()}/tag/{flair.id}',
                     "display_name": flair.flair,
                     "text_color": flair.text_color,
                     "background_color": flair.background_color,
@@ -3128,7 +3141,7 @@ class Post(db.Model):
             return_value.append(
                 {
                     "type": "Hashtag",
-                    "href": f'https://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
+                    "href": f'{current_app.config["SERVER_NAME"]}://{current_app.config["SERVER_NAME"]}/tag/{tag.name}',
                     "name": f"#{tag.name}",
                 }
             )
@@ -3154,7 +3167,9 @@ class Post(db.Model):
                             "name": emoji.token,
                             "icon": {
                                 "type": "Image",
-                                "mediaType": guess_mime_type(emoji.url),
+                                "mediaType": guess_mime_type(
+                                    emoji.url
+                                ),  # or store this in DB
                                 "url": emoji.url,
                             },
                         }
@@ -3411,6 +3426,7 @@ class PostReply(db.Model):
     body_html = db.Column(db.Text)
     body_html_safe = db.Column(db.Boolean, default=False)
     score = db.Column(db.Integer, default=0, index=True)  # used for 'top' sorting
+    indexable = db.Column(db.Boolean, default=True, index=True)
     nsfw = db.Column(db.Boolean, default=False, index=True)
     distinguished = db.Column(db.Boolean, default=False)
     notify_author = db.Column(db.Boolean, default=True)
@@ -3444,7 +3460,7 @@ class PostReply(db.Model):
         db.DateTime
     )  # When the remote instance edited the PostReply. Useful when local instance has been offline and a flurry of potentially out of order updates are coming in.
 
-    search_vector = db.Column(create_tsvector_type("body", auto_index=False))
+    search_vector = db.Column(TSVectorType("body", auto_index=False))
 
     author = db.relationship(
         "User",
@@ -3512,8 +3528,10 @@ class PostReply(db.Model):
             reply_is_just_link_to_gif_reaction,
             reply_is_stupid,
             wilson_confidence_lower_bound,
+            get_setting,
         )
         from app.activitypub.util import notify_about_post_reply
+        from app import redis_client
 
         if session is None:
             session = db.session
@@ -3547,6 +3565,7 @@ class PostReply(db.Model):
             language_id=language_id,
             distinguished=distinguished,
             answer=answer,
+            indexable=user.indexable,
             ap_id=request_json["object"]["id"] if request_json else None,
             ap_create_id=request_json["id"] if request_json else None,
             ap_announce_id=announce_id,
@@ -3557,6 +3576,15 @@ class PostReply(db.Model):
             for blocked_phrase in blocked_phrases():
                 if blocked_phrase in reply.body:
                     raise PostReplyValidationError(_("Blocked phrase in comment"))
+        if (
+            request_json
+            and "searchableBy" in request_json["object"]
+            and request_json["object"]["searchableBy"]
+            != "https://www.w3.org/ns/activitystreams#Public"
+        ):
+            reply.indexable = False
+        if post.community.private:
+            reply.indexable = False
         if in_reply_to is None or in_reply_to.parent_id is None:
             notification_target = post
         else:
@@ -3632,21 +3660,43 @@ class PostReply(db.Model):
             cache.delete_memoized(recently_upvoted_post_replies, user.id)
 
         reply.ap_id = reply.profile_id()
-        if not user.bot:
-            post.reply_count += 1
-            post.community.post_reply_count += 1
-            post.community.last_active = post.last_active = utcnow()
-        session.execute(
-            text(
-                'UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'
-            ),
-            {"user_id": user.id},
-        )
-        session.execute(text('UPDATE "site" SET last_active = NOW()'))
-        session.commit()
+
+        with redis_client.lock(f"lock:post:{post.id}", timeout=10, blocking_timeout=6):
+            if not user.bot:
+                post.reply_count += 1
+                post.community.post_reply_count += 1
+                post.community.last_active = post.last_active = utcnow()
+            session.execute(
+                text(
+                    'UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'
+                ),
+                {"user_id": user.id},
+            )
+            session.execute(text('UPDATE "site" SET last_active = NOW()'))
+            session.commit()
+
+            # update reply_count_cross_posted
+            if post.cross_posts and len(post.cross_posts) > 0:
+                ids = [post.id, *post.cross_posts]
+
+                total = (
+                    session.query(db.func.sum(Post.reply_count))
+                    .filter(Post.id.in_(ids))
+                    .scalar()
+                ) or 0
+                session.query(Post).filter(Post.id.in_(ids)).update(
+                    {"reply_count_cross_posted": total}, synchronize_session=False
+                )
+
+                session.commit()
 
         # LLM Detection
-        if reply.body and "—" in reply.body and user.created_very_recently():
+        if (
+            reply.body
+            and "—" in reply.body
+            and user.created_very_recently()
+            and get_setting("enable_report_em_dash_replies", True)
+        ):
             # usage of em-dash is highly suspect.
             from app.utils import notify_admin
 
@@ -3754,7 +3804,7 @@ class PostReply(db.Model):
 
     def is_local(self):
         return self.ap_id is None or self.ap_id.startswith(
-            "https://" + current_app.config["SERVER_NAME"]
+            current_app.config["SERVER_URL"]
         )
 
     @classmethod
@@ -3765,7 +3815,7 @@ class PostReply(db.Model):
         if self.ap_id:
             return self.ap_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/comment/{self.id}"
+            return f"{current_app.config['SERVER_URL']}/comment/{self.id}"
 
     def public_url(self):
         return self.profile_id()
@@ -4296,7 +4346,9 @@ class PostVote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
     author_id = db.Column(db.Integer, db.ForeignKey("user.id"), index=True)
-    post_id = db.Column(db.Integer, db.ForeignKey("post.id"), index=True)
+    post_id = db.Column(
+        db.Integer, db.ForeignKey("post.id", ondelete="CASCADE"), index=True
+    )
     effect = db.Column(db.Float, index=True)
     emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -4314,7 +4366,9 @@ class PostReplyVote(db.Model):
     author_id = db.Column(
         db.Integer, db.ForeignKey("user.id"), index=True
     )  # the author of the reply voted on - who's reputation is affected
-    post_reply_id = db.Column(db.Integer, db.ForeignKey("post_reply.id"), index=True)
+    post_reply_id = db.Column(
+        db.Integer, db.ForeignKey("post_reply.id", ondelete="CASCADE"), index=True
+    )
     effect = db.Column(db.Float)
     emoji = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=utcnow)
@@ -4828,9 +4882,7 @@ class Feed(db.Model):
         "FeedItem", lazy="dynamic", cascade="all, delete-orphan"
     )
 
-    search_vector = db.Column(
-        create_tsvector_type("name", "description", auto_index=False)
-    )
+    search_vector = db.Column(TSVectorType("name", "description", auto_index=False))
 
     icon = db.relationship(
         "File",
@@ -4959,7 +5011,7 @@ class Feed(db.Model):
         retval = (
             self.ap_profile_id
             if self.ap_profile_id
-            else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+            else f"{current_app.config['SERVER_URL']}/f/{self.name}"
         )
         return retval.lower()
 
@@ -4967,20 +5019,20 @@ class Feed(db.Model):
         result = (
             self.ap_public_url
             if self.ap_public_url
-            else f"https://{current_app.config['SERVER_NAME']}/f/{self.name}"
+            else f"{current_app.config['SERVER_URL']}/f/{self.name}"
         )
         return result
 
     def is_local(self):
         return self.ap_id is None or self.profile_id().startswith(
-            "https://" + current_app.config["SERVER_NAME"]
+            current_app.config["SERVER_URL"]
         )
 
     def local_url(self):
         if self.is_local():
             return self.ap_profile_id
         else:
-            return f"https://{current_app.config['SERVER_NAME']}/f/{self.ap_id}"
+            return f"{current_app.config['SERVER_URL']}/f/{self.ap_id}"
 
     def notify_new_posts(self, user_id: int) -> bool:
         existing_notification = NotificationSubscription.query.filter(

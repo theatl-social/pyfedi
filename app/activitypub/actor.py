@@ -185,7 +185,7 @@ def fetch_remote_actor_data(url: str, retry_count=1):
                     signed_response = signed_get_request(
                         url,
                         site.private_key,
-                        f"https://{current_app.config['SERVER_NAME']}/actor#main-key",
+                        f"{current_app.config['SERVER_URL']}/actor#main-key",
                     )
                     try:
                         return signed_response.json()
@@ -285,7 +285,7 @@ def create_actor_from_remote(
     actor_address: str, community_only=False, feed_only=False
 ) -> User | Community | Feed | None:
     """Create a new actor from remote data."""
-    if actor_address.startswith("https://"):
+    if actor_address.startswith("https://") or actor_address.startswith("http://"):
         server, address = extract_domain_and_actor(actor_address)
         actor_json = fetch_remote_actor_data(actor_address)
     else:
@@ -343,7 +343,7 @@ def find_actor_by_url(
         return None
 
     # For remote actors
-    if actor_url.startswith("https://"):
+    if actor_url.startswith("https://") or actor_url.startswith("http://"):
         actor = find_remote_actor(actor_url)
 
         if actor:
@@ -367,7 +367,7 @@ def find_actor_by_url(
         )
         if user is None:
             user = User.query.filter_by(
-                ap_profile_id=f'https://{current_app.config["SERVER_NAME"]}/u/{actor_url.lower()}',
+                ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor_url.lower()}',
                 ap_id=None,
             ).first()
         return user

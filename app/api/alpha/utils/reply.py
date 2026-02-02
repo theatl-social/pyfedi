@@ -63,6 +63,9 @@ def get_reply_list(auth, data, user_details=None):
     sort = data["sort"] if "sort" in data else "New"
     type = data["type_"] if "type_" in data else "All"
 
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
+
     # LIKED_ONLY
     vote_effect = None
     by_liked_only = False
@@ -99,6 +102,7 @@ def get_reply_list(auth, data, user_details=None):
             replies = PostReply.query.search(query, sort=sort == "Relevance")
         else:
             replies = replies.search(query, sort=sort == "Relevance")
+        replies = replies.filter(PostReply.indexable == True)
 
     if replies:
         if type == "Local":
@@ -190,7 +194,7 @@ def get_reply_list(auth, data, user_details=None):
     depth_first = False
     next_page = None
     if replies:
-        # if replies isn't None, then response is just a list of commments, not a threaded conversation
+        # if replies isn't None, then response is just a list of comments, not a threaded conversation
 
         # safe to just remove any replies by blocked users (won't cause gaps in threaded convo)
         if user_id and (add_creator_in_view == True or user_id != data["person_id"]):
@@ -322,11 +326,7 @@ def get_reply_list(auth, data, user_details=None):
                 desc(PostReply.posted_at)
             )
         elif sort == "Active":
-            replies = replies.order_by(
-                func.greatest(
-                    PostReply.posted_at, func.coalesce(PostReply.edited_at, 0)
-                )
-            )
+            replies = replies.order_by(desc(PostReply.posted_at))
         elif sort == "Top" or sort == "TopAll":
             replies = replies.order_by(desc(PostReply.up_votes - PostReply.down_votes))
         elif sort == "TopHour":
@@ -802,6 +802,9 @@ def get_reply_like_list(auth, data):
     comment_id = data["comment_id"]
     page = data["page"] if "page" in data else 1
     limit = data["limit"] if "limit" in data else 50
+
+    if limit > current_app.config["PAGE_LENGTH"]:
+        limit = current_app.config["PAGE_LENGTH"]
 
     user = authorise_api_user(auth, return_type="model")
     post_reply = PostReply.query.filter_by(id=comment_id).one()

@@ -50,6 +50,7 @@ from app.community.forms import (
     SetMyFlairForm,
     FindAndBanUserCommunityForm,
     CreateEventForm,
+    InviteAcceptForm,
 )
 from app.community.util import (
     search_for_community,
@@ -88,6 +89,9 @@ from app.constants import (
     NOTIF_MENTION,
     POST_STATUS_REVIEWING,
     POST_TYPE_EVENT,
+    INVITE_MEMBERS_ONLY,
+    INVITE_MODS_ONLY,
+    INVITE_OWNER_ONLY,
 )
 from app.email import send_email
 from app.inoculation import inoculation
@@ -120,6 +124,7 @@ from app.models import (
     post_tag,
     Tag,
     hidden_posts,
+    CommunityInvitation,
 )
 from app.community import bp
 from app.post.util import tags_to_string
@@ -179,6 +184,8 @@ from app.utils import (
     communities_banned_from_all_users,
     moderating_communities_ids_all_users,
     block_honey_pot,
+    user_pronouns,
+    community_membership_private,
 )
 from app.shared.post import make_post, sticky_post
 from app.shared.tasks import task_selector
@@ -217,7 +224,18 @@ def add_local():
         if form.url.data.strip().lower().startswith("/c/"):
             form.url.data = form.url.data[3:]
         form.url.data = slugify(form.url.data.strip(), separator="_").lower()
-        private_key, public_key = RsaKeys.generate_keypair()
+        show_popular = True
+        show_all = True
+        if form.private.data:
+            form.local_only.data = True
+            show_popular = False
+            show_all = False
+        if form.local_only.data:
+            private_key = None
+            public_key = None
+        else:
+            private_key, public_key = RsaKeys.generate_keypair()
+            form.invitations.data = 0
         community = Community(
             title=form.community_name.data,
             name=form.url.data,
@@ -228,6 +246,10 @@ def add_local():
             description_html=markdown_to_html(form.description.data),
             local_only=form.local_only.data,
             posting_warning=form.posting_warning.data,
+            private=form.private.data,
+            invitations=form.invitations.data,
+            show_popular=show_popular,
+            show_all=show_all,
             ap_profile_id="https://"
             + current_app.config["SERVER_NAME"]
             + "/c/"
@@ -294,6 +316,7 @@ def add_local():
         cache.delete_memoized(community_membership, current_user, community)
         cache.delete_memoized(joined_communities, current_user.id)
         cache.delete_memoized(moderating_communities, current_user.id)
+        cache.delete_memoized(community_membership_private, current_user.id)
         return redirect("/c/" + community.name)
     else:
         form.publicize.data = not current_app.debug
@@ -343,7 +366,7 @@ def add_remote():
             ...
         elif "@" in address:
             new_community = search_for_community("!" + address)
-        elif address.startswith("https://"):
+        elif address.startswith("https://") or address.startswith("http://"):
             server, community = extract_domain_and_actor(address)
             new_community = search_for_community("!" + community + "@" + server)
         else:
@@ -968,10 +991,11 @@ def show_community(community: Community):
             recently_upvoted=recently_upvoted,
             recently_downvoted=recently_downvoted,
             community_feeds=community_feeds,
+            user_pronouns=user_pronouns(),
             canonical=community.profile_id(),
             can_upvote_here=can_upvote(user, community),
             can_downvote_here=can_downvote(user, community),
-            rss_feed=f"https://{current_app.config['SERVER_NAME']}/community/{community.link()}/feed",
+            rss_feed=f"{current_app.config['SERVER_URL']}/community/{community.link()}/feed",
             rss_feed_name=f"{community.title} on {g.site.name}",
             content_filters=content_filters,
             sort=sort,
@@ -1022,6 +1046,9 @@ def show_community_rss(actor):
         if request_etag_matches(current_etag):
             return return_304(current_etag, "application/rss+xml")
 
+        if community.private:
+            abort(403)
+
         score = request.args.get("score", 0, int)
 
         posts = Post.query.filter(Post.community_id == community.id).filter(
@@ -1041,37 +1068,29 @@ def show_community_rss(actor):
         )
         og_image = community.image.source_url if community.image_id else None
         fg = FeedGenerator()
-        fg.id(f"https://{current_app.config['SERVER_NAME']}/c/{actor}")
+        fg.id(f"{current_app.config['SERVER_URL']}/c/{actor}")
         fg.title(f"{community.title} on {g.site.name}")
-        fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}",
-            rel="alternate",
-        )
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}", rel="alternate")
         if og_image:
             fg.logo(og_image)
         else:
             fg.logo(
-                f"https://{current_app.config['SERVER_NAME']}/static/images/apple-touch-icon.png"
+                f"{current_app.config['SERVER_URL']}/static/images/apple-touch-icon.png"
             )
         if description:
             fg.subtitle(description)
         else:
             fg.subtitle(" ")
-        fg.link(
-            href=f"https://{current_app.config['SERVER_NAME']}/c/{actor}/feed",
-            rel="self",
-        )
+        fg.link(href=f"{current_app.config['SERVER_URL']}/c/{actor}/feed", rel="self")
         fg.language("en")
 
         for post in posts:
             fe = fg.add_entry()
             fe.title(post.title)
             if post.slug:
-                fe.link(href=f"https://{current_app.config['SERVER_NAME']}{post.slug}")
+                fe.link(href=f"{current_app.config['SERVER_URL']}{post.slug}")
             else:
-                fe.link(
-                    href=f"https://{current_app.config['SERVER_NAME']}/post/{post.id}"
-                )
+                fe.link(href=f"{current_app.config['SERVER_URL']}/post/{post.id}")
             if post.url:
                 type = mimetype_from_url(post.url)
                 if type and not type.startswith("text/"):
@@ -1107,6 +1126,8 @@ def show_community_ical(actor):
             name=actor, banned=False, ap_id=None
         ).first()
     if community is not None:
+        if community.private:
+            abort(403)
         posts = (
             Post.query.filter(
                 Post.community_id == community.id, Post.type == POST_TYPE_EVENT
@@ -1246,7 +1267,7 @@ def do_subscribe(actor, user_id, admin_preload=False, joined_via_feed=False):
                                     "to": [community.public_url()],
                                     "object": community.public_url(),
                                     "type": "Follow",
-                                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}",
+                                    "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}",
                                 }
                                 send_post_request(
                                     community.ap_inbox_url,
@@ -1309,15 +1330,15 @@ def unsubscribe(actor):
                 # Undo the Follow
                 if "@" in actor:  # this is a remote community, so activitypub is needed
                     if not community.instance.gone_forever:
-                        follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{gibberish(15)}"
+                        follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{gibberish(15)}"
                         if community.instance.domain == "ovo.st":
                             join_request = CommunityJoinRequest.query.filter_by(
                                 user_id=current_user.id, community_id=community.id
                             ).first()
                             if join_request:
-                                follow_id = f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}"
+                                follow_id = f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}"
                         undo_id = (
-                            f"https://{current_app.config['SERVER_NAME']}/activities/undo/"
+                            f"{current_app.config['SERVER_URL']}/activities/undo/"
                             + gibberish(15)
                         )
                         follow = {
@@ -1402,7 +1423,7 @@ def join_then_add(actor):
                     "to": [community.public_url()],
                     "object": community.public_url(),
                     "type": "Follow",
-                    "id": f"https://{current_app.config['SERVER_NAME']}/activities/follow/{join_request.uuid}",
+                    "id": f"{current_app.config['SERVER_URL']}/activities/follow/{join_request.uuid}",
                 }
                 send_post_request(
                     community.ap_inbox_url,
@@ -1709,6 +1730,12 @@ def community_edit(community_id: int):
         if g.site.enable_nsfw is False:
             form.nsfw.render_kw = {"disabled": True}
         if form.validate_on_submit():
+            if form.private.data:
+                form.local_only.data = True
+                community.show_popular = False
+                community.show_all = False
+            else:
+                form.invitations.data = 0
             community.title = form.title.data
             community.description = piefed_markdown_to_lemmy_markdown(
                 form.description.data
@@ -1720,6 +1747,8 @@ def community_edit(community_id: int):
             community.nsfw = form.nsfw.data
             community.ai_generated = form.ai_generated.data
             community.local_only = form.local_only.data
+            community.private = form.private.data
+            community.invitations = form.invitations.data
             community.restricted_to_mods = form.restricted_to_mods.data
             community.new_mods_wanted = form.new_mods_wanted.data
             community.topic_id = form.topic.data if form.topic.data > 0 else None
@@ -1774,6 +1803,7 @@ def community_edit(community_id: int):
 
             cache.delete_memoized(moderating_communities, current_user.id)
             cache.delete_memoized(joined_communities, current_user.id)
+            cache.delete_memoized(community_membership_private, current_user.id)
 
             # just borrow federation code for now (replacing most of this function with a call to edit_community in app.shared.community can be done "later")
             task_selector(
@@ -1794,6 +1824,8 @@ def community_edit(community_id: int):
             form.nsfw.data = community.nsfw
             form.ai_generated.data = community.ai_generated
             form.local_only.data = community.local_only
+            form.private.data = community.private
+            form.invitations.data = community.invitations
             form.new_mods_wanted.data = community.new_mods_wanted
             form.restricted_to_mods.data = community.restricted_to_mods
             form.topic.data = community.topic_id if community.topic_id else None
@@ -3416,6 +3448,10 @@ def community_invite(actor):
         return redirect(referrer())
 
     if community is not None:
+        if not community.can_invite():
+            flash(_("Sorry, you cannot invite people to this community."), "warning")
+            return redirect(referrer())
+
         if form.validate_on_submit():
             chat_invites = 0
             email_invites = 0
@@ -3451,6 +3487,13 @@ def community_invite(actor):
             )
             return redirect("/c/" + community.link())
 
+        if community.is_local() and community.local_only:
+            flash(
+                _(
+                    "This community can only be accessed by people who have a %(domain)s account. People on other instances will need to make an account here to participate.",
+                    domain=current_app.config["SERVER_NAME"],
+                )
+            )
         return render_template(
             "community/invite.html",
             title=_("Invite to community"),
@@ -3460,6 +3503,59 @@ def community_invite(actor):
         )
     else:
         abort(404)
+
+
+@bp.route("/<actor>/accept_invite/<token>", methods=["GET", "POST"])
+@limiter.limit("10 per 1 minutes", methods=["GET", "POST"])
+@login_required
+def community_invite_accept(actor, token):
+    if current_user.banned:
+        return show_ban_message()
+    if "@" in token:
+        flash(
+            _(
+                "Ask %(token)s to send an invite to %(current_user)s",
+                token=token,
+                current_user=current_user.lemmy_link(),
+            )
+        )
+        return redirect("/")
+    form = InviteAcceptForm()
+
+    community = actor_to_community(actor)
+
+    if community.is_member(current_user):
+        flash(_("You are already a member."))
+        return redirect("/c/" + actor)
+
+    invites = (
+        db.session.query(CommunityInvitation)
+        .filter_by(token=token)
+        .filter(
+            CommunityInvitation.user_id == current_user.id,
+            CommunityInvitation.community_id == community.id,
+        )
+        .all()
+    )
+
+    if len(invites) > 0:
+        if form.validate_on_submit():
+            do_subscribe(actor, current_user.id)
+            for invite in invites:
+                db.session.delete(invite)
+            db.session.commit()
+            cache.delete_memoized(community_membership_private, current_user.id)
+            return redirect("/c/" + actor)
+        return render_template(
+            "generic_form.html",
+            form=form,
+            title=_(
+                "Accept invitation to %(community_name)s",
+                community_name=community.display_name(),
+            ),
+        )
+    else:
+        abort(403)
 
 
 @bp.route("/lookup/<community>/<domain>")

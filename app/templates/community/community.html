@@ -119,69 +119,73 @@
             <p class="text-muted">{{ community.lemmy_link() }}</p>
         {% endif -%}
         {% include "community/_community_nav.html" -%}
-        {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
-            <div class="masonry" id="masonry">
-                <!-- Masonry columns will be added here -->
-            </div>
-            <script nonce="{{ nonce }}">
-                document.addEventListener("DOMContentLoaded", function() {
-                    const masonry = document.getElementById('masonry');
-                    const htmlSnippets = [
-                        {% if sticky_posts -%}
-                          {% for post in sticky_posts -%}
-                              {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
-                          {% endfor -%}
-                        {% endif -%}
-                        {% for post in posts.items -%}
-                            {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
-                        {% endfor -%}
-                    ];
-                    renderMasonry(masonry, htmlSnippets);
-                });
-            </script>
-        {% else -%}
-            {% if content_type == "posts" or content_type == 'events' -%}
-                {% if posts or sticky_posts %}
-                    <div class="post_list">
-                        {% if sticky_posts -%}
-                            {% for post in sticky_posts -%}
+        {% if community.private and (current_user.is_anonymous or not community.is_member(current_user)) -%}
+            <p class="mt-4">{{ _('You need to be a member to see the contents of this private community.') }}</p>
+        {% else %}
+            {% if (content_type == 'posts' or content_type == 'events') and (post_layout == 'masonry' or post_layout == 'masonry_wide') -%}
+                <div class="masonry" id="masonry">
+                    <!-- Masonry columns will be added here -->
+                </div>
+                <script nonce="{{ nonce }}">
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const masonry = document.getElementById('masonry');
+                        const htmlSnippets = [
+                            {% if sticky_posts -%}
+                              {% for post in sticky_posts -%}
+                                  {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
+                              {% endfor -%}
+                            {% endif -%}
+                            {% for post in posts.items -%}
+                                {% raw -%}`{% endraw -%}{% include 'post/_post_teaser_masonry.html' -%}{% raw -%}`{% endraw -%},
+                            {% endfor -%}
+                        ];
+                        renderMasonry(masonry, htmlSnippets);
+                    });
+                </script>
+            {% else -%}
+                {% if content_type == "posts" or content_type == 'events' -%}
+                    {% if posts or sticky_posts %}
+                        <div class="post_list">
+                            {% if sticky_posts -%}
+                                {% for post in sticky_posts -%}
+                                    {% include 'post/_post_teaser.html' -%}
+                                {% endfor -%}
+                            {% endif -%}
+                            {% for post in posts.items -%}
                                 {% include 'post/_post_teaser.html' -%}
                             {% endfor -%}
-                        {% endif -%}
-                        {% for post in posts.items -%}
-                            {% include 'post/_post_teaser.html' -%}
-                        {% endfor -%}
-                    </div>
-                {% else -%}
-                    <p>{{ _('No posts in this community yet.') }}</p>
-                {% endif -%}
-            {% elif content_type == "comments" %}
-                {% if comments -%}
-                    <div class="post_list comments">
-                        {% for post_reply in comments.items %}
-                            {% with teaser=True %}
-                                {% include 'post/_post_reply_teaser.html' %}
-                            {% endwith %}
-                        {% endfor %}
-                    </div>
-                {% else -%}
-                    <p>{{ _("No comments in this community yet.") }}</p>
+                        </div>
+                    {% else -%}
+                        <p>{{ _('No posts in this community yet.') }}</p>
+                    {% endif -%}
+                {% elif content_type == "comments" %}
+                    {% if comments -%}
+                        <div class="post_list comments">
+                            {% for post_reply in comments.items %}
+                                {% with teaser=True %}
+                                    {% include 'post/_post_reply_teaser.html' %}
+                                {% endwith %}
+                            {% endfor %}
+                        </div>
+                    {% else -%}
+                        <p>{{ _("No comments in this community yet.") }}</p>
+                    {% endif -%}
                 {% endif -%}
             {% endif -%}
-        {% endif -%}
 
-        <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
-            {% if prev_url -%}
-                <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
-                    <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
-                </a>
-            {% endif -%}
-            {% if next_url -%}
-                <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
-                    {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
-                </a>
-            {% endif -%}
-        </nav>
+            <nav aria-label="{{ _('Pagination') }}" class="mt-4" role="navigation">
+                {% if prev_url -%}
+                    <a href="{{ prev_url }}" class="btn btn-primary" rel='nofollow'>
+                        <span aria-hidden="true">&larr;</span> {{ _('Previous page') }}
+                    </a>
+                {% endif -%}
+                {% if next_url -%}
+                    <a href="{{ next_url }}" class="btn btn-primary" rel='nofollow'>
+                        {{ _('Next page') }} <span aria-hidden="true">&rarr;</span>
+                    </a>
+                {% endif -%}
+            </nav>
+        {% endif -%}
     </main>
 
     {% include "_side_pane.html" %}

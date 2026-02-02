@@ -75,9 +75,7 @@ community_listing_type_list = [
 content_type_list = ["Communities", "Posts", "Users", "Url", "Comments"]
 subscribed_type_list = ["Subscribed", "NotSubscribed", "Pending"]
 notification_status_list = ["All", "Unread", "Read", "New"]
-feature_type_list = [
-    "Community"
-]  # "Local" for pinning to top of site isn't supported yet
+feature_type_list = ["Community", "Local"]
 post_type_list = ["Link", "Discussion", "Image", "Video", "Poll", "Event"]
 nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
@@ -469,7 +467,7 @@ class SearchRequest(DefaultSchema):
     )
     community_name = fields.String()
     community_id = fields.Integer()
-    minimun_upvotes = fields.Integer()
+    minimum_upvotes = fields.Integer()
     nsfw = fields.String(validate=validate.OneOf(search_nsfw))
 
 
@@ -545,6 +543,7 @@ class PostPoll(DefaultSchema):
     )
     mode = fields.String(
         required=True,
+        validate=validate.OneOf(["single", "multiple"]),
         metadata={
             "example": "single",
             "description": "single or multiple - determines whether people can vote for one or multiple options",
@@ -585,6 +584,7 @@ class Post(DefaultSchema):
     )
     removed = fields.Boolean(required=True)
     sticky = fields.Boolean(required=True)
+    instance_sticky = fields.Boolean(required=True)
     title = fields.String(required=True)
     user_id = fields.Integer(required=True)
     alt_text = fields.String()
@@ -954,6 +954,11 @@ class GetCommunityResponse(DefaultSchema):
     discussion_languages = fields.List(fields.Integer(), required=True)
     moderators = fields.List(fields.Nested(CommunityModeratorView), required=True)
     site = fields.Nested(Site)
+
+
+class GetFeedRequest(DefaultSchema):
+    id = fields.Integer()
+    name = fields.String()
 
 
 class GetSuggestCompletionRequest(DefaultSchema):
@@ -1920,7 +1925,9 @@ class HidePostRequest(DefaultSchema):
 class FeaturePostRequest(DefaultSchema):
     post_id = fields.Integer(required=True)
     featured = fields.Boolean(required=True)
-    feature_type = fields.String(validate=validate.OneOf(feature_type_list))
+    feature_type = fields.String(
+        validate=validate.OneOf(feature_type_list), metadata={"default": "Community"}
+    )
 
 
 class RemovePostRequest(DefaultSchema):
@@ -1980,7 +1987,7 @@ class ListPostsRequest(Schema):
     ignore_sticky = fields.Boolean(
         metadata={
             "default": False,
-            "description": "If filtering by community, ignores a post's sticky state",
+            "description": "Ignores a post's sticky state when sorting",
         }
     )
 

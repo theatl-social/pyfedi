@@ -142,7 +142,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
                     .filter(
                         Notification.user_id == recipient.id,
                         Notification.url
-                        == f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                        == f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                     )
                     .first()
                 )
@@ -163,7 +163,7 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
                     notification = Notification(
                         user_id=recipient.id,
                         title=gettext(f"You have been mentioned in comment {reply.id}"),
-                        url=f"https://{current_app.config['SERVER_NAME']}/comment/{reply.id}",
+                        url=f"{current_app.config['SERVER_URL']}/comment/{reply.id}",
                         author_id=user.id,
                         notif_type=NOTIF_MENTION,
                         subtype="comment_mention",
@@ -228,7 +228,9 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
         note["updated"] = ap_datetime(utcnow())
 
     activity = "create" if not edit else "update"
-    create_id = f"https://{current_app.config['SERVER_NAME']}/activities/{activity}/{gibberish(15)}"
+    create_id = (
+        f"{current_app.config['SERVER_URL']}/activities/{activity}/{gibberish(15)}"
+    )
     type = "Create" if not edit else "Update"
     create = {
         "id": create_id,
@@ -247,7 +249,9 @@ def send_reply(reply_id, parent_id, edit=False, session=None):
     if community.is_local():
         del create["@context"]
 
-        announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+        announce_id = (
+            f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
+        )
         cc = [community.ap_followers_url]
         announce = {
             "id": announce_id,
@@ -316,7 +320,9 @@ def send_answer(post_reply_id, user_id, is_undo):
         ):
             return
 
-        answer_ap_id = f"https://{current_app.config['SERVER_NAME']}/activities/answer/{gibberish(15)}"
+        answer_ap_id = (
+            f"{current_app.config['SERVER_URL']}/activities/answer/{gibberish(15)}"
+        )
         to = ["https://www.w3.org/ns/activitystreams#Public"]
         cc = [post_reply.community.public_url()]
         lock = {
@@ -332,7 +338,9 @@ def send_answer(post_reply_id, user_id, is_undo):
 
         if is_undo:
             del lock["@context"]
-            undo_id = f"https://{current_app.config['SERVER_NAME']}/activities/undo/{gibberish(15)}"
+            undo_id = (
+                f"{current_app.config['SERVER_URL']}/activities/undo/{gibberish(15)}"
+            )
             undo = {
                 "id": undo_id,
                 "type": "Undo",
@@ -352,7 +360,7 @@ def send_answer(post_reply_id, user_id, is_undo):
                 del lock["@context"]
                 object = lock
 
-            announce_id = f"https://{current_app.config['SERVER_NAME']}/activities/announce/{gibberish(15)}"
+            announce_id = f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}"
             actor = post_reply.community.public_url()
             cc = [post_reply.community.ap_followers_url]
             announce = {

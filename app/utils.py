@@ -8,6 +8,7 @@ import io
 import mimetypes
 import math
 import random
+import time
 import urllib
 import warnings
 from collections import defaultdict, OrderedDict
@@ -49,7 +50,7 @@ from flask import (
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select
+from sqlalchemy import text, or_, desc, asc, event, select, func
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -98,27 +99,25 @@ from app.models import (
     InstanceBan,
     Tag,
     Emoji,
+    UserExtraField,
 )
 
 
 # Flask's render_template function, with support for themes added
-def render_template(template_name: str, **context) -> Response:
+def render_template(
+    template_name: str, skip_protocol_replacement: bool = False, **context
+) -> Response:
     theme = current_theme()
     if theme != "" and os.path.exists(f"app/templates/themes/{theme}/{template_name}"):
         content = flask.render_template(f"themes/{theme}/{template_name}", **context)
     else:
         content = flask.render_template(template_name, **context)
 
-    # Add nonces to all script tags that don't have them (for CSP with strict-dynamic)
-    if hasattr(g, "nonce") and g.nonce:
-        import re
-
-        # Find all <script tags with src= that don't have nonce=
-        content = re.sub(
-            r'<script\s+([^>]*?)src=(["\'][^"\']*["\'])(?![^>]*nonce=)',
-            rf'<script \1src=\2 nonce="{g.nonce}"',
-            content,
-        )
+    if (
+        not skip_protocol_replacement and current_app.config["HTTP_PROTOCOL"] == "mixed"
+    ):  # mixed mode is for instances like retro.piefed.com which has a web ui that uses http while federation happens over https
+        server_name = current_app.config["SERVER_NAME"]
+        content = content.replace(f"https://{server_name}", f"http://{server_name}")
 
     # Browser caching using ETags and Cache-Control
     resp = make_response(content)
@@ -446,7 +445,7 @@ LINK_PATTERN = re.compile(
         (
             (?:https?://|(?<!//)www\.)    # prefix - https:// or www.
             \w[\w_\-]*(?:\.\w[\w_\-]*)*   # host
-            [^<>\s"']*                    # rest of url
+            [^<>\s\"']*                   # rest of url
             (?<![?!.,:*_~);])             # exclude trailing punctuation
             (?=[?!.,:*_~);]?(?:[<\s]|$))  # make sure that we're not followed by " or ', i.e. we're outside of href="...".
         )
@@ -705,7 +704,7 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
             # This doesn't look like a valid HTML tag - escape it
             return f"&lt;{match.group(1)}&gt;"
 
-    html = re.sub(r"<([^<>]+?)>", escape_non_html_brackets, html)
+    html = re.sub(r"<([^<>]+?)>", escape_non_html_brackets, clean_html)
 
     # Parse the HTML using BeautifulSoup
     soup = BeautifulSoup(html, "html.parser")
@@ -744,8 +743,11 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
                 if not tag.attrs.get("href", "").startswith("#"):
                     tag.attrs["rel"] = "nofollow ugc"
                     tag.attrs["target"] = a_target
-                    if furl(tag["href"]).host in instance_domains:
+                    f = furl(tag["href"])
+                    if f.host in instance_domains:
                         tag["href"] = rewrite_href(tag["href"])
+                    elif f.scheme == "javascript":
+                        tag["href"] = ""
                 else:
                     # This is a same-page anchor - a footnote, give unique suffix for href
                     tag.attrs["href"] = tag.attrs.get("href", "") + "-" + fn_string
@@ -760,89 +762,11 @@ def allowlist_html(html: str, a_target="_blank", test_env=False) -> str:
             if tag.name == "table":
                 tag.attrs["class"] = "table"
 
-    code_placeholder = gibberish(10)
-
-    clean_html = str(soup)
-
-    # substitute out the <code> snippets so that they don't inadvertently get formatted
-    code_snippets, clean_html = stash_code_html(clean_html, code_placeholder)
-
-    # avoid returning empty anchors
-    re_empty_anchor = re.compile(
-        r'<a href="(.*?)" rel="nofollow ugc" target="_blank"><\/a>'
-    )
-    clean_html = re_empty_anchor.sub(
-        r'<a href="\1" rel="nofollow ugc" target="_blank">\1</a>', clean_html
-    )
-
-    # replace lemmy's spoiler markdown left in HTML
-    clean_html = clean_html.replace(
-        "<h2>:::</h2>", "<p>:::</p>"
-    )  # this is needed for lemmy.world/c/hardware's sidebar, for some reason.
-    re_spoiler = re.compile(
-        r":{3}\s*?spoiler\s+?(\S.+?)(?:\n|</p>)(.+?)(?:\n|<p>):{3}", re.S
-    )
-    clean_html = re_spoiler.sub(
-        r"<details><summary>\1</summary><p>\2</p></details>", clean_html
-    )
-
-    # replace strikethough markdown left in HTML
-    re_strikethough = re.compile(r"~~(.*)~~")
-    clean_html = re_strikethough.sub(r"<s>\1</s>", clean_html)
-
-    # replace subscript markdown left in HTML
-    re_subscript = re.compile(r"~([^~\r\n\t\f\v ]+)~")
-    clean_html = re_subscript.sub(r"<sub>\1</sub>", clean_html)
-
-    # replace superscript markdown left in HTML
-    re_superscript = re.compile(r"\^([^\^\r\n\t\f\v ]+)\^")
-    clean_html = re_superscript.sub(r"<sup>\1</sup>", clean_html)
-
-    # replace <img src> for mp4 with <video> - treat them like a GIF (autoplay, but initially muted)
-    re_embedded_mp4 = re.compile(r'<img .*?src="(https://.*?\.mp4)".*?/>')
-    clean_html = re_embedded_mp4.sub(
-        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/mp4"></video>',
-        clean_html,
-    )
-
-    # replace <img src> for webm with <video> - treat them like a GIF (autoplay, but initially muted)
-    re_embedded_webm = re.compile(r'<img .*?src="(https://.*?\.webm)".*?/>')
-    clean_html = re_embedded_webm.sub(
-        r'<video class="responsive-video" controls preload="auto" autoplay muted loop playsinline disablepictureinpicture><source src="\1" type="video/webm"></video>',
-        clean_html,
-    )
-
-    # replace <img src> for mp3 with <audio>
-    re_embedded_mp3 = re.compile(r'<img .*?src="(https://.*?\.mp3)".*?/>')
-    clean_html = re_embedded_mp3.sub(
-        r'<audio controls><source src="\1" type="audio/mp3"></audio>', clean_html
-    )
-
-    # replace the 'static' for images hotlinked to fandom sites with 'vignette'
-    re_fandom_hotlink = re.compile(
-        r'<img alt="(.*?)" loading="lazy" src="https://static.wikia.nocookie.net'
-    )
-    clean_html = re_fandom_hotlink.sub(
-        r'<img alt="\1" loading="lazy" src="https://vignette.wikia.nocookie.net',
-        clean_html,
-    )
-
-    # replace ruby markdown like {漢字|かんじ}
-    re_ruby = re.compile(r"\{(.+?)\|(.+?)\}")
-    clean_html = re_ruby.sub(
-        r"<ruby>\1<rp>(</rp><rt>\2</rt><rp>)</rp></ruby>", clean_html
-    )
-
-    # bring back the <code> snippets
-    clean_html = pop_code(
-        code_snippets=code_snippets, text=clean_html, placeholder=code_placeholder
-    )
-
-    return clean_html
+    return str(soup)
 
 
 def escape_non_html_angle_brackets(text: str) -> str:
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
 
@@ -877,20 +801,24 @@ def escape_non_html_angle_brackets(text: str) -> str:
     return text
 
 
-def handle_double_bolds(text: str) -> str:
+def handle_bold_em(text: str) -> str:
     """
     Handles properly assigning <strong> tags to **bolded** words in markdown even if there are **two** of them in the
     same sentence.
     """
 
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
 
     # Step 2: Wrap **bold** sections with <strong></strong>
-    # Regex is slightly modified from markdown2 source code
-    re_bold = re.compile(r"(\*\*)(?=\S)(.+?[*]?)(?<=\S)\1")
+    # First, sub any that are both italics and bold
+    re_em_bold = re.compile(r"(\*\*\*|___)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
+    text = re_em_bold.sub(r"<em><strong>\2</strong></em>", text)
+
+    # Second, sub any that are just bold
+    re_bold = re.compile(r"(\*\*|__)(?=\S)(.+?)(?<=\S)\1", re.S | re.X)
     text = re_bold.sub(r"<strong>\2</strong>", text)
 
     # Step 3: Restore code blocks
@@ -921,7 +849,7 @@ def handle_lemmy_autocomplete(text: str) -> str:
     ...which will be later converted to an instance-local link
     """
 
-    placeholder = gibberish(6)
+    placeholder = gibberish(10)
 
     # Step 1: Extract inline and block code, replacing with placeholders
     code_snippets, text = stash_code_md(text, placeholder)
@@ -962,12 +890,10 @@ def markdown_to_html(
             markdown_text
         )  # To handle situations like https://ani.social/comment/9666667
 
-        markdown_text = handle_double_bolds(
+        markdown_text = handle_bold_em(
             markdown_text
-        )  # To handle bold in two places in a sentence
+        )  # Some preprocessing to better handle bold and italics
         markdown_text = handle_lemmy_autocomplete(markdown_text)
-
-        markdown_text = markdown_text.replace("þ", "th")
 
         try:
             md = markdown2.Markdown(
@@ -978,7 +904,7 @@ def markdown_to_html(
                     "strike": True,
                     "tg-spoiler": True,
                     "link-patterns": [(LINK_PATTERN, r"\1")],
-                    "breaks": {"on_newline": True, "on_backslash": True},
+                    "breaks": {"on_backslash": True, "on_newline": True},
                     "tag-friendly": True,
                     "smarty-pants": True,
                     "enhanced-images": True,
@@ -999,7 +925,7 @@ def markdown_to_html(
                         "strike": True,
                         "tg-spoiler": True,
                         "link-patterns": [(LINK_PATTERN, r"\1")],
-                        "breaks": {"on_newline": True, "on_backslash": True},
+                        "breaks": {"on_backslash": True, "on_newline": True},
                         "tag-friendly": True,
                         "smarty-pants": True,
                         "enhanced-images": True,
@@ -1241,7 +1167,7 @@ def stash_code_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}$"
 
     text = re.sub(r"<code>[\s\S]*?<\/code>", store_code, text)
 
@@ -1253,7 +1179,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_code(match):
         code_snippets.append(match.group(0))
-        return f"{placeholder}{len(code_snippets) - 1}__"
+        return f"{placeholder}{len(code_snippets) - 1}$"
 
     # Fenced code blocks (```...```)
     text = re.sub(r"```[\s\S]*?```", store_code, text)
@@ -1265,7 +1191,7 @@ def stash_code_md(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_code(code_snippets: list, text: str, placeholder: str) -> str:
     for i, code in enumerate(code_snippets):
-        text = text.replace(f"{placeholder}{i}__", code)
+        text = text.replace(f"{placeholder}{i}$", code)
 
     return text
 
@@ -1275,7 +1201,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
     def store_link(match):
         link_snippets.append(match.group(0))
-        return f"{placeholder}{len(link_snippets) - 1}__"
+        return f"{placeholder}{len(link_snippets) - 1}$"
 
     text = re.sub(r"<a href=[\s\S]*?<\/a>", store_link, text)
 
@@ -1284,7 +1210,7 @@ def stash_link_html(text: str, placeholder: str) -> tuple[list, str]:
 
 def pop_link(link_snippets: list, text: str, placeholder: str) -> str:
     for i, link in enumerate(link_snippets):
-        text = text.replace(f"{placeholder}{i}__", link)
+        text = text.replace(f"{placeholder}{i}$", link)
 
     return text
 
@@ -1917,7 +1843,9 @@ def can_downvote(user, community: Community, communities_banned_from_list=None) 
         return False
 
     if community.downvote_accept_mode != DOWNVOTE_ACCEPT_ALL:
-        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
+        if community.downvote_accept_mode == DOWNVOTE_ACCEPT_NONE:
+            return False
+        elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_MEMBERS:
             if not community.is_member(user):
                 return False
         elif community.downvote_accept_mode == DOWNVOTE_ACCEPT_INSTANCE:
@@ -2383,12 +2311,12 @@ def finalize_user_setup(user):
     # Only set AP profile IDs if they haven't been set already
     if user.ap_profile_id is None:
         user.ap_profile_id = (
-            f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}".lower()
+            f"{current_app.config['SERVER_URL']}/u/{user.user_name}".lower()
         )
-        user.ap_public_url = (
-            f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name}"
+        user.ap_public_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name}"
+        user.ap_inbox_url = (
+            f"{current_app.config['SERVER_URL']}/u/{user.user_name.lower()}/inbox"
         )
-        user.ap_inbox_url = f"https://{current_app.config['SERVER_NAME']}/u/{user.user_name.lower()}/inbox"
 
     # find all notifications from this registration and mark them as read
     reg_notifs = Notification.query.filter_by(
@@ -3596,6 +3524,11 @@ def get_deduped_post_ids(
                 "p.from_bot is false AND p.nsfw is false AND p.nsfl is false AND p.deleted is false AND p.status > 0 "
             )
     else:
+        if private_community_ids := community_membership_private(current_user.id):
+            post_id_where.append(
+                "(c.private is false OR c.id IN :private_community_ids) "
+            )
+            params["private_community_ids"] = tuple(private_community_ids)
         if current_user.ignore_bots == 1:
             post_id_where.append("p.from_bot is false ")
         if current_user.hide_nsfl == 1:
@@ -3685,6 +3618,8 @@ def get_deduped_post_ids(
     elif sort == "active":
         post_id_where.append("p.reply_count > 0 ")
         post_id_sort = "ORDER BY p.last_active DESC"
+    # Filter out posts stickied to the instance, they are handled separately
+    post_id_where.append("p.instance_sticky is false ")
     final_post_id_sql = (
         f"{post_id_sql} WHERE {' AND '.join(post_id_where)}\n{post_id_sort}\nLIMIT 1000"
     )
@@ -3716,6 +3651,102 @@ def post_ids_to_models(post_ids: List[int], sort: str):
     elif sort == "active":
         posts = posts.order_by(desc(Post.last_active))
     return posts
+
+
+@cache.memoize(timeout=3600)
+def instance_sticky_post_ids():
+    post_ids = db.session.execute(
+        text(
+            'SELECT id FROM "post" WHERE instance_sticky = :sticky AND deleted = :deleted AND status > 0'
+        ),
+        {"sticky": True, "deleted": False},
+    ).all()
+    post_ids = [post_id[0] for post_id in post_ids]
+    return post_ids
+
+
+@cache.memoize(timeout=3600)
+def instance_sticky_posts(sort: str):
+    posts = Post.query.filter(
+        Post.instance_sticky == True, Post.deleted == False, Post.status > 0
+    )
+    if sort == "" or sort == "hot":
+        posts = posts.order_by(desc(Post.ranking)).order_by(desc(Post.posted_at))
+    elif sort == "scaled":
+        posts = (
+            posts.order_by(desc(Post.ranking_scaled))
+            .order_by(desc(Post.ranking))
+            .order_by(desc(Post.posted_at))
+        )
+    elif sort.startswith("top"):
+        posts = posts.order_by(desc(Post.up_votes - Post.down_votes))
+    elif sort == "new":
+        posts = posts.order_by(desc(Post.posted_at))
+    elif sort == "old":
+        posts = posts.order_by(asc(Post.posted_at))
+    elif sort == "active":
+        posts = posts.order_by(desc(Post.last_active))
+    return posts.all()
+
+
+def get_instance_stickies(community_ids: List[int], sort: str):
+    posts = instance_sticky_posts(sort=sort)
+    visible_posts = []
+    if len(community_ids) == 1 and community_ids[0] < 0:
+        all_communities = True
+    else:
+        all_communities = False
+
+    # Check each post in turn and only return list of posts that should be displayed
+    if current_user.is_anonymous:
+        for post in posts:
+            # Only show NSFW/NSFL to anon users if content warning enabled
+            if not current_app.config["CONTENT_WARNING"]:
+                if post.nsfw or post.nsfl:
+                    continue
+            # Community not in main feed view filter
+            if post.community_id not in community_ids and not all_communities:
+                continue
+
+            # Post should be visible
+            visible_posts.append(post)
+    else:
+        hidden_post_ids = db.session.execute(
+            text('SELECT hidden_post_id FROM "hidden_posts" WHERE user_id = :user_id'),
+            {"user_id": current_user.id},
+        ).all()
+        hidden_post_ids = [post_id[0] for post_id in hidden_post_ids]
+        if current_user.hide_read_posts:
+            read_post_ids = db.session.execute(
+                text('SELECT read_post_id FROM "read_posts" WHERE user_id = :user_id'),
+                {"user_id": current_user.id},
+            ).all()
+            read_post_ids = [read_post_id[0] for read_post_id in read_post_ids]
+        else:
+            read_post_ids = []
+
+        for post in posts:
+            # All the different reasons a post might be filtered out
+            # Community not in main feed view filter
+            if post.community_id not in community_ids and not all_communities:
+                continue
+            # User hides NSFL posts
+            if current_user.hide_nsfl == 1 and post.nsfl:
+                continue
+            # User hides NSFW posts
+            if current_user.hide_nsfw == 1 and post.nsfw:
+                continue
+            # User has marked post as read and hides read posts
+            if post.id in read_post_ids:
+                continue
+            # User has hidden the post
+            if post.id in hidden_post_ids:
+                continue
+
+            # We made it past all the filters, this post should be displayed
+            visible_posts.append(post)
+
+    return visible_posts
 
 
 def total_comments_on_post_and_cross_posts(post_id):
@@ -4716,6 +4747,21 @@ def rewrite_href(url: str) -> str:
     return url
 
 
+@cache.memoize(timeout=600)
+def user_pronouns() -> defaultdict:
+    result = defaultdict(str)
+    pronouns = db.session.query(UserExtraField).filter(
+        func.lower(UserExtraField.label) == "pronouns"
+    )
+    for pronoun in pronouns:
+        if len(pronoun.text) <= 22:
+            if "<" in pronoun.text and ">" in pronoun.text:
+                result[pronoun.user_id] = html_to_text(pronoun.text)
+            else:
+                result[pronoun.user_id] = pronoun.text
+    return result
+
+
 def expand_hex_color(text: str) -> str:
     new_text = "#" + text[1] * 2 + text[2] * 2 + text[3] * 2
     return new_text
@@ -4762,6 +4808,21 @@ def save_new_gif(new_frames, old_gif_information, new_path):
     )
 
 
+@cache.memoize(timeout=100)
+def community_membership_private(user_id: int) -> List[int]:
+    community_ids = db.session.execute(
+        text("""SELECT c.id FROM "community" as c
+                                                INNER JOIN community_member cm on c.id = cm.community_id
+                                                WHERE c.private is true AND cm.user_id = :user_id AND cm.is_banned is false"""),
+        {"user_id": user_id},
+    ).scalars()
+    return list(community_ids)
+
+
+def intlist_to_strlist(input: List[int]) -> List[str]:
+    return [str(x) for x in input]
+
+
 def human_filesize(size_bytes):
     """Convert bytes to human-readable string (e.g. 1.2 MB)."""
     if size_bytes == 0:
@@ -4774,7 +4835,31 @@ def human_filesize(size_bytes):
     return f"{size_bytes:.1f} {units[i]}"
 
 
-# Private Registration Utility Functions
+def compaction_level():
+    compact_level = request.cookies.get("compact_level", None)
+    if current_app.config["HTTP_PROTOCOL"] == "mixed" and compact_level is None:
+        compact_level = "compact-min compact-max"
+    return compact_level
+
+
+def debug_checkpoint(name: str):
+    """
+    record a named debug checkpoint.
+    returns (timestamp, delta_since_last_checkpoint)
+    use in jinja like this: {{ dbg_checkpoint('some label') }}
+    """
+    now = time.time()
+    if not hasattr(g, "_debug_checkpoints"):
+        g._debug_checkpoints = []
+
+    last_time = g._debug_checkpoints[-1][1] if g._debug_checkpoints else None
+    delta = now - last_time if last_time else 0
+
+    g._debug_checkpoints.append((name, now))
+    return now, delta
+
+
+# Private Registration Utility Functions (fork-specific)
 def is_private_registration_enabled():
     """Check if private registration feature is enabled"""
     # Check environment variable first, then fall back to database setting

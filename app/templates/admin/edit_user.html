@@ -4,61 +4,64 @@
     {% extends "base.html" -%}
 {% endif -%}
 {% from 'bootstrap5/form.html' import render_field %}
-{% set active_child = "admin_users" %}
+{% set active_child = 'admin_users' %}
+
 {% block app_content %}
-    <div class="row">
-        <div class="col col-login mx-auto">
-            <h1>{{ _('Edit %(user_name)s (%(display_name)s)', user_name=user.user_name, display_name=user.display_name() ) }}</h1>
-            <form method="post" enctype="multipart/form-data" id="add_local_user_form">
-                {{ form.csrf_token() }}
-                {{ user.about_html|safe if user.about_html }}
-                <p>Created: {{ arrow.get(user.created).humanize(locale=locale) }}</p>
-                <p>Last active: {{ arrow.get(user.last_seen).humanize(locale=locale) }}</p>
+<div class="row">
+    <div class="col col-login mx-auto">
+        <h1>{{ _('Edit %(user_name)s (%(display_name)s)', user_name=user.user_name, display_name=user.display_name()) }}</h1>
+        <form method="post" enctype="multipart/form-data" id="add_local_user_form">
+            {{ form.csrf_token() }}
+            {{ user.about_html|safe if user.about_html }}
+            <p>Created: {{ arrow.get(user.created).humanize(locale=locale) }}</p>
+            <p>Last active: {{ arrow.get(user.last_seen).humanize(locale=locale) }}</p>
+            <p>Email: <a href="mailto:{{ user.email }}">{{ user.email }}</a></p>
+            <p>Matrix: {{ user.matrix_user_id if user.matrix_user_id }}</p>
+            {% if user.avatar_id %}
+                <img class="user_icon_big rounded-circle" src="{{ user.avatar_image() }}" width="120" height="120" />
+            {% endif %}
+            {% if user.cover_id %}
+                <a href="{{ user.cover_image() }}"><img class="user_icon_big" src="{{ user.cover_image() }}" style="width: 300px; height: auto;" /></a>
+            {% endif %}
+            {{ render_field(form.bot) }}
+            {{ render_field(form.bot_override) }}
+            {{ render_field(form.suppress_crossposts) }}
+            {{ render_field(form.verified) }}
+            {% if not user.verified -%}
                 <p>
-                    Email: <a href="mailto:{{ user.email }}">{{ user.email }}</a>
-                </p>
-                <p>Matrix: {{ user.matrix_user_id if user.matrix_user_id }}</p>
-                {% if user.avatar_id %}
-                    <img class="user_icon_big rounded-circle"
-                         src="{{ user.avatar_image() }}"
-                         width="120"
-                         height="120" />
-                {% endif %}
-                {% if user.cover_id %}
-                    <a href="{{ user.cover_image() }}">
-                        <img class="user_icon_big"
-                             src="{{ user.cover_image() }}"
-                             style="width: 300px;
-                                    height: auto" />
+                    <a class="btn btn-primary" href="#" role="button"
+                            hx-post="{{ url_for('admin.admin_user_resend_email', user_id=user.id) }}"
+                            hx-target="this"
+                            hx-swap="outerHTML">
+                        {{ _('Resend verification email') }}
                     </a>
-                {% endif %}
-                {{ render_field(form.bot) }}
-                {{ render_field(form.bot_override) }}
-                {{ render_field(form.suppress_crossposts) }}
-                {{ render_field(form.verified) }}
-                {{ render_field(form.banned) }}
-                {{ render_field(form.ban_posts) }}
-                {{ render_field(form.ban_comments) }}
-                <p>receive newsletter: {{ user.newsletter }}</p>
-                {{ render_field(form.hide_nsfw) }}
-                {{ render_field(form.hide_nsfl) }}
-                <p>searchable: {{ user.searchable }}</p>
-                <p>indexable: {{ user.indexable }}</p>
-                {{ render_field(form.role) }}
-                {{ render_field(form.remove_avatar) }}
-                {{ render_field(form.remove_banner) }}
-                {{ render_field(form.submit) }}
-            </form>
-            <p class="mt-4">
-                {% if not user.is_local() %}
-                    <a href="{{ user.public_url() }}" class="btn btn-primary">View original profile</a>
-                {% endif %}
-            </p>
-        </div>
+                </p>
+            {% endif -%}
+            {{ render_field(form.banned) }}
+            {{ render_field(form.ban_posts) }}
+            {{ render_field(form.ban_comments) }}
+            <p>receive newsletter: {{ user.newsletter }}</p>
+            {{ render_field(form.hide_nsfw) }}
+            {{ render_field(form.hide_nsfl) }}
+            <p>searchable: {{ user.searchable }}</p>
+            <p>indexable: {{ user.indexable }}</p>
+            {{ render_field(form.role) }}
+            {{ render_field(form.remove_avatar) }}
+            {{ render_field(form.remove_banner) }}
+            {{ render_field(form.submit) }}
+        </form>
+        <p class="mt-4">
+            {% if not user.is_local() %}
+                <a href="{{ user.public_url() }}" class="btn btn-primary">View original profile</a>
+            {% endif %}
+        </p>
     </div>
-    <hr />
-    <div class="row">
-        <div class="col">{% include 'admin/_nav.html' %}</div>
+</div>
+<hr />
+<div class="row">
+    <div class="col">
+        {% include 'admin/_nav.html' %}
     </div>
-    <hr />
+</div>
+<hr />
 {% endblock %}
