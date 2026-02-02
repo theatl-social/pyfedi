@@ -22,6 +22,11 @@ errorlog = "-"
 max_requests = 2000
 max_requests_jitter = 50
 
+# Timeout configuration - kill workers that hang
+timeout = 30  # Kill worker if request takes > 30 seconds
+graceful_timeout = 30  # Grace period for graceful shutdown
+keepalive = 5  # Seconds to wait for requests on a keep-alive connection
+
 
 def post_fork(server, worker):
     """

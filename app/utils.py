@@ -4277,7 +4277,7 @@ def render_from_tpl(tpl: str) -> str:
     return pattern.sub(_sub, tpl)
 
 
-@lru_cache(maxsize=None)
+@lru_cache(maxsize=8)  # Small cache - only one unique result expected
 def get_timezones():
     """
     returns an OrderedDict of timezones:
