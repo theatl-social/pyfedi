@@ -75,35 +75,38 @@ def process_upload(image_file, destination="posts", user_id=None):
         import pillow_avif  # NOQA
 
     if not final_place.endswith(".svg") and not final_place.endswith(".gif"):
-        img = Image.open(final_place)
-        if "." + img.format.lower() in allowed_extensions:
-            img = ImageOps.exif_transpose(img)
-            img = img.convert(
-                "RGB"
-                if (image_format == "JPEG" or final_ext in [".jpg", ".jpeg"])
-                else "RGBA"
-            )
-            img.thumbnail(
-                (image_max_dimension, image_max_dimension), resample=Image.LANCZOS
-            )
+        img = None
+        try:
+            img = Image.open(final_place)
+            if "." + img.format.lower() in allowed_extensions:
+                img = ImageOps.exif_transpose(img)
+                img = img.convert(
+                    "RGB"
+                    if (image_format == "JPEG" or final_ext in [".jpg", ".jpeg"])
+                    else "RGBA"
+                )
+                img.thumbnail(
+                    (image_max_dimension, image_max_dimension), resample=Image.LANCZOS
+                )
 
-            kwargs = {}
-            if image_format:
-                kwargs["format"] = image_format.upper()
-                final_ext = "." + image_format.lower()
-                final_place = os.path.splitext(final_place)[0] + final_ext
-            if image_quality:
-                kwargs["quality"] = int(image_quality)
+                kwargs = {}
+                if image_format:
+                    kwargs["format"] = image_format.upper()
+                    final_ext = "." + image_format.lower()
+                    final_place = os.path.splitext(final_place)[0] + final_ext
+                if image_quality:
+                    kwargs["quality"] = int(image_quality)
 
-            img.save(final_place, optimize=True, **kwargs)
+                img.save(final_place, optimize=True, **kwargs)
 
-            file_size = os.path.getsize(final_place)
+                file_size = os.path.getsize(final_place)
 
-            url = (
-                f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
-            )
-        else:
-            raise Exception("filetype not allowed")
+                url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
+            else:
+                raise Exception("filetype not allowed")
+        finally:
+            if img is not None:
+                img.close()  # Explicitly release image memory
     else:
         url = f"{current_app.config['SERVER_URL']}/{final_place.replace('app/', '')}"
 

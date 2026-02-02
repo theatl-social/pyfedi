@@ -84,7 +84,14 @@ limiter = Limiter(
     else Config.CACHE_REDIS_URL,
 )
 celery = Celery(__name__, broker=Config.CELERY_BROKER_URL)
-httpx_client = httpx.Client(http2=True)
+httpx_client = httpx.Client(
+    http2=True,
+    limits=httpx.Limits(
+        max_connections=100,  # Max total connections
+        max_keepalive_connections=20,  # Max idle connections to keep alive
+        keepalive_expiry=30.0,  # Close idle connections after 30s
+    ),
+)
 oauth = OAuth()
 redis_client = None  # Will be initialized in create_app()
 rest_api = Api()

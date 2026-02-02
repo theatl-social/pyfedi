@@ -11,6 +11,12 @@ if not app.debug:
 
 app.app_context().push()
 
+# Configure Celery worker memory management
+celery.conf.update(
+    worker_max_tasks_per_child=1000,  # Restart worker after 1000 tasks to prevent memory leaks
+    worker_max_memory_per_child=512000,  # Restart worker if memory exceeds 512MB (in KB)
+)
+
 from app.shared.tasks import maintenance
 from app.shared.tasks import (
     follows,
