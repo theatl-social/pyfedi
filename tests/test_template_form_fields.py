@@ -52,11 +52,21 @@ def extract_form_field_references(template_content: str) -> set[str]:
 
 
 def get_form_field_names(form_class) -> set[str]:
-    """Get all field names from a form class instance."""
-    form = form_class()
-    # Get field names from the form instance
-    field_names = {field.name for field in form}
-    # Also add csrf_token which is always present
+    """Get all field names from a form class without instantiating it.
+
+    This avoids needing Flask app context (which forms need due to lazy_gettext).
+    """
+    # Inspect class attributes to find field definitions
+    field_names = set()
+    for name in dir(form_class):
+        if name.startswith('_'):
+            continue
+        attr = getattr(form_class, name, None)
+        # Check if it's a WTForms field (UnboundField at class level)
+        if hasattr(attr, 'creation_counter'):  # WTForms UnboundField marker
+            field_names.add(name)
+
+    # Also add csrf_token which is always present in FlaskForm
     field_names.add("csrf_token")
     return field_names
 
@@ -96,8 +106,7 @@ class TestTemplateFormFields:
         render_field_pattern = r"render_field\(form\.(\w+)\)"
         rendered_fields = set(re.findall(render_field_pattern, template_content))
 
-        form = SiteProfileForm()
-        form_fields = {field.name for field in form}
+        form_fields = get_form_field_names(SiteProfileForm)
 
         missing_fields = rendered_fields - form_fields
 
