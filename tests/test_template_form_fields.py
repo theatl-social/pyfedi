@@ -42,11 +42,12 @@ def extract_form_field_references(template_content: str) -> set[str]:
     - form.field_name.errors
     """
     # Match form.XXX where XXX is a word character sequence
-    pattern = r"form\.(\w+)"
+    # Use word boundary to avoid matching "ban_lists_form.field" as "form.field"
+    pattern = r"\bform\.(\w+)"
     matches = set(re.findall(pattern, template_content))
 
-    # Filter out method calls that aren't field references
-    non_field_attrs = {"hidden_tag", "csrf_token", "validate_on_submit", "errors"}
+    # Filter out method calls and template imports that aren't field references
+    non_field_attrs = {"hidden_tag", "csrf_token", "validate_on_submit", "errors", "html"}
 
     return matches - non_field_attrs
 

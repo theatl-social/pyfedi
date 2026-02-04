@@ -49,6 +49,7 @@ class SiteProfileForm(FlaskForm):
     announcement = TextAreaField(_l("Announcement at top of home page"))
     legal_information = TextAreaField(_l("Legal information"))
     tos_url = StringField(_l("Terms of service url"), validators=[Length(max=255)])
+    privacy_url = StringField(_l("Privacy policy url"), validators=[Length(max=255)])
     contact_email = EmailField(
         _l("General instance contact email address"),
         validators=[DataRequired(), Length(min=5, max=255)],
