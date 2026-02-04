@@ -13,13 +13,8 @@ from pathlib import Path
 
 import pytest
 
-# Form class imports
-from app.admin.forms import (
-    SiteProfileForm,
-    SiteMiscForm,
-    FederationForm,
-    ReportsForm,
-)
+# Form class imports - only import forms we're actually testing
+from app.admin.forms import SiteProfileForm, SiteMiscForm, FederationForm
 from app.auth.forms import LoginForm, RegistrationForm
 from app.community.forms import AddCommunityForm
 
@@ -30,7 +25,6 @@ TEMPLATE_FORM_MAP = {
     "admin/site.html": SiteProfileForm,
     "admin/misc.html": SiteMiscForm,
     "admin/federation.html": FederationForm,
-    "admin/reports.html": ReportsForm,
     "auth/login.html": LoginForm,
     "auth/register.html": RegistrationForm,
     "community/add_community.html": AddCommunityForm,
