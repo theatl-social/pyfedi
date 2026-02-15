@@ -40,7 +40,7 @@ from flask import current_app, json, redirect, url_for, request, make_response, 
 from flask_babel import _, lazy_gettext as _l
 from flask_login import current_user, logout_user
 from flask_wtf.csrf import validate_csrf
-from sqlalchemy import text, or_, desc, asc, event, select, func
+from sqlalchemy import text, or_, desc, asc, event, select, func, update
 from sqlalchemy.orm import Session
 from wtforms.fields import SelectMultipleField, StringField
 from wtforms.widgets import ListWidget, CheckboxInput, TextInput
@@ -1937,9 +1937,17 @@ def finalize_user_setup(user):
         user.ap_inbox_url = f"{current_app.config['SERVER_URL']}/u/{user.user_name.lower()}/inbox"
 
     # find all notifications from this registration and mark them as read
-    reg_notifs = Notification.query.filter_by(notif_type=NOTIF_REGISTRATION, author_id=user.id)
-    for rn in reg_notifs:
-        rn.read = True
+    unread_notification_users = db.session.scalars(
+        update(Notification)
+            .where(Notification.notif_type == NOTIF_REGISTRATION, Notification.author_id == user.id)
+            .values({Notification.read: True})
+            .returning(Notification.user_id)
+    ).all()
+    db.session.execute(
+        update(User)
+            .where(User.id.in_(unread_notification_users))
+            .values({User.unread_notifications: User.unread_notifications - 1})
+    )
 
     db.session.commit()
 
