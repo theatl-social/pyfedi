@@ -102,6 +102,10 @@ class LanguageView(DefaultSchema):
 
 class Site(DefaultSchema):
     actor_id = fields.Url(required=True, metadata={"example": "https://piefed.social"})
+    announcement_md = fields.String(
+        metadata={"description": "The banner at the top of the home page", "format": "markdown"})
+    announcement = fields.String(
+        metadata={"description": "The banner at the top of the home page", "format": "html"})
     name = fields.String(required=True)
     all_languages = fields.List(fields.Nested(LanguageView))
     description = fields.String()
