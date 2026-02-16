@@ -1263,7 +1263,7 @@ def cached_modlist_for_user(user):
 @cache.memoize(timeout=3000)
 def users_total():
     return db.session.execute(text(
-        'SELECT COUNT(id) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
+        'SELECT COUNT(*) as c FROM "user" WHERE ap_id is null AND verified is true AND banned is false AND deleted is false')).scalar()
 
 
 def moderating_communities_view(user):
