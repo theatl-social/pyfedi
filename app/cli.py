@@ -141,7 +141,7 @@ def register(app):
             db.session.add(Settings(name='federation', value=json.dumps(True)))
             banned_instances = ['anonib.al', 'lemmygrad.ml', 'gab.com', 'rqd2.net', 'exploding-heads.com',
                                 'hexbear.net', 'hilariouschaos.com',
-                                'threads.net', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
+                                'threads.com', 'noauthority.social', 'pieville.net', 'links.hackliberty.org',
                                 'poa.st', 'freespeechextremist.com', 'bae.st', 'nicecrew.digital',
                                 'detroitriotcity.com', 'gregtech.eu',
                                 'pawoo.net', 'shitposter.club', 'spinster.xyz', 'catgirl.life', 'gameliberty.club',
