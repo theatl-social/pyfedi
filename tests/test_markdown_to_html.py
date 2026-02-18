@@ -73,6 +73,11 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         self.assertTrue("&lt;Book Title and Volume&gt;" in result)
 
+        markdown = "This is an emoticon with an angled bracket :<\n\nThis is a paragraph\n\n> This is a block quote."
+        correct_html = '<p>This is an emoticon with an angled bracket :&lt;</p>\n<p>This is a paragraph</p>\n<blockquote>\n<p>This is a block quote.</p>\n</blockquote>\n'
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        self.assertEqual(correct_html, result)
+
     def test_gt_lt_in_code(self):
         """Test usage of angle brackets in code block"""
         markdown = "Normal text `code block > something else` normal text again"

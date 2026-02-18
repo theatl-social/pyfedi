@@ -511,8 +511,9 @@ def escape_non_html_angle_brackets(text: str) -> str:
             return match.group(0)
         else:
             return f"&lt;{match.group(1)}&gt;"
-
-    text = re.sub(r'<([^<>]+?)>', escape_tag, text)
+    
+    bracket_regex = re.compile(r'<([^<>\n]+?)>', re.M)
+    text = re.sub(bracket_regex, escape_tag, text)
 
     # Step 3: Restore code blocks
     text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
