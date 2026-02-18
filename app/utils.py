@@ -294,7 +294,7 @@ def mime_type_using_head(url):
 
 
 allowed_tags = ['p', 'strong', 'a', 'ul', 'ol', 'li', 'em', 'blockquote', 'cite', 'br', 'h1', 'h2', 'h3', 'h4', 'h5',
-                'h6', 'pre', 'div',
+                'h6', 'pre', 'div', 'video', 'source',
                 'code', 'img', 'details', 'summary', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'hr', 'span', 'small',
                 'sub', 'sup',
                 's', 'tg-spoiler', 'ruby', 'rt', 'rp']
@@ -455,6 +455,13 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
             # Add image-specific attributes for enhanced-images markdown extra
             if tag.name == 'img':
                 allowed_attrs.extend(['width', 'height', 'align', 'title', 'data-enhanced-img'])
+            
+            if tag.name == 'video':
+                allowed_attrs.extend(['controls', 'loop', 'preload', 'autoplay', 'muted', 'playsinline',
+                                      'disablepictureinpicture'])
+            
+            if tag.name == 'source':
+                allowed_attrs.extend(['type'])
 
             for attr in list(tag.attrs):
                 if attr not in allowed_attrs:
@@ -666,6 +673,79 @@ def handle_spoiler_spacing(text: str) -> str:
     return text
 
 
+def handle_video_embeds(text: str) -> str:
+    """
+    Takes markdown video embedding format and turns it into html.
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_md(text, placeholder)
+
+    # Step 2: Function to handle matched regex groups
+    def sub_video_markdown(match):
+        alt_text = match.group(1)
+        link = match.group(2)
+
+        if is_video_url(link):
+            output = ('<video class="responsive-video" muted controls loop ' + 
+                      'playsinline disablepictureinpicture" preload="metadata">')
+            download_text = _('You can download a copy of the file instead.')
+            if link.endswith('.webm'):
+                output += f'<source type="video/webm" src="{link}"> '
+            elif link.endswith('.mp4'):
+                output += f'<source type="video/mp4" src="{link}"> '
+            
+            output += _('Your browser does not support playing HTML5 video.')
+            output += " " + f'<a href="{link}" download>' + download_text + '</a>'
+            output += " " + _("Here is a description of the content: %s" % alt_text)
+            output += '</video>'
+            
+            return output
+        else:
+            # return things unchanged (probably an image link)
+            return match.group(0)
+
+    # Step 3: Do the regex matching and substitutions
+    img_md = re.compile(r'!\[(.*?)\]\((\S*?)\)', re.M)
+    text = re.sub(img_md, sub_video_markdown, text)
+
+    # Step 4: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
+def make_quotes_straight(text: str) -> str:
+    """
+    Don't do the stylized opening and ending quotation marks as part of the smartypants extra inside angle brackets.
+    It breaks too many things.
+    """
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: function to do replacements
+    def replace_quotes_in_brackets(match):
+        left_dquot = match.group(0).replace('&#8220;', '"')
+        right_dquot = left_dquot.replace('&#8221;', '"')
+        left_squot = right_dquot.replace("&#8216;", "'")
+        right_squot = left_squot.replace("&#8217;", "'")
+
+        return right_squot
+
+    # Step 3: regex stuff
+    potential_html = re.compile(r'<([^<>\n]+?)>', re.M)
+    text = re.sub(potential_html, replace_quotes_in_brackets, text)
+
+    # Step 4: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
@@ -679,6 +759,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
         markdown_text = handle_lemmy_autocomplete(markdown_text)
         markdown_text = handle_naked_spoilers(markdown_text)
         markdown_text = handle_spoiler_spacing(markdown_text)
+        markdown_text = handle_video_embeds(markdown_text)
 
         try:
             md = markdown2.Markdown(extras={'middle-word-em': False,
@@ -719,6 +800,7 @@ def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_targ
             raw_html = escape_img(raw_html)
         
         raw_html = handle_lemmy_spoilers(raw_html)
+        raw_html = make_quotes_straight(raw_html)
 
         return allowlist_html(raw_html, a_target=a_target if anchors_new_tab else '', test_env=test_env)
     else:
