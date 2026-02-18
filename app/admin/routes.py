@@ -2245,3 +2245,26 @@ def masquerade(user_id):
         login_user(user, False)
         return redirect('/')
     return ''
+
+
+@bp.route('/perf_test', methods=['POST'])
+@login_required
+@permission_required('change instance settings')
+def perf_test():
+    import time
+
+    N = 100_000_000
+
+    start = time.perf_counter()
+
+    x = 0
+    for i in range(N):
+        x += i * i
+
+    elapsed = time.perf_counter() - start
+
+    result = []
+    #result.append(f"Result: {x}")
+    result.append(f"Time: {elapsed:.3f} seconds")
+    result.append(f"Iterations per second: {N / elapsed:,.0f}")
+    return "<br>".join(result)

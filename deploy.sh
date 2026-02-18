@@ -3,7 +3,7 @@
 sudo systemctl stop celery.service
 sudo systemctl stop pyfedi.service
 sudo systemctl stop piefed-notifs.service
-git pull
+git pull || exit 1
 source venv/bin/activate
 export FLASK_APP=pyfedi.py
 pip install -r requirements.txt

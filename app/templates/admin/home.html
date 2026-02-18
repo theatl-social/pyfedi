@@ -99,4 +99,14 @@
         {% endif %}
     </div>
 </div>
+<div class="row">
+    <div class="col mt-4">
+        <h3>{{ _('CPU speed test') }}</h3>
+        <p>
+            <button class="btn btn-primary" hx-post="{{ url_for('admin.perf_test') }}" hx-target="#perf_test_result" hx-indicator="#perf-spinner">{{ _('Run test') }}</button>
+            <span id="perf-spinner" class="htmx-indicator spinner-border spinner-border-sm ms-2" role="status" aria-hidden="true"></span>
+        </p>
+        <p><div id="perf_test_result"></div></p>
+    </div>
+</div>
 {% endblock %}
