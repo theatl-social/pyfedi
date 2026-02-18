@@ -2179,10 +2179,15 @@ def parse_page(page_url):
         "og:description"
     ]
 
+    #todo: do a head request head_request() and check content-type and size before proceeding
+
     # read the html from the page
     response = get_request(page_url)
 
     if response.status_code != 200:
+        return False
+
+    if 'text/html' not in response.headers.get('Content-Type', ''):
         return False
 
     # set up beautiful soup

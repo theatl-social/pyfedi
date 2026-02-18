@@ -390,6 +390,8 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
             post.type = POST_TYPE_IMAGE
         elif post.url.startswith('https://loops.video/'):
             post.type = POST_TYPE_VIDEO
+        elif is_video_url(post.url):
+            post.type = POST_TYPE_VIDEO
 
     if scheduled_for:
         date_with_tz = post.scheduled_for.replace(tzinfo=ZoneInfo(post.timezone))
@@ -617,7 +619,7 @@ def edit_post(input, post: Post, type, src, user=None, auth=None, uploaded_file=
 
             post.url = embed_url
 
-            if url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
+            if is_video_url(url) or url.endswith('.mp4') or url.endswith('.webm') or is_video_hosting_site(embed_url):
                 post.type = POST_TYPE_VIDEO
             else:
                 post.type = POST_TYPE_LINK
