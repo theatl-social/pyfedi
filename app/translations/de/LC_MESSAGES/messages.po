@@ -1,18 +1,18 @@
-
 msgid ""
 msgstr ""
-"Project-Id-Version:  piefed\n"
+"Project-Id-Version: piefed\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-02-10 11:32+1300\n"
-"PO-Revision-Date: 2026-02-07 16:07+0000\n"
+"PO-Revision-Date: 2026-02-12 17:11+0000\n"
 "Last-Translator: squirrel <squirrel@kobel.fyi>\n"
+"Language-Team: German <http://translate.piefed.social/projects/piefed/"
+"main-web-app/de/>\n"
 "Language: de\n"
-"Language-Team: German <http://translate.piefed.social/projects/piefed"
-"/main-web-app/de/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -338,7 +338,7 @@ msgstr "Nein"
 
 #: app/admin/forms.py:37
 msgid "User ID 1"
-msgstr "Benutzer-ID 1"
+msgstr "Konto-ID 1"
 
 #: app/admin/forms.py:38
 msgid "Admins and staff"
@@ -346,7 +346,7 @@ msgstr "Administratoren und Mitarbeiter"
 
 #: app/admin/forms.py:39
 msgid "Any user"
-msgstr "Jeder Benutzer"
+msgstr "Jede Nutzer*in"
 
 #: app/admin/forms.py:41
 msgid "Allow video file uploads"
@@ -470,6 +470,8 @@ msgid ""
 "Report comments containing an em dash (—) from newly created users - "
 "likely spam / AI."
 msgstr ""
+"Melde Kommentare von neu erstellten Konten die einen Geviertstrich (—) "
+"enthalten - wahrscheinlich Spam / KI."
 
 #: app/admin/forms.py:72
 msgid "Log ActivityPub JSON for debugging"
@@ -1157,9 +1159,8 @@ msgid "Category"
 msgstr "Kategorie"
 
 #: app/admin/routes.py:65
-#, fuzzy
 msgid "Storage used"
-msgstr "Konto moderieren"
+msgstr "Genutzter Speicherplatz"
 
 #: app/admin/routes.py:220 app/admin/routes.py:252 app/admin/routes.py:294
 #: app/feed/routes.py:238
@@ -1242,7 +1243,7 @@ msgstr ""
 
 #: app/admin/routes.py:1088
 msgid "ActivityPub Log"
-msgstr "ActivityPub Protokoll"
+msgstr "ActivityPub-Log"
 
 #: app/admin/routes.py:1117 app/templates/admin/activity_json.html:13
 msgid "Activity JSON"
@@ -1580,7 +1581,6 @@ msgstr ""
 "einverstanden (siehe Links im Footer)"
 
 #: app/auth/forms.py:36
-#, fuzzy
 msgid "Enter captcha code below"
 msgstr "Captcha-Code eingeben"
 
@@ -2019,12 +2019,11 @@ msgstr "Anmeldeprozess"
 
 #: app/community/forms.py:43
 msgid "Announce this community to newcommunities@lemmy.world"
-msgstr ""
+msgstr "Diese Community in newcommunities@lemmy.world ankündigen"
 
 #: app/community/forms.py:44
-#, fuzzy
 msgid "Question & answer community"
-msgstr "Zu einer anderen Community verschieben"
+msgstr "Frage & Antwort Community"
 
 #: app/community/forms.py:47
 msgid "Create"
@@ -2579,6 +2578,8 @@ msgid ""
 "Accepted address formats: !community@server.name or "
 "https://server.name/{c|m}/community."
 msgstr ""
+"Akzeptierte Adressformate: !community@server.name oder https://server.name/c/"
+"community."
 
 #: app/community/routes.py:196
 msgid ""
@@ -2586,6 +2587,8 @@ msgid ""
 "href=\"https://lemmyverse.net/communities\">Lemmyverse.net</a> to find "
 "some."
 msgstr ""
+"Suche auf <a href=\"https://lemmyverse.net/communities\">Lemmyverse.net</a> "
+"um welche zu finden."
 
 #: app/community/routes.py:200 app/community/routes.py:2518
 msgid "Community not found."
@@ -2993,20 +2996,17 @@ msgid "Parent feed"
 msgstr "Übergeordneter Feed"
 
 #: app/feed/forms.py:17 app/feed/forms.py:69
-#, fuzzy
 msgid "Show posts from child feeds"
-msgstr "Zeige Beiträge aus Unter-Themen"
+msgstr "Zeige Beiträge aus untergeordneten Feeds"
 
 #: app/feed/forms.py:23 app/feed/forms.py:75
 #: app/templates/user/user_feeds.html:23
-#, fuzzy
 msgid "Public"
-msgstr "Veröffentlichen"
+msgstr "Öffentlich"
 
 #: app/feed/forms.py:24 app/feed/forms.py:76
-#, fuzzy
 msgid "Add to main menu"
-msgstr "Domainname"
+msgstr "Zum Hauptmenü hinzufügen"
 
 #: app/feed/forms.py:57 app/feed/forms.py:97
 msgid ""
@@ -3037,6 +3037,8 @@ msgid ""
 "Accepted address formats: ~feedname@server.name or "
 "https://server.name/f/feedname."
 msgstr ""
+"Akzeptierte Adressformate: ~feedname@server.name oder https://server.name/f/"
+"feedname."
 
 #: app/feed/routes.py:145 app/feed/routes.py:1119
 msgid "Feed not found."
@@ -3306,10 +3308,9 @@ msgid "Vote has been cast."
 msgstr "Stimme wurde abgegeben."
 
 #: app/post/routes.py:646
-#, fuzzy
 msgid "This comment has been deleted and is only visible to staff and admins."
 msgstr ""
-"Dieser Beitrag wurde gelöscht und ist nur für Mitarbeitende und Admins "
+"Dieser Kommentar wurde gelöscht und ist nur für Mitarbeitende und Admins "
 "sichtbar."
 
 #: app/post/routes.py:704 app/post/routes.py:831
@@ -3434,14 +3435,14 @@ msgid "%(name)s has been un-stickied."
 msgstr "%(name)s ist nicht mehr angepinnt."
 
 #: app/post/routes.py:1513
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been stickied to the instance."
-msgstr "%(name)s wurde angepinnt."
+msgstr "%(name)s wurde an der Instanz angepinnt."
 
 #: app/post/routes.py:1516
-#, fuzzy, python-format
+#, python-format
 msgid "%(name)s has been un-stickied from the instance."
-msgstr "%(name)s ist nicht mehr angepinnt."
+msgstr "%(name)s ist nicht mehr an der Instanz angepinnt."
 
 #: app/post/routes.py:1534
 #, python-format
@@ -4358,14 +4359,12 @@ msgid "Color mode"
 msgstr "Farbmodus"
 
 #: app/templates/base.html:264
-#, fuzzy
 msgid "Dark mode"
-msgstr "Farbmodus"
+msgstr "Dunkler Modus"
 
 #: app/templates/base.html:264
-#, fuzzy
 msgid "Light mode"
-msgstr "Testmodus"
+msgstr "Heller Modus"
 
 #: app/templates/auth/login.html:15 app/templates/base.html:265
 #: app/templates/themes/dillo/base.html:107
@@ -4400,6 +4399,9 @@ msgid ""
 "bugs</a> or <a href=\"https://join.piefed.social/get-involved/\">get "
 "involved</a>."
 msgstr ""
+"Bitte <a href=\"https://codeberg.org/rimu/pyfedi/issues\">melde Fehler</a> "
+"oder <a href=\"https://join.piefed.social/get-involved/\">bringe dich "
+"ein</a>."
 
 #: app/templates/base.html:302 app/templates/themes/dillo/base.html:203
 msgid ""
@@ -4583,7 +4585,7 @@ msgstr "Filtern je nachdem ob die Community lokal oder remote ist"
 #: app/templates/list_communities.html:50
 #: app/templates/list_communities.html:69
 msgid "Any"
-msgstr "Jeder"
+msgstr "Beliebig"
 
 #: app/templates/list_communities.html:56
 msgid "Remote"
@@ -4944,58 +4946,48 @@ msgstr "Seiten"
 
 #: app/templates/admin/activities.html:15
 #: app/templates/admin/communities.html:22
-#, fuzzy
 msgid "Result Filter"
-msgstr "Filter bearbeiten"
+msgstr "Ergebnisfilter"
 
 #: app/templates/admin/activities.html:17
-#, fuzzy
 msgid "Failure"
-msgstr "Fehlgeschlagen"
+msgstr "Fehler"
 
 #: app/templates/admin/activities.html:18
-#, fuzzy
 msgid "Success"
-msgstr "Quelle"
+msgstr "Erfolg"
 
 #: app/templates/admin/activities.html:19
-#, fuzzy
 msgid "Ignored"
-msgstr "Ignorieren"
+msgstr "Ignoriert"
 
 #: app/templates/admin/activities.html:20
 msgid "Processing"
-msgstr ""
+msgstr "Verarbeite"
 
 #: app/templates/admin/activities.html:21
-#, fuzzy
 msgid "Direction Filter"
-msgstr "Filter bearbeiten"
+msgstr "Richtungsfilter"
 
 #: app/templates/admin/activities.html:22
-#, fuzzy
 msgid "Both"
-msgstr "Sonstige"
+msgstr "Beides"
 
 #: app/templates/admin/activities.html:23
-#, fuzzy
 msgid "In"
-msgstr "in"
+msgstr "Rein"
 
 #: app/templates/admin/activities.html:24
-#, fuzzy
 msgid "Out"
-msgstr "Über"
+msgstr "Raus"
 
 #: app/templates/admin/activities.html:29
-#, fuzzy
 msgid "Direction"
-msgstr "Beschreibung"
+msgstr "Richtung"
 
 #: app/templates/admin/activities.html:30
-#, fuzzy
 msgid "ID"
-msgstr "Bezahlt"
+msgstr "ID"
 
 #: app/templates/admin/activities.html:31
 #: app/templates/community/community_moderate.html:41
@@ -5004,14 +4996,12 @@ msgid "Type"
 msgstr "Typ"
 
 #: app/templates/admin/activities.html:32
-#, fuzzy
 msgid "Result"
-msgstr "Ergebnisse ansehen"
+msgstr "Ergebnis"
 
 #: app/templates/admin/activities.html:34
-#, fuzzy
 msgid "JSON"
-msgstr "Beitreten"
+msgstr "JSON"
 
 #: app/templates/admin/activity_json.html:20
 msgid "Re-submit this activity"
@@ -5256,14 +5246,12 @@ msgid "No pages have been created yet."
 msgstr "Es wurden bisher noch keine Seiten erstellt."
 
 #: app/templates/admin/communities.html:24
-#, fuzzy
 msgid "No topic"
-msgstr "Thema"
+msgstr "Kein Thema"
 
 #: app/templates/admin/communities.html:25
-#, fuzzy
 msgid "Low Quality"
-msgstr "Antwort schlechter Qualität"
+msgstr "Schlechte Qualität"
 
 #: app/templates/admin/communities.html:57
 #: app/templates/admin/communities.html:101
@@ -5327,28 +5315,24 @@ msgid "Move %(community)s to %(instance_domain)s"
 msgstr "%(community)s nach %(instance_domain)s umziehen"
 
 #: app/templates/admin/content.html:20
-#, fuzzy
 msgid "Trash"
-msgstr "Tags"
+msgstr "Müll"
 
 #: app/templates/admin/content.html:21
-#, fuzzy
 msgid "Spammy"
-msgstr "Spam"
+msgstr "Spammig"
 
 #: app/templates/admin/content.html:22
-#, fuzzy
 msgid "Deleted"
-msgstr "gelöscht"
+msgstr "Gelöscht"
 
 #: app/templates/admin/content.html:26
 msgid "Posts/Comments:"
 msgstr "Posts/Kommentare :"
 
 #: app/templates/admin/content.html:32
-#, fuzzy
 msgid "Days"
-msgstr "Tag"
+msgstr "Tage"
 
 #: app/templates/admin/content.html:37
 msgid "14 days"
@@ -5400,24 +5384,20 @@ msgid "Edit %(user_name)s (%(display_name)s)"
 msgstr "%(user_name)s bearbeiten (%(display_name)s)"
 
 #: app/templates/admin/edit_user.html:17
-#, fuzzy
 msgid "Last active"
-msgstr "Letzte Aktivität"
+msgstr "Zuletzt aktiv"
 
 #: app/templates/admin/edit_user.html:43
-#, fuzzy
 msgid "receive newsletter"
-msgstr "Newsletter senden"
+msgstr "Newsletter erhalten"
 
 #: app/templates/admin/edit_user.html:46
-#, fuzzy
 msgid "searchable"
-msgstr "Suchen"
+msgstr "durchsuchbar"
 
 #: app/templates/admin/edit_user.html:47
-#, fuzzy
 msgid "indexable"
-msgstr "Beispiel"
+msgstr "indexierbar"
 
 #: app/templates/admin/edit_user.html:55
 #: app/templates/user/show_profile.html:115
@@ -5643,7 +5623,7 @@ msgstr "Inhaltseinstellungen"
 
 #: app/templates/admin/misc.html:25
 msgid "CSS in this field will be added to every page."
-msgstr "CSS in diesem Feld wird jeder Page hinzugefügt."
+msgstr "CSS in diesem Feld wird jeder Seite hinzugefügt."
 
 #: app/templates/admin/misc.html:27
 msgid ""
@@ -5792,9 +5772,8 @@ msgstr ""
 
 #: app/templates/admin/topics.html:37 app/templates/user/user_feeds.html:21
 #: app/templates/user/user_public_feeds.html:18
-#, fuzzy
 msgid "# Communities"
-msgstr "Communities"
+msgstr "# Communities"
 
 #: app/templates/admin/users.html:16
 msgid "Add local user"
@@ -5848,14 +5827,12 @@ msgid "Last seen."
 msgstr "Zuletzt gesehen."
 
 #: app/templates/admin/users.html:101
-#, fuzzy
 msgid "Banned posts"
-msgstr "Beiträge bannen"
+msgstr "Gebannte Beiträge"
 
 #: app/templates/admin/users.html:102
-#, fuzzy
 msgid "Banned comments"
-msgstr "Kommentare bannen"
+msgstr "Gebannte Kommentare"
 
 #: app/templates/admin/users.html:113
 #: app/templates/community/community_moderate_subscribers.html:156
@@ -5897,6 +5874,8 @@ msgstr "Ich weiß es nicht, hilf mir"
 #: app/templates/auth/instance_chooser.html:19
 msgid "Either join this server using the button above or choose one below."
 msgstr ""
+"Tritt diesem Server bei indem du den Button oben nutzt oder wähle unten "
+"einen aus."
 
 #: app/templates/auth/instance_chooser.html:36
 msgid "Good for newbies"
@@ -5931,8 +5910,8 @@ msgid ""
 "These servers are ordered by speed so it may vary depending on time of "
 "day, etc"
 msgstr ""
-"Die Server sind nach Geschwindigkeit sortiert, daher kann es sich "
-"unterscheiden je nach Tageszeit, usw"
+"Diese Server sind nach Geschwindigkeit sortiert, daher kann sich die "
+"Reihenfolge unterscheiden je nach Tageszeit, usw"
 
 #: app/templates/auth/instance_chooser.html:75
 msgid "Server details"
@@ -5973,7 +5952,7 @@ msgstr "Betriebszeit"
 #: app/templates/auth/instance_chooser.html:112
 #: app/templates/auth/instance_chooser.html:352
 msgid "Newbie friendly"
-msgstr "Anfängerfreundlich"
+msgstr "Neulingfreundlich"
 
 #: app/templates/auth/instance_chooser.html:115
 msgid "Defederation"
@@ -5989,7 +5968,7 @@ msgstr "Server besuchen"
 
 #: app/templates/auth/instance_chooser.html:141
 msgid "Help"
-msgstr ""
+msgstr "Hilfe"
 
 #: app/templates/auth/instance_chooser.html:147
 msgid ""
@@ -5997,40 +5976,54 @@ msgid ""
 "your subscriptions and settings and import then into another server if "
 "your original choice doesn't work out."
 msgstr ""
+"Es entstehen keine großen Risiken durch diese Entscheidung - du kannst "
+"jederzeit deine Abonnements und Einstellungen exportieren und sie auf einem "
+"anderen Server importieren, sollte deine ursprüngliche Auswahl nicht passen."
 
 #: app/templates/auth/instance_chooser.html:148
 msgid ""
 "The servers are listed in order of how fast they are - look for ones with"
 " a rocket or lightning icon."
 msgstr ""
+"Die Server werden nach Schnelligkeit sortiert - achte auf die Server mit "
+"Raketen- oder Blitz-Icon."
 
 #: app/templates/auth/instance_chooser.html:149
 msgid ""
 "Stability is a rough measure of how organized the admin team is and how "
 "much support they have, not uptime."
 msgstr ""
+"Stabilität ist eine ungefähre Messung, die sich danach richtet wie das Admin-"
+"Team organisiert ist und wieviel Unterstützung sie bekommen, nicht die "
+"Verfügbarkeit."
 
 #: app/templates/auth/instance_chooser.html:150
 msgid ""
 "Newbie friendly servers have set up some starter-packs to help you find "
 "interesting communities more easily."
 msgstr ""
+"Neulingfreundliche Server haben einige Starterpakete eingerichtet um dir zu "
+"helfen leichter interessante Communities zu finden."
 
 #: app/templates/auth/instance_chooser.html:151
 msgid ""
 "Age is how long the server has been online for. Generally older ones are "
 "more likely to be around for the long term."
 msgstr ""
+"Das Alter gibt an, wie lange der Server bereits online ist. Im Allgemeinen "
+"ist es wahrscheinlicher, dass ältere Server langfristig bestehen bleiben."
 
 #: app/templates/auth/instance_chooser.html:152
 msgid ""
 "The language of the server only matters when need to communicate with the"
 " admins."
 msgstr ""
+"Die Sprache des Servers ist nur dann von Bedeutung, wenn eine Kommunikation "
+"mit den Admins erforderlich ist."
 
 #: app/templates/auth/instance_chooser.html:153
 msgid "Click 'more' on a server to read a longer description of it."
-msgstr ""
+msgstr "Klicke 'mehr' an einem Server um eine längere Beschreibung zu lesen."
 
 #: app/templates/auth/instance_chooser.html:350
 #: app/templates/post/add_reply_inline.html:87 app/templates/post/post.html:42
@@ -7113,9 +7106,8 @@ msgstr ""
 "frequentierten Feeds!"
 
 #: app/templates/feed/add_remote.html:15
-#, fuzzy
 msgid "Accepted address formats"
-msgstr "Akzeptiere Downvotes von"
+msgstr "Akzeptiere Adressformate"
 
 #: app/templates/feed/add_remote.html:30
 #: app/templates/feed/lookup_remote.html:15
@@ -7907,14 +7899,12 @@ msgid "Un-sticky"
 msgstr "Nicht mehr anpinnen"
 
 #: app/templates/post/post_options.html:68
-#, fuzzy
 msgid "Un-sticky from instance"
-msgstr "Beiträge von %(instance)s"
+msgstr "Nicht mehr an Instanz anpinnen"
 
 #: app/templates/post/post_options.html:75
-#, fuzzy
 msgid "Sticky to instance"
-msgstr "Gehe zur Instanz"
+msgstr "An Instanz anpinnen"
 
 #: app/templates/post/post_options.html:84
 #: app/templates/post/post_reply_options.html:144
@@ -8887,9 +8877,8 @@ msgid "Use a comma between each word."
 msgstr "Setze ein Komma nach jedem Wort."
 
 #: app/templates/user/filters.html:39
-#, fuzzy
 msgid "Keyword Filters"
-msgstr "Filter löschen"
+msgstr "Stichwort-Filter"
 
 #: app/templates/user/filters.html:43
 msgid ""
@@ -8917,9 +8906,8 @@ msgid "No filters defined yet."
 msgstr "Noch keine Filter definiert."
 
 #: app/templates/user/filters.html:70
-#, fuzzy
 msgid "Blocks"
-msgstr "Blockieren"
+msgstr "Blockierungen"
 
 #: app/templates/user/filters.html:71
 msgid ""
@@ -8980,9 +8968,8 @@ msgid "No posts are marked as hidden."
 msgstr "Keine Beiträge sind als versteckt markiert."
 
 #: app/templates/user/import_export.html:29
-#, fuzzy
 msgid "Export community subscriptions and user settings"
-msgstr "Community-Abonnements und Kontoblockierungen von Lemmy importieren"
+msgstr "Community-Abonnements und Kontoeinstellungen exportieren"
 
 #: app/templates/user/newsletter_unsubscribed.html:14
 msgid ""
@@ -9011,9 +8998,8 @@ msgid "Manage"
 msgstr "Verwalten"
 
 #: app/templates/user/notifications.html:64
-#, fuzzy
 msgid "Granted"
-msgstr "Erstellt"
+msgstr "Angenommen"
 
 #: app/templates/user/notifications.html:64
 msgid "Enable popup notifications"
@@ -9165,14 +9151,13 @@ msgid "Donor"
 msgstr "Spender*in"
 
 #: app/templates/user/show_profile.html:179
-#, fuzzy
 msgid "Overview"
-msgstr "Ansicht"
+msgstr "Übersicht"
 
 #: app/templates/user/show_profile.html:196
-#, fuzzy, python-format
+#, python-format
 msgid "Posts and Comments by %(user_name)s"
-msgstr "Beiträge von %(user_name)s"
+msgstr "Beiträge und Kommentare von %(user_name)s"
 
 #: app/templates/user/show_profile.html:210
 msgid "Overview pagination"
@@ -9183,9 +9168,8 @@ msgid "No posts or comments yet."
 msgstr "Noch keine Beiträge oder Kommentare."
 
 #: app/templates/user/show_profile.html:232
-#, fuzzy
 msgid "RSS feed"
-msgstr "Feed besuchen"
+msgstr "RSS-Feed"
 
 #: app/templates/user/show_profile.html:235 app/user/routes.py:238
 #, python-format
@@ -9197,9 +9181,9 @@ msgid "Post pagination"
 msgstr "Beitrags-Pagination"
 
 #: app/templates/user/show_profile.html:262
-#, fuzzy, python-format
+#, python-format
 msgid "Comments by %(user_name)s"
-msgstr "Beiträge von %(user_name)s"
+msgstr "Kommentare von %(user_name)s"
 
 #: app/templates/user/show_profile.html:315
 msgid "Same IP address"
@@ -9249,7 +9233,6 @@ msgid "New Feed"
 msgstr "Neuer Feed"
 
 #: app/templates/user/user_feeds.html:20
-#, fuzzy
 msgid "Parent Feed"
 msgstr "Übergeordneter Feed"
 
@@ -9582,9 +9565,8 @@ msgid "Matrix user ids start with @"
 msgstr "Matrix-IDs beginnen mit @"
 
 #: app/user/forms.py:53
-#, fuzzy
 msgid "Invalid display name"
-msgstr "Anzeigename"
+msgstr "Ungültiger Anzeigename"
 
 #: app/user/forms.py:57
 msgid "Interface language"
@@ -9946,7 +9928,7 @@ msgstr "Englisch"
 
 #: app/user/routes.py:559
 msgid "Finnish"
-msgstr ""
+msgstr "Finnisch"
 
 #: app/user/routes.py:560
 msgid "French"
@@ -9974,7 +9956,7 @@ msgstr "Polnisch"
 
 #: app/user/routes.py:566
 msgid "Ukrainian"
-msgstr ""
+msgstr "Ukrainisch"
 
 #: app/user/routes.py:674
 #, python-format
@@ -10475,4 +10457,3 @@ msgstr "Deine Spende wurde storniert."
 
 #~ msgid "More new communities"
 #~ msgstr "Mehr neue Communities"
-

@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2026-02-10 11:32+1300\n"
-"PO-Revision-Date: 2026-01-17 00:47+0000\n"
+"PO-Revision-Date: 2026-02-16 19:01+0000\n"
 "Last-Translator: Tuukka R <tuukka.ryyppo@protonmail.com>\n"
+"Language-Team: Finnish <http://translate.piefed.social/projects/piefed/"
+"main-web-app/fi/>\n"
 "Language: fi\n"
-"Language-Team: Finnish <http://translate.piefed.social/projects/piefed"
-"/main-web-app/fi/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -1650,11 +1651,11 @@ msgstr ""
 
 #: app/auth/oauth_util.py:128 app/auth/oauth_util.py:131
 msgid "Account registrations are currently closed."
-msgstr ""
+msgstr "Käyttäjätunnusten luominen on tällä hetkellä suljettu."
 
 #: app/auth/oauth_util.py:134 app/auth/oauth_util.py:135 app/auth/util.py:164
 msgid "Application declined"
-msgstr ""
+msgstr "Hakemus evätty"
 
 #: app/auth/oauth_util.py:136 app/auth/util.py:165
 msgid "Sorry, we are not accepting registrations from your country."
@@ -1720,7 +1721,7 @@ msgstr "Tarkista sähköpostisi"
 
 #: app/auth/routes.py:119
 msgid "Problem sending email, please contact the administrator for support"
-msgstr ""
+msgstr "Ongelma sähköpostin lähettämisessä. Ota yhteys sivuston ylläpitoon"
 
 #: app/auth/routes.py:135
 msgid "Sorry, you cannot use that email address."
@@ -1796,7 +1797,7 @@ msgstr "Discord-käyttäjätiliin yhdistäminen epäonnistui: %(error)s"
 
 #: app/auth/util.py:157
 msgid "Sorry, this username pattern is not allowed."
-msgstr ""
+msgstr "Pahoittelumme, käyttäjätunnus sisältää kielletyn merkkijonon."
 
 #: app/auth/util.py:175
 msgid "Sorry, you cannot use that email address"
@@ -1898,7 +1899,7 @@ msgstr "Luvatta luotu intiimi sisältö"
 #: app/chat/forms.py:24 app/post/forms.py:38
 #: app/templates/user/user_ban.html:22 app/user/forms.py:166
 msgid "Prohibited transaction"
-msgstr ""
+msgstr "Kielletty toimenpide"
 
 #: app/chat/forms.py:24 app/post/forms.py:38
 #: app/templates/user/user_ban.html:23 app/user/forms.py:166
@@ -1944,7 +1945,7 @@ msgstr "Ilmianna"
 #: app/chat/routes.py:64
 #, python-format
 msgid "Chat with %(name)s"
-msgstr ""
+msgstr "Keskustele käyttäjän %(name)s kanssa"
 
 #: app/chat/routes.py:85
 msgid "Send"
@@ -1990,19 +1991,19 @@ msgstr "Ylä-ääni"
 
 #: app/community/forms.py:36 app/community/forms.py:96
 msgid "Anyone can join"
-msgstr ""
+msgstr "Kuka tahansa voi liittyä"
 
 #: app/community/forms.py:38 app/community/forms.py:98
 msgid "Invitation by a member required"
-msgstr ""
+msgstr "Kutsu käyttäjältä vaaditaan"
 
 #: app/community/forms.py:39 app/community/forms.py:99
 msgid "Invitation by moderator required"
-msgstr ""
+msgstr "Kutsu valvojalta vaaditaan"
 
 #: app/community/forms.py:40 app/community/forms.py:100
 msgid "Invitation by owner required"
-msgstr ""
+msgstr "Kutsu pääkäyttäjältä vaaditaan"
 
 #: app/community/forms.py:42 app/community/forms.py:102
 msgid "Joining process"
@@ -2010,7 +2011,7 @@ msgstr ""
 
 #: app/community/forms.py:43
 msgid "Announce this community to newcommunities@lemmy.world"
-msgstr ""
+msgstr "Ilmoita tästä yhteisöstä newcommunities@lemmy.world-yhteisössä"
 
 #: app/community/forms.py:44
 #, fuzzy
@@ -2057,7 +2058,7 @@ msgstr "Video"
 #: app/community/forms.py:127 app/templates/community/add_post.html:18
 #: app/templates/community/add_post.html:20 app/templates/search/start.html:53
 msgid "Poll"
-msgstr ""
+msgstr "Kysely"
 
 #: app/community/forms.py:128 app/templates/community/add_post.html:23
 #: app/templates/community/add_post.html:25
@@ -2078,7 +2079,7 @@ msgstr "Vain julkaisujen ID:t"
 
 #: app/community/forms.py:134
 msgid "Post url structure to use in this community"
-msgstr ""
+msgstr "Yhteisön julkaisujen internet-osoitteen rakenne"
 
 #: app/community/forms.py:142 app/community/forms.py:217 app/post/forms.py:15
 msgid "Body"
@@ -2155,11 +2156,11 @@ msgstr "Internetosoite vaaditaan."
 
 #: app/community/forms.py:185
 msgid "Address must start with !"
-msgstr ""
+msgstr "Osoitteen on alettava !-merkillä"
 
 #: app/community/forms.py:188
 msgid "Address must include @"
-msgstr ""
+msgstr "Osoitteessa on oltava @-merkki"
 
 #: app/community/forms.py:191
 #, fuzzy
@@ -2434,7 +2435,7 @@ msgstr "7 päivää"
 
 #: app/community/forms.py:472
 msgid "End voting in"
-msgstr ""
+msgstr "Kyselyn kesto"
 
 #: app/community/forms.py:474
 msgid "Accept votes from this instance only"
@@ -10030,4 +10031,3 @@ msgstr ""
 
 #~ msgid "More new communities"
 #~ msgstr "Lisää uusia yhteisöjä"
-

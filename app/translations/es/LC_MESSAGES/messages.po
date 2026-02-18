@@ -8,15 +8,16 @@ msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: tkz@tkz.es\n"
 "POT-Creation-Date: 2026-02-10 11:32+1300\n"
-"PO-Revision-Date: 2026-02-09 22:28+0000\n"
+"PO-Revision-Date: 2026-02-16 19:01+0000\n"
 "Last-Translator: f <felipe@disroot.org>\n"
+"Language-Team: Spanish <http://translate.piefed.social/projects/piefed/"
+"main-web-app/es/>\n"
 "Language: es\n"
-"Language-Team: Spanish <http://translate.piefed.social/projects/piefed"
-"/main-web-app/es/>\n"
-"Plural-Forms: nplurals=2; plural=n != 1;\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.10.4\n"
 "Generated-By: Babel 2.17.0\n"
 
 #: app/__init__.py:52
@@ -74,7 +75,7 @@ msgstr "Bloquear en la comunidad"
 
 #: app/models.py:2636
 msgid "Blocked phrase in comment"
-msgstr ""
+msgstr "Bloquear oración en comentario"
 
 #: app/models.py:2647
 #, fuzzy
@@ -825,7 +826,7 @@ msgstr "Ignorar la configuración de idioma remoto"
 
 #: app/admin/forms.py:178
 msgid "Always show translation icon on posts"
-msgstr ""
+msgstr "Mostrar siempro el icono de traducción en las publicaciones"
 
 #: app/admin/forms.py:179
 msgid "Old posts can be archived"
@@ -3130,7 +3131,7 @@ msgstr "Ver quién está suscrito a %(community)s"
 #: app/feed/routes.py:969
 #, python-format
 msgid "You have left %(feed_title)s"
-msgstr ""
+msgstr "Has abandonado %(feed_title)s"
 
 #: app/feed/routes.py:1125
 #, fuzzy, python-format
@@ -3236,7 +3237,7 @@ msgstr "Advertencia al publicar"
 
 #: app/main/routes.py:1198
 msgid "This page is intentionally left blank."
-msgstr ""
+msgstr "Esta página se deja intencionalmente vacía."
 
 #: app/main/routes.py:1198
 msgid "We don't track you, so there's not much data to make graphs of."
@@ -3312,9 +3313,8 @@ msgid "Move"
 msgstr "Eliminar"
 
 #: app/post/routes.py:80
-#, fuzzy
 msgid "This post has been deleted by the author."
-msgstr "Este usuario ha sido eliminado."
+msgstr "Esta publicación ha sido eliminada por el autor."
 
 #: app/post/routes.py:83 app/post/routes.py:427 app/post/routes.py:651
 msgid "This post has been deleted and is only visible to staff and admins."
@@ -3591,13 +3591,15 @@ msgstr "También eliminar todas sus publicaciones"
 
 #: app/post/routes.py:2091
 msgid "Are you sure you want to block this image?"
-msgstr ""
+msgstr "¿Estás seguro que quieres bloquear esta imagen?"
 
 #: app/post/routes.py:2092
 msgid ""
 "All posts that use this image will be deleted and future posts of the "
 "image will be rejected."
 msgstr ""
+"Todas las publicaciones que usen esta imagen serán eliminados y las futuras "
+"publicaciones de la imagen serán rechazadas."
 
 #: app/post/routes.py:2140 app/post/routes.py:2161
 msgid "Voting Activity"
@@ -3609,7 +3611,7 @@ msgstr "Compartir publicación"
 
 #: app/post/routes.py:2318 app/post/routes.py:2342
 msgid "Body text is too short to be sure."
-msgstr ""
+msgstr "El cuerpo del texto es muy corto para estar seguro."
 
 #: app/post/routes.py:2320 app/post/routes.py:2344
 #, fuzzy
@@ -6578,6 +6580,8 @@ msgid ""
 "This is shown above the field where people compose their content. Only "
 "use this if really necessary."
 msgstr ""
+"Esto se muestra arriba del campo donde las personas escriben su contenido. "
+"Solo úsalo si es estrictamente necesario."
 
 #: app/templates/community/add_local.html:27
 #: app/templates/feed/feed_copy.html:29 app/templates/feed/feed_edit.html:34
@@ -6594,12 +6598,12 @@ msgstr "No hay comunidades bloqueadas"
 
 #: app/templates/community/add_local.html:34
 msgid "Comments can be designated as the answer."
-msgstr ""
+msgstr "Comentarios pueden ser marcados como la respuesta."
 
 #: app/templates/community/add_local.html:37
 #: app/templates/community/community_edit.html:74
 msgid "Access control"
-msgstr ""
+msgstr "Control de acceso"
 
 #: app/templates/community/add_local.html:40
 #, python-format
@@ -6610,6 +6614,7 @@ msgstr "Solo las personas que usan %(name)s pueden publicar o responder"
 #: app/templates/community/community_edit.html:80
 msgid "Private communities do not federate and are only visible to members"
 msgstr ""
+"Las comunidades privadas no se federan y son solo visibles a los miembros"
 
 #: app/templates/community/add_post.html:8
 msgid "Type of post"
@@ -6638,7 +6643,7 @@ msgstr "Crear una encuesta"
 
 #: app/templates/community/add_post.html:20
 msgid "Lemmy does not support polls, try a PieFed community instead."
-msgstr ""
+msgstr "Lemmy no es compatible con encuestas, intenta con una comunidad PieFed."
 
 #: app/templates/community/add_post.html:23
 #: app/templates/community/add_post.html:25
@@ -6647,7 +6652,7 @@ msgstr "Crear un evento"
 
 #: app/templates/community/add_post.html:25
 msgid "Lemmy does not support events, try a PieFed community instead."
-msgstr ""
+msgstr "Lemmy no es compatible con eventos, intenta con una comunidad PieFed."
 
 #: app/templates/community/check_url_posted.html:2
 msgid "This link has already been posted to these communities:"
@@ -7287,9 +7292,8 @@ msgid "Feed communities"
 msgstr "Comunidades relacionadas"
 
 #: app/templates/feed/show_feed.html:191
-#, fuzzy
 msgid "Curated by "
-msgstr "Creado"
+msgstr "Creado por "
 
 #: app/templates/feed/show_feed.html:199
 #: app/templates/topic/show_topic.html:127
@@ -7657,14 +7661,14 @@ msgstr "Bloquear la comunidad %(community_name)s"
 #: app/templates/post/_post_reply_source_swap.html:19
 #: app/templates/post/_post_source_swap.html:19
 msgid "Hide markdown source"
-msgstr ""
+msgstr "Ocultar fuente Markdown"
 
 #: app/templates/post/_post_reply_source_swap.html:21
 #: app/templates/post/_post_source_swap.html:21
 #: app/templates/post/post_options.html:226
 #: app/templates/post/post_reply_options.html:187
 msgid "View markdown source"
-msgstr ""
+msgstr "Mostrar fuente Markdown"
 
 #: app/templates/post/_post_reply_teaser.html:42
 #: app/templates/post/add_reply_inline_result.html:55
@@ -7836,22 +7840,22 @@ msgstr "Respuesta"
 #: app/templates/post/add_reply_inline.html:89 app/templates/post/post.html:44
 #: app/templates/post/post_edit.html:106
 msgid "Are you sure you want to delete this image?"
-msgstr ""
+msgstr "¿Estás seguro de querer eliminar esta imagen?"
 
 #: app/templates/post/add_reply_inline.html:90 app/templates/post/post.html:45
 #: app/templates/post/post_edit.html:107
 msgid "Failed to delete image. Please try again."
-msgstr ""
+msgstr "Hubo un error al eliminar la imagen. Por favor, intenta de nuevo."
 
 #: app/templates/post/add_reply_inline.html:91 app/templates/post/post.html:46
 #: app/templates/post/post_edit.html:108
 msgid "Please select a file."
-msgstr ""
+msgstr "Por favor, selecciona un archivo."
 
 #: app/templates/post/add_reply_inline.html:92 app/templates/post/post.html:47
 #: app/templates/post/post_edit.html:109
 msgid "Please select an image file."
-msgstr ""
+msgstr "Por favor, selecciona una imagen."
 
 #: app/templates/post/add_reply_inline.html:93 app/templates/post/post.html:48
 #: app/templates/post/post_edit.html:110
@@ -7923,7 +7927,7 @@ msgstr "Eliminar cuenta"
 
 #: app/templates/post/post_block_image_purge_posts.html:18
 msgid "Select all"
-msgstr ""
+msgstr "Seleccionar todo"
 
 #: app/templates/post/post_block_image_purge_posts.html:20
 #, fuzzy
@@ -7972,7 +7976,7 @@ msgstr ""
 
 #: app/templates/post/post_edit.html:308
 msgid "Tags available"
-msgstr ""
+msgstr "Etiquetas disponibles"
 
 #: app/templates/post/post_edit.html:309
 #, fuzzy
@@ -7981,7 +7985,7 @@ msgstr "Personas"
 
 #: app/templates/post/post_edit.html:310
 msgid "...will generate"
-msgstr ""
+msgstr "... generará"
 
 #: app/templates/post/post_edit.html:322
 msgid ""
@@ -7996,7 +8000,7 @@ msgstr "Compartir una imagen"
 
 #: app/templates/post/post_embed_code.html:28
 msgid "Copy to clipboard"
-msgstr ""
+msgstr "Copiar al portapapeles"
 
 #: app/templates/post/post_mea_culpa.html:15
 msgid ""
@@ -8066,7 +8070,7 @@ msgstr "Desbloquear"
 #: app/templates/post/post_options.html:101
 #: app/templates/post/post_reply_options.html:163
 msgid "Written by AI?"
-msgstr ""
+msgstr "¿Escrito por IA?"
 
 #: app/templates/post/post_options.html:127
 msgid "Stop hiding this post from me"
@@ -8074,7 +8078,7 @@ msgstr ""
 
 #: app/templates/post/post_options.html:134
 msgid "Hide this post from me"
-msgstr ""
+msgstr "Ocultar esta publicación para mí"
 
 #: app/templates/post/post_options.html:142
 msgid "I made a mistake with this post and have changed my mind about the topic"
@@ -8397,7 +8401,7 @@ msgstr "Editar %(community)s"
 
 #: app/templates/tag/tag_cloud.html:27
 msgid "Tag Cloud"
-msgstr ""
+msgstr "Nube de etiquetas"
 
 #: app/templates/tag/tag_cloud.html:32
 #, fuzzy
@@ -8563,6 +8567,7 @@ msgstr "No hay comentarios."
 #: app/templates/user/block_community.html:22
 msgid "Enter the name or ActivityPub ID of the community you want to block."
 msgstr ""
+"Ingresa el nombre o el ID ActivityPub de la comunidad que quieres bloquear."
 
 #: app/templates/user/block_community.html:26
 msgid ""
@@ -8584,7 +8589,7 @@ msgstr ""
 
 #: app/templates/user/block_domain.html:26
 msgid "Example: example.com"
-msgstr ""
+msgstr "Ejemplo: ejemplo.com"
 
 #: app/templates/user/block_instance.html:17
 #: app/templates/user/block_instance.html:20 app/user/forms.py:285
@@ -8600,7 +8605,7 @@ msgstr ""
 
 #: app/templates/user/block_instance.html:26
 msgid "Example: lemmy.example.com"
-msgstr ""
+msgstr "Ejemplo: lemmy.ejemplo.com"
 
 #: app/templates/user/block_user.html:17 app/templates/user/block_user.html:20
 #: app/user/forms.py:267
@@ -8650,25 +8655,27 @@ msgstr ""
 
 #: app/templates/user/choose_plan.html:14
 msgid "Please choose from one of the plans below."
-msgstr ""
+msgstr "Por favor elige uno de los planes de abajo."
 
 #: app/templates/user/choose_plan.html:21
 msgid "Manage existing donation plan"
-msgstr ""
+msgstr "Administrar plan de donación existente"
 
 #: app/templates/user/choose_plan.html:25
 msgid "Cancel regular donation"
-msgstr ""
+msgstr "Cancelar donación recurrente"
 
 #: app/templates/user/choose_plan.html:28
 msgid ""
 "When your credit card expires you will need to add a new one to continue "
 "your donations."
 msgstr ""
+"Cuando tu tarjeta de crédito expire, necesitarás agregar una nueva para "
+"continuar con tus donaciones."
 
 #: app/templates/user/choose_plan.html:29
 msgid "Update credit card details"
-msgstr ""
+msgstr "Actualizar detalles de tarjeta de crédito"
 
 #: app/templates/user/choose_plan.html:51
 #, fuzzy
@@ -8677,7 +8684,7 @@ msgstr "Suplantación de identidad"
 
 #: app/templates/user/choose_plan.html:60
 msgid "Prices are in US dollars."
-msgstr ""
+msgstr "Los precios están en dólares estadounidenses."
 
 #: app/templates/user/connect_oauth.html:24
 msgid "OAuth Connections"
@@ -8685,7 +8692,7 @@ msgstr "Conexiones OAuth"
 
 #: app/templates/user/connect_oauth.html:27
 msgid "Connect your account to these services to log in without a password."
-msgstr ""
+msgstr "Conecta tu cuenta a estos servicios para ingresar sin contraseña."
 
 #: app/templates/user/connect_oauth.html:41
 #: app/templates/user/connect_oauth.html:76
@@ -8715,11 +8722,11 @@ msgstr "Inicia sesión para comentar"
 
 #: app/templates/user/connect_oauth.html:91
 msgid "Connect Mastodon"
-msgstr ""
+msgstr "Conecta Mastodon"
 
 #: app/templates/user/connect_oauth.html:125
 msgid "Connect Discord"
-msgstr ""
+msgstr "Conecta Discord"
 
 #: app/templates/user/connect_oauth.html:135
 msgid ""
@@ -8863,7 +8870,7 @@ msgstr ""
 
 #: app/templates/user/edit_profile.html:133
 msgid "Danger Zone! - Account Deletion"
-msgstr ""
+msgstr "¡Zona de peligro! - Eliminar cuenta"
 
 #: app/templates/user/edit_settings.html:24
 #, fuzzy
@@ -8881,15 +8888,15 @@ msgstr "Nota de usuario"
 
 #: app/templates/user/edit_settings.html:36
 msgid "This is used for menus and labels in the user interface"
-msgstr ""
+msgstr "Eso es usado para menús y etiquetas en la interfaz de usuario"
 
 #: app/templates/user/edit_settings.html:44
 msgid "Increase font size"
-msgstr ""
+msgstr "Aumentar tamaño de la letra"
 
 #: app/templates/user/edit_settings.html:45
 msgid "Decrease font size"
-msgstr ""
+msgstr "Disminuir tamaño de la letra"
 
 #: app/templates/user/edit_settings.html:54
 msgid "Go here to preview the different code styles"
@@ -9295,9 +9302,9 @@ msgid "Overview"
 msgstr "Ver"
 
 #: app/templates/user/show_profile.html:196
-#, fuzzy, python-format
+#, python-format
 msgid "Posts and Comments by %(user_name)s"
-msgstr "Publicaciones de %(user_name)s"
+msgstr "Publicaciones y comentarios de %(user_name)s"
 
 #: app/templates/user/show_profile.html:210
 #, fuzzy
@@ -9324,9 +9331,9 @@ msgid "Post pagination"
 msgstr "Paginación de publicaciones"
 
 #: app/templates/user/show_profile.html:262
-#, fuzzy, python-format
+#, python-format
 msgid "Comments by %(user_name)s"
-msgstr "Publicaciones de %(user_name)s"
+msgstr "Comentarios de %(user_name)s"
 
 #: app/templates/user/show_profile.html:315
 #, fuzzy
@@ -9594,9 +9601,8 @@ msgid "New Post in followed feed "
 msgstr "No se permiten enlaces a %(domain)s."
 
 #: app/templates/user/notifs/6.html:4
-#, fuzzy
 msgid "You have been mentioned by"
-msgstr "Has sido bloqueado."
+msgstr "Has sido mencionado por"
 
 #: app/templates/user/notifs/6.html:15
 #, fuzzy
@@ -9891,9 +9897,8 @@ msgid "Ban IP address"
 msgstr "Dirección de correo electrónico"
 
 #: app/user/forms.py:149
-#, fuzzy
 msgid "Delete all content by this account"
-msgstr "Eliminar mi cuenta"
+msgstr "Eliminar todo le contenido de esta cuenta"
 
 #: app/user/forms.py:150
 msgid "Flush CDN cache when deleting (slow)"
@@ -10365,7 +10370,7 @@ msgstr ""
 
 #: app/user/subscription.py:162
 msgid "Regular donation cancelled"
-msgstr ""
+msgstr "Donación recurrente cancelada"
 
 #: app/user/subscription.py:162
 #, fuzzy
@@ -10649,4 +10654,3 @@ msgstr "Tu nueva comunidad ha sido creada."
 
 #~ msgid "More new communities"
 #~ msgstr "Más nuevas comunidades"
-
