@@ -459,7 +459,7 @@ def community_profile(actor):
             abort(400)
         community: Community = Community.query.filter_by(ap_id=actor.lower(), banned=False).first()
     else:
-        profile_id = f"{current_app.config['SERVER_URL']}/c/{actor.lower()}"
+        profile_id = f"https://{current_app.config['SERVER_NAME']}/c/{actor.lower()}"
         community: Community = Community.query.filter_by(ap_profile_id=profile_id, ap_id=None).first()
     if community is not None:
         if is_activitypub_request():
