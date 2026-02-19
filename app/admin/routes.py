@@ -10,7 +10,7 @@ from flask import request, flash, json, url_for, current_app, redirect, g, abort
 from flask_login import current_user, login_user
 from flask_babel import _
 from slugify import slugify
-from sqlalchemy import text, desc, or_
+from sqlalchemy import text, desc, or_, delete, update
 from PIL import Image
 from urllib.parse import urlparse
 from furl import furl
@@ -1593,9 +1593,17 @@ def admin_approve_registrations_denied(user_id):
         db.session.delete(registration)
 
         # remove notifications caused by the registration attempt
-        reg_notifs = Notification.query.filter_by(author_id=user.id)
-        for n in reg_notifs:
-            db.session.delete(n)
+        notifications = db.session.execute(
+            delete(Notification)
+            .where(Notification.author_id == user.id)
+            .returning(Notification.user_id, Notification.read)
+        ).all()
+        unread_notification_users = [n.user_id for n in notifications if not n.read]
+        db.session.execute(
+            update(User)
+            .where(User.id.in_(unread_notification_users))
+            .values({User.unread_notifications: User.unread_notifications - 1})
+        )
 
         # remove the user from the db so the username is available again
         user.deleted = True
