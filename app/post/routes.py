@@ -2301,22 +2301,31 @@ def show_post_ical(post_id: int):
 def post_check_ai(post_id):
     post = Post.query.get(post_id)
     if current_app.config['DETECT_AI_ENDPOINT']:
-        if len(post.body) > 100:
-            is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
-            if is_ai and is_ai.status_code == 200:
-                is_ai_result = is_ai.json()
-                if is_ai_result['detection_result'] == 'ai':
+        is_ai = get_request(f"{current_app.config['DETECT_AI_ENDPOINT']}?url={post.ap_id}")
+        if is_ai and is_ai.status_code == 200:
+            is_ai_result = is_ai.json()
+            if is_ai_result['detection_result'] == 'ai':
+                result_type = 'alert-warning'
+            else:
+                result_type = 'alert-success'
+            if is_ai_result['detection_result'] == 'none':
+                return f'<div class="w-100 alert {result_type}">Detection blocked</div>'
+            output = f'<div class="w-100 alert {result_type}">'
+            output += 'Post: ' + is_ai_result['detection_result'].upper()
+            output += '<br>'
+            output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+            output += '</div>'
+            if 'attachment' in is_ai_result:
+                if is_ai_result['attachment']['detection_result'] == 'ai':
                     result_type = 'alert-warning'
                 else:
                     result_type = 'alert-success'
-                output = f'<div class="w-100 alert {result_type}">'
-                output += is_ai_result['detection_result'].upper()
+                output += f'<div class="w-100 alert {result_type}">'
+                output += 'Link: ' + is_ai_result['attachment']['detection_result'].upper()
                 output += '<br>'
-                output += f"{int(is_ai_result['confidence'] * 100)}% confident"
+                output += f"{int(is_ai_result['attachment']['confidence'] * 100)}% confident"
                 output += '</div>'
-                return output
-        else:
-            return _('Body text is too short to be sure.')
+            return output
     else:
         return _('Not configured.')
 
