@@ -1,0 +1,20 @@
+{% if theme() != 'piefed' and file_exists('app/templates/themes/' + theme() + '/base.html') -%}
+    {% extends 'themes/' + theme() + '/base.html' -%}
+{% else -%}
+    {% extends "base.html" -%}
+{% endif -%}
+{% from 'bootstrap5/form.html' import render_field %}
+
+{% block app_content %}
+<div class="row">
+    <main class="col-12 col-lg-8 position-relative main_pane">
+        <h1>{{ title }}</h1>
+        <p>{{ message }}</p>
+        <form method="post" enctype="multipart/form-data">
+            {{ form.csrf_token() }}
+            {{ render_field(form.next) }}
+            {{ render_field(form.submit) }}
+        </form>
+    </main>
+</div>
+{% endblock %}

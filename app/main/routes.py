@@ -1189,7 +1189,10 @@ def content_warning():
 
     By entering, you affirm that you are at least 18 years of age or the age of majority in the jurisdiction you are accessing the website from and you consent to viewing sexually explicit content.
     """
-    return render_template('generic_form.html', title=_('Content warning'), message=message, form=form)
+    resp = make_response(render_template('content_warning.html', title=_('Content warning'), message=message, form=form))
+    resp.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+    resp.headers.set('Cache-Control', 'private, max-age=1, must-revalidate')
+    return resp
 
 
 @bp.route('/my-year-in-review/<year>')
