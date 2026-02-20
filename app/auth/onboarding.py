@@ -1,4 +1,4 @@
-from flask import redirect, url_for, flash, current_app, abort
+from flask import redirect, url_for, flash, current_app, abort, g
 from flask_babel import _
 from flask_login import current_user, login_required
 
@@ -20,7 +20,7 @@ def onboarding_instance_chooser():
             language_ids.add(instance.language_id)
         languages = Language.query.filter(Language.id.in_(language_ids)).all()
         return render_template('auth/instance_chooser.html', title=_('Which server do you want to join?'),
-                               instances=instances, languages=languages)
+                               instances=instances, languages=languages, closed=g.site.registration_mode == 'Closed')
     else:
         return redirect(url_for('auth.register'))
 
