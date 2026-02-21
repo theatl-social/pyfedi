@@ -51,6 +51,7 @@ def testredis_get():
 
 
 @bp.route('/.well-known/webfinger')
+@cache.cached(timeout=60)
 def webfinger():
     if request.args.get('resource'):
         feed = False

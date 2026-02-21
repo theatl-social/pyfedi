@@ -1043,6 +1043,13 @@ class User(UserMixin, db.Model):
     read_post = db.relationship('Post', secondary=read_posts, back_populates='read_by', lazy='dynamic')
     hidden_post = db.relationship('Post', secondary=hidden_posts, back_populates='hidden_by', lazy='dynamic')
 
+    __table_args__ = (
+        db.Index(
+            'idx_user_user_name_lower',
+            db.text('lower(user_name)')
+        ),
+    )
+
     def __repr__(self):
         return '<User {}_{}>'.format(self.user_name, self.id)
 
@@ -1623,6 +1630,11 @@ class Post(db.Model):
             'ix_post_community_created_bot',
             'community_id', 'created_at',
             postgresql_where=db.text('from_bot = false')
+        ),
+        db.Index(
+            'idx_post_reports_gt_0',
+            'id',
+            postgresql_where=db.text('reports > 0')
         ),
     )
 
