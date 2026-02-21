@@ -248,9 +248,9 @@ def is_local_image_url(url):
     return f.host in ["127.0.0.1", current_app.config["SERVER_NAME"], current_app.config['S3_PUBLIC_URL']]
 
 
-def is_video_url(url: str) -> bool:
+def is_video_url(url: str, quick=False) -> bool:
     common_video_extensions = ['.mp4', '.webm']
-    mime_type = mime_type_using_head(url) if url.startswith('http') else None
+    mime_type = mime_type_using_head(url) if not quick and url.startswith('http') else None
     if mime_type:
         mime_type_parts = mime_type.split('/')
         return f'.{mime_type_parts[1]}' in common_video_extensions
@@ -688,7 +688,7 @@ def handle_video_embeds(text: str) -> str:
         alt_text = match.group(1)
         link = match.group(2)
 
-        if is_video_url(link):
+        if is_video_url(link, quick=True):
             output = ('<video class="responsive-video" muted controls loop ' + 
                       'playsinline disablepictureinpicture" preload="metadata">')
             download_text = _('You can download a copy of the file instead.')
