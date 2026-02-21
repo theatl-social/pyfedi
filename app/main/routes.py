@@ -24,7 +24,7 @@ from flask_login import current_user
 from flask_babel import _
 from sqlalchemy import desc, text
 
-from app.main.forms import ShareLinkForm, ContentWarningForm
+from app.main.forms import ShareLinkForm
 from app.post.routes import show_post
 from app.shared.tasks.maintenance import refresh_instance_chooser
 from app.translation import LibreTranslateAPI
@@ -1175,21 +1175,15 @@ def explore():
                            menu_subscribed_feeds=menu_subscribed_feeds(current_user.id) if current_user.is_authenticated else None,)
 
 
-@bp.route('/content_warning', methods=['GET', 'POST'])
+@bp.route('/content_warning')
 def content_warning():
-    form = ContentWarningForm()
-    if form.validate_on_submit():
-        if form.next.data.startswith("/"):
-            resp = make_response(redirect(form.next.data))
-            resp.set_cookie('warned', 'yes', expires=datetime(year=2099, month=12, day=30))
-            return resp
-    form.next.data = referrer()
+    next_url = referrer()
     message = """
     This website contains age-restricted materials including nudity and explicit depictions of sexual activity.
 
     By entering, you affirm that you are at least 18 years of age or the age of majority in the jurisdiction you are accessing the website from and you consent to viewing sexually explicit content.
     """
-    resp = make_response(render_template('content_warning.html', title=_('Content warning'), message=message, form=form))
+    resp = make_response(render_template('content_warning.html', title=_('Content warning'), message=message, next_url=next_url))
     resp.headers.set('Vary', 'Accept, Cookie, Accept-Language')
     resp.headers.set('Cache-Control', 'private, max-age=1, must-revalidate')
     return resp

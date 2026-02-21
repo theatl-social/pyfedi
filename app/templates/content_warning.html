@@ -3,18 +3,19 @@
 {% else -%}
     {% extends "base.html" -%}
 {% endif -%}
-{% from 'bootstrap5/form.html' import render_field %}
 
 {% block app_content %}
 <div class="row">
     <main class="col-12 col-lg-8 position-relative main_pane">
         <h1>{{ title }}</h1>
         <p>{{ message }}</p>
-        <form method="post" enctype="multipart/form-data">
-            {{ form.csrf_token() }}
-            {{ render_field(form.next) }}
-            {{ render_field(form.submit) }}
-        </form>
+        <button id="content_warning_continue" class="btn btn-primary">Continue</button>
     </main>
 </div>
+<script nonce="{{ nonce }}">
+document.getElementById('content_warning_continue').addEventListener('click', function() {
+    setCookie('warned', 'yes', 27000);
+    window.location.href = {{ next_url | tojson }};
+});
+</script>
 {% endblock %}
