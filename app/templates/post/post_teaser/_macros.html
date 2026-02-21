@@ -335,12 +335,12 @@
     {% if not low_bandwidth %}
         <div class="post_teaser_video_preview">
             <div class="max_width_512">
-                {% if post.url.endswith('.mp4') or post.url.endswith('.webm') -%}
+                {% if post.url.endswith('.mp4') or post.url.endswith('.webm') or '.mp4?' in post.url or '.webm?' in post.url -%}
                     <p>
                         <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
-                        {% if post.url.endswith('.mp4') -%}
+                        {% if post.url.endswith('.mp4') or '.mp4?' in post.url -%}
                             <source src="{{ post.url }}" type="video/mp4" />
-                        {% elif post.url.endswith('.webm') -%}
+                        {% elif post.url.endswith('.webm') or '.webm?' in post.url -%}
                             <source src="{{ post.url }}" type="video/webm" />
                         {% endif -%}
                         </video></p>
@@ -354,9 +354,9 @@
                     {% if post.image -%}
                     <p>
                         <video class="responsive-video {{ 'blur' if blur_content }}" controls preload="{{ 'none' if low_bandwidth else 'metadata' }}" {{ 'autoplay muted' if autoplay }} {{ 'loop' if post.community.loop_videos() }}>
-                        {% if post.image.source_url.endswith('.mp4') -%}
+                        {% if post.image.source_url.endswith('.mp4') or '.mp4?' in post.url -%}
                             <source src="{{ post.image.source_url }}" type="video/mp4" />
-                        {% elif post.image.source_url.endswith('.webm') -%}
+                        {% elif post.image.source_url.endswith('.webm') or '.webm?' in post.url -%}
                             <source src="{{ post.image.source_url }}" type="video/webm" />
                         {% endif -%}
                         </video></p>
