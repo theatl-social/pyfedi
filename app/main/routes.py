@@ -471,7 +471,7 @@ def modlog():
             suspect_user_name = suspect_user_name.split('@')[0]
         user = User.query.filter(func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None).first()
         if user is None:
-            user = User.query.filter_by(ap_id=suspect_user_name).first()
+            user = User.query.filter_by(ap_id=suspect_user_name.lower()).first()
         if user:
             modlog_entries = modlog_entries.filter(ModLog.target_user_id == user.id)
     if user_name:
@@ -479,7 +479,7 @@ def modlog():
             user_name = user_name.split('@')[0]
         user = User.query.filter(func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None).first()
         if user is None:
-            user = User.query.filter_by(ap_id=user_name).first()
+            user = User.query.filter_by(ap_id=user_name.lower()).first()
         if user:
             modlog_entries = modlog_entries.filter(ModLog.user_id == user.id)
     if community_id:

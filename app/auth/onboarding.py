@@ -13,7 +13,7 @@ from app.utils import render_template, joined_communities, community_membership,
 
 @bp.route('/instance_chooser')
 def onboarding_instance_chooser():
-    if get_setting('enable_instance_chooser', False) or current_app.debug:
+    if get_setting('enable_instance_chooser', False):
         instances = InstanceChooser.query.all()
         language_ids = set()
         for instance in instances:
