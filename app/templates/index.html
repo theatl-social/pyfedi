@@ -148,6 +148,24 @@
             </div>
         </div>
 
+        {% if new_instances and len(new_instances) > 0 -%}
+        <div class="card mb-3 mt-3">
+            <div class="card-header">
+                 <h2>{{ _('New instances') }}</h2>
+            </div>
+            <div class="card-body">
+                <ul class="list-group list-group-flush">
+                    {% for instance in new_instances %}
+                        <li class="list-group-item">
+                            <a href="https://{{ instance.domain }}">{{ instance.domain }}</a> <span class="text-muted">({{ instance.software }})</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+                <p class="mb-0 mt-2"><a href="/instances" class="btn btn-outline-secondary">{{ _('More instances') }}</a></p>
+            </div>
+        </div>
+        {% endif -%}
+
         {% include "_inoculation_links.html" %}
     </aside>
     <a href="/honey" class="visually-hidden" tabindex="-1" aria-hidden="true">Do not click this</a>

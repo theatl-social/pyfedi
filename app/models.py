@@ -96,6 +96,11 @@ class Instance(db.Model):
     nodeinfo_href = db.Column(db.String(100))
     admin_note = db.Column(db.Text)
 
+    __table_args__ = (
+        Index('ix_instance_created_at_active', created_at.desc(),
+              postgresql_where=text('gone_forever = false AND dormant = false')),
+    )
+
     posts = db.relationship('Post', backref='instance', lazy='dynamic')
     post_replies = db.relationship('PostReply', backref='instance', lazy='dynamic')
     communities = db.relationship('Community', backref='instance', lazy='dynamic')

@@ -40,7 +40,7 @@ from app.utils import render_template, get_setting, request_etag_matches, return
     moderating_communities_ids, user_notes, login_required, safe_order_by, filtered_out_communities, \
     num_topics, referrer, block_honey_pot, user_pronouns, get_instance_stickies
 from app.models import Community, CommunityMember, Post, Site, User, utcnow, Topic, Instance, \
-    Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage
+    Notification, Language, community_language, ModLog, Feed, FeedItem, CmsPage, BannedInstances
 from app.ldap_utils import test_ldap_connection, sync_user_to_ldap, login_with_ldap
 
 
@@ -175,6 +175,14 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     new_communities = new_communities.order_by(desc(Community.first_federated_at)). \
         order_by(desc(Community.created_at)).limit(5).all()
 
+    # New Instances
+    instances = db.session.query(Instance).\
+        outerjoin(BannedInstances, BannedInstances.domain == Instance.domain).\
+        filter(Instance.gone_forever == False, Instance.dormant == False,
+               BannedInstances.id == None,
+               or_(Instance.software == 'piefed', Instance.software == 'lemmy', Instance.software == 'mbin', Instance.software == 'nodebb')).\
+        order_by(desc(Instance.created_at)).limit(5).all()
+
     # Upcoming events
     upcoming_events = db.session.execute(text("""SELECT e.start, p.title, p.id FROM "event" e
                                                  INNER JOIN post p on e.post_id = p.id
@@ -196,7 +204,7 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
     resp = make_response(render_template('index.html', posts=posts, active_communities=active_communities,
                            new_communities=new_communities, upcoming_events=upcoming_events,
                            show_post_community=True, low_bandwidth=low_bandwidth, recently_upvoted=recently_upvoted,
-                           recently_downvoted=recently_downvoted,
+                           recently_downvoted=recently_downvoted, new_instances=instances,
                            communities_banned_from_list=communities_banned_from_list,
                            SUBSCRIPTION_PENDING=SUBSCRIPTION_PENDING, SUBSCRIPTION_MEMBER=SUBSCRIPTION_MEMBER,
                            etag=f"{sort}_{view_filter}_{hash(str(g.site.last_active))}", next_url=next_url,
