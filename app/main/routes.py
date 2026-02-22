@@ -5,7 +5,7 @@ from random import randint
 
 import flask
 from pyld import jsonld
-from sqlalchemy import or_, and_
+from sqlalchemy import or_, and_, func
 from ua_parser import parse as uaparse
 
 from app import db, cache
@@ -469,7 +469,7 @@ def modlog():
     if suspect_user_name:
         if f"@{current_app.config['SERVER_NAME']}" in suspect_user_name:
             suspect_user_name = suspect_user_name.split('@')[0]
-        user = User.query.filter_by(user_name=suspect_user_name, ap_id=None).first()
+        user = User.query.filter(func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None).first()
         if user is None:
             user = User.query.filter_by(ap_id=suspect_user_name).first()
         if user:
@@ -477,7 +477,7 @@ def modlog():
     if user_name:
         if f"@{current_app.config['SERVER_NAME']}" in user_name:
             user_name = user_name.split('@')[0]
-        user = User.query.filter_by(user_name=user_name, ap_id=None).first()
+        user = User.query.filter(func.lower(User.user_name) == suspect_user_name.lower(), User.ap_id == None).first()
         if user is None:
             user = User.query.filter_by(ap_id=user_name).first()
         if user:
