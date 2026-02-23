@@ -250,14 +250,9 @@ def is_local_image_url(url):
 
 def is_video_url(url: str) -> bool:
     common_video_extensions = ['.mp4', '.webm']
-    mime_type = mime_type_using_head(url) if url.startswith('http') else None
-    if mime_type:
-        mime_type_parts = mime_type.split('/')
-        return f'.{mime_type_parts[1]}' in common_video_extensions
-    else:
-        parsed_url = urlparse(url)
-        path = parsed_url.path.lower()
-        return any(path.endswith(extension) for extension in common_video_extensions)
+    parsed_url = urlparse(url)
+    path = parsed_url.path.lower()
+    return any(path.endswith(extension) for extension in common_video_extensions)
 
 
 def is_video_hosting_site(url: str) -> bool:
