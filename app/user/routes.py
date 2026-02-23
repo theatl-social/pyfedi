@@ -187,10 +187,10 @@ def show_profile(user):
     if (user.deleted or user.banned) and current_user.is_anonymous:
         abort(404)
 
-    if user.banned:
-        flash(_('This user has been banned.'), 'warning')
     if user.deleted:
         flash(_('This user has been deleted.'), 'warning')
+    elif user.banned:
+        flash(_('This user has been banned.'), 'warning')
 
     post_page = request.args.get('post_page', 1, type=int)
     replies_page = request.args.get('replies_page', 1, type=int)
