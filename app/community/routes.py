@@ -2446,8 +2446,9 @@ def community_invite(actor):
                                 sent_to.add(line)
                         total_invites += 1
 
-            flash(_('Invited %(total_invites)d people using %(chat_invites)d chat messages and %(email_invites)d emails.',
-                  total_invites=total_invites, chat_invites=chat_invites, email_invites=email_invites))
+            flash(ngettext('Invited %(num)d person', 'Invited %(num)d people', total_invites) + ' ' +
+                  ngettext('using %(num)d chat message', 'using %(num)d chat messages', chat_invites) + ' ' +
+                  ngettext('and %(num)d email', 'and %(num)d emails', email_invites) + '.')
             return redirect('/c/' + community.link())
 
         if community.is_local() and community.local_only:
