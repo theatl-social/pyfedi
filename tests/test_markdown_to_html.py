@@ -35,6 +35,13 @@ class TestMarkdownToHtml(unittest.TestCase):
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         self.assertEqual(result,
                          '<p>This is a test link <a href="https://pizza.com" rel="nofollow ugc" target="_blank">https://pizza.com</a>. Will it work?</p>\n')
+    
+    def test_links_w_tilde(self):
+        """Test links that have a tilde in them."""
+        markdown = "This link has a tilde: https://site.tld/~user"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        correct_html = '<p>This link has a tilde: <a href="https://site.tld/~user" rel="nofollow ugc" target="_blank">https://site.tld/~user</a></p>\n'
+        self.assertEqual(result, correct_html)
 
     def test_code_blocks(self):
         """Test code blocks formatting"""

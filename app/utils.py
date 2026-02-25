@@ -328,6 +328,7 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
         fn_string = gibberish(6)
 
     code_placeholder = gibberish(10)
+    link_placeholder = gibberish(10)
 
     # substitute out the <code> snippets so that they don't inadvertently get formatted
     code_snippets, clean_html = stash_code_html(html, code_placeholder)
@@ -346,9 +347,11 @@ def allowlist_html(html: str, a_target='_blank', test_env=False) -> str:
     re_strikethough = re.compile(r'~~(.*)~~')
     clean_html = re_strikethough.sub(r'<s>\1</s>', clean_html)
 
-    # replace subscript markdown left in HTML
+    # replace subscript markdown left in HTML, don't break links that have a ~ in them
     re_subscript = re.compile(r'~([^~\r\n\t\f\v ]+)~')
+    link_snippets, clean_html = stash_link_html(clean_html, link_placeholder)
     clean_html = re_subscript.sub(r'<sub>\1</sub>', clean_html)
+    clean_html = pop_link(link_snippets, clean_html, link_placeholder)
 
     # replace superscript markdown left in HTML
     re_superscript = re.compile(r'\^([^\^\r\n\t\f\v ]+)\^')
@@ -4003,5 +4006,5 @@ def get_site_as_dict() -> dict:
 def localize_datetime(inp, locale='en'):
     try:
         return arrow.get(inp).humanize(locale=locale)
-    except ValueError as e:
+    except ValueError:
         return arrow.get(inp).humanize(locale='en')
