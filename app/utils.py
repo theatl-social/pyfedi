@@ -4000,7 +4000,7 @@ def get_site_as_dict() -> dict:
     return { c.name: getattr(site, c.name) for c in site.__table__.columns }
 
 
-def localize_datetime(inp, locale):
+def localize_datetime(inp, locale='en'):
     try:
         return arrow.get(inp).humanize(locale=locale)
     except ValueError as e:
