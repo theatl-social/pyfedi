@@ -21,6 +21,7 @@ from typing import List, Tuple, Optional
 from urllib.parse import urlparse, parse_qs, urlencode
 from zoneinfo import available_timezones
 
+import arrow
 import flask
 import httpx
 import jwt
@@ -3997,3 +3998,10 @@ def get_site_as_dict() -> dict:
     # return the Site as a dict so that it can be serialized by flask-caching
     site = db.session.query(Site).get(1)
     return { c.name: getattr(site, c.name) for c in site.__table__.columns }
+
+
+def localize_datetime(inp, locale):
+    try:
+        return arrow.get(inp).humanize(locale=locale)
+    except ValueError as e:
+        return arrow.get(inp).humanize(locale='en')
