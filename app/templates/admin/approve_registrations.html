@@ -43,7 +43,7 @@
                     </td>
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
-                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
+                    <td>{{ localize_datetime(registration.created_at, locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td>
@@ -92,7 +92,7 @@
                     <td><a href="mailto:{{ registration.user.email }}">{{ registration.user.email }}</a></td>
                     <td>{{ '<span class="green">&check;</span>'|safe if registration.user.verified else '<span class="red">&cross;</span>'|safe }}</td>
                     <td>{{ registration.answer }}</td>
-                    <td>{{ arrow.get(registration.created_at).humanize(locale=locale) }}</td>
+                    <td>{{ localize_datetime(registration.created_at, locale) }}</td>
                     <td>{{ registration.user.ip_address if registration.user.ip_address }}<br />{{ registration.user.ip_address_country if registration.user.ip_address_country }}</td>
                     <td>{{ registration.user.referrer if registration.user.referrer }} </td>
                     <td>

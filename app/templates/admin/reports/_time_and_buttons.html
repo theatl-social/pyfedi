@@ -4,7 +4,7 @@
             {{ 'Local' if report.is_local() else 'Remote' }}
         </div>
         <div class="align-self-end my-2 mr-auto">
-            {{ arrow.get(report.created_at).humanize(locale=locale) }}
+            {{ localize_datetime(report.created_at, locale) }}
         </div>
     </div>
 </td>
