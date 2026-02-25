@@ -122,7 +122,7 @@ def create_app(config_class=Config):
                 }
             ],
             "info": {
-                "title": "PieFed 1.6 Alpha API",
+                "title": "PieFed 1.7 Alpha API",
                 "contact": {
                     "name": "Developer",
                     "url": "https://codeberg.org/rimu/pyfedi"
