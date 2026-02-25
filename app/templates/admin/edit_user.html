@@ -13,8 +13,8 @@
         <form method="post" enctype="multipart/form-data" id="add_local_user_form">
             {{ form.csrf_token() }}
             {{ user.about_html|safe if user.about_html }}
-            <p>{{ _('Created') }}: {{ arrow.get(user.created).humanize(locale=locale) }}</p>
-            <p>{{ _('Last active') }}: {{ arrow.get(user.last_seen).humanize(locale=locale) }}</p>
+            <p>{{ _('Created') }}: {{ localize_datetime(user.created, locale) }}</p>
+            <p>{{ _('Last active') }}: {{ localize_datetime(user.last_seen, locale) }}</p>
             <p>{{ _('Email') }}: <a href="mailto:{{ user.email }}">{{ user.email }}</a></p>
             <p>Matrix: {{ user.matrix_user_id if user.matrix_user_id }}</p>
             {% if user.avatar_id %}

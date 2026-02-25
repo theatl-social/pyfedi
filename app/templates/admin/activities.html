@@ -35,7 +35,7 @@
                 </tr>
                 {% for activity in activities.items %}
                     <tr>
-                        <td>{{ arrow.get(activity.created_at).humanize(locale=locale) }}</td>
+                        <td>{{ localize_datetime(activity.created_at, locale) }}</td>
                         <td>{{ activity.direction }}</td>
                         <td>{{ activity.activity_id }}</td>
                         <td>{{ activity.activity_type if activity.activity_type else ''  }}</td>

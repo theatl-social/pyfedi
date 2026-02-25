@@ -1,7 +1,7 @@
 <td width="80" class="text-center p-0">
     <div class="row my-2">
         <div class="col">
-            {{ arrow.get(notification.created_at).humanize(locale=locale) }}
+            {{ localize_datetime(notification.created_at, locale) }}
         </div>
     </div>
     <div class="row my-2 ">

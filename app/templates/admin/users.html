@@ -104,8 +104,8 @@
                     <td><span title="{{ _('Reports') }}">{{ user.reports if user.reports > 0 }}</span></td>
                     <td><span title="{{ _('Attitude') }}">{% if user.attitude %}{{ (user.attitude * 100) | round | int }}%{% endif %}</span></td>
                     <td><span title="{{ _('Reputation') }}">{% if user.reputation %}R {{ user.reputation | round | int }}{% endif %}</span></td>
-                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ arrow.get(user.created).humanize(locale=locale) }}</span></td>
-                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ arrow.get(user.last_seen).humanize(locale=locale) }}</span></td>
+                    <td><span title="{{ _('Created') }}: {{ user.created }}">{{ localize_datetime(user.created, locale) }}</span></td>
+                    <td><span title="{{ _('Last Seen') }}: {{ user.last_seen }}">{{ localize_datetime(user.last_seen, locale) }}</span></td>
                     <td><a href="{{ url_for('admin.admin_user_edit', user_id=user.id) }}">{{ _('Edit') }}</a>,
                         <a href="#" data-url="{{ url_for('admin.admin_user_delete', user_id=user.id) }}" class="confirm_first send_post">{{ _('Delete') }}</a>,
                         <br />

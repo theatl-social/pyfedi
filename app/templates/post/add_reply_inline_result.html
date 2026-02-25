@@ -56,7 +56,7 @@
                 {% endif -%}
             </div>
             <div class="col-auto text-muted small pt-05">
-                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post_reply.posted_at).humanize(locale=locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ arrow.get(post_reply.posted_at) }}" title="{{ arrow.get(post_reply.posted_at) }}">{{ arrow.get(post_reply.edited_at).humanize(locale=locale) }}</time>{% endif -%}
+                <time datetime="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post_reply.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post_reply.posted_at, locale) }}</time>{% if post_reply.edited_at -%}, edited <time datetime="{{ localize_datetime(post_reply.posted_at) }}" title="{{ localize_datetime(post_reply.posted_at) }}">{{ localize_datetime(post_reply.edited_at, locale) }}</time>{% endif -%}
             </div>
             <div class="col-auto">
                 {% if post_reply.has_been_reported() -%}

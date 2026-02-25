@@ -324,10 +324,10 @@
                                 {{ community.post_reply_count }}
                             </td>
                             <td>
-                                {{ arrow.get(community.last_active).humanize(locale=locale) }}
+                                {{ localize_datetime(community.last_active, locale) }}
                             </td>
                             <td>
-                                {{ arrow.get(community.created_at).humanize(locale=locale) }}
+                                {{ localize_datetime(community.created_at, locale) }}
                             </td>
                             <td align="center">
                                 {{ loop.index }}
