@@ -119,6 +119,11 @@ def post_private_message(auth, data):
     sender = authorise_api_user(auth, return_type='model')
     recipient = User.query.filter_by(id=data['recipient_id']).one()
 
+    if not sender.can_send_pm(recipient):
+        raise Exception(
+            "You are not permitted to send a private message at this time to this recipient, likely because your "
+            "account is too new.")
+
     existing_conversation = Conversation.find_existing_conversation(recipient=recipient, sender=sender)
     if not existing_conversation:
         existing_conversation = Conversation(user_id=sender.id)
