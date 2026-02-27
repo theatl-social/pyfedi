@@ -7,7 +7,7 @@ import os
 from flask import Flask, request, current_app, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_login import LoginManager, current_user
 from flask_bootstrap import Bootstrap5
 from flask_mail import Mail
 from flask_babel import Babel, lazy_gettext as _l
@@ -26,7 +26,9 @@ from config import Config
 
 def get_locale():
     try:
-        if session.get('ui_language', None):
+        if current_user.is_authenticated and current_user.interface_language:
+            return current_user.interface_language
+        elif session.get('ui_language', None):
             return session['ui_language']
         else:
             try:
