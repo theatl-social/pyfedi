@@ -1518,6 +1518,17 @@ class User(UserMixin, db.Model):
             return user_note.body
         else:
             return ''
+    
+    def can_send_pm(self, recipient):
+        if (
+            self.created_very_recently()
+            or self.reputation <= -10
+            or self.banned
+            or not self.verified
+        ) and not (self.is_admin_or_staff() or recipient.is_admin_or_staff()):
+            return False
+        
+        return True
 
 
 class ActivityLog(db.Model):
