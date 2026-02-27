@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from flask import redirect, url_for, flash, request, make_response, current_app, abort, g, json
 from markupsafe import Markup, escape
 from flask_login import current_user
-from flask_babel import _, force_locale, gettext
+from flask_babel import _, force_locale, gettext, ngettext
 from slugify import slugify
 from sqlalchemy import or_, asc, desc, text
 from sqlalchemy.orm.exc import NoResultFound

@@ -1,7 +1,7 @@
 import random
 from flask import request, flash, url_for, current_app, redirect, g, abort
 from flask_login import current_user
-from flask_babel import _
+from flask_babel import _, ngettext
 
 from app import db, cache
 from app.activitypub.signature import RsaKeys

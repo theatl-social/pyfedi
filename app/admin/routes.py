@@ -8,7 +8,7 @@ import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import current_user, login_user
-from flask_babel import _
+from flask_babel import _, ngettext
 from slugify import slugify
 from sqlalchemy import text, desc, or_, delete, update
 from PIL import Image
