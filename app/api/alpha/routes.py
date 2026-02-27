@@ -11,7 +11,7 @@ from app.api.alpha.utils.community import get_community, get_community_list, pos
     post_community_flair_delete, post_community_leave_all
 from app.api.alpha.utils.domain import post_domain_block
 from app.api.alpha.utils.feed import get_feed_list, get_feed
-from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion
+from app.api.alpha.utils.misc import get_search, get_resolve_object, get_suggestion, get_modlog
 from app.api.alpha.utils.post import get_post_list, get_post, post_post_like, put_post_save, put_post_subscribe, \
     post_post, put_post, post_post_delete, post_post_report, post_post_lock, post_post_feature, post_post_remove, \
     post_post_mark_as_read, get_post_replies, get_post_like_list, put_post_set_flair, get_post_list2, post_poll_vote, \
@@ -1341,10 +1341,19 @@ def alpha_site():
     return jsonify({"error": "not_yet_implemented"}), 400
 
 
-# Miscellaneous - not yet implemented
-@bp.route('/api/alpha/modlog', methods=['GET'])  # Get Modlog. Not usually public
-def alpha_miscellaneous():
-    return jsonify({"error": "not_yet_implemented"}), 400
+# Miscellaneous
+@misc_bp.route('/modlog', methods=['GET'])  # Get Modlog
+@misc_bp.doc(summary="Get modlog.")
+@misc_bp.arguments(GetModLogRequest, location="query")
+@misc_bp.response(200, GetModLogResponse)
+@misc_bp.alt_response(400, schema=DefaultError)
+@misc_bp.alt_response(429, schema=DefaultError)
+def alpha_miscellaneous_modlog(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = get_modlog(auth, data)
+    return GetModLogResponse().load(resp)
 
 
 # Community - not yet implemented
