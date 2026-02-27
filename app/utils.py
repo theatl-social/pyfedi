@@ -745,10 +745,31 @@ def make_quotes_straight(text: str) -> str:
 
     return text
 
+
+def handle_reddit_spoilers(text: str) -> str:
+    """Handle reddit-style in-line spoilers >! like this !<"""
+
+    placeholder = gibberish(10)
+
+    # Step 1: Extract inline and block code, replacing with placeholders
+    code_snippets, text = stash_code_html(text, placeholder)
+
+    # Step 2: Do the regex matching and substitutions
+    img_md = re.compile(r'>!\s?(.+?)\s?!<', re.M)
+    text = img_md.sub(r'<tg-spoiler>\1</tg-spoiler>', text)
+
+    # Step 3: Restore code snippets
+    text = pop_code(code_snippets=code_snippets, text=text, placeholder=placeholder)
+
+    return text
+
+
 # use this for Markdown irrespective of origin, as it can deal with both soft break newlines ('\n' used by PieFed) and hard break newlines ('  \n' or ' \\n')
 # ' \\n' will create <br /><br /> instead of just <br />, but hopefully that's acceptable.
 def markdown_to_html(markdown_text, anchors_new_tab=True, allow_img=True, a_target="_blank", test_env=False) -> str:
     if markdown_text:
+
+        markdown_text = handle_reddit_spoilers(markdown_text)
 
         # Escape <...> if it’s not a real HTML tag
         markdown_text = escape_non_html_angle_brackets(

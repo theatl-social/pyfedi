@@ -382,6 +382,54 @@ And if you want to add your score to the database to help your fellow Bookworms 
         result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
         target_html = '<p><img alt="alt text here" loading="lazy" src="https://site.tld/image.png"/></p>\n'
         self.assertEqual(target_html, result)
+    
+    def test_inline_spoilers(self):
+        """Tests inline spoiler functionality."""
+
+        # Basic functionality
+        # telegram/discord format: || like this ||
+        markdown = "|| spoiler here ||"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # reddit format: >! like this !<
+        markdown = ">! spoiler here !<"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # with no space after spoiler delineator
+        # telegram/discord:
+        markdown = "||spoiler here||"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # reddit:
+        markdown = ">!spoiler here!<"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # Multiple occurrences
+        # telegram/discord:
+        markdown = "|| spoiler here || and || another ||"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # reddit:
+        markdown = ">! spoiler here !< and >! another !<"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
+
+        # Mixed formats
+        markdown = "|| spoiler here || and >! another !<"
+        result = markdown_to_html(markdown, test_env={'fn_string': 'fn-test'})
+        target_html = '<p><tg-spoiler>spoiler here</tg-spoiler> and <tg-spoiler>another</tg-spoiler></p>\n'
+        self.assertEqual(target_html, result)
 
 
 if __name__ == '__main__':
