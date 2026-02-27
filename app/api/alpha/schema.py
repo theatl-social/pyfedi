@@ -25,6 +25,7 @@ nsfw_visibility_list = ["Show", "Blur", "Hide", "Transparent"]
 ai_visibility_list = ["Show", "Hide", "Label", "Transparent"]
 private_message_list = ["None", "Local", "Trusted", "All"]
 search_nsfw = ['Exclude', 'Include', 'Only']
+modlog_type_list = ["All", "ModRemovePost", "ModLockPost", "ModFeaturePost", "ModRemoveComment", "ModRemoveCommunity", "ModBanFromCommunity", "ModAddCommunity", "ModTransferCommunity", "ModAdd", "ModBan", "ModHideCommunity", "AdminPurgePerson", "AdminPurgeCommunity", "AdminPurgePost", "AdminPurgeComment"]
 
 
 def validate_datetime_string(text):
@@ -1549,3 +1550,258 @@ class PollVoteRequest(DefaultSchema):
 
 class PollVoteResponse(DefaultSchema):
     post_view = fields.Nested(PostView, required=True)
+
+
+class GetModLogRequest(DefaultSchema):
+    mod_person_id = fields.Integer()
+    community_id = fields.Integer()
+    page = fields.Integer()
+    limit = fields.Integer()
+    type_ = fields.String(validate=validate.OneOf(modlog_type_list))
+    other_person_id = fields.Integer()
+    post_id = fields.Integer()
+    comment_id = fields.Integer()
+
+
+class ModRemovePost(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModRemovePostView(DefaultSchema):
+    mod_remove_post = fields.Nested(ModRemovePost, required=True)
+    moderator = fields.Nested(Person)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+
+
+class ModLockPost(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    locked = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModLockPostView(DefaultSchema):
+    mod_lock_post = fields.Nested(ModLockPost, required=True)
+    moderator = fields.Nested(Person)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+
+
+class ModFeaturePost(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    featured = fields.Boolean(required=True)
+    is_featured_community = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModFeaturePostView(DefaultSchema):
+    mod_feature_post = fields.Nested(ModFeaturePost, required=True)
+    moderator = fields.Nested(Person)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+
+
+class ModRemoveComment(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    comment_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModRemoveCommentView(DefaultSchema):
+    mod_remove_comment = fields.Nested(ModRemoveComment, required=True)
+    moderator = fields.Nested(Person)
+    comment = fields.Nested(Comment, required=True)
+    commenter = fields.Nested(Person, required=True)
+    post = fields.Nested(Post, required=True)
+    community = fields.Nested(Community, required=True)
+
+
+class ModRemoveCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModRemoveCommunityView(DefaultSchema):
+    mod_remove_community = fields.Nested(ModRemoveCommunity, required=True)
+    moderator = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+
+
+class ModBanFromCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    other_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    banned = fields.Boolean(required=True)
+    expires = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModBanFromCommunityView(DefaultSchema):
+    mod_ban_from_community = fields.Nested(ModBanFromCommunity, required=True)
+    moderator = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+    banned_person = fields.Nested(Person, required=True)
+
+
+class ModBan(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    other_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    banned = fields.Boolean(required=True)
+    expires = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModBanView(DefaultSchema):
+    mod_ban = fields.Nested(ModBan, required=True)
+    moderator = fields.Nested(Person)
+    banned_person = fields.Nested(Person, required=True)
+
+
+class ModAddCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    other_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModAddCommunityView(DefaultSchema):
+    mod_add_community = fields.Nested(ModAddCommunity, required=True)
+    moderator = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+    modded_person = fields.Nested(Person, required=True)
+
+
+class ModTransferCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    other_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModTransferCommunityView(DefaultSchema):
+    mod_transfer_community = fields.Nested(ModTransferCommunity, required=True)
+    moderator = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+    modded_person = fields.Nested(Person, required=True)
+
+
+class ModAdd(DefaultSchema):
+    id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    other_person_id = fields.Integer(required=True)
+    removed = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModAddView(DefaultSchema):
+    mod_add = fields.Nested(ModAdd, required=True)
+    moderator = fields.Nested(Person)
+    modded_person = fields.Nested(Person, required=True)
+
+
+class AdminPurgePerson(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class AdminPurgePersonView(DefaultSchema):
+    admin_purge_person = fields.Nested(AdminPurgePerson, required=True)
+    admin = fields.Nested(Person)
+
+
+class AdminPurgeCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class AdminPurgeCommunityView(DefaultSchema):
+    admin_purge_community = fields.Nested(AdminPurgeCommunity, required=True)
+    admin = fields.Nested(Person)
+
+
+class AdminPurgePost(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class AdminPurgePostView(DefaultSchema):
+    admin_purge_post = fields.Nested(AdminPurgePost, required=True)
+    admin = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+
+
+class AdminPurgeComment(DefaultSchema):
+    id = fields.Integer(required=True)
+    admin_person_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class AdminPurgeCommentView(DefaultSchema):
+    admin_purge_comment = fields.Nested(AdminPurgeComment, required=True)
+    admin = fields.Nested(Person)
+    post = fields.Nested(Post, required=True)
+
+
+class ModHideCommunity(DefaultSchema):
+    id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True)
+    mod_person_id = fields.Integer(required=True)
+    reason = fields.String(allow_none=True)
+    hidden = fields.Boolean(required=True)
+    when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
+
+
+class ModHideCommunityView(DefaultSchema):
+    mod_hide_community = fields.Nested(ModHideCommunity, required=True)
+    admin = fields.Nested(Person)
+    community = fields.Nested(Community, required=True)
+
+
+class GetModLogResponse(DefaultSchema):
+    removed_posts = fields.List(fields.Nested(ModRemovePostView), required=True)
+    locked_posts = fields.List(fields.Nested(ModLockPostView), required=True)
+    featured_posts = fields.List(fields.Nested(ModFeaturePostView), required=True)
+    removed_comments = fields.List(fields.Nested(ModRemoveCommentView), required=True)
+    removed_communities = fields.List(fields.Nested(ModRemoveCommunityView), required=True)
+    banned_from_community = fields.List(fields.Nested(ModBanFromCommunityView), required=True)
+    banned = fields.List(fields.Nested(ModBanView), required=True)
+    added_to_community = fields.List(fields.Nested(ModAddCommunityView), required=True)
+    transferred_to_community = fields.List(fields.Nested(ModTransferCommunityView), required=True)
+    added = fields.List(fields.Nested(ModAddView), required=True)
+    admin_purged_persons = fields.List(fields.Nested(AdminPurgePersonView), required=True)
+    admin_purged_communities = fields.List(fields.Nested(AdminPurgeCommunityView), required=True)
+    admin_purged_posts = fields.List(fields.Nested(AdminPurgePostView), required=True)
+    admin_purged_comments = fields.List(fields.Nested(AdminPurgeCommentView), required=True)
+    hidden_communities = fields.List(fields.Nested(ModHideCommunityView), required=True)
