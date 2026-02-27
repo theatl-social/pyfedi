@@ -874,20 +874,17 @@ def admin_federation():
 
     # this is the main settings form
     elif form.validate_on_submit():
-        if form.federation_mode.data == 'allowlist':
-            set_setting('use_allowlist', True)
-            db.session.execute(text('DELETE FROM allowed_instances'))
-            for allow in form.allowlist.data.split('\n'):
-                if allow.strip():
-                    db.session.add(AllowedInstances(domain=allow.strip().lower()))
-                    cache.delete_memoized(instance_allowed, allow.strip())
-        else:  # blocklist mode
-            set_setting('use_allowlist', False)
-            db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
-            for banned in form.blocklist.data.split('\n'):
-                if banned.strip():
-                    db.session.add(BannedInstances(domain=banned.strip().lower()))
-                    cache.delete_memoized(instance_banned, banned.strip())
+        set_setting('use_allowlist', form.federation_mode.data == 'allowlist')
+        db.session.execute(text('DELETE FROM allowed_instances'))
+        for allow in form.allowlist.data.split('\n'):
+            if allow.strip():
+                db.session.add(AllowedInstances(domain=allow.strip().lower()))
+                cache.delete_memoized(instance_allowed, allow.strip())
+        db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is null'))
+        for banned in form.blocklist.data.split('\n'):
+            if banned.strip():
+                db.session.add(BannedInstances(domain=banned.strip().lower()))
+                cache.delete_memoized(instance_banned, banned.strip())
 
         # update and sync defederation subscriptions
         db.session.execute(text('DELETE FROM banned_instances WHERE subscription_id is not null'))

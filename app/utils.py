@@ -2612,9 +2612,11 @@ def download_defeds(defederation_subscription_id: int, domain: str):
 
 @celery.task
 def download_defeds_worker(defederation_subscription_id: int, domain: str):
-    session = get_task_session()
+    session = get_task_session()  # noqa: F811
+    allowed_instances = [instance.domain for instance in session.query(AllowedInstances).all()]
     for defederation_url in retrieve_defederation_list(domain):
-        session.add(BannedInstances(domain=defederation_url, reason='auto', subscription_id=defederation_subscription_id))
+        if defederation_url not in allowed_instances:
+            session.add(BannedInstances(domain=defederation_url, reason='auto', subscription_id=defederation_subscription_id))
     session.commit()
     session.close()
 
