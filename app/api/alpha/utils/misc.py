@@ -477,7 +477,7 @@ def get_modlog(auth, data):
     post_id = int(data['post_id']) if 'post_id' in data else 0
     comment_id = int(data['comment_id']) if 'comment_id' in data else 0
 
-    user = authorise_api_user(auth, return_type='model') if auth else User.query.get(1)
+    user = authorise_api_user(auth, return_type='model') if auth else None
 
     is_admin = user and (user.is_admin() or user.is_staff())
 
