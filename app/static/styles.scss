@@ -156,7 +156,7 @@ div.navbar {
   .dropdown-menu {
     .dropdown-item {
       @include breakpoint(tablet) {
-        max-width: 200px;
+        width: 200px;
       }
       white-space: break-spaces;
       break-inside: avoid;
