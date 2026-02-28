@@ -1570,7 +1570,7 @@ class GetModLogRequest(DefaultSchema):
 class ModRemovePost(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
-    post_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     removed = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
@@ -1586,7 +1586,7 @@ class ModRemovePostView(DefaultSchema):
 class ModLockPost(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
-    post_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True, allow_none=True)
     locked = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
@@ -1601,7 +1601,7 @@ class ModLockPostView(DefaultSchema):
 class ModFeaturePost(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
-    post_id = fields.Integer(required=True)
+    post_id = fields.Integer(required=True, allow_none=True)
     featured = fields.Boolean(required=True)
     is_featured_community = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
@@ -1617,7 +1617,7 @@ class ModFeaturePostView(DefaultSchema):
 class ModRemoveComment(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
-    comment_id = fields.Integer(required=True)
+    comment_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     removed = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
