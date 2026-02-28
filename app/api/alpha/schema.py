@@ -1631,7 +1631,7 @@ class ModRemoveCommentView(DefaultSchema):
 class ModRemoveCommunity(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     removed = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
@@ -1647,7 +1647,7 @@ class ModBanFromCommunity(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
     other_person_id = fields.Integer(required=True, allow_none=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     banned = fields.Boolean(required=True)
     expires = fields.String(allow_none=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
@@ -1681,7 +1681,7 @@ class ModAddCommunity(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
     other_person_id = fields.Integer(required=True, allow_none=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     removed = fields.Boolean(required=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
@@ -1697,7 +1697,7 @@ class ModTransferCommunity(DefaultSchema):
     id = fields.Integer(required=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
     other_person_id = fields.Integer(required=True, allow_none=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
 
@@ -1749,7 +1749,7 @@ class AdminPurgeCommunityView(DefaultSchema):
 class AdminPurgePost(DefaultSchema):
     id = fields.Integer(required=True)
     admin_person_id = fields.Integer(required=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     when_ = fields.String(required=True, validate=validate_datetime_string, metadata={"example": "2025-06-07T02:29:07.980084Z", "format": "datetime"})
 
@@ -1776,7 +1776,7 @@ class AdminPurgeCommentView(DefaultSchema):
 
 class ModHideCommunity(DefaultSchema):
     id = fields.Integer(required=True)
-    community_id = fields.Integer(required=True)
+    community_id = fields.Integer(required=True, allow_none=True)
     mod_person_id = fields.Integer(required=True, allow_none=True)
     reason = fields.String(allow_none=True)
     hidden = fields.Boolean(required=True)
