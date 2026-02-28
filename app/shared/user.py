@@ -200,7 +200,7 @@ def ban_user(input, src, auth=None):
             db.session.add(IpBan(ip_address=to_ban.ip_address, notes=reason))
             db.session.commit()
 
-    task_selector('ban_from_site', user_id=to_ban.id, mod_id=user.id, expiry=None, reason=reason)
+    task_selector('ban_from_site', user_id=to_ban.id, mod_id=user.id, expiry=None, reason=reason, remove_data=purge_content)
 
 
 def unban_user(input, src, auth=None):
