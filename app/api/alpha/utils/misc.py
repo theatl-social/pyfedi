@@ -533,8 +533,6 @@ def get_modlog(auth, data):
     def build_removed_posts(entries):
         result = []
         for entry in entries:
-            if not entry.post:
-                continue
             result.append({
                 'mod_remove_post': {
                     'id': entry.id,
@@ -545,7 +543,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'post': post_view(entry.post, variant=1),
+                'post': post_view(entry.post, variant=1) if entry.post else None,
                 'community': community_view(entry.community, variant=1) if entry.community else None,
             })
         return result
@@ -553,8 +551,6 @@ def get_modlog(auth, data):
     def build_locked_posts(entries):
         result = []
         for entry in entries:
-            if not entry.post:
-                continue
             result.append({
                 'mod_lock_post': {
                     'id': entry.id,
@@ -564,7 +560,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'post': post_view(entry.post, variant=1),
+                'post': post_view(entry.post, variant=1) if entry.post else None,
                 'community': community_view(entry.community, variant=1) if entry.community else None,
             })
         return result
@@ -572,8 +568,6 @@ def get_modlog(auth, data):
     def build_featured_posts(entries):
         result = []
         for entry in entries:
-            if not entry.post:
-                continue
             result.append({
                 'mod_feature_post': {
                     'id': entry.id,
@@ -584,7 +578,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'post': post_view(entry.post, variant=1),
+                'post': post_view(entry.post, variant=1) if entry.post else None,
                 'community': community_view(entry.community, variant=1) if entry.community else None,
             })
         return result
@@ -592,8 +586,6 @@ def get_modlog(auth, data):
     def build_removed_comments(entries):
         result = []
         for entry in entries:
-            if not entry.reply:
-                continue
             result.append({
                 'mod_remove_comment': {
                     'id': entry.id,
@@ -604,9 +596,9 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'comment': reply_view(entry.reply, variant=1),
-                'commenter': user_view(entry.reply.user_id, variant=1),
-                'post': post_view(entry.reply.post_id, variant=1),
+                'comment': reply_view(entry.reply, variant=1) if entry.reply else None,
+                'commenter': user_view(entry.reply.user_id, variant=1) if entry.reply else None,
+                'post': post_view(entry.reply.post_id, variant=1) if entry.reply else None,
                 'community': community_view(entry.community, variant=1) if entry.community else None,
             })
         return result
@@ -614,8 +606,6 @@ def get_modlog(auth, data):
     def build_removed_communities(entries):
         result = []
         for entry in entries:
-            if not entry.community:
-                continue
             result.append({
                 'mod_remove_community': {
                     'id': entry.id,
@@ -626,7 +616,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'community': community_view(entry.community, variant=1),
+                'community': community_view(entry.community, variant=1) if entry.community else None,
             })
         return result
 
@@ -644,7 +634,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'community': community_view(entry.community, variant=1),
+                'community': community_view(entry.community, variant=1) if entry.community else None,
                 'banned_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
             })
         return result
@@ -679,7 +669,7 @@ def get_modlog(auth, data):
                     'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
                 },
                 'moderator': user_view(entry.author, variant=1) if entry.author else None,
-                'community': community_view(entry.community, variant=1),
+                'community': community_view(entry.community, variant=1) if entry.community else None,
                 'modded_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
             })
         return result
