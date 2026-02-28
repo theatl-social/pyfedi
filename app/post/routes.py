@@ -2131,10 +2131,18 @@ def post_view_voting_activity(post_id: int):
     if current_user.is_admin_or_staff() or post.community.is_moderator():
 
         post_title = post.title
-        upvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=1.0).\
-            order_by(User.ap_domain, User.user_name)
-        downvoters = User.query.join(PostVote, PostVote.user_id == User.id).filter_by(post_id=post_id, effect=-1.0).\
-            order_by(User.ap_domain, User.user_name)
+        upvoters = (
+            db.session.query(User, PostVote)
+            .join(PostVote, PostVote.user_id == User.id)
+            .filter(PostVote.post_id == post_id, PostVote.effect == 1.0)
+            .order_by(PostVote.created_at)
+        )
+        downvoters = (
+            db.session.query(User, PostVote)
+            .join(PostVote, PostVote.user_id == User.id)
+            .filter(PostVote.post_id == post_id, PostVote.effect == -1.0)
+            .order_by(PostVote.created_at)
+        )
 
         # local users will be at the bottom of each list as ap_domain is empty for those.
 
@@ -2152,10 +2160,18 @@ def post_reply_view_voting_activity(comment_id: int):
     if current_user.is_admin_or_staff() or post_reply.community.is_moderator():
 
         reply_text = post_reply.body
-        upvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=1.0).\
-            order_by(User.ap_domain, User.user_name)
-        downvoters = User.query.join(PostReplyVote, PostReplyVote.user_id == User.id).filter_by(post_reply_id=comment_id, effect=-1.0).\
-            order_by(User.ap_domain, User.user_name)
+        upvoters = (
+            db.session.query(User, PostReplyVote)
+            .join(PostReplyVote, PostReplyVote.user_id == User.id)
+            .filter(PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect == 1.0)
+            .order_by(PostReplyVote.created_at)
+        )
+        downvoters = (
+            db.session.query(User, PostReplyVote)
+            .join(PostReplyVote, PostReplyVote.user_id == User.id)
+            .filter(PostReplyVote.post_reply_id == comment_id, PostReplyVote.effect == -1.0)
+            .order_by(PostReplyVote.created_at)
+        )
 
         # local users will be at the bottom of each list as ap_domain is empty for those.
 
