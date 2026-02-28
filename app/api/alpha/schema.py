@@ -1579,8 +1579,8 @@ class ModRemovePost(DefaultSchema):
 class ModRemovePostView(DefaultSchema):
     mod_remove_post = fields.Nested(ModRemovePost, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
 class ModLockPost(DefaultSchema):
@@ -1594,8 +1594,8 @@ class ModLockPost(DefaultSchema):
 class ModLockPostView(DefaultSchema):
     mod_lock_post = fields.Nested(ModLockPost, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
 class ModFeaturePost(DefaultSchema):
@@ -1610,8 +1610,8 @@ class ModFeaturePost(DefaultSchema):
 class ModFeaturePostView(DefaultSchema):
     mod_feature_post = fields.Nested(ModFeaturePost, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
 class ModRemoveComment(DefaultSchema):
@@ -1626,10 +1626,10 @@ class ModRemoveComment(DefaultSchema):
 class ModRemoveCommentView(DefaultSchema):
     mod_remove_comment = fields.Nested(ModRemoveComment, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    comment = fields.Nested(Comment, required=True)
+    comment = fields.Nested(Comment, allow_none=True)
     commenter = fields.Nested(Person, allow_none=True)
-    post = fields.Nested(Post, required=True)
-    community = fields.Nested(Community, required=True)
+    post = fields.Nested(Post, allow_none=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
 class ModRemoveCommunity(DefaultSchema):
@@ -1644,7 +1644,7 @@ class ModRemoveCommunity(DefaultSchema):
 class ModRemoveCommunityView(DefaultSchema):
     mod_remove_community = fields.Nested(ModRemoveCommunity, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    community = fields.Nested(Community, required=True)
+    community = fields.Nested(Community, allow_none=True)
 
 
 class ModBanFromCommunity(DefaultSchema):
@@ -1661,7 +1661,7 @@ class ModBanFromCommunity(DefaultSchema):
 class ModBanFromCommunityView(DefaultSchema):
     mod_ban_from_community = fields.Nested(ModBanFromCommunity, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    community = fields.Nested(Community, required=True)
+    community = fields.Nested(Community, allow_none=True)
     banned_person = fields.Nested(Person, allow_none=True)
 
 
@@ -1693,7 +1693,7 @@ class ModAddCommunity(DefaultSchema):
 class ModAddCommunityView(DefaultSchema):
     mod_add_community = fields.Nested(ModAddCommunity, required=True)
     moderator = fields.Nested(Person, allow_none=True)
-    community = fields.Nested(Community, required=True)
+    community = fields.Nested(Community, allow_none=True)
     modded_person = fields.Nested(Person, allow_none=True)
 
 
