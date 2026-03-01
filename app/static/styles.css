@@ -781,6 +781,14 @@ tg-spoiler:hover {
   top: 0; /* Bring the link back into view when it receives focus */
 }
 
+.ml-3 {
+  margin-left: 1rem !important;
+}
+
+.home .ml-3 {
+  margin-left: 1px !important;
+}
+
 #outer_container a:not(.btn):hover, footer a:not(.btn):hover {
   text-decoration: underline;
 }
