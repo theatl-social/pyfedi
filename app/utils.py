@@ -79,7 +79,7 @@ def render_template(template_name: str, skip_protocol_replacement: bool = False,
     if current_user.is_anonymous:
         if 'etag' in context:
             resp.headers.add_header('ETag', context['etag'])
-        resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
+        resp.headers.add_header('Cache-Control', 'no-cache, must-revalidate')
 
     # Early Hints-compatible Link headers (for Cloudflare or supporting proxies)
     resp.headers['Link'] = (
@@ -103,8 +103,11 @@ def request_etag_matches(etag):
 def return_304(etag, content_type=None):
     resp = make_response('', 304)
     resp.headers.add_header('ETag', request.headers['If-None-Match'])
-    resp.headers.add_header('Cache-Control', 'no-cache, max-age=600, must-revalidate')
-    resp.headers.add_header('Vary', 'Accept, Cookie, Accept-Language')
+    resp.headers.add_header('Cache-Control', 'no-cache, must-revalidate')
+    if current_user.is_anonymous:
+        resp.headers.add_header('Vary', 'Accept, Accept-Language')
+    else:
+        resp.headers.add_header('Vary', 'Accept, Cookie, Accept-Language')
     if content_type:
         resp.headers.set('Content-Type', content_type)
     return resp

@@ -331,14 +331,16 @@ def show_post(post_id: int, sort, low_bandwidth, autoplay):
                                    author_banned=author_banned,
                                    user_pronouns=user_pronouns()
                                    )
-        response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         response.headers.set('Link',
                              f'<https://{current_app.config["SERVER_NAME"]}/post/{post.id}>; rel="alternate"; type="application/activity+json"')
         oembed_url = url_for('post.post_oembed', post_id=post.id, _external=True)
         response.headers.set('Link', f'<{oembed_url}>; rel="alternate"; type="application/json+oembed"')
+        response.headers.set('ETag', f"{post.id}{sort}_{hash(post.last_active)}")
         if current_user.is_anonymous:
+            response.headers.set('Vary', 'Accept, Accept-Language')
             response.headers.set('Cache-Control', 'public, max-age=30')
         else:
+            response.headers.set('Vary', 'Accept, Cookie, Accept-Language')
             response.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
         return response

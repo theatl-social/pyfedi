@@ -136,7 +136,6 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
         instance_stickies = []
 
     if current_user.is_anonymous:
-        flash(_('Create an account to tailor this feed to your interests.'))
         content_filters = {'-1': {'trump', 'elon', 'musk'}}
     else:
         content_filters = user_filters_home(current_user.id)
@@ -222,10 +221,12 @@ def home_page(sort, view_filter, page, result_id, low_bandwidth, tag):
                            has_topics=num_topics() > 0,
                            user_pronouns=user_pronouns()
                            ))
-    resp.headers.set('Vary', 'Accept, Cookie, Accept-Language')
+    resp.headers.set('ETag', f"{sort}_{view_filter}_{hash(str(g.site.last_active))}")
     if current_user.is_anonymous:
+        resp.headers.set('Vary', 'Accept, Accept-Language')
         resp.headers.set('Cache-Control', 'public, max-age=60')
     else:
+        resp.headers.set('Vary', 'Accept, Cookie, Accept-Language')
         resp.headers.set('Cache-Control', 'private, max-age=15, must-revalidate')
 
     return resp
