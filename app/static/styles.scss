@@ -109,6 +109,14 @@ tg-spoiler {
     top: 0; /* Bring the link back into view when it receives focus */
 }
 
+.ml-3 {
+  margin-left: 1rem !important;
+}
+
+.home .ml-3 {
+  margin-left: 1px !important;
+}
+
 #outer_container, footer {
   //overscroll-behavior-x: none;
   a:not(.btn):hover {
