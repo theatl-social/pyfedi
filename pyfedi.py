@@ -160,13 +160,7 @@ def after_request(response):
             )
             response.headers.setdefault('Vary', 'Accept-Language, Cookie')
         else:
-            response.headers.setdefault('Vary', 'Accept-Language, Cookie')
-            # Prevent Flask from setting session cookie for anonymous users
-            # This must be done by marking session as not modified, since Flask sets
-            # the cookie after after_request handlers run
-            if 'session' in dir(flask):
-                from flask import session
-                session.modified = False
+            response.headers.setdefault('Vary', 'Accept-Language')
     return response
 
 
