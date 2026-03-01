@@ -481,11 +481,17 @@ server {
         proxy_set_header Connection "";
         proxy_pass http://app_server;
         ssi off;
-        
+
+        # Bypass cache for logged-in users
+        set $no_cache 0;
+        if ($http_cookie ~* "session=") {
+            set $no_cache 1;
+        }
+
         # Enable caching
         proxy_cache mycache;
-        proxy_cache_bypass   $http_cache_control;
-        proxy_no_cache       $http_cache_control;
+        proxy_cache_bypass   $no_cache $http_cache_control;
+        proxy_no_cache       $no_cache $http_cache_control;
 
         proxy_cache_valid any 0;    # default: don't override app TTLs
 
