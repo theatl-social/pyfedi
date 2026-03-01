@@ -65,6 +65,34 @@ rest_api = Api()
 app_bcrypt = Bcrypt()
 
 
+class StripCookieVaryForAnonymous:
+    """WSGI middleware that removes 'Cookie' from the Vary header for requests
+    that have no session cookie. This allows Cloudflare to cache responses for
+    anonymous users, which Flask's session middleware prevents by always adding
+    Vary: Cookie when it processes the session."""
+
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        has_session_cookie = 'session=' in environ.get('HTTP_COOKIE', '')
+
+        def custom_start_response(status, headers, exc_info=None):
+            if not has_session_cookie:
+                new_headers = []
+                for name, value in headers:
+                    if name.lower() == 'vary':
+                        value = ', '.join(
+                            part.strip() for part in value.split(',')
+                            if part.strip().lower() != 'cookie'
+                        )
+                    new_headers.append((name, value))
+                headers = new_headers
+            return start_response(status, headers, exc_info)
+
+        return self.app(environ, custom_start_response)
+
+
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
@@ -80,7 +108,7 @@ def create_app(config_class=Config):
             enable_tracing=False,
         )
 
-    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1)
+    app.wsgi_app = StripCookieVaryForAnonymous(ProxyFix(app.wsgi_app, x_for=1))
 
     app.config["API_TITLE"] = "PieFed 1.7 Alpha API"
     app.config["API_VERSION"] = "alpha 1.7"
