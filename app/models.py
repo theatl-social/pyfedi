@@ -1941,7 +1941,7 @@ class Post(db.Model):
             post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
-            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1 WHERE id = :user_id'),
+            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1, last_seen = now() WHERE id = :user_id'),
                                {'user_id': user.id})
             db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
@@ -2736,7 +2736,7 @@ class PostReply(db.Model):
                 post.reply_count += 1
                 post.community.post_reply_count += 1
                 post.community.last_active = post.last_active = utcnow()
-            session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
+            session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1, last_seen = now() WHERE id = :user_id'),
                                {'user_id': user.id})
             session.execute(text('UPDATE "site" SET last_active = NOW()'))
             session.commit()
