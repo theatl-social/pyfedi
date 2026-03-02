@@ -3363,6 +3363,17 @@ form h5 {
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
 }
 
+#outer_container .share_desktop a {
+  text-decoration: none !important;
+}
+#outer_container .share_desktop a:hover {
+  text-decoration: none !important;
+}
+#outer_container .share_desktop a img {
+  width: 20px;
+  height: 20px;
+}
+
 @keyframes blink-animation {
   to {
     visibility: hidden;
@@ -3480,6 +3491,10 @@ form h5 {
 
 [data-bs-theme=dark] .skip-link {
   color: black;
+}
+
+[data-bs-theme=dark] .share_desktop img {
+  filter: invert(1);
 }
 
 :root {

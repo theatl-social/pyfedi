@@ -65,7 +65,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupEmojiAutoSubmit,
         setupReactionDialog,
         setupScrollChat,
-        setupCodeBlockCopy
+        setupCodeBlockCopy,
+        setupShareIcons
     ];
     
     // Run critical setups immediately
@@ -2514,4 +2515,18 @@ function setupCodeBlockCopy() {
       code.appendChild(button);
     }
   });
+}
+
+function setupShareIcons() {
+    document.querySelectorAll('.share_mobile a').forEach(shareAnchor => {
+        shareAnchor.addEventListener("click", function(event) {
+            event.preventDefault();
+            if (navigator.share) {
+              navigator.share({ url: location.href });
+            } else {
+              navigator.clipboard.writeText(location.href);
+              alert("Link copied to clipboard");
+            }
+        });
+    });
 }
