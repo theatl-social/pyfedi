@@ -3027,6 +3027,19 @@ form {
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
 }
 
+#outer_container .share_desktop a {
+  text-decoration: none !important;
+
+  &:hover {
+    text-decoration: none !important;
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 @keyframes blink-animation {
   to {
     visibility: hidden;
@@ -3073,6 +3086,10 @@ form {
 
 [data-bs-theme="dark"] .skip-link {
   color: black;
+}
+
+[data-bs-theme="dark"] .share_desktop img {
+  filter: invert(1);
 }
 
 @import "scss/compact";

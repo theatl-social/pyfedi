@@ -499,6 +499,26 @@
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
         </div>
+        <div class="share_mobile d-lg-none">
+            <a href="#" title="{{ _('Share') }}"><span class="fe fe-share"></span></a>
+        </div>
+        <div class="d-none share_desktop d-lg-flex">
+            <div class="dropdown">
+                <a href="#" title="{{ _('Share') }}" data-bs-toggle="dropdown" aria-expanded="false" id="post_share_link_{{ post.id }}" rel="nofollow"><span class="fe fe-share"></span></a>
+                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="post_share_link_{{ post.id }}">
+                    <li><a href="/post/290/share_mastodon" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                            <img src="/static/images/mastodon_ico.png"> {{ _('Share on Mastodon') }}</a></li>
+                    <li><a href="https://www.reddit.com/submit?url={{ post.public_url() | urlencode }}&title={{ post.title | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener"><img src="/static/images/reddit.svg"> {{ _('Share on Reddit') }}</a></li>
+                    <li><a href="https://www.facebook.com/sharer/sharer.php?u={{ post.public_url() | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener">
+                            <span class="fe fe-facebook"></span> {{ _('Share on Facebook') }}</a></li>
+                    <li><a href="https://api.whatsapp.com/send?text={{ (post.title ~ ' ' ~ post.public_url()) | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener">
+                            <img src="/static/images/whatsapp.svg"></span> {{ _('Share on WhatsApp') }}</a></li>
+                </ul>
+            </div>
+        </div>
         {% if can_translate and current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
             <div class="post_translate_icon">
                 <a rel="nofollow noindex" title="{{ _('Translate') }}" href="#"
