@@ -8,7 +8,7 @@ import shutil
 
 from flask import request, flash, json, url_for, current_app, redirect, g, abort, send_file
 from flask_login import current_user, login_user
-from flask_babel import _
+from flask_babel import _, ngettext
 from slugify import slugify
 from sqlalchemy import text, desc, or_, delete, update
 from PIL import Image
@@ -472,7 +472,10 @@ def admin_federation():
             flash(_('Results: %(results)s', results=str(pre_load_messages)))
         else:
             flash(
-                _('Subscription process for %(communities_to_add)d of %(parsed_communities_sorted)d communities launched in background, check admin/activities for details',
+                ngettext(
+                  'Subscription process for %(communities_to_add)d of %(parsed_communities_sorted)d community launched in background, check admin/activities for details',
+                  'Subscription process for %(communities_to_add)d of %(parsed_communities_sorted)d communities launched in background, check admin/activities for details',
+                  len(parsed_communities_sorted),
                   communities_to_add=communities_to_add, parsed_communities_sorted=len(parsed_communities_sorted)))
 
         return redirect(url_for('admin.admin_federation'))
@@ -782,7 +785,10 @@ def admin_federation():
             flash(_('Results: %(results)s', results=str(remote_scan_messages)))
         else:
             flash(
-                _('Based on current filters, the subscription process for %(communities_to_join)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                ngettext(
+                  'Based on current filters, the subscription process for %(communities_to_join)d of %(candidate_communities)d community launched in background, check admin/activities for details',
+                  'Based on current filters, the subscription process for %(communities_to_join)d of %(candidate_communities)d communities launched in background, check admin/activities for details',
+                  len(candidate_communities),
                   communities_to_join=len(community_urls_to_join), candidate_communities=len(candidate_communities)))
 
         return redirect(url_for('admin.admin_federation'))
