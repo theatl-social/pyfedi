@@ -343,14 +343,14 @@ def user_profile(actor):
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(func.lower(User.user_name) == actor.lower())).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(func.lower(User.user_name) == actor.lower())).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
 

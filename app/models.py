@@ -3250,7 +3250,7 @@ class UserRegistration(db.Model):
     user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
 
     def search_similar_names(self):
-        return User.query.filter(or_(User.user_name == self.user.user_name, User.title == self.user.title),
+        return User.query.filter(or_(func.lower(User.user_name) == self.user.user_name.lower(), User.title == self.user.title),
                                  User.id != self.user.id).order_by(desc(User.banned)).order_by(User.reputation).limit(15)
 
 

@@ -9,7 +9,7 @@ from app.activitypub.signature import post_request, default_context, signed_get_
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
-from app.utils import gibberish, ap_datetime, instance_banned, get_request
+from app.utils import gibberish, ap_datetime, instance_banned, get_request, get_task_session, patch_db_session
 
 import httpx
 
@@ -24,76 +24,85 @@ def purge_user_then_delete(user_id, flush=True):
 @celery.task
 def purge_user_then_delete_task(user_id, flush):
     with current_app.app_context():
-        user = User.query.get(user_id)
-        if user:
-            # posts
-            for post in user.posts:
-                if not post.community.local_only:
-                    delete_json = {
-                        'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
-                        'type': 'Delete',
-                        'actor': user.public_url(),
-                        'audience': post.community.public_url(),
-                        'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                        'published': ap_datetime(utcnow()),
-                        'cc': [
-                            user.followers_url()
-                        ],
-                        'object': post.ap_id,
-                    }
+        session = get_task_session()
+        try:
+            with patch_db_session(session):
+                user = session.query(User).get(user_id)
+                if user:
+                    # posts
+                    for post in user.posts:
+                        if not post.community.local_only:
+                            delete_json = {
+                                'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
+                                'type': 'Delete',
+                                'actor': user.public_url(),
+                                'audience': post.community.public_url(),
+                                'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
+                                'published': ap_datetime(utcnow()),
+                                'cc': [
+                                    user.followers_url()
+                                ],
+                                'object': post.ap_id,
+                            }
 
-                    if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                        send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
+                            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
+                                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
 
-                    else:  # local community - send it to followers on remote instances, using Announce
-                        announce = {
-                            "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
-                            "type": 'Announce',
+                            else:  # local community - send it to followers on remote instances, using Announce
+                                announce = {
+                                    "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
+                                    "type": 'Announce',
+                                    "to": [
+                                        "https://www.w3.org/ns/activitystreams#Public"
+                                    ],
+                                    "actor": post.community.ap_profile_id,
+                                    "cc": [
+                                        post.community.ap_followers_url
+                                    ],
+                                    '@context': default_context(),
+                                    'object': delete_json
+                                }
+
+                                for instance in post.community.following_instances():
+                                    if instance.inbox and not instance_banned(instance.domain):
+                                        send_to_remote_instance_fast(instance.inbox, post.community.private_key, post.community.ap_profile_id, announce)
+
+                    # unsubscribe
+                    communities = session.query(CommunityMember).filter_by(user_id=user_id).all()
+                    for membership in communities:
+                        community = session.query(Community).get(membership.community_id)
+                        unsubscribe_from_community(community, user)
+
+                    # federate deletion of account
+                    if user.is_local():
+                        instances = session.query(Instance).all()
+                        payload = {
+                            "@context": default_context(),
+                            "actor": user.public_url(),
+                            "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
+                            "object": user.public_url(),
                             "to": [
                                 "https://www.w3.org/ns/activitystreams#Public"
                             ],
-                            "actor": post.community.ap_profile_id,
-                            "cc": [
-                                post.community.ap_followers_url
-                            ],
-                            '@context': default_context(),
-                            'object': delete_json
+                            "type": "Delete"
                         }
+                        for instance in instances:
+                            if instance.inbox and instance.online() and instance.id != 1:
+                                send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
-                        for instance in post.community.following_instances():
-                            if instance.inbox and not instance_banned(instance.domain):
-                                send_to_remote_instance_fast(instance.inbox, post.community.private_key, post.community.ap_profile_id, announce)
+                    user.delete_dependencies()
+                    user.purge_content(flush)
+                    from app import redis_client
+                    with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
+                        user = session.query(User).get(user_id)
+                        user.deleted = True
+                        session.commit()
 
-            # unsubscribe
-            communities = CommunityMember.query.filter_by(user_id=user_id).all()
-            for membership in communities:
-                community = Community.query.get(membership.community_id)
-                unsubscribe_from_community(community, user)
-
-            # federate deletion of account
-            if user.is_local():
-                instances = Instance.query.all()
-                payload = {
-                    "@context": default_context(),
-                    "actor": user.public_url(),
-                    "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
-                    "object": user.public_url(),
-                    "to": [
-                        "https://www.w3.org/ns/activitystreams#Public"
-                    ],
-                    "type": "Delete"
-                }
-                for instance in instances:
-                    if instance.inbox and instance.online() and instance.id != 1:
-                        send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
-
-            user.delete_dependencies()
-            user.purge_content(flush)
-            from app import redis_client
-            with redis_client.lock(f"lock:user:{user.id}", timeout=10, blocking_timeout=6):
-                user = User.query.get(user_id)
-                user.deleted = True
-                db.session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
 
 def unsubscribe_from_community(community, user):

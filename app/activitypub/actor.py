@@ -6,7 +6,7 @@ from random import randint
 
 import httpx
 from flask import current_app
-from sqlalchemy import or_
+from sqlalchemy import or_, func
 
 from app import cache, db
 from app.activitypub.util import get_request, signed_get_request, actor_json_to_model, refresh_user_profile, \
@@ -303,7 +303,7 @@ def find_actor_by_url(actor_url, community_only=False, feed_only=False, allow_ba
         user: User = User.query.filter_by(ap_id=actor_url.lower()).first()
         return user
     else:
-        user: User = User.query.filter(or_(User.user_name == actor_url)).filter_by(ap_id=None).first()
+        user: User = User.query.filter(or_(func.lower(User.user_name) == actor_url.lower())).filter_by(ap_id=None).first()
         if user is None:
             user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor_url.lower()}',
                                         ap_id=None).first()
