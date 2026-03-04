@@ -2058,7 +2058,7 @@ def site_ban_remove_data(blocker_id, blocked):
     # Images attached to posts can't be restored, but site ban reversals don't have a 'removeData' field anyway.
     files = db.session.query(File).join(Post).filter(Post.user_id == blocked.id).all()
     for file in files:
-        file.delete_from_disk()
+        file.delete_from_disk(purge_cdn=True)
         file.source_url = ''
     if blocked.avatar_id:
         blocked.avatar.delete_from_disk()
