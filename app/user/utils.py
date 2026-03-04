@@ -9,6 +9,7 @@ from app.activitypub.signature import post_request, default_context, signed_get_
 from app.activitypub.util import actor_json_to_model
 from app.community.util import send_to_remote_instance, send_to_remote_instance_fast
 from app.models import User, CommunityMember, Community, Instance, Site, utcnow, ActivityPubLog, BannedInstances
+from app.shared.tasks import task_selector
 from app.utils import gibberish, ap_datetime, instance_banned, get_request, get_task_session, patch_db_session
 
 import httpx
@@ -31,64 +32,15 @@ def purge_user_then_delete_task(user_id, flush):
                 if user:
                     # posts
                     for post in user.posts:
-                        if not post.community.local_only:
-                            delete_json = {
-                                'id': f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
-                                'type': 'Delete',
-                                'actor': user.public_url(),
-                                'audience': post.community.public_url(),
-                                'to': [post.community.public_url(), 'https://www.w3.org/ns/activitystreams#Public'],
-                                'published': ap_datetime(utcnow()),
-                                'cc': [
-                                    user.followers_url()
-                                ],
-                                'object': post.ap_id,
-                            }
-
-                            if not post.community.is_local():  # this is a remote community, send it to the instance that hosts it
-                                send_post_request(post.community.ap_inbox_url, delete_json, user.private_key, user.public_url() + '#main-key')
-
-                            else:  # local community - send it to followers on remote instances, using Announce
-                                announce = {
-                                    "id": f"{current_app.config['SERVER_URL']}/activities/announce/{gibberish(15)}",
-                                    "type": 'Announce',
-                                    "to": [
-                                        "https://www.w3.org/ns/activitystreams#Public"
-                                    ],
-                                    "actor": post.community.ap_profile_id,
-                                    "cc": [
-                                        post.community.ap_followers_url
-                                    ],
-                                    '@context': default_context(),
-                                    'object': delete_json
-                                }
-
-                                for instance in post.community.following_instances():
-                                    if instance.inbox and not instance_banned(instance.domain):
-                                        send_to_remote_instance_fast(instance.inbox, post.community.private_key, post.community.ap_profile_id, announce)
+                        task_selector('delete_post', user_id=user.id, post_id=post.id)
+                    for reply in user.post_replies:
+                        task_selector('delete_reply', user_id=user.id, reply_id=reply.id)
 
                     # unsubscribe
                     communities = session.query(CommunityMember).filter_by(user_id=user_id).all()
                     for membership in communities:
                         community = session.query(Community).get(membership.community_id)
                         unsubscribe_from_community(community, user)
-
-                    # federate deletion of account
-                    if user.is_local():
-                        instances = session.query(Instance).all()
-                        payload = {
-                            "@context": default_context(),
-                            "actor": user.public_url(),
-                            "id": f"{current_app.config['SERVER_URL']}/activities/delete/{gibberish(15)}",
-                            "object": user.public_url(),
-                            "to": [
-                                "https://www.w3.org/ns/activitystreams#Public"
-                            ],
-                            "type": "Delete"
-                        }
-                        for instance in instances:
-                            if instance.inbox and instance.online() and instance.id != 1:
-                                send_post_request(instance.inbox, payload, user.private_key, user.public_url() + '#main-key')
 
                     user.delete_dependencies()
                     user.purge_content(flush)
