@@ -5,6 +5,7 @@ import math
 import os
 import uuid
 import re
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import time
@@ -1091,7 +1092,11 @@ class User(UserMixin, db.Model):
     def display_name(self):
         if self.deleted is False:
             if self.title:
-                return self.title.strip()
+                # Sanitize some special unicode formatting characters
+                # ref: https://krvtz.net/posts/input-validation-of-free-form-unicode-text-in-python.html
+                title = self.title.strip()
+                clean_title = "".join(c for c in title if unicodedata.category(c) != "Cf")
+                return clean_title
             else:
                 return self.user_name.strip()
         else:
