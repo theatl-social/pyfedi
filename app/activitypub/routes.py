@@ -527,6 +527,9 @@ def community_profile(actor):
                         "type": "Image",
                         "url": f"{current_app.config['SERVER_URL']}{community.header_image()}"
                     }
+            actor_data['language'] = []
+            for language in community.languages:
+                actor_data['language'].append({'identifier': language.code, 'name': language.name})
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Cache-Control', 'public, max-age=30')
