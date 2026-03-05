@@ -80,6 +80,13 @@ upload_bp = ApiBlueprint(
     description=""
 )
 
+admin_bp = ApiBlueprint(
+    "Admin",
+    __name__,
+    url_prefix="/api/alpha",
+    description=""
+)
+
 
 def shared_error_handler(e):
     """Shared error handler for all API blueprints"""
@@ -124,7 +131,19 @@ def _get_provided_value(field):
 
 
 # Register the shared error handler for all blueprints
-blueprints = [site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, reply_bp, post_bp, private_message_bp, upload_bp]
+blueprints = [
+    site_bp,
+    misc_bp,
+    comm_bp,
+    feed_bp,
+    topic_bp,
+    user_bp,
+    reply_bp,
+    post_bp,
+    private_message_bp,
+    upload_bp,
+    admin_bp,
+]
 for blueprint in blueprints:
     blueprint.errorhandler(Exception)(shared_error_handler)
 

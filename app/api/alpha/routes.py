@@ -3,7 +3,7 @@ from flask_smorest import abort
 
 from app import limiter
 from app.api.alpha import bp, site_bp, misc_bp, comm_bp, feed_bp, topic_bp, user_bp, \
-    reply_bp, post_bp, private_message_bp, upload_bp
+    reply_bp, post_bp, private_message_bp, upload_bp, admin_bp
 from app.api.alpha.utils.community import get_community, get_community_list, post_community_follow, \
     post_community_block, post_community, put_community, put_community_subscribe, post_community_delete, \
     get_community_moderate_bans, put_community_moderate_unban, post_community_moderate_ban, \
@@ -33,6 +33,7 @@ from app.api.alpha.utils.user import get_user, post_user_block, get_user_unread_
     get_user_notifications, put_user_notification_state, get_user_notifications_count, \
     put_user_mark_all_notifications_read, post_user_verify_credentials, post_user_set_flair, get_user_details, \
     get_user_media, post_user_set_note, post_user_ban, post_user_unban
+from app.api.alpha.utils.admin import get_registration_list
 from app.constants import *
 from app.utils import orjson_response, get_setting
 from app.api.alpha.schema import *
@@ -1332,6 +1333,21 @@ def post_alpha_user_image_delete(data):
     return ImageDeleteResponse().load(resp)
 
 
+# Admin routes, only some are selectively implemented. Everything else intended to be done through web ui
+
+@admin_bp.route('/admin/registration_application/list', methods=['GET'])
+@admin_bp.doc(summary="Get the list of applications ready for admin review, sorted reverse chronologically")
+@admin_bp.arguments(GetRegistrationList, location="query")
+@admin_bp.response(200, GetRegistrationListResponse)
+@admin_bp.alt_response(400, schema=DefaultError)
+def get_alpha_admin_registration_list(data):
+    if not enable_api():
+        return abort(400, message="alpha api is not enabled")
+    auth = request.headers.get('Authorization')
+    resp = get_registration_list(auth, data)
+    return GetRegistrationListResponse().load(resp)
+
+
 # Not yet implemented. Copied from lemmy's V3 api, so some aren't needed, and some need changing
 
 # Site - not yet implemented
@@ -1421,7 +1437,7 @@ def alpha_user_mention():
 # Admin - not yet implemented
 @bp.route('/api/alpha/admin/add', methods=['POST'])
 @bp.route('/api/alpha/admin/registration_application/count', methods=['GET'])  # (no
-@bp.route('/api/alpha/admin/registration_application/list', methods=['GET'])  # plans
+# @bp.route('/api/alpha/admin/registration_application/list', methods=['GET'])  # plans
 @bp.route('/api/alpha/admin/registration_application/approve', methods=['PUT'])  # to
 @bp.route('/api/alpha/admin/purge/person', methods=['POST'])  # implement
 @bp.route('/api/alpha/admin/purge/community', methods=['POST'])  # any
