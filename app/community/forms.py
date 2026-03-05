@@ -230,7 +230,7 @@ class CreatePostForm(FlaskForm):
                          choices=[('none', _l('None')), ('daily', _l('Daily')),
                                   ('weekly', _l('Weekly')), ('monthly', _l('Monthly'))],
                          render_kw={'class': 'form-select'})
-    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control tom-select"})
+    timezone = SelectField(_('Timezone'), validators=[DataRequired()], render_kw={'id': 'timezone', "class": "form-control"})
     submit = SubmitField(_l('Publish'))
 
     def __init__(self, *args, **kwargs):
