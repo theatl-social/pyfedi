@@ -184,17 +184,20 @@ def run_search():
             recently_upvoted = []
             recently_downvoted = []
 
+        languages = Language.query.order_by(Language.name).all()
+        instance_software = Instance.unique_software_names()
         return render_template('search/results.html', title=_('Search results for %(q)s', q=q), posts=posts,
                                replies=replies,
                                community_results=communities, q=q,
-                               community_id=community_id, language_id=language_id,
-                               search_for=search_for,
+                               community=community, community_id=community_id, language_id=language_id,
+                               search_for=search_for, sort_by=sort_by, type=type,
+                               software=software, nsfw=nsfw, minimum_upvote=minimum_upvote,
+                               languages=languages, instance_software=instance_software,
                                next_url=next_url, prev_url=prev_url, show_post_community=True,
                                recently_upvoted=recently_upvoted,
                                recently_downvoted=recently_downvoted,
                                user_pronouns=user_pronouns(),
                                moderated_community_ids=moderating_communities_ids(current_user.get_id()),
-
                                )
 
     else:
