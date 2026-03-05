@@ -891,6 +891,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.add(member)
                                 community.subscriptions_count += 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                                 session.commit()
                                 cache.delete_memoized(community_membership, user, community)
                                 # send accept message to acknowledge the follow
@@ -1549,6 +1550,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.delete(member)
                                 community.subscriptions_count -= 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                             if join_request:
                                 session.delete(join_request)
                             session.commit()
