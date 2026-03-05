@@ -2360,6 +2360,10 @@ form {
 	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
 }
 
+.coolfieldset.expanded .coolfieldset.collapsed legend {
+	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+}
+
 .domain_link {
   color: #777;
   font-size: 73%;
@@ -3106,7 +3110,12 @@ form {
   color: white;
 }
 
-[data-bs-theme="dark"] .coolfieldset legend, .coolfieldset.expanded legend {
+
+.coolfieldset.expanded legend {
+	background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+}
+
+[data-bs-theme="dark"] .coolfieldset legend {
 	background: #424549 url(/static/images/expanded.gif) no-repeat center left;
 }
 
