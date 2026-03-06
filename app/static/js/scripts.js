@@ -65,7 +65,8 @@ document.addEventListener("DOMContentLoaded", function () {
         setupEmojiAutoSubmit,
         setupReactionDialog,
         setupScrollChat,
-        setupCodeBlockCopy
+        setupCodeBlockCopy,
+        setupShareIcons
     ];
     
     // Run critical setups immediately
@@ -400,16 +401,18 @@ function setupLightDark() {
 
     const showActiveTheme = (theme) => {
         if (theme === 'dark') {
-            elem.setAttribute('aria-label', 'Light mode');
-            elem.setAttribute('title', 'Light mode');
-            elem.setAttribute('data-bs-original-title', 'Light mode');
+            const title = elem.dataset['light'];
+            elem.setAttribute('aria-label', title);
+            elem.setAttribute('title', title);
+            elem.setAttribute('data-bs-original-title', title);
             elem.setAttribute('data-bs-theme-value', 'light');
             icon.classList.remove('fe-moon');
             icon.classList.add('fe-sun');
         } else {
-            elem.setAttribute('aria-label', 'Dark mode');
-            elem.setAttribute('title', 'Dark mode');
-            elem.setAttribute('data-bs-original-title', 'Dark mode');
+            const title = elem.dataset['dark'];
+            elem.setAttribute('aria-label', title);
+            elem.setAttribute('title', title);
+            elem.setAttribute('data-bs-original-title', title);
             elem.setAttribute('data-bs-theme-value', 'dark');
             icon.classList.remove('fe-sun');
             icon.classList.add('fe-moon');
@@ -536,10 +539,11 @@ function collapseReply(comment_id) {
 // every element with the 'confirm_first' class gets a popup confirmation dialog
 function setupConfirmFirst() {
     const show_first = document.querySelectorAll('.confirm_first');
+    const translation = document.querySelector('#areYouSureTranslation');
     show_first.forEach(element => {
         if (!element.dataset.confirmFirstSetup) {
             element.addEventListener("click", function(event) {
-                if (!confirm("Are you sure?")) {
+                if (!confirm(translation.value)) {
                   event.preventDefault(); // As the user clicked "Cancel" in the dialog, prevent the default action.
                   event.stopImmediatePropagation(); // Stop other event listeners from running
                   event.action_cancelled = true; // Custom flag for setupSendPost handlers
@@ -1367,7 +1371,7 @@ function setupNotificationPermission() {
         if(Notification.permission !== "granted") {
             permissionButton.addEventListener('click', () => {
                 Notification.requestPermission().then((permission) => {
-                  permissionButton.innerText = 'Granted'
+                  permissionButton.innerText = permissionButton.dataset['granted'];
                 });
             });
         }
@@ -2511,4 +2515,18 @@ function setupCodeBlockCopy() {
       code.appendChild(button);
     }
   });
+}
+
+function setupShareIcons() {
+    document.querySelectorAll('.share_mobile a').forEach(shareAnchor => {
+        shareAnchor.addEventListener("click", function(event) {
+            event.preventDefault();
+            if (navigator.share) {
+              navigator.share({ url: location.href });
+            } else {
+              navigator.clipboard.writeText(location.href);
+              alert("Link copied to clipboard");
+            }
+        });
+    });
 }

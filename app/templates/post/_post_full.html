@@ -34,7 +34,7 @@
             <a href="{{ url_for('community.community_moderate', actor=post.community.link()) }}"><span class="red fe fe-report" title="{{ _('Reported. Check post for issues.') }}"></span></a>
             {% endif -%}
             {% if post.type != POST_TYPE_EVENT -%}
-                <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
+                <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post.posted_at, locale=locale) }}</time> by
                     {% if not post.deleted or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
                         {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
                     {% else -%}
@@ -45,7 +45,7 @@
                 {% elif post.author.id in user_pronouns and user_pronouns[post.author.id] not in post.author.display_name() %}
                     <span class="user_flair pronouns">{{ user_pronouns[post.author.id] }}</span>
                 {% endif %}
-                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
+                {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post.edited_at, locale=locale) }}</time>{% endif -%}</small>
             {% endif -%}
         </div>
         {% if post.type == POST_TYPE_IMAGE and not post.deleted -%}
@@ -328,7 +328,7 @@
                         </div>
                     {% endif -%}
                     <p>{{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}</p>
-                    <p>{{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.</p>
+                    <p>{{ _('Poll closes') }} {{ localize_datetime(poll_data.end_poll, locale=locale) }}.</p>
                 {% endif -%}
                 {% if poll_results and poll_total_votes == 0 -%}
                     <p>
@@ -353,7 +353,7 @@
                         {{ _('Total votes: %(total_votes)d.', total_votes=poll_total_votes) }}
                     </p>
                     <p>
-                        {{ _('Poll closes') }} {{ arrow.get(poll_data.end_poll).humanize(locale=locale) }}.
+                        {{ _('Poll closes') }} {{ localize_datetime(poll_data.end_poll, locale=locale) }}.
                     </p>
                 {% elif poll_form -%}
                     {% if current_user.is_authenticated -%}
@@ -389,7 +389,7 @@
             <a class="btn btn-sm btn-outline-secondary" style="float: right;" href="{{ url_for('post.show_post_ical', post_id=post.id) }}">
                 {{ _('Add to calendar') }}
             </a>
-            <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.posted_at).humanize(locale=locale) }}</time> by
+            <small>submitted <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post.posted_at, locale=locale) }}</time> by
             {% if not post.deleted or post.community.is_moderator() or post.community.is_owner() or current_user.get_id() in admin_ids -%}
                 {{ render_username(post.author, htmx_redirect_back_to=request.path, user_notes=user_notes, current_user=current_user, admin_ids=admin_ids, low_bandwidth=low_bandwidth) }}
             {% else -%}
@@ -400,7 +400,7 @@
             {% elif post.author.id in user_pronouns and user_pronouns[post.author.id] not in post.author.display_name() %}
                 <span class="user_flair pronouns">{{ user_pronouns[post.author.id] }}</span>
             {% endif %}
-            {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ arrow.get(post.edited_at).humanize(locale=locale) }}</time>{% endif -%}</small>
+            {% if post.edited_at -%} edited <time datetime="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}" title="{{ arrow.get(post.posted_at).format('YYYY-MM-DD HH:mm:ss ZZ') }}">{{ localize_datetime(post.edited_at, locale=locale) }}</time>{% endif -%}</small>
         {% endif -%}
     </div>
     {% if len(post.tags) > 0 -%}
@@ -498,6 +498,26 @@
             {% if current_user.is_authenticated and current_user.verified -%}
                 {% include 'post/_post_notification_toggle.html' -%}
             {% endif -%}
+        </div>
+        <div class="share_mobile d-lg-none">
+            <a href="#" title="{{ _('Share') }}"><span class="fe fe-share"></span></a>
+        </div>
+        <div class="d-none share_desktop d-lg-flex">
+            <div class="dropdown">
+                <a href="#" title="{{ _('Share') }}" data-bs-toggle="dropdown" aria-expanded="false" id="post_share_link_{{ post.id }}" rel="nofollow"><span class="fe fe-share"></span></a>
+                <ul class="dropdown-menu" style="width: 320px" aria-labelledby="post_share_link_{{ post.id }}">
+                    <li><a href="/post/290/share_mastodon" style="white-space: normal" class="dropdown-item no-underline" rel="nofollow noindex">
+                            <img src="/static/images/mastodon_ico.png"> {{ _('Share on Mastodon') }}</a></li>
+                    <li><a href="https://www.reddit.com/submit?url={{ post.public_url() | urlencode }}&title={{ post.title | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener"><img src="/static/images/reddit.svg"> {{ _('Share on Reddit') }}</a></li>
+                    <li><a href="https://www.facebook.com/sharer/sharer.php?u={{ post.public_url() | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener">
+                            <span class="fe fe-facebook"></span> {{ _('Share on Facebook') }}</a></li>
+                    <li><a href="https://api.whatsapp.com/send?text={{ (post.title ~ ' ' ~ post.public_url()) | urlencode }}" target="_blank"
+                           class="dropdown-item no-underline" rel="nofollow noindex noopener">
+                            <img src="/static/images/whatsapp.svg"></span> {{ _('Share on WhatsApp') }}</a></li>
+                </ul>
+            </div>
         </div>
         {% if can_translate and current_user.is_authenticated and current_user.language_id and post.language_id and (current_user.language_id != post.language_id or post.community.always_translate) -%}
             <div class="post_translate_icon">

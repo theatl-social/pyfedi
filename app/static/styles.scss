@@ -109,6 +109,14 @@ tg-spoiler {
     top: 0; /* Bring the link back into view when it receives focus */
 }
 
+.ml-3 {
+  margin-left: 1rem !important;
+}
+
+.home .ml-3 {
+  margin-left: 1px !important;
+}
+
 #outer_container, footer {
   //overscroll-behavior-x: none;
   a:not(.btn):hover {
@@ -2314,6 +2322,10 @@ form {
 	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
 }
 
+.coolfieldset.expanded .coolfieldset.collapsed legend {
+	background: whitesmoke url(/static/images/collapsed.gif) no-repeat center left;
+}
+
 .domain_link {
   color: #777;
   font-size: 73%;
@@ -3019,6 +3031,19 @@ form {
   -webkit-animation: blink-animation 1s steps(2, start) infinite;
 }
 
+#outer_container .share_desktop a {
+  text-decoration: none !important;
+
+  &:hover {
+    text-decoration: none !important;
+  }
+
+  img {
+    width: 20px;
+    height: 20px;
+  }
+}
+
 @keyframes blink-animation {
   to {
     visibility: hidden;
@@ -3044,7 +3069,12 @@ form {
   color: white;
 }
 
-[data-bs-theme="dark"] .coolfieldset legend, .coolfieldset.expanded legend {
+
+.coolfieldset.expanded legend {
+	background: whitesmoke url(/static/images/expanded.gif) no-repeat center left;
+}
+
+[data-bs-theme="dark"] .coolfieldset legend {
 	background: #424549 url(/static/images/expanded.gif) no-repeat center left;
 }
 
@@ -3065,6 +3095,10 @@ form {
 
 [data-bs-theme="dark"] .skip-link {
   color: black;
+}
+
+[data-bs-theme="dark"] .share_desktop img {
+  filter: invert(1);
 }
 
 @import "scss/compact";

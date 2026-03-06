@@ -1304,5 +1304,3 @@ def blocked_instances_view(user) -> list[dict]:
     for blocked_instance in Instance.query.filter(Instance.id.in_(blocked_ids)).all():
         blocked.append({'person': user_view(user, variant=1, stub=True), 'instance': instance_view(blocked_instance, variant=1)})
     return blocked
-
-

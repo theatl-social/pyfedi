@@ -143,12 +143,14 @@ def ban_user(input, src, auth=None):
         purge_content = input['purge_content']
         ban_ip_address = input['ban_ip_address']
         reason = input['reason']
+        flush_cdn = False
     else:
         user = current_user
         to_ban = db.session.query(User).get(input.person_id)
         purge_content = input.purge.data
         ban_ip_address = input.ip_address.data
         reason = input.reason.data
+        flush_cdn = input.flush.data
     to_ban.banned = True
     db.session.commit()
 
@@ -163,13 +165,13 @@ def ban_user(input, src, auth=None):
         # federate deletion
         if to_ban.is_local():
             to_ban.deleted_by = user.id
-            purge_user_then_delete(to_ban.id, flush=False)
+            purge_user_then_delete(to_ban.id, flush=flush_cdn)
             if SRC_WEB:
                 flash(_('%(actor)s has been banned, deleted and all their content deleted. This might take a few minutes.',
                         actor=to_ban.display_name()))
         else:
             to_ban.delete_dependencies()
-            to_ban.purge_content(flush=False)
+            to_ban.purge_content(flush=flush_cdn)
             from app import redis_client
             with redis_client.lock(f"lock:user:{to_ban.id}", timeout=10, blocking_timeout=6):
                 to_ban = User.query.get(to_ban.id)
@@ -200,7 +202,7 @@ def ban_user(input, src, auth=None):
             db.session.add(IpBan(ip_address=to_ban.ip_address, notes=reason))
             db.session.commit()
 
-    task_selector('ban_from_site', user_id=to_ban.id, mod_id=user.id, expiry=None, reason=reason)
+    task_selector('ban_from_site', user_id=to_ban.id, mod_id=user.id, expiry=None, reason=reason, remove_data=purge_content and to_ban.is_local())
 
 
 def unban_user(input, src, auth=None):

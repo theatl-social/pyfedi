@@ -213,6 +213,7 @@ def make_post(input, community, type, src, auth=None, uploaded_file=None):
     community.post_count += 1
     community.last_active = g.site.last_active = utcnow()
     user.post_count += 1
+    user.last_seen = utcnow()
 
     post.generate_ap_id(community)
 

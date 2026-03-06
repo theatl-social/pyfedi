@@ -5,6 +5,7 @@ import math
 import os
 import uuid
 import re
+import unicodedata
 from collections import defaultdict
 from datetime import datetime, timedelta
 from time import time
@@ -1091,7 +1092,11 @@ class User(UserMixin, db.Model):
     def display_name(self):
         if self.deleted is False:
             if self.title:
-                return self.title.strip()
+                # Sanitize some special unicode formatting characters
+                # ref: https://krvtz.net/posts/input-validation-of-free-form-unicode-text-in-python.html
+                title = self.title.strip()
+                clean_title = "".join(c for c in title if unicodedata.category(c) != "Cf")
+                return clean_title
             else:
                 return self.user_name.strip()
         else:
@@ -1941,7 +1946,7 @@ class Post(db.Model):
             post.ranking_scaled = int(post.ranking + community.scale_by())
             community.post_count += 1
             community.last_active = utcnow()
-            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1 WHERE id = :user_id'),
+            db.session.execute(text('UPDATE "user" SET post_count = post_count + 1, last_seen = now() WHERE id = :user_id'),
                                {'user_id': user.id})
             db.session.execute(text('UPDATE "site" SET last_active = NOW()'))
             try:
@@ -2736,7 +2741,7 @@ class PostReply(db.Model):
                 post.reply_count += 1
                 post.community.post_reply_count += 1
                 post.community.last_active = post.last_active = utcnow()
-            session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1 WHERE id = :user_id'),
+            session.execute(text('UPDATE "user" SET post_reply_count = post_reply_count + 1, last_seen = now() WHERE id = :user_id'),
                                {'user_id': user.id})
             session.execute(text('UPDATE "site" SET last_active = NOW()'))
             session.commit()
@@ -3250,7 +3255,7 @@ class UserRegistration(db.Model):
     user = db.relationship('User', foreign_keys=[user_id], lazy='joined')
 
     def search_similar_names(self):
-        return User.query.filter(or_(User.user_name == self.user.user_name, User.title == self.user.title),
+        return User.query.filter(or_(func.lower(User.user_name) == self.user.user_name.lower(), User.title == self.user.title),
                                  User.id != self.user.id).order_by(desc(User.banned)).order_by(User.reputation).limit(15)
 
 

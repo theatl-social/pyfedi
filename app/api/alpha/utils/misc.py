@@ -13,7 +13,7 @@ from app.api.alpha.utils.user import get_user_list
 from app.api.alpha.utils.reply import get_reply_list
 from app.api.alpha.views import search_view, post_view, reply_view, user_view, community_view, feed_view
 from app.community.util import search_for_community
-from app.models import Post, PostReply, User, Community, BannedInstances, Feed
+from app.models import Post, PostReply, User, Community, BannedInstances, Feed, ModLog
 from app.user.utils import search_for_user
 from app.feed.util import search_for_feed
 from app.utils import authorise_api_user, gibberish, subscribed_feeds, communities_banned_from, \
@@ -465,3 +465,255 @@ def get_suggestion(data):
         for community in Community.query.filter(Community.name.ilike(f'{query[1:]}%')).order_by(desc(Community.active_monthly)).limit(7).all():
             result.append(community.lemmy_link()[1:])
     return {'result': result}
+
+
+def get_modlog(auth, data):
+    type_ = data['type_'] if 'type_' in data else "All"
+    page = int(data['page']) if 'page' in data else 1
+    limit = int(data['limit']) if 'limit' in data else 10
+    mod_person_id = int(data['mod_person_id']) if 'mod_person_id' in data else 0
+    community_id = int(data['community_id']) if 'community_id' in data else 0
+    other_person_id = int(data['other_person_id']) if 'other_person_id' in data else 0
+    post_id = int(data['post_id']) if 'post_id' in data else 0
+    comment_id = int(data['comment_id']) if 'comment_id' in data else 0
+
+    user = authorise_api_user(auth, return_type='model') if auth else None
+    is_admin = user and (user.is_admin() or user.is_staff())
+
+    # Build base query with common filters shared by all categories
+    base_q = ModLog.query
+    if not is_admin:
+        base_q = base_q.filter(ModLog.public == True)
+    if mod_person_id:
+        base_q = base_q.filter(ModLog.user_id == mod_person_id)
+    if community_id:
+        base_q = base_q.filter(ModLog.community_id == community_id)
+    if other_person_id:
+        base_q = base_q.filter(ModLog.target_user_id == other_person_id)
+    if post_id:
+        base_q = base_q.filter(ModLog.post_id == post_id)
+    if comment_id:
+        base_q = base_q.filter(ModLog.reply_id == comment_id)
+
+    # Each category is (action_strings, community_id_required)
+    # community_id_required: True = must have community_id, False = must not, None = don't care
+    all_categories = {
+        'ModRemovePost':       (['delete_post', 'restore_post'],           None),
+        'ModLockPost':         (['lock_post', 'unlock_post'],              None),
+        'ModFeaturePost':      (['featured_post', 'unfeatured_post'],      None),
+        'ModRemoveComment':    (['delete_post_reply', 'restore_post_reply'], None),
+        'ModRemoveCommunity':  (['delete_community'],                      None),
+        'ModBanFromCommunity': (['ban_user', 'unban_user'],                True),
+        'ModBan':              (['ban_user', 'unban_user'],                False),
+        'ModAddCommunity':     (['add_mod', 'remove_mod'],                 True),
+        'ModAdd':              (['add_mod', 'remove_mod'],                 False),
+    }
+
+    if type_ != 'All':
+        if type_ not in all_categories:
+            return _empty_modlog_response()
+        categories_to_fetch = {type_: all_categories[type_]}
+    else:
+        categories_to_fetch = all_categories
+
+    def fetch_category(actions, comm_required):
+        q = base_q.filter(ModLog.action.in_(actions))
+        if comm_required is True:
+            q = q.filter(ModLog.community_id.isnot(None))
+        elif comm_required is False:
+            q = q.filter(ModLog.community_id.is_(None))
+        return q.order_by(desc(ModLog.created_at)).paginate(
+            page=page, per_page=limit, error_out=False).items
+
+    fetched = {
+        name: fetch_category(actions, comm_required)
+        for name, (actions, comm_required) in categories_to_fetch.items()
+    }
+
+    def build_removed_posts(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_remove_post': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'post_id': entry.post_id,
+                    'reason': entry.reason,
+                    'removed': entry.action == 'delete_post',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'post': post_view(entry.post, variant=1) if entry.post else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+            })
+        return result
+
+    def build_locked_posts(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_lock_post': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'post_id': entry.post_id,
+                    'locked': entry.action == 'lock_post',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'post': post_view(entry.post, variant=1) if entry.post else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+            })
+        return result
+
+    def build_featured_posts(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_feature_post': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'post_id': entry.post_id,
+                    'featured': entry.action == 'featured_post',
+                    'is_featured_community': True,
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'post': post_view(entry.post, variant=1) if entry.post else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+            })
+        return result
+
+    def build_removed_comments(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_remove_comment': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'comment_id': entry.reply_id,
+                    'reason': entry.reason,
+                    'removed': entry.action == 'delete_post_reply',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'comment': reply_view(entry.reply, variant=1) if entry.reply else None,
+                'commenter': user_view(entry.reply.user_id, variant=1) if entry.reply else None,
+                'post': post_view(entry.reply.post_id, variant=1) if entry.reply else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+            })
+        return result
+
+    def build_removed_communities(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_remove_community': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'community_id': entry.community_id,
+                    'reason': entry.reason,
+                    'removed': True,
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+            })
+        return result
+
+    def build_banned_from_community(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_ban_from_community': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'other_person_id': entry.target_user_id,
+                    'community_id': entry.community_id,
+                    'reason': entry.reason,
+                    'banned': entry.action == 'ban_user',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+                'banned_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
+            })
+        return result
+
+    def build_banned(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_ban': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'other_person_id': entry.target_user_id,
+                    'reason': entry.reason,
+                    'banned': entry.action == 'ban_user',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'banned_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
+            })
+        return result
+
+    def build_added_to_community(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_add_community': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'other_person_id': entry.target_user_id,
+                    'community_id': entry.community_id,
+                    'removed': entry.action == 'remove_mod',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'community': community_view(entry.community, variant=1) if entry.community else None,
+                'modded_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
+            })
+        return result
+
+    def build_added(entries):
+        result = []
+        for entry in entries:
+            result.append({
+                'mod_add': {
+                    'id': entry.id,
+                    'mod_person_id': entry.user_id,
+                    'other_person_id': entry.target_user_id,
+                    'removed': entry.action == 'remove_mod',
+                    'when_': entry.created_at.isoformat(timespec="microseconds") + 'Z',
+                },
+                'moderator': user_view(entry.author, variant=1) if entry.author else None,
+                'modded_person': user_view(entry.target_user, variant=1) if entry.target_user else None,
+            })
+        return result
+
+    return {
+        'removed_posts':        build_removed_posts(fetched.get('ModRemovePost', [])),
+        'locked_posts':         build_locked_posts(fetched.get('ModLockPost', [])),
+        'featured_posts':       build_featured_posts(fetched.get('ModFeaturePost', [])),
+        'removed_comments':     build_removed_comments(fetched.get('ModRemoveComment', [])),
+        'removed_communities':  build_removed_communities(fetched.get('ModRemoveCommunity', [])),
+        'banned_from_community': build_banned_from_community(fetched.get('ModBanFromCommunity', [])),
+        'banned':               build_banned(fetched.get('ModBan', [])),
+        'added_to_community':   build_added_to_community(fetched.get('ModAddCommunity', [])),
+        'transferred_to_community': [],
+        'added':                build_added(fetched.get('ModAdd', [])),
+        'admin_purged_persons': [],
+        'admin_purged_communities': [],
+        'admin_purged_posts':   [],
+        'admin_purged_comments': [],
+        'hidden_communities':   [],
+    }
+
+
+def _empty_modlog_response():
+    return {
+        'removed_posts': [], 'locked_posts': [], 'featured_posts': [],
+        'removed_comments': [], 'removed_communities': [], 'banned_from_community': [],
+        'banned': [], 'added_to_community': [], 'transferred_to_community': [],
+        'added': [], 'admin_purged_persons': [], 'admin_purged_communities': [],
+        'admin_purged_posts': [], 'admin_purged_comments': [], 'hidden_communities': [],
+    }

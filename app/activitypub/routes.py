@@ -51,7 +51,7 @@ def testredis_get():
 
 
 @bp.route('/.well-known/webfinger')
-@cache.cached(timeout=60)
+@cache.cached(timeout=60, query_string=True)
 def webfinger():
     if request.args.get('resource'):
         feed = False
@@ -343,14 +343,14 @@ def user_profile(actor):
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(func.lower(User.user_name) == actor.lower())).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
     else:
         if '@' in actor:
             user: User = User.query.filter_by(ap_id=actor.lower()).first()
         else:
-            user: User = User.query.filter(or_(User.user_name == actor)).filter_by(ap_id=None).first()
+            user: User = User.query.filter(or_(func.lower(User.user_name) == actor.lower())).filter_by(ap_id=None).first()
             if user is None:
                 user = User.query.filter_by(ap_profile_id=f'{current_app.config["SERVER_URL"]}/u/{actor.lower()}', ap_id=None).first()
 
@@ -527,6 +527,9 @@ def community_profile(actor):
                         "type": "Image",
                         "url": f"{current_app.config['SERVER_URL']}{community.header_image()}"
                     }
+            actor_data['language'] = []
+            for language in community.languages:
+                actor_data['language'].append({'identifier': language.code, 'name': language.name})
             resp = jsonify(actor_data)
             resp.content_type = 'application/activity+json'
             resp.headers.set('Cache-Control', 'public, max-age=30')
@@ -888,6 +891,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.add(member)
                                 community.subscriptions_count += 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                                 session.commit()
                                 cache.delete_memoized(community_membership, user, community)
                                 # send accept message to acknowledge the follow
@@ -1546,6 +1550,7 @@ def process_inbox_request(request_json, store_ap_json):
                                 session.delete(member)
                                 community.subscriptions_count -= 1
                                 community.last_active = utcnow()
+                                user.last_seen = utcnow()
                             if join_request:
                                 session.delete(join_request)
                             session.commit()
