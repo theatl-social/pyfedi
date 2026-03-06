@@ -217,6 +217,29 @@ The repository includes comprehensive test infrastructure:
 
 ### Merge History
 
+- Successfully merged with upstream v1.6.9 on 2026-03-06
+- Branch: `20260306/merge-upstream-v169`
+- Upstream commit: 9a4db0f4
+- Key additions from upstream:
+  - Admin registration approval/denial API endpoints
+  - ActivityPub caching improvements (404s, longer TTLs)
+  - API: join/leave feeds, modlog pagination, private voting preference
+  - Inline spoiler markdown support
+  - Video embedding in markdown
+  - Performance: DB indexes, count(*) optimization, caching headers/etag
+  - UI: user stats on home page, code block copy-to-clipboard
+  - Translations: Ukrainian language, updated translations from Weblate
+  - Search improvements and hang fixes
+  - Private community data handling
+  - S3 storage class configuration
+  - `get_site_as_dict()` caching for Site object
+  - User interface language preference
+  - New migration: `merge_heads_20260306.py`
+- Fixed upstream bugs:
+  - `content_type` used before definition in `app/admin/util.py`
+  - Duplicate `post_alpha_community_follow` function name in API routes
+- Dependency updates for Python 3.14: orjson>=3.10.0, pillow-avif-plugin>=1.5.5
+
 - Successfully merged with upstream v1.5.0 on 2026-01-14
 - Branch: `20250723/theatl-fork-pyfed-nightly-2`
 - Key additions from upstream v1.5.0:
