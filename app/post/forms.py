@@ -65,7 +65,7 @@ class CrossPostForm(FlaskForm):
                                              'hx-target': '#community_suggestions',
                                              'hx-swap': 'innerHTML settle:0ms',
                                              'autocomplete': 'off',
-                                             'pattern': '!?[^@\s]+@[^@\s]+\.[^@\s]+',
+                                             'pattern': r'!?[^@\s]+@[^@\s]+\.[^@\s]+',
                                              'title': _l('Enter a community name in the format xyz@example.com')})
     submit = SubmitField(_l('Next'))
 
@@ -133,7 +133,7 @@ class MovePostForm(FlaskForm):
                                             'hx-target': '#community_suggestions',
                                             'hx-swap': 'innerHTML settle:0ms',
                                             'autocomplete': 'off',
-                                            'pattern': '!?[^@\s]+@[^@\s]+\.[^@\s]+',
+                                            'pattern': r'!?[^@\s]+@[^@\s]+\.[^@\s]+',
                                             'title': _l('Enter a community name in the format xyz@example.com')
                                             })
     submit = SubmitField(_l('Move'))
